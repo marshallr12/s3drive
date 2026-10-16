@@ -35,7 +35,40 @@ using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
-public static class S3DriveFixtureBatchRight {
+using System.Text;
+public static class S3DriveFixtureNative {
+    [StructLayout(LayoutKind.Sequential)]
+    struct Luid { public uint Low; public int High; }
+    [StructLayout(LayoutKind.Sequential)]
+    struct Statistics {
+        public Luid TokenId, AuthenticationId;
+        public long Expiration;
+        public uint Type, ImpersonationLevel, DynamicCharged, DynamicAvailable, GroupCount, PrivilegeCount;
+        public Luid ModifiedId;
+    }
+    [DllImport("advapi32.dll", SetLastError=true)]
+    static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
+    [DllImport("advapi32.dll", SetLastError=true)]
+    static extern bool GetTokenInformation(IntPtr token, int information, out Statistics value, int length, out int returned);
+    [DllImport("kernel32.dll")]
+    static extern bool CloseHandle(IntPtr handle);
+    [DllImport("userenv.dll", CharSet=CharSet.Unicode)]
+    static extern int CreateProfile(string sid, string user, StringBuilder path, uint length);
+    public static void CreateFixtureProfile(SecurityIdentifier sid, string user) {
+        var path = new StringBuilder(260);
+        Marshal.ThrowExceptionForHR(CreateProfile(sid.Value, user, path, (uint)path.Capacity));
+    }
+    public static string AuthenticationId(IntPtr process) {
+        IntPtr token;
+        if (!OpenProcessToken(process, 8, out token)) throw new Win32Exception(Marshal.GetLastWin32Error());
+        try {
+            Statistics value;
+            int returned;
+            if (!GetTokenInformation(token, 10, out value, Marshal.SizeOf(typeof(Statistics)), out returned))
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            return value.AuthenticationId.High.ToString("x8") + ":" + value.AuthenticationId.Low.ToString("x8");
+        } finally { CloseHandle(token); }
+    }
     [StructLayout(LayoutKind.Sequential)]
     struct Attributes {
         public uint Length;
@@ -95,13 +128,18 @@ function User-Action([string]$Operation) {
     $info.UserName = $userName
     $info.Domain = $env:COMPUTERNAME
     $info.Password = $password
-    $info.LoadUserProfile = $true
+    # The fixture profile is already created. These short-lived clients use
+    # files, not HKCU, and must not retain loaded profile references.
+    $info.LoadUserProfile = $false
     $info.WorkingDirectory = $root
     $info.RedirectStandardInput = $true
     $info.RedirectStandardOutput = $true
     $info.RedirectStandardError = $true
     $process = [Diagnostics.Process]::Start($info)
     try {
+        # CreateProcessWithLogonW can reuse the caller's desktop logon SID;
+        # TOKEN_STATISTICS.AuthenticationId identifies the actual LSA logon.
+        $authenticationId = [S3DriveFixtureNative]::AuthenticationId($process.Handle)
         $output = $process.StandardOutput.ReadToEndAsync()
         $errors = $process.StandardError.ReadToEndAsync()
         if ($Operation -eq 'Install') {
@@ -114,6 +152,11 @@ function User-Action([string]$Operation) {
         $text = $output.GetAwaiter().GetResult()
         $errorText = $errors.GetAwaiter().GetResult()
         if ($process.ExitCode -ne 0) { throw "Disposable-user $Operation failed: $errorText $text" }
+        if ($Operation -eq 'Probe') {
+            $probe = $text | ConvertFrom-Json
+            $probe | Add-Member -NotePropertyName authentication_id -NotePropertyValue $authenticationId
+            return ($probe | ConvertTo-Json -Compress)
+        }
         return $text
     } finally { $process.Dispose() }
 }
@@ -124,8 +167,9 @@ try {
     if (-not (Get-LocalGroupMember -SID 'S-1-5-32-545' | Where-Object SID -eq $account.SID)) {
         Add-LocalGroupMember -SID 'S-1-5-32-545' -Member $account
     }
-    [S3DriveFixtureBatchRight]::Set($account.SID,$true)
+    [S3DriveFixtureNative]::Set($account.SID,$true)
     $batchRightGranted = $true
+    [S3DriveFixtureNative]::CreateFixtureProfile($account.SID,$userName)
     $taskName = "S3Drive-$($account.SID.Value)-acceptance"
     $null = [IO.Directory]::CreateDirectory($root)
     $acl = [Security.AccessControl.DirectorySecurity]::new()
@@ -216,7 +260,9 @@ exit 0
     # Scheduler must keep the mount alive without that process or console.
     $first = User-Action Probe | ConvertFrom-Json
     $second = User-Action Probe | ConvertFrom-Json
-    if ($first.caller_logon -eq $second.caller_logon -or $first.child_pid -ne $second.child_pid) {
+    Write-Output ("First login: " + ($first | ConvertTo-Json -Compress))
+    Write-Output ("Second login: " + ($second | ConvertTo-Json -Compress))
+    if ($first.authentication_id -eq $second.authentication_id -or $first.child_pid -ne $second.child_pid) {
         throw 'Repeated independent logons did not access the same mount'
     }
     $unexpectedRead=$false
@@ -284,7 +330,7 @@ exit 0
     if (-not $unmounted) { $cleanupFailures.Add('Mountpoint still exists; preserving the isolated test directory') }
     if ($null -ne $account) {
         if ($batchRightGranted) {
-            try { [S3DriveFixtureBatchRight]::Set($account.SID,$false) }
+            try { [S3DriveFixtureNative]::Set($account.SID,$false) }
             catch { $cleanupFailures.Add('Could not remove disposable batch-logon right') }
         }
         try {
