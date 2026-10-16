@@ -239,6 +239,9 @@ try {
         $definition.Principal.LogonType = 1 # TASK_LOGON_PASSWORD, independent batch logon
         $definition.Principal.RunLevel = 0 # least privilege
         $definition.Settings.Enabled = $true
+        $definition.Settings.AllowDemandStart = $true
+        $definition.Settings.RunOnlyIfIdle = $false
+        $definition.Settings.RunOnlyIfNetworkAvailable = $false
         $definition.Settings.ExecutionTimeLimit = 'PT0S'
         $definition.Settings.MultipleInstances = 2 # ignore duplicate starts
         $definition.Settings.DisallowStartIfOnBatteries = $false
@@ -273,7 +276,12 @@ try {
                     Remove-Item -LiteralPath $stopFile -Force -ErrorAction SilentlyContinue
                 }
                 $null = $task.Run($null)
-                Write-Output 'Startup requested; use Status and session.log to confirm the mount'
+                $deadline=[DateTime]::UtcNow.AddSeconds(30)
+                while (-not (Is-Supervising)) {
+                    if ([DateTime]::UtcNow -gt $deadline) { throw "Supervisor did not start; scheduler result $($task.LastTaskResult); inspect session.log and Task Scheduler history" }
+                    Start-Sleep -Milliseconds 100
+                }
+                Write-Output 'Supervisor running; use Status and session.log to confirm the mount'
             }
             'Status' {
                 $states=@('unknown','disabled','queued','ready','running')

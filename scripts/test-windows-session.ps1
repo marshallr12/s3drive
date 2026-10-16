@@ -12,7 +12,9 @@ $suffix = [Guid]::NewGuid().ToString('N').Substring(0,10)
 $userName = "s3d$suffix"
 $plainPassword = 'S3d!aA9-' + [Guid]::NewGuid().ToString('N')
 $password = ConvertTo-SecureString $plainPassword -AsPlainText -Force
-$root = Join-Path ([IO.Path]::GetTempPath()) ("s3drive session caf" + [char]0xE9 + " ' `$ %USERNAME% $suffix")
+# All ancestors must be readable to the disposable user; another account's
+# AppData/Temp directory does not satisfy the directory-mount contract.
+$root = Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) ("s3drive session caf" + [char]0xE9 + " ' `$ %USERNAME% $suffix")
 $stateRoot = Join-Path $root 'state'
 $mount = Join-Path $root 'mounted'
 $powershell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
@@ -23,6 +25,7 @@ $service = New-Object -ComObject Schedule.Service
 $service.Connect()
 $worker = Join-Path $root 'worker.ps1'
 $cleanupFailures = [Collections.Generic.List[string]]::new()
+$started = Get-Date
 function User-Action([string]$Operation) {
     $info = [Diagnostics.ProcessStartInfo]::new()
     $info.FileName = $powershell
@@ -55,6 +58,8 @@ function User-Action([string]$Operation) {
     } finally { $process.Dispose() }
 }
 try {
+    & wevtutil.exe sl Microsoft-Windows-TaskScheduler/Operational /e:true
+    if ($LASTEXITCODE -ne 0) { throw 'Could not enable native task diagnostics' }
     $account = New-LocalUser -Name $userName -Password $password -Description 'Disposable S3Drive native acceptance account'
     if (-not (Get-LocalGroupMember -SID 'S-1-5-32-545' | Where-Object SID -eq $account.SID)) {
         Add-LocalGroupMember -SID 'S-1-5-32-545' -Member $account
@@ -144,7 +149,7 @@ try {
 } catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }
 exit 0
 '@ | Set-Content -LiteralPath $worker -Encoding UTF8
-    $null = User-Action Install
+    Write-Output (User-Action Install)
     # The installer process (and its independent logon) has exited. Task
     # Scheduler must keep the mount alive without that process or console.
     $first = User-Action Probe | ConvertFrom-Json
@@ -173,6 +178,13 @@ exit 0
     if ($null -ne $account -and [IO.File]::Exists($worker)) {
         try { Write-Output (User-Action Diagnostics) }
         catch { Write-Warning ("Isolated diagnostics failed: " + $_.Exception.Message) }
+    }
+    if ($taskName) {
+        try {
+            Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-TaskScheduler/Operational';StartTime=$started} -ErrorAction Stop |
+                Where-Object { $_.Message.Contains($taskName) } |
+                Select-Object -First 20 Id,Message | Format-List | Out-String | Write-Output
+        } catch { Write-Warning 'Task history unavailable' }
     }
     throw
 } finally {
