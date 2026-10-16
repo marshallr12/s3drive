@@ -9,7 +9,8 @@ platform contracts for native acceptance scope.
 ![Local applications reach the Rust filesystem engine through FUSE or WinFsp; its S3 client reads remote bucket data. Local SQLite and cache have separate roles.](images/architecture.png)
 
 The blue path is implemented. Amber cache/journal components are planned;
-SQLite currently has a schema bootstrap only. [Startup and remote sessions](startup-and-sessions.md)
+SQLite now has a credential-binding registry and migration, but mounts do not
+yet use it for file data. [Startup and remote sessions](startup-and-sessions.md)
 include MX Linux without systemd. [Turso coordination](turso-coordination.md)
 evaluates an optional shared metadata authority, separate from each host's local database.
 
@@ -60,10 +61,14 @@ Do not merge same-named paths across sources. Cross-source rename returns
 delete. No transparent failover, replication or balancing is promised. Different
 providers can have different credentials, latency and capabilities.
 
-Cache identity must include a stable volume/source ID plus endpoint, bucket,
-prefix and revision. A config change must not make old cache bytes appear under
-another account or bucket. P0's reserved `cached_objects` table is not populated
-by the application; add source identity and invalidation in P1/P4 before use.
+Future cache-entry keys must include the credential/configuration binding,
+exact object key, size and revision. P4a binds successful opens to the actual
+credentials used for HEAD and all reads through that handle; new opens resolve
+credentials again. Configuration or credential changes select a different
+namespace, and every new open still requires online authorization. SQLite
+schema 2 preserves P0's unbound rows separately and provides a binding registry.
+This is not a provider-global account identifier. See the implemented
+[provider contract](provider-contract.md) and [migration](storage-and-recovery.md).
 
 ## Direct objects versus managed filesystem layout
 

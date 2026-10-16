@@ -455,6 +455,216 @@ fn fingerprints_distinguish_sources_and_profile_selection() {
     assert_eq!(source_fingerprint(&original), fingerprint);
 }
 
+#[derive(Clone, Debug)]
+struct RotatingCredentials(Arc<std::sync::Mutex<Credentials>>);
+
+impl ProvideCredentials for RotatingCredentials {
+    fn provide_credentials<'a>(
+        &'a self,
+    ) -> aws_credential_types::provider::future::ProvideCredentials<'a>
+    where
+        Self: 'a,
+    {
+        aws_credential_types::provider::future::ProvideCredentials::ready(Ok(self
+            .0
+            .lock()
+            .unwrap()
+            .clone()))
+    }
+}
+
+fn fixture_credentials(key: &str, secret: &str, token: Option<&str>) -> Credentials {
+    Credentials::new(
+        key,
+        secret,
+        token.map(str::to_owned),
+        None,
+        "binding-fixture",
+    )
+}
+
+#[tokio::test]
+async fn rotation_changes_new_opens_but_preserves_existing_handle_credentials() {
+    let server = Server::start(vec![
+        Response::head(3, Some("\"v1\"")),
+        Response::head(3, Some("\"v1\"")),
+        Response::range("one", "bytes 0-2/3", "\"v1\""),
+        Response::range("two", "bytes 0-2/3", "\"v1\""),
+    ])
+    .await;
+    let provider = RotatingCredentials(Arc::new(std::sync::Mutex::new(fixture_credentials(
+        "FIRSTACCESS",
+        "FIRSTSECRET",
+        Some("FIRSTTOKEN"),
+    ))));
+    let reader = S3Reader::with_credentials(
+        source(&server.endpoint),
+        SharedCredentialsProvider::new(provider.clone()),
+        Duration::from_secs(3),
+        1,
+    )
+    .unwrap();
+    let first = reader.open("file").await.unwrap();
+    *provider.0.lock().unwrap() =
+        fixture_credentials("SECONDACCESS", "SECONDSECRET", Some("SECONDTOKEN"));
+    let second = reader.open("file").await.unwrap();
+    assert_ne!(first.cache_identity(), second.cache_identity());
+    assert_eq!(first.read_range(0, 3).await.unwrap(), b"one");
+    assert_eq!(second.read_range(0, 3).await.unwrap(), b"two");
+
+    let requests = server.finish().await;
+    for (index, access, token) in [
+        (0, "FIRSTACCESS", "FIRSTTOKEN"),
+        (1, "SECONDACCESS", "SECONDTOKEN"),
+        (2, "FIRSTACCESS", "FIRSTTOKEN"),
+        (3, "SECONDACCESS", "SECONDTOKEN"),
+    ] {
+        assert!(requests[index].contains(&format!("Credential={access}/")));
+        assert!(requests[index].contains(&format!("x-amz-security-token: {token}")));
+    }
+}
+
+#[tokio::test]
+async fn binding_survives_reader_recreation_and_is_not_an_object_identifier() {
+    let server = Server::start(vec![
+        Response::head(3, Some("\"v1\"")),
+        Response::head(4, Some("\"v2\"")),
+    ])
+    .await;
+    let first = server.reader().open("one").await.unwrap();
+    let second = server.reader().open("two").await.unwrap();
+    assert_eq!(first.cache_identity(), second.cache_identity());
+    assert_eq!(
+        format!("{:?}", first.cache_identity()),
+        "CacheIdentity([redacted])"
+    );
+    assert_eq!(server.finish().await.len(), 2);
+}
+
+#[test]
+fn binding_isolates_credential_generations_and_configuration() {
+    let config = source("https://s3.example.com");
+    let fingerprint = source_fingerprint(&config);
+    let credentials = fixture_credentials("ACCESS", "SECRET", Some("TOKEN"));
+    let original = credential_binding(&fingerprint, &credentials);
+    for changed in [
+        fixture_credentials("OTHER", "SECRET", Some("TOKEN")),
+        fixture_credentials("ACCESS", "OTHER", Some("TOKEN")),
+        fixture_credentials("ACCESS", "SECRET", Some("OTHER")),
+        fixture_credentials("ACCESS", "SECRET", None),
+        fixture_credentials("ACCESS", "SECRET", Some("")),
+        // Length-prefixing separates adjacent fields.
+        fixture_credentials("ACCES", "SSECRET", Some("TOKEN")),
+    ] {
+        assert_ne!(original, credential_binding(&fingerprint, &changed));
+    }
+    assert_ne!(
+        credential_binding(&fingerprint, &fixture_credentials("A", "B", None)),
+        credential_binding(&fingerprint, &fixture_credentials("A", "B", Some("")))
+    );
+    for (field, value) in [
+        ("bucket", "another-bucket"),
+        ("prefix", "other/"),
+        ("endpoint", "https://other.example.com"),
+        ("profile", "other"),
+    ] {
+        let mut changed = config.clone();
+        match field {
+            "bucket" => changed.bucket = value.into(),
+            "prefix" => changed.prefix = value.into(),
+            "endpoint" => changed.endpoint = Some(value.into()),
+            "profile" => changed.profile = Some(value.into()),
+            _ => unreachable!(),
+        }
+        assert_ne!(
+            original,
+            credential_binding(&source_fingerprint(&changed), &credentials)
+        );
+    }
+}
+
+#[derive(Debug)]
+struct UnavailableCredentials {
+    calls: Arc<std::sync::atomic::AtomicUsize>,
+    stall: bool,
+}
+
+impl ProvideCredentials for UnavailableCredentials {
+    fn provide_credentials<'a>(
+        &'a self,
+    ) -> aws_credential_types::provider::future::ProvideCredentials<'a>
+    where
+        Self: 'a,
+    {
+        self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        aws_credential_types::provider::future::ProvideCredentials::new(async move {
+            if self.stall {
+                std::future::pending::<()>().await;
+            }
+            Err(
+                aws_credential_types::provider::error::CredentialsError::provider_error(
+                    "private provider error with SECRET",
+                ),
+            )
+        })
+    }
+}
+
+#[tokio::test]
+async fn open_bounds_and_sanitizes_credential_discovery_after_key_validation() {
+    for stall in [false, true] {
+        let server = Server::start(vec![]).await;
+        let calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let reader = S3Reader::with_credentials(
+            source(&server.endpoint),
+            SharedCredentialsProvider::new(UnavailableCredentials {
+                calls: calls.clone(),
+                stall,
+            }),
+            Duration::from_millis(50),
+            1,
+        )
+        .unwrap();
+        assert!(matches!(
+            reader.open("../bad").await,
+            Err(Error {
+                kind: ErrorKind::InvalidInput,
+                ..
+            })
+        ));
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 0);
+        let error = match reader.open("file").await {
+            Ok(_) => panic!("unavailable credentials must not produce a handle"),
+            Err(error) => error,
+        };
+        assert_eq!(error.operation, "open");
+        assert_eq!(
+            error.kind,
+            if stall {
+                ErrorKind::Timeout
+            } else {
+                ErrorKind::Configuration
+            }
+        );
+        assert!(!format!("{error:?} {error}").contains("SECRET"));
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert!(server.finish().await.is_empty());
+    }
+}
+
+#[tokio::test]
+async fn denied_head_cannot_issue_an_authorized_handle() {
+    let server = Server::start(vec![Response::new(403, "")]).await;
+    assert!(matches!(
+        server.reader().open("file").await,
+        Err(Error {
+            kind: ErrorKind::PermissionDenied,
+            ..
+        })
+    ));
+    assert_eq!(server.finish().await.len(), 1);
+}
+
 #[tokio::test]
 async fn explicit_form_listing_dialect_preserves_spaces_pluses_and_percent_sequences() {
     // Captured key encoding from the approved Wasabi integration fixture.

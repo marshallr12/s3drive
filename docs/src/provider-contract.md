@@ -71,7 +71,8 @@ as a hardened arbitrary-host fetcher.
 
 ## Open handles and reads
 
-`open` performs HEAD and binds a key, size, revision and reader into a handle.
+`open` resolves one credential generation, performs HEAD using it, and binds
+those credentials, key, size, revision and reader into a handle.
 No caller can swap the handle's metadata for another source's metadata. At
 least an ETag or non-null version ID is required; the literal version ID `null`
 does not prove immutability. Empty files with a validator are valid.
@@ -82,6 +83,13 @@ returning bytes. It reads the stream incrementally into a buffer capped at the
 requested length, rejects a short/oversized body, clips reads at EOF, and avoids
 network requests for zero-length/EOF reads. ETags are not content checksums.
 No automatic reopen is performed after a revision conflict.
+
+Credential rotation affects new opens. Existing handles retain their original
+credentials for GET, so an SDK refresh cannot silently switch a handle to a
+different account. If those credentials expire or are revoked, a subsequent
+remote read can fail; the caller must close and reopen. The 30-second open
+deadline includes both credential resolution and HEAD. Credential-provider
+failures are sanitized configuration errors; stalled resolution is a timeout.
 
 Each operation has a 30-second overall deadline; range-read timing includes the
 response body, not just receipt of headers. The SDK has a five-second connect
@@ -99,11 +107,26 @@ throttling, service failures and malformed responses are distinct categories.
 
 The reader has a versioned SHA-256 **configuration fingerprint** covering source
 alias, bucket, region, prefix, canonical endpoint, credential-profile selection
-and addressing/loopback/listing-decoding settings (fingerprint format v2). It distinguishes reconfigured sources, but
-does not identify the current authenticated principal. Credentials behind the
-same profile/default chain can change. Before persistent caching, add a
-verified identity boundary and migrate the unused P0 cache table. This phase
-does not read or populate that table.
+and addressing/loopback/listing-decoding settings (fingerprint format v2). It
+distinguishes reconfigured sources, but does not identify the authenticated
+principal. Credentials behind the same profile/default chain can change.
+
+P4a adds an opaque `CacheIdentity` available from a successfully opened handle.
+It is a domain-separated SHA-256 digest of that fingerprint and the exact
+access key ID, secret key and optional session token used for HEAD. Fields are
+length-prefixed, including an explicit absent/present marker for the token.
+Its Debug output is redacted. Persist only the digest in private local state;
+never persist the raw credentials. This binding is neither a provider-global
+account ID nor an authorization token. It distinguishes credential generations,
+including secret/token changes under an unchanged profile or access key ID.
+
+The planned cache must still require an online HEAD for each new open. A stored
+binding cannot authorize access; successful HEAD establishes only the provider's
+authorization for that object at that time. A newly issued credential generation
+gets a cold namespace even if it belongs to the same account. Revocation during
+an already-open handle and explicit offline access require separate policies.
+Bindings exclude object key/revision/size, which must also be included in future
+cache-entry keys. No file data is cached yet. See [SQLite migration](storage-and-recovery.md).
 
 ## Verification and remaining work
 
@@ -111,7 +134,11 @@ The local tests use real TCP sockets and the real SDK HTTP client with dummy
 credentials. They cover pagination, exact key encoding, request signature
 fields, version/ETag conditions, empty files/EOF, incorrect ranges, short bodies,
 bad XML, missing tokens, source escape, HTTP error categories, canceled reads,
-stalled bodies and configuration fingerprints. Workers use kernel-selected
+stalled bodies and configuration fingerprints. Additional binding tests cover
+credential rotation between opens, unchanged credentials across reader
+recreation, configuration/secret/token isolation, denied HEAD, sanitized
+credential failures and discovery timeouts. The rotating-provider test inspects
+the actual Authorization/token headers on each HEAD and GET. Workers use kernel-selected
 ports, bounded waits and explicit teardown.
 
 A CLI subprocess test supplies isolated dummy credential/config files plus
@@ -123,5 +150,6 @@ SigV4 cryptographic signature. Separate [live Wasabi evidence](wasabi.md)
 records authenticated LIST/HEAD/GET, pagination, exact bytes and Linux mounting
 against user-approved isolated objects. Stale validators, versioned reads and
 mutating provider capabilities remain unverified. The OS adapters now implement
-mounting and native name projection. Persistent authenticated cache identity,
-cache recovery and all filesystem mutations remain later work.
+mounting and native name projection. The credential binding and schema migration
+are cache prerequisites; data caching, recovery and filesystem mutations remain
+later work.

@@ -4,13 +4,16 @@ use aws_config::{
 };
 use aws_sdk_s3::{
     Client,
-    config::{Region, SharedCredentialsProvider, retry::RetryConfig, timeout::TimeoutConfig},
+    config::{
+        Credentials, ProvideCredentials, Region, SharedCredentialsProvider, retry::RetryConfig,
+        timeout::TimeoutConfig,
+    },
     types::EncodingType,
 };
 use percent_encoding::percent_decode_str;
 use s3drive_core::{ListUrlEncoding, Source};
 use sha2::{Digest, Sha256};
-use std::{future::Future, time::Duration};
+use std::{fmt, future::Future, time::Duration};
 
 pub const MAX_READ_BYTES: usize = 8 * 1024 * 1024;
 const DEADLINE: Duration = Duration::from_secs(30);
@@ -44,15 +47,37 @@ pub struct ObjectMetadata {
 #[derive(Clone)]
 pub struct S3Reader {
     client: Client,
+    credentials: SharedCredentialsProvider,
     source: Source,
     fingerprint: String,
     deadline: Duration,
 }
 
-/// A handle binds the reader, key, size and revision together. Callers cannot
-/// substitute metadata from another source or modify a revision after opening.
+/// An opaque binding of source configuration and one credential generation.
+/// Available only after a successful, revision-bearing HEAD. This is private
+/// local metadata, not a provider-global account ID or an authorization token.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CacheIdentity([u8; 32]);
+
+impl CacheIdentity {
+    /// Stable bytes for private local state. Never use this digest alone to
+    /// authorize an open: obtain a fresh handle with an online HEAD first.
+    pub fn as_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
+}
+
+impl fmt::Debug for CacheIdentity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("CacheIdentity([redacted])")
+    }
+}
+
+/// A handle binds the reader, credentials, key, size and revision together.
+/// Callers cannot substitute metadata or credentials after opening.
 pub struct ReadHandle {
     reader: S3Reader,
+    cache_identity: CacheIdentity,
     metadata: ObjectMetadata,
     full_key: String,
 }
@@ -95,7 +120,7 @@ impl S3Reader {
         let mut builder = aws_sdk_s3::config::Builder::new()
             .behavior_version_latest()
             .region(Region::new(source.region.clone()))
-            .credentials_provider(credentials)
+            .credentials_provider(credentials.clone())
             .force_path_style(source.path_style)
             .use_fips(false)
             .use_dual_stack(false)
@@ -110,6 +135,7 @@ impl S3Reader {
         let fingerprint = source_fingerprint(&source);
         Ok(Self {
             client: Client::from_conf(builder.build()),
+            credentials,
             source,
             fingerprint,
             deadline,
@@ -264,15 +290,40 @@ impl S3Reader {
     }
 
     pub async fn open(&self, key: &str) -> Result<ReadHandle> {
-        let metadata = self.head(key).await?;
-        if metadata.revision.etag.is_none() && metadata.revision.version_id.is_none() {
-            return Err(Error::new("open", ErrorKind::Unsupported));
-        }
-        Ok(ReadHandle {
-            reader: self.clone(),
-            full_key: self.full_key(key)?,
-            metadata,
+        let full_key = self.full_key(key)?;
+        // One outer deadline includes credential discovery and HEAD. The SDK's
+        // Config::credentials_provider getter is deprecated and always None;
+        // retain our configured provider explicitly instead.
+        deadline(self.deadline, "open", async {
+            let credentials = self
+                .credentials
+                .provide_credentials()
+                .await
+                .map_err(|_| Error::new("open", ErrorKind::Configuration))?;
+            let provider = SharedCredentialsProvider::new(credentials.clone());
+            let reader = Self {
+                client: Client::from_conf(
+                    self.client
+                        .config()
+                        .to_builder()
+                        .credentials_provider(provider.clone())
+                        .build(),
+                ),
+                credentials: provider,
+                ..self.clone()
+            };
+            let metadata = reader.head(key).await?;
+            if metadata.revision.etag.is_none() && metadata.revision.version_id.is_none() {
+                return Err(Error::new("open", ErrorKind::Unsupported));
+            }
+            Ok(ReadHandle {
+                cache_identity: credential_binding(&self.fingerprint, &credentials),
+                reader,
+                full_key,
+                metadata,
+            })
         })
+        .await
     }
 
     fn full_key(&self, key: &str) -> Result<String> {
@@ -286,6 +337,10 @@ impl S3Reader {
 }
 
 impl ReadHandle {
+    pub fn cache_identity(&self) -> CacheIdentity {
+        self.cache_identity
+    }
+
     pub fn metadata(&self) -> &ObjectMetadata {
         &self.metadata
     }
@@ -350,6 +405,25 @@ impl ReadHandle {
         })
         .await
     }
+}
+
+fn credential_binding(fingerprint: &str, credentials: &Credentials) -> CacheIdentity {
+    let mut hash = Sha256::new();
+    hash.update(b"s3drive-credential-binding-v1");
+    for part in [
+        fingerprint,
+        credentials.access_key_id(),
+        credentials.secret_access_key(),
+    ] {
+        hash.update((part.len() as u64).to_be_bytes());
+        hash.update(part.as_bytes());
+    }
+    let token = credentials.session_token();
+    hash.update([u8::from(token.is_some())]);
+    let bytes = token.unwrap_or_default().as_bytes();
+    hash.update((bytes.len() as u64).to_be_bytes());
+    hash.update(bytes);
+    CacheIdentity(hash.finalize().into())
 }
 
 fn validate_key(key: &str) -> Result<()> {

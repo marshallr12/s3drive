@@ -8,8 +8,9 @@ P3 implements Windows WinFsp, with native read-only acceptance verified.
 The user's startup/session requirements add P3.5 before caching: Linux must
 support MX without systemd, and both platforms must retain a mount after its
 launching SSH terminal disconnects. See [startup/session design](startup-and-sessions.md).
-Broader provider semantics, persistent cache identity/migration and writes
-remain unverified or unimplemented.
+P4a now adds credential-bound read handles and a SQLite binding registry with
+migration. The actual file cache, broader provider semantics and writes remain
+unverified or unimplemented.
 
 | Phase | Deliverable | Completion evidence |
 | --- | --- | --- |
@@ -19,6 +20,7 @@ remain unverified or unimplemented.
 | P3 — Windows read-only drive | WinFsp binding decision and Windows adapter reusing P2 core | Native MSVC build and Windows runtime tests; Explorer/PowerShell access; stable names/handles and clean removal |
 | P3.5a — Linux session startup | Detached per-user supervisor, XDG desktop entry and explicit shell login hook; no systemd dependency | Real FUSE mount, simultaneous starts, desktop-entry parsing, terminal loss, new-session access and safe removal |
 | P3.5b — Windows session startup | Stable mount path shared by the account's desktop/SSH logons; backend independent of the launching session | Native folder mount, independent logon tokens, startup/removal, disconnect and reboot/sign-in checks |
+| P4a — cache prerequisites | Credential-bound read handles and schema 2 source registry; preserve unbound legacy rows | Rotation/recreation/authorization tests, migration rollback and binding isolation |
 | P4 — cache and local recovery | Revision-aware disk cache, eviction, pinning, single-process ownership, state migrations | Cache isolation, disk-full, stale revision, offline miss and restart tests; no dirty data exists yet |
 | P5a — staged writes | In-memory storage test double plus immutable local generations and durable journal | Fault injection at every local boundary; acknowledged local state survives restart; network mutation remains disabled |
 | P5b — conditional remote commits | Create/replace and multipart recovery; explicit flush contract | Provider preconditions verified; two-writer conflict tests; crash/timeout replay never overwrites unseen edits |
@@ -60,8 +62,10 @@ were removed afterward. The test found a form-style listing URL dialect;
 the explicit source option and regression are documented in [Wasabi evidence](wasabi.md).
 Stale-validator and versioned reads, write capabilities and broader
 real-service coverage remain unverified. The configuration hash
-is not an authenticated account identity; persistent cache adoption must add
-that identity and migrate the reserved P0 table before storing live cache data.
+is not an authenticated account identity. P4a adds a per-credential-generation
+binding after a successful HEAD and migrates the reserved P0 table; persistent
+cache adoption must use that binding plus key/revision/size, not the config hash
+alone. This does not establish a provider-global account ID.
 
 ### P2 progress
 
@@ -105,6 +109,26 @@ The disposable CI VM has an explicit exception for an OS-retained locked test
 profile; see [verification details](development.md). Actual reboot, desktop
 logout policy, SSH authentication and Windows 10/11 desktop checks remain
 pending. These are not inferred from the scheduled-task definition.
+
+### P4 progress and remaining acceptance
+
+P4a implements an opaque digest of the source configuration and exact credential
+generation used for HEAD. The same generation signs the handle's GET requests;
+new opens resolve credentials again and must complete an online HEAD. Tests
+cover rotation, stable binding across reader recreation, denied opens, discovery
+timeouts and private error/Debug output. SQLite schema 2 registers bindings,
+rejects conflicting registrations and preserves schema 1 rows in a separate
+legacy table. Migration rollback and restart are tested. See
+[storage and recovery](storage-and-recovery.md) for the implemented boundary.
+
+P4b must add private cache-directory ownership on both OSes, an exclusive
+process lock, bounded small-file storage with checksum/revision validation,
+eviction/pinning and a bounded database worker. Mount integration must authorize
+each new open online before cache lookup. Prove cache hits, stale revisions,
+credential rotation, disk-full handling, corrupt/missing data and restart with
+deterministic fixtures, then rerun real Linux and Windows mount gates with
+caching enabled. New offline opens remain denied until an explicit offline
+authorization policy is designed. P4a alone does not complete P4.
 
 ### Optional coordination investigation
 

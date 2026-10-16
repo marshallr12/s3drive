@@ -1,19 +1,37 @@
 # Cache, SQLite and recovery
 
-Everything below the P0 subsection is a proposed design requiring fault tests.
+P4a implements credential bindings and SQLite migration. The file cache,
+exclusive ownership, eviction and upload journal below remain proposed designs.
 An initialized database is not an implemented or proven upload journal.
 
-## SQLite in P0
+## Implemented SQLite state and migration
 
 `s3drive-state` uses `rusqlite` with bundled SQLite. Initialization marks a
-database with an application ID and `user_version = 1`, then creates a reserved
-`cached_objects` table. Reopening preserves existing rows. Foreign databases,
-future schema versions and missing expected columns fail explicitly.
+database with an application ID and `user_version = 2`. Schema 1's reserved
+`cached_objects` table had only source aliases, with no credential binding.
+Migration 2 renames it to `legacy_cached_objects_v1` and preserves every row for
+inspection. None of those rows is adopted into an active cache namespace.
+
+The new `source_bindings` table maps a 32-byte credential/configuration digest
+to its configuration fingerprint. Registration is idempotent for the same pair;
+a conflicting fingerprint is rejected without changing the existing binding.
+The caller must obtain the digest from a successfully opened S3 handle.
+Registration itself does not authenticate anyone or grant offline access.
+See the [credential-binding contract](provider-contract.md).
+
+Fresh initialization and migration from schema 1 run inside an immediate
+transaction, including application/version markers. A migration failure rolls
+back table renaming and the version update. Foreign databases, unsupported
+schema versions and missing expected columns fail explicitly. The schema does
+not yet include cache data or upload jobs.
 
 The connection uses WAL, `synchronous=FULL`, foreign keys, and a five-second
-busy timeout. Tests check persistence, the connection settings and refusal to
-adopt another application's database. No application code currently populates
-the cache table, manages inodes, or enqueues uploads.
+busy timeout. Tests cover restart, settings, binding isolation/rebinding refusal,
+shape constraints, legacy-row preservation and migration rollback. The CLI's
+`init-state` now initializes or migrates to schema 2. Mounts do not yet register
+bindings or use this database; integration belongs to the next cache phase.
+The caller must supply a private local directory. Cache-directory permissions,
+Windows ACLs and exclusive process ownership still need implementation.
 
 SQLite documents that WAL participants must share a host; keep state on a real
 local disk outside the mounted tree. `FULL` synchronization is a useful building
@@ -31,10 +49,10 @@ file or remote object. [SQLite WAL](https://www.sqlite.org/wal.html),
 | `volume.lock` | Single local daemon ownership | Held for daemon lifetime |
 | Diagnostic logs | Redacted operational evidence | Rotated and size-limited |
 
-Future schema tables should include `sources` (stable identity and config
-fingerprint), `nodes` (stable IDs and parent links), `cache_extents`,
+Future schema tables should build on `source_bindings` with volume ownership,
+`nodes` (stable IDs and parent links), `cache_extents`,
 `upload_jobs`, `upload_parts`, `conflicts`, and `provider_capabilities` with
-probe provenance/expiry. These are design entities, not shipped migrations.
+probe provenance/expiry. These additional entities are not shipped migrations.
 Do not persist remote credentials. A source alias alone is not a safe cache ID.
 
 Use a single SQL worker initially. Cache and upload tasks exchange bounded
@@ -44,8 +62,10 @@ Preserve schema migrations and write recovery tests for each version change.
 
 ## Reads and local disk pressure
 
-Resolve source/key, obtain metadata/revision, then fetch only missing ranges.
-Key cache entries by source identity and remote revision. Coalesce adjacent
+Resolve source/key and authorize a fresh handle with an online HEAD, then fetch
+only missing ranges. Key cache entries by credential-bound source identity,
+exact object key, revision and size. Store a separate checksum for local data
+integrity. Coalesce adjacent
 reads, cap read-ahead and concurrent requests, and deduplicate in-flight reads.
 Start with a simple bounded whole-file cache for small files and an explicit
 large-file policy; add sparse range caching when measurements justify it.
@@ -56,7 +76,9 @@ writes with a disk-full error and show pending upload state. Do not delete dirty
 data to make a cache quota appear satisfied. Keep the metadata DB and emergency
 recovery margin outside the ordinary clean-cache budget.
 
-A fully cached file can be offered offline only with a clear stale-data policy.
+A fully cached file could later be offered offline with an explicit access and
+stale-data policy. The first cache requires online authorization on new opens;
+it must report failure when that authorization cannot be obtained.
 An uncached range must fail while offline. Persisted directory metadata is not
 evidence that its listed file contents are locally available.
 

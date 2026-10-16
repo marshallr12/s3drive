@@ -3,7 +3,8 @@
 Updated: 2026-10-16. P3 read-only mounts have passed native acceptance on Linux
 and Windows. Scoped live Wasabi reads also passed. P3.5a adds Linux startup
 without systemd; native session tests passed locally. P3.5b adds Windows
-startup with native cross-logon acceptance. Goal active; actual workstation
+startup with native cross-logon acceptance. P4a adds credential-bound handles
+and SQLite schema 2 migration/registry. Goal active; actual workstation
 reboot/SSH login checks, cache, recovery, safe writes and packaging remain.
 
 ## Goal and scope
@@ -29,9 +30,15 @@ until the documented safe-write contract and its OS acceptance gates pass.
 - `config-check`, `resolve`, `list`, `stat`, `read`, `init-state`, `status` and
   both native `mount` paths work. Windows requires WinFsp 2.1 Developer files
   for a source build and the installed runtime/driver for mounting.
-- SQLite schema 1 is initialized but has no live cache entries. Before cache
-  adoption, add persistent authenticated source identity and migrate the P0
-  reserved table. A configuration fingerprint is not an account identity.
+- Read handles now pin the credentials resolved for their successful HEAD;
+  later GETs cannot silently switch credentials. New opens resolve again and
+  expose an opaque credential/configuration digest only after successful HEAD.
+  The digest is not a global account ID or an authorization token. Config,
+  access key, secret or token changes cause a new binding. Debug is redacted.
+- SQLite schema 2 adds a source-binding registry and preserves schema 1 rows
+  separately as `legacy_cached_objects_v1`; migration failures roll back.
+  Registration is idempotent and rejects conflicting fingerprints. Mounts do
+  not yet use the registry; the first cache must authorize each new open online.
 - No uploads, mutations, disk cache, offline support or desktop packaging yet.
 
 ## Current user requirements and startup work
@@ -198,11 +205,26 @@ tip, followed by fast-forwarding/pushing private `origin/main`. Check live Git
 and Actions state when resuming; preserve ignored user configuration. The local
 gate log is `/tmp/s3drive-windows-session-final-gate.log`.
 
+P4a uses branch `cache-source-binding`: credential-bound reads and SQLite migration.
+Local verification passed: focused tests (18 S3 / 8 state), full repository
+gate, real Linux FUSE (145 S3 requests and the Unicode corpus), and startup on
+this non-systemd workstation. Logs: `/tmp/s3drive-cache-binding-tests.log`,
+`/tmp/s3drive-cache-binding-gate.log`, `/tmp/s3drive-cache-binding-linux.log`,
+`/tmp/s3drive-cache-binding-session.log`. CI runs the new binding/migration tests
+on both OSes and the existing real Windows mount/startup gate; publication
+requires all jobs successful at the exact branch tip. Retrieve the result with
+`gh run list --branch cache-source-binding` and match its head SHA to Git.
+Resolved AWS SDK 1.152.0's Config::credentials_provider getter is deprecated
+and always returns None. S3Reader retains the actual provider separately;
+open resolves it within the overall deadline and replaces the pinned client's
+identity resolver. Do not recover the provider through that getter.
+
 Target-workstation reboot/sign-in, full sign-out policy and SSH authentication
-acceptance remain pending. The next independent implementation phase is P4:
-authenticated cache identity, SQLite migration, revision-bound clean data cache,
-exclusive process ownership, eviction/pinning and restart/disk-full/offline-miss
-tests. Keep cache/state outside mounted trees. Writes require separate staged
+acceptance remain pending. Next implementation is P4b: private cache-directory
+permissions/ACLs, exclusive process ownership, revision-bound clean data cache,
+bounded SQLite worker, eviction/pinning and restart/disk-full/offline-miss tests.
+Use the handle binding plus exact key/revision/size; no binding alone authorizes
+cached access. Keep cache/state outside mounted trees. Writes require separate staged
 generations and a durable journal (P5a), provider conditional commits/recovery
 (P5b), then desktop mutations (P5c). Do not expose unconditional overwrite as a
 shortcut. Broader live provider probes require scoped disposable fixtures.

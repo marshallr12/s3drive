@@ -40,7 +40,7 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Rust workspace and CLI | Implemented |
 | TOML parsing and source/namespace validation | Implemented; no network checks |
 | Alias + prefix + file-path resolution | Implemented as a planning utility |
-| Local SQLite schema bootstrap and version/ownership checks | Implemented |
+| Local SQLite state | Schema 2; credential-binding registry, atomic migration and version/ownership checks |
 | mdBook research, design and acceptance plan | Implemented |
 | S3 transport and credentials | Implemented; [Wasabi read acceptance](wasabi.md) passed; broader conformance pending |
 | Linux filesystem mount | Implemented read-only FUSE; see [mount contract](linux-mount.md) and native evidence in handoff |

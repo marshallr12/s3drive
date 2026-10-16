@@ -4,7 +4,9 @@ mod error;
 mod reader;
 
 pub use error::{Error, ErrorKind, Result};
-pub use reader::{ListPage, ListedObject, MAX_READ_BYTES, ObjectMetadata, ReadHandle, S3Reader};
+pub use reader::{
+    CacheIdentity, ListPage, ListedObject, MAX_READ_BYTES, ObjectMetadata, ReadHandle, S3Reader,
+};
 
 /// Unknown is distinct from unsupported and must never enable a mutation.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]

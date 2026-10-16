@@ -24,6 +24,7 @@ to the user.
 | D016 | Adopted from live Wasabi evidence | Explicit `list_url_encoding = "form"` decodes raw listing plus signs as spaces before one percent decode; other providers retain percent-only default |
 | D017 | User requirement; Linux and Windows launchers implemented | Start at sign-in after reboot; keep the mount accessible from later same-account SSH sessions and surviving tmux processes. Support MX Linux without systemd. Linux terminal-loss and Windows cross-logon checks passed; actual workstation reboot/SSH authentication acceptance remains pending |
 | D018 | Proposed after research | Evaluate Turso Cloud behind an authoritative coordination API; retain local SQLite. Do not use offline last-push-wins sync for leases or publication, or treat SQL/S3 as one transaction |
+| D019 | Implemented prerequisite for P4 | Bind each successful open to its resolved credential generation and source configuration. Require online HEAD on new opens; credential rotation creates a separate cache namespace. Preserve schema 1 rows as unbound legacy data during migration to schema 2. This does not establish a provider-global principal or enable offline access |
 
 ## Questions to resolve at the relevant phase
 
