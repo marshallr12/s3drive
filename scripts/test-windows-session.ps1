@@ -335,6 +335,17 @@ exit 0
     }
     if (-not $unmounted) { $cleanupFailures.Add('Mountpoint still exists; preserving the isolated test directory') }
     if ($null -ne $account) {
+        # Windows can start per-user helper processes during a batch logon.
+        # All processes owned by this newly created fixture SID belong to this
+        # test, even if the OS, rather than our launcher, created them.
+        foreach ($process in Get-CimInstance Win32_Process) {
+            $owner=Invoke-CimMethod -InputObject $process -MethodName GetOwnerSid -ErrorAction SilentlyContinue
+            if ($owner -and $owner.ReturnValue -eq 0 -and $owner.Sid -eq $account.SID.Value) {
+                Write-Output ("Stopping disposable-account helper: " + $process.Name + " (" + $process.ProcessId + ")")
+                Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
+                Wait-Process -Id $process.ProcessId -Timeout 15 -ErrorAction SilentlyContinue
+            }
+        }
         if ($batchRightGranted) {
             try { [S3DriveFixtureNative]::Set($account.SID,$false) }
             catch { $cleanupFailures.Add('Could not remove disposable batch-logon right') }
@@ -346,7 +357,10 @@ exit 0
             while ($true) {
                 $profile=Get-CimInstance Win32_UserProfile | Where-Object SID -eq $account.SID.Value
                 if (-not $profile -or -not $profile.Loaded) { break }
-                if ([DateTime]::UtcNow -gt $deadline) { throw 'Disposable profile is still loaded after all owned processes stopped' }
+                if ([DateTime]::UtcNow -gt $deadline) {
+                    Write-Output ($profile | Select-Object SID,Loaded,RefCount,Status | ConvertTo-Json -Compress)
+                    throw 'Disposable profile is still loaded after all owned processes stopped'
+                }
                 Start-Sleep -Milliseconds 200
             }
             if ($profile) { $profile | Remove-CimInstance }
