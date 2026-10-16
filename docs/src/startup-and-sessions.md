@@ -96,7 +96,16 @@ WinFsp creates the new directory and removes it on teardown.
 [WinFsp service architecture](https://github.com/winfsp/winfsp/wiki/WinFsp-Service-Architecture),
 [WinFsp directory mounts](https://github.com/winfsp/winfsp/wiki/Frequently-Asked-Questions)
 
-Run Windows PowerShell as the account that owns the S3 credential profile:
+The account must have **Log on as a batch job** (`SeBatchLogonRight`) and must
+not be denied that logon type. An administrator may need to provision this
+right in Local Security Policy or the applicable domain policy. The launcher
+does not change account rights or elevate the mount. A task can register yet
+fail to start when this prerequisite is absent; Task Scheduler history reports
+`0x80070569` (1385). The native test grants/removes this right only for its newly
+created disposable account.
+[Windows account logon rights](https://learn.microsoft.com/en-us/windows/win32/secauthz/account-rights-constants)
+
+Then run Windows PowerShell as the account that owns the S3 credential profile:
 
 ```powershell
 .\scripts\windows-session.ps1 -Action Install -Name default `
