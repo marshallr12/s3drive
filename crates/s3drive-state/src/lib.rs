@@ -8,6 +8,7 @@ mod directory;
 #[path = "directory/windows.rs"]
 mod directory_windows;
 pub mod journal;
+pub mod worker;
 
 use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};

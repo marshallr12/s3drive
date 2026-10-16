@@ -240,8 +240,9 @@ schema tables should build on these with volume ownership,
 probe provenance/expiry. These additional entities are not shipped migrations.
 Do not persist remote credentials. A source alias alone is not a safe cache ID.
 
-The implemented clean-cache API uses a single SQL worker. Future upload tasks
-should also exchange bounded messages with it; no transaction waits on S3. Keep enough inode tombstones to
+The implemented cache and journal APIs share a single SQL worker and bounded
+command queue; see the [async owner contract](staged-writes.md#shared-async-owner).
+Future upload tasks should also exchange bounded messages with it; no transaction waits on S3. Keep enough inode tombstones to
 avoid reusing a kernel-visible ID while handles or lookup references survive.
 Preserve schema migrations and write recovery tests for each version change.
 

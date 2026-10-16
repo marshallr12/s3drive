@@ -3,7 +3,7 @@ use std::{
     fs,
     io::Read,
     process::{Command, Stdio},
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 fn key(name: &str, size: u64) -> Key {
@@ -239,29 +239,6 @@ async fn worker_is_exclusive_async_and_releases_ownership_on_close() {
         b"abc"
     );
     reopened.close().await.unwrap();
-}
-
-#[tokio::test]
-async fn saturated_queue_fails_without_enqueuing_more_work() {
-    let (sender, mut receiver) = mpsc::channel(QUEUE_SIZE);
-    for _ in 0..QUEUE_SIZE {
-        let (reply, _receive) = oneshot::channel();
-        sender
-            .try_send(Request::Get(key("file", 3), reply))
-            .unwrap_or_else(|_| panic!("unexpected full queue"));
-    }
-    let cache = Cache {
-        sender,
-        options: options(20, 3),
-    };
-    let error = cache
-        .get(key("file", 3))
-        .await
-        .err()
-        .expect("queue should be full");
-    assert!(error.to_string().contains("queue is full"));
-    assert_eq!(receiver.len(), QUEUE_SIZE);
-    receiver.close();
 }
 
 #[test]

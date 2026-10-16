@@ -36,8 +36,9 @@ local staged generations and eventual remote upload jobs. Its clean cache uses
 BLOBs up to 1 MiB so bytes and integrity metadata commit together. P5a1 stages
 complete generations as bounded SQLite chunks, with local intent in the same
 transaction boundary. Optional external bulk files remain future work. The
-cache has one bounded SQL worker; the staging API borrows its owner State and
-needs the P5a2 command integration. No SQL transaction spans a network request. A local process lock must prevent two daemon instances from owning
+cache and journal now share one bounded SQL worker through `worker::Storage`.
+Mounted reads use its cache handle; staged writes are a library API until the
+remaining write phases pass. No SQL transaction spans a network request. A local process lock must prevent two daemon instances from owning
 the same volume/cache; SQLite locking alone does not coordinate cache files.
 
 The platform crates own only OS callback translation, reply lifetimes, mount

@@ -40,7 +40,7 @@ impl Default for Options {
     }
 }
 impl Options {
-    fn validate(self) -> Result<Self> {
+    pub(crate) fn validate(self) -> Result<Self> {
         if self.max_bytes == 0
             || self.max_bytes > i64::MAX as u64
             || self.max_generations == 0
@@ -103,7 +103,7 @@ pub enum Base {
     },
 }
 impl Base {
-    fn validate(&self) -> Result<()> {
+    pub(crate) fn validate(&self) -> Result<()> {
         if let Self::Existing { etag, version } = self
             && ((etag.is_none() && version.is_none())
                 || [etag, version]

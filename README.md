@@ -11,7 +11,8 @@ through FUSE; see the [Linux contract](docs/src/linux-mount.md) and
 Native read-only acceptance passed on both platforms. Optional [mounted caching](docs/src/storage-and-recovery.md)
 uses bounded SQLite snapshots with checksums, eviction, pins and recovery tests.
 Each new open still authorizes online. A [local staging/journal library](docs/src/staged-writes.md)
-now preserves immutable write generations; writable mounts and remote commits remain planned.
+now preserves immutable write generations. Cache and staging commands share a
+bounded async owner; writable mounts and remote commits remain planned.
 [Linux sign-in startup](docs/src/startup-and-sessions.md) works without systemd,
 including MX Linux, and has a native terminal-disconnect acceptance test.
 Windows startup uses a per-user scheduled task and an NTFS folder shared across

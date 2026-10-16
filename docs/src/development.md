@@ -157,3 +157,13 @@ idempotent append/seal replay. Real SQLITE_FULL is induced using SQLite's page
 limit. The memory-base fixture rejects a changed revision during hydration.
 These state tests run natively on both CI OSes. They do not establish writable
 FUSE/WinFsp behavior, remote publication or physical power-loss survival.
+
+`worker/tests.rs` tests the async cache/journal owner: shared connection/lock,
+queue pressure, pre-admission bounds, immutable local snapshots and competing
+builders. It deterministically pauses the owner for queued cancellation and
+lost append/seal replies, verifies real SQLITE_FULL and a separate SQLite
+writer stall, and checks worker-panic recovery, draining and close/reopen.
+Tests exercise the public cache/staging APIs; private owner jobs provide only
+the local scheduling and fault-injection controls. All pauses have deadlines.
+Use `cargo test -p s3drive-state --locked` for the focused storage gate, followed
+by the repository gate and both native mount/startup jobs before publication.

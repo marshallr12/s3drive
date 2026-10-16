@@ -1,6 +1,9 @@
 //! Bounded clean snapshots. Callers must authorize every new open online before
 //! constructing a key. This module performs no network I/O or authorization.
-use crate::{Result, State};
+use crate::{
+    Result, State, journal,
+    worker::{Owner, Storage},
+};
 use rusqlite::{OptionalExtension, Transaction, TransactionBehavior, params};
 use sha2::{Digest, Sha256};
 use std::{
@@ -8,14 +11,10 @@ use std::{
     fmt,
     path::Path,
     sync::{Arc, Weak},
-    time::Duration,
 };
-use tokio::sync::{mpsc, oneshot};
 
 pub const MAX_FILE_BYTES: usize = 1024 * 1024;
 const MAX_ENTRIES: usize = 65_536;
-const QUEUE_SIZE: usize = 8;
-const DEADLINE: Duration = Duration::from_secs(30);
 
 /// Preserve SQLite's real disk-full classification across the worker boundary.
 pub fn is_disk_full(error: &(dyn std::error::Error + 'static)) -> bool {
@@ -41,7 +40,7 @@ impl Default for Options {
     }
 }
 impl Options {
-    fn validate(self) -> Result<Self> {
+    pub(crate) fn validate(self) -> Result<Self> {
         if !(1..=1024 * 1024 * 1024).contains(&self.max_bytes)
             || !(1..=MAX_FILE_BYTES).contains(&self.max_file_bytes)
             || self.max_file_bytes as u64 > self.max_bytes
@@ -126,68 +125,20 @@ impl Pinned {
     }
 }
 
-enum Request {
-    Get(Key, oneshot::Sender<Result<Option<Pinned>>>),
-    Put(Key, Arc<[u8]>, oneshot::Sender<Result<Option<Pinned>>>),
-    Close(oneshot::Sender<()>),
-}
-
 /// A bounded command queue to one dedicated OS thread. SQLite and checksumming
 /// never run on the async executor. No SQL transaction includes a remote read.
 #[derive(Clone)]
 pub struct Cache {
-    sender: mpsc::Sender<Request>,
-    options: Options,
+    pub(crate) owner: Owner,
+    pub(crate) options: Options,
 }
 impl Cache {
     pub async fn open(directory: &Path, options: Options) -> Result<Self> {
-        let options = options.validate()?;
-        let directory = directory.to_path_buf();
-        let (sender, mut receiver) = mpsc::channel(QUEUE_SIZE);
-        let (ready, started) = oneshot::channel();
-        std::thread::Builder::new()
-            .name("s3drive-cache".into())
-            .spawn(move || {
-                let mut store = match Store::open(&directory, options) {
-                    Ok(store) => store,
-                    Err(error) => {
-                        let _ = ready.send(Err(error));
-                        return;
-                    }
-                };
-                if ready.send(Ok(())).is_err() {
-                    return;
-                }
-                let mut closing = None;
-                while let Some(request) = receiver.blocking_recv() {
-                    match request {
-                        Request::Get(key, reply) => {
-                            if !reply.is_closed() {
-                                let _ = reply.send(store.get(&key));
-                            }
-                        }
-                        Request::Put(key, bytes, reply) => {
-                            if !reply.is_closed() {
-                                let _ = reply.send(store.put(&key, bytes));
-                            }
-                        }
-                        Request::Close(reply) => {
-                            closing = Some(reply);
-                            break;
-                        }
-                    }
-                }
-                // Signal completion only after closing SQLite and releasing its lock.
-                drop(store);
-                if let Some(reply) = closing {
-                    let _ = reply.send(());
-                }
-            })?;
-        tokio::time::timeout(DEADLINE, started)
-            .await
-            .map_err(|_| "cache initialization timed out")?
-            .map_err(|_| "cache worker stopped during initialization")??;
-        Ok(Self { sender, options })
+        Ok(
+            Storage::open(directory, options, journal::Options::default())
+                .await?
+                .cache(),
+        )
     }
 
     pub fn accepts(&self, size: u64) -> bool {
@@ -195,7 +146,7 @@ impl Cache {
     }
 
     pub async fn get(&self, key: Key) -> Result<Option<Pinned>> {
-        self.request(|reply| Request::Get(key, reply)).await
+        self.owner.call(move |store| store.get(&key)).await
     }
 
     /// None means ineligible size or insufficient unpinned quota. SQL errors,
@@ -207,55 +158,24 @@ impl Cache {
         if !self.accepts(key.size) {
             return Ok(None);
         }
-        self.request(|reply| Request::Put(key, bytes, reply)).await
+        self.owner.call(move |store| store.put(&key, bytes)).await
     }
 
-    async fn request(
-        &self,
-        build: impl FnOnce(oneshot::Sender<Result<Option<Pinned>>>) -> Request,
-    ) -> Result<Option<Pinned>> {
-        let (reply, receive) = oneshot::channel();
-        // Backpressure is explicit: never accumulate an unbounded queue of
-        // already downloaded file buffers while the local disk is slow.
-        self.sender
-            .try_send(build(reply))
-            .map_err(|error| match error {
-                mpsc::error::TrySendError::Full(_) => "cache command queue is full",
-                mpsc::error::TrySendError::Closed(_) => "cache worker is closed",
-            })?;
-        tokio::time::timeout(DEADLINE, receive)
-            .await
-            .map_err(|_| "cache operation timed out")?
-            .map_err(|_| "cache worker stopped")?
-    }
-
-    /// Close all clones of this worker after filesystem callbacks have stopped.
-    /// Dropping the last Cache also lets the worker drain and release ownership.
+    /// Close all handles of this shared owner after filesystem callbacks stop.
+    /// Dropping the last owner client also drains and releases ownership.
     pub async fn close(&self) -> Result<()> {
-        let (reply, receive) = oneshot::channel();
-        tokio::time::timeout(DEADLINE, async {
-            self.sender
-                .send(Request::Close(reply))
-                .await
-                .map_err(|_| "cache worker is closed")?;
-            receive
-                .await
-                .map_err(|_| "cache worker stopped before close")
-        })
-        .await
-        .map_err(|_| "cache close timed out")??;
-        Ok(())
+        self.owner.close().await
     }
 }
 
-struct Store {
-    state: State,
+pub(crate) struct Store {
+    pub(crate) state: State,
     options: Options,
     pins: HashMap<[u8; 32], Weak<[u8]>>,
     clock: i64,
 }
 impl Store {
-    fn open(path: &Path, options: Options) -> Result<Self> {
+    pub(crate) fn open(path: &Path, options: Options) -> Result<Self> {
         let options = options.validate()?;
         let state = State::open_managed(path)?;
         let clock = state.connection.query_row(

@@ -8,7 +8,8 @@ and SQLite schema 2 migration/registry. P4b1 adds private managed state director
 and process ownership. P4b2a implements a bounded clean-cache storage worker
 with SQLite BLOBs. P4b2b connects it to optional mounted caching, with native
 acceptance required for each published source. P5a1 adds the local staged-
-generation/journal library. Goal active; write coordination, remote commit,
+generation/journal library. P5a2a adds one shared async owner for cache/journal
+commands and immutable local snapshot handles. Goal active; file-edit coordination, remote commit,
 writable mounts, workstation reboot/SSH checks and packaging remain.
 
 ## Goal and scope
@@ -65,6 +66,10 @@ until the documented safe-write contract and its OS acceptance gates pass.
   cursors/receipts. Metadata and requested bytes are verified on read. Staging
   mutation refuses unmanaged state and known Linux tmpfs; inspection remains
   available. No writable filesystem path uses this API yet.
+- `worker::Storage` now gives cache/staging handles the same connection, lock,
+  bounded queue and owner thread. Rejected commands are distinct from accepted
+  commands with lost/expired replies. Guarded append/seal operations reconcile
+  those uncertain outcomes. Snapshot handles read a fixed sealed generation.
 - No uploads, writable mounts, new offline opens or desktop packaging yet.
 
 ## Current user requirements and startup work
@@ -382,8 +387,49 @@ before fast-forwarding main. Locate source evidence with
 `gh run list --branch staged-generations`; do not infer native Windows results
 from local Linux tests. No real user config, credentials or state were changed.
 
-Next required work is P5a2: one bounded async owner for cache/journal commands,
-patch/truncate/read-your-writes coordination, pinned-base hydration and a fuller
+P5a1's exact final source `ce743adbee23c24656733d23545830f6c02db93f` passed
+[run 38966280679](https://github.com/marshallr12/s3drive/actions/runs/38966280679)
+and was published to private main. Native evidence: 42 Linux / 40 Windows state
+tests, 341 FUSE requests, 749 WinFsp requests, cache and session gates.
+
+P5a2a is implemented on `shared-state-worker` in
+`crates/s3drive-state/src/worker.rs` and `worker/tests.rs`. `Storage::open`
+validates cache/staging limits before creating state. Its cache and staging
+handles share one dedicated thread, eight-command queue, connection and process
+lock. `Cache::open` uses the same implementation. No schema or dependency change.
+Input payload/range/page bounds are checked before admission; deadlines are
+30 seconds including queue time. Worker failures preserve concrete SQL/journal
+error types. Queue-full/closed errors prove no admission; missing/expired replies
+are explicitly unknown. Queued canceled work is skipped; executing work can
+commit despite cancellation. Never infer rollback from timeout.
+
+Staging exposes guarded append/zero append, seal, metadata/head, bounded reads,
+recovery pages and explicit builder abort. `begin` has no operation ID yet:
+unknown begin outcomes require draft inspection, not blind allocation retries.
+Local snapshots validate a sealed manifest and retain generation identity over
+newer heads. They hold no whole-file buffer and become unusable after owner
+close. Sealed generations remain retained forever; future GC must implement
+real pin accounting. Close drains earlier commands, drops DB/lock and then
+acknowledges. Dropping the last handle also drains accepted work.
+
+New tests exercise real shared ownership/cache pressure, competing builders,
+queue pressure and pre-admission limits, queued cancellation, lost running
+append/seal replies, immutable snapshots, SQLITE_FULL, a SQLite writer stall,
+worker-panic recovery, last-client drain and close/reopen. Test pauses have
+deadlines and remain outside the public API. The book describes the contract
+and adds `images/state-worker.png`; architecture/publication diagrams are updated.
+No live user config, credentials, startup registration or cloud objects changed.
+The full local gate passed with 51 Linux state tests. Native FUSE passed 341
+read-only fixture requests, and the no-systemd cache-enabled startup/session
+gate passed on this workstation. `state-worker.png` was visually inspected.
+Local logs: `/tmp/s3drive-worker-tests.log`, `/tmp/s3drive-worker-clippy.log`,
+`/tmp/s3drive-worker-gate.log`, `/tmp/s3drive-worker-linux.log` and
+`/tmp/s3drive-worker-session.log`. Require successful full local gate and
+exact-tip Linux/Windows/book CI before fast-forwarding main. Use
+`gh run list --branch shared-state-worker` to locate authoritative run state.
+
+Next required work is P5a2b: patch/truncate/read-your-writes coordination,
+pinned-base hydration and a fuller
 in-memory storage model. Preserve parent/supersession dependencies and define
 credential rebinding before P5b conditionally publishes to S3. No remote ack or
 sealed-generation GC is implemented yet. P5c exposes writes only after those

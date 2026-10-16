@@ -14,7 +14,8 @@ not promises made by the cited projects.
 
 Build a per-user Rust process with a shared namespace/cache engine, a Linux FUSE
 adapter, and a Windows WinFsp adapter. Use a local SQLite database for metadata
-and later a persistent upload journal. Store small clean snapshots in SQLite;
+and a local pending-intent journal. An async owner shares the cache and journal
+connection; remote upload execution remains planned. Store small clean snapshots in SQLite;
 keep bulk file data in planned ordinary local cache files. Begin with explicit, read-only bucket roots such as:
 
 ```text

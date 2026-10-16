@@ -1,7 +1,8 @@
 # Local staged generations
 
-**P5a1, implemented 2026-10-16:** `s3drive-state::journal` provides a blocking
+**P5a1/P5a2a, implemented 2026-10-16:** `s3drive-state::journal` provides a blocking
 owner-thread library for immutable generations and pending local intent.
+`s3drive-state::worker::Storage` adds a shared bounded async owner for cache and journal.
 Filesystem mounts remain read-only. No S3 mutation, upload executor, writable
 callback or staging CLI is enabled by this phase.
 
@@ -70,14 +71,14 @@ these records into unconditional overwrites.
 
 ## API and recovery boundary
 
-`Journal` borrows the already-owned `State`, so a future worker can combine cache
-and journal commands on one connection. Methods are synchronous and belong on an
+`Journal` borrows the already-owned `State`; the async worker combines cache
+and journal commands on that connection. These lower-level methods are synchronous and belong on an
 owner thread. Mutating operations require managed local state; Linux tmpfs is
 refused for new staging acknowledgments. Inspection/recovery reads remain
 available there. Windows acquisition already requires fixed NTFS; hardware
 and virtual-disk persistence still depend on the host storage contract. Callers
 must not run these methods on Tokio's executor or hold SQL transactions over
-network I/O. The bounded async write coordinator is P5a2 work.
+network I/O. File-edit coordination is P5a2b work.
 
 | Method | Result |
 | --- | --- |
@@ -104,6 +105,71 @@ error and preserves rows; dirty bytes are not discarded or refetched from S3.
 A missing or rewound head is reported rather than silently adopting an older
 generation. Recovery inspection remains available when configured limits are
 smaller than existing staged data.
+
+## Shared async owner
+
+![Cache and staging callers share one bounded queue and one SQLite owner thread. Network hydration stays outside that thread. Accepted requests with a missing reply require durable-state reconciliation.](images/state-worker.png)
+
+P5a2a adds `worker::Storage::open(directory, cache_options, staging_options)`.
+Its `cache()` and `staging()` handles share one connection, directory lock and
+dedicated OS thread. Existing `Cache::open` delegates to this owner, so mounted
+reads use it now. No mounted write callback is connected to `Staging`.
+No new schema, provider call, configuration table or dependency is required.
+
+The shared queue accepts eight commands, plus the one executing on the owner.
+Payload bounds are checked before admission: append chunks at most 1 MiB, reads
+at most 8 MiB, and recovery pages at most 1,000 records. Every call has a
+30-second deadline including time in the queue. These bound individual calls
+and queued payloads; they are not throughput or maximum disk-latency guarantees.
+Checksum and SQL work stay off Tokio's executor. A stalled network hydration
+must never occupy the owner or an open SQL transaction.
+
+The async `Staging` API exposes begin, guarded append/zero append, seal, abort,
+metadata/head, bounded reads and recovery pages. It deliberately exposes only
+the cursor-guarded append variants. Errors retain their concrete type through
+the queue, including `journal::Failure` and SQLite's disk-full error.
+
+| Result | What the caller may infer |
+| --- | --- |
+| `worker::Failure::QueueFull` | This command was rejected before admission |
+| `worker::Failure::Closed` | This command could not be submitted to the closed worker |
+| `worker::Failure::OutcomeUnknown` | A submitted command lost its reply or exceeded its deadline; it may have committed |
+| Journal/SQL error | The completed operation returned that error; existing transactional rules apply |
+| Successful seal receipt | The named local generation committed; remote publication is still pending |
+
+The worker classification does not turn a SQLite commit or I/O error into
+proof of rollback; those errors can also require recovery inspection. Close
+reports an unknown outcome on timeout even if still waiting for queue capacity.
+
+The worker skips a queued request if its caller has already gone away. A
+cancellation racing execution cannot roll back a completed commit. Callers
+must inspect `info`/`head`/`drafts`/`pending`, then replay an exact guarded append
+or seal as appropriate. `begin` does not yet take an operation ID: an unknown
+begin result requires draft inspection and must not be retried blindly.
+Application-level edit plans and remote operation IDs remain later work.
+
+`snapshot(id)` validates a sealed manifest and returns a lightweight immutable
+generation handle. It stores metadata, not the whole body; each bounded read
+verifies the same manifest identity and requested payloads. A newer local head
+does not change the snapshot. Sealed generations are already retained forever;
+future garbage collection must add explicit pin accounting before reclaiming
+them. A snapshot keeps the owner alive after other clients are dropped.
+
+Close the owner through `Storage::close` or `Cache::close` only after stopping
+all producers and native callbacks. Close drains earlier queued work and
+acknowledges only after SQLite and its process lock have dropped. It invalidates
+all cache, staging and staged-snapshot handles from that owner. Already returned
+in-memory clean-cache buffers remain valid. Dropping the last client also
+drains accepted work and releases ownership; it provides no explicit close
+acknowledgment. A worker panic loses its reply, releases ownership during
+unwinding, and requires reopen/reconciliation.
+
+Native async tests cover shared ownership, cache pressure preserving staged
+bytes, queue admission, canceled queued work, append/seal commits with missing
+replies, competing builders, immutable old snapshots, a SQLite writer stall,
+disk-full rollback, worker failure, last-client draining and close/reopen.
+The lost-response cases deliberately hold the owner after commit until the
+caller deadline expires. No test substitutes cancellation for a rollback.
 
 ## Bounds and failure behavior
 
@@ -145,6 +211,6 @@ physical power-cut test.
 
 An in-memory base test changes its revision during hydration and proves no
 mixed generation is published. A complete write coordinator still needs patch/
-truncate/read-your-writes operations, bounded async commands and broader fake-
-storage failure schedules (P5a2). Conditional remote commit/reconciliation (P5b),
+truncate/read-your-writes operations and broader fake-storage failure schedules
+(P5a2b). Conditional remote commit/reconciliation (P5b),
 writable OS callbacks and desktop save workflows (P5c) remain disabled.
