@@ -9,6 +9,9 @@ lookup and revision-pinned reads work. Linux `mount` exposes source aliases
 through FUSE; see the [Linux contract](docs/src/linux-mount.md) and
 [Windows contract](docs/src/windows-mount.md) for native verification scope.
 Native read-only acceptance passed on both platforms; file caching and writes remain planned.
+[Linux sign-in startup](docs/src/startup-and-sessions.md) works without systemd,
+including MX Linux, and has a native terminal-disconnect acceptance test.
+Windows startup across login sessions remains a separate phase.
 [Wasabi read acceptance](docs/src/wasabi.md) passed against isolated test
 objects, including a real Linux mount. Broader provider conformance is pending.
 
@@ -22,6 +25,8 @@ phases. Windows Cloud Files is a separately evaluated sync-folder alternative.
 The [mdBook](docs/src/README.md) contains the [technology comparison](docs/src/landscape.md),
 [architecture](docs/src/architecture.md), [filesystem contract](docs/src/filesystem-contract.md),
 [recovery design](docs/src/storage-and-recovery.md), and [primary sources](docs/src/sources.md).
+It also includes architecture images and an evaluation of
+[Turso for cross-machine coordination](docs/src/turso-coordination.md).
 Findings were researched on **2026-10-16**. Recommendations and untested assumptions
 are distinguished from implemented behavior.
 

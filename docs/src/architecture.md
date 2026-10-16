@@ -6,30 +6,13 @@ S3 transport. P2 adds the shared read-only namespace/handle engine and Linux
 adapter; P3 adds Windows WinFsp. Cache and writes remain planned. See the
 platform contracts for native acceptance scope.
 
-```text
-Local applications
-       |                               |
-Linux kernel / FUSE                Windows / WinFsp
-       |                               |
-s3drive-fuse                      s3drive-winfsp
-       +--------------+----------------+
-                      |
-            Shared filesystem engine
-       namespace | handles | locks | errors
-                      |
-        +-------------+--------------+
-        |                            |
-  Local cache files            SQLite state worker
-  clean / staged data          metadata / recovery journal
-        |                            |
-        +-------------+--------------+
-                      |
-       Async scheduler / provider adapter
-          bounded queues, retries, cancellation
-                      |
-         S3 endpoint A       S3 endpoint B
-         bucket/prefix       bucket/prefix
-```
+![Local applications reach the Rust filesystem engine through FUSE or WinFsp; its S3 client reads remote bucket data. Local SQLite and cache have separate roles.](images/architecture.png)
+
+The blue path is implemented. Amber cache/journal components are planned;
+SQLite currently has a schema bootstrap only. [Startup and remote sessions](startup-and-sessions.md)
+include MX Linux without systemd. [Turso coordination](turso-coordination.md)
+evaluates an optional shared metadata authority, separate from each host's local database.
+
 
 ## Crate ownership and process model
 
@@ -56,8 +39,9 @@ network work. Do not create a runtime per callback, block the runtime on SQLite,
 or reply after a kernel request has been canceled. Keep callbacks independent
 of credentials and object signing.
 
-Initially `s3drive` runs in the foreground to make errors and shutdown visible.
-Later add a systemd user service on Linux and a per-user agent on Windows. A
+The core `s3drive` mount process runs in the foreground. A detached per-user
+launcher now provides Linux desktop/SSH startup without requiring systemd.
+Windows needs a backend independent of the interactive logon session. A
 local control endpoint can carry status, unmount, pin, retry and conflict actions.
 A tray UI should consume that same API rather than implementing storage logic.
 
@@ -87,7 +71,9 @@ by the application; add source identity and invalidation in P1/P4 before use.
 | Managed layout with immutable file/chunk IDs and manifests | Namespace edits can be separated from data movement | Requires a durable metadata protocol, garbage collection, recovery and interoperability tooling |
 | Gateway with authoritative shared metadata | Can serialize namespace operations across clients | Adds an always-available service and deployment responsibility |
 
-A local SQLite file is not a cross-machine coordinator. Uploading that file to
+A local SQLite file is not a cross-machine coordinator. A hosted transactional
+service such as Turso could supply shared authority; see the separate
+[Turso evaluation](turso-coordination.md) for the proposed protocol and evidence limits. Uploading that file to
 S3 after each change does not produce a safe distributed database. If managed
 mode is chosen, design either a single-writer service with explicit failover or
 a thoroughly specified conditional-manifest protocol. Do not introduce either

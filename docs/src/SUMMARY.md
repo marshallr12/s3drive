@@ -3,6 +3,8 @@
 - [Purpose and current status](README.md)
 - [Existing tools and Rust libraries](landscape.md)
 - [Proposed architecture](architecture.md)
+- [Persistent mounts and remote sessions](startup-and-sessions.md)
+- [Turso and cross-machine coordination](turso-coordination.md)
 - [Filesystem behavior contract](filesystem-contract.md)
 - [Implemented read-only provider contract](provider-contract.md)
 - [Implemented Linux read-only mount](linux-mount.md)

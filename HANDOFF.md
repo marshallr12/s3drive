@@ -1,8 +1,9 @@
 # S3Drive handoff
 
 Updated: 2026-10-16. P3 read-only mounts have passed native acceptance on Linux
-and Windows. Scoped live Wasabi reads also passed. Goal active; cache, recovery,
-safe writes and packaging remain future phases.
+and Windows. Scoped live Wasabi reads also passed. P3.5a adds Linux startup
+without systemd; native session tests passed locally. Goal active; Windows
+startup, cache, recovery, safe writes and packaging remain future work.
 
 ## Goal and scope
 
@@ -31,6 +32,57 @@ until the documented safe-write contract and its OS acceptance gates pass.
   adoption, add persistent authenticated source identity and migrate the P0
   reserved table. A configuration fingerprint is not an account identity.
 - No uploads, mutations, disk cache, offline support or desktop packaging yet.
+
+## Current user requirements and startup work
+
+The drive should return at sign-in after reboot and remain available to later
+same-account SSH sessions, including tmux/Codex/Claude work after disconnect.
+Interpret the user's "remote SSL sessions" as SSH. MX Linux without systemd
+is explicitly required. Do not prescribe systemd as a prerequisite or an
+interactive-only Windows task as proof of cross-session access.
+
+`scripts/linux-session.py` installs a private detached supervisor, XDG desktop
+entry and optional explicit login-profile hook around the Rust mount. It uses
+standard-library Python 3.9+, a new OS session, redirected private logs and a
+process lock. It bounds retries, exposes start/status/stop/remove, preserves
+user profile content/mode and refuses removal of edited managed entries.
+No real user startup registration was installed and no reboot/logout performed.
+
+`python3 scripts/test-linux-session.py` passed locally on Linux
+6.12.29-amd64, PID 1 `init`, no `/run/systemd/system`, Python 3.11.2,
+tmux 3.3a and gio 2.74.6. Log: `/tmp/s3drive-session-native.log`.
+It tests real FUSE + desktop entry parsing, racing launches, restart from a
+tmux login hook without inherited XDG variables, terminal destruction and
+fresh-process reads, edited-entry refusal and cleanup. Only a synthetic source
+root is read; no cloud account is contacted. No mount remains afterward.
+CI now requires this gate in its Linux job. Actual reboot, full desktop logout
+policy and incoming SSH authentication/PAM need separate acceptance.
+
+The Windows foreground mount still accepts only drive letters. P3.5b must add
+an NTFS directory mount and a session-independent backend; validate same-account
+access through independent logon tokens, graceful cleanup and sign-in startup.
+WinFsp supports directory mounts, but its directory creation/removal contract
+must be implemented and tested natively. A password-backed scheduled task or
+WinFsp Launcher/service is a candidate; S4U/interactive-only alternatives have
+different credential/session restrictions. No Windows password or startup
+registration was created. See `docs/src/startup-and-sessions.md`.
+
+## Turso research and architecture images
+
+`docs/src/turso-coordination.md` records current/released versus announced
+features as of 2026-10-16, with primary sources. Engine v0.8.3 was the latest
+release; Cloud concurrent writes were announced as early preview. New Sync's
+last-push-wins reconciliation is unsuitable for exclusive ownership. Recommend
+evaluating Turso Cloud behind an authoritative coordination API while keeping
+local SQLite; no Turso dependency, database, token or subscription was added.
+Conditional remote transactions, common guard records, idempotency, fencing and
+SQL/S3 reconciliation still need a scoped integration proof. An ordinary S3
+overwrite does not consult a Turso lease; direct mode still requires verified
+S3 preconditions. Managed immutable generations would change object layout.
+
+Three original PNG images under `docs/src/images/` explain the system,
+session lifecycle and proposed coordination. The optional Pillow generator is
+`scripts/draw-architecture.py`; generated images were visually inspected.
 
 ## User configuration and live Wasabi evidence
 
@@ -107,14 +159,17 @@ was fixed and the complete native gate rerun; none is acceptance evidence.
 
 ## Publication and next work
 
-P3 was developed on `windows-read-only` from P2 commit
-`2c0830d6102f4f9b54507f8f15a2b359be21e805`. The source checkpoint above has
-native acceptance evidence; status/documentation updates also passed the local
-gate (`/tmp/s3drive-p3-checkpoint-gate.log`). Publication to main requires the
-exact branch tip's terminal CI success, then a fast-forward. Check current Git
-and Actions state when resuming; preserve ignored user configuration.
+P3 is published to private `origin/main` at
+`6e9de9695b8f3eb019eb6da279f10259142faa1b`; final-source CI run
+[38929689424](https://github.com/marshallr12/s3drive/actions/runs/38929689424)
+passed. Startup/research work is on `persistent-startup`. Baseline gate passed
+(`/tmp/s3drive-startup-baseline.log`); current gate log is
+`/tmp/s3drive-startup-gate.log`. Publication requires the exact branch tip's
+terminal CI success, then a fast-forward. Check current Git and Actions state
+when resuming; preserve ignored user configuration.
 
-Next is P4: design authenticated cache identity, SQLite migration, revision-
+Next is P3.5b Windows startup/session acceptance, followed by P4: design
+authenticated cache identity, SQLite migration, revision-
 bound clean data cache, exclusive process ownership, eviction/pinning and
 restart/disk-full/offline-miss tests. Keep cache/state outside mounted trees.
 Writes require separate staged generations and a durable journal (P5a),

@@ -53,6 +53,18 @@ The native acceptance command and its coverage are documented in
 [the Linux mount contract](linux-mount.md); it is intentionally separate from
 portable tests and must be invoked explicitly.
 
+Linux startup has another explicit native gate:
+
+```bash
+python3 scripts/test-linux-session.py
+```
+
+It requires Python 3.9+, `tmux`, `gio` (Debian/MX package `libglib2.0-bin`),
+FUSE and the built CLI. It uses isolated registration/profile files and a real
+mount with a synthetic root; it neither changes the user's startup nor contacts
+a provider. It does not require systemd. See [startup evidence](startup-and-sessions.md)
+for the distinction between terminal loss and actual reboot/logout acceptance.
+
 ## Read the book locally
 
 ```bash
@@ -63,6 +75,9 @@ mdbook serve docs --hostname 127.0.0.1 --port 3000
 The output is under `docs/book/` and ignored by Git. Serve on loopback and open
 the local URL. No public GitHub Pages deployment is configured. Edit Markdown
 under `docs/src/` and keep `SUMMARY.md` synchronized.
+Original architecture images are committed under `docs/src/images/`.
+`python3 scripts/draw-architecture.py` regenerates them using Pillow and DejaVu
+fonts; those optional authoring dependencies are unnecessary to build the book.
 
 ## Dependency policy
 

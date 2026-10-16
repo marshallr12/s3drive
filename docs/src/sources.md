@@ -49,6 +49,19 @@ These references support the research, not claims of live integration testing.
 | [Cargo workspaces](https://doc.rust-lang.org/cargo/reference/workspaces.html) | Shared workspace settings and dependencies |
 | [mdBook](https://rust-lang.github.io/mdBook/guide/creating.html) | Book structure and local authoring workflow |
 
+## Startup and shared coordination
+
+| Source | Why it matters |
+| --- | --- |
+| [XDG autostart](https://specifications.freedesktop.org/autostart/latest/) and [Bash startup files](https://www.gnu.org/software/bash/manual/html_node/Bash-Startup-Files) | Per-user desktop/login startup without a systemd dependency |
+| [WinFsp service architecture](https://github.com/winfsp/winfsp/wiki/WinFsp-Service-Architecture) and [Task Scheduler logon types](https://learn.microsoft.com/en-us/windows/win32/taskschd/principal-logontype) | Process lifetime and distinct Windows logon sessions |
+| [Turso transactions](https://docs.turso.tech/sql-reference/statements/transactions) and [Cloud concurrent writes](https://turso.tech/blog/concurrent-writes-on-turso-cloud) | Authoritative remote transactions, conflict handling and rollout status |
+| [Turso Sync conflicts](https://docs.turso.tech/sync/conflict-resolution) and [embedded replicas](https://docs.turso.tech/features/embedded-replicas/introduction) | Distinguish offline reconciliation from primary transaction authority |
+| [Turso releases](https://github.com/tursodatabase/turso/releases/tag/v0.8.3) and [Supabase announcement](https://turso.tech/blog/turso-is-joining-supabase) | Released engine features versus planned product integration |
+
+The [Turso chapter](turso-coordination.md) contains the complete feature matrix,
+SDK/platform caveats and citations for durability, schema compatibility and WAL.
+
 ## How to update this research
 
 Refresh the load-bearing vendor contract before implementing an operation.

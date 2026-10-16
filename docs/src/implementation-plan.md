@@ -5,6 +5,9 @@ verification evidence. P0 is complete; P1 has a read-only transport and local
 wire tests plus scoped live Wasabi read evidence. P2 implements a shared
 read-only engine and Linux FUSE adapter with a separate native acceptance gate.
 P3 implements Windows WinFsp, with native read-only acceptance verified.
+The user's startup/session requirements add P3.5 before caching: Linux must
+support MX without systemd, and both platforms must retain a mount after its
+launching SSH terminal disconnects. See [startup/session design](startup-and-sessions.md).
 Broader provider semantics, persistent cache identity/migration and writes
 remain unverified or unimplemented.
 
@@ -14,11 +17,13 @@ remain unverified or unimplemented.
 | P1 — provider contract | Read-only S3 client, bounded list/head/range APIs, source identity, error model and provider evidence records | Deterministic HTTP contract tests plus an explicitly selected test bucket/provider; pagination, signed requests, exact ranges and revisions verified |
 | P2 — Linux read-only drive | Shared namespace engine and FUSE callbacks | Real mount; directory traversal and random/sequential reads match remote bytes; no mutation calls; clean unmount and cancellation |
 | P3 — Windows read-only drive | WinFsp binding decision and Windows adapter reusing P2 core | Native MSVC build and Windows runtime tests; Explorer/PowerShell access; stable names/handles and clean removal |
+| P3.5a — Linux session startup | Detached per-user supervisor, XDG desktop entry and explicit shell login hook; no systemd dependency | Real FUSE mount, simultaneous starts, desktop-entry parsing, terminal loss, new-session access and safe removal |
+| P3.5b — Windows session startup | Stable mount path shared by the account's desktop/SSH logons; backend independent of the launching session | Native folder mount, independent logon tokens, startup/removal, disconnect and reboot/sign-in checks |
 | P4 — cache and local recovery | Revision-aware disk cache, eviction, pinning, single-process ownership, state migrations | Cache isolation, disk-full, stale revision, offline miss and restart tests; no dirty data exists yet |
 | P5a — staged writes | In-memory storage test double plus immutable local generations and durable journal | Fault injection at every local boundary; acknowledged local state survives restart; network mutation remains disabled |
 | P5b — conditional remote commits | Create/replace and multipart recovery; explicit flush contract | Provider preconditions verified; two-writer conflict tests; crash/timeout replay never overwrites unseen edits |
 | P5c — desktop mutations | Safe delete, documented rename behavior, open-handle semantics, real application workflows | Delete races, save/replace, concurrent open, unmount failures and data-loss tests on both OSes |
-| P6 — user application | Diagnostics, per-user startup, signed packaging/update process, optional tray UI | Clean-machine install/uninstall, missing-driver handling, upgrade/recovery, user-visible status |
+| P6 — user application | Diagnostics, startup integration in installers, signed packaging/update process, optional tray UI | Clean-machine install/uninstall, missing-driver handling, upgrade/recovery, user-visible status |
 
 ## P1 concrete tasks
 
@@ -82,6 +87,29 @@ and cancellation during a stalled GET. See [Windows contract](windows-mount.md)
 for the exact source/run and exclusions. P3 establishes the first read-only
 milestone; caching, safe writes and desktop packaging remain separate phases.
 
+### P3.5 progress
+
+Linux implements a Python standard-library launch/supervision helper around the
+Rust filesystem. Native tests passed on a host without an active systemd user
+manager: real FUSE, `gio` desktop startup, racing duplicate starts, a login hook
+in tmux, destruction of that terminal and subsequent process access. Tests also
+cover private registration, preservation of existing profile content/mode and
+refusal to remove edited startup entries. No real user login profile was changed.
+
+Windows needs a directory mount and service/scheduled-task decision that works
+across distinct logon sessions. An interactive task plus a drive letter is not
+sufficient evidence. Actual reboot and account logout policy checks on the
+target workstations remain pending on both platforms.
+
+### Optional coordination investigation
+
+[Turso research](turso-coordination.md) evaluates currently documented remote
+transactions, concurrent writes, embedded replicas and newer Sync separately.
+Before P5b, decide whether to evaluate a managed object layout with a shared
+metadata authority. Keep SQLite local and direct object mode unchanged while
+that decision is open. Offline last-push-wins sync cannot decide exclusive
+ownership; SQL metadata and S3 uploads need explicit reconciliation.
+
 ## Test matrix
 
 | Layer | Required scenarios | Where it runs |
@@ -92,6 +120,7 @@ milestone; caching, safe writes and desktop packaging remain separate phases.
 | Provider | AWS S3 general-purpose bucket plus the user's actual compatible provider | Isolated opted-in test buckets |
 | Linux mount | Kernel callbacks, large trees, concurrent reads, signals and unmount | Linux host with `/dev/fuse` |
 | Windows mount | WinFsp callbacks, sharing, names, Explorer, security and teardown | Windows host/VM with driver |
+| Startup/session lifecycle | Desktop/SSH startup, duplicate instances, terminal loss, same-account access, uninstall and reboot | Native hosts, including Linux without systemd; separate Windows logon sessions |
 | Recovery | Kill/restart at every durability boundary, external writer, credentials expired | Fault-injection runner with isolated objects |
 | Desktop compatibility | Real open/edit/save/replace sequences in chosen applications | Both OSes in P5c |
 

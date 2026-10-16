@@ -38,7 +38,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y fuse3
+          sudo apt-get install -y fuse3 tmux libglib2.0-bin
           sudo modprobe fuse
           test -c /dev/fuse
       - name: Verify real Linux mount and teardown
@@ -49,6 +49,10 @@ jobs:
         if: runner.os == 'Windows'
         timeout-minutes: 10
         run: cargo test -p s3drive-cli --test windows_mount --locked -- --ignored --nocapture
+      - name: Verify Linux startup without systemd
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        run: python3 scripts/test-linux-session.py
       - name: Save Rust build cache
         if: always()
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
