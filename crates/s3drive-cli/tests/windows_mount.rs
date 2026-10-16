@@ -1,0 +1,263 @@
+//! Explicit native Windows acceptance; a missing driver is a failure, not a skip.
+#![cfg(windows)]
+#[path = "support/fixture.rs"]
+mod fixture;
+use fixture::Fixture;
+use std::{
+    collections::BTreeSet,
+    io::{Read, Seek, SeekFrom},
+    os::windows::fs::{FileExt, OpenOptionsExt},
+    path::{Path, PathBuf},
+    process::Stdio,
+    time::Duration,
+};
+use tokio::{
+    io::{AsyncBufReadExt, BufReader},
+    process::{Child, Command},
+};
+
+async fn ready(child: &mut Child) {
+    let mut lines = BufReader::new(child.stderr.take().unwrap()).lines();
+    assert!(
+        tokio::time::timeout(Duration::from_secs(30), async {
+            while let Some(line) = lines.next_line().await.unwrap() {
+                eprintln!("{line}");
+                if line.starts_with("Mounted read-only") {
+                    return true;
+                }
+            }
+            false
+        })
+        .await
+        .unwrap(),
+        "Windows mount failed"
+    );
+}
+async fn stop(child: &mut Child) {
+    drop(child.stdin.take());
+    let status = tokio::time::timeout(Duration::from_secs(15), child.wait())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(status.success(), "mount daemon failed: {status}");
+}
+fn names(path: &Path) -> BTreeSet<String> {
+    std::fs::read_dir(path)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .collect()
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "native acceptance: Windows MSVC with installed WinFsp 2.1 driver"]
+async fn actual_windows_drive_names_reads_security_and_teardown() {
+    let mut fixture = Fixture::start().await;
+    let data: Vec<u8> = (0..350_123).map(|n| (n % 251) as u8).collect();
+    fixture.put("/test-bucket/desktop/large.bin", &data, "large-v1");
+    fixture.put("/test-bucket/desktop/nested/", b"", "marker");
+    fixture.put(
+        "/test-bucket/desktop/nested/a%2Fb + café.txt",
+        b"literal key bytes",
+        "literal",
+    );
+    fixture.put("/test-bucket/desktop/empty", b"", "empty");
+    fixture.put("/other-bucket/readme", b"other bucket", "other");
+    for i in 0..310 {
+        fixture.put(
+            &format!("/test-bucket/desktop/many/item-{i:04}"),
+            b"x",
+            "one",
+        );
+    }
+    fixture.put("/test-bucket/desktop/collision/Case", b"one", "one");
+    fixture.put("/test-bucket/desktop/collision/case", b"two", "two");
+    fixture.put("/test-bucket/desktop/unicode-collision/café", b"one", "one");
+    fixture.put("/test-bucket/desktop/unicode-collision/CAFÉ", b"two", "two");
+    fixture.put("/test-bucket/desktop/invalid/NUL.txt", b"one", "one");
+    fixture.put("/test-bucket/desktop/ambiguous/file", b"one", "one");
+    fixture.put("/test-bucket/desktop/ambiguous/file/child", b"two", "two");
+    let dir = tempfile::tempdir().unwrap();
+    let letter = (b'M'..=b'Z')
+        .rev()
+        .find(|c| !Path::new(&format!("{}:\\", *c as char)).exists())
+        .expect("no unused test drive");
+    let drive = format!("{}:", letter as char);
+    let mount = PathBuf::from(format!("{drive}\\"));
+    let config = dir.path().join("drive.toml");
+    std::fs::write(&config,format!("version=1\nmode='read-only'\n[[sources]]\nalias='docs'\nbucket='test-bucket'\nregion='us-east-1'\nprefix='desktop/'\nendpoint='{}'\nprofile='fixture'\npath_style=true\nallow_http_loopback=true\n[[sources]]\nalias='other'\nbucket='other-bucket'\nregion='us-east-1'\nendpoint='{}'\nprofile='fixture'\npath_style=true\nallow_http_loopback=true\n",fixture.endpoint,fixture.endpoint)).unwrap();
+    let credentials = dir.path().join("credentials");
+    std::fs::write(
+        &credentials,
+        "[fixture]\naws_access_key_id=TESTPROFILE\naws_secret_access_key=TESTPROFILESECRET\n",
+    )
+    .unwrap();
+    let aws_config = dir.path().join("aws-config");
+    std::fs::write(&aws_config, "").unwrap();
+    let mut command = Command::new(env!("CARGO_BIN_EXE_s3drive"));
+    command
+        .arg("mount")
+        .arg(&config)
+        .arg(&drive)
+        .arg("--unmount-on-stdin-close")
+        .env("AWS_SHARED_CREDENTIALS_FILE", credentials)
+        .env("AWS_CONFIG_FILE", aws_config)
+        .env("AWS_EC2_METADATA_DISABLED", "true")
+        .stdin(Stdio::piped())
+        .stderr(Stdio::piped())
+        .stdout(Stdio::null())
+        .kill_on_drop(true);
+    let mut child = command.spawn().unwrap();
+    ready(&mut child).await;
+    // A second daemon must not steal or silently choose a different drive.
+    let occupied = tokio::time::timeout(Duration::from_secs(15), command.output())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(
+        !occupied.status.success(),
+        "occupied drive mount unexpectedly succeeded"
+    );
+    let path = mount.clone();
+    let objects = fixture.objects.clone();
+    let mut checks = tokio::task::spawn_blocking(move || {
+        assert_eq!(
+            names(&path),
+            BTreeSet::from(["docs".into(), "other".into()])
+        );
+        assert_eq!(
+            std::fs::read(path.join("OTHER/README")).unwrap(),
+            b"other bucket"
+        );
+        assert_eq!(
+            std::fs::read(path.join("docs/nested/A%2fB + CAFÉ.TXT")).unwrap(),
+            b"literal key bytes"
+        );
+        assert!(std::fs::read(path.join("docs/empty")).unwrap().is_empty());
+        assert_eq!(
+            names(&path.join("docs/many")),
+            (0..310).map(|n| format!("item-{n:04}")).collect()
+        );
+        let large = path.join("docs/large.bin");
+        let mut file = std::fs::File::open(&large).unwrap();
+        let mut sequential = Vec::new();
+        file.read_to_end(&mut sequential).unwrap();
+        assert_eq!(sequential, data);
+        for offset in [0, 1, 65535, 262144, data.len() - 10, data.len()] {
+            let mut buffer = [0; 79];
+            let len = file.seek_read(&mut buffer, offset as u64).unwrap();
+            assert_eq!(&buffer[..len], &data[offset..(offset + 79).min(data.len())]);
+        }
+        std::thread::scope(|scope| {
+            for n in 0..8 {
+                let file = &file;
+                let data = &data;
+                scope.spawn(move || {
+                    let mut buffer = [0; 1024];
+                    assert_eq!(file.seek_read(&mut buffer, n * 4096).unwrap(), 1024);
+                    assert_eq!(&buffer, &data[n as usize * 4096..n as usize * 4096 + 1024]);
+                });
+            }
+        });
+        assert!(std::fs::write(path.join("docs/new"), b"no").is_err());
+        assert!(std::fs::remove_file(&large).is_err());
+        assert!(std::fs::rename(&large, path.join("docs/renamed")).is_err());
+        assert!(
+            std::fs::OpenOptions::new()
+                .write(true)
+                .open(&large)
+                .is_err()
+        );
+        for directory in ["collision", "unicode-collision", "invalid", "ambiguous"] {
+            assert!(
+                std::fs::read_dir(path.join("docs").join(directory))
+                    .and_then(|i| i.collect::<std::io::Result<Vec<_>>>())
+                    .is_err(),
+                "bad names leaked: {directory}"
+            );
+        }
+        // Windows sharing is enforced by the real driver, across independent opens.
+        let exclusive_path = path.join("other/readme");
+        let exclusive = std::fs::OpenOptions::new()
+            .read(true)
+            .share_mode(0)
+            .open(&exclusive_path)
+            .unwrap();
+        assert!(std::fs::File::open(&exclusive_path).is_err());
+        drop(exclusive);
+        assert!(std::fs::File::open(&exclusive_path).is_ok());
+        objects.lock().unwrap().insert(
+            "/test-bucket/desktop/large.bin".into(),
+            (b"changed".to_vec(), "\"large-v2\"".into()),
+        );
+        file.seek(SeekFrom::Start(0)).unwrap();
+        assert!(
+            file.read(&mut [0; 3]).is_err(),
+            "old handle served a replaced revision"
+        );
+        drop(file);
+        assert_eq!(std::fs::read(&large).unwrap(), b"changed");
+    });
+    let result = tokio::time::timeout(Duration::from_secs(120), &mut checks).await;
+    if !matches!(result, Ok(Ok(()))) {
+        stop(&mut child).await;
+        if result.is_err() {
+            let _ = tokio::time::timeout(Duration::from_secs(65), checks).await;
+        }
+        panic!("Windows filesystem checks failed: {result:?}");
+    }
+    // PowerShell filesystem and Explorer's Shell.Application namespace/ACL APIs.
+    let script = format!(
+        r#"$ErrorActionPreference='Stop'; if ((Get-ChildItem -LiteralPath '{drive}\').Count -ne 2) {{ throw 'aliases' }}; if ([IO.File]::ReadAllText('{drive}\other\readme') -ne 'other bucket') {{ throw 'read' }}; $acl=Get-Acl -LiteralPath '{drive}\other\readme'; $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value; $rules=$acl.GetAccessRules($true,$true,[Security.Principal.SecurityIdentifier]); if ($rules.Count -ne 1 -or $rules[0].IdentityReference.Value -ne $sid -or [int]$rules[0].FileSystemRights -band 2) {{ throw 'owner read-only ACL' }}; $shell=New-Object -ComObject Shell.Application; $folder=$shell.NameSpace('{drive}\'); if ($null -eq $folder -or $folder.Items().Count -ne 2) {{ throw 'Explorer namespace' }}; Write-Output 'PowerShell, owner ACL, and Explorer Shell namespace verified'"#
+    );
+    let shell = tokio::time::timeout(
+        Duration::from_secs(30),
+        Command::new("powershell.exe")
+            .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+            .kill_on_drop(true)
+            .output(),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    eprintln!("{}", String::from_utf8_lossy(&shell.stdout));
+    assert!(
+        shell.status.success(),
+        "{}",
+        String::from_utf8_lossy(&shell.stderr)
+    );
+    stop(&mut child).await;
+    assert!(!mount.exists(), "drive remains after normal teardown");
+    fixture.put("/other-bucket/stalled", b"stalled", "stalled");
+    let mut child = command.spawn().unwrap();
+    ready(&mut child).await;
+    let stalled = mount.join("other/stalled");
+    let reading = tokio::task::spawn_blocking(move || std::fs::read(stalled));
+    tokio::time::timeout(Duration::from_secs(15), fixture.stalled.notified())
+        .await
+        .unwrap();
+    stop(&mut child).await;
+    assert!(
+        tokio::time::timeout(Duration::from_secs(10), reading)
+            .await
+            .unwrap()
+            .unwrap()
+            .is_err()
+    );
+    assert!(!mount.exists(), "drive remains after cancellation");
+    assert!(!fixture.server.is_finished(), "fixture server failed");
+    {
+        let requests = fixture.requests.lock().unwrap();
+        assert!(requests.iter().any(|r| r.contains("continuation-token=")));
+        assert!(
+            requests
+                .iter()
+                .all(|r| r.starts_with("GET ") || r.starts_with("HEAD "))
+        );
+        eprintln!(
+            "Verified {} read-only S3 requests through two real WinFsp drive sessions",
+            requests.len()
+        );
+    }
+    fixture.server.abort();
+    let _ = (&mut fixture.server).await;
+}

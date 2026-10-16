@@ -4,8 +4,8 @@
 
 The workspace pins Rust 1.99.1 in `rust-toolchain.toml`; Cargo dependencies are
 locked. Native builds need a C compiler for bundled SQLite. Use MSVC with the
-Visual Studio C++ workload on Windows. Building and portable tests require no
-filesystem drivers. The separate Linux mount test needs FUSE. Dev/test builds omit debug symbols to reduce the SDK's build footprint.
+Visual Studio C++ workload on Windows. Windows builds now require WinFsp 2.1 Developer files;
+installing the runtime is separate from starting a mount. The separate Linux mount test needs FUSE. Dev/test builds omit debug symbols to reduce the SDK's build footprint.
 
 ```bash
 cargo build --workspace --locked
@@ -19,7 +19,7 @@ The initializer creates `metadata.sqlite3` in the given local directory. It is
 safe to reopen the scaffold's current schema; future versions and databases
 owned by other applications are rejected. It does not contact S3 or cache file
 contents. Linux `mount` now serves the shared engine through FUSE; Windows
-continues to return an explicit unsupported error.
+has a WinFsp implementation pending native acceptance.
 
 The separate `list`, `stat` and `read` commands perform S3 reads with a real
 configuration. See [provider contract](provider-contract.md) for their usage
@@ -38,8 +38,8 @@ preserves failures with `set -euo pipefail`. Install mdBook 0.5.4 with
 local target files; it does not validate external websites or heading anchors.
 
 On Windows, run the Rust commands directly or through Git Bash. CI defines
-native Linux and Windows Rust jobs and a separate Linux book job. Initial CI
-does not install WinFsp, access providers or use cloud credentials. A separate
+native Linux and Windows Rust jobs and a separate Linux book job. CI installs a pinned WinFsp runtime/SDK and runs an explicit native Windows
+mount test; it does not access providers or use cloud credentials. A separate
 explicit Linux native test uses `/dev/fuse` and a local fixture.
 
 Behavioral tests cover namespace isolation/traversal, exact key bytes and byte
@@ -68,7 +68,7 @@ under `docs/src/` and keep `SUMMARY.md` synchronized.
 
 `fuser` and `nix` live under a Linux target dependency table. Add any Windows
 binding under a Windows target table. Restrict unsafe FFI to an audited adapter module if needed; workspace
-code currently forbids unsafe Rust. The AWS SDK now implements the read-only
+code forbids unsafe Rust except the reviewed Windows native API module. The AWS SDK now implements the read-only
 transport, while its mutation APIs are not exposed by S3Drive.
 
 Inspect local resolved source before using new dependency APIs. Keep provider

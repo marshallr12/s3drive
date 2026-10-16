@@ -5,5 +5,19 @@ edition.workspace = true
 publish.workspace = true
 repository.workspace = true
 
-[lints]
-workspace = true
+[target.'cfg(windows)'.dependencies]
+s3drive-fs.workspace = true
+s3drive-s3.workspace = true
+tokio = { workspace = true, features = ["signal"] }
+winfsp.workspace = true
+windows.workspace = true
+
+[target.'cfg(windows)'.build-dependencies]
+winfsp.workspace = true
+
+[lints.rust]
+# Only native.rs may contain audited Windows FFI. All other modules forbid it.
+unsafe_code = "deny"
+
+[lints.clippy]
+all = "warn"

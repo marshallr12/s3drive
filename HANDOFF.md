@@ -31,12 +31,22 @@ at a partial phase checkpoint.
 
 ## Current user input
 
-The user selected **Wasabi** for the first hosted integration target.
-`examples/wasabi.toml` is an illustrative US East 1 configuration, not evidence
-of their actual region. A pending asynchronous question asks for the region,
-test bucket/prefix and local credential profile name. No credentials or real
-bucket details have been provided, and no Wasabi account was accessed.
+The user selected **Wasabi**, test bucket `s3drivetest`, region `us-east-2`
+(N. Virginia). Correct endpoint: `https://s3.us-east-2.wasabisys.com`.
+Recommended ignored config: `s3drive.local.toml`, with profile `wasabi-s3drive`
+in `~/.aws/credentials`. User is preparing configuration; the file was absent
+at this turn's start. No credentials were read and no live provider accessed.
+Explained `[[sources]]`, named credential profiles and prefix mapping in chat.
 Keep credentials out of chat, logs and Git. See [Wasabi plan](docs/src/wasabi.md).
+
+## P3 in progress
+
+Windows adapter and native acceptance harness are implemented on a working
+branch for native CI verification. Do not claim P3 passed until the Windows
+runner completes mount/read/unmount tests. `docs/src/windows-mount.md` records
+APIs, limits and evidence boundaries. Linux and Windows mount tests now share
+`crates/s3drive-cli/tests/support/fixture.rs`; rerun Linux native acceptance.
+The previous main-branch results below do not certify these edits.
 
 ## Verification
 

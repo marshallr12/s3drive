@@ -18,6 +18,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install pinned Rust
         run: rustup toolchain install 1.99.1 --profile minimal --component clippy --component rustfmt
+      - name: Install pinned WinFsp runtime and SDK
+        if: runner.os == 'Windows'
+        run: ./scripts/install-winfsp.ps1
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked
@@ -33,6 +36,10 @@ jobs:
         if: runner.os == 'Linux'
         timeout-minutes: 10
         run: cargo test -p s3drive-cli --test linux_mount --locked -- --ignored --nocapture
+      - name: Verify real Windows drive and teardown
+        if: runner.os == 'Windows'
+        timeout-minutes: 10
+        run: cargo test -p s3drive-cli --test windows_mount --locked -- --ignored --nocapture
   book:
     runs-on: ubuntu-latest
     steps:

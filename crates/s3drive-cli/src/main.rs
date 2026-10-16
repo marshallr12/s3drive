@@ -4,10 +4,7 @@ use s3drive_s3::S3Reader;
 use std::{error::Error, fs, io::Write, path::PathBuf};
 
 #[derive(Parser)]
-#[command(
-    version,
-    about = "S3Drive read-only S3 tools and Linux filesystem mounts"
-)]
+#[command(version, about = "S3Drive read-only S3 tools and filesystem mounts")]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -48,10 +45,14 @@ enum Command {
         #[arg(long, default_value_t = 65536)]
         length: usize,
     },
-    /// Mount a read-only drive in the foreground (Linux; Windows is pending).
+    /// Mount a read-only drive in the foreground (Linux FUSE or Windows WinFsp).
     Mount {
         config: PathBuf,
         mountpoint: PathBuf,
+        /// Unmount when the supervising process closes standard input (Windows).
+        #[cfg(windows)]
+        #[arg(long)]
+        unmount_on_stdin_close: bool,
     },
 }
 
@@ -146,7 +147,12 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
             let bytes = handle.read_range(offset, length).await?;
             std::io::stdout().lock().write_all(&bytes)?;
         }
-        Command::Mount { config, mountpoint } => {
+        Command::Mount {
+            config,
+            mountpoint,
+            #[cfg(windows)]
+            unmount_on_stdin_close,
+        } => {
             #[cfg(target_os = "linux")]
             {
                 let config = Config::parse(&fs::read_to_string(config)?)?;
@@ -155,8 +161,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
             }
             #[cfg(target_os = "windows")]
             {
-                let _ = (config, mountpoint);
-                s3drive_winfsp::mount()?;
+                let config = Config::parse(&fs::read_to_string(config)?)?;
+                let filesystem = s3drive_fs::ReadOnlyFs::new(&config).await?;
+                s3drive_winfsp::run(filesystem, &mountpoint, unmount_on_stdin_close).await?;
             }
             #[cfg(not(any(target_os = "linux", target_os = "windows")))]
             {

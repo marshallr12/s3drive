@@ -1,7 +1,7 @@
 # Linux and Windows integration
 
-Linux now has a read-only FUSE implementation; the Windows adapter remains a
-stub. See [the Linux contract](linux-mount.md) for commands, limits and the
+Linux now has a read-only FUSE implementation; a Windows adapter is implemented with native acceptance pending. See the
+[Windows contract](windows-mount.md). See [the Linux contract](linux-mount.md) for commands, limits and the
 explicit native acceptance gate.
 
 ## Linux: FUSE with fuser
@@ -83,7 +83,7 @@ distribution model; do not assume the runtime exception applies to the wrapper.
 [WinFsp license](https://github.com/winfsp/winfsp/blob/master/License.txt),
 [winfsp-rs license](https://github.com/SnowflakePowered/winfsp-rs/blob/master/LICENSE.md)
 
-The current Linux adapter links fuser (MIT). No Windows binding is linked and
+The current Linux adapter links fuser (MIT). The Windows prototype links the GPL-3.0 winfsp wrapper;
 no project distribution license has been selected. This
 does not block private research. Before distributing a working Windows build,
 resolve whether to use this wrapper under compatible terms, another reviewed
