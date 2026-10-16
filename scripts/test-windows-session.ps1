@@ -135,11 +135,14 @@ try {
             if (-not [IO.File]::Exists((Join-Path $root 'drive.toml')) -or -not [IO.File]::Exists((Join-Path $env:USERPROFILE '.aws\credentials'))) { throw 'Removal deleted config or credentials' }
         }
         'Diagnostics' {
-            if ([IO.File]::Exists((Join-Path $state 'startup.json'))) { Manage Status }
+            if ([IO.File]::Exists((Join-Path $state 'startup.json'))) {
+                try { Manage Status } catch { Write-Output ("Status diagnostic failed: " + $_.Exception.Message) }
+            }
             if ([IO.File]::Exists((Join-Path $state 'session.log'))) { Get-Content -LiteralPath (Join-Path $state 'session.log') -Tail 30 }
         }
     }
 } catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }
+exit 0
 '@ | Set-Content -LiteralPath $worker -Encoding UTF8
     $null = User-Action Install
     # The installer process (and its independent logon) has exited. Task
@@ -168,7 +171,8 @@ try {
     Write-Output 'PASS: non-admin registration, independent same-account logons, exact S3 and Unicode reads, duplicate starts, retained mount and removal'
 } catch {
     if ($null -ne $account -and [IO.File]::Exists($worker)) {
-        try { Write-Output (User-Action Diagnostics) } catch { Write-Warning 'Could not collect isolated session diagnostics' }
+        try { Write-Output (User-Action Diagnostics) }
+        catch { Write-Warning ("Isolated diagnostics failed: " + $_.Exception.Message) }
     }
     throw
 } finally {

@@ -295,6 +295,11 @@ try {
         }
     }
 } catch {
-    [Console]::Error.WriteLine($_.Exception.Message)
+    $message=$_.Exception.Message
+    if ($Action -eq 'Run') {
+        try { Assert-PrivateRoot; Log-Line ("Supervisor failed: " + $message) } catch {}
+    }
+    [Console]::Error.WriteLine($message)
     exit 1
 }
+exit 0
