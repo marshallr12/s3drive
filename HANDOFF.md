@@ -10,7 +10,9 @@ with SQLite BLOBs. P4b2b connects it to optional mounted caching, with native
 acceptance required for each published source. P5a1 adds the local staged-
 generation/journal library. P5a2a adds one shared async owner for cache/journal
 commands and immutable local snapshot handles. P5a2b adds local edit plans and
-pinned-base hydration. Goal active; conditional remote commit,
+pinned-base hydration. P5b1 adds an explicit disposable-key transport/probe;
+live Wasabi write evidence awaits the new scoped authorization. Goal active;
+application remote commits,
 writable mounts, workstation reboot/SSH checks and packaging remain.
 
 ## Goal and scope
@@ -27,7 +29,7 @@ until the documented safe-write contract and its OS acceptance gates pass.
 - Linux FUSE and Windows WinFsp foreground mounts use the same S3 reader.
   Owner-only/read-only permissions, revision-pinned file handles, bounded
   directory snapshots, explicit collisions and cancellation paths are enforced.
-- S3 exposes LIST/HEAD/range GET only. It validates ranges, lengths and revisions,
+- The mounted S3 reader exposes LIST/HEAD/range GET only. It validates ranges, lengths and revisions,
   bounds deadlines and uses explicit endpoint/region/profile precedence.
 - Windows uses native UTF-16 case comparison and owner SID security descriptors.
   Invalid/case-colliding names fail instead of being silently renamed/hidden.
@@ -76,7 +78,11 @@ until the documented safe-write contract and its OS acceptance gates pass.
   `s3drive-fs::edits` plans patch/truncate/sparse growth, copies immutable local
   parent pieces, and hydrates remote unchanged ranges through a pinned handle.
   A successful plan returns a new local snapshot; mounted writes remain disabled.
-- No uploads, writable mounts, new offline opens or desktop packaging yet.
+- No application uploads, writable mounts, new offline opens or desktop packaging yet.
+- A separate explicit `probe-writes` CLI can create/replace/delete only six
+  reviewed fixture keys. Its private transport makes one mutation attempt and
+  observes metadata plus full bytes after uncertain results. Application uploads
+  and mounted mutations remain disabled.
 
 ## Current user requirements and startup work
 
@@ -489,7 +495,64 @@ Require exact-final-tip Linux/Windows/book CI before main publication; locate it
 with `gh run list --branch file-edit-plans`. No live user config, credentials,
 startup registration or cloud objects were changed.
 
-Next required work is P5b: conditional remote commits and uncertain-result
+P5a2b's exact final source `4414711ee313ab97c86ea0e71de6438b8ebce635` passed
+[run 38971696786](https://github.com/marshallr12/s3drive/actions/runs/38971696786)
+and was published to private main. Native evidence: 12 filesystem tests on each
+OS, 56 Linux / 54 Windows state tests, SDK Unicode hydration, 341 FUSE requests,
+749 WinFsp requests, startup/session gates and book. Full log:
+`/tmp/s3drive-edits-ci.log`.
+
+P5b1 is implemented on `conditional-write-probes`:
+`s3drive-s3/src/probe.rs`, its private `probe/transport.rs` and `probe/tests.rs`,
+plus the CLI's `probe-writes plan/run/cleanup` and `probe_cli.rs`. No DB migration.
+New direct dependencies reuse already-locked getrandom 0.4.3, serde and toml.
+`plan` performs no credential resolution/network and writes a fresh TOML plan
+with a random 128-bit namespace, source binding, six exact keys and limits.
+`run` requires exact source/plan regeneration and digest confirmation, reserves
+a new report path before network work, pins one credential generation, and
+refuses versioned or nonempty scopes before PUT. The private transport uses
+one SDK attempt, 30-second request deadlines, required-only SDK checksums,
+guarded known-length bodies, operation markers and SHA-256 metadata. Probe
+objects are <=4 KiB, fourteen PUTs maximum per execution; transport bound is
+8 MiB. CLI mutation futures are heap-pinned out of mount startup's envelope.
+
+Lost/malformed success, service errors and cancellation never trigger an
+automatic second PUT. Observation requires exact marker/length plus complete
+conditional GET metadata, revision and body checksum. `null` versions remain
+mutable. An absent/rival object cannot prove a lost attempt never committed;
+unknown application attempts will need durable unresolved states. Reports are
+test evidence, not application capability tokens or remote acknowledgment.
+
+Cleanup is explicit fixture-only plain DELETE after verifying a known marker
+and exact fixture body in the reserved unversioned scope. It refuses foreign,
+corrupt or versioned data. It is not the application's delete protocol or an
+unconditional fallback from a failed application guard. Interrupted runs can
+use `cleanup` with the same confirmed plan and a fresh report path; no PUT.
+The original Wasabi three-object read approval does not authorize these new
+create/replace probes. No live write probe has run in this phase yet.
+
+Prepared ignored mode-0600 plan: `s3drive.probe-plan.local.toml`.
+Bucket `s3drivetest`, exact prefix
+`s3drive-conformance/d147830ba5257d762e14c3962cde60f9/`.
+Digest `98914e5210466c6c1e074ea36184ea580d20c93749363e18650e5ddf14906de6`.
+An async question requests explicit authorization for six keys, conditional
+replacements and cleanup, under 1 MiB ordinary transfer. Check the actual user
+reply before executing; tool acceptance is not approval. Keep this question
+pending while progressing independent local work. The plan has been queued
+for display in Codex; do not claim it was visibly opened. Config/credentials,
+real startup registration and existing cloud objects remain untouched.
+
+Local gate and native Linux checks passed before final documentation updates:
+29 S3 tests, existing 12 filesystem / 56 state tests, SDK hydration/CLI guards,
+341 FUSE requests and the no-systemd cache-enabled session gate. Logs:
+`/tmp/s3drive-probe-gate.log`, `/tmp/s3drive-probe-tests.log`,
+`/tmp/s3drive-probe-linux.log`, `/tmp/s3drive-probe-session.log`.
+The new book chapter `conditional-uploads.md` describes primary-source research,
+the exact scope, command sequence, evidence and remaining state-machine work.
+Run the final local gate and exact-tip Linux/Windows/book CI before publication;
+locate the run with `gh run list --branch conditional-write-probes`.
+
+Next required work is P5b2: conditional remote commits and uncertain-result
 reconciliation, followed by reference/pin-aware remote-ack cleanup.
 Preserve parent/supersession dependencies and define
 credential rebinding before P5b conditionally publishes to S3. No remote ack or

@@ -102,7 +102,7 @@ source file hashes, binary hash, platform, results and cleanup. Test namespace:
 | Mounted filesystem | Real Linux FUSE sequential/concurrent reads and clean unmount | Native Windows against Wasabi |
 | ETag preconditions | Reads supplied matching If-Match and received the expected bytes | Reject a stale ETag after a separately authorized replacement |
 | Version reads | Unverified; this bucket has versioning disabled | Versioned test bucket and exact returned version checks |
-| Writes, multipart, delete and rename | CLI fixture creation/cleanup only; S3Drive exposes no mutations | Separate safe-write phase conformance |
+| Writes, multipart, delete and rename | Explicit scoped single-PUT probe available; application mutations remain disabled and live write evidence is pending | [Write probe](conditional-uploads.md) and subsequent safe-write conformance |
 
 The binary fixture is `bytes(range(256))` repeated 2,048 times, SHA-256
 `33bc8aab40703678c3ebe94d2dd8f2afff285dd901f9234e841e4679f8204fd5`.

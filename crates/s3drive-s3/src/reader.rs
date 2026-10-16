@@ -46,11 +46,11 @@ pub struct ObjectMetadata {
 
 #[derive(Clone)]
 pub struct S3Reader {
-    client: Client,
-    credentials: SharedCredentialsProvider,
-    source: Source,
-    fingerprint: String,
-    deadline: Duration,
+    pub(crate) client: Client,
+    pub(crate) credentials: SharedCredentialsProvider,
+    pub(crate) source: Source,
+    pub(crate) fingerprint: String,
+    pub(crate) deadline: Duration,
 }
 
 /// An opaque binding of source configuration and one credential generation.
@@ -106,7 +106,7 @@ impl S3Reader {
         Self::with_credentials(source.clone(), credentials, DEADLINE, 3)
     }
 
-    fn with_credentials(
+    pub(crate) fn with_credentials(
         source: Source,
         credentials: SharedCredentialsProvider,
         deadline: Duration,
@@ -329,7 +329,7 @@ impl S3Reader {
         .await
     }
 
-    fn full_key(&self, key: &str) -> Result<String> {
+    pub(crate) fn full_key(&self, key: &str) -> Result<String> {
         validate_key(key)?;
         let key = format!("{}{key}", self.source.prefix);
         if key.len() > 1024 {
@@ -415,7 +415,7 @@ impl ReadHandle {
     }
 }
 
-fn credential_binding(fingerprint: &str, credentials: &Credentials) -> CacheIdentity {
+pub(crate) fn credential_binding(fingerprint: &str, credentials: &Credentials) -> CacheIdentity {
     let mut hash = Sha256::new();
     hash.update(b"s3drive-credential-binding-v1");
     for part in [
@@ -462,7 +462,7 @@ async fn deadline<T>(
         .map_err(|_| Error::new(operation, ErrorKind::Timeout))?
 }
 
-fn source_fingerprint(source: &Source) -> String {
+pub(crate) fn source_fingerprint(source: &Source) -> String {
     let mut hash = Sha256::new();
     hash.update(b"s3drive-source-config-v2");
     let endpoint = source

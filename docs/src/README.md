@@ -16,8 +16,10 @@ Build a per-user Rust process with a shared namespace/cache engine, a Linux FUSE
 adapter, and a Windows WinFsp adapter. Use a local SQLite database for metadata
 and a local pending-intent journal. An async owner shares the cache and journal
 connection; local edit plans provide patch/truncate and pinned-base hydration.
-Remote upload execution remains planned. Store small clean snapshots in SQLite;
-keep bulk file data in planned ordinary local cache files. Begin with explicit, read-only bucket roots such as:
+Remote upload execution remains planned. An [explicit write-capability probe](conditional-uploads.md)
+reserves disposable keys and records provider evidence without enabling mounted writes.
+Store small clean snapshots in SQLite; bulk cache files remain future work.
+Begin with explicit, read-only bucket roots such as:
 
 ```text
 Linux:   ~/S3Drive/documents/report.pdf
@@ -53,6 +55,7 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Clean-cache storage library | Bounded worker, checksums, LRU/pins and recovery tests |
 | Mounted caching | Opt-in; online HEAD on new opens, revision snapshots, restart and integrity checks |
 | Local staging/journal foundation | Immutable chunked generations and pending intent; [no upload execution yet](staged-writes.md) |
+| Conditional write probe | Reviewed six-key plan/run/cleanup tool; [live provider proof pending](conditional-uploads.md) |
 | Remote upload/flush, writable mounts, new offline opens, tray UI | Planned |
 
 The initial research/scaffold delivery is complete. Work has advanced to the

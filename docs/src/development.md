@@ -184,3 +184,13 @@ stale base and no HTTP mutation. Child startup/execution have deadlines and
 kill-on-drop cleanup. The state tests additionally cover schema-4 migration,
 operation-mapping rollback, lost begin replies and manifest-bound intent keys;
 all nine process-kill points now exercise operation-bound generations too.
+
+`s3drive-s3/src/probe/tests.rs` drives the real SDK over bounded TCP fixtures.
+It enforces headers and exact bytes, simulates ignored guards, lost/malformed
+receipts, 503s, cancellation, a committed-then-deleted object, corrupt data and
+foreign metadata. It verifies no hidden PUT retry, full checksum observation,
+Unicode/literal keys, races, null-version normalization, empty/occupied scope
+checks and fixture-only cleanup. The model's atomic guard is not provider proof.
+`probe_cli.rs` tests no-network planning, exact digest/source/target validation,
+private create-new artifacts and refusal to overwrite reports before network
+work. The optional live commands require the [reviewed probe plan](conditional-uploads.md).

@@ -11,6 +11,9 @@ aws-sdk-s3.workspace = true
 percent-encoding.workspace = true
 s3drive-core.workspace = true
 sha2.workspace = true
+getrandom.workspace = true
+serde.workspace = true
+toml.workspace = true
 tokio.workspace = true
 url.workspace = true
 

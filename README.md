@@ -15,6 +15,8 @@ now preserves immutable write generations. Cache and staging commands share a
 bounded async owner; writable mounts and remote commits remain planned.
 Local edit plans support patch/truncate and revision-pinned hydration with
 restart replay; the native mount adapters still expose read-only files.
+An explicit [disposable-key write probe](docs/src/conditional-uploads.md)
+can test a provider's conditional PUT behavior; application uploads remain disabled.
 [Linux sign-in startup](docs/src/startup-and-sessions.md) works without systemd,
 including MX Linux, and has a native terminal-disconnect acceptance test.
 Windows startup uses a per-user scheduled task and an NTFS folder shared across

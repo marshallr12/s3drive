@@ -4,7 +4,10 @@ use s3drive_s3::S3Reader;
 use std::{error::Error, fs, io::Write, path::PathBuf};
 
 #[derive(Parser)]
-#[command(version, about = "S3Drive read-only S3 tools and filesystem mounts")]
+#[command(
+    version,
+    about = "S3Drive read-only mounts, S3 tools and opt-in conformance probes"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -12,6 +15,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Plan/run an explicit disposable-key conditional-write capability probe.
+    ProbeWrites {
+        #[command(subcommand)]
+        command: ProbeCommand,
+    },
     /// Validate a local configuration without contacting a provider.
     ConfigCheck { config: PathBuf },
     /// Show which bucket/key a slash-separated virtual file path would use.
@@ -56,9 +64,44 @@ enum Command {
     },
 }
 
+#[derive(Subcommand)]
+enum ProbeCommand {
+    /// Prepare six random, source-bound fixture keys; no provider connection.
+    Plan {
+        config: PathBuf,
+        source: String,
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Create/replace/delete only the reserved keys, after plan confirmation.
+    Run {
+        config: PathBuf,
+        source: String,
+        #[arg(long)]
+        plan: PathBuf,
+        #[arg(long)]
+        confirm: String,
+        #[arg(long)]
+        report: PathBuf,
+    },
+    /// Dispose only matching owned fixtures after an interrupted probe; no PUT.
+    Cleanup {
+        config: PathBuf,
+        source: String,
+        #[arg(long)]
+        plan: PathBuf,
+        #[arg(long)]
+        confirm: String,
+        #[arg(long)]
+        report: PathBuf,
+    },
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     match Cli::parse().command {
+        // Keep SDK mutation futures out of the existing mount startup envelope.
+        Command::ProbeWrites { command } => Box::pin(run_probe(command)).await?,
         Command::ConfigCheck { config } => {
             let config = Config::parse(&fs::read_to_string(config)?)?;
             println!(
@@ -167,6 +210,114 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         }
     }
     Ok(())
+}
+
+async fn run_probe(command: ProbeCommand) -> Result<(), Box<dyn Error + Send + Sync>> {
+    use s3drive_s3::probe::Plan;
+    let cleanup = matches!(&command, ProbeCommand::Cleanup { .. });
+    match command {
+        ProbeCommand::Plan {
+            config,
+            source,
+            output,
+        } => {
+            let source = probe_source(config, &source)?;
+            let plan = Plan::prepare(&source)?;
+            let mut file = create_private_new(&output)?;
+            file.write_all(plan.to_toml()?.as_bytes())?;
+            file.sync_all()?;
+            println!(
+                "Prepared {} disposable keys under {}/{}",
+                plan.keys().len(),
+                plan.bucket(),
+                plan.full_prefix()
+            );
+            println!("plan-digest={}", plan.digest()?);
+            println!(
+                "No credentials resolved or provider requests made. Review the plan before run."
+            );
+        }
+        ProbeCommand::Run {
+            config,
+            source,
+            plan,
+            confirm,
+            report,
+        }
+        | ProbeCommand::Cleanup {
+            config,
+            source,
+            plan,
+            confirm,
+            report,
+        } => {
+            let source = probe_source(config, &source)?;
+            let plan = {
+                use std::io::Read as _;
+                let mut text = String::new();
+                fs::File::open(plan)?
+                    .take(32769)
+                    .read_to_string(&mut text)?;
+                Plan::from_toml(&text)?
+            };
+            plan.validate(&source, &confirm)?;
+            // Fail on an unusable/existing report path before any remote write.
+            let mut file = create_private_new(&report)?;
+            file.write_all(format!("# Probe started; plan-digest={confirm}\n# An interrupted report is not successful capability evidence.\n").as_bytes())?;
+            file.sync_all()?;
+            let result = if cleanup {
+                plan.cleanup(&source, &confirm).await?
+            } else {
+                plan.execute(&source, &confirm).await?
+            };
+            file.write_all(result.to_toml()?.as_bytes())?;
+            file.sync_all()?;
+            for check in &result.checks {
+                println!(
+                    "{} {}: {}",
+                    if check.passed { "PASS" } else { "FAIL" },
+                    check.name,
+                    check.detail
+                );
+            }
+            for error in &result.errors {
+                eprintln!("Probe error: {error}");
+            }
+            if !result.remaining_keys.is_empty() {
+                eprintln!(
+                    "Fixtures retained for recovery: {:?}",
+                    result.remaining_keys
+                );
+            }
+            if !result.passed {
+                return Err("probe did not pass; inspect its report and cleanup state".into());
+            }
+            println!(
+                "Probe completed; exact fixture keys removed. This does not enable writable mounts."
+            );
+        }
+    }
+    Ok(())
+}
+fn probe_source(
+    config: PathBuf,
+    alias: &str,
+) -> Result<s3drive_core::Source, Box<dyn Error + Send + Sync>> {
+    Config::parse(&fs::read_to_string(config)?)?
+        .sources
+        .into_iter()
+        .find(|source| source.alias == alias)
+        .ok_or_else(|| "unknown source alias".into())
+}
+fn create_private_new(path: &std::path::Path) -> std::io::Result<fs::File> {
+    let mut options = fs::OpenOptions::new();
+    options.create_new(true).write(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    options.open(path)
 }
 
 async fn reader_for_path(

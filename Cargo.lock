@@ -2031,10 +2031,13 @@ dependencies = [
  "aws-config",
  "aws-credential-types",
  "aws-sdk-s3",
+ "getrandom 0.4.3",
  "percent-encoding",
  "s3drive-core",
+ "serde",
  "sha2",
  "tokio",
+ "toml",
  "url",
 ]
 

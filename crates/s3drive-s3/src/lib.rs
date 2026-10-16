@@ -1,6 +1,8 @@
-//! Read-only S3 transport and provider evidence types. No mutation APIs.
+//! S3 reads and explicitly scoped conformance probes. Application upload APIs
+//! and writable mounts remain disabled.
 
 mod error;
+pub mod probe;
 mod reader;
 
 pub use error::{Error, ErrorKind, Result};
@@ -36,5 +38,4 @@ pub struct ObjectRevision {
     pub version_id: Option<String>,
 }
 
-pub const IMPLEMENTATION_STATUS: &str =
-    "read-only S3 list/head/revision-pinned range reads; live-provider conformance pending";
+pub const IMPLEMENTATION_STATUS: &str = "read-only S3 list/head/revision-pinned range reads; scoped write probe; application uploads disabled";
