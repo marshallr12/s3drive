@@ -206,14 +206,20 @@ and Actions state when resuming; preserve ignored user configuration. The local
 gate log is `/tmp/s3drive-windows-session-final-gate.log`.
 
 P4a uses branch `cache-source-binding`: credential-bound reads and SQLite migration.
-Local verification passed: focused tests (18 S3 / 8 state), full repository
-gate, real Linux FUSE (145 S3 requests and the Unicode corpus), and startup on
-this non-systemd workstation. Logs: `/tmp/s3drive-cache-binding-tests.log`,
+Local verification passed: full repository gate (19 S3 / 8 state tests), real
+Linux FUSE (145 S3 requests and the Unicode corpus), and startup on
+this non-systemd workstation. Logs: `/tmp/s3drive-cache-binding-stack-fix.log`,
 `/tmp/s3drive-cache-binding-gate.log`, `/tmp/s3drive-cache-binding-linux.log`,
 `/tmp/s3drive-cache-binding-session.log`. CI runs the new binding/migration tests
 on both OSes and the existing real Windows mount/startup gate; publication
 requires all jobs successful at the exact branch tip. Retrieve the result with
 `gh run list --branch cache-source-binding` and match its head SHA to Git.
+The first P4a candidate `3f3af5a` passed portable tests but failed the real
+Windows mount with exit `0xc00000fd` (stack overflow) in run 38948825021.
+Its nested open future was 32,008 bytes on Linux. Heap-pinning the HEAD future
+keeps open below a 4 KiB inline budget, now enforced by a regression test.
+The native Windows gate must pass for the repaired source; the size check
+alone does not establish actual callback stack use.
 Resolved AWS SDK 1.152.0's Config::credentials_provider getter is deprecated
 and always returns None. S3Reader retains the actual provider separately;
 open resolves it within the overall deadline and replaces the pinned client's

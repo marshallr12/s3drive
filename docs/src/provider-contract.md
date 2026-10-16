@@ -141,6 +141,10 @@ credential failures and discovery timeouts. The rotating-provider test inspects
 the actual Authorization/token headers on each HEAD and GET. Workers use kernel-selected
 ports, bounded waits and explicit teardown.
 
+The HEAD future inside `open` is heap-pinned to avoid amplifying its large SDK
+state through native callback stacks. A size-budget test guards the open future;
+real OS mount tests remain necessary to prove runtime stack behavior.
+
 A CLI subprocess test supplies isolated dummy credential/config files plus
 conflicting ambient AWS settings. It checks that the configured profile,
 endpoint and region are used. It does not read the user's credential files.

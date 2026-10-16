@@ -542,6 +542,23 @@ async fn binding_survives_reader_recreation_and_is_not_an_object_identifier() {
 }
 
 #[test]
+fn open_future_fits_native_callback_stack_budget() {
+    // Native acceptance caught a 32 KiB future amplified through nested
+    // adapter calls. Bound its inline size; native gates still prove runtime
+    // stack use, which cannot be established by this size check alone.
+    let reader = S3Reader::with_credentials(
+        source("http://127.0.0.1:1"),
+        SharedCredentialsProvider::new(fixture_credentials("KEY", "SECRET", None)),
+        Duration::from_secs(3),
+        1,
+    )
+    .unwrap();
+    let future = reader.open("not-polled");
+    let bytes = std::mem::size_of_val(&future);
+    assert!(bytes <= 4096, "open future uses {bytes} inline bytes");
+}
+
+#[test]
 fn binding_isolates_credential_generations_and_configuration() {
     let config = source("https://s3.example.com");
     let fingerprint = source_fingerprint(&config);

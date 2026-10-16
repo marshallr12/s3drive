@@ -312,7 +312,10 @@ impl S3Reader {
                 credentials: provider,
                 ..self.clone()
             };
-            let metadata = reader.head(key).await?;
+            // Keep the SDK HEAD future on the heap. Nesting its large inline
+            // state in this second deadline overflows WinFsp callback stacks
+            // in debug builds, even though ordinary Tokio tests pass.
+            let metadata = Box::pin(reader.head(key)).await?;
             if metadata.revision.etag.is_none() && metadata.revision.version_id.is_none() {
                 return Err(Error::new("open", ErrorKind::Unsupported));
             }
