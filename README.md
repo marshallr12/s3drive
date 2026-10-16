@@ -20,7 +20,7 @@ can test a provider's conditional PUT behavior; application uploads remain disab
 A [local remote-attempt journal](docs/src/remote-journal.md) now preserves
 single-use send claims and uncertain outcomes without executing network writes.
 A [journal-driven SDK executor](docs/src/upload-executor.md) is tested against
-local HTTP fixtures; it has no production constructor pending provider/write-policy acceptance.
+local HTTP fixtures; it has no production constructor pending source-bound write-policy integration.
 [Linux sign-in startup](docs/src/startup-and-sessions.md) works without systemd,
 including MX Linux, and has a native terminal-disconnect acceptance test.
 Windows startup uses a per-user scheduled task and an NTFS folder shared across
@@ -28,6 +28,9 @@ logins; native cross-logon reads and removal passed on the hosted Windows VM.
 Actual workstation reboot, sign-out policy and SSH authentication remain separate checks.
 [Wasabi read acceptance](docs/src/wasabi.md) passed against isolated test
 objects, including a real Linux mount. Broader provider conformance is pending.
+The separately authorized [Wasabi single-PUT probe](docs/src/wasabi.md#conditional-put-acceptance--2026-10-16)
+also passed ten checks; all six disposable fixtures were removed. Application
+uploads remain disabled.
 
 The proposed architecture uses **FUSE on Linux**, **WinFsp on Windows**, a shared
 Rust engine, and **SQLite on local disk** for metadata and eventual recovery state.

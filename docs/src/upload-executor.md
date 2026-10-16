@@ -5,8 +5,9 @@ real AWS SDK's single-attempt PUT and full-byte observation path. Local TCP
 fixtures exercise the complete sequence, including killing the executor process
 after the server commits. **Production construction is disabled.** No upload
 command, writable mount, remote flush or automatic dirty-byte reclamation is
-enabled. Live Wasabi preconditions and an explicit application write policy
-remain prerequisites for enabling an executor factory.
+enabled. The [scoped Wasabi single-PUT probe](wasabi.md#conditional-put-acceptance--2026-10-16)
+has now passed. An explicit source-bound application write policy and its
+acceptance remain prerequisites for enabling an executor factory.
 
 The exported `s3drive_s3::uploads::Executor` has private fields and no production
 constructor. Its implementation is compiled and linted in normal builds; test
@@ -95,10 +96,10 @@ provider probe must still detect an incompatible endpoint.
 
 ## Required next work
 
-Run the separately authorized live Wasabi probe before asserting conditional
-write support there. Define a source-bound application write policy and enable
-construction only after its acceptance requirements pass. This does not broaden
-the pending six-key probe authorization to ordinary bucket contents.
+Preserve the scoped Wasabi single-PUT evidence when defining a source-bound
+application write policy. Enable construction only after that policy's
+acceptance requirements pass. The completed six-key probe authorization does
+not extend to ordinary bucket contents or multipart operations.
 
 Uncertain/rejected intent resolution, explicit credential rebinding, multipart
 recovery, remote flush and reference/pin-aware acknowledgment cleanup remain

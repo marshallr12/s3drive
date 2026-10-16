@@ -23,8 +23,11 @@ protocol; do not infer it from an ETag match.
 
 Wasabi describes broad S3 compatibility and points to AWS documentation. That
 statement does not provide endpoint-specific evidence for our upload guards.
-Wasabi's write preconditions remain **unverified** until the scoped live probe
-passes. No compatibility statement or successful read enables mounted writes.
+The [scoped Wasabi live probe](wasabi.md#conditional-put-acceptance--2026-10-16)
+passed all ten checks on 2026-10-16, with cleanup. That evidence covers sampled
+unversioned single-PUT conditions at the recorded source; it does not verify
+multipart, application deletion or arbitrary providers. No compatibility
+statement or successful read enables mounted writes.
 [Wasabi S3 API reference](https://docs.wasabi.com/apidocs/wasabi-api)
 
 The transport uses the resolved AWS SDK 1.152.0 `if_match`/`if_none_match` APIs.
@@ -138,6 +141,14 @@ Only a complete passing report at the recorded source/credential generation
 provides this probe's evidence; it does not automatically enable an upload API.
 
 ## Verification and next work
+
+The reviewed plan with digest
+`98914e5210466c6c1e074ea36184ea580d20c93749363e18650e5ddf14906de6`
+was explicitly approved and executed once. Its fourteen PUT attempts are
+consumed; all six owned fixtures were removed and the prefix was empty.
+The [sanitized result](evidence/wasabi-conditional-put-2026-10-16.json) preserves
+the evidence without local credentials. A new live mutation run needs its own
+reviewed scope; this record does not enable application writes.
 
 Real SDK/TCP tests cover enforced and ignored guards, stale/incorrect ETags,
 two-writer races, exact Unicode/empty bytes, lost successes, missing receipts,

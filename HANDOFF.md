@@ -12,8 +12,9 @@ generation/journal library. P5a2a adds one shared async owner for cache/journal
 commands and immutable local snapshot handles. P5a2b adds local edit plans and
 pinned-base hydration. P5b1 adds an explicit disposable-key transport/probe.
 P5b2a adds local durable remote-attempt records and single-use send claims.
-P5b2b connects a quarantined SDK executor with local wire/recovery evidence;
-live Wasabi write evidence awaits the new scoped authorization. Goal active;
+P5b2b connects a quarantined SDK executor with local wire/recovery evidence.
+The separately approved live Wasabi single-PUT probe passed all ten checks and
+removed its six fixtures. Goal active;
 application remote commits,
 writable mounts, workstation reboot/SSH checks and packaging remain.
 
@@ -41,7 +42,9 @@ sign-out and real SSH authentication remain unverified on target workstations.
 single-PUT and full-byte observation. Its exported `Executor` has private
 fields and **no production constructor**; tests alone construct it with local
 TCP endpoints and dummy credentials. Normal builds compile/lint its methods.
-No capability enum or probe report constructs it. Existing configurations,
+No capability enum or probe report constructs it. The scoped Wasabi single-PUT
+probe has now passed; source-bound application write-policy integration remains.
+Existing configurations,
 CLI commands and mounted adapters retain their read-only application boundary.
 Provider acceptance and explicit application write policy precede a factory.
 
@@ -80,14 +83,37 @@ Gate log: `/tmp/s3drive-upload-executor-gate.log` (exit 0). Real FUSE passed 341
 read-only requests; the no-systemd cache-enabled startup/session gate passed
 with schema 6. Logs: `/tmp/s3drive-upload-executor-linux.log` and
 `/tmp/s3drive-upload-executor-session.log`, both exit 0. Final book diagnostics
-are in `/tmp/s3drive-upload-executor-book.log`. Require exact-final-tip Linux/Windows/book CI before main
-publication. Find the run with `gh run list --branch journaled-s3-executor`.
+are in `/tmp/s3drive-upload-executor-book.log`. Code checkpoint
+`8eeda5b3b336047ad37f66b39e6c81c98c0c501c` passed terminal all-green
+[run 38981622231](https://github.com/marshallr12/s3drive/actions/runs/38981622231):
+43 S3 tests on both OSes, 70 Linux / 68 Windows state tests, 341 FUSE and 749
+WinFsp requests, startup/cache gates and book. Logs:
+`/tmp/s3drive-upload-executor-{linux,windows,book}-ci.log`.
+Final live-evidence/research documentation follows that tested code checkpoint;
+require exact-final-tip CI before main publication. Locate it with
+`gh run list --branch journaled-s3-executor`.
 See `docs/src/upload-executor.md`; the updated `remote-journal.png` was visually
-inspected. No local config, credentials, real startup registration or Wasabi
-objects changed. The scoped cloud approval question below remains pending.
+inspected. No local config, credentials or real startup registration changed.
+Only the six explicitly approved Wasabi fixtures changed; all were removed.
 
-Next: live provider acceptance after an actual user approval; explicit source-
-bound application write policy/factory; unresolved-intent/credential rebinding;
+The user answered "Allow this probe and cleanup" for the prepared six-key plan.
+It ran once at 2026-10-16T23:36:18Z using checkpoint `8eeda5b`, with ten passes,
+zero errors and zero remaining keys. The final LIST was empty. All fourteen PUT
+attempts in this approval are consumed; do not rerun uploads under this plan.
+Complete mode-0600 local report: `s3drive.probe-run.local.toml`, ignored by Git.
+Sanitized, hash-bound evidence: `docs/src/evidence/wasabi-conditional-put-2026-10-16.json`.
+Its credential-generation digest stays in the local full report. Live log:
+`/tmp/s3drive-wasabi-probe-live.log`. Existing user objects remained untouched.
+
+`docs/src/multipart-plan.md` records refreshed primary-source research and a
+proposed durable protocol. AWS and Wasabi now document different object limits;
+do not inherit AWS's larger limit for Wasabi. Completion has separate guarded,
+200-with-error and unknown-upload-ID semantics. SDK 1.152.0 exposes the required
+builder fields; multipart conditions remain unverified. A future live multipart
+plan needs fresh concrete authorization beyond this completed small-PUT scope.
+
+Next: explicit source-bound application write policy/factory using the scoped
+single-PUT evidence; unresolved-intent/credential rebinding;
 multipart, remote flush and reference/pin-aware acknowledgment cleanup, then
 real writable FUSE/WinFsp application workflows. The overall goal remains active.
 
@@ -596,19 +622,20 @@ and exact fixture body in the reserved unversioned scope. It refuses foreign,
 corrupt or versioned data. It is not the application's delete protocol or an
 unconditional fallback from a failed application guard. Interrupted runs can
 use `cleanup` with the same confirmed plan and a fresh report path; no PUT.
-The original Wasabi three-object read approval does not authorize these new
-create/replace probes. No live write probe has run in this phase yet.
+The original Wasabi three-object read approval did not authorize these new
+create/replace probes. The user subsequently approved the separate plan below;
+its one completed live run is recorded in the current phase section above.
 
 Prepared ignored mode-0600 plan: `s3drive.probe-plan.local.toml`.
 Bucket `s3drivetest`, exact prefix
 `s3drive-conformance/d147830ba5257d762e14c3962cde60f9/`.
 Digest `98914e5210466c6c1e074ea36184ea580d20c93749363e18650e5ddf14906de6`.
-An async question requests explicit authorization for six keys, conditional
-replacements and cleanup, under 1 MiB ordinary transfer. Check the actual user
-reply before executing; tool acceptance is not approval. Keep this question
-pending while progressing independent local work. The plan has been queued
-for display in Codex; do not claim it was visibly opened. Config/credentials,
-real startup registration and existing cloud objects remain untouched.
+The user explicitly approved six keys, conditional replacements and cleanup,
+under 1 MiB ordinary transfer. The completed run consumed all fourteen PUTs and
+removed its fixtures. Do not treat this as a standing or repeat-upload approval.
+The original plan was queued for display; no visible-open claim was made.
+Config/credentials, real startup registration and existing user objects were
+left untouched.
 
 Local gate and native Linux checks passed before final documentation updates:
 29 S3 tests, existing 12 filesystem / 56 state tests, SDK hydration/CLI guards,

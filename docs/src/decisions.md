@@ -33,6 +33,7 @@ to the user.
 | D025 | Implemented P5b1 probe boundary | Use one SDK mutation attempt and observe exact operation metadata plus full bytes after a lost result. Absence does not prove no prior commit. Confine provider tests and fixture-only plain DELETE cleanup to a reviewed six-key unversioned namespace; never enable application writes from compatibility claims |
 | D026 | Implemented P5b2a local journal | Commit a single-use send claim before issuing its in-memory permit; never reissue after response loss/restart. Preserve uncertain/rejected attempts and local bytes. Bind descendant guards to verified parent receipts; observation of absence does not authorize replay. Network execution, explicit resolution and reclamation remain separate phases |
 | D027 | Implemented P5b2b executor boundary | A private send function consumes the journal permit; reconciliation never sends. Verify complete operation-bound bytes even after a success receipt. Compile the executor normally but keep construction unavailable until provider and write-policy acceptance; local wire fixtures cannot authorize ordinary cloud writes |
+| D028 | Proposed multipart extension | Use provider-specific limits and immutable part plans; journal upload-ID and completion uncertainty separately. Guard completion once and reconcile the operation before any new publication. Unknown or expired upload IDs cannot prove publication did not occur; multipart needs separate live acceptance and authorization |
 
 ## Questions to resolve at the relevant phase
 

@@ -1,0 +1,111 @@
+{
+  "evidence_version": 1,
+  "probe_version": "conditional-put-v1",
+  "probe_started_at_utc": "2026-10-16T23:36:18Z",
+  "report_written_at_utc": "2026-10-16T23:36:21.572321Z",
+  "source_commit": "8eeda5b3b336047ad37f66b39e6c81c98c0c501c",
+  "source_files_sha256": {
+    "Cargo.lock": "4b4d457f0244dc98de6f00d9ee8eb9ab5873d36ea08466b35bf6717daac5997f",
+    "crates/s3drive-core/src/lib.rs": "583daa9c2054aa341e4dd6008ef3b6e026b2b2127a88eeb6bc40127ef5c12047",
+    "crates/s3drive-s3/src/lib.rs": "8f2b84d0de2011426560c1b702bb615662b3b0b882211cdfa85c628f06a35f6a",
+    "crates/s3drive-s3/src/reader.rs": "6c2df3b718d6a30de0ba2d469e92d03b65f7185ba105a326b48b51e83a104a2f",
+    "crates/s3drive-s3/src/transport.rs": "a97449e3b8a88bcd494630eeb86ed0e2e9f95176ef677aba76cef80436820fed",
+    "crates/s3drive-s3/src/probe.rs": "a63bdc348aad7d93d11fd1a059c96e49c9553f224bfbbeccf23c0bf0862cb58e",
+    "crates/s3drive-s3/src/probe/transport.rs": "5ef16b7b09c105fcc1db788ad4981bd0ded1028714ddfe7533546a2d92c44822",
+    "crates/s3drive-cli/src/main.rs": "a545df0725ccfbc26288d778423454f56f99231d60521fd1ec28235309f4f334"
+  },
+  "binary_sha256": "a452feffdb2f0757d31c811b1fb12e6ed86214c0810dc15eb13ad943af4df9f6",
+  "local_plan_sha256": "120a4a314d6eed90f338e596e2d59d0018712aa2ee7912b2a9bfa09b37273a34",
+  "local_report_sha256": "ba8721cf2f56599991fdfa2f183313cb1207661ef6cea1781b97ba8f51a558f8",
+  "plan_digest": "98914e5210466c6c1e074ea36184ea580d20c93749363e18650e5ddf14906de6",
+  "source_fingerprint": "fe2a6bdadd3ae4316c4133768b7b459bedacfcb57c9c949345eddac408f61da8",
+  "credential_generation": "Recorded in the ignored mode-0600 local report; omitted from this committed summary.",
+  "endpoint": "https://s3.us-east-2.wasabisys.com",
+  "region": "us-east-2",
+  "bucket": "s3drivetest",
+  "source_prefix": "",
+  "probe_prefix": "s3drive-conformance/d147830ba5257d762e14c3962cde60f9/",
+  "exact_keys": [
+    "s3drive-conformance/d147830ba5257d762e14c3962cde60f9/create.bin",
+    "s3drive-conformance/d147830ba5257d762e14c3962cde60f9/replace.bin",
+    "s3drive-conformance/d147830ba5257d762e14c3962cde60f9/race-create.bin",
+    "s3drive-conformance/d147830ba5257d762e14c3962cde60f9/race-replace.bin",
+    "s3drive-conformance/d147830ba5257d762e14c3962cde60f9/nested/日本語 %2F + café.txt",
+    "s3drive-conformance/d147830ba5257d762e14c3962cde60f9/empty"
+  ],
+  "authorization": "The user explicitly approved this six-object plan and cleanup in this thread. Executed once; the 14-PUT authorization is consumed. No further uploads are authorized by this evidence record.",
+  "max_objects": 6,
+  "max_object_bytes": 4096,
+  "completed_script_put_attempts": 14,
+  "put_count_basis": "Complete ten-check execution follows the audited 14-call script, using one SDK mutation attempt per call; this is not a separate packet capture.",
+  "passed": true,
+  "checks": [
+    {
+      "name": "conditional-create",
+      "passed": true,
+      "detail": "success response"
+    },
+    {
+      "name": "existing-key-create-rejected",
+      "passed": true,
+      "detail": "conditional rejection: put: RevisionChanged (HTTP 412)"
+    },
+    {
+      "name": "conditional-replace",
+      "passed": true,
+      "detail": "success response"
+    },
+    {
+      "name": "stale-replace-rejected",
+      "passed": true,
+      "detail": "conditional rejection: put: RevisionChanged (HTTP 412)"
+    },
+    {
+      "name": "wrong-validator-rejected",
+      "passed": true,
+      "detail": "conditional rejection: put: RevisionChanged (HTTP 412)"
+    },
+    {
+      "name": "concurrent-create-one-winner",
+      "passed": true,
+      "detail": "success response; conditional rejection: put: RevisionChanged (HTTP 412)"
+    },
+    {
+      "name": "concurrent-replace-one-winner",
+      "passed": true,
+      "detail": "success response; conditional rejection: put: RevisionChanged (HTTP 412)"
+    },
+    {
+      "name": "unicode-literal-key-replace",
+      "passed": true,
+      "detail": "success response"
+    },
+    {
+      "name": "empty-object-round-trip",
+      "passed": true,
+      "detail": "success response"
+    },
+    {
+      "name": "receipt-independent-observation",
+      "passed": true,
+      "detail": "marker, length and full SHA-256 match"
+    }
+  ],
+  "errors": [],
+  "remaining_keys": [],
+  "cleanup": {
+    "all_six_owned_fixtures_removed": true,
+    "post_cleanup_prefix_listing_empty": true,
+    "basis": "Probe requires exact owned markers/full bytes before deletion and an empty final LIST before reporting passed."
+  },
+  "bucket_versioning_preflight": "Unversioned; any returned Enabled/Suspended status would have refused the probe before PUT.",
+  "unverified": [
+    "conditional multipart completion and recovery",
+    "conditional application delete/rename",
+    "versioned bucket behavior",
+    "live lost-response/timeout faults",
+    "provider-wide linearizability or strict generation fencing",
+    "native Windows against Wasabi",
+    "ordinary application uploads and writable mounts"
+  ]
+}

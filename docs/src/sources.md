@@ -32,6 +32,8 @@ These references support the research, not claims of live integration testing.
 | [PutObject](https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html) | Object replacement and write preconditions |
 | [Conditional writes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html) | Create/replace conflict behavior |
 | [CompleteMultipartUpload](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CompleteMultipartUpload.html) | Completion conditions, uncertain outcomes and response parsing |
+| [AWS multipart limits](https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html) | Current part/object bounds; keep provider profiles separate |
+| [Wasabi object limits](https://docs.wasabi.com/docs/en/working-with-buckets-and-objects) and [multipart behavior](https://docs.wasabi.com/docs/how-does-wasabi-handle-multipart-uploads) | Different documented object maximum and incomplete-upload expiration; see the multipart plan |
 | [RenameObject](https://docs.aws.amazon.com/AmazonS3/latest/API/API_RenameObject.html) | S3 Express-specific rename rather than generic portability |
 | [S3 metadata](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingMetadata.html) | ETag and metadata interpretation |
 | [AWS Rust SDK](https://docs.rs/aws-sdk-s3/1.152.0/aws_sdk_s3/) | First transport candidate |

@@ -6,8 +6,8 @@ This is a local recovery library. P5b2b now connects it to a
 [quarantined SDK executor](upload-executor.md), tested with local HTTP fixtures.
 Production construction, remote flush, writable mounts, multipart uploads and
 dirty-data reclamation remain disabled.
-Wasabi conditional-write evidence still requires the separately authorized
-[provider probe](conditional-uploads.md).
+The separately authorized [Wasabi single-PUT probe](conditional-uploads.md)
+has passed; application write-policy integration remains subsequent work.
 
 ![A sealed generation becomes a prepared intent, then one durable send claim. Lost results remain uncertain until matching remote evidence is established.](images/remote-journal.png)
 

@@ -8,6 +8,10 @@ were created, read byte-for-byte through the CLI and a real Linux FUSE mount,
 then deleted. The test prefix was empty after cleanup. This is scoped read-only
 acceptance, not proof of every provider capability.
 
+The separately approved [conditional-PUT probe](#conditional-put-acceptance--2026-10-16)
+also passed later that day. Its six fixtures were removed and its prefix was
+empty afterward. Application uploads and mounted writes remain disabled.
+
 ## Configuration
 
 For this test bucket, use `https://s3.us-east-2.wasabisys.com`, including the
@@ -100,9 +104,10 @@ source file hashes, binary hash, platform, results and cleanup. Test namespace:
 | Delimiter listings and pagination | Three pages at max-keys=1, nested directory and literal/Unicode names | Folder markers and large tree workloads |
 | Ranges and bytes | 524,288-byte pattern, 21-byte Unicode/literal-name object, empty file; exact SHA-256 and offset/tail/EOF comparisons | Broader sizes and network faults |
 | Mounted filesystem | Real Linux FUSE sequential/concurrent reads and clean unmount | Native Windows against Wasabi |
-| ETag preconditions | Reads supplied matching If-Match and received the expected bytes | Reject a stale ETag after a separately authorized replacement |
+| ETag preconditions | Read validators passed; later single-PUT probes rejected stale/wrong ETags with HTTP 412 | Versioned reads and live network-fault recovery |
 | Version reads | Unverified; this bucket has versioning disabled | Versioned test bucket and exact returned version checks |
-| Writes, multipart, delete and rename | Explicit scoped single-PUT probe available; application mutations remain disabled and live write evidence is pending | [Write probe](conditional-uploads.md) and subsequent safe-write conformance |
+| Conditional single-PUT create/replace | [Ten live checks passed](#conditional-put-acceptance--2026-10-16), including concurrent create/replace, Unicode and empty objects | Application write policy, recovery and remote flush |
+| Multipart, application delete and rename | Unverified; fixture disposal is not a concurrent application delete protocol | Separate capability probes and safe-write conformance |
 
 The binary fixture is `bytes(range(256))` repeated 2,048 times, SHA-256
 `33bc8aab40703678c3ebe94d2dd8f2afff285dd901f9234e841e4679f8204fd5`.
@@ -122,3 +127,34 @@ An S3 compatibility statement cannot establish every concurrency or failure
 behavior. The reader remains strict: if Wasabi omits or disagrees with required
 range/revision metadata, return an error and investigate; never silently read
 an unpinned replacement. Mutation probes remain separate from mount startup.
+
+## Conditional-PUT acceptance — 2026-10-16
+
+After explicit user approval, the `conditional-put-v1` plan ran **once** against
+`https://s3.us-east-2.wasabisys.com`, bucket `s3drivetest`, under
+`s3drive-conformance/d147830ba5257d762e14c3962cde60f9/`. The run started at
+23:36:18 UTC with code commit `8eeda5b3b336047ad37f66b39e6c81c98c0c501c`.
+The completed script used its fourteen PUT attempts, with payloads up to 4 KiB
+and six exact keys. Preflight required an unversioned bucket and empty scope.
+
+All ten checks passed: create, duplicate-create rejection, matching replacement,
+stale/wrong-validator rejection, concurrent-create and concurrent-replace races
+with one winner each, Unicode/literal-key replacement, empty-object round trip,
+and receipt-independent observation using metadata plus a complete SHA-256 GET.
+The literal key included `nested/日本語 %2F + café.txt`. Rejections returned 412.
+
+Cleanup verified ownership and exact bytes before deleting only the six fixture
+keys. The final prefix listing was empty, with no errors or remaining keys.
+The [sanitized evidence](evidence/wasabi-conditional-put-2026-10-16.json) records
+checks, scope, code/binary/report hashes and these limits. The complete
+credential-generation-bound report remains in the ignored mode-0600
+`s3drive.probe-run.local.toml`. No raw credentials are in the evidence.
+
+This approval has been consumed; do not rerun uploads with the same plan or
+infer authority over ordinary bucket contents. It establishes sampled
+unversioned single-PUT behavior for the recorded source. It does not establish
+multipart conditions, versioned buckets, conditional application deletion,
+rename, live fault recovery, strict generation fencing or provider-wide
+linearizability. The probe deliberately forgetting a receipt is not a real
+network fault. Native Windows against Wasabi and application uploads still
+need their own acceptance. Existing mounts remain read-only.

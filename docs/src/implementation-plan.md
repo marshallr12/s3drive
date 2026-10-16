@@ -221,5 +221,9 @@ claims, uncertain outcomes and verified-parent ETag guards. P5b2b adds the
 [journal-driven executor](upload-executor.md), compiled in normal builds but
 constructible only inside local tests until provider/write-policy acceptance.
 No application upload, remote flush or dirty-byte reclamation is enabled yet.
+The scoped Wasabi single-PUT probe has now passed with cleanup. The source-bound
+write policy/factory remains subsequent work. Multipart is a separate capability;
+the [current research and protocol plan](multipart-plan.md) records provider
+limit differences and the remaining durability boundaries.
 Credential-generation rebinding and unresolved-attempt/supersession resolution
 still need explicit policies; a pending local record is not permission to upload.

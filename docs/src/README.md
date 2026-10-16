@@ -57,9 +57,9 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Clean-cache storage library | Bounded worker, checksums, LRU/pins and recovery tests |
 | Mounted caching | Opt-in; online HEAD on new opens, revision snapshots, restart and integrity checks |
 | Local staging/journal foundation | Immutable chunked generations and pending intent; [no upload execution yet](staged-writes.md) |
-| Conditional write probe | Reviewed six-key plan/run/cleanup tool; [live provider proof pending](conditional-uploads.md) |
+| Conditional write probe | [Scoped Wasabi single-PUT acceptance passed](wasabi.md#conditional-put-acceptance--2026-10-16); all six fixtures removed |
 | Durable remote-attempt journal | [Local single-use claims and uncertain-result recovery](remote-journal.md); executor described below |
-| Journal-driven SDK executor | [Implemented and locally tested](upload-executor.md); production construction disabled pending provider/write-policy acceptance |
+| Journal-driven SDK executor | [Implemented and tested on Linux/Windows](upload-executor.md); production construction disabled pending source-bound write-policy integration |
 | Application upload/flush, writable mounts, new offline opens, tray UI | Planned |
 
 The initial research/scaffold delivery is complete. Work has advanced to the
