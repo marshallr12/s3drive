@@ -42,6 +42,9 @@ native Linux and Windows Rust jobs and a separate Linux book job. CI installs a 
 mount test; it does not access providers or use cloud credentials. A separate
 explicit Linux native test uses `/dev/fuse` and a local fixture.
 
+Build-cache restore may fall back to the same OS/compiler with an older lockfile;
+Cargo still checks the current locked dependency graph and every gate runs.
+
 Windows testing runs remotely in the private repository's GitHub Actions
 `windows-latest` VM, not by emulation or cross-compilation on the MX Linux
 workstation. The 2026-10-16 run logs identify Windows Server 2025
@@ -113,8 +116,9 @@ fonts; those optional authoring dependencies are unnecessary to build the book.
 ## Dependency policy
 
 `fuser` and `nix` live under a Linux target dependency table. Add any Windows
-binding under a Windows target table. Restrict unsafe FFI to an audited adapter module if needed; workspace
-code forbids unsafe Rust except the reviewed Windows native API module. The AWS SDK now implements the read-only
+binding under a Windows target table. Unsafe FFI is restricted to reviewed
+Windows native modules: WinFsp's adapter boundary and the state's directory/ACL
+boundary. Other workspace code forbids or denies unsafe Rust. The AWS SDK implements the read-only
 transport, while its mutation APIs are not exposed by S3Drive.
 
 Inspect local resolved source before using new dependency APIs. Keep provider

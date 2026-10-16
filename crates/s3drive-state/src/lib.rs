@@ -1,5 +1,11 @@
 //! Local SQLite bootstrap. Never place this database on the S3-backed mount.
 
+mod directory;
+#[cfg(windows)]
+#[allow(unsafe_code)]
+#[path = "directory/windows.rs"]
+mod directory_windows;
+
 use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
@@ -8,7 +14,9 @@ pub const SCHEMA_VERSION: i32 = 2;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub struct State {
+    // Drop the connection before releasing exclusive directory ownership.
     connection: Connection,
+    _directory: Option<directory::OwnedDirectory>,
 }
 
 #[derive(Debug)]
@@ -19,9 +27,18 @@ pub struct StateInfo {
 }
 
 impl State {
+    /// Open a private local state directory, creating its last component when
+    /// needed. The parent must exist. Ownership is held until this State drops.
+    pub fn open_managed(directory: &Path) -> Result<Self> {
+        let owner = directory::OwnedDirectory::acquire(directory)?;
+        let mut state = Self::open(&owner.database_path())?;
+        state._directory = Some(owner);
+        Ok(state)
+    }
+
     /// Initialize, migrate schema 1, or reopen schema 2; refuse unknown DBs.
-    /// The caller must supply a private, local directory outside the mount.
-    pub fn open(path: &Path) -> Result<Self> {
+    /// Internal schema helper; public callers must acquire directory ownership.
+    fn open(path: &Path) -> Result<Self> {
         let mut connection = Connection::open(path)?;
         connection.busy_timeout(Duration::from_secs(5))?;
         {
@@ -65,7 +82,10 @@ impl State {
         }
         connection.pragma_update(None, "synchronous", "FULL")?;
         connection.pragma_update(None, "foreign_keys", true)?;
-        Ok(Self { connection })
+        Ok(Self {
+            connection,
+            _directory: None,
+        })
     }
 
     /// Register an authorized source generation in private local state.

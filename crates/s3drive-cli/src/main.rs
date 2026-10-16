@@ -75,15 +75,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
             );
         }
         Command::InitState { directory } => {
-            let mut builder = fs::DirBuilder::new();
-            builder.recursive(true);
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::DirBuilderExt;
-                builder.mode(0o700);
-            }
-            builder.create(&directory)?;
-            let state = s3drive_state::State::open(&directory.join("metadata.sqlite3"))?;
+            let state = s3drive_state::State::open_managed(&directory)?;
             let info = state.info()?;
             println!(
                 "Local state ready: schema={}, journal={}, SQLite={}. No file data or uploads created.",

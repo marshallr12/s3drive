@@ -24,7 +24,9 @@ jobs:
             ~/.cargo/git
             target
           key: rust-${{ runner.os }}-1.99.1-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}
-          restore-keys: rust-${{ runner.os }}-1.99.1-${{ hashFiles('Cargo.lock') }}-
+          restore-keys: |
+            rust-${{ runner.os }}-1.99.1-${{ hashFiles('Cargo.lock') }}-
+            rust-${{ runner.os }}-1.99.1-
       - name: Install pinned Rust
         run: rustup toolchain install 1.99.1 --profile minimal --component clippy --component rustfmt
       - name: Install pinned WinFsp runtime and SDK

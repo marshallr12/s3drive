@@ -21,6 +21,7 @@ unverified or unimplemented.
 | P3.5a — Linux session startup | Detached per-user supervisor, XDG desktop entry and explicit shell login hook; no systemd dependency | Real FUSE mount, simultaneous starts, desktop-entry parsing, terminal loss, new-session access and safe removal |
 | P3.5b — Windows session startup | Stable mount path shared by the account's desktop/SSH logons; backend independent of the launching session | Native folder mount, independent logon tokens, startup/removal, disconnect and reboot/sign-in checks |
 | P4a — cache prerequisites | Credential-bound read handles and schema 2 source registry; preserve unbound legacy rows | Rotation/recreation/authorization tests, migration rollback and binding isolation |
+| P4b1 — local ownership | Private local directory and exclusive lock retained for SQLite's lifetime | Competing processes, forced owner termination, link/ACL refusal and ordinary Windows account access |
 | P4 — cache and local recovery | Revision-aware disk cache, eviction, pinning, single-process ownership, state migrations | Cache isolation, disk-full, stale revision, offline miss and restart tests; no dirty data exists yet |
 | P5a — staged writes | In-memory storage test double plus immutable local generations and durable journal | Fault injection at every local boundary; acknowledged local state survives restart; network mutation remains disabled |
 | P5b — conditional remote commits | Create/replace and multipart recovery; explicit flush contract | Provider preconditions verified; two-writer conflict tests; crash/timeout replay never overwrites unseen edits |
@@ -121,14 +122,21 @@ rejects conflicting registrations and preserves schema 1 rows in a separate
 legacy table. Migration rollback and restart are tested. See
 [storage and recovery](storage-and-recovery.md) for the implemented boundary.
 
-P4b must add private cache-directory ownership on both OSes, an exclusive
-process lock, bounded small-file storage with checksum/revision validation,
-eviction/pinning and a bounded database worker. Mount integration must authorize
+P4b1 adds private state directories on Linux and Windows, an exclusive process
+lock, and a managed SQLite entry point used by `init-state`. It refuses unknown
+entries and unsafe paths before SQLite use. Tests cover contention, process
+death and committed-state recovery, links and permissions/ACLs. The native
+Windows fixture also checks state access across logons. See the
+[ownership contract](storage-and-recovery.md) for supported local filesystems.
+
+P4b2 must add bounded small-file storage with checksum/revision validation,
+eviction/pinning and a bounded database worker, using the owned directory.
+Mount integration must authorize
 each new open online before cache lookup. Prove cache hits, stale revisions,
 credential rotation, disk-full handling, corrupt/missing data and restart with
 deterministic fixtures, then rerun real Linux and Windows mount gates with
 caching enabled. New offline opens remain denied until an explicit offline
-authorization policy is designed. P4a alone does not complete P4.
+authorization policy is designed. P4a/P4b1 do not complete the file cache phase.
 
 ### Optional coordination investigation
 

@@ -56,7 +56,10 @@ bash scripts/gate.sh
 
 The two example sources are placeholders. Configuration validation does not
 establish that an endpoint or bucket exists. State initialization writes only a
-local SQLite database; use a private local directory outside any future mount.
+local SQLite database and its ownership lock. The parent must already exist;
+use private local disk outside any future mount. Existing directories must be
+private; network/FUSE storage and Windows reparse paths are refused. See the
+[state directory contract](docs/src/storage-and-recovery.md).
 
 With your own configuration and credentials, the read-only network commands are:
 

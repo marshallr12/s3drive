@@ -200,6 +200,7 @@ $root=$PSScriptRoot
 $state=Join-Path $root 'state'
 $mount=Join-Path $root 'mounted'
 $manager=Join-Path $root 'source-manager.ps1'
+$databaseState=Join-Path $root 'database-state'
 # Without loading HKCU, the secondary-logon environment can point USERPROFILE
 # at Default. Use the path returned by CreateProfile for fixture file setup;
 # the actual scheduled daemon must discover its loaded profile independently.
@@ -208,6 +209,12 @@ function Manage([string]$Action) {
     $output=& $manager -Action $Action -Name acceptance -StateDirectory $state
     if ($LASTEXITCODE -ne 0) { throw "Manager $Action failed" }
     return $output
+}
+function Initialize-LocalState {
+    $output=& (Join-Path $root 's3drive.exe') init-state --directory $databaseState | Out-String
+    if ($LASTEXITCODE -ne 0 -or $output -notmatch 'schema=2, journal=wal') {
+        throw 'Private local state initialization/reopen failed'
+    }
 }
 try {
     switch ($Operation) {
@@ -223,11 +230,15 @@ try {
             $null=[IO.Directory]::CreateDirectory($aws)
             [IO.File]::WriteAllText((Join-Path $aws 'credentials'), "[fixture]`naws_access_key_id=TESTPROFILE`naws_secret_access_key=TESTPROFILESECRET`n")
             [IO.File]::WriteAllText((Join-Path $aws 'config'), '')
+            Initialize-LocalState
             & $manager -Action Install -Name acceptance -StateDirectory $state -Executable (Join-Path $root 's3drive.exe') -Config (Join-Path $root 'drive.toml') -MountPoint $mount -Credential $credential
             if ($LASTEXITCODE -ne 0) { throw 'Install failed' }
             $null=Manage Start
         }
         'Probe' {
+            # Reopen the same private DB from each independently authenticated
+            # ordinary-account process; no loaded profile/HKCU is required.
+            Initialize-LocalState
             $deadline=[DateTime]::UtcNow.AddSeconds(45)
             $readme=Join-Path $mount 'other\readme'
             while ($true) {
@@ -280,6 +291,9 @@ exit 0
     $unexpectedRead=$false
     try { $null=[IO.File]::ReadAllText((Join-Path $mount 'other\readme')); $unexpectedRead=$true } catch {}
     if ($unexpectedRead) { throw 'A different account could read the owner-only mount' }
+    $unexpectedStateRead=$false
+    try { $null=[IO.File]::ReadAllBytes((Join-Path $root 'database-state\metadata.sqlite3')); $unexpectedStateRead=$true } catch {}
+    if ($unexpectedStateRead) { throw 'A different account could read the private local database' }
     $task = $service.GetFolder('\').GetTask($taskName)
     $definition = $task.Definition
     if ($definition.Principal.LogonType -ne 1 -or $definition.Principal.RunLevel -ne 0 -or

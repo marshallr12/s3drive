@@ -4,7 +4,8 @@ Updated: 2026-10-16. P3 read-only mounts have passed native acceptance on Linux
 and Windows. Scoped live Wasabi reads also passed. P3.5a adds Linux startup
 without systemd; native session tests passed locally. P3.5b adds Windows
 startup with native cross-logon acceptance. P4a adds credential-bound handles
-and SQLite schema 2 migration/registry. Goal active; actual workstation
+and SQLite schema 2 migration/registry. P4b1 adds private managed state directories
+and process ownership. Goal active; actual workstation
 reboot/SSH login checks, cache, recovery, safe writes and packaging remain.
 
 ## Goal and scope
@@ -39,6 +40,11 @@ until the documented safe-write contract and its OS acceptance gates pass.
   separately as `legacy_cached_objects_v1`; migration failures roll back.
   Registration is idempotent and rejects conflicting fingerprints. Mounts do
   not yet use the registry; the first cache must authorize each new open online.
+- Public `State::open_managed` now owns a private directory and nonblocking
+  kernel file lock for the connection lifetime. `init-state` uses it; its parent
+  must already exist. Link/type/ownership checks precede SQLite access. Linux
+  supports a local filesystem allowlist; Windows requires fixed NTFS and checks
+  ACLs through a small audited native module. See the book for exact limitations.
 - No uploads, mutations, disk cache, offline support or desktop packaging yet.
 
 ## Current user requirements and startup work
@@ -218,8 +224,11 @@ The first P4a candidate `3f3af5a` passed portable tests but failed the real
 Windows mount with exit `0xc00000fd` (stack overflow) in run 38948825021.
 Its nested open future was 32,008 bytes on Linux. Heap-pinning the HEAD future
 keeps open below a 4 KiB inline budget, now enforced by a regression test.
-The native Windows gate must pass for the repaired source; the size check
-alone does not establish actual callback stack use.
+The repaired final source `0a773bf3b4fc5b309c6629cc1cab10ed05419f4c` passed all
+jobs in run 38949836161 and was published to main. Its real Windows gate passed
+626 read-only S3 requests, Unicode and cross-logon checks. Full Windows log:
+`/tmp/s3drive-cache-binding-final-windows.log`. The size check alone does not
+establish actual callback stack use.
 Resolved AWS SDK 1.152.0's Config::credentials_provider getter is deprecated
 and always returns None. S3Reader retains the actual provider separately;
 open resolves it within the overall deadline and replaces the pinned client's
@@ -230,8 +239,21 @@ Refreshable provider chains keep their own refresh behavior. Cache bindings use
 the actual returned credential tuple, never an inferred profile identity.
 
 Target-workstation reboot/sign-in, full sign-out policy and SSH authentication
-acceptance remain pending. Next implementation is P4b: private cache-directory
-permissions/ACLs, exclusive process ownership, revision-bound clean data cache,
+acceptance remain pending. P4b1 is implemented on `cache-directory-ownership`.
+Local tests cover single-process and cross-process contention, killing the
+owner and reopening committed SQLite state, permission/link refusal and
+unmanaged-file preservation. Windows tests cover broad ACLs and junctions;
+the native session fixture initializes/reopens state as an ordinary account
+and checks another account cannot read the database. Publication requires a
+successful final-tip CI run on this branch; use `gh run list` to locate it.
+Local logs: `/tmp/s3drive-directory-tests.log`, `/tmp/s3drive-directory-gate.log`.
+The full local gate and Linux mount/session checks passed; their native logs are
+`/tmp/s3drive-directory-linux.log` and `/tmp/s3drive-directory-session.log`.
+CI cache restore now permits the same OS/compiler's older dependency cache;
+all locked builds/tests and native gates still execute.
+No real user state directory was initialized. The existing schema remains 2.
+
+Next implementation is P4b2: revision-bound clean data cache,
 bounded SQLite worker, eviction/pinning and restart/disk-full/offline-miss tests.
 Use the handle binding plus exact key/revision/size; no binding alone authorizes
 cached access. Keep cache/state outside mounted trees. Writes require separate staged

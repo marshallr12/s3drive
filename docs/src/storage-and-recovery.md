@@ -1,7 +1,7 @@
 # Cache, SQLite and recovery
 
-P4a implements credential bindings and SQLite migration. The file cache,
-exclusive ownership, eviction and upload journal below remain proposed designs.
+P4a implements credential bindings and SQLite migration. P4b1 adds private local
+directory ownership. The file cache, eviction and upload journal below remain proposed designs.
 An initialized database is not an implemented or proven upload journal.
 
 ## Implemented SQLite state and migration
@@ -30,14 +30,62 @@ busy timeout. Tests cover restart, settings, binding isolation/rebinding refusal
 shape constraints, legacy-row preservation and migration rollback. The CLI's
 `init-state` now initializes or migrates to schema 2. Mounts do not yet register
 bindings or use this database; integration belongs to the next cache phase.
-The caller must supply a private local directory. Cache-directory permissions,
-Windows ACLs and exclusive process ownership still need implementation.
+`State::open_managed` and `init-state` now acquire a private local directory and
+retain its process lock until the SQLite connection closes. The internal
+unmanaged schema helper is no longer a public API.
 
 SQLite documents that WAL participants must share a host; keep state on a real
 local disk outside the mounted tree. `FULL` synchronization is a useful building
 block but cannot make a database transaction atomic with an unrelated cache
 file or remote object. [SQLite WAL](https://www.sqlite.org/wal.html),
 [SQLite synchronous](https://www.sqlite.org/pragma.html#pragma_synchronous)
+
+## Implemented local ownership boundary
+
+`init-state --directory PATH` creates the last directory component when needed;
+its parent must already exist. Relative paths are resolved against the working
+directory, while parent traversal, symlinks and Windows reparse points are
+refused. Existing directories must already be private. Unrecognized entries
+cause refusal rather than adoption or deletion. The directory currently permits
+only the database, known SQLite sidecars and `volume.lock`; payload directories
+will be added with the file cache.
+
+On Linux, the directory must belong to the effective user with mode `0700`.
+Ancestors must belong to that user or root and prevent other accounts from
+replacing entries; root-owned sticky directories such as `/tmp` are supported.
+Known files must be owned regular files with one link. Files from the earlier
+SQLite bootstrap are tightened to `0600` only after those checks, inside the
+already-private directory. Symlink and hard-link targets are never changed.
+The initial filesystem allowlist is ext2/3/4, btrfs, xfs, f2fs and tmpfs. Network,
+FUSE, overlay and other unverified filesystem types are refused. Tmpfs state
+is local but disappears on reboot; choose persistent local disk for a cache.
+
+On Windows, new directories have a protected DACL granting the account and
+SYSTEM inheritable full control. Existing entries must have a non-null DACL
+with only supported allow rules for the account, SYSTEM or Administrators,
+and grant the account full control. The owner must also be one of those
+principals. This does not attempt to isolate data from privileged administrators.
+Only local fixed NTFS volumes are supported. Open directory handles deny
+delete sharing and remain alive for every ancestor, preventing path replacement
+while the state is open. File hard links and reparse points are refused.
+The ACL is supplied during directory creation, not applied afterward to an
+initially public directory.
+[Windows directory creation](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createdirectoryw)
+
+The process opens the stable `volume.lock` file and uses Rust's nonblocking
+exclusive file lock before opening the database or its sidecars. A contender
+fails explicitly. The lock file is never deleted during normal shutdown;
+closing the handle or process death releases the kernel lock. SQLite closes
+before ownership is released. These locks coordinate cooperating S3Drive
+processes, not hostile software running as the same user or administrator.
+[Rust file locking](https://doc.rust-lang.org/std/fs/struct.File.html#method.try_lock)
+
+Tests cover competing processes, aliases, forced process termination followed
+by reopening committed state, private permissions, symlinks/junctions, file
+hard links, broad Windows ACLs, unknown entries and preserved unrelated bytes.
+The native Windows session fixture additionally initializes and reopens state
+from separate ordinary-account logons and denies a different account's file
+read. These are state ownership tests; mounted file data caching is not enabled.
 
 ## Planned state layout
 

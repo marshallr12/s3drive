@@ -11,5 +11,15 @@ rusqlite.workspace = true
 [dev-dependencies]
 tempfile.workspace = true
 
-[lints]
-workspace = true
+[target.'cfg(target_os = "linux")'.dependencies]
+nix = { workspace = true, features = ["fs"] }
+
+[target.'cfg(windows)'.dependencies]
+windows.workspace = true
+
+[lints.rust]
+# Only directory/windows.rs contains the audited native ACL boundary.
+unsafe_code = "deny"
+
+[lints.clippy]
+all = "warn"

@@ -2038,8 +2038,10 @@ dependencies = [
 name = "s3drive-state"
 version = "0.1.0"
 dependencies = [
+ "nix",
  "rusqlite",
  "tempfile",
+ "windows",
 ]
 
 [[package]]
