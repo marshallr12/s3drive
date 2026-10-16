@@ -51,7 +51,12 @@ verification is unchanged. Tests bind an ephemeral port rather than assuming
 The SDK requests `ListObjectsV2` with delimiter `/`, URL-encoded keys and a page
 size between 1 and 1,000. Returned keys/prefixes are percent-decoded exactly
 once, validated as UTF-8, and checked against the requested prefix. Literal
-percent escapes and plus signs are preserved. Continuation tokens are opaque
+percent escapes are preserved. `list_url_encoding = "percent"` is the default
+and leaves unescaped plus signs literal. Providers such as the tested Wasabi
+endpoint use form-style spaces; select `list_url_encoding = "form"` to decode
+raw `+` as space and `%2B` as literal plus. Decoding is never guessed from a
+filename. The same dialect applies to common prefixes and source containment.
+Continuation tokens are opaque
 and are never percent-decoded by application code. Missing/repeated tokens on
 truncated pages, missing encoding declarations, invalid sizes and out-of-prefix
 keys fail as invalid responses.
@@ -94,7 +99,7 @@ throttling, service failures and malformed responses are distinct categories.
 
 The reader has a versioned SHA-256 **configuration fingerprint** covering source
 alias, bucket, region, prefix, canonical endpoint, credential-profile selection
-and addressing/loopback settings. It distinguishes reconfigured sources, but
+and addressing/loopback/listing-decoding settings (fingerprint format v2). It distinguishes reconfigured sources, but
 does not identify the current authenticated principal. Credentials behind the
 same profile/default chain can change. Before persistent caching, add a
 verified identity boundary and migrate the unused P0 cache table. This phase

@@ -31,22 +31,44 @@ at a partial phase checkpoint.
 
 ## Current user input
 
-The user selected **Wasabi**, test bucket `s3drivetest`, region `us-east-2`
-(N. Virginia). Correct endpoint: `https://s3.us-east-2.wasabisys.com`.
-Recommended ignored config: `s3drive.local.toml`, with profile `wasabi-s3drive`
-in `~/.aws/credentials`. User is preparing configuration; the file was absent
-at this turn's start. No credentials were read and no live provider accessed.
-Explained `[[sources]]`, named credential profiles and prefix mapping in chat.
-Keep credentials out of chat, logs and Git. See [Wasabi plan](docs/src/wasabi.md).
+The user configured **Wasabi**, test bucket `s3drivetest`, region `us-east-2`
+(N. Virginia), endpoint `https://s3.us-east-2.wasabisys.com`, alias `wasabi`.
+Ignored `s3drive.local.toml` now exists and passes validation. The user corrected
+credential field names to `aws_access_key_id` / `aws_secret_access_key` in the
+`wasabi-s3drive` local profile. The values were neither displayed nor modified.
+
+On 2026-10-16 the user explicitly approved creating/deleting three fixtures
+under `s3drive-conformance/20261016-lxrfkg8p/`. The live SDK passed pagination,
+HEAD, full/range/EOF reads and exact byte comparisons. A real Linux FUSE mount
+passed sequential/concurrent reads of the binary, empty and Unicode/literal
+name objects, then cleanly unmounted. All three objects were removed; the
+isolated prefix is empty. Bucket versioning is disabled. Stale validators,
+versioned reads and Windows against Wasabi remain unverified.
+
+The live test found that Wasabi encodes listing spaces as `+`. Added explicit
+`list_url_encoding = "form"` to the ignored local config and Wasabi template;
+default percent-only decoding is unchanged for other sources. The dialect is
+part of configuration fingerprint v2. A wire regression covers spaces, pluses,
+literal percent sequences, directories and containment. See the durable
+`docs/src/evidence/wasabi-2026-10-16.json` and `docs/src/wasabi.md`.
 
 ## P3 in progress
 
-Windows adapter and native acceptance harness are implemented on a working
-branch for native CI verification. Do not claim P3 passed until the Windows
-runner completes mount/read/unmount tests. `docs/src/windows-mount.md` records
-APIs, limits and evidence boundaries. Linux and Windows mount tests now share
-`crates/s3drive-cli/tests/support/fixture.rs`; rerun Linux native acceptance.
-The previous main-branch results below do not certify these edits.
+Windows adapter/harness are on `windows-read-only`; main remains the P2
+checkpoint. First CI found an ambiguous host guard type, fixed explicitly.
+Second CI passed build/Clippy/portable tests and actual Windows filesystem
+reads, sharing, mutation refusal and name/revision checks; the later PowerShell
+ACL step failed loading its module, not a filesystem assertion. Fix the test's
+PowerShell 5/7 environment isolation and rerun the full native gate, including
+Shell namespace, upstream volume info, removal and cancellation. Do not claim
+P3 complete until all pass. Runs: 38924822475, 38925797029 (both failed; inspect
+Actions for the next exact commit). CI now caches the build even on failure.
+
+Linux and Windows mount tests share `tests/support/fixture.rs`. The refactored
+Linux native test passed with 62 requests/two mounts. The full local gate after
+the Wasabi fix passed (30 portable tests on Linux); log
+`/tmp/s3drive-p3-wasabi-gate.log`. No mounts or fixture objects remain. Local
+private fixture/log files are in `/tmp/s3drive-wasabi-fixtures-lxrfkg8p/`.
 
 ## Verification
 

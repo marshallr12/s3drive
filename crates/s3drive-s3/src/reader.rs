@@ -8,7 +8,7 @@ use aws_sdk_s3::{
     types::EncodingType,
 };
 use percent_encoding::percent_decode_str;
-use s3drive_core::Source;
+use s3drive_core::{ListUrlEncoding, Source};
 use sha2::{Digest, Sha256};
 use std::{future::Future, time::Duration};
 
@@ -213,6 +213,17 @@ impl S3Reader {
                 return Err(Error::new("list", ErrorKind::InvalidResponse));
             }
         }
+        // Wasabi's observed EncodingType=url responses encode spaces as '+'.
+        // Select the dialect explicitly: guessing would alias distinct keys on
+        // providers that return unescaped literal '+'. Replace before decoding
+        // so %2B remains a plus and %252B remains the literal text %2B.
+        let form_encoded;
+        let encoded = if self.source.list_url_encoding == ListUrlEncoding::Form {
+            form_encoded = encoded.replace('+', "%20");
+            form_encoded.as_str()
+        } else {
+            encoded
+        };
         let key = percent_decode_str(encoded)
             .decode_utf8()
             .map_err(|_| Error::new("list", ErrorKind::InvalidResponse))?;
@@ -371,7 +382,7 @@ async fn deadline<T>(
 
 fn source_fingerprint(source: &Source) -> String {
     let mut hash = Sha256::new();
-    hash.update(b"s3drive-source-config-v1");
+    hash.update(b"s3drive-source-config-v2");
     let endpoint = source
         .endpoint
         .as_ref()
@@ -394,6 +405,7 @@ fn source_fingerprint(source: &Source) -> String {
     hash.update([
         u8::from(source.path_style),
         u8::from(source.allow_http_loopback),
+        u8::from(source.list_url_encoding == ListUrlEncoding::Form),
     ]);
     hash.finalize()
         .iter()

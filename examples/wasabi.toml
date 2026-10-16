@@ -11,3 +11,5 @@ endpoint = "https://s3.us-east-1.wasabisys.com"
 prefix = ""
 profile = "wasabi-s3drive"
 path_style = true
+# Wasabi encodes spaces as '+' in URL-encoded listing responses.
+list_url_encoding = "form"

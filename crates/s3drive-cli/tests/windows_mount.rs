@@ -207,11 +207,13 @@ async fn actual_windows_drive_names_reads_security_and_teardown() {
     }
     // PowerShell filesystem and Explorer's Shell.Application namespace/ACL APIs.
     let script = format!(
-        r#"$ErrorActionPreference='Stop'; if ((Get-ChildItem -LiteralPath '{drive}\').Count -ne 2) {{ throw 'aliases' }}; if ([IO.File]::ReadAllText('{drive}\other\readme') -ne 'other bucket') {{ throw 'read' }}; $acl=Get-Acl -LiteralPath '{drive}\other\readme'; $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value; $rules=$acl.GetAccessRules($true,$true,[Security.Principal.SecurityIdentifier]); if ($rules.Count -ne 1 -or $rules[0].IdentityReference.Value -ne $sid -or (([int]$rules[0].FileSystemRights -band 2) -ne 0)) {{ throw 'owner read-only ACL' }}; $shell=New-Object -ComObject Shell.Application; $folder=$shell.NameSpace('{drive}\'); if ($null -eq $folder -or $folder.Items().Count -ne 2) {{ throw 'Explorer namespace' }}; Write-Output 'PowerShell, owner ACL, and Explorer Shell namespace verified'"#
+        r#"$ErrorActionPreference='Stop'; Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Security\Microsoft.PowerShell.Security.psd1'); if ((Get-ChildItem -LiteralPath '{drive}\').Count -ne 2) {{ throw 'aliases' }}; if ([IO.File]::ReadAllText('{drive}\other\readme') -ne 'other bucket') {{ throw 'read' }}; $acl=Get-Acl -LiteralPath '{drive}\other\readme'; $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value; $rules=$acl.GetAccessRules($true,$true,[Security.Principal.SecurityIdentifier]); if ($rules.Count -ne 1 -or $rules[0].IdentityReference.Value -ne $sid -or (([int]$rules[0].FileSystemRights -band 2) -ne 0)) {{ throw 'owner read-only ACL' }}; $shell=New-Object -ComObject Shell.Application; $folder=$shell.NameSpace('{drive}\'); if ($null -eq $folder -or $folder.Items().Count -ne 2) {{ throw 'Explorer namespace' }}; Write-Output 'PowerShell, owner ACL, and Explorer Shell namespace verified'"#
     );
     let shell = tokio::time::timeout(
         Duration::from_secs(30),
         Command::new("powershell.exe")
+            // Avoid inheriting PowerShell 7 module paths into Windows PowerShell.
+            .env_remove("PSModulePath")
             .args(["-NoProfile", "-NonInteractive", "-Command", &script])
             .kill_on_drop(true)
             .output(),

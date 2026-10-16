@@ -171,6 +171,7 @@ fn source(endpoint: &str) -> Source {
         path_style: true,
         allow_http_loopback: true,
         profile: None,
+        list_url_encoding: ListUrlEncoding::Percent,
     }
 }
 
@@ -448,5 +449,50 @@ fn fingerprints_distinguish_sources_and_profile_selection() {
     changed = original.clone();
     changed.endpoint = Some("https://other.example.com".into());
     assert_ne!(source_fingerprint(&changed), fingerprint);
+    changed = original.clone();
+    changed.list_url_encoding = ListUrlEncoding::Form;
+    assert_ne!(source_fingerprint(&changed), fingerprint);
     assert_eq!(source_fingerprint(&original), fingerprint);
+}
+
+#[tokio::test]
+async fn explicit_form_listing_dialect_preserves_spaces_pluses_and_percent_sequences() {
+    // Captured key encoding from the approved Wasabi integration fixture.
+    let body = list_xml(
+        "<Contents><Key>root/nested/a%252Fb+%2B+caf%C3%A9.txt</Key><Size>21</Size></Contents><CommonPrefixes><Prefix>root/sub+dir%2B/</Prefix></CommonPrefixes>",
+        None,
+    );
+    for (dialect, expected_file, expected_dir) in [
+        (
+            ListUrlEncoding::Percent,
+            "nested/a%2Fb+++café.txt",
+            "sub+dir+/",
+        ),
+        (
+            ListUrlEncoding::Form,
+            "nested/a%2Fb + café.txt",
+            "sub dir+/",
+        ),
+    ] {
+        let server = Server::start(vec![Response::new(200, &body)]).await;
+        let mut reader = server.reader();
+        reader.source.list_url_encoding = dialect;
+        let page = reader.list_page("", None, 2).await.unwrap();
+        assert_eq!(page.objects[0].key, expected_file);
+        assert_eq!(page.directories, [expected_dir]);
+        if dialect == ListUrlEncoding::Form {
+            assert_eq!(
+                reader.list_key(Some("root/a%252B%2B+b"), "root/").unwrap(),
+                "a%2B+ b"
+            );
+            assert!(reader.list_key(Some("root/a%xy+b"), "root/").is_err());
+            assert!(reader.list_key(Some("outside/a+b"), "root/").is_err());
+            reader.source.prefix = "root +/".into();
+            assert_eq!(
+                reader.list_key(Some("root+%2B/a+b"), "root +/").unwrap(),
+                "a b"
+            );
+        }
+        server.finish().await;
+    }
 }

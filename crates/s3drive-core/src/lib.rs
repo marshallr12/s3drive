@@ -35,6 +35,19 @@ pub struct Source {
     pub allow_http_loopback: bool,
     /// An AWS shared-config profile name, never a credential value.
     pub profile: Option<String>,
+    /// How this provider encodes spaces in URL-encoded LIST response keys.
+    #[serde(default)]
+    pub list_url_encoding: ListUrlEncoding,
+}
+
+#[derive(Debug, Clone, Copy, Default, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum ListUrlEncoding {
+    /// Percent decoding only: an unescaped plus remains a literal plus.
+    #[default]
+    Percent,
+    /// Form decoding: an unescaped plus is a space; %2B is a literal plus.
+    Form,
 }
 
 #[derive(Debug, PartialEq, Eq)]

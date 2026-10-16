@@ -2,8 +2,11 @@
 
 The user selected **Wasabi** as the first hosted provider on 2026-10-16.
 The user supplied test bucket `s3drivetest` in `us-east-2` (N. Virginia).
-Local configuration is being prepared; its credential profile has not yet been verified.
-No account has been accessed and no Wasabi compatibility claim has been verified.
+The local configuration and profile `wasabi-s3drive` are verified for signed
+LIST, HEAD and ranged GET. With explicit approval, three isolated test objects
+were created, read byte-for-byte through the CLI and a real Linux FUSE mount,
+then deleted. The test prefix was empty after cleanup. This is scoped read-only
+acceptance, not proof of every provider capability.
 
 ## Configuration
 
@@ -26,7 +29,15 @@ endpoint = "https://s3.us-east-2.wasabisys.com"
 prefix = ""
 profile = "wasabi-s3drive"
 path_style = true
+list_url_encoding = "form"
 ```
+
+The form-decoding setting is required by the observed Wasabi listing behavior:
+its `EncodingType=url` response encoded the test key `a%2Fb + café.txt` as
+`a%252Fb+%2B+caf%C3%A9.txt`. Without this setting the spaces would appear as plus
+signs and lookup would fail. A live fixture exposed the difference; regression
+tests preserve literal `+` and percent sequences while decoding spaces once.
+This is evidence for this endpoint, not an assumption about every S3 provider.
 
 The `prefix` filters object keys inside a bucket; it is not a setting to create
 in the Wasabi console. Empty or omitted means the entire bucket. For example,
@@ -76,21 +87,31 @@ fixtures or enable public access. `read` writes raw bytes; redirect to a local
 file when comparing a binary object. Linux mount instructions and limitations
 are in [the implemented mount contract](linux-mount.md).
 
-## Acceptance record to complete
+## Acceptance record — 2026-10-16
 
-Record the source commit, date, Wasabi region/endpoint, bucket type/versioning,
-nonsecret source configuration fingerprint, test object manifest and local OS.
-Keep account/bucket identifiers in a private evidence file if necessary.
+The [machine-readable evidence](evidence/wasabi-2026-10-16.json) records the
+source file hashes, binary hash, platform, results and cleanup. Test namespace:
+`s3drivetest/s3drive-conformance/20261016-lxrfkg8p/`. Bucket versioning was
+`Disabled`. The current tested source includes the explicit form-decoding fix.
 
-| Behavior | Current Wasabi evidence | Required check |
+| Behavior | Current Wasabi evidence | Remaining check |
 | --- | --- | --- |
-| SigV4 authentication and correct region | Documented by provider; untested by S3Drive | Successful signed LIST, HEAD and GET using the selected profile |
-| Delimiter listings and continuation tokens | Unknown | Multiple pages, empty folder marker, Unicode and literal percent keys |
-| Ranges and exact Content-Range/length | Unknown | Compare sequential and random reads against known local bytes |
-| ETag preconditions | Unknown | Old open handle fails or stays on its pinned version after a controlled replacement |
-| Version reads | Provider documents version-ID download; untested by S3Drive | Repeat with versioned objects, check returned version and permissions |
-| Mounted filesystem access | Unknown | Traverse the Wasabi source through Linux and Windows adapters |
-| Conditional writes, multipart, delete and rename | Unknown; not implemented | Separate disposable-prefix tests during writable phases |
+| SigV4 and endpoint/region | Signed LIST, HEAD and GET succeeded | Credential expiration/permission failures |
+| Delimiter listings and pagination | Three pages at max-keys=1, nested directory and literal/Unicode names | Folder markers and large tree workloads |
+| Ranges and bytes | 524,288-byte pattern, 21-byte Unicode/literal-name object, empty file; exact SHA-256 and offset/tail/EOF comparisons | Broader sizes and network faults |
+| Mounted filesystem | Real Linux FUSE sequential/concurrent reads and clean unmount | Native Windows against Wasabi |
+| ETag preconditions | Reads supplied matching If-Match and received the expected bytes | Reject a stale ETag after a separately authorized replacement |
+| Version reads | Unverified; this bucket has versioning disabled | Versioned test bucket and exact returned version checks |
+| Writes, multipart, delete and rename | CLI fixture creation/cleanup only; S3Drive exposes no mutations | Separate safe-write phase conformance |
+
+The binary fixture is `bytes(range(256))` repeated 2,048 times, SHA-256
+`33bc8aab40703678c3ebe94d2dd8f2afff285dd901f9234e841e4679f8204fd5`.
+The literal-name fixture contains `literal S3 key bytes` followed by a newline.
+To reproduce, select and authorize a new disposable prefix, use create-only
+PUTs for these files, set that prefix and form decoding in a separate local
+configuration, run `list --max-keys 1`, `stat`, range reads and the Linux mount
+commands above. Compare with the local fixture bytes and remove only the owned
+test keys (or exact returned version IDs). Do not run mutation probes at startup.
 
 Wasabi documents downloading a particular version with `get-object --version-id`.
 That supports investigating immutable-version handles, but does not establish

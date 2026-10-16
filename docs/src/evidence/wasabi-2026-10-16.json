@@ -1,0 +1,40 @@
+{
+  "bucket": "s3drivetest",
+  "prefix": "s3drive-conformance/20261016-lxrfkg8p/",
+  "verified": [
+    "delimiter listing and 3 pages with max-keys=1",
+    "HEAD and full read: pattern.bin sha256=33bc8aab40703678c3ebe94d2dd8f2afff285dd901f9234e841e4679f8204fd5",
+    "HEAD and full read: empty sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "HEAD and full read: nested/a%2Fb + caf\u00e9.txt sha256=673a9763fe7bc1038311cf43c4566536b119f7fa5d73a7e161f977fb535a0a2d",
+    "random ranges, clipped tail and EOF",
+    "real Linux FUSE mount, exact bytes, concurrent reads and clean unmount"
+  ],
+  "cleanup": [
+    "s3drive-conformance/20261016-lxrfkg8p/nested/a%2Fb + caf\u00e9.txt",
+    "s3drive-conformance/20261016-lxrfkg8p/empty",
+    "s3drive-conformance/20261016-lxrfkg8p/pattern.bin"
+  ],
+  "bucket_versioning": "Disabled",
+  "source_base_commit": "bf0a375ab463634e2b237ef3b7fca83e00de04df",
+  "source_files_sha256": {
+    "Cargo.lock": "74e55e407b81133dd6c82c6f79a66c96d07737177f8be2845e45de9e17374e75",
+    "crates/s3drive-core/src/lib.rs": "943767e02c0f510871a9ae16c82413390cf5df30fd1cbb8f9a37e55035635989",
+    "crates/s3drive-s3/src/reader.rs": "a483b5fb3ff1d244a8727f1689eaa2bb17a873aa5bcdf302767836fd90aee3c5",
+    "crates/s3drive-fs/src/lib.rs": "7e76bd95b1fa356c056e90bb4e65dac859f35eee03783c706c022ca90ea3fed4",
+    "crates/s3drive-fuse/src/linux.rs": "79cf262cc0d2b750078012d1b9d51b09de34a3bbf03cdd386ea27d3635ba6f57",
+    "crates/s3drive-cli/src/main.rs": "4ec6b923013c3d72dbef6850bca133df8582c50dd314435dcffbac0161a315b2"
+  },
+  "binary_sha256": "b3fa8f964f3e0ac50d13070b72719af95028a4b9dbb2359df114f634e9c99885",
+  "tested_at_utc": "2026-10-16T15:50:24Z",
+  "host": "Linux 6.12.29-amd64 x86_64; fusermount3 3.14.0; Rust 1.99.1",
+  "list_url_encoding": "form",
+  "authorization": "User approved creation and deletion of these three isolated test objects in this thread.",
+  "unverified": [
+    "stale ETag rejection",
+    "version-ID reads (bucket versioning disabled)",
+    "folder markers",
+    "Windows against Wasabi",
+    "conditional overwrite/delete races",
+    "multipart and recovery"
+  ]
+}
