@@ -7,8 +7,9 @@ startup with native cross-logon acceptance. P4a adds credential-bound handles
 and SQLite schema 2 migration/registry. P4b1 adds private managed state directories
 and process ownership. P4b2a implements a bounded clean-cache storage worker
 with SQLite BLOBs. P4b2b connects it to optional mounted caching, with native
-acceptance required for each published source. Goal active; actual workstation
-reboot/SSH checks, safe writes and packaging remain.
+acceptance required for each published source. P5a1 adds the local staged-
+generation/journal library. Goal active; write coordination, remote commit,
+writable mounts, workstation reboot/SSH checks and packaging remain.
 
 ## Goal and scope
 
@@ -58,7 +59,13 @@ until the documented safe-write contract and its OS acceptance gates pass.
   handles retain their authorized immutable bytes until release; denied or
   offline new opens fail. Large files and pinned-quota pressure use direct
   conditional range reads. Both adapters close the worker after callbacks stop.
-- No uploads, mutations, new offline opens or desktop packaging yet.
+- Schema 4 adds non-evictable chunked staged generations, manifests, retained
+  chunk markers, local heads and pending intent. `Journal` borrows owned State
+  on a blocking owner thread. Append/seal retries are idempotent with explicit
+  cursors/receipts. Metadata and requested bytes are verified on read. Staging
+  mutation refuses unmanaged state and known Linux tmpfs; inspection remains
+  available. No writable filesystem path uses this API yet.
+- No uploads, writable mounts, new offline opens or desktop packaging yet.
 
 ## Current user requirements and startup work
 
@@ -329,11 +336,60 @@ Require all-green CI at the exact final branch SHA before fast-forwarding main;
 locate it with `gh run list --branch mounted-cache`. Current Windows behavior
 must be proved remotely, never inferred from the Linux pass.
 
-Next required work is P5a: immutable local staging generations and a durable
-journal against an in-memory storage test double, with kill/fault injection at
-local durability boundaries. Network mutations and writable mounts stay disabled.
-Broader live Wasabi cached-read acceptance and workload/performance tests are
-separate pending work; new provider uploads need concrete scoped authorization.
+P4b2b's final source `2764fee28eccc40cde71c6d801f6a2a6f269de39` passed all jobs
+in [run 38960792977](https://github.com/marshallr12/s3drive/actions/runs/38960792977)
+and was published to main. Native evidence: 341 FUSE requests, 749 WinFsp
+requests, cached acceptance and ordinary-account cross-logon cache access.
+Logs: `/tmp/s3drive-mounted-linux-ci.log`, `/tmp/s3drive-mounted-windows-ci.log`.
+
+P5a1 is implemented on `staged-generations`: migration 004 and
+`crates/s3drive-state/src/journal.rs` with `journal/tests.rs`. It uses SQLite
+chunks instead of external staging files so publication has one transactional
+boundary. Separate `retained_staged_chunks` markers protect published payloads
+without updating their BLOB rows. The original external-file design remains an
+optional future backend, not a dependency of the local-write foundation.
+
+Targets preserve source binding/fingerprint, exact key and original base
+condition. Builders append bounded immutable chunks or explicit sparse zeros.
+`seal` verifies coverage/checksums and compares the local parent, then atomically
+retains chunks, seals the manifest, inserts pending intent and advances the head.
+Local receipts do not acknowledge S3 publication. Retrying an exact append or
+seal cannot duplicate bytes or rewind a newer head. `abort` accepts unpublished
+builders only; retained chunks and sealed generations cannot be reclaimed.
+
+The blocking API borrows the already-owned State for future worker integration.
+Defaults: 1 GiB unique payload, 4,096 generations and 1,000,000 extents per
+file; chunks <=1 MiB and reads <=8 MiB. Logical lengths use i64 offsets; sparse
+holes avoid corresponding allocation. Quotas exclude metadata/WAL overhead.
+A smaller quota leaves recovery reads available. Generations are never evicted.
+Linux tmpfs may hold clean cache, but cannot acknowledge staging mutations;
+`/dev/shm` tests verify the distinction. Windows remains fixed-NTFS only.
+Current-schema open no longer rewrites the version pragma unnecessarily.
+
+Tests exercise restart/old snapshots, empty and 3 TiB sparse generations,
+concurrent-builder conflicts, wrong parents/bases, lost append/seal responses,
+quota/dedup/abort behavior, corruption/missing or rewound heads, clean-cache
+isolation, schema-3 migration and real SQLITE_FULL append rollback. Nine child
+kill points cover append and publication changes/commits. A memory-base fixture
+changes revision during hydration and cannot publish the incomplete mixture.
+This does not test hardware power cuts, writable OS callbacks or S3 mutations.
+
+Logs: `/tmp/s3drive-staging-tests.log`, `/tmp/s3drive-staging-clippy.log`,
+`/tmp/s3drive-staging-gate.log`. The new book chapter `docs/src/staged-writes.md`
+and `images/staged-generations.png` explain the boundary; the PNG was visually
+inspected. Require the full local gate and exact-final-tip Linux/Windows/book CI
+before fast-forwarding main. Locate source evidence with
+`gh run list --branch staged-generations`; do not infer native Windows results
+from local Linux tests. No real user config, credentials or state were changed.
+
+Next required work is P5a2: one bounded async owner for cache/journal commands,
+patch/truncate/read-your-writes coordination, pinned-base hydration and a fuller
+in-memory storage model. Preserve parent/supersession dependencies and define
+credential rebinding before P5b conditionally publishes to S3. No remote ack or
+sealed-generation GC is implemented yet. P5c exposes writes only after those
+contracts and their provider/OS acceptance tests pass.
+Broader live Wasabi cached-read acceptance and workload/performance tests remain
+separate pending work; new provider uploads require concrete scoped authorization.
 Use the handle binding plus exact key/revision/size; no binding alone authorizes
 cached access. Keep cache/state outside mounted trees. Writes require separate staged
 generations and a durable journal (P5a), provider conditional commits/recovery

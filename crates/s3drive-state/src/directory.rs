@@ -33,6 +33,19 @@ pub(crate) struct OwnedDirectory {
 }
 
 impl OwnedDirectory {
+    pub(crate) fn verify_staging_storage(&self) -> Result<()> {
+        #[cfg(target_os = "linux")]
+        linux::verify_persistent(
+            self._directories
+                .last()
+                .ok_or("missing owned state directory")?,
+        )?;
+        // Windows acquisition already requires a local fixed NTFS volume.
+        #[cfg(not(any(target_os = "linux", windows)))]
+        return Err("staging is supported on Linux and Windows only".into());
+        #[cfg(any(target_os = "linux", windows))]
+        Ok(())
+    }
     #[cfg(any(target_os = "linux", windows))]
     pub(crate) fn acquire(path: &Path) -> Result<Self> {
         // Native Windows creation APIs use NUL-terminated strings; reject a

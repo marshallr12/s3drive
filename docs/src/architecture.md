@@ -3,14 +3,17 @@
 The diagram describes the target system. P0 added configuration, evidence
 types, SQLite initialization and explicit adapter stubs. P1 adds the read-only
 S3 transport. P2 adds the shared read-only namespace/handle engine and Linux
-adapter; P3 adds Windows WinFsp. The optional clean-cache path is implemented; safe writes remain planned. See the
-platform contracts for native acceptance scope.
+adapter; P3 adds Windows WinFsp. Optional clean caching and the local staging
+library are implemented. Writable mount integration and conditional remote
+commit remain planned. See platform contracts for native acceptance scope.
 
 ![Local applications reach the Rust filesystem engine through FUSE or WinFsp; its S3 client reads remote bucket data. Local SQLite and cache have separate roles.](images/architecture.png)
 
 The blue read/cache path is implemented. New opens authorize with S3 before
 SQLite cache access; a hit avoids the data GET. Amber external bulk files,
-staging and coordination components remain planned. [Startup and remote sessions](startup-and-sessions.md)
+writable mount integration and coordination components remain planned. The
+local staging/journal library is implemented separately from mounted writes.
+[Startup and remote sessions](startup-and-sessions.md)
 include MX Linux without systemd. [Turso coordination](turso-coordination.md)
 evaluates an optional shared metadata authority, separate from each host's local database.
 
@@ -28,11 +31,13 @@ paginated list, head and bounded range reads; mutation APIs arrive
 only with their precondition and recovery tests. Avoid designing a broad
 generic VFS trait before the first real adapter reveals the necessary contract.
 
-`s3drive-state` owns SQLite migrations, persistent identity, cache metadata and
-eventually upload jobs. Its first cache uses SQLite BLOBs up to 1 MiB so bytes
-and integrity metadata commit together. Large payloads still belong in future
-cache files. One bounded worker owns SQLite; no SQL transaction spans a network
-request. A local process lock must prevent two daemon instances from owning
+`s3drive-state` owns SQLite migrations, persistent identity, cache metadata,
+local staged generations and eventual remote upload jobs. Its clean cache uses
+BLOBs up to 1 MiB so bytes and integrity metadata commit together. P5a1 stages
+complete generations as bounded SQLite chunks, with local intent in the same
+transaction boundary. Optional external bulk files remain future work. The
+cache has one bounded SQL worker; the staging API borrows its owner State and
+needs the P5a2 command integration. No SQL transaction spans a network request. A local process lock must prevent two daemon instances from owning
 the same volume/cache; SQLite locking alone does not coordinate cache files.
 
 The platform crates own only OS callback translation, reply lifetimes, mount
@@ -67,8 +72,8 @@ exact object key, size and revision. P4a binds successful opens to the actual
 credentials used for HEAD and all reads through that handle; new opens resolve
 credentials again. Configuration or credential changes select a different
 namespace, and every new open still requires online authorization. SQLite
-schema 3 retains the binding registry and unbound legacy rows, and adds clean
-snapshots. The engine enforces online authorization before cache lookup.
+schema 4 retains the binding registry, unbound legacy rows and clean snapshots,
+and adds staged generations/local intent. The engine enforces online authorization before cache lookup.
 This is not a provider-global account identifier. See the implemented
 [provider contract](provider-contract.md) and [migration](storage-and-recovery.md).
 

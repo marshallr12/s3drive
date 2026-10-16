@@ -27,6 +27,7 @@ to the user.
 | D019 | Implemented prerequisite for P4 | Bind each successful open to its resolved credential generation and source configuration. Require online HEAD on new opens; credential rotation creates a separate cache namespace. Preserve schema 1 rows as unbound legacy data during migration to schema 2. This does not establish a provider-global principal or enable offline access |
 | D020 | Implemented | SQLite BLOBs for clean snapshots up to 1 MiB make bytes/checksum/metadata atomic. Use one bounded worker, explicit byte/entry limits and pins. Bulk files and staged writes remain separate future storage; no performance or offline-access claim |
 | D021 | Implemented for P4b2b | Opt-in mounted clean cache: authorize every new open online, retain immutable fully cached snapshots until handle release, coalesce fills, and use direct reads for large files or pinned quota pressure. This permits already-open cached reads during network loss but denies new offline opens |
+| D022 | Implemented local P5a1 foundation | Non-evictable bounded SQLite chunks, manifests and pending intent make local generation publication transactional across Linux/Windows. Local receipts do not acknowledge remote writes. External bulk files remain optional and need a separate durability proof |
 
 ## Questions to resolve at the relevant phase
 

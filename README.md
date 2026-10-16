@@ -10,7 +10,8 @@ through FUSE; see the [Linux contract](docs/src/linux-mount.md) and
 [Windows contract](docs/src/windows-mount.md) for native verification scope.
 Native read-only acceptance passed on both platforms. Optional [mounted caching](docs/src/storage-and-recovery.md)
 uses bounded SQLite snapshots with checksums, eviction, pins and recovery tests.
-Each new open still authorizes online; writes remain planned.
+Each new open still authorizes online. A [local staging/journal library](docs/src/staged-writes.md)
+now preserves immutable write generations; writable mounts and remote commits remain planned.
 [Linux sign-in startup](docs/src/startup-and-sessions.md) works without systemd,
 including MX Linux, and has a native terminal-disconnect acceptance test.
 Windows startup uses a per-user scheduled task and an NTFS folder shared across
@@ -85,7 +86,7 @@ On Windows with WinFsp installed, choose an unused letter:
 | --- | --- |
 | `s3drive-core` | Validate TOML and resolve virtual paths to bucket/key pairs |
 | `s3drive-s3` | Read-only AWS SDK adapter, revision-bound handles and sanitized errors |
-| `s3drive-state` | Private SQLite state and bounded clean-cache worker |
+| `s3drive-state` | Private SQLite state, bounded clean cache and local staged-generation journal |
 | `s3drive-fs` | Shared namespace, revision-bound handles and optional cache orchestration |
 | `s3drive-fuse` | Linux read-only FUSE callbacks and signal-driven unmount |
 | `s3drive-winfsp` | Windows read-only WinFsp callbacks, native naming/security and teardown |

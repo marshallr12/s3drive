@@ -40,7 +40,7 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Rust workspace and CLI | Implemented |
 | TOML parsing and source/namespace validation | Implemented; no network checks |
 | Alias + prefix + file-path resolution | Implemented as a planning utility |
-| Local SQLite state | Schema 3; binding registry, clean BLOBs, atomic migration and private process ownership |
+| Local SQLite state | Schema 4; bindings, clean BLOBs, staged generations/journal and private process ownership |
 | mdBook research, design and acceptance plan | Implemented |
 | S3 transport and credentials | Implemented; [Wasabi read acceptance](wasabi.md) passed; broader conformance pending |
 | Linux filesystem mount | Implemented read-only FUSE; see [mount contract](linux-mount.md) and native evidence in handoff |
@@ -50,7 +50,8 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Cross-machine coordination with Turso | [Research and design proposal](turso-coordination.md); no dependency or cloud service enabled |
 | Clean-cache storage library | Bounded worker, checksums, LRU/pins and recovery tests |
 | Mounted caching | Opt-in; online HEAD on new opens, revision snapshots, restart and integrity checks |
-| Upload journal, new offline opens, tray UI | Planned |
+| Local staging/journal foundation | Immutable chunked generations and pending intent; [no upload execution yet](staged-writes.md) |
+| Remote upload/flush, writable mounts, new offline opens, tray UI | Planned |
 
 The initial research/scaffold delivery is complete. Work has advanced to the
 [read-only provider adapter](provider-contract.md). The overall product goal

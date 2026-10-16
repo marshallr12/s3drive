@@ -3,13 +3,14 @@
 P4a implements credential bindings and SQLite migration. P4b1 adds private local
 directory ownership. P4b2a implements the bounded clean-cache storage library and
 worker. P4b2b connects that cache to read-only mounts. New offline opens and the
-upload journal remain unsupported.
+writable mounts remain unsupported. The [P5a1 local staged-generation library](staged-writes.md)
+now implements pending local intent; upload execution remains disabled.
 An initialized database is not an implemented or proven upload journal.
 
 ## Implemented SQLite state and migration
 
 `s3drive-state` uses `rusqlite` with bundled SQLite. Initialization marks a
-database with an application ID and `user_version = 3`. Schema 1's reserved
+database with an application ID and `user_version = 4`. Schema 1's reserved
 `cached_objects` table had only source aliases, with no credential binding.
 Migration 2 renames it to `legacy_cached_objects_v1` and preserves every row for
 inspection. None of those rows is adopted into an active cache namespace.
@@ -24,13 +25,14 @@ See the [credential-binding contract](provider-contract.md).
 Fresh initialization and migration from schema 1 run inside an immediate
 transaction, including application/version markers. A migration failure rolls
 back table renaming and the version update. Foreign databases, unsupported
-schema versions and missing expected columns fail explicitly. The schema
-includes clean snapshots in schema 3, but no upload jobs.
+schema versions and missing expected columns fail explicitly. Schema 4 preserves
+schema-3 clean snapshots and adds staged chunks, manifests,
+local heads and pending intent. It does not execute remote upload jobs.
 
 The connection uses WAL, `synchronous=FULL`, foreign keys, and a five-second
 busy timeout. Tests cover restart, settings, binding isolation/rebinding refusal,
 shape constraints, legacy-row preservation and migration rollback. The CLI's
-`init-state` now initializes or migrates to schema 3. Mounts with an explicit
+`init-state` now initializes or migrates to schema 4. Mounts with an explicit
 `[cache]` table register authorized source bindings and
 use this database for clean snapshots. Mounts without that table keep direct
 S3 range reads.
@@ -63,7 +65,8 @@ database application/schema validation, inside the
 already-private directory. Symlink and hard-link targets are never changed.
 The initial filesystem allowlist is ext2/3/4, btrfs, xfs, f2fs and tmpfs. Network,
 FUSE, overlay and other unverified filesystem types are refused. Tmpfs state
-is local but disappears on reboot; choose persistent local disk for a cache.
+is local but disappears on reboot. It can hold disposable clean cache data;
+new staging mutations/receipts are refused on known tmpfs storage.
 
 On Windows, new directories have a protected DACL granting the account and
 SYSTEM inheritable full control. Existing entries must have a non-null DACL
@@ -223,13 +226,15 @@ live Wasabi cached-read acceptance is still separate work.
 
 | Local resource | Purpose | Lifetime |
 | --- | --- | --- |
-| `metadata.sqlite3` with WAL/SHM files | Implemented bindings and small clean BLOBs; planned inode mapping, jobs and conflicts | Persistent; migrate explicitly |
+| `metadata.sqlite3` with WAL/SHM files | Bindings, clean BLOBs, staged chunks/manifests and local pending intent; later remote jobs/conflicts | Persistent; migrate explicitly |
 | `clean/<generated-id>` (planned) | Large revision-specific chunks/files | Evictable when unpinned and unused |
-| `staging/<generated-id>` | Modified bytes not yet safely committed remotely | Never evict while dirty or unresolved |
+| External staging files (optional future backend) | Current P5a1 generations use non-evictable SQLite chunks | Never evict while dirty or unresolved |
 | `volume.lock` | Single local daemon ownership | Held for daemon lifetime |
 | Diagnostic logs | Redacted operational evidence | Rotated and size-limited |
 
-Future schema tables should build on `source_bindings` with volume ownership,
+Schema 4 also includes `staged_generations`, `staged_chunks`, `staged_extents`,
+`retained_staged_chunks`, `staged_heads` and `write_journal`; see the staged-generation chapter. Future
+schema tables should build on these with volume ownership,
 `nodes` (stable IDs and parent links), `cache_extents`,
 `upload_jobs`, `upload_parts`, `conflicts`, and `provider_capabilities` with
 probe provenance/expiry. These additional entities are not shipped migrations.
@@ -270,13 +275,13 @@ clean -> dirty -> prepared -> uploading -> remotely-committed -> clean
                      +------------+--> retryable / conflict / needs-reconciliation
 ```
 
-1. Serialize mutations per inode. Keep a base revision and allocate a generated
-   staging path. Build the next complete file generation; untouched ranges must
+1. Serialize mutations per inode. Keep a base revision and build a complete
+   immutable generation (P5a1 uses SQLite chunks); untouched ranges must
    come from the same base revision, not a newly overwritten remote object.
-2. On a local durability barrier, flush staged bytes and the necessary parent
-   directory metadata, then commit a journal record referring to that durable
-   generation. Implement the OS-specific equivalent on Windows. Never record
-   a supposedly durable generation before its bytes are durable.
+2. P5a1 publishes its complete manifest, retained payload references, pending
+   intent and local head in one FULL SQLite transaction. An external-file
+   backend would need durable payload/parent-directory ordering before SQL
+   publication. Neither local boundary is a remote flush acknowledgment.
 3. Upload an immutable snapshot of that generation. New writes go to a newer
    generation. Persist multipart upload ID, part numbers/checksums, expected
    revision and operation ID so recovery can reconcile progress.

@@ -1,4 +1,5 @@
-//! Local SQLite bootstrap. Never place this database on the S3-backed mount.
+//! Private SQLite state, clean cache and local staged-generation journal.
+//! Never place this database on the S3-backed mount.
 
 pub mod cache;
 mod directory;
@@ -6,12 +7,13 @@ mod directory;
 #[allow(unsafe_code)]
 #[path = "directory/windows.rs"]
 mod directory_windows;
+pub mod journal;
 
 use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 3;
+pub const SCHEMA_VERSION: i32 = 4;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub struct State {
@@ -28,6 +30,12 @@ pub struct StateInfo {
 }
 
 impl State {
+    fn verify_staging_storage(&self) -> Result<()> {
+        self._directory
+            .as_ref()
+            .ok_or("staging requires managed local state")?
+            .verify_staging_storage()
+    }
     /// Open a private local state directory, creating its last component when
     /// needed. The parent must exist. Ownership is held until this State drops.
     pub fn open_managed(directory: &Path) -> Result<Self> {
@@ -75,12 +83,24 @@ impl State {
             }
             if version == 2 {
                 tx.execute_batch(include_str!("../migrations/003.sql"))?;
+                version = 3;
+            }
+            if version == 3 {
+                tx.execute_batch(include_str!("../migrations/004.sql"))?;
             }
             // Catch a damaged/current-version database before returning success.
             tx.prepare("SELECT source_alias, object_key, etag, version_id, size_bytes FROM legacy_cached_objects_v1 LIMIT 0")?;
             tx.prepare("SELECT source_id, config_fingerprint FROM source_bindings LIMIT 0")?;
             tx.prepare("SELECT cache_key, source_id, size_bytes, checksum, data, last_used FROM clean_blobs LIMIT 0")?;
-            tx.pragma_update(None, "user_version", SCHEMA_VERSION)?;
+            tx.prepare("SELECT generation_id, source_id, object_key, parent_id, base_absent, base_etag, base_version, size_bytes, filled_bytes, extent_count, phase, manifest_hash FROM staged_generations LIMIT 0")?;
+            tx.prepare("SELECT chunk_hash, data, created_by FROM staged_chunks LIMIT 0")?;
+            tx.prepare("SELECT chunk_hash FROM retained_staged_chunks LIMIT 0")?;
+            tx.prepare("SELECT generation_id, offset_bytes, length_bytes, chunk_hash FROM staged_extents LIMIT 0")?;
+            tx.prepare("SELECT source_id, object_key, generation_id FROM staged_heads LIMIT 0")?;
+            tx.prepare("SELECT generation_id, status FROM write_journal LIMIT 0")?;
+            if version != SCHEMA_VERSION {
+                tx.pragma_update(None, "user_version", SCHEMA_VERSION)?;
+            }
             tx.commit()?;
         }
         let journal: String =

@@ -9,8 +9,9 @@ The user's startup/session requirements add P3.5 before caching: Linux must
 support MX without systemd, and both platforms must retain a mount after its
 launching SSH terminal disconnects. See [startup/session design](startup-and-sessions.md).
 P4a now adds credential-bound read handles and a SQLite binding registry with
-migration. The actual file cache, broader provider semantics and writes remain
-unverified or unimplemented.
+migration. Optional mounted clean caching is implemented and natively tested.
+P5a1 now adds local staged-generation storage; write coordination, remote commit
+and writable OS callbacks remain subsequent phases.
 
 | Phase | Deliverable | Completion evidence |
 | --- | --- | --- |
@@ -24,6 +25,7 @@ unverified or unimplemented.
 | P4b1 — local ownership | Private local directory and exclusive lock retained for SQLite's lifetime | Competing processes, forced owner termination, link/ACL refusal and ordinary Windows account access |
 | P4b2a — clean-cache storage | Bounded SQLite BLOB worker, integrity checks, LRU and pins | Native storage tests, forced process death, SQL disk-full rollback and migration |
 | P4 — cache and local recovery | Revision-aware disk cache, eviction, pinning, single-process ownership, state migrations | Cache isolation, disk-full, stale revision, offline miss and restart tests; no dirty data exists yet |
+| P5a1 — local generation store | Immutable chunked payloads, manifests, local heads and pending intent | Native state tests, nine process-kill boundaries, lost acknowledgments, corruption and SQLITE_FULL rollback |
 | P5a — staged writes | In-memory storage test double plus immutable local generations and durable journal | Fault injection at every local boundary; acknowledged local state survives restart; network mutation remains disabled |
 | P5b — conditional remote commits | Create/replace and multipart recovery; explicit flush contract | Provider preconditions verified; two-writer conflict tests; crash/timeout replay never overwrites unseen edits |
 | P5c — desktop mutations | Safe delete, documented rename behavior, open-handle semantics, real application workflows | Delete races, save/replace, concurrent open, unmount failures and data-loss tests on both OSes |
@@ -188,3 +190,18 @@ The first usable product milestone is **P3: read-only mounts on both platforms**
 A general editable desktop drive requires P5c, while a Google Drive-like
 polished application also needs P6. Choose Cloud Files instead of the P3 WinFsp
 surface only after resolving the drive-versus-sync-folder product preference.
+
+## P5a local-write foundation
+
+P5a1 implements the [local generation/journal store](staged-writes.md) with
+non-evictable SQLite chunks, sparse extents, complete manifests, local-parent
+compare-and-swap and idempotent append/seal receipts. Dirty bytes are preserved
+on quota, corruption, conflict and process death. There is no sealed-data
+garbage collection, upload executor or writable mount yet.
+
+P5a2 must add the bounded async coordinator on the same owner connection as
+cache work, patch/truncate/read-your-writes operations, hydration from a pinned
+base and a fuller in-memory storage failure model. P5b must verify provider
+preconditions and reconcile uncertain remote results before P5c exposes writes.
+Credential-generation rebinding and parent/supersession dependencies need
+explicit policies; a pending local record is not permission to upload.

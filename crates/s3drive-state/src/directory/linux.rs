@@ -98,3 +98,10 @@ pub(super) fn verify_local(file: &File, _: &Path) -> Result<()> {
     }
     Ok(())
 }
+
+pub(super) fn verify_persistent(file: &File) -> Result<()> {
+    if fstatfs(file)?.filesystem_type() == statfs::TMPFS_MAGIC {
+        return Err("staging requires persistent local storage; tmpfs cannot acknowledge durable generations".into());
+    }
+    Ok(())
+}

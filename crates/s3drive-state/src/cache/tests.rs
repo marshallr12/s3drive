@@ -273,7 +273,7 @@ fn migration_two_preserves_bindings_and_rolls_back_conflicting_cache_schema() {
         state.register_source(&[1; 32], &"a".repeat(64)).unwrap();
         state
             .connection
-            .execute_batch("DROP TABLE clean_blobs; PRAGMA user_version=2;")
+            .execute_batch("DROP TABLE write_journal; DROP TABLE staged_heads; DROP TABLE staged_extents; DROP TABLE retained_staged_chunks; DROP TABLE staged_chunks; DROP TABLE staged_generations; DROP TABLE clean_blobs; PRAGMA user_version=2;")
             .unwrap();
         if conflict {
             state.connection.execute_batch("CREATE TABLE clean_blobs (personal TEXT); INSERT INTO clean_blobs VALUES ('keep');").unwrap();
@@ -286,7 +286,7 @@ fn migration_two_preserves_bindings_and_rolls_back_conflicting_cache_schema() {
         let version: i32 = db
             .pragma_query_value(None, "user_version", |r| r.get(0))
             .unwrap();
-        assert_eq!(version, if conflict { 2 } else { 3 });
+        assert_eq!(version, if conflict { 2 } else { crate::SCHEMA_VERSION });
         let count: i64 = db
             .query_row("SELECT count(*) FROM source_bindings", [], |r| r.get(0))
             .unwrap();

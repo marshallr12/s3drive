@@ -145,3 +145,15 @@ quota/pin behavior and rollback after an injected insertion failure. A separate
 state test uses SQLite's page limit to cause real SQLITE_FULL; native SQL-error
 coverage does not claim physical disk exhaustion. Startup fixtures now enable
 cache ownership and verify preserved state can reopen after daemon removal.
+
+## Local staged-generation verification
+
+`journal/tests.rs` covers schema-4 migration, range/sparse/empty generations,
+immutability, quotas/deduplication, conflicts, corrupt state and clean-cache
+isolation. Linux also uses an existing `/dev/shm` tmpfs fixture to check
+that staging cannot acknowledge volatile storage. Nine child-process kill points surround append and publication
+transaction changes/commits; injected post-commit response loss exercises
+idempotent append/seal replay. Real SQLITE_FULL is induced using SQLite's page
+limit. The memory-base fixture rejects a changed revision during hydration.
+These state tests run natively on both CI OSes. They do not establish writable
+FUSE/WinFsp behavior, remote publication or physical power-loss survival.
