@@ -96,10 +96,15 @@ in tmux, destruction of that terminal and subsequent process access. Tests also
 cover private registration, preservation of existing profile content/mode and
 refusal to remove edited startup entries. No real user login profile was changed.
 
-Windows needs a directory mount and service/scheduled-task decision that works
-across distinct logon sessions. An interactive task plus a drive letter is not
-sufficient evidence. Actual reboot and account logout policy checks on the
-target workstations remain pending on both platforms.
+Windows implements an owner-account, password-backed scheduled task with a
+shared NTFS directory mount. Native acceptance at `029765e` in
+[run 38945436975](https://github.com/marshallr12/s3drive/actions/runs/38945436975)
+verifies two distinct authentication sessions reading the same daemon's S3 and
+Unicode bytes, owner-only access, duplicate starts and graceful removal.
+The disposable CI VM has an explicit exception for an OS-retained locked test
+profile; see [verification details](development.md). Actual reboot, desktop
+logout policy, SSH authentication and Windows 10/11 desktop checks remain
+pending. These are not inferred from the scheduled-task definition.
 
 ### Optional coordination investigation
 

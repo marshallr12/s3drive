@@ -83,7 +83,8 @@ exposes an NTFS directory mount as the common desktop/SSH path. A drive letter
 can remain a convenience inside an individual session.
 
 `scripts/windows-session.ps1` implements a password-backed Task Scheduler
-registration. Native acceptance is pending for this new backend. The scheduled
+registration. Native cross-logon acceptance passed on the hosted Windows VM.
+The scheduled
 process uses the mounting account at least privilege in a separate batch logon,
 has no execution time limit, ignores duplicate starts and retries an unexpected
 failure at most three times. Its private supervisor launches the Rust mount and
@@ -159,7 +160,8 @@ python3 scripts/test-linux-session.py
 The startup source checkpoint `664f51cdbf0e44cf2410da4cd3bef606e03fe5fc`
 also passed Linux startup, both native filesystem gates and book checks in
 [CI run 38933462454](https://github.com/marshallr12/s3drive/actions/runs/38933462454).
-The Windows result covers the existing foreground drive, not persistent startup.
+That earlier Windows result covers the foreground drive. The newer persistent
+startup evidence is recorded below.
 
 It uses a real FUSE mount, the real desktop-entry parser (`gio`), a login hook
 inside a temporary tmux server, duplicate startup attempts, destruction of that
@@ -170,7 +172,20 @@ changing the profile. Paths include spaces, Unicode, dollar and percent characte
 It checks the synthetic source root without contacting any cloud account.
 The existing native mount gates separately verify remote object reads.
 
+Windows persistent startup passed the native test at
+`029765ec79c99a029037356ba61278fc7de6ab7b` in
+[run 38945436975](https://github.com/marshallr12/s3drive/actions/runs/38945436975).
+This runs remotely on a GitHub-hosted Windows Server 2025 VM with real WinFsp,
+using local HTTP fixtures and dummy S3 credentials. An ordinary account installs
+the task; two fresh authentication sessions read the same surviving mount after
+the installer exits. Exact S3/Unicode bytes, duplicate starts, another account's
+denied access and graceful removal are checked. The fixture account is
+provisioned by an elevated test harness; the mounted process runs at least privilege.
+The CI VM may retain its locked Windows test profile until VM destruction, after
+removing the dummy credentials and account. This explicit, narrow exception
+does not bypass any mount or access assertion; see [test cleanup](development.md).
+
 Actual workstation reboot, desktop sign-out under its logout policy, incoming
-SSH authentication/PAM behavior and Windows cross-logon visibility still need
+SSH authentication/PAM behavior and Windows 10/11 desktop behavior still need
 their own acceptance evidence. No startup was installed into the user's real
 desktop or login profile during the isolated tests.

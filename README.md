@@ -11,7 +11,9 @@ through FUSE; see the [Linux contract](docs/src/linux-mount.md) and
 Native read-only acceptance passed on both platforms; file caching and writes remain planned.
 [Linux sign-in startup](docs/src/startup-and-sessions.md) works without systemd,
 including MX Linux, and has a native terminal-disconnect acceptance test.
-Windows startup across login sessions remains a separate phase.
+Windows startup uses a per-user scheduled task and an NTFS folder shared across
+logins; native cross-logon reads and removal passed on the hosted Windows VM.
+Actual workstation reboot, sign-out policy and SSH authentication remain separate checks.
 [Wasabi read acceptance](docs/src/wasabi.md) passed against isolated test
 objects, including a real Linux mount. Broader provider conformance is pending.
 

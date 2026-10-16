@@ -46,7 +46,7 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Linux filesystem mount | Implemented read-only FUSE; see [mount contract](linux-mount.md) and native evidence in handoff |
 | Windows drive mount | Implemented WinFsp adapter; [native read-only acceptance passed](windows-mount.md) |
 | Linux sign-in startup, including MX without systemd | [Detached launcher implemented](startup-and-sessions.md); native desktop/login-hook/terminal-loss checks passed |
-| Windows startup across login sessions | Planned; foreground drive acceptance does not establish this contract |
+| Windows startup across login sessions | [Scheduled task and shared NTFS folder implemented](startup-and-sessions.md); native cross-logon reads/removal passed; workstation reboot/SSH authentication pending |
 | Cross-machine coordination with Turso | [Research and design proposal](turso-coordination.md); no dependency or cloud service enabled |
 | Read cache, upload journal, offline use, tray UI | Planned |
 

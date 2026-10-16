@@ -41,8 +41,10 @@ of credentials and object signing.
 
 The core `s3drive` mount process runs in the foreground. A detached per-user
 launcher now provides Linux desktop/SSH startup without requiring systemd.
-Windows needs a backend independent of the interactive logon session. A
-local control endpoint can carry status, unmount, pin, retry and conflict actions.
+Windows uses an account-owned password-backed scheduled task and a shared NTFS
+folder mount; native tests verify reads across distinct authentication sessions.
+Both launchers provide start/status/stop/remove. A future local control endpoint
+can carry status, unmount, pin, retry and conflict actions.
 A tray UI should consume that same API rather than implementing storage logic.
 
 ## Multiple buckets

@@ -2,8 +2,9 @@
 
 Updated: 2026-10-16. P3 read-only mounts have passed native acceptance on Linux
 and Windows. Scoped live Wasabi reads also passed. P3.5a adds Linux startup
-without systemd; native session tests passed locally. Goal active; Windows
-startup, cache, recovery, safe writes and packaging remain future work.
+without systemd; native session tests passed locally. P3.5b adds Windows
+startup with native cross-logon acceptance. Goal active; actual workstation
+reboot/SSH login checks, cache, recovery, safe writes and packaging remain.
 
 ## Goal and scope
 
@@ -62,22 +63,39 @@ including Linux startup, Linux/Windows native mounts and book checks.
 Actual reboot, full desktop logout
 policy and incoming SSH authentication/PAM need separate acceptance.
 
-On `windows-session-startup`, the Windows foreground mount also accepts a new
-absolute NTFS directory path, with existing parents and no junctions/symlinks.
-Directory tests cover Unicode reads, occupied targets, graceful teardown and
-forced process termination; native CI run 38935158119 passed at `af18c3a`.
-The new `scripts/windows-session.ps1` registers an owner-account, least-privilege
-password-backed scheduled task. Its independent supervisor uses stdin EOF for
-graceful unmount. No Windows passwords are stored in application files/argv.
-`scripts/test-windows-session.ps1`, called by the native Rust test while the HTTP
-fixture is live, creates a disposable non-admin account and two independent
-logons to verify real S3/Unicode reads, duplicate starts and uninstall.
-Startup native CI is pending; do not claim cross-session acceptance yet.
-No real user Windows credential or startup registration was changed. Accounts
-without usable Windows passwords or with restrictive batch-logon policies need
-a service alternative, not an S4U/interactive-only fallback. Actual reboot,
-full sign-out, SSH authentication/trigger behavior remain host acceptance work.
-See `docs/src/startup-and-sessions.md`.
+Windows foreground mounts accept a new absolute NTFS directory path, with
+existing parents and no junctions/symlinks. Tests cover Unicode reads, occupied
+targets, graceful teardown and forced process termination. The persistent
+`scripts/windows-session.ps1` registers an owner-account, least-privilege,
+password-backed scheduled task. Its supervisor uses stdin EOF for graceful
+unmount. No Windows password is stored in application files/argv. The account
+requires batch-logon rights; the launcher never changes security policy.
+
+Native startup acceptance passed at `029765ec79c99a029037356ba61278fc7de6ab7b`
+in [run 38945436975](https://github.com/marshallr12/s3drive/actions/runs/38945436975).
+Tests run remotely on GitHub's Windows Server 2025 VM (`10.0.26100`), not on
+this Linux workstation. The test creates an ordinary account and verifies two
+distinct TOKEN_STATISTICS.AuthenticationId values reading the same daemon's
+exact S3/Unicode bytes after its installer exits. Duplicate starts preserve
+its PID; another account is denied access. Remove deletes the task/mount and
+preserves config/credentials. The prior drive/folder Unicode corpus also runs.
+Actual Windows 10/11 desktop, reboot, full sign-out and SSH authentication/trigger
+behavior remain target-host acceptance work. No real user Windows credential or
+startup registration changed. Passwordless accounts or restrictive batch-logon
+policy require a service alternative, which is not implemented.
+
+The elevated fixture provisions/removes only its new account's batch right.
+Short-lived clients use CreateProfile's returned path without loading HKCU.
+Windows can retain a locked registry profile after all fixture processes exit.
+CI explicitly permits only that sharing violation to defer to GitHub VM
+destruction, after successful functional checks, dummy credential removal and
+account deletion; all other cleanup failures remain fatal. Normal local tests
+still require profile deletion. This is fixture disposal, not application
+uninstall behavior. See `docs/src/development.md` and `startup-and-sessions.md`.
+`whoami /logonid` can be inherited by CreateProcessWithLogonW clients, so use
+token AuthenticationId for session uniqueness. Earlier failing runs and logs
+`/tmp/s3drive-windows-session-job10.log` through `job12.log` retain the diagnosis;
+do not report them as complete acceptance.
 
 ## Turso research and architecture images
 
@@ -171,23 +189,23 @@ was fixed and the complete native gate rerun; none is acceptance evidence.
 
 ## Publication and next work
 
-Linux startup/research is published to private `origin/main` at
-`3eeb40bf94f990e2917c49b4107f74a4679ef61a`; final-source CI run
-[38933907710](https://github.com/marshallr12/s3drive/actions/runs/38933907710)
-passed. Windows startup work is on `windows-session-startup`. Baseline and
-directory-mount local gates passed (`/tmp/s3drive-windows-startup-baseline.log`,
-`/tmp/s3drive-windows-folder-gate.log`). Publication requires the exact branch tip's
-terminal CI success, then a fast-forward. Check current Git and Actions state
-when resuming; preserve ignored user configuration.
+Linux startup/research baseline `3eeb40bf94f990e2917c49b4107f74a4679ef61a`
+passed final-source CI run 38933907710. Windows startup source checkpoint
+`029765ec79c99a029037356ba61278fc7de6ab7b` has native acceptance in run
+38945436975; subsequent updates document the results and refresh the diagrams.
+The publication procedure is a terminal successful CI run for the final branch
+tip, followed by fast-forwarding/pushing private `origin/main`. Check live Git
+and Actions state when resuming; preserve ignored user configuration. The local
+gate log is `/tmp/s3drive-windows-session-final-gate.log`.
 
-Next is P3.5b Windows startup/session acceptance, followed by P4: design
-authenticated cache identity, SQLite migration, revision-
-bound clean data cache, exclusive process ownership, eviction/pinning and
-restart/disk-full/offline-miss tests. Keep cache/state outside mounted trees.
-Writes require separate staged generations and a durable journal (P5a),
-provider conditional commits/recovery (P5b), then desktop mutations (P5c).
-Do not expose unconditional overwrite as a shortcut. Broader live provider
-probes must use explicitly scoped disposable fixtures.
+Target-workstation reboot/sign-in, full sign-out policy and SSH authentication
+acceptance remain pending. The next independent implementation phase is P4:
+authenticated cache identity, SQLite migration, revision-bound clean data cache,
+exclusive process ownership, eviction/pinning and restart/disk-full/offline-miss
+tests. Keep cache/state outside mounted trees. Writes require separate staged
+generations and a durable journal (P5a), provider conditional commits/recovery
+(P5b), then desktop mutations (P5c). Do not expose unconditional overwrite as a
+shortcut. Broader live provider probes require scoped disposable fixtures.
 
 Read the mdBook implementation plan, provider/OS contracts and decisions.
 No subagents were dispatched. The overall goal is not complete.
