@@ -54,9 +54,10 @@ public static class S3DriveFixtureNative {
     static extern bool CloseHandle(IntPtr handle);
     [DllImport("userenv.dll", CharSet=CharSet.Unicode)]
     static extern int CreateProfile(string sid, string user, StringBuilder path, uint length);
-    public static void CreateFixtureProfile(SecurityIdentifier sid, string user) {
+    public static string CreateFixtureProfile(SecurityIdentifier sid, string user) {
         var path = new StringBuilder(260);
         Marshal.ThrowExceptionForHR(CreateProfile(sid.Value, user, path, (uint)path.Capacity));
+        return path.ToString();
     }
     public static string AuthenticationId(IntPtr process) {
         IntPtr token;
@@ -169,7 +170,7 @@ try {
     }
     [S3DriveFixtureNative]::Set($account.SID,$true)
     $batchRightGranted = $true
-    [S3DriveFixtureNative]::CreateFixtureProfile($account.SID,$userName)
+    $profileDirectory = [S3DriveFixtureNative]::CreateFixtureProfile($account.SID,$userName)
     $taskName = "S3Drive-$($account.SID.Value)-acceptance"
     $null = [IO.Directory]::CreateDirectory($root)
     $acl = [Security.AccessControl.DirectorySecurity]::new()
@@ -179,6 +180,7 @@ try {
         $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($allowed), 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow'))
     }
     Set-Acl -LiteralPath $root -AclObject $acl
+    [IO.File]::WriteAllText((Join-Path $root 'profile-path.txt'), $profileDirectory)
     Copy-Item -LiteralPath $Executable -Destination (Join-Path $root 's3drive.exe')
     Copy-Item -LiteralPath $Config -Destination (Join-Path $root 'drive.toml')
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'windows-session.ps1') -Destination (Join-Path $root 'source-manager.ps1')
@@ -192,6 +194,10 @@ $root=$PSScriptRoot
 $state=Join-Path $root 'state'
 $mount=Join-Path $root 'mounted'
 $manager=Join-Path $root 'source-manager.ps1'
+# Without loading HKCU, the secondary-logon environment can point USERPROFILE
+# at Default. Use the path returned by CreateProfile for fixture file setup;
+# the actual scheduled daemon must discover its loaded profile independently.
+$profileDirectory=[IO.File]::ReadAllText((Join-Path $root 'profile-path.txt'))
 function Manage([string]$Action) {
     $output=& $manager -Action $Action -Name acceptance -StateDirectory $state
     if ($LASTEXITCODE -ne 0) { throw "Manager $Action failed" }
@@ -207,7 +213,7 @@ try {
             $received=$null
             $identity=[Security.Principal.WindowsIdentity]::GetCurrent()
             $credential=[Management.Automation.PSCredential]::new($identity.Name,$secure)
-            $aws=Join-Path $env:USERPROFILE '.aws'
+            $aws=Join-Path $profileDirectory '.aws'
             $null=[IO.Directory]::CreateDirectory($aws)
             [IO.File]::WriteAllText((Join-Path $aws 'credentials'), "[fixture]`naws_access_key_id=TESTPROFILE`naws_secret_access_key=TESTPROFILESECRET`n")
             [IO.File]::WriteAllText((Join-Path $aws 'config'), '')
@@ -243,7 +249,7 @@ try {
         'Remove' {
             $null=Manage Remove
             if ([IO.Directory]::Exists($mount)) { throw 'Directory mount remains after removal' }
-            if (-not [IO.File]::Exists((Join-Path $root 'drive.toml')) -or -not [IO.File]::Exists((Join-Path $env:USERPROFILE '.aws\credentials'))) { throw 'Removal deleted config or credentials' }
+            if (-not [IO.File]::Exists((Join-Path $root 'drive.toml')) -or -not [IO.File]::Exists((Join-Path $profileDirectory '.aws\credentials'))) { throw 'Removal deleted config or credentials' }
         }
         'Diagnostics' {
             if ([IO.File]::Exists((Join-Path $state 'startup.json'))) {
