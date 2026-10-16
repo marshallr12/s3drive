@@ -1,6 +1,6 @@
 # Linux and Windows integration
 
-Linux now has a read-only FUSE implementation; a Windows adapter is implemented with native acceptance pending. See the
+Linux FUSE and Windows WinFsp read-only adapters have passed their native gates. See the
 [Windows contract](windows-mount.md). See [the Linux contract](linux-mount.md) for commands, limits and the
 explicit native acceptance gate.
 

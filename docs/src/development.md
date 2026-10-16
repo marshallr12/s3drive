@@ -19,7 +19,7 @@ The initializer creates `metadata.sqlite3` in the given local directory. It is
 safe to reopen the scaffold's current schema; future versions and databases
 owned by other applications are rejected. It does not contact S3 or cache file
 contents. Linux `mount` now serves the shared engine through FUSE; Windows
-has a WinFsp implementation pending native acceptance.
+has a WinFsp implementation with separate native read-only acceptance evidence.
 
 The separate `list`, `stat` and `read` commands perform S3 reads with a real
 configuration. See [provider contract](provider-contract.md) for their usage

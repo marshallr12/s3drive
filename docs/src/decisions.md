@@ -8,27 +8,24 @@ to the user.
 | --- | --- | --- |
 | D001 | Adopted for scaffold | Rust Cargo workspace with shared core and separate OS adapters; mdBook holds research and plans |
 | D002 | Adopted for scaffold | Local SQLite via rusqlite; bundled SQLite avoids relying on a host-installed library |
-| D003 | Linux implemented; Windows proposed | FUSE/fuser on Linux and WinFsp on Windows for genuine filesystem mounts and drive letters |
-| D004 | Proposed | Direct object layout first, preserving existing S3 interoperability |
+| D003 | Implemented; native acceptance recorded separately | FUSE/fuser on Linux and WinFsp on Windows for genuine filesystem mounts and drive letters |
+| D004 | Adopted for reads | Direct object layout first, preserving existing S3 interoperability |
 | D005 | Adopted for scaffold/first milestone | Read-only mode; no implicit write or deletion support |
 | D006 | Adopted for P2 | One alias per bucket/prefix under a virtual root; no union, sharding or replication |
 | D007 | Adopted for P1 reads | AWS SDK implements list/head/range reads; mutation/recovery requirements still need evaluation |
 | D008 | Proposed | Explicit flush means remote durability by default; offline local durability must be a separate mode |
 | D009 | Adopted | Unknown capabilities remain unknown; no fallback from failed conditional writes to unconditional overwrite |
-| D010 | Deferred | Windows binding/distribution license and installer arrangement; P0 links neither runtime nor wrapper |
+| D010 | Private prototype; distribution deferred | P3 uses GPL-3.0 winfsp wrapper; application distribution license and installer arrangement remain undecided |
 | D011 | Deferred | Full POSIX/NTFS compatibility, distributed locks, writable database workloads and cross-source atomicity |
 | D012 | Deferred | Tray UI and optional Cloud Files surface until the shared engine is reliable |
 | D013 | Adopted for P1 | Source configuration controls S3 endpoint/region; explicit profiles do not fall back to ambient keys; numeric-loopback HTTP is test-only opt-in |
-
-| D014 | User selected | Wasabi is the first hosted integration target; region and isolated test prefix remain unspecified |
+| D014 | User selected and tested for reads | Wasabi `us-east-2`, bucket `s3drivetest`, local profile `wasabi-s3drive`; isolated test objects were approved, verified and removed |
 | D015 | Adopted for P2 | Bounded, uncached read-only namespace; collisions fail the directory, handles pin revisions, Linux direct I/O avoids mixed kernel cache revisions |
+| D016 | Adopted from live Wasabi evidence | Explicit `list_url_encoding = "form"` decodes raw listing plus signs as spaces before one percent decode; other providers retain percent-only default |
 
 ## Questions to resolve at the relevant phase
 
-- **Before live Wasabi integration:** Which region, local credential profile and
-  disposable test bucket/prefix should be used? What authentication setup must
-  work? Wasabi is selected; this remaining information is not yet available.
-- **Before the first mount:** Typical file sizes, directory sizes and working
+- **Before cache sizing and broader OS acceptance:** Typical file sizes, directory sizes and working
   set? How much local disk may the cache consume? Which Windows/Linux versions
   and CPU architectures need support?
 - **Before Windows packaging:** Is a drive letter essential, or is an Explorer

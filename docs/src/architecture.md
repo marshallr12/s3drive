@@ -3,7 +3,8 @@
 The diagram describes the target system. P0 added configuration, evidence
 types, SQLite initialization and explicit adapter stubs. P1 adds the read-only
 S3 transport. P2 adds the shared read-only namespace/handle engine and Linux
-adapter; cache, writes and Windows mounts remain planned.
+adapter; P3 adds Windows WinFsp. Cache and writes remain planned. See the
+platform contracts for native acceptance scope.
 
 ```text
 Local applications

@@ -2,9 +2,11 @@
 
 Each phase must leave a buildable tree, explicit behavior contract and durable
 verification evidence. P0 is complete; P1 has a read-only transport and local
-wire tests. P2 adds a shared read-only engine and Linux FUSE adapter with a separate native
-acceptance gate. Live Wasabi conformance, persistent cache identity/migration
-and Windows mounts remain unverified or unimplemented.
+wire tests plus scoped live Wasabi read evidence. P2 implements a shared
+read-only engine and Linux FUSE adapter with a separate native acceptance gate.
+P3 implements Windows WinFsp, with native read-only acceptance verified.
+Broader provider semantics, persistent cache identity/migration and writes
+remain unverified or unimplemented.
 
 | Phase | Deliverable | Completion evidence |
 | --- | --- | --- |
@@ -20,7 +22,7 @@ and Windows mounts remain unverified or unimplemented.
 
 ## P1 concrete tasks
 
-1. Wasabi is the selected first provider; identify a dedicated test bucket/prefix. Add AWS SDK client
+1. Wasabi is the selected first provider; a dedicated test bucket/prefix is configured. Add AWS SDK client
    setup with explicit per-source endpoint/region/addressing/profile precedence.
    Pin and inspect resolved APIs. Keep credentials out of fixtures.
 2. Establish a storage error taxonomy and streaming/cancellation contract.
@@ -47,9 +49,12 @@ configuration fingerprint, and `list`/`stat`/`read` CLI commands. The local TCP
 contract tests exercise the real SDK HTTP path with dummy credentials. See
 [the implemented contract](provider-contract.md).
 
-Still required before declaring full provider conformance: an explicitly
-selected live provider/test prefix, support evidence tied to that provider,
-and broader malformed-response/real-service coverage. The configuration hash
+Live Wasabi LIST/HEAD/GET, pagination, exact full/range/EOF bytes and a real
+Linux mount passed with three explicitly approved disposable fixtures. All
+were removed afterward. The test found a form-style listing URL dialect;
+the explicit source option and regression are documented in [Wasabi evidence](wasabi.md).
+Stale-validator and versioned reads, write capabilities and broader
+real-service coverage remain unverified. The configuration hash
 is not an authenticated account identity; persistent cache adoption must add
 that identity and migrate the reserved P0 table before storing live cache data.
 
@@ -60,8 +65,22 @@ Linux FUSE callbacks, real kernel reads from two fixture buckets, pagination,
 Unicode/literal names, open-revision conflicts, rejected mutations, external
 unmount and SIGTERM cancellation during a stalled GET. The native gate remounts
 and verifies cleanup. See [Linux contract](linux-mount.md) for the exact scope.
-Large-scale performance, desktop applications, cache and real Wasabi behavior
-are not covered by this isolated gate. Windows is the next independent phase.
+The expanded native Unicode corpus preserves 11 filenames plus a Unicode
+directory, including distinct composed/decomposed accents and supplementary
+emoji. Large-scale performance, desktop applications and cache are not covered
+by this isolated gate. Live Wasabi reads have separate evidence.
+
+### P3 progress
+
+Implemented: WinFsp callbacks using the shared engine, native Windows name
+comparison and collision rejection, owner read-only security descriptors,
+revision-pinned reads, bounded handles/directory snapshots, and cancellation.
+Native CI passed file reads, sharing, rejected mutations, PowerShell,
+owner ACLs and Explorer's Shell namespace. The full acceptance gate also passed
+the upstream volume-information test, expanded Unicode corpus, normal removal
+and cancellation during a stalled GET. See [Windows contract](windows-mount.md)
+for the exact source/run and exclusions. P3 establishes the first read-only
+milestone; caching, safe writes and desktop packaging remain separate phases.
 
 ## Test matrix
 

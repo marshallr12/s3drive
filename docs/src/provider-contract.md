@@ -119,8 +119,9 @@ conflicting ambient AWS settings. It checks that the configured profile,
 endpoint and region are used. It does not read the user's credential files.
 
 The fixture inspects signing headers; it does not independently validate the
-SigV4 cryptographic signature. No actual AWS or third-party bucket has been
-certified yet. The first live provider/test prefix is awaiting selection.
-Mounting, Windows name projection, persistent cache identity, provider evidence
-storage and all mutations remain later work. A working transport is necessary
-for the goal, but does not complete it.
+SigV4 cryptographic signature. Separate [live Wasabi evidence](wasabi.md)
+records authenticated LIST/HEAD/GET, pagination, exact bytes and Linux mounting
+against user-approved isolated objects. Stale validators, versioned reads and
+mutating provider capabilities remain unverified. The OS adapters now implement
+mounting and native name projection. Persistent authenticated cache identity,
+cache recovery and all filesystem mutations remain later work.

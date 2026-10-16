@@ -67,10 +67,11 @@ recovery design before selecting it.
 [S3 builder](https://docs.rs/object_store/0.14.2/object_store/aws/struct.AmazonS3Builder.html)
 
 P0 linked no network or filesystem bindings. P2 links Linux-only `fuser` 0.18
-(MIT); the Windows binding remains undecided. P1 links `aws-sdk-s3`,
+(MIT); P3 links Windows-only `winfsp` 0.13.1 (GPL-3.0) and `windows` 0.61.3.
+Private prototyping does not resolve future distribution terms. P1 links `aws-sdk-s3`,
 `aws-config` and Tokio for the read-only adapter, plus SHA-256 configuration
-fingerprints and percent decoding for list responses. Native filesystem
-bindings remain deferred. All dependencies are locked in `Cargo.lock`.
+fingerprints and explicit URL decoding dialects for list responses.
+All dependencies are locked in `Cargo.lock`.
 The local components use `serde`, `toml`, `url`, `clap`, `rusqlite` with bundled
 SQLite, and `tempfile` for isolated tests. SQLite operations should run on a
 dedicated worker once the filesystem engine exists.

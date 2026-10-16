@@ -10,4 +10,4 @@ mod windows;
 pub use windows::run;
 
 pub const IMPLEMENTATION_STATUS: &str =
-    "read-only WinFsp adapter; native acceptance pending; no writes or disk cache";
+    "read-only WinFsp adapter; native mount acceptance verified; no writes or disk cache";

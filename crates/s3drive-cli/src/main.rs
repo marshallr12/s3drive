@@ -92,7 +92,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         }
         Command::Status => {
             println!(
-                "Read-only transport and Linux FUSE adapter; host={}",
+                "Read-only transport and Linux/Windows filesystem adapters; host={}",
                 std::env::consts::OS
             );
             println!("Implemented: config validation, namespace planning, local SQLite bootstrap.");

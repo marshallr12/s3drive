@@ -1,130 +1,126 @@
 # S3Drive handoff
 
-Updated: 2026-10-16. Current phase: P2 Linux read-only mount implemented and
-locally verified. P1 live-provider conformance remains pending. Goal active.
+Updated: 2026-10-16. P3 read-only mounts have passed native acceptance on Linux
+and Windows. Scoped live Wasabi reads also passed. Goal active; cache, recovery,
+safe writes and packaging remain future phases.
 
 ## Goal and scope
 
 Enable S3-compatible storage to appear as local drives/filesystems on Linux and
-Windows using Rust. Research, workspace, mdBook and private GitHub repository
-`marshallr12/s3drive` are complete. Continue toward real usable mounts on both
-platforms, then the documented safe-write contract; do not call the goal done
-at a partial phase checkpoint.
+Windows using Rust. Research, seven-crate workspace, mdBook and private GitHub
+repository `marshallr12/s3drive` are complete. The first usable read-only
+milestone is verified. Do not call the broader editable-drive goal complete
+until the documented safe-write contract and its OS acceptance gates pass.
 
 ## Current implementation
 
-- Seven crates: configuration, read-only S3 transport, shared filesystem engine,
-  local SQLite state, Linux FUSE, Windows stub, CLI.
-- Linux `mount CONFIG MOUNTPOINT` is implemented. It serves per-source aliases
-  through FUSE with owner-only read-only permissions, stable inode IDs, bounded
-  directory snapshots and revision-pinned direct-I/O file handles.
-- SDK LIST/HEAD/range GET are the only remote operations exposed. It validates
-  exact ranges, lengths and revisions, sanitizes errors, bounds deadlines and
-  uses explicit source endpoint/region/profile precedence.
-- Root/alias configuration and `list`, `stat`, `read`, `config-check`, `resolve`,
-  `init-state`, `status` work. Windows `mount` remains explicitly unsupported.
-- SQLite schema 1 is initialized but not used for live cache entries. Add a
-  persistent authenticated source identity and migration before cache adoption;
-  a configuration fingerprint alone is not an account identity.
-- No uploads, mutations, cache, offline support or packaging yet. Do not expose
-  unconditional writes as a shortcut to provider conformance.
+- Shared bounded namespace engine; one directory per configured source alias.
+- Linux FUSE and Windows WinFsp foreground mounts use the same S3 reader.
+  Owner-only/read-only permissions, revision-pinned file handles, bounded
+  directory snapshots, explicit collisions and cancellation paths are enforced.
+- S3 exposes LIST/HEAD/range GET only. It validates ranges, lengths and revisions,
+  bounds deadlines and uses explicit endpoint/region/profile precedence.
+- Windows uses native UTF-16 case comparison and owner SID security descriptors.
+  Invalid/case-colliding names fail instead of being silently renamed/hidden.
+  The GPL-3.0 WinFsp wrapper is used for private prototyping; future application
+  distribution terms and packaging remain undecided.
+- `config-check`, `resolve`, `list`, `stat`, `read`, `init-state`, `status` and
+  both native `mount` paths work. Windows requires WinFsp 2.1 Developer files
+  for a source build and the installed runtime/driver for mounting.
+- SQLite schema 1 is initialized but has no live cache entries. Before cache
+  adoption, add persistent authenticated source identity and migrate the P0
+  reserved table. A configuration fingerprint is not an account identity.
+- No uploads, mutations, disk cache, offline support or desktop packaging yet.
 
-## Current user input
+## User configuration and live Wasabi evidence
 
-The user configured **Wasabi**, test bucket `s3drivetest`, region `us-east-2`
-(N. Virginia), endpoint `https://s3.us-east-2.wasabisys.com`, alias `wasabi`.
-Ignored `s3drive.local.toml` now exists and passes validation. The user corrected
-credential field names to `aws_access_key_id` / `aws_secret_access_key` in the
-`wasabi-s3drive` local profile. The values were neither displayed nor modified.
+User-selected Wasabi bucket `s3drivetest`, region `us-east-2` (N. Virginia),
+endpoint `https://s3.us-east-2.wasabisys.com`, alias `wasabi`. Ignored local
+`s3drive.local.toml` passes validation. The user corrected credential field
+names to `aws_access_key_id` / `aws_secret_access_key` in local profile
+`wasabi-s3drive`. Key values were neither displayed nor modified.
 
-On 2026-10-16 the user explicitly approved creating/deleting three fixtures
-under `s3drive-conformance/20261016-lxrfkg8p/`. The live SDK passed pagination,
-HEAD, full/range/EOF reads and exact byte comparisons. A real Linux FUSE mount
-passed sequential/concurrent reads of the binary, empty and Unicode/literal
-name objects, then cleanly unmounted. All three objects were removed; the
-isolated prefix is empty. Bucket versioning is disabled. Stale validators,
-versioned reads and Windows against Wasabi remain unverified.
+The user explicitly approved creating/deleting three fixtures under
+`s3drive-conformance/20261016-lxrfkg8p/`. SDK pagination, HEAD, exact full/range/
+EOF reads and Linux FUSE sequential/concurrent reads passed. Fixtures covered
+524288 binary bytes, an empty file, and `nested/a%2Fb + café.txt`.
+All three were removed, the isolated prefix was confirmed empty, and the
+mount exited cleanly. Bucket versioning is disabled. Stale validators,
+versioned reads, Windows against Wasabi and all write/recovery semantics remain
+unverified. Do not infer broader mutation authorization from this limited test.
 
-The live test found that Wasabi encodes listing spaces as `+`. Added explicit
-`list_url_encoding = "form"` to the ignored local config and Wasabi template;
-default percent-only decoding is unchanged for other sources. The dialect is
-part of configuration fingerprint v2. A wire regression covers spaces, pluses,
-literal percent sequences, directories and containment. See the durable
-`docs/src/evidence/wasabi-2026-10-16.json` and `docs/src/wasabi.md`.
+Live testing found Wasabi listing spaces encoded as `+`. Explicit
+`list_url_encoding = "form"` was added to the ignored local config and Wasabi
+example. Default percent-only decoding remains unchanged. Dialect participates
+in configuration fingerprint v2; wire tests cover exact decoding/containment.
+See `docs/src/wasabi.md` and `docs/src/evidence/wasabi-2026-10-16.json` for hashes,
+source scope, test manifest and exclusions. Private ephemeral logs/fixture
+files are under `/tmp/s3drive-wasabi-fixtures-lxrfkg8p/`.
 
-## P3 in progress
+## Native acceptance
 
-Windows adapter/harness are on `windows-read-only`; main remains the P2
-checkpoint. First CI found an ambiguous host guard type, fixed explicitly.
-Second CI passed build/Clippy/portable tests and actual Windows filesystem
-reads, sharing, mutation refusal and name/revision checks; the later PowerShell
-ACL step failed loading its module, not a filesystem assertion. Fix the test's
-PowerShell 5/7 environment isolation and rerun the full native gate, including
-Shell namespace, upstream volume info, removal and cancellation. Do not claim
-P3 complete until all pass. Runs: 38924822475, 38925797029 failed. Third run
-38927733040 passed PowerShell/ACL/Shell checks, then the upstream executable
-failed before emitting output. Inspection of the verified release binary found
-a direct `winfsp-x64.dll` import; CI now adds the installed runtime to PATH
-and checks executable startup before mounting. Failure diagnostics include exit
-status. Inspect Actions for the next exact commit. CI caches even on failure.
+The shared HTTP fixture uses ephemeral ports and isolated dummy credentials.
+It checks signing-header shape, not an independent SigV4 implementation.
+Both native gates exercise two buckets, configured prefixes, 310-entry
+pagination, sequential/random/concurrent reads, EOF, stale handles/fresh reopen,
+rejected writes, and teardown during an in-flight GET. Windows additionally
+checks case/device-name rejection, sharing, owner ACLs, PowerShell, Explorer's
+Shell.Application namespace and the upstream read-only `getvolinfo_test`.
 
-The user requested broader Unicode filename testing. Added a shared corpus of
-11 filenames and a Unicode directory (CJK, Cyrillic, Arabic, Devanagari, emoji,
-ZWJ sequence, distinct NFC/NFD accents, literal percent/space/plus). Exact
-listing preservation and per-name bytes passed through real Linux FUSE on
-2026-10-16 (145 requests/two mounts); Windows runs the same corpus next.
-Local log: `/tmp/s3drive-unicode-linux.log`.
+At the user's request, both gates include a shared Unicode corpus in
+`crates/s3drive-cli/tests/support/unicode.rs`: 11 filenames and a Unicode
+folder, covering Japanese, Chinese, Cyrillic, Arabic, Devanagari, supplementary
+emoji, a zero-width joiner sequence and literal percent/space/plus characters.
+NFC/NFD accent spellings remain separate keys with distinct bytes. The gates
+verify exact listings, directory traversal and correct contents for every key.
 
-Linux and Windows mount tests share `tests/support/fixture.rs`. The refactored
-Linux native test passed with 62 requests/two mounts. The full local gate after
-the Wasabi fix passed (30 portable tests on Linux); log
-`/tmp/s3drive-p3-wasabi-gate.log`. No mounts or fixture objects remain. Local
-private fixture/log files are in `/tmp/s3drive-wasabi-fixtures-lxrfkg8p/`.
-
-## Verification
-
-Local native FUSE gate passed on 2026-10-16, Linux 6.12.29-amd64 x86_64,
-fusermount3 3.14.0, Rust 1.99.1, fuser 0.18.0:
+Local Linux gate passed with 145 GET/HEAD requests/two mounts on Linux
+6.12.29-amd64, fusermount3 3.14.0 and Rust 1.99.1. Logs:
+`/tmp/s3drive-unicode-linux.log`, `/tmp/s3drive-unicode-gate.log`.
+No local mount remains. Commands:
 
 ```bash
+bash scripts/gate.sh
 cargo test -p s3drive-cli --test linux_mount --locked -- --ignored --nocapture
 ```
 
-It made 62 GET/HEAD requests to a loopback fixture using dummy credentials:
-two buckets, configured prefix, nested/empty/Unicode/literal-percent keys,
-310-entry pagination, sequential/random/concurrent reads, EOF, read-only
-failures, stale open handles, fresh reopen and ambiguous directory errors.
-External unmount and remount/SIGTERM during a stalled GET both exited cleanly;
-the underlying temporary directory was empty afterward. No FUSE mount/process
-was left behind. Log: `/tmp/s3drive-p2-mount.log` (ephemeral).
+Windows native acceptance passed at commit
+`25235a72e83d75389f0f95d53ff998b4bab6c80c`, CI run
+[38928960490](https://github.com/marshallr12/s3drive/actions/runs/38928960490).
+The Windows command is:
 
-An initial shutdown test found retryable EINTR caused caller retry/liveness
-problems. Cancellation now returns ECANCELED and the native regression passes.
-The fixture proves kernel/HTTP behavior, not independent SigV4 verification or
-Wasabi compatibility. Idle open descriptors can delay detached-mount drainage;
-close them to complete graceful shutdown.
+```powershell
+cargo test -p s3drive-cli --test windows_mount --locked -- --ignored --nocapture
+```
 
-Portable tests total 28 plus one intentionally ignored native test on Linux.
-`bash scripts/gate.sh` passed format, Clippy, tests/build and mdBook; the P2 log
-is `/tmp/s3drive-p2-gate.log`. CI includes native Linux/Windows Rust jobs, book,
-and an explicit Linux real-mount step; inspect the pushed commit's terminal
-[Actions result](https://github.com/marshallr12/s3drive/actions).
+CI installs digest-pinned WinFsp 2.1.25156/runtime/SDK and upstream test binary.
+The native test requires `S3DRIVE_WINFSP_TEST_EXE`; the installed WinFsp `bin`
+directory must be on PATH for the test executable's direct DLL import. CI
+checks its startup before mounting. PowerShell isolates its module path from
+PowerShell 7. Both normal stdin-EOF shutdown and cancellation remove the drive.
+Actual console Ctrl+C/Break events and a visually inspected Explorer window
+are not covered; Shell COM access is. Read `docs/src/windows-mount.md` for limits.
 
-## Next work
+Earlier failed CI runs: 38924822475 (ambiguous WinFsp guard type), 38925797029
+(PowerShell module path), 38927733040 (upstream test DLL loading). Each defect
+was fixed and the complete native gate rerun; none is acceptance evidence.
 
-1. Reuse the shared `s3drive-fs` engine for a Windows WinFsp adapter. Inspect the
-   exact resolved APIs and licensing first. Prove an actual native Windows
-   mount/read/unmount, not just a cross-compile; an isolated Windows CI runner
-   with the driver is a possible acceptance host.
-2. When Wasabi test configuration is supplied, run the documented read-only
-   conformance checks, record endpoint/region/versioning and exact source scope.
-   Never mutate the user's ordinary objects or probe writes during mount startup.
-3. Add cache identity/migrations and recovery only as separate green phases.
-   Windows naming/case/sharing rules need native treatment; Linux's current
-   case-sensitive name policy is not Windows acceptance evidence.
+## Publication and next work
 
-Read [plan](docs/src/implementation-plan.md), [Linux contract](docs/src/linux-mount.md),
-[provider contract](docs/src/provider-contract.md), and [decisions](docs/src/decisions.md).
-The native test is intentionally separate from the portable gate. Use normal
-unmount first, and do not delete a directory that still contains a live mount.
+P3 was developed on `windows-read-only` from P2 commit
+`2c0830d6102f4f9b54507f8f15a2b359be21e805`. The source checkpoint above has
+native acceptance evidence; status/documentation updates also passed the local
+gate (`/tmp/s3drive-p3-checkpoint-gate.log`). Publication to main requires the
+exact branch tip's terminal CI success, then a fast-forward. Check current Git
+and Actions state when resuming; preserve ignored user configuration.
+
+Next is P4: design authenticated cache identity, SQLite migration, revision-
+bound clean data cache, exclusive process ownership, eviction/pinning and
+restart/disk-full/offline-miss tests. Keep cache/state outside mounted trees.
+Writes require separate staged generations and a durable journal (P5a),
+provider conditional commits/recovery (P5b), then desktop mutations (P5c).
+Do not expose unconditional overwrite as a shortcut. Broader live provider
+probes must use explicitly scoped disposable fixtures.
+
+Read the mdBook implementation plan, provider/OS contracts and decisions.
 No subagents were dispatched. The overall goal is not complete.

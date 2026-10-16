@@ -1,8 +1,10 @@
 # Windows read-only drive
 
-Implementation checkpoint, researched 2026-10-16. The adapter is present on the
-Windows implementation branch; **native acceptance is pending**. Do not infer
-Windows runtime support from Linux builds or portable tests.
+Implemented and natively verified on 2026-10-16. The read-only acceptance gate
+passed on Windows x64 with WinFsp 2.1 in
+[CI run 38928960490](https://github.com/marshallr12/s3drive/actions/runs/38928960490)
+at commit `25235a72e83d75389f0f95d53ff998b4bab6c80c`. This is real driver
+evidence; it is separate from Linux builds and portable tests.
 
 ## Run
 
@@ -87,5 +89,7 @@ applications, general NTFS conformance, provider credentials or Wasabi behavior.
 
 CI installs a fixed official MSI after verifying its published SHA-256. Missing
 driver, install failure or required reboot fails the gate. It never substitutes
-a fake mount. Record the exact successful run before marking P3 verified.
+a fake mount. The linked run passed the full native gate, including both mount
+sessions, Unicode names, PowerShell/ACL/Shell checks, the upstream volume test
+and cancellation of an in-flight GET.
 [WinFsp 2.1 installer and published digest](https://github.com/winfsp/winfsp/releases/tag/v2.1)

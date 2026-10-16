@@ -3,13 +3,14 @@
 Research and Rust workspace for making one or more S3-compatible buckets appear
 as a local filesystem on Linux and Windows.
 
-**Status: read-only S3 transport and Linux FUSE implementation.** Configuration
+**Status: read-only S3 transport, Linux FUSE and Windows WinFsp implementations.** Configuration
 checking, bucket/key resolution, SQLite initialization, S3 listing, metadata
 lookup and revision-pinned reads work. Linux `mount` exposes source aliases
-through FUSE; see the [mount contract](docs/src/linux-mount.md) and handoff for
-native verification. Windows mounts, file caching and writes remain planned.
-[Wasabi](docs/src/wasabi.md) is the selected first hosted provider; live Wasabi
-conformance has not yet been tested.
+through FUSE; see the [Linux contract](docs/src/linux-mount.md) and
+[Windows contract](docs/src/windows-mount.md) for native verification scope.
+Native read-only acceptance passed on both platforms; file caching and writes remain planned.
+[Wasabi read acceptance](docs/src/wasabi.md) passed against isolated test
+objects, including a real Linux mount. Broader provider conformance is pending.
 
 The proposed architecture uses **FUSE on Linux**, **WinFsp on Windows**, a shared
 Rust engine, and **SQLite on local disk** for metadata and eventual recovery state.
@@ -34,8 +35,9 @@ Open `http://127.0.0.1:3000` locally. Building the book does not publish it.
 ## Try the scaffold
 
 Rust 1.99.1 and a native C compiler are required; SQLite is bundled. Windows
-builds use the MSVC toolchain and Visual Studio C++ build tools. No driver,
-credentials, bucket, or elevated privileges are needed for these commands.
+builds use the MSVC toolchain, Visual Studio C++ build tools and installed
+WinFsp 2.1 Developer files. The following local commands need no bucket or
+credentials. Installing native filesystem drivers is a separate setup step.
 
 ```bash
 cargo run --locked -- status
@@ -62,6 +64,8 @@ see the [provider contract](docs/src/provider-contract.md) for credentials,
 limits, pagination and current verification scope. No write/delete APIs exist. For a drive, use
 `cargo run --locked -- mount s3drive.local.toml /path/to/empty-owned-directory`
 on Linux with `/dev/fuse` and `fusermount3`.
+On Windows with WinFsp installed, choose an unused letter:
+`cargo run --locked -- mount s3drive.local.toml S:`.
 
 ## Workspace
 
@@ -72,8 +76,8 @@ on Linux with `/dev/fuse` and `fusermount3`.
 | `s3drive-state` | Versioned local SQLite initialization and ownership checks |
 | `s3drive-fs` | Shared bounded namespace, inode identities and revision-bound handles |
 | `s3drive-fuse` | Linux read-only FUSE callbacks and signal-driven unmount |
-| `s3drive-winfsp` | Explicitly unimplemented Windows adapter boundary |
-| `s3drive-cli` | Local commands, read-only S3 tools and foreground Linux mounting |
+| `s3drive-winfsp` | Windows read-only WinFsp callbacks, native naming/security and teardown |
+| `s3drive-cli` | Local commands, read-only S3 tools and foreground OS mounting |
 
 See [development](docs/src/development.md) for verification scope and
 [HANDOFF.md](HANDOFF.md) for the next phase. All crates have `publish = false`.

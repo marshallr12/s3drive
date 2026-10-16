@@ -25,7 +25,8 @@ documents -> configured endpoint / bucket / desktop/report.pdf
 photos    -> another endpoint / another bucket / image.jpg
 ```
 
-Linux now implements this namespace; the Windows path remains a planned surface.
+Linux and Windows now implement this namespace; native acceptance is recorded
+separately for each adapter.
 Preserve native object names and content in the initial design, accepting a
 documented subset of filesystem semantics. Random writes, durable upload,
 conflict handling and rename are separate milestones. If atomic shared
@@ -41,9 +42,9 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Alias + prefix + file-path resolution | Implemented as a planning utility |
 | Local SQLite schema bootstrap and version/ownership checks | Implemented |
 | mdBook research, design and acceptance plan | Implemented |
-| S3 transport and credentials | Implemented read-only adapter; live-provider conformance pending |
+| S3 transport and credentials | Implemented; [Wasabi read acceptance](wasabi.md) passed; broader conformance pending |
 | Linux filesystem mount | Implemented read-only FUSE; see [mount contract](linux-mount.md) and native evidence in handoff |
-| Windows drive mount | Planned; stub returns error |
+| Windows drive mount | Implemented WinFsp adapter; [native read-only acceptance passed](windows-mount.md) |
 | Read cache, upload journal, offline use, tray UI | Planned |
 
 The initial research/scaffold delivery is complete. Work has advanced to the
@@ -57,6 +58,7 @@ An individual user runs one process per volume with local SSD space available.
 The first namespace is one folder per configured source, not a merged union,
 RAID array, automatic sharding, or replication scheme. Existing objects should
 remain useful through independent S3 tools. Read-only access is the first usable
-milestone. Wasabi is the selected first hosted provider; region, test prefix, workload
-sizes and packaging requirements remain open; [open questions](decisions.md) record those choices without blocking
-the scaffold.
+milestone. Wasabi is the selected first hosted provider in `us-east-2`; isolated
+test fixtures and local credential profiles are configured. Workload sizes,
+cache budget and packaging requirements remain open; [open questions](decisions.md)
+record those choices.
