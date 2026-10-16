@@ -100,6 +100,11 @@ The no-systemd Linux gate passed locally on 2026-10-16:
 python3 scripts/test-linux-session.py
 ```
 
+The startup source checkpoint `664f51cdbf0e44cf2410da4cd3bef606e03fe5fc`
+also passed Linux startup, both native filesystem gates and book checks in
+[CI run 38933462454](https://github.com/marshallr12/s3drive/actions/runs/38933462454).
+The Windows result covers the existing foreground drive, not persistent startup.
+
 It uses a real FUSE mount, the real desktop-entry parser (`gio`), a login hook
 inside a temporary tmux server, duplicate startup attempts, destruction of that
 terminal, a fresh process accessing the retained mount, and explicit

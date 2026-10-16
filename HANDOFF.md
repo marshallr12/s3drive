@@ -55,7 +55,11 @@ It tests real FUSE + desktop entry parsing, racing launches, restart from a
 tmux login hook without inherited XDG variables, terminal destruction and
 fresh-process reads, edited-entry refusal and cleanup. Only a synthetic source
 root is read; no cloud account is contacted. No mount remains afterward.
-CI now requires this gate in its Linux job. Actual reboot, full desktop logout
+CI now requires this gate in its Linux job. Source checkpoint
+`664f51cdbf0e44cf2410da4cd3bef606e03fe5fc` passed every job in
+[run 38933462454](https://github.com/marshallr12/s3drive/actions/runs/38933462454),
+including Linux startup, Linux/Windows native mounts and book checks.
+Actual reboot, full desktop logout
 policy and incoming SSH authentication/PAM need separate acceptance.
 
 The Windows foreground mount still accepts only drive letters. P3.5b must add
@@ -162,9 +166,10 @@ was fixed and the complete native gate rerun; none is acceptance evidence.
 P3 is published to private `origin/main` at
 `6e9de9695b8f3eb019eb6da279f10259142faa1b`; final-source CI run
 [38929689424](https://github.com/marshallr12/s3drive/actions/runs/38929689424)
-passed. Startup/research work is on `persistent-startup`. Baseline gate passed
-(`/tmp/s3drive-startup-baseline.log`); current gate log is
-`/tmp/s3drive-startup-gate.log`. Publication requires the exact branch tip's
+passed. Startup/research work is on `persistent-startup`; its verified source
+checkpoint and CI are recorded above. Baseline and updated local gates passed
+(`/tmp/s3drive-startup-baseline.log`, `/tmp/s3drive-startup-gate.log`).
+This evidence update changes documentation only. Publication requires the exact branch tip's
 terminal CI success, then a fast-forward. Check current Git and Actions state
 when resuming; preserve ignored user configuration.
 
