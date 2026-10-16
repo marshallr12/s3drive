@@ -26,6 +26,8 @@ to the user.
 | D018 | Proposed after research | Evaluate Turso Cloud behind an authoritative coordination API; retain local SQLite. Do not use offline last-push-wins sync for leases or publication, or treat SQL/S3 as one transaction |
 | D019 | Implemented prerequisite for P4 | Bind each successful open to its resolved credential generation and source configuration. Require online HEAD on new opens; credential rotation creates a separate cache namespace. Preserve schema 1 rows as unbound legacy data during migration to schema 2. This does not establish a provider-global principal or enable offline access |
 
+| D020 | Implemented storage; mount integration pending | SQLite BLOBs for clean snapshots up to 1 MiB make bytes/checksum/metadata atomic. Use one bounded worker, explicit byte/entry limits and pins. Bulk files and staged writes remain separate future storage; no performance or offline-access claim |
+
 ## Questions to resolve at the relevant phase
 
 - **Before cache sizing and broader OS acceptance:** Typical file sizes, directory sizes and working

@@ -5,8 +5,9 @@ and Windows. Scoped live Wasabi reads also passed. P3.5a adds Linux startup
 without systemd; native session tests passed locally. P3.5b adds Windows
 startup with native cross-logon acceptance. P4a adds credential-bound handles
 and SQLite schema 2 migration/registry. P4b1 adds private managed state directories
-and process ownership. Goal active; actual workstation
-reboot/SSH login checks, cache, recovery, safe writes and packaging remain.
+and process ownership. P4b2a implements a bounded clean-cache storage worker
+with SQLite BLOBs; it is not yet connected to mounts. Goal active; actual
+workstation reboot/SSH checks, mounted caching, safe writes and packaging remain.
 
 ## Goal and scope
 
@@ -45,7 +46,14 @@ until the documented safe-write contract and its OS acceptance gates pass.
   must already exist. Link/type/ownership checks precede SQLite access. Linux
   supports a local filesystem allowlist; Windows requires fixed NTFS and checks
   ACLs through a small audited native module. See the book for exact limitations.
-- No uploads, mutations, disk cache, offline support or desktop packaging yet.
+- Schema 3 adds `clean_blobs` and a bounded async cache API backed by one OS
+  thread. Default limits: 64 MiB logical payload, 1 MiB/file, 4,096 entries.
+  Keys bind the authorized source generation, fingerprint, exact object key,
+  ETag/version and size; independent SHA-256 checksums verify payloads. LRU
+  eviction skips pinned entries; quota pressure is an explicit bypass result.
+  SQLite insertion and eviction are atomic. See the storage chapter for bounds
+  and remaining integration. No CLI/mount path uses the cache worker yet.
+- No uploads, mutations, offline support or desktop packaging yet.
 
 ## Current user requirements and startup work
 
@@ -239,29 +247,47 @@ Refreshable provider chains keep their own refresh behavior. Cache bindings use
 the actual returned credential tuple, never an inferred profile identity.
 
 Target-workstation reboot/sign-in, full sign-out policy and SSH authentication
-acceptance remain pending. P4b1 is implemented on `cache-directory-ownership`.
-Local tests cover single-process and cross-process contention, killing the
-owner and reopening committed SQLite state, permission/link refusal and
-unmanaged-file preservation. Legacy Linux file permissions are tightened only
-after application/schema validation; a foreign database keeps its bytes and
-permissions. Windows tests cover broad ACLs and junctions;
-the native session fixture initializes/reopens state as an ordinary account
-and checks another account cannot read the database. Publication requires a
-successful final-tip CI run on this branch; use `gh run list` to locate it.
-Candidate `fa2c030` passed unit tests and native mount/logon assertions, but
-failed disposable-directory cleanup in run 38953271290. The fixture now removes
-its protected database as the owning ordinary account before deleting that
-account; application uninstall still preserves data. Cleanup failures remain
-fatal and native command exit codes are checked. This is pending exact-tip CI.
-Local logs: `/tmp/s3drive-directory-tests.log`, `/tmp/s3drive-directory-gate.log`.
-The full local gate and Linux mount/session checks passed; their native logs are
-`/tmp/s3drive-directory-linux.log` and `/tmp/s3drive-directory-session.log`.
-CI cache restore now permits the same OS/compiler's older dependency cache;
-all locked builds/tests and native gates still execute.
-No real user state directory was initialized. The existing schema remains 2.
+acceptance remain pending. P4b1 was published to main at
+`13227328a88708a4aed18cb582d8cd73cd534fd1`; all jobs passed in
+[run 38954161719](https://github.com/marshallr12/s3drive/actions/runs/38954161719).
+Its Windows gate passed 626 requests, Unicode and independent logons. Log:
+`/tmp/s3drive-directory-final-windows.log`. The native fixture removes its
+protected DB as the owning ordinary account before deleting that account;
+application uninstall still preserves data. All fixture cleanup errors except
+the documented disposable-profile lock remain fatal. Local ownership tests
+include process death, links/ACLs, and foreign DB byte/permission preservation.
 
-Next implementation is P4b2: revision-bound clean data cache,
-bounded SQLite worker, eviction/pinning and restart/disk-full/offline-miss tests.
+P4b2a is implemented on branch `revision-cache`. Source lives in
+`crates/s3drive-state/src/cache.rs`, its `cache/tests.rs`, and migration 003.
+`Cache::open` initializes on its worker thread; `get`/`put` use an eight-command
+queue and 30-second caller deadlines. Oversized inputs and pinned quota
+pressure return None; full queues and SQL errors are explicit. `close()` releases
+SQLite and the process lock before acknowledging. Pinned data remains immutable,
+but callers must stop filesystem callbacks before closing the worker.
+
+Small clean BLOBs replace the originally proposed separate small-file payloads:
+this gives bytes/checksum/metadata and eviction one SQLite transaction boundary.
+Large cached files and durable staged writes remain future external-file work.
+The logical cache quota excludes DB/WAL overhead. Performance is unmeasured.
+Mounts still do no caching; no real user config or state was changed.
+
+Local tests cover key/credential/revision/Unicode separation, corruption and
+missing rows, pins/LRU/zero-byte entry quotas, restart with reduced limits,
+queue saturation, a live SQLite writer lock without blocking Tokio, actual
+SQLITE_FULL rollback, and child-process kills after a committed payload and
+during uncommitted eviction. Logs: `/tmp/s3drive-blob-tests.log`,
+`/tmp/s3drive-blob-clippy.log`, `/tmp/s3drive-blob-gate.log`.
+Run the full repository gate, then require terminal all-green Linux/Windows/book
+CI at the branch's exact final SHA before fast-forwarding/pushing main.
+Use `gh run list --branch revision-cache` to find its evidence. Windows CI runs
+all new storage tests and the existing ordinary-account/mount/session gate.
+
+Next implementation is P4b2b: connect the cache worker to configuration and the
+shared engine, coalesce misses and bound downloads, retain direct range reads
+for files larger than the threshold, and close the worker after callbacks stop.
+Authorization must precede every cache acquisition on a new open. Verify hits,
+cache reuse after process restart, denied/offline new opens, stale revisions,
+credential changes and corruption repair through real Linux/Windows mounts.
 Use the handle binding plus exact key/revision/size; no binding alone authorizes
 cached access. Keep cache/state outside mounted trees. Writes require separate staged
 generations and a durable journal (P5a), provider conditional commits/recovery

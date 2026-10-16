@@ -8,7 +8,8 @@ checking, bucket/key resolution, SQLite initialization, S3 listing, metadata
 lookup and revision-pinned reads work. Linux `mount` exposes source aliases
 through FUSE; see the [Linux contract](docs/src/linux-mount.md) and
 [Windows contract](docs/src/windows-mount.md) for native verification scope.
-Native read-only acceptance passed on both platforms; file caching and writes remain planned.
+Native read-only acceptance passed on both platforms; mounted file caching and writes remain planned. The local cache storage library now
+implements bounded SQLite snapshots, checksums, eviction and pins; mount integration is next.
 [Linux sign-in startup](docs/src/startup-and-sessions.md) works without systemd,
 including MX Linux, and has a native terminal-disconnect acceptance test.
 Windows startup uses a per-user scheduled task and an NTFS folder shared across
@@ -83,7 +84,7 @@ On Windows with WinFsp installed, choose an unused letter:
 | --- | --- |
 | `s3drive-core` | Validate TOML and resolve virtual paths to bucket/key pairs |
 | `s3drive-s3` | Read-only AWS SDK adapter, revision-bound handles and sanitized errors |
-| `s3drive-state` | Versioned local SQLite initialization and ownership checks |
+| `s3drive-state` | Private SQLite state and bounded clean-cache worker; mount integration pending |
 | `s3drive-fs` | Shared bounded namespace, inode identities and revision-bound handles |
 | `s3drive-fuse` | Linux read-only FUSE callbacks and signal-driven unmount |
 | `s3drive-winfsp` | Windows read-only WinFsp callbacks, native naming/security and teardown |

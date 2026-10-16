@@ -47,7 +47,7 @@ class Diagram:
         self.image.save(OUT / name, optimize=True)
 
 
-d = Diagram("S3Drive: what runs where", "Working read path in blue  •  Local persistence and coordination roadmap in amber")
+d = Diagram("S3Drive: what runs where", "Working read path in blue  •  Persistence integration and coordination roadmap in amber")
 d.draw.rounded_rectangle((25, 120, 835, 885), 20, fill="#ffffff", outline="#d5dfe9", width=2)
 d.draw.rounded_rectangle((865, 120, 1255, 885), 20, fill="#edf7f4", outline="#bcdcd0", width=2)
 d.text(50, 136, "YOUR COMPUTER", 16, bold=True, color=MUTED)
@@ -65,9 +65,10 @@ d.box(890, 440, 340, 200, "S3-compatible service", ["Wasabi / other providers", 
 d.arrow([(805, 560), (890, 560)], label="HTTPS", position=(816, 532))
 d.box(50, 515, 330, 125, "Startup supervisors", ["Linux: hooks, no systemd", "Windows: Task Scheduler"])
 d.arrow([(380, 575), (415, 575), (415, 420), (440, 420)])
-d.box(50, 705, 350, 135, "Local SQLite", ["Schema bootstrap exists", "Planned: cache metadata,", "local recovery / upload journal"], color=AMBER, fill="#fff4de")
-d.box(440, 705, 365, 125, "Local cache files", ["Planned: downloaded data", "and durable staged generations"], color=AMBER, fill="#fff4de", planned=True)
+d.box(50, 705, 350, 135, "Local SQLite", ["Bindings + small clean BLOBs", "Bounded worker implemented", "Mount integration pending"], color=AMBER, fill="#fff4de")
+d.box(440, 705, 365, 125, "Bulk cache / staging", ["Planned: large cached files", "and durable staged generations"], color=AMBER, fill="#fff4de", planned=True)
 d.arrow([(620, 640), (620, 705)], color=AMBER)
+d.arrow([(440, 615), (420, 615), (420, 675), (225, 675), (225, 705)], color=AMBER, label="Small snapshots (next)", position=(65, 649))
 d.arrow([(440, 766), (400, 766)], color=AMBER)
 d.box(890, 705, 340, 125, "Optional Turso service", ["Shared metadata authority", "Separate from local SQLite"], color=AMBER, fill="#fff4de", planned=True)
 d.text(50, 850, "State and cache stay outside the mounted filesystem. Current mounts are read-only.", 17, color=MUTED)

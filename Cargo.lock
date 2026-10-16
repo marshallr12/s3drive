@@ -2040,7 +2040,9 @@ version = "0.1.0"
 dependencies = [
  "nix",
  "rusqlite",
+ "sha2",
  "tempfile",
+ "tokio",
  "windows",
 ]
 

@@ -3,14 +3,15 @@
 The diagram describes the target system. P0 added configuration, evidence
 types, SQLite initialization and explicit adapter stubs. P1 adds the read-only
 S3 transport. P2 adds the shared read-only namespace/handle engine and Linux
-adapter; P3 adds Windows WinFsp. Cache and writes remain planned. See the
+adapter; P3 adds Windows WinFsp. The clean-cache storage worker is implemented;
+mount integration and writes remain planned. See the
 platform contracts for native acceptance scope.
 
 ![Local applications reach the Rust filesystem engine through FUSE or WinFsp; its S3 client reads remote bucket data. Local SQLite and cache have separate roles.](images/architecture.png)
 
-The blue path is implemented. Amber cache/journal components are planned;
-SQLite now has a credential-binding registry and migration, but mounts do not
-yet use it for file data. [Startup and remote sessions](startup-and-sessions.md)
+The blue read path is implemented. The amber persistence path is not yet wired
+into mounts: SQLite now has bindings and a bounded small-file cache worker;
+external bulk files and the upload journal remain planned. [Startup and remote sessions](startup-and-sessions.md)
 include MX Linux without systemd. [Turso coordination](turso-coordination.md)
 evaluates an optional shared metadata authority, separate from each host's local database.
 
@@ -29,9 +30,10 @@ only with their precondition and recovery tests. Avoid designing a broad
 generic VFS trait before the first real adapter reveals the necessary contract.
 
 `s3drive-state` owns SQLite migrations, persistent identity, cache metadata and
-eventually upload jobs. Large payloads belong in cache files, not database BLOBs.
-Use one database worker rather than holding SQL transactions across network
-requests. A local process lock must prevent two daemon instances from owning
+eventually upload jobs. Its first cache uses SQLite BLOBs up to 1 MiB so bytes
+and integrity metadata commit together. Large payloads still belong in future
+cache files. One bounded worker owns SQLite; no SQL transaction spans a network
+request. A local process lock must prevent two daemon instances from owning
 the same volume/cache; SQLite locking alone does not coordinate cache files.
 
 The platform crates own only OS callback translation, reply lifetimes, mount
@@ -61,12 +63,13 @@ Do not merge same-named paths across sources. Cross-source rename returns
 delete. No transparent failover, replication or balancing is promised. Different
 providers can have different credentials, latency and capabilities.
 
-Future cache-entry keys must include the credential/configuration binding,
+Implemented storage cache keys include the credential/configuration binding,
 exact object key, size and revision. P4a binds successful opens to the actual
 credentials used for HEAD and all reads through that handle; new opens resolve
 credentials again. Configuration or credential changes select a different
 namespace, and every new open still requires online authorization. SQLite
-schema 2 preserves P0's unbound rows separately and provides a binding registry.
+schema 3 retains the binding registry and unbound legacy rows, and adds clean
+snapshots. Mount integration must still enforce authorization before lookup.
 This is not a provider-global account identifier. See the implemented
 [provider contract](provider-contract.md) and [migration](storage-and-recovery.md).
 

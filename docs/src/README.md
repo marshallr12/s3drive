@@ -14,8 +14,8 @@ not promises made by the cited projects.
 
 Build a per-user Rust process with a shared namespace/cache engine, a Linux FUSE
 adapter, and a Windows WinFsp adapter. Use a local SQLite database for metadata
-and later a persistent upload journal. Keep bulk file data in ordinary local
-cache files. Begin with explicit, read-only bucket roots such as:
+and later a persistent upload journal. Store small clean snapshots in SQLite;
+keep bulk file data in planned ordinary local cache files. Begin with explicit, read-only bucket roots such as:
 
 ```text
 Linux:   ~/S3Drive/documents/report.pdf
@@ -40,7 +40,7 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Rust workspace and CLI | Implemented |
 | TOML parsing and source/namespace validation | Implemented; no network checks |
 | Alias + prefix + file-path resolution | Implemented as a planning utility |
-| Local SQLite state | Schema 2; credential-binding registry, atomic migration, private directory and exclusive process ownership |
+| Local SQLite state | Schema 3; binding registry, clean BLOBs, atomic migration and private process ownership |
 | mdBook research, design and acceptance plan | Implemented |
 | S3 transport and credentials | Implemented; [Wasabi read acceptance](wasabi.md) passed; broader conformance pending |
 | Linux filesystem mount | Implemented read-only FUSE; see [mount contract](linux-mount.md) and native evidence in handoff |
@@ -48,7 +48,8 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Linux sign-in startup, including MX without systemd | [Detached launcher implemented](startup-and-sessions.md); native desktop/login-hook/terminal-loss checks passed |
 | Windows startup across login sessions | [Scheduled task and shared NTFS folder implemented](startup-and-sessions.md); native cross-logon reads/removal passed; workstation reboot/SSH authentication pending |
 | Cross-machine coordination with Turso | [Research and design proposal](turso-coordination.md); no dependency or cloud service enabled |
-| Read cache, upload journal, offline use, tray UI | Planned |
+| Clean-cache storage library | Bounded worker, checksums, LRU/pins and recovery tests; mount integration pending |
+| Mounted caching, upload journal, offline use, tray UI | Planned |
 
 The initial research/scaffold delivery is complete. Work has advanced to the
 [read-only provider adapter](provider-contract.md). The overall product goal

@@ -22,6 +22,7 @@ unverified or unimplemented.
 | P3.5b — Windows session startup | Stable mount path shared by the account's desktop/SSH logons; backend independent of the launching session | Native folder mount, independent logon tokens, startup/removal, disconnect and reboot/sign-in checks |
 | P4a — cache prerequisites | Credential-bound read handles and schema 2 source registry; preserve unbound legacy rows | Rotation/recreation/authorization tests, migration rollback and binding isolation |
 | P4b1 — local ownership | Private local directory and exclusive lock retained for SQLite's lifetime | Competing processes, forced owner termination, link/ACL refusal and ordinary Windows account access |
+| P4b2a — clean-cache storage | Bounded SQLite BLOB worker, integrity checks, LRU and pins | Native storage tests, forced process death, SQL disk-full rollback and migration |
 | P4 — cache and local recovery | Revision-aware disk cache, eviction, pinning, single-process ownership, state migrations | Cache isolation, disk-full, stale revision, offline miss and restart tests; no dirty data exists yet |
 | P5a — staged writes | In-memory storage test double plus immutable local generations and durable journal | Fault injection at every local boundary; acknowledged local state survives restart; network mutation remains disabled |
 | P5b — conditional remote commits | Create/replace and multipart recovery; explicit flush contract | Provider preconditions verified; two-writer conflict tests; crash/timeout replay never overwrites unseen edits |
@@ -129,14 +130,18 @@ death and committed-state recovery, links and permissions/ACLs. The native
 Windows fixture also checks state access across logons. See the
 [ownership contract](storage-and-recovery.md) for supported local filesystems.
 
-P4b2 must add bounded small-file storage with checksum/revision validation,
+P4b2a implements bounded small-file BLOB storage with checksum/revision keys,
 eviction/pinning and a bounded database worker, using the owned directory.
+Storage tests cover quota pressure, corruption, restart, forced termination and
+SQLITE_FULL rollback. It does not yet serve files through the mount.
+
+P4b2b must connect the worker to the shared engine and configuration.
 Mount integration must authorize
 each new open online before cache lookup. Prove cache hits, stale revisions,
 credential rotation, disk-full handling, corrupt/missing data and restart with
 deterministic fixtures, then rerun real Linux and Windows mount gates with
 caching enabled. New offline opens remain denied until an explicit offline
-authorization policy is designed. P4a/P4b1 do not complete the file cache phase.
+authorization policy is designed. P4a/P4b1/P4b2a do not complete the mounted file cache phase.
 
 ### Optional coordination investigation
 

@@ -1,5 +1,6 @@
 //! Local SQLite bootstrap. Never place this database on the S3-backed mount.
 
+pub mod cache;
 mod directory;
 #[cfg(windows)]
 #[allow(unsafe_code)]
@@ -10,7 +11,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 2;
+pub const SCHEMA_VERSION: i32 = 3;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub struct State {
@@ -38,7 +39,7 @@ impl State {
         Ok(state)
     }
 
-    /// Initialize, migrate schema 1, or reopen schema 2; refuse unknown DBs.
+    /// Initialize, migrate known older schemas, or reopen; refuse unknown DBs.
     /// Internal schema helper; public callers must acquire directory ownership.
     fn open(path: &Path) -> Result<Self> {
         let mut connection = Connection::open(path)?;
@@ -70,11 +71,16 @@ impl State {
             if version == 1 {
                 tx.prepare("SELECT source_alias, object_key, etag, version_id, size_bytes FROM cached_objects LIMIT 0")?;
                 tx.execute_batch(include_str!("../migrations/002.sql"))?;
-                tx.pragma_update(None, "user_version", SCHEMA_VERSION)?;
+                version = 2;
+            }
+            if version == 2 {
+                tx.execute_batch(include_str!("../migrations/003.sql"))?;
             }
             // Catch a damaged/current-version database before returning success.
             tx.prepare("SELECT source_alias, object_key, etag, version_id, size_bytes FROM legacy_cached_objects_v1 LIMIT 0")?;
             tx.prepare("SELECT source_id, config_fingerprint FROM source_bindings LIMIT 0")?;
+            tx.prepare("SELECT cache_key, source_id, size_bytes, checksum, data, last_used FROM clean_blobs LIMIT 0")?;
+            tx.pragma_update(None, "user_version", SCHEMA_VERSION)?;
             tx.commit()?;
         }
         let journal: String =
@@ -177,7 +183,7 @@ mod tests {
             row,
             ("docs".into(), "café.txt".into(), "opaque".into(), None, 42)
         );
-        assert_eq!(state.info().unwrap().schema_version, 2);
+        assert_eq!(state.info().unwrap().schema_version, SCHEMA_VERSION);
         let bindings: i64 = state
             .connection
             .query_row("SELECT count(*) FROM source_bindings", [], |r| r.get(0))
@@ -192,7 +198,7 @@ mod tests {
         drop(state);
         assert_eq!(
             State::open(&path).unwrap().info().unwrap().schema_version,
-            2
+            SCHEMA_VERSION
         );
     }
 
@@ -294,7 +300,10 @@ mod tests {
             } else {
                 drop(State::open(&path).unwrap());
                 let db = Connection::open(&path).unwrap();
-                db.execute_batch("DROP TABLE source_bindings;").unwrap();
+                db.execute_batch(
+                    "DROP TABLE clean_blobs; DROP TABLE source_bindings; PRAGMA user_version=2;",
+                )
+                .unwrap();
                 db
             };
             assert!(State::open(&path).is_err());
@@ -321,7 +330,7 @@ mod tests {
             })
             .unwrap();
         assert_eq!(fingerprint, "a".repeat(64));
-        assert_eq!(state.info().unwrap().schema_version, 2);
+        assert_eq!(state.info().unwrap().schema_version, SCHEMA_VERSION);
         assert_eq!(state.info().unwrap().journal_mode, "wal");
         let sync: i32 = state
             .connection

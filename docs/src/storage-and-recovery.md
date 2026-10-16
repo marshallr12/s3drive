@@ -1,13 +1,14 @@
 # Cache, SQLite and recovery
 
 P4a implements credential bindings and SQLite migration. P4b1 adds private local
-directory ownership. The file cache, eviction and upload journal below remain proposed designs.
+directory ownership. P4b2a implements the bounded clean-cache storage library and
+worker. Mount integration, offline access and the upload journal remain planned.
 An initialized database is not an implemented or proven upload journal.
 
 ## Implemented SQLite state and migration
 
 `s3drive-state` uses `rusqlite` with bundled SQLite. Initialization marks a
-database with an application ID and `user_version = 2`. Schema 1's reserved
+database with an application ID and `user_version = 3`. Schema 1's reserved
 `cached_objects` table had only source aliases, with no credential binding.
 Migration 2 renames it to `legacy_cached_objects_v1` and preserves every row for
 inspection. None of those rows is adopted into an active cache namespace.
@@ -23,12 +24,12 @@ Fresh initialization and migration from schema 1 run inside an immediate
 transaction, including application/version markers. A migration failure rolls
 back table renaming and the version update. Foreign databases, unsupported
 schema versions and missing expected columns fail explicitly. The schema does
-not yet include cache data or upload jobs.
+includes clean snapshots in schema 3, but no upload jobs.
 
 The connection uses WAL, `synchronous=FULL`, foreign keys, and a five-second
 busy timeout. Tests cover restart, settings, binding isolation/rebinding refusal,
 shape constraints, legacy-row preservation and migration rollback. The CLI's
-`init-state` now initializes or migrates to schema 2. Mounts do not yet register
+`init-state` now initializes or migrates to schema 3. Mounts do not yet register
 bindings or use this database; integration belongs to the next cache phase.
 `State::open_managed` and `init-state` now acquire a private local directory and
 retain its process lock until the SQLite connection closes. The internal
@@ -47,8 +48,8 @@ its parent must already exist. Relative paths are resolved against the working
 directory, while parent traversal, symlinks and Windows reparse points are
 refused. Existing directories must already be private. Unrecognized entries
 cause refusal rather than adoption or deletion. The directory currently permits
-only the database, known SQLite sidecars and `volume.lock`; payload directories
-will be added with the file cache.
+only the database, known SQLite sidecars and `volume.lock`. Small clean payloads
+are SQLite BLOBs; external payload directories are not yet supported.
 
 On Linux, the directory must belong to the effective user with mode `0700`.
 Ancestors must belong to that user or root and prevent other accounts from
@@ -88,12 +89,78 @@ The native Windows session fixture additionally initializes and reopens state
 from separate ordinary-account logons and denies a different account's file
 read. These are state ownership tests; mounted file data caching is not enabled.
 
+## Implemented clean-cache storage library (P4b2a)
+
+`cache::Cache` owns a private `State` on one dedicated OS thread. Its async API
+sends at most eight queued commands; a full queue returns an explicit error.
+SQLite and checksum work stay off Tokio's executor. Operations have a 30-second
+caller deadline. Cancellation before execution skips the command; cancellation
+once an operation is running may leave a complete clean entry, never dirty
+user data. `close()` acknowledges only after SQLite closes and the directory
+lock is released. Dropping all clients also drains and stops the worker.
+
+Schema 3 adds `clean_blobs`. Each row contains a generated SHA-256 cache address,
+source binding, byte length, an independent SHA-256 payload checksum, the complete
+small-file BLOB and an LRU counter. Address hashing uses tagged, length-prefixed
+fields: credential/configuration binding, configuration fingerprint, exact UTF-8
+key, ETag, version ID and size. Composed/decomposed Unicode keys remain distinct.
+No object key becomes a local path; neither credentials nor raw object names
+are stored in this table. Source registration rejects fingerprint rebinding.
+The caller must obtain these inputs from an authorized `ReadHandle`; this
+storage API does not authenticate access by itself.
+
+The default library policy permits 64 MiB of logical payload, 4,096 entries and
+files up to 1 MiB. Limits are validated before creating state. The API allows a
+smaller threshold and byte/entry budgets, bounded above by 1 MiB per file, 1 GiB
+of logical payload and 65,536 entries. Larger files return an ineligible result;
+the future mount integration will retain direct revision-pinned range reads.
+Empty objects consume an entry even though they use no payload bytes.
+
+Each lookup checks size/source/shape before allocating a BLOB, verifies its
+checksum and returns an immutable shared buffer. A `Pinned` snapshot prevents
+its row's eviction while the worker remains open. Concurrent acquisitions share
+that buffer. Eviction chooses the least recently used unpinned entries; if
+all candidates are pinned, insertion returns `None` without deleting anything.
+Insertion and any required eviction commit in one transaction. Damaged payloads
+are discarded as clean-cache misses. A damaged SQLite database or failed SQL
+operation is an explicit error, not permission to reset the database.
+
+On restart, surviving snapshots are verified on demand; a reduced budget is
+enforced before any entry is pinned. Logical quotas exclude SQLite page/index
+space, source-registry metadata, WAL and temporary buffers. Freed pages are
+reused and the database does not automatically shrink. This is not a hard limit
+on total disk usage. Actual disk-full errors propagate and the transaction rolls
+back, preserving prior entries. New opens still require online authorization;
+no offline filesystem behavior is enabled by this library.
+
+**Storage decision, 2026-10-16:** small payloads live in SQLite so metadata,
+checksum and bytes have one transactional boundary. Separate files and durable
+staging remain the plan for bulk payloads and writes. SQLite's published BLOB
+comparisons are hardware/size dependent and do not establish performance on
+our target workstations; this choice is about a verifiable first recovery
+boundary, not a speed claim. [SQLite BLOB comparison](https://sqlite.org/intern-v-extern-blob.html),
+[SQLite WAL](https://sqlite.org/wal.html)
+
+Tests cover source/revision/size/Unicode separation, checksum/length corruption,
+missing rows, LRU and empty-entry quotas, pins, restart with reduced limits,
+bounded queue saturation, and executor responsiveness during a real SQLite
+writer lock. `PRAGMA max_page_count` induces a real `SQLITE_FULL` error and proves
+that eviction rolls back with insertion. Child processes are killed after a
+committed payload and during an uncommitted eviction; reopening preserves the
+committed bytes. This tests the SQLite durability boundary, not hardware power
+loss. [SQLite page limit](https://sqlite.org/pragma.html#pragma_max_page_count)
+
+**Still required before mounted caching is claimed:** configure and connect this
+worker to the shared filesystem, authorize every new open before cache access,
+coalesce concurrent misses, bound downloads, and run cache-hit/revision/denied
+open tests through real FUSE and WinFsp mounts. Current mounts remain uncached.
+
 ## Planned state layout
 
 | Local resource | Purpose | Lifetime |
 | --- | --- | --- |
-| `metadata.sqlite3` with WAL/SHM files | Source identity, inode mapping, cached revisions, jobs and conflicts | Persistent; migrate explicitly |
-| `clean/<generated-id>` | Revision-specific downloaded chunks/files | Evictable when unpinned and unused |
+| `metadata.sqlite3` with WAL/SHM files | Implemented bindings and small clean BLOBs; planned inode mapping, jobs and conflicts | Persistent; migrate explicitly |
+| `clean/<generated-id>` (planned) | Large revision-specific chunks/files | Evictable when unpinned and unused |
 | `staging/<generated-id>` | Modified bytes not yet safely committed remotely | Never evict while dirty or unresolved |
 | `volume.lock` | Single local daemon ownership | Held for daemon lifetime |
 | Diagnostic logs | Redacted operational evidence | Rotated and size-limited |
@@ -104,8 +171,8 @@ Future schema tables should build on `source_bindings` with volume ownership,
 probe provenance/expiry. These additional entities are not shipped migrations.
 Do not persist remote credentials. A source alias alone is not a safe cache ID.
 
-Use a single SQL worker initially. Cache and upload tasks exchange bounded
-messages with it; no transaction waits on S3. Keep enough inode tombstones to
+The implemented clean-cache API uses a single SQL worker. Future upload tasks
+should also exchange bounded messages with it; no transaction waits on S3. Keep enough inode tombstones to
 avoid reusing a kernel-visible ID while handles or lookup references survive.
 Preserve schema migrations and write recovery tests for each version change.
 
