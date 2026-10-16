@@ -12,12 +12,13 @@ $suffix = [Guid]::NewGuid().ToString('N').Substring(0,10)
 $userName = "s3d$suffix"
 $plainPassword = 'S3d!aA9-' + [Guid]::NewGuid().ToString('N')
 $password = ConvertTo-SecureString $plainPassword -AsPlainText -Force
-$root = Join-Path ([IO.Path]::GetTempPath()) ("s3drive session caf" + [char]0xE9 + " `$ % $suffix")
+$root = Join-Path ([IO.Path]::GetTempPath()) ("s3drive session caf" + [char]0xE9 + " ' `$ %USERNAME% $suffix")
 $stateRoot = Join-Path $root 'state'
 $mount = Join-Path $root 'mounted'
 $powershell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 $account = $null
 $taskName = $null
+$taskArguments = $null
 $service = New-Object -ComObject Schedule.Service
 $service.Connect()
 $worker = Join-Path $root 'worker.ps1'
@@ -40,7 +41,15 @@ function User-Action([string]$Operation) {
     try {
         $output = $process.StandardOutput.ReadToEndAsync()
         $errors = $process.StandardError.ReadToEndAsync()
-        if ($Operation -eq 'Install') { $process.StandardInput.WriteLine($plainPassword) }
+        if ($Operation -eq 'Install') {
+            # Windows PowerShell can give Process.StandardInput a BOM-emitting
+            # console encoding. Send ASCII fixture bytes directly so no Unicode
+            # preamble becomes part of the password consumed by ReadLine.
+            $bytes=[Text.Encoding]::ASCII.GetBytes($plainPassword + "`n")
+            $process.StandardInput.BaseStream.Write($bytes,0,$bytes.Length)
+            $process.StandardInput.BaseStream.Flush()
+            [Array]::Clear($bytes,0,$bytes.Length)
+        }
         $process.StandardInput.Close()
         if (-not $process.WaitForExit(90000)) { $process.Kill(); throw "Timed out in disposable-user $Operation" }
         $text = $output.GetAwaiter().GetResult()
@@ -84,7 +93,10 @@ function Manage([string]$Action) {
 try {
     switch ($Operation) {
         'Install' {
-            $secure=ConvertTo-SecureString ([Console]::In.ReadLine()) -AsPlainText -Force
+            $received=[Console]::In.ReadLine()
+            if (-not $received.StartsWith('S3d!aA9-') -or $received.Length -ne 40) { throw 'Disposable credential pipe changed the fixture bytes' }
+            $secure=ConvertTo-SecureString $received -AsPlainText -Force
+            $received=$null
             $identity=[Security.Principal.WindowsIdentity]::GetCurrent()
             $credential=[Management.Automation.PSCredential]::new($identity.Name,$secure)
             $aws=Join-Path $env:USERPROFILE '.aws'
@@ -139,6 +151,9 @@ try {
     if ($first.caller_logon -eq $second.caller_logon -or $first.child_pid -ne $second.child_pid) {
         throw 'Repeated independent logons did not access the same mount'
     }
+    $unexpectedRead=$false
+    try { $null=[IO.File]::ReadAllText((Join-Path $mount 'other\readme')); $unexpectedRead=$true } catch {}
+    if ($unexpectedRead) { throw 'A different account could read the owner-only mount' }
     $task = $service.GetFolder('\').GetTask($taskName)
     $definition = $task.Definition
     if ($definition.Principal.LogonType -ne 1 -or $definition.Principal.RunLevel -ne 0 -or
@@ -164,6 +179,7 @@ try {
     if ($taskName) {
         try {
             $task=$service.GetFolder('\').GetTask($taskName)
+            $taskArguments=$task.Definition.Actions.Item(1).Arguments
             $task.Enabled=$false
             $service.GetFolder('\').DeleteTask($taskName,0)
         } catch { if ($_.Exception.GetBaseException().HResult -ne -2147024894) { $cleanupFailures.Add('Could not delete disposable task') } }
@@ -171,7 +187,7 @@ try {
     if ([IO.Directory]::Exists($root)) {
         foreach ($process in Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='s3drive.exe'") {
             if (($process.ExecutablePath -eq (Join-Path $root 's3drive.exe')) -or
-                ($process.CommandLine -and $process.CommandLine.Contains((Join-Path $stateRoot 'manager.ps1')))) {
+                ($taskArguments -and $process.CommandLine -and $process.CommandLine.Contains($taskArguments))) {
                 Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
             }
         }

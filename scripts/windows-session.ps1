@@ -55,6 +55,7 @@ function Quote-Argument([string]$Text) {
     if ($Text.Contains('"') -or $Text.Contains([char]0)) { throw 'Invalid startup argument' }
     return '"' + [regex]::Replace($Text, '(\\+)$', '$1$1') + '"'
 }
+function Quote-Literal([string]$Text) { return "'" + $Text.Replace("'", "''") + "'" }
 function Read-Manifest {
     Assert-PrivateRoot
     $value = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -183,6 +184,7 @@ try {
         if (-not $Executable -or -not $Config -or -not $MountPoint) { throw 'Install requires Executable, Config and MountPoint' }
         $Executable = (Get-Item -LiteralPath $Executable).FullName
         $Config = (Get-Item -LiteralPath $Config).FullName
+        if ($MountPoint -notmatch '^[A-Za-z]:[\\/]') { throw 'MountPoint must be an absolute local directory path' }
         $MountPoint = [IO.Path]::GetFullPath($MountPoint)
         if ($MountPoint -notmatch '^[A-Za-z]:\\.+' -or [IO.File]::Exists($MountPoint) -or [IO.Directory]::Exists($MountPoint)) {
             throw 'Use a new absolute NTFS directory mountpoint, not an existing directory or drive letter'
@@ -218,7 +220,11 @@ try {
         Set-Acl -LiteralPath $root -AclObject $acl
         Assert-PrivateRoot
         Copy-Item -LiteralPath $PSCommandPath -Destination $manager
-        $arguments = '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ' + (Quote-Argument $manager) + ' -Action Run -Name ' + (Quote-Argument $Name) + ' -StateDirectory ' + (Quote-Argument $root)
+        # Task Scheduler expands %ENV% in action arguments. An encoded command
+        # preserves literal path characters; all inserted values are quoted
+        # PowerShell literals. This is encoding, not encryption; no secrets here.
+        $invocation = '& ' + (Quote-Literal $manager) + ' -Action Run -Name ' + (Quote-Literal $Name) + ' -StateDirectory ' + (Quote-Literal $root) + '; exit $LASTEXITCODE'
+        $arguments = '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand ' + [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($invocation))
         $description = "S3Drive startup v1; owner $sid; registration $Name"
         $value = @{ version=1; owner_sid=$sid; task_name=$taskName; executable=$Executable; config=$Config; mountpoint=$MountPoint; arguments=$arguments; description=$description }
         $value | ConvertTo-Json | Set-Content -LiteralPath $manifestPath -Encoding UTF8
@@ -241,7 +247,7 @@ try {
         $exec = $definition.Actions.Create(0)
         $exec.Path = $powershell
         $exec.Arguments = $arguments
-        $exec.WorkingDirectory = $root
+        $exec.WorkingDirectory = $env:SystemRoot
         # COM receives the password in memory. It is not a process argument,
         # script, log, manifest field or repository secret.
         $plainPassword = $Credential.GetNetworkCredential().Password
