@@ -279,8 +279,13 @@ during uncommitted eviction. Logs: `/tmp/s3drive-blob-tests.log`,
 `/tmp/s3drive-blob-clippy.log`, `/tmp/s3drive-blob-gate.log`.
 Run the full repository gate, then require terminal all-green Linux/Windows/book
 CI at the branch's exact final SHA before fast-forwarding/pushing main.
-Use `gh run list --branch revision-cache` to find its evidence. Windows CI runs
-all new storage tests and the existing ordinary-account/mount/session gate.
+Implementation commit `bf21ba6f19a93d749595f266c9d5b21d5b3cbe98` passed all jobs
+in [run 38956348568](https://github.com/marshallr12/s3drive/actions/runs/38956348568):
+26 Linux and 25 Windows state tests, native Linux FUSE/startup, 626 Windows
+mount requests and cross-logon acceptance. Logs: `/tmp/s3drive-blob-linux-ci.log`
+and `/tmp/s3drive-blob-windows-ci.log`. The final documentation update fixes a
+rendered decision-table row; locate exact-tip CI with
+`gh run list --branch revision-cache` before publication.
 
 Next implementation is P4b2b: connect the cache worker to configuration and the
 shared engine, coalesce misses and bound downloads, retain direct range reads
