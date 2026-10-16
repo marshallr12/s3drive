@@ -79,14 +79,19 @@ function Registered-Task($Service) {
 function Assert-Task($Task, $Value) {
     if ($null -eq $Task) { return }
     $definition = $Task.Definition
-    if ($definition.RegistrationInfo.Description -ne $Value.description -or
-        $definition.Actions.Count -ne 1 -or
-        $definition.Actions.Item(1).Path -ne $powershell -or
-        $definition.Actions.Item(1).Arguments -ne $Value.arguments -or
-        $definition.Principal.LogonType -ne 1 -or
-        $definition.Principal.UserId -notin @($sid,$identity.Name) -or
-        $definition.Principal.RunLevel -ne 0) {
-        throw 'Scheduled task was edited; refusing to control a different registration'
+    $principal = $definition.Principal.UserId
+    if ($principal -match '^S-1-') { $principalSid=[Security.Principal.SecurityIdentifier]::new($principal).Value }
+    else { $principalSid=([Security.Principal.NTAccount]::new($principal)).Translate([Security.Principal.SecurityIdentifier]).Value }
+    if ($principalSid -ne $sid -or $definition.Principal.LogonType -ne 1 -or $definition.Principal.RunLevel -ne 0) {
+        throw 'Scheduled task owner or logon policy changed; refusing control'
+    }
+    if ($definition.RegistrationInfo.Description -cne $Value.description) {
+        throw 'Scheduled task description changed; refusing control'
+    }
+    if ($definition.Actions.Count -ne 1 -or $definition.Actions.Item(1).Path -ine $powershell -or
+        $definition.Actions.Item(1).Arguments -cne $Value.arguments -or
+        $definition.Actions.Item(1).WorkingDirectory -ine $env:SystemRoot) {
+        throw 'Scheduled task action changed; refusing control'
     }
 }
 function Is-Supervising {
@@ -251,8 +256,9 @@ try {
         # COM receives the password in memory. It is not a process argument,
         # script, log, manifest field or repository secret.
         $plainPassword = $Credential.GetNetworkCredential().Password
-        try { $null = $service.GetFolder('\').RegisterTaskDefinition($taskName,$definition,2,$identity.Name,$plainPassword,1,$null) }
+        try { $registered = $service.GetFolder('\').RegisterTaskDefinition($taskName,$definition,2,$identity.Name,$plainPassword,1,$null) }
         finally { $plainPassword = $null; $Credential = $null }
+        Assert-Task $registered $value
         Write-Output "Installed $taskName. Use Start to mount now; future account logons trigger it."
     } else {
         $value = Read-Manifest

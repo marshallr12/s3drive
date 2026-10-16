@@ -135,6 +135,7 @@ try {
             if (-not [IO.File]::Exists((Join-Path $root 'drive.toml')) -or -not [IO.File]::Exists((Join-Path $env:USERPROFILE '.aws\credentials'))) { throw 'Removal deleted config or credentials' }
         }
         'Diagnostics' {
+            if ([IO.File]::Exists((Join-Path $state 'startup.json'))) { Manage Status }
             if ([IO.File]::Exists((Join-Path $state 'session.log'))) { Get-Content -LiteralPath (Join-Path $state 'session.log') -Tail 30 }
         }
     }
