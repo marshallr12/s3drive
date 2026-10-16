@@ -27,6 +27,7 @@ $worker = Join-Path $root 'worker.ps1'
 $cleanupFailures = [Collections.Generic.List[string]]::new()
 $started = Get-Date
 $batchRightGranted = $false
+$acceptancePassed = $false
 # CI fixture provisioning only. Registration itself still runs as the ordinary
 # account. Never grant rights to an existing user or rewrite the host's policy.
 # https://learn.microsoft.com/en-us/windows/win32/api/ntsecapi/nf-ntsecapi-lsaaddaccountrights
@@ -292,6 +293,7 @@ exit 0
     try { $null=$service.GetFolder('\').GetTask($taskName) }
     catch { if ($_.Exception.GetBaseException().HResult -eq -2147024894) { $removed=$true } else { throw } }
     if (-not $removed) { throw 'Task remains after removal' }
+    $acceptancePassed = $true
 } catch {
     # Keep the original assertion visible even if cleanup independently fails.
     Write-Output ("Session acceptance failed: " + $_.Exception.Message)
@@ -372,7 +374,25 @@ exit 0
                 Start-Sleep -Milliseconds 200
             }
             if (Get-CimInstance Win32_UserProfile | Where-Object SID -eq $account.SID.Value) { throw 'Profile registration remains after deletion' }
-        } catch { $cleanupFailures.Add('Could not remove disposable profile: ' + $_.Exception.Message) }
+        } catch {
+            $failure=$_.Exception.GetBaseException()
+            # Only the explicitly disposable GitHub VM may defer this observed
+            # OS-owned hive lock. Every filesystem/security/lifetime assertion
+            # must already have passed. Other cleanup errors still fail.
+            $disposable=$env:S3DRIVE_DISPOSABLE_WINDOWS_VM -eq '1' -and $env:GITHUB_ACTIONS -eq 'true'
+            if ($disposable -and $acceptancePassed -and $unmounted -and
+                $failure -is [ComponentModel.Win32Exception] -and $failure.NativeErrorCode -eq 32) {
+                foreach ($process in Get-CimInstance Win32_Process) {
+                    $owner=Invoke-CimMethod -InputObject $process -MethodName GetOwnerSid -ErrorAction SilentlyContinue
+                    if ($owner -and $owner.ReturnValue -eq 0 -and $owner.Sid -eq $account.SID.Value) {
+                        $cleanupFailures.Add('Disposable account still owns a process')
+                    }
+                }
+                try { Remove-Item -LiteralPath (Join-Path $profileDirectory '.aws') -Recurse -Force }
+                catch { $cleanupFailures.Add('Could not remove dummy credentials from retained profile') }
+                Write-Warning 'DISPOSABLE VM CLEANUP: Windows retained its locked fixture profile; dummy credentials removed, profile deletion deferred to VM destruction.'
+            } else { $cleanupFailures.Add('Could not remove disposable profile: ' + $failure.Message) }
+        }
         try { Remove-LocalUser -Name $userName }
         catch { $cleanupFailures.Add('Could not remove disposable user: ' + $_.Exception.Message) }
     }

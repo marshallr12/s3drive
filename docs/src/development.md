@@ -80,7 +80,21 @@ account's batch-logon right, registers startup as that account and checks access
 from independent logons. It enables Task Scheduler's operational event log on
 the disposable runner for failure diagnostics. Passwords exist only in memory
 and a redirected input pipe; the fixture S3 profile uses dummy credentials.
-The harness removes its account, task, mount and private directory afterward.
+The harness removes its account, task, mount and private test directory afterward.
+On GitHub's explicitly disposable VM, Windows may retain a locked registry
+profile after all fixture processes exit. Only that profile sharing violation
+may defer to VM destruction, with a visible warning and removal of the dummy
+S3 credentials. This requires `S3DRIVE_DISPOSABLE_WINDOWS_VM=1` in GitHub Actions
+and all functional checks to have passed; task, mount, process, account or other
+cleanup failures still fail the gate. Outside that disposable CI configuration,
+profile deletion remains mandatory. The app's `Remove` deliberately retains the
+real user's profile and credentials.
+[GitHub VM lifecycle](https://docs.github.com/en/actions/how-tos/manage-runners/github-hosted-runners/use-github-hosted-runners)
+It compares `TOKEN_STATISTICS.AuthenticationId` to distinguish authentication
+sessions. `whoami /logonid` alone is insufficient for clients launched with
+`CreateProcessWithLogonW`, which uses the caller's desktop logon SID.
+[Token statistics](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-token_statistics),
+[secondary logon API](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createprocesswithlogonw)
 
 ## Read the book locally
 

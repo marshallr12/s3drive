@@ -48,6 +48,10 @@ jobs:
       - name: Verify real Windows drive and teardown
         if: runner.os == 'Windows'
         timeout-minutes: 10
+        env:
+          # GitHub destroys this fresh VM after the job. Only a retained Windows
+          # fixture-profile sharing violation may defer to that disposal.
+          S3DRIVE_DISPOSABLE_WINDOWS_VM: '1'
         run: cargo test -p s3drive-cli --test windows_mount --locked -- --ignored --nocapture
       - name: Verify Linux startup without systemd
         if: runner.os == 'Linux'
