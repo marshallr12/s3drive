@@ -77,20 +77,67 @@ enabled automatically.
 
 A task running only in an interactive desktop session does not establish the
 requested headless-session contract. Windows drive-letter namespaces and
-account tokens must be considered separately. The proposed persistent backend
+account tokens must be considered separately. The persistent backend
 runs independently of the launching terminal, as the user's account, and
 exposes an NTFS directory mount as the common desktop/SSH path. A drive letter
 can remain a convenience inside an individual session.
 
-WinFsp supports directory mountpoints and provides a service architecture for
-processes independent of user sessions. A password-backed scheduled task or a
-proper service/WinFsp Launcher integration needs explicit account provisioning;
-an interactive-only task is not an equivalent substitute. Do not put Windows
-passwords or S3 keys into task arguments or repository configuration. This
-backend and cross-logon acceptance remain a separate implementation step.
+`scripts/windows-session.ps1` implements a password-backed Task Scheduler
+registration. Native acceptance is pending for this new backend. The scheduled
+process uses the mounting account at least privilege in a separate batch logon,
+has no execution time limit, ignores duplicate starts and retries an unexpected
+failure at most three times. Its private supervisor launches the Rust mount and
+closes stdin for graceful removal. It does not force-kill a delayed unmount.
+
+WinFsp supports directory mounts; their target must **not already exist**.
+Use an absolute local NTFS path whose parent exists, without junction/symlink
+ancestors. The existing contents of a directory cannot be covered by the mount.
+WinFsp creates the new directory and removes it on teardown.
 [WinFsp service architecture](https://github.com/winfsp/winfsp/wiki/WinFsp-Service-Architecture),
-[WinFsp directory mounts](https://github.com/winfsp/winfsp/wiki/Frequently-Asked-Questions),
+[WinFsp directory mounts](https://github.com/winfsp/winfsp/wiki/Frequently-Asked-Questions)
+
+Run Windows PowerShell as the account that owns the S3 credential profile:
+
+```powershell
+.\scripts\windows-session.ps1 -Action Install -Name default `
+  -Executable "$PWD\target\debug\s3drive.exe" `
+  -Config "$PWD\s3drive.local.toml" `
+  -MountPoint "$env:USERPROFILE\S3Drive"
+.\scripts\windows-session.ps1 -Action Start -Name default
+.\scripts\windows-session.ps1 -Action Status -Name default
+```
+
+Installation asks locally for that **Windows account's password**, not an S3
+key or Windows Hello PIN. Task Scheduler stores the logon credential; the
+application's files and task arguments contain only paths and registration
+metadata. Use a stable executable/configuration and an explicit S3 profile in
+the account's credential store. Credentials held only in a terminal's temporary
+environment will not be inherited by Task Scheduler.
+
+Accounts without a usable password, or machines that deny batch logon through
+policy, need a separately provisioned service/WinFsp Launcher alternative; that
+alternative is not implemented. S4U is not selected because Microsoft documents
+network/encrypted-file restrictions. Password changes require updating/recreating
+the scheduled registration. The task has a per-account logon trigger; a headless
+SSH command that does not fire that trigger must explicitly invoke `Start` before
+accessing the path. Existing mounts remain available to later same-account logons.
 [Task Scheduler logon types](https://learn.microsoft.com/en-us/windows/win32/taskschd/principal-logontype)
+
+```powershell
+.\scripts\windows-session.ps1 -Action Stop -Name default
+.\scripts\windows-session.ps1 -Action Remove -Name default
+```
+
+`Stop` unmounts the current instance; the registration still applies to future
+logons. `Remove` disables future triggers, stops the mount and deletes its task
+and managed files, retaining configuration, credentials and logs. Private state
+is under `%LOCALAPPDATA%\S3Drive\startup\default`; optional `-StateDirectory`
+selects another private directory. A new installation requires an unused state
+directory. Status reports scheduler state, supervisor ownership, path existence
+and the log path. Path existence alone is not proof of successful remote reads.
+The script refuses to control a task whose owner/action registration was edited.
+[Task registration](https://learn.microsoft.com/en-us/windows/win32/taskschd/taskfolder-registertaskdefinition),
+[execution time limit](https://learn.microsoft.com/en-us/windows/win32/taskschd/tasksettings-executiontimelimit)
 
 ## Acceptance evidence and remaining checks
 

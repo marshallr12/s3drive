@@ -65,14 +65,19 @@ policy and incoming SSH authentication/PAM need separate acceptance.
 On `windows-session-startup`, the Windows foreground mount also accepts a new
 absolute NTFS directory path, with existing parents and no junctions/symlinks.
 Directory tests cover Unicode reads, occupied targets, graceful teardown and
-forced process termination; native CI is pending for this change. P3.5b still
-needs a session-independent backend; validate same-account
-access through independent logon tokens, graceful cleanup and sign-in startup.
-WinFsp supports directory mounts, but its directory creation/removal contract
-must be implemented and tested natively. A password-backed scheduled task or
-WinFsp Launcher/service is a candidate; S4U/interactive-only alternatives have
-different credential/session restrictions. No Windows password or startup
-registration was created. See `docs/src/startup-and-sessions.md`.
+forced process termination; native CI run 38935158119 passed at `af18c3a`.
+The new `scripts/windows-session.ps1` registers an owner-account, least-privilege
+password-backed scheduled task. Its independent supervisor uses stdin EOF for
+graceful unmount. No Windows passwords are stored in application files/argv.
+`scripts/test-windows-session.ps1`, called by the native Rust test while the HTTP
+fixture is live, creates a disposable non-admin account and two independent
+logons to verify real S3/Unicode reads, duplicate starts and uninstall.
+Startup native CI is pending; do not claim cross-session acceptance yet.
+No real user Windows credential or startup registration was changed. Accounts
+without usable Windows passwords or with restrictive batch-logon policies need
+a service alternative, not an S4U/interactive-only fallback. Actual reboot,
+full sign-out, SSH authentication/trigger behavior remain host acceptance work.
+See `docs/src/startup-and-sessions.md`.
 
 ## Turso research and architecture images
 

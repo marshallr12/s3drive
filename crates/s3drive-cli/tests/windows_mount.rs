@@ -352,6 +352,40 @@ async fn actual_windows_drive_names_reads_security_and_teardown() {
             .is_err()
     );
     assert!(!mount.exists(), "drive remains after cancellation");
+    // Separate logon sessions use an isolated non-administrator account. The
+    // fixture stays live while Task Scheduler owns the daemon independently.
+    let startup = tokio::time::timeout(
+        Duration::from_secs(360),
+        Command::new("powershell.exe")
+            .env_remove("PSModulePath")
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+            ])
+            .arg(
+                Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../scripts/test-windows-session.ps1"),
+            )
+            .arg("-Executable")
+            .arg(env!("CARGO_BIN_EXE_s3drive"))
+            .arg("-Config")
+            .arg(&config)
+            .kill_on_drop(true)
+            .output(),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    eprintln!("{}", String::from_utf8_lossy(&startup.stdout));
+    assert!(
+        startup.status.success(),
+        "Windows session acceptance failed: {}",
+        String::from_utf8_lossy(&startup.stderr)
+    );
+    assert!(String::from_utf8_lossy(&startup.stdout).contains("PASS: non-admin registration"));
     assert!(!fixture.server.is_finished(), "fixture server failed");
     {
         let requests = fixture.requests.lock().unwrap();
