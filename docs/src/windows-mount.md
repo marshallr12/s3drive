@@ -4,8 +4,12 @@ P3.5b now implements an additional absolute NTFS directory mount path, for
 example `C:\Users\you\S3Drive`. Its parent must exist; the target itself must
 not exist. Existing directories, relative paths, UNC paths and junction/symlink
 ancestors are rejected. WinFsp creates the mount directory and removes it on
-teardown. Native directory acceptance is being added; the earlier P3 evidence
-below applies to drive letters. Persistent session startup is a separate step.
+teardown. Native directory acceptance passed at `af18c3a` in
+[CI run 38935158119](https://github.com/marshallr12/s3drive/actions/runs/38935158119),
+including Unicode reads, occupied-target refusal, graceful removal and cleanup
+after forced process termination. The earlier P3 evidence below applies to
+drive letters. [Persistent session startup](startup-and-sessions.md) has a
+separate acceptance scope.
 [WinFsp mount implementation](https://github.com/winfsp/winfsp/blob/v2.1/src/dll/mount.c)
 
 Implemented and natively verified on 2026-10-16. The read-only acceptance gate
@@ -68,7 +72,7 @@ cache, uploads, offline operation or capacity estimation exists.
 
 Unsafe Rust is confined to `s3drive-winfsp/src/native.rs`: process-token/SID
 querying, construction/copying of a self-relative security descriptor, native
-uppercase mapping and matching Windows allocation cleanup. Other modules
+uppercase mapping, NTFS volume identification and matching Windows allocation cleanup. Other modules
 forbid unsafe code. The native binding itself remains a separate FFI dependency.
 
 ## Native acceptance
@@ -81,7 +85,12 @@ This must run with the actual installed driver. Set
 `S3DRIVE_WINFSP_TEST_EXE` to the x64 executable from the official
 `winfsp-tests-2.1.25156.zip` release; CI downloads and verifies it. The installed
 WinFsp `bin` directory must be on `PATH` for this executable's direct DLL
-imports; CI checks startup before mounting. It mounts two fixture buckets
+imports; CI checks startup before mounting. The extended session test also
+requires an elevated **disposable** Windows host: it creates a temporary
+non-administrator account, grants only that account batch-logon rights, and
+removes the account/right/task afterward. The actual startup registration and
+mount run at ordinary-user privilege. Do not run this gate on a shared
+workstation. It mounts two fixture buckets
 using dummy credentials, verifies names, pagination, byte-exact sequential,
 random and concurrent reads, EOF, revision changes, sharing, rejected mutations,
 owner ACLs, PowerShell and Explorer's Shell.Application namespace. It also runs

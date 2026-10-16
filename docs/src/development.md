@@ -42,6 +42,14 @@ native Linux and Windows Rust jobs and a separate Linux book job. CI installs a 
 mount test; it does not access providers or use cloud credentials. A separate
 explicit Linux native test uses `/dev/fuse` and a local fixture.
 
+Windows testing runs remotely in the private repository's GitHub Actions
+`windows-latest` VM, not by emulation or cross-compilation on the MX Linux
+workstation. The 2026-10-16 run logs identify Windows Server 2025
+(`10.0.26100`, image `windows-2025-vs2026`). This is native Windows driver/API
+evidence, not acceptance on a user's Windows 10/11 desktop or a rebooted PC.
+The local Linux workstation separately runs its real FUSE and non-systemd
+startup checks.
+
 Behavioral tests cover namespace isolation/traversal, exact key bytes and byte
 limits, endpoint/config rejection, alias collisions, SQLite persistence/schema
 refusal, Linux filename projection/collisions, inode identity, and required CLI
@@ -64,6 +72,15 @@ FUSE and the built CLI. It uses isolated registration/profile files and a real
 mount with a synthetic root; it neither changes the user's startup nor contacts
 a provider. It does not require systemd. See [startup evidence](startup-and-sessions.md)
 for the distinction between terminal loss and actual reboot/logout acceptance.
+
+The Windows native mount gate also invokes `scripts/test-windows-session.ps1`
+while its local HTTP fixture is running. Use an elevated disposable Windows
+runner. The harness creates its own ordinary account, grants/removes that
+account's batch-logon right, registers startup as that account and checks access
+from independent logons. It enables Task Scheduler's operational event log on
+the disposable runner for failure diagnostics. Passwords exist only in memory
+and a redirected input pipe; the fixture S3 profile uses dummy credentials.
+The harness removes its account, task, mount and private directory afterward.
 
 ## Read the book locally
 

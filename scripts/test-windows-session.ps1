@@ -237,6 +237,8 @@ exit 0
     if (-not $removed) { throw 'Task remains after removal' }
     Write-Output 'PASS: non-admin registration, independent same-account logons, exact S3 and Unicode reads, duplicate starts, retained mount and removal'
 } catch {
+    # Keep the original assertion visible even if cleanup independently fails.
+    Write-Output ("Session acceptance failed: " + $_.Exception.Message)
     if ($null -ne $account -and [IO.File]::Exists($worker)) {
         try { Write-Output (User-Action Diagnostics) }
         catch { Write-Warning ("Isolated diagnostics failed: " + $_.Exception.Message) }
@@ -265,6 +267,7 @@ exit 0
             if (($process.ExecutablePath -eq (Join-Path $root 's3drive.exe')) -or
                 ($taskArguments -and $process.CommandLine -and $process.CommandLine.Contains($taskArguments))) {
                 Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
+                Wait-Process -Id $process.ProcessId -Timeout 15 -ErrorAction SilentlyContinue
             }
         }
     }
@@ -285,9 +288,19 @@ exit 0
             catch { $cleanupFailures.Add('Could not remove disposable batch-logon right') }
         }
         try {
-            Get-CimInstance Win32_UserProfile | Where-Object SID -eq $account.SID.Value | Remove-CimInstance
-            Remove-LocalUser -Name $userName
-        } catch { $cleanupFailures.Add('Could not remove disposable user/profile') }
+            # The scheduler/user-profile service can release the batch logon
+            # after the last mount handle disappears. Wait for that condition.
+            $deadline=[DateTime]::UtcNow.AddSeconds(30)
+            while ($true) {
+                $profile=Get-CimInstance Win32_UserProfile | Where-Object SID -eq $account.SID.Value
+                if (-not $profile -or -not $profile.Loaded) { break }
+                if ([DateTime]::UtcNow -gt $deadline) { throw 'Disposable profile is still loaded after all owned processes stopped' }
+                Start-Sleep -Milliseconds 200
+            }
+            if ($profile) { $profile | Remove-CimInstance }
+        } catch { $cleanupFailures.Add('Could not remove disposable profile: ' + $_.Exception.Message) }
+        try { Remove-LocalUser -Name $userName }
+        catch { $cleanupFailures.Add('Could not remove disposable user: ' + $_.Exception.Message) }
     }
     if ($unmounted -and [IO.Directory]::Exists($root)) {
         # The private manager state belongs to the disposable user. The elevated
