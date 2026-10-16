@@ -61,8 +61,19 @@ reads, sharing, mutation refusal and name/revision checks; the later PowerShell
 ACL step failed loading its module, not a filesystem assertion. Fix the test's
 PowerShell 5/7 environment isolation and rerun the full native gate, including
 Shell namespace, upstream volume info, removal and cancellation. Do not claim
-P3 complete until all pass. Runs: 38924822475, 38925797029 (both failed; inspect
-Actions for the next exact commit). CI now caches the build even on failure.
+P3 complete until all pass. Runs: 38924822475, 38925797029 failed. Third run
+38927733040 passed PowerShell/ACL/Shell checks, then the upstream executable
+failed before emitting output. Inspection of the verified release binary found
+a direct `winfsp-x64.dll` import; CI now adds the installed runtime to PATH
+and checks executable startup before mounting. Failure diagnostics include exit
+status. Inspect Actions for the next exact commit. CI caches even on failure.
+
+The user requested broader Unicode filename testing. Added a shared corpus of
+11 filenames and a Unicode directory (CJK, Cyrillic, Arabic, Devanagari, emoji,
+ZWJ sequence, distinct NFC/NFD accents, literal percent/space/plus). Exact
+listing preservation and per-name bytes passed through real Linux FUSE on
+2026-10-16 (145 requests/two mounts); Windows runs the same corpus next.
+Local log: `/tmp/s3drive-unicode-linux.log`.
 
 Linux and Windows mount tests share `tests/support/fixture.rs`. The refactored
 Linux native test passed with 62 requests/two mounts. The full local gate after

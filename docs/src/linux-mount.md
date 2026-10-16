@@ -43,8 +43,8 @@ literal percent sequences. Empty, dot, parent, slash, backslash, control and
 components exceeding 255 UTF-8 bytes are rejected. A zero-byte marker matching
 the directory prefix is ignored; a nonempty marker is an error. File/prefix
 collisions such as `a` plus `a/b` make that directory inaccessible with an error.
-Nothing is silently renamed or hidden. Windows will need an additional native
-name/case policy before it can share this projection.
+Nothing is silently renamed or hidden. The Windows adapter applies the
+additional [native name/case policy](windows-mount.md).
 
 Inodes are stable per source/key/type for the lifetime of the mount and are
 never recycled. The engine retains these identities until unmount, with a cap;
@@ -103,7 +103,13 @@ Portable workspace tests do not run this ignored test; a native gate must invoke
 it explicitly. Linux CI also runs it after installing the FUSE helper.
 Local native acceptance passed on 2026-10-16 on Linux 6.12.29-amd64 x86_64
 with fusermount3 3.14.0: both mount sessions exited successfully, and the mount
-directory was empty after each teardown (62 GET/HEAD requests total).
+directory was empty after each teardown. The expanded Unicode gate passed
+with 145 GET/HEAD requests on 2026-10-16. It preserves exact directory entries
+and contents for 11 filenames: NFC `café.txt` and NFD `cafe\u0301.txt` as
+distinct keys, Japanese, Chinese, Cyrillic, Arabic, Devanagari, supplementary
+emoji, an emoji sequence with a zero-width joiner, and literal percent/plus
+characters. It also traverses `目录-📁/résumé-🎉.txt`. The shared corpus is
+`crates/s3drive-cli/tests/support/unicode.rs`; both native gates use it.
 Wasabi acceptance
 remains separate: the fixture tests our HTTP/kernel contract, not Wasabi's
 service, authentication implementation or concurrency semantics.

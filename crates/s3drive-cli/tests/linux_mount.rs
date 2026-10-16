@@ -15,6 +15,8 @@ use tokio::{
 
 #[path = "support/fixture.rs"]
 mod fixture;
+#[path = "support/unicode.rs"]
+mod unicode;
 use fixture::Fixture;
 
 struct MountCleanup(PathBuf);
@@ -34,6 +36,7 @@ impl Drop for MountCleanup {
 #[ignore = "native acceptance: requires /dev/fuse and fusermount3"]
 async fn actual_kernel_mount_reads_pagination_revisions_and_teardown() {
     let mut fixture = Fixture::start().await;
+    unicode::seed(&fixture);
     let data: Vec<u8> = (0..350_123).map(|n| (n % 251) as u8).collect();
     fixture.put("/test-bucket/desktop/large.bin", &data, "large-v1");
     fixture.put("/test-bucket/desktop/nested/", b"", "marker");
@@ -81,6 +84,7 @@ async fn actual_kernel_mount_reads_pagination_revisions_and_teardown() {
     let mount = mountpoint.clone();
     let objects = fixture.objects.clone();
     let mut checks = tokio::task::spawn_blocking(move || {
+        unicode::verify(&mount.join("docs/unicode"));
         assert_eq!(
             names(&mount),
             BTreeSet::from(["docs".into(), "other".into()])

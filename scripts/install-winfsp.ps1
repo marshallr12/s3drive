@@ -10,6 +10,11 @@ $install = Start-Process msiexec.exe -ArgumentList @('/i', "`"$installer`"", '/q
 if ($install.ExitCode -ne 0) { throw "WinFsp install failed or requires reboot: $($install.ExitCode)" }
 $directory = (Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\WinFsp').InstallDir
 (Get-Item (Join-Path $directory 'bin\winfsp-x64.dll')).VersionInfo | Format-List FileVersion, ProductVersion
+# The official tests import winfsp-x64.dll directly (our app delay-loads it).
+# Make the installed runtime available to this process and subsequent CI steps.
+$runtimeDirectory = Join-Path $directory 'bin'
+$env:PATH = "$runtimeDirectory;$env:PATH"
+$runtimeDirectory | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
 
 $testsArchive = Join-Path $env:RUNNER_TEMP 'winfsp-tests-2.1.25156.zip'
 Invoke-WebRequest 'https://github.com/winfsp/winfsp/releases/download/v2.1/winfsp-tests-2.1.25156.zip' -OutFile $testsArchive
@@ -20,4 +25,6 @@ $testsDirectory = Join-Path $env:RUNNER_TEMP 'winfsp-tests'
 Expand-Archive $testsArchive -DestinationPath $testsDirectory -Force
 $tests = @(Get-ChildItem $testsDirectory -Recurse -Filter 'winfsp-tests-x64.exe')
 if ($tests.Count -ne 1) { throw 'Expected exactly one WinFsp x64 test executable' }
+& $tests[0].FullName --external --list +getvolinfo_test
+if ($LASTEXITCODE -ne 0) { throw "WinFsp test executable preflight failed: $LASTEXITCODE" }
 "S3DRIVE_WINFSP_TEST_EXE=$($tests[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8

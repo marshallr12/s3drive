@@ -2,6 +2,8 @@
 #![cfg(windows)]
 #[path = "support/fixture.rs"]
 mod fixture;
+#[path = "support/unicode.rs"]
+mod unicode;
 use fixture::Fixture;
 use std::{
     collections::BTreeSet,
@@ -52,6 +54,7 @@ fn names(path: &Path) -> BTreeSet<String> {
 #[ignore = "native acceptance: Windows MSVC with installed WinFsp 2.1 driver"]
 async fn actual_windows_drive_names_reads_security_and_teardown() {
     let mut fixture = Fixture::start().await;
+    unicode::seed(&fixture);
     let data: Vec<u8> = (0..350_123).map(|n| (n % 251) as u8).collect();
     fixture.put("/test-bucket/desktop/large.bin", &data, "large-v1");
     fixture.put("/test-bucket/desktop/nested/", b"", "marker");
@@ -120,6 +123,7 @@ async fn actual_windows_drive_names_reads_security_and_teardown() {
     let path = mount.clone();
     let objects = fixture.objects.clone();
     let mut checks = tokio::task::spawn_blocking(move || {
+        unicode::verify(&path.join("docs/unicode"));
         assert_eq!(
             names(&path),
             BTreeSet::from(["docs".into(), "other".into()])
@@ -245,7 +249,8 @@ async fn actual_windows_drive_names_reads_security_and_teardown() {
     eprintln!("{}", String::from_utf8_lossy(&upstream.stdout));
     assert!(
         upstream.status.success(),
-        "WinFsp volume conformance: {}",
+        "WinFsp volume conformance exited {}: {}",
+        upstream.status,
         String::from_utf8_lossy(&upstream.stderr)
     );
     assert!(
