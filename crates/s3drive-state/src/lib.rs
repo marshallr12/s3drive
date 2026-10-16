@@ -8,13 +8,14 @@ mod directory;
 #[path = "directory/windows.rs"]
 mod directory_windows;
 pub mod journal;
+pub mod remote;
 pub mod worker;
 
 use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 5;
+pub const SCHEMA_VERSION: i32 = 6;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub struct State {
@@ -45,6 +46,7 @@ impl State {
         // Only tighten legacy file modes after confirming this is our DB.
         owner.finish_initialization()?;
         state._directory = Some(owner);
+        remote::recover_interrupted(&mut state)?;
         Ok(state)
     }
 
@@ -92,6 +94,10 @@ impl State {
             }
             if version == 4 {
                 tx.execute_batch(include_str!("../migrations/005.sql"))?;
+                version = 5;
+            }
+            if version == 5 {
+                tx.execute_batch(include_str!("../migrations/006.sql"))?;
             }
             // Catch a damaged/current-version database before returning success.
             tx.prepare("SELECT source_alias, object_key, etag, version_id, size_bytes FROM legacy_cached_objects_v1 LIMIT 0")?;
@@ -104,6 +110,8 @@ impl State {
             tx.prepare("SELECT source_id, object_key, generation_id FROM staged_heads LIMIT 0")?;
             tx.prepare("SELECT generation_id, status FROM write_journal LIMIT 0")?;
             tx.prepare("SELECT operation_key, generation_id FROM staged_operations LIMIT 0")?;
+            tx.prepare("SELECT generation_id, operation_id, source_id, config_fingerprint, object_key, manifest_hash, payload_sha256, size_bytes, guard_etag, anchor_operation, anchor_receipt, intent_hash, phase, reason, observation, rejection_status, remote_etag, remote_version, state_hash FROM remote_intents LIMIT 0")?;
+            tx.prepare("SELECT operation_id FROM retained_remote_intents LIMIT 0")?;
             if version != SCHEMA_VERSION {
                 tx.pragma_update(None, "user_version", SCHEMA_VERSION)?;
             }

@@ -126,6 +126,12 @@ impl Base {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GenerationId(i64);
 impl GenerationId {
+    pub(crate) fn from_database(value: i64) -> Result<Self> {
+        if value <= 0 {
+            return Err("invalid generation ID".into());
+        }
+        Ok(Self(value))
+    }
     pub fn value(self) -> i64 {
         self.0
     }
@@ -647,7 +653,7 @@ fn digest32(value: Vec<u8>) -> Result<[u8; 32]> {
         .try_into()
         .map_err(|_| "invalid staged checksum shape".into())
 }
-fn load(connection: &Connection, id: GenerationId) -> Result<Generation> {
+pub(crate) fn load(connection: &Connection, id: GenerationId) -> Result<Generation> {
     // Bound metadata allocation even when a damaged DB bypasses its CHECKs.
     let shape:bool=connection.query_row("SELECT length(g.source_id)=32 AND length(b.config_fingerprint)=64 AND length(CAST(g.object_key AS BLOB)) BETWEEN 1 AND 1024 AND (g.base_etag IS NULL OR length(CAST(g.base_etag AS BLOB)) BETWEEN 1 AND 8192) AND (g.base_version IS NULL OR length(CAST(g.base_version AS BLOB)) BETWEEN 1 AND 8192) AND (g.manifest_hash IS NULL OR length(g.manifest_hash)=32) FROM staged_generations g JOIN source_bindings b ON b.source_id=g.source_id WHERE g.generation_id=?1",[id.0],|r|r.get(0))?;
     if !shape {
@@ -697,7 +703,10 @@ fn load(connection: &Connection, id: GenerationId) -> Result<Generation> {
         extents,
     })
 }
-fn current_head(connection: &Connection, target: &Target) -> Result<Option<GenerationId>> {
+pub(crate) fn current_head(
+    connection: &Connection,
+    target: &Target,
+) -> Result<Option<GenerationId>> {
     let head: Option<i64> = connection
         .query_row(
             "SELECT generation_id FROM staged_heads WHERE source_id=?1 AND object_key=?2",
@@ -718,7 +727,7 @@ fn field(hash: &mut Sha256, value: Option<&[u8]>) {
         hash.update(value);
     }
 }
-fn validate_manifest(
+pub(crate) fn validate_manifest(
     connection: &Connection,
     generation: &Generation,
     verify_payloads: bool,

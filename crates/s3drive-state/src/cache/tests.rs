@@ -250,7 +250,7 @@ fn migration_two_preserves_bindings_and_rolls_back_conflicting_cache_schema() {
         state.register_source(&[1; 32], &"a".repeat(64)).unwrap();
         state
             .connection
-            .execute_batch("DROP TABLE staged_operations; DROP TABLE write_journal; DROP TABLE staged_heads; DROP TABLE staged_extents; DROP TABLE retained_staged_chunks; DROP TABLE staged_chunks; DROP TABLE staged_generations; DROP TABLE clean_blobs; PRAGMA user_version=2;")
+            .execute_batch("DROP TABLE retained_remote_intents; DROP TABLE remote_intents; DROP TABLE staged_operations; DROP TABLE write_journal; DROP TABLE staged_heads; DROP TABLE staged_extents; DROP TABLE retained_staged_chunks; DROP TABLE staged_chunks; DROP TABLE staged_generations; DROP TABLE clean_blobs; PRAGMA user_version=2;")
             .unwrap();
         if conflict {
             state.connection.execute_batch("CREATE TABLE clean_blobs (personal TEXT); INSERT INTO clean_blobs VALUES ('keep');").unwrap();

@@ -2,8 +2,9 @@
 
 **P5b1, implemented 2026-10-16:** a private single-attempt transport and explicit
 `probe-writes` CLI can test a provider in a reserved namespace. Mounted drives
-remain read-only. The application upload executor, remote acknowledgment
-journal, multipart writes and dirty-data cleanup are subsequent P5b work.
+remain read-only. A [local attempt journal](remote-journal.md) now records durable
+claims and uncertain outcomes. The application upload executor, remote flush,
+multipart writes and dirty-data cleanup are subsequent P5b work.
 
 ## Provider contract and evidence
 
@@ -53,7 +54,8 @@ after a committed request followed by another writer's deletion. Replaying the
 create in the latter case would undo that deletion. Future application recovery
 must retain the unresolved intent and local bytes unless a matching remote
 operation can be established or the user explicitly resolves it. This phase
-does not implement that durable remote state machine.
+provides the transport contract; the [local journal](remote-journal.md) implements
+durable states without a network executor.
 
 ## Reviewable probe plan
 
@@ -143,8 +145,9 @@ foreign cleanup refusal and preflight rejection for occupied/versioned scopes.
 CLI tests cover offline planning, private create-new files, source/plan binding,
 confirmation, edited-key refusal and existing-report preservation.
 
-P5b still needs durable attempt/uncertain/verified states, operation IDs suitable
-for remote jobs, parent/supersession rules, explicit credential rebinding,
+P5b2a adds durable attempt/uncertain/verified states, random operation IDs and
+verified-parent guards in the local journal. P5b still needs a network
+coordinator, unresolved-attempt/supersession resolution, explicit credential rebinding,
 multipart recovery, flush semantics, and reference/pin-aware acknowledgment
 cleanup. Direct `If-Match` is an ETag guard, not a version-ID fence. Preserve
 these limits when deciding whether direct mode or managed metadata is needed.

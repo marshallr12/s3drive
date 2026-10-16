@@ -194,3 +194,14 @@ checks and fixture-only cleanup. The model's atomic guard is not provider proof.
 `probe_cli.rs` tests no-network planning, exact digest/source/target validation,
 private create-new artifacts and refusal to overwrite reports before network
 work. The optional live commands require the [reviewed probe plan](conditional-uploads.md).
+
+The [remote journal](remote-journal.md) tests local SQLite state, using simulated
+verification evidence rather than cloud writes. They kill subprocesses at seven
+prepare/claim/verification boundaries, drop a committed claim's async reply,
+require one send permission, preserve newer dirty heads, and check real disk-full,
+quota, corruption and migration failures. Windows runs in GitHub Actions on a
+Windows Server 2025 VM with WinFsp installed; Linux runs here and on the Linux
+runner. The passing Windows job for published `a77e170` is
+[117225090437](https://github.com/marshallr12/s3drive/actions/runs/38975881747/job/117225090437).
+Windows 10/11 desktop use, actual reboot, full sign-out and real SSH authentication
+remain separate target-host acceptance checks.

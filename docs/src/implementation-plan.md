@@ -30,6 +30,7 @@ and writable OS callbacks remain subsequent phases.
 | P5a2a — shared async owner | Cache/journal commands on one connection and lock; bounded queue, uncertain outcomes and immutable snapshot handles | Native storage concurrency, queue pressure, cancellation/response loss, worker failure, draining/close and disk-full tests |
 | P5a2b — file-edit plans | Patch/truncate, sparse parent copying, pinned S3 hydration, durable intent-key recovery and immutable read-your-writes snapshots | Deterministic 120-step model, process-kill/response-loss/restart recovery, conflicting/concurrent plans, quota and changed/short/stalled base tests; real SDK HTTP hydration |
 | P5b1 — conditional transport probe | Private single-attempt PUT/observation and an explicit six-key, source-bound probe plan/run/cleanup CLI | Real SDK/TCP tests for lost responses, enforced/ignored guards, races, corruption and guarded fixture disposal; live provider evidence requires separately authorized execution |
+| P5b2a — durable remote-attempt records | Schema 6, single-use send claims, uncertain-result recovery and verified-parent guards on the shared async owner | Process-kill boundaries, lost owner reply, no duplicate permission, exact observation matching, newer dirty-head preservation, quota/disk-full/corruption/migration tests; no network executor |
 | P5a — staged writes | In-memory storage test double plus immutable local generations and durable journal | Fault injection at every local boundary; acknowledged local state survives restart; network mutation remains disabled |
 | P5b — conditional remote commits | Create/replace and multipart recovery; explicit flush contract | Provider preconditions verified; two-writer conflict tests; crash/timeout replay never overwrites unseen edits |
 | P5c — desktop mutations | Safe delete, documented rename behavior, open-handle semantics, real application workflows | Delete races, save/replace, concurrent open, unmount failures and data-loss tests on both OSes |
@@ -214,6 +215,8 @@ The SDK hydration fixture checks real conditional GETs with an exact Unicode key
 P5b must verify provider
 preconditions and reconcile uncertain remote results before P5c exposes writes.
 P5b1 prepares the [scoped conditional-write probe](conditional-uploads.md).
-It provides no application upload executor or durable remote acknowledgment yet.
-Credential-generation rebinding and parent/supersession dependencies need
-explicit policies; a pending local record is not permission to upload.
+P5b2a adds the [local attempt journal](remote-journal.md), preserving single-use
+claims, uncertain outcomes and verified-parent ETag guards. It provides no
+application upload executor, remote flush or dirty-byte reclamation yet.
+Credential-generation rebinding and unresolved-attempt/supersession resolution
+still need explicit policies; a pending local record is not permission to upload.

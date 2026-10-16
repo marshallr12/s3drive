@@ -10,7 +10,8 @@ with SQLite BLOBs. P4b2b connects it to optional mounted caching, with native
 acceptance required for each published source. P5a1 adds the local staged-
 generation/journal library. P5a2a adds one shared async owner for cache/journal
 commands and immutable local snapshot handles. P5a2b adds local edit plans and
-pinned-base hydration. P5b1 adds an explicit disposable-key transport/probe;
+pinned-base hydration. P5b1 adds an explicit disposable-key transport/probe.
+P5b2a adds local durable remote-attempt records and single-use send claims;
 live Wasabi write evidence awaits the new scoped authorization. Goal active;
 application remote commits,
 writable mounts, workstation reboot/SSH checks and packaging remain.
@@ -22,6 +23,69 @@ Windows using Rust. Research, seven-crate workspace, mdBook and private GitHub
 repository `marshallr12/s3drive` are complete. The first usable read-only
 milestone is verified. Do not call the broader editable-drive goal complete
 until the documented safe-write contract and its OS acceptance gates pass.
+
+## Current phase: P5b2a durable remote-attempt records
+
+Branch `durable-upload-intents` starts from published private main
+`a77e1707fdfdd17aec9ccb156a4297939240a3bb`. Its preceding P5b1 checkpoint passed
+all jobs in [run 38975881747](https://github.com/marshallr12/s3drive/actions/runs/38975881747)
+and was verified on remote main. Windows runs remotely on GitHub's Windows
+Server 2025 VMs with the real WinFsp driver; this workstation runs Linux.
+The user was explicitly told this again. Actual Windows 10/11 desktop,
+workstation reboot/full sign-out and real SSH authentication remain unverified.
+
+`s3drive-state/src/remote.rs` and migration `006.sql` implement local records
+for prepared/in-flight/uncertain/verified/rejected/cancelled attempts. The same
+async `Storage` owner exposes `uploads()` without another connection/thread/lock.
+Prepare binds the current sealed generation, exact target, complete body hash,
+manifest, random 256-bit operation ID and initial absence/strong-ETag guard.
+Verified earlier ancestors supply a descendant's ETag guard plus receipt hash.
+Cross-binding history requires explicit resolution; it is never silently adopted.
+
+Claim revalidates the body/current head/runtime binding, retains the attempt and
+commits in-flight state before issuing a non-cloneable `SendPermit`. Lost replies
+cannot issue another permit. Managed startup converts interrupted in-flight
+attempts to uncertain, including a crash before the actual send. Absent/rival
+observations never authorize retry. Rejected attempts quarantine the target.
+Only a never-claimed prepared intent can cancel. Every generation keeps its
+original identity, including cancelled records; a new attempt needs a new local
+generation and the applicable resolution rules.
+
+`Verification` is caller-supplied data, not remote proof or authorization. A
+future network coordinator must establish exact operation/key/binding, full
+bytes/checksum and valid revision. Receipt replay is idempotent, never rewinds a
+newer local head, and never removes pending intent or sealed payloads. No network
+executor, flush, upload API, multipart, writable callback or reclamation is added.
+Single-PUT body bound 8 MiB; default record quota 4,096, hard bound 65,536. Larger
+and sparse local generations remain preserved/readable. Canonical intent/state
+hashes, retained FK markers, bounded shape checks and global streaming validation
+refuse corruption; they are not authentication against an owner rewriting the DB.
+
+Local state tests cover seven real process-kill boundaries, lost prepare/claim/
+verification results and an async committed-claim reply, unknown observations,
+parent receipts with newer dirty heads, credential isolation, stale selection,
+record quotas, empty/exact-8-MiB/oversized bodies, real SQLITE_FULL and schema-5
+migration/rollback. The final local gate passed 70 state tests, 29 S3 tests,
+12 filesystem tests, clippy, builds and book checks. The disk-full fixture now explicitly exhausts reusable
+SQLite pages. One initial parallel run hit a transient reopen-lock failure in an
+existing Unicode/local-head test; its isolated run and subsequent full local gate
+passed without weakening ownership checks. Keep watching native CI for recurrence.
+
+Local real FUSE passed 341 read-only fixture requests; no-systemd cache-enabled
+startup/session tests passed with schema 6. Logs:
+`/tmp/s3drive-remote-intent-linux.log`, `/tmp/s3drive-remote-intent-session.log`.
+The final gate is recorded in `/tmp/s3drive-remote-intent-gate.log` (exit 0).
+Require exact-tip Linux/Windows/book CI before main publication; locate the run
+with `gh run list --branch durable-upload-intents`.
+See `docs/src/remote-journal.md` and the visually inspected `remote-journal.png`.
+The Windows session fixture now expects schema 6. No local config, credentials,
+real startup registration or cloud objects changed. The scoped Wasabi approval
+question below remains pending; do not run it without an actual user approval.
+
+Next: connect a separately authorized/proven single-attempt transport to these
+records, implement trusted full-byte observation and unresolved-attempt resolution,
+then multipart, remote flush and reference/pin-aware acknowledgment cleanup.
+Credential rebinding and cross-machine publication semantics remain required.
 
 ## Current implementation
 

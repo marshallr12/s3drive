@@ -31,6 +31,7 @@ to the user.
 | D023 | Implemented P5a2a | One async owner serves cache and journal commands on the same connection and process lock. Bound the queue and inputs; an accepted request with a lost reply has an unknown outcome. Inspect durable state and use guarded append/seal replay; never infer rollback from cancellation |
 | D024 | Implemented P5a2b library | Immutable edit plans bind the complete fixed input and patch/truncate intent to a durable operation key. Hydrate unchanged S3 ranges through a pinned handle outside SQL, preserve sparse local extents and publish one complete local snapshot. Failed builders stay recoverable; no writable callback or remote commit is enabled |
 | D025 | Implemented P5b1 probe boundary | Use one SDK mutation attempt and observe exact operation metadata plus full bytes after a lost result. Absence does not prove no prior commit. Confine provider tests and fixture-only plain DELETE cleanup to a reviewed six-key unversioned namespace; never enable application writes from compatibility claims |
+| D026 | Implemented P5b2a local journal | Commit a single-use send claim before issuing its in-memory permit; never reissue after response loss/restart. Preserve uncertain/rejected attempts and local bytes. Bind descendant guards to verified parent receipts; observation of absence does not authorize replay. Network execution, explicit resolution and reclamation remain separate phases |
 
 ## Questions to resolve at the relevant phase
 

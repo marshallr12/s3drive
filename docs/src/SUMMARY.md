@@ -13,6 +13,7 @@
 - [Cache, SQLite and recovery](storage-and-recovery.md)
 - [Local staged generations](staged-writes.md)
 - [Conditional uploads and provider probe](conditional-uploads.md)
+- [Durable remote-attempt journal](remote-journal.md)
 - [Linux and Windows integration](platform-integration.md)
 - [Security and operations](security-and-operations.md)
 - [Phased implementation plan](implementation-plan.md)

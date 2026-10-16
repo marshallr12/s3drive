@@ -73,8 +73,10 @@ exact object key, size and revision. P4a binds successful opens to the actual
 credentials used for HEAD and all reads through that handle; new opens resolve
 credentials again. Configuration or credential changes select a different
 namespace, and every new open still requires online authorization. SQLite
-schema 5 retains the binding registry, unbound legacy rows and clean snapshots,
-and staged generations/local intent, with operation-key recovery for edit plans.
+schema 6 retains the binding registry, unbound legacy rows, clean snapshots,
+staged generations/local intent and edit operation keys. It adds the
+[remote-attempt journal](remote-journal.md) with single-use send claims and
+uncertain-result recovery; network execution remains subsequent work.
 The engine enforces online authorization before cache lookup.
 This is not a provider-global account identifier. See the implemented
 [provider contract](provider-contract.md) and [migration](storage-and-recovery.md).

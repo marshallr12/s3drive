@@ -272,6 +272,87 @@ async fn lost_running_append_and_seal_replies_reconcile_without_duplicate_bytes(
 }
 
 #[tokio::test]
+async fn lost_remote_claim_reply_never_reissues_permission_across_restart() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("state");
+    let storage = open(&path).await;
+    let receipt = generation(&storage.staging(), None, b"keep dirty").await;
+    let uploads = storage.uploads();
+    let intent = uploads.prepare(receipt.generation).await.unwrap();
+    let operation = intent.operation;
+    let (release, wait) = blocking::channel();
+    let (ready, committed) = oneshot::channel();
+    let owner = storage.owner.clone();
+    let running = tokio::spawn(async move {
+        owner
+            .call_with_deadline(
+                move |store| {
+                    let permit =
+                        remote::Journal::new(&mut store.state, remote::Options::default())?
+                            .claim(operation, &target("日本語/é.txt"))?;
+                    ready.send(()).unwrap();
+                    wait.recv_timeout(Duration::from_secs(10)).unwrap();
+                    Ok(permit)
+                },
+                Duration::from_secs(2),
+            )
+            .await
+    });
+    tokio::time::timeout(Duration::from_secs(5), committed)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_worker_failure(running.await.unwrap(), Failure::OutcomeUnknown);
+    release.send(()).unwrap();
+    assert_eq!(
+        uploads.info(operation).await.unwrap().phase,
+        remote::Phase::InFlight
+    );
+    let error = uploads
+        .claim(operation, target("日本語/é.txt"))
+        .await
+        .unwrap_err();
+    assert_eq!(
+        error.downcast_ref::<remote::Failure>(),
+        Some(&remote::Failure::AlreadyDispatched)
+    );
+    storage.close().await.unwrap();
+    assert_worker_failure(uploads.info(operation).await, Failure::Closed);
+    let reopened = open(&path).await;
+    let recovered = reopened
+        .uploads()
+        .for_generation(receipt.generation)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(recovered.operation, operation);
+    assert_eq!(recovered.phase, remote::Phase::Uncertain);
+    assert_eq!(recovered.reason, remote::Reason::Interrupted);
+    let error = reopened
+        .uploads()
+        .claim(operation, target("日本語/é.txt"))
+        .await
+        .unwrap_err();
+    assert_eq!(
+        error.downcast_ref::<remote::Failure>(),
+        Some(&remote::Failure::AlreadyDispatched)
+    );
+    assert_eq!(
+        reopened
+            .staging()
+            .read(receipt.generation, 0, 100)
+            .await
+            .unwrap(),
+        b"keep dirty"
+    );
+    assert_eq!(
+        reopened.staging().pending(None, 100).await.unwrap().len(),
+        1
+    );
+    reopened.close().await.unwrap();
+}
+
+#[tokio::test]
 async fn snapshots_keep_their_generation_while_racing_builders_report_conflict() {
     let temp = tempfile::tempdir().unwrap();
     let storage = open(&temp.path().join("state")).await;

@@ -2045,6 +2045,7 @@ dependencies = [
 name = "s3drive-state"
 version = "0.1.0"
 dependencies = [
+ "getrandom 0.4.3",
  "nix",
  "rusqlite",
  "sha2",

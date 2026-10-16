@@ -1,6 +1,6 @@
 //! One bounded owner for clean-cache and staged-journal commands. Network I/O
 //! stays with the caller, outside this thread and all SQLite transactions.
-use crate::{Result, cache, journal};
+use crate::{Result, cache, journal, remote};
 use journal::{Base, Generation, GenerationId, Journal, Receipt, Target};
 use std::{fmt, path::Path, sync::Arc, time::Duration};
 use tokio::sync::{mpsc, oneshot};
@@ -111,9 +111,82 @@ impl Storage {
             options: self.staging_options,
         }
     }
+    pub fn uploads(&self) -> Uploads {
+        Uploads {
+            owner: self.owner.clone(),
+        }
+    }
     /// This closes every clone, including cache, staging and snapshot handles.
     pub async fn close(&self) -> Result<()> {
         self.owner.close().await
+    }
+}
+
+/// Durable remote-attempt records on the existing owner. These operations do
+/// no network I/O and cannot establish provider capability or authorization.
+#[derive(Clone)]
+pub struct Uploads {
+    owner: Owner,
+}
+impl Uploads {
+    async fn call<T: Send + 'static>(
+        &self,
+        work: impl FnOnce(&mut remote::Journal<'_>) -> Result<T> + Send + 'static,
+    ) -> Result<T> {
+        self.owner
+            .call(move |store| {
+                work(&mut remote::Journal::new(
+                    &mut store.state,
+                    remote::Options::default(),
+                )?)
+            })
+            .await
+    }
+    pub async fn prepare(&self, id: GenerationId) -> Result<remote::Info> {
+        self.call(move |j| j.prepare(id)).await
+    }
+    pub async fn claim(
+        &self,
+        id: remote::OperationId,
+        binding: Target,
+    ) -> Result<remote::SendPermit> {
+        self.call(move |j| j.claim(id, &binding)).await
+    }
+    pub async fn info(&self, id: remote::OperationId) -> Result<remote::Info> {
+        self.call(move |j| j.info(id)).await
+    }
+    pub async fn for_generation(&self, id: GenerationId) -> Result<Option<remote::Info>> {
+        self.call(move |j| j.for_generation(id)).await
+    }
+    pub async fn list(&self, after: Option<GenerationId>, limit: u16) -> Result<Vec<remote::Info>> {
+        if !(1..=1000).contains(&limit) {
+            return Err(remote::Failure::InvalidInput.into());
+        }
+        self.call(move |j| j.list(after, limit)).await
+    }
+    pub async fn cancel_prepared(&self, id: remote::OperationId) -> Result<remote::Info> {
+        self.call(move |j| j.cancel_prepared(id)).await
+    }
+    pub async fn uncertain(
+        &self,
+        id: remote::OperationId,
+        reason: remote::Reason,
+    ) -> Result<remote::Info> {
+        self.call(move |j| j.uncertain(id, reason)).await
+    }
+    pub async fn observe_unmatched(
+        &self,
+        id: remote::OperationId,
+        observation: remote::Observation,
+    ) -> Result<remote::Info> {
+        self.call(move |j| j.observe_unmatched(id, observation))
+            .await
+    }
+    pub async fn rejected(&self, id: remote::OperationId, status: u16) -> Result<remote::Info> {
+        self.call(move |j| j.rejected(id, status)).await
+    }
+    pub async fn verified(&self, proof: remote::Verification) -> Result<remote::Info> {
+        self.call(move |j| j.verified(proof)).await
     }
 }
 

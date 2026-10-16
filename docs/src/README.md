@@ -16,7 +16,8 @@ Build a per-user Rust process with a shared namespace/cache engine, a Linux FUSE
 adapter, and a Windows WinFsp adapter. Use a local SQLite database for metadata
 and a local pending-intent journal. An async owner shares the cache and journal
 connection; local edit plans provide patch/truncate and pinned-base hydration.
-Remote upload execution remains planned. An [explicit write-capability probe](conditional-uploads.md)
+The [local attempt journal](remote-journal.md) preserves single-use claims and
+uncertain outcomes; remote upload execution remains planned. An [explicit write-capability probe](conditional-uploads.md)
 reserves disposable keys and records provider evidence without enabling mounted writes.
 Store small clean snapshots in SQLite; bulk cache files remain future work.
 Begin with explicit, read-only bucket roots such as:
@@ -44,7 +45,7 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Rust workspace and CLI | Implemented |
 | TOML parsing and source/namespace validation | Implemented; no network checks |
 | Alias + prefix + file-path resolution | Implemented as a planning utility |
-| Local SQLite state | Schema 4; bindings, clean BLOBs, staged generations/journal and private process ownership |
+| Local SQLite state | Schema 6; bindings, clean BLOBs, staged generations, edit keys, remote-attempt records and private process ownership |
 | mdBook research, design and acceptance plan | Implemented |
 | S3 transport and credentials | Implemented; [Wasabi read acceptance](wasabi.md) passed; broader conformance pending |
 | Linux filesystem mount | Implemented read-only FUSE; see [mount contract](linux-mount.md) and native evidence in handoff |
@@ -56,6 +57,7 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Mounted caching | Opt-in; online HEAD on new opens, revision snapshots, restart and integrity checks |
 | Local staging/journal foundation | Immutable chunked generations and pending intent; [no upload execution yet](staged-writes.md) |
 | Conditional write probe | Reviewed six-key plan/run/cleanup tool; [live provider proof pending](conditional-uploads.md) |
+| Durable remote-attempt journal | [Local single-use claims and uncertain-result recovery](remote-journal.md); no network executor |
 | Remote upload/flush, writable mounts, new offline opens, tray UI | Planned |
 
 The initial research/scaffold delivery is complete. Work has advanced to the
