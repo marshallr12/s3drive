@@ -207,7 +207,7 @@ async fn actual_windows_drive_names_reads_security_and_teardown() {
     }
     // PowerShell filesystem and Explorer's Shell.Application namespace/ACL APIs.
     let script = format!(
-        r#"$ErrorActionPreference='Stop'; if ((Get-ChildItem -LiteralPath '{drive}\').Count -ne 2) {{ throw 'aliases' }}; if ([IO.File]::ReadAllText('{drive}\other\readme') -ne 'other bucket') {{ throw 'read' }}; $acl=Get-Acl -LiteralPath '{drive}\other\readme'; $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value; $rules=$acl.GetAccessRules($true,$true,[Security.Principal.SecurityIdentifier]); if ($rules.Count -ne 1 -or $rules[0].IdentityReference.Value -ne $sid -or [int]$rules[0].FileSystemRights -band 2) {{ throw 'owner read-only ACL' }}; $shell=New-Object -ComObject Shell.Application; $folder=$shell.NameSpace('{drive}\'); if ($null -eq $folder -or $folder.Items().Count -ne 2) {{ throw 'Explorer namespace' }}; Write-Output 'PowerShell, owner ACL, and Explorer Shell namespace verified'"#
+        r#"$ErrorActionPreference='Stop'; if ((Get-ChildItem -LiteralPath '{drive}\').Count -ne 2) {{ throw 'aliases' }}; if ([IO.File]::ReadAllText('{drive}\other\readme') -ne 'other bucket') {{ throw 'read' }}; $acl=Get-Acl -LiteralPath '{drive}\other\readme'; $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value; $rules=$acl.GetAccessRules($true,$true,[Security.Principal.SecurityIdentifier]); if ($rules.Count -ne 1 -or $rules[0].IdentityReference.Value -ne $sid -or (([int]$rules[0].FileSystemRights -band 2) -ne 0)) {{ throw 'owner read-only ACL' }}; $shell=New-Object -ComObject Shell.Application; $folder=$shell.NameSpace('{drive}\'); if ($null -eq $folder -or $folder.Items().Count -ne 2) {{ throw 'Explorer namespace' }}; Write-Output 'PowerShell, owner ACL, and Explorer Shell namespace verified'"#
     );
     let shell = tokio::time::timeout(
         Duration::from_secs(30),
@@ -224,6 +224,31 @@ async fn actual_windows_drive_names_reads_security_and_teardown() {
         shell.status.success(),
         "{}",
         String::from_utf8_lossy(&shell.stderr)
+    );
+    // The upstream volume-information subset only reads volume metadata; its
+    // file tests create mutable fixtures and do not fit a read-only filesystem.
+    let upstream = std::env::var_os("S3DRIVE_WINFSP_TEST_EXE")
+        .expect("set S3DRIVE_WINFSP_TEST_EXE to the official WinFsp 2.1 x64 test executable");
+    let upstream = tokio::time::timeout(
+        Duration::from_secs(30),
+        Command::new(upstream)
+            .args(["--external", "+getvolinfo_test"])
+            .current_dir(&mount)
+            .kill_on_drop(true)
+            .output(),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    eprintln!("{}", String::from_utf8_lossy(&upstream.stdout));
+    assert!(
+        upstream.status.success(),
+        "WinFsp volume conformance: {}",
+        String::from_utf8_lossy(&upstream.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&upstream.stdout).contains("getvolinfo_test"),
+        "upstream test did not execute"
     );
     stop(&mut child).await;
     assert!(!mount.exists(), "drive remains after normal teardown");

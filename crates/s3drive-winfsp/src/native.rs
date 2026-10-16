@@ -60,7 +60,7 @@ pub fn owner_descriptor() -> Result<Vec<u8>> {
     unsafe {
         let _ = GetTokenInformation(token.0, TokenUser, None, 0, &mut size);
     }
-    if size < size_of::<TOKEN_USER>() as u32 || size > 65536 {
+    if !(size_of::<TOKEN_USER>() as u32..=65536).contains(&size) {
         return Err(STATUS_INTERNAL_ERROR.into());
     }
     // usize alignment suffices for TOKEN_USER; allocation includes trailing SID.

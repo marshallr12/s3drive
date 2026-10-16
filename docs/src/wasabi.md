@@ -1,23 +1,56 @@
 # Wasabi integration target
 
 The user selected **Wasabi** as the first hosted provider on 2026-10-16.
-Its region, bucket/prefix and local credential profile have not been supplied.
+The user supplied test bucket `s3drivetest` in `us-east-2` (N. Virginia).
+Local configuration is being prepared; its credential profile has not yet been verified.
 No account has been accessed and no Wasabi compatibility claim has been verified.
 
 ## Configuration
 
-Use the HTTPS S3 endpoint matching the bucket's location. For example, Wasabi
-lists `s3.us-east-1.wasabisys.com` as an alternative for US East 1, and
-`s3.eu-central-2.wasabisys.com` for Frankfurt. These are examples, not inferred
-locations for the user's bucket. Keep explicit endpoint and region settings in
-each source. [Wasabi region endpoints](https://docs.wasabi.com/docs/service-urls-for-wasabis-storage-regions)
+For this test bucket, use `https://s3.us-east-2.wasabisys.com`, including the
+hyphen before `2`. Wasabi lists this endpoint for US East 2 (N. Virginia).
+[Wasabi region endpoints](https://docs.wasabi.com/docs/service-urls-for-wasabis-storage-regions)
 
-The checked-in [Wasabi template](https://github.com/marshallr12/s3drive/blob/main/examples/wasabi.toml) uses an illustrative
-US East 1 endpoint and the profile name `wasabi-s3drive`. Copy it to
-`s3drive.local.toml` (ignored by Git), then edit the bucket, prefix, region and
-endpoint. Configure that profile locally through an AWS-compatible credential
-file/tool. The TOML contains only the profile name; never put access keys in
-this repository, command arguments, chat, or diagnostic logs.
+Save the local configuration as `s3drive.local.toml` in the repository root
+(ignored by Git). A single-source configuration still requires `[[sources]]`:
+
+```toml
+version = 1
+mode = "read-only"
+
+[[sources]]
+alias = "wasabi"
+bucket = "s3drivetest"
+region = "us-east-2"
+endpoint = "https://s3.us-east-2.wasabisys.com"
+prefix = ""
+profile = "wasabi-s3drive"
+path_style = true
+```
+
+The `prefix` filters object keys inside a bucket; it is not a setting to create
+in the Wasabi console. Empty or omitted means the entire bucket. For example,
+`prefix = "documents/"` exposes `documents/report.pdf` as `wasabi/report.pdf`.
+A nonempty prefix must end with `/`.
+
+Credentials live outside the repository, in `~/.aws/credentials` on Linux or
+`%USERPROFILE%\.aws\credentials` on Windows. This is an INI file:
+
+```ini
+[wasabi-s3drive]
+aws_access_key_id = YOUR_ACCESS_KEY
+aws_secret_access_key = YOUR_SECRET_KEY
+```
+
+Preserve existing profiles when editing it. On Linux use private permissions
+(`chmod 600 ~/.aws/credentials`). Never put real keys in TOML, command arguments,
+chat or diagnostic logs. `profile` selects a named credential section; it does
+not define a bucket. Add another `[[sources]]` block per additional bucket or
+prefix, with its own unique `alias` and endpoint/region. Reuse the profile when
+the same credentials have access, or select another named credentials section.
+
+The checked-in [Wasabi template](https://github.com/marshallr12/s3drive/blob/main/examples/wasabi.toml)
+remains a generic example; its placeholder bucket must be replaced.
 
 Wasabi documents AWS Signature Version 4 authentication and use of AWS SDKs with
 its S3 endpoint. S3Drive uses the Rust SDK with an explicit profile, endpoint,

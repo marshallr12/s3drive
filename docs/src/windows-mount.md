@@ -66,10 +66,14 @@ forbid unsafe code. The native binding itself remains a separate FFI dependency.
 cargo test -p s3drive-cli --test windows_mount --locked -- --ignored --nocapture
 ```
 
-This must run with the actual installed driver. It mounts two fixture buckets
+This must run with the actual installed driver. Set
+`S3DRIVE_WINFSP_TEST_EXE` to the x64 executable from the official
+`winfsp-tests-2.1.25156.zip` release; CI downloads and verifies it. It mounts two fixture buckets
 using dummy credentials, verifies names, pagination, byte-exact sequential,
 random and concurrent reads, EOF, revision changes, sharing, rejected mutations,
-owner ACLs, PowerShell and Explorer's Shell.Application namespace. It rejects
+owner ACLs, PowerShell and Explorer's Shell.Application namespace. It also runs
+the upstream `getvolinfo_test` subset against this drive; mutable upstream tests
+are not appropriate to the current read-only contract. It rejects
 an occupied letter, then removes the drive, remounts and cancels a stalled GET.
 It does not prove a visually inspected interactive Explorer window, all Windows
 applications, general NTFS conformance, provider credentials or Wasabi behavior.

@@ -16,6 +16,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Restore Rust build cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: rust-${{ runner.os }}-1.99.1-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}
+          restore-keys: rust-${{ runner.os }}-1.99.1-${{ hashFiles('Cargo.lock') }}-
       - name: Install pinned Rust
         run: rustup toolchain install 1.99.1 --profile minimal --component clippy --component rustfmt
       - name: Install pinned WinFsp runtime and SDK
@@ -40,6 +49,15 @@ jobs:
         if: runner.os == 'Windows'
         timeout-minutes: 10
         run: cargo test -p s3drive-cli --test windows_mount --locked -- --ignored --nocapture
+      - name: Save Rust build cache
+        if: always()
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: rust-${{ runner.os }}-1.99.1-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}
   book:
     runs-on: ubuntu-latest
     steps:

@@ -361,7 +361,7 @@ pub async fn run(
             .case_sensitive_search(false).case_preserved_names(true).unicode_on_disk(true)
             .persistent_acls(true).read_only_volume(true).file_info_timeout(0).dir_info_timeout(0)
             .flush_and_purge_on_cleanup(true).irp_timeout(120_000);
-        let mut host = FileSystemHost::new(params, adapter)?;
+        let mut host: FileSystemHost<Adapter> = FileSystemHost::new(params, adapter)?;
         host.mount(&point)?;
         host.start_with_threads(4)?;
         Ok(Mounted { host, cancel })
