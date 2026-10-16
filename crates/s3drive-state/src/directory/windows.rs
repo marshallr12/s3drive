@@ -98,10 +98,7 @@ fn current_sid() -> Result<String> {
 pub(crate) fn hold_parents(path: &Path) -> Result<Vec<File>> {
     match path.components().next() {
         Some(Component::Prefix(p))
-            if matches!(p.kind(), Prefix::Disk(_) | Prefix::VerbatimDisk(_)) =>
-        {
-            ()
-        }
+            if matches!(p.kind(), Prefix::Disk(_) | Prefix::VerbatimDisk(_)) => {}
         _ => {
             return Err(
                 "state requires an absolute local drive path; UNC paths are refused".into(),

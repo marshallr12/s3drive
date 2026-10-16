@@ -35,6 +35,11 @@ pub(crate) struct OwnedDirectory {
 impl OwnedDirectory {
     #[cfg(any(target_os = "linux", windows))]
     pub(crate) fn acquire(path: &Path) -> Result<Self> {
+        // Native Windows creation APIs use NUL-terminated strings; reject a
+        // public API caller's embedded NUL before it can create a prefix path.
+        if path.as_os_str().as_encoded_bytes().contains(&0) {
+            return Err("state path must not contain NUL".into());
+        }
         if path.components().any(|c| matches!(c, Component::ParentDir)) {
             return Err("state path must not contain parent traversal".into());
         }

@@ -37,6 +37,8 @@ fn refuses_unmanaged_entries_and_parent_traversal() {
     assert!(!temporary.path().join("other").exists());
     assert!(State::open_managed(&temporary.path().join("missing/child")).is_err());
     assert!(!temporary.path().join("missing").exists());
+    assert!(State::open_managed(&temporary.path().join("nul-prefix\0ignored")).is_err());
+    assert!(!temporary.path().join("nul-prefix").exists());
 }
 
 #[test]
