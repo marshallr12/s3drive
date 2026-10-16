@@ -76,7 +76,8 @@ namespace, and every new open still requires online authorization. SQLite
 schema 6 retains the binding registry, unbound legacy rows, clean snapshots,
 staged generations/local intent and edit operation keys. It adds the
 [remote-attempt journal](remote-journal.md) with single-use send claims and
-uncertain-result recovery; network execution remains subsequent work.
+uncertain-result recovery. The [SDK executor](upload-executor.md) is tested with
+local HTTP fixtures; production construction remains gated.
 The engine enforces online authorization before cache lookup.
 This is not a provider-global account identifier. See the implemented
 [provider contract](provider-contract.md) and [migration](storage-and-recovery.md).

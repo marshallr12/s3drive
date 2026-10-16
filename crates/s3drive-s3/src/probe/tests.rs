@@ -16,7 +16,7 @@ use tokio::{
 };
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Mode {
+pub(crate) enum Mode {
     Normal,
     IgnoreGuards,
     DropAfterCommit,
@@ -29,25 +29,32 @@ enum Mode {
     StallPut,
     NullVersion,
     HideListing,
+    StallAfterCommit,
+    StallGet,
+    Reject409,
+    FalseReceipt,
+    OtherAfterCommit,
+    ShortGet,
+    RevokeReads,
 }
 #[derive(Clone)]
-struct Object {
-    bytes: Vec<u8>,
-    tag: String,
-    operation: String,
-    checksum: String,
+pub(crate) struct Object {
+    pub(crate) bytes: Vec<u8>,
+    pub(crate) tag: String,
+    pub(crate) operation: String,
+    pub(crate) checksum: String,
 }
-struct Model {
-    objects: BTreeMap<String, Object>,
+pub(crate) struct Model {
+    pub(crate) objects: BTreeMap<String, Object>,
     requests: Vec<(String, String)>,
     serial: u64,
-    mode: Mode,
+    pub(crate) mode: Mode,
 }
-struct Server {
-    endpoint: String,
-    model: Arc<Mutex<Model>>,
+pub(crate) struct Server {
+    pub(crate) endpoint: String,
+    pub(crate) model: Arc<Mutex<Model>>,
     task: JoinHandle<()>,
-    received: Arc<Notify>,
+    pub(crate) received: Arc<Notify>,
     versioned: Arc<AtomicBool>,
 }
 impl Drop for Server {
@@ -56,7 +63,7 @@ impl Drop for Server {
     }
 }
 impl Server {
-    async fn new(mode: Mode) -> Self {
+    pub(crate) async fn new(mode: Mode) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let endpoint = format!("http://{}", listener.local_addr().unwrap());
         let model = Arc::new(Mutex::new(Model {
@@ -113,10 +120,10 @@ impl Server {
             versioned,
         }
     }
-    fn source(&self) -> Source {
-        s3drive_core::Config::parse(&format!("version=1\nmode='read-only'\n[[sources]]\nalias='fixture'\nbucket='bucket'\nregion='us-east-1'\nprefix='root/'\nendpoint='{}'\npath_style=true\nallow_http_loopback=true\n",self.endpoint)).unwrap().sources.remove(0)
+    pub(crate) fn source(&self) -> Source {
+        source_at(&self.endpoint)
     }
-    fn reader(&self) -> S3Reader {
+    pub(crate) fn reader(&self) -> S3Reader {
         S3Reader::with_credentials(
             self.source(),
             SharedCredentialsProvider::new(Credentials::new(
@@ -134,10 +141,10 @@ impl Server {
     fn plan(&self) -> Plan {
         Plan::build(&self.source(), "07".repeat(16), 1).unwrap()
     }
-    async fn session(&self) -> Session {
+    pub(crate) async fn session(&self) -> Session {
         Session::pin(self.reader()).await.unwrap()
     }
-    fn count(&self, method: &str) -> usize {
+    pub(crate) fn count(&self, method: &str) -> usize {
         self.model
             .lock()
             .unwrap()
@@ -146,6 +153,9 @@ impl Server {
             .filter(|(m, _)| m == method)
             .count()
     }
+}
+pub(crate) fn source_at(endpoint: &str) -> Source {
+    s3drive_core::Config::parse(&format!("version=1\nmode='read-only'\n[[sources]]\nalias='fixture'\nbucket='bucket'\nregion='us-east-1'\nprefix='root/'\nendpoint='{endpoint}'\npath_style=true\nallow_http_loopback=true\n")).unwrap().sources.remove(0)
 }
 enum Reply {
     Data(Vec<u8>),
@@ -242,6 +252,9 @@ fn respond(
         if model.mode == Mode::Status503 {
             return error(503);
         }
+        if model.mode == Mode::Reject409 {
+            return error(409);
+        }
         if model.mode == Mode::DropBeforeCommit {
             return Reply::Drop;
         }
@@ -275,6 +288,14 @@ fn respond(
         if model.mode == Mode::DropAfterCommit {
             return Reply::Drop;
         }
+        if model.mode == Mode::StallAfterCommit {
+            return Reply::Stall;
+        }
+        if model.mode == Mode::OtherAfterCommit {
+            let other = model.objects.get_mut(path).unwrap();
+            other.operation = "foreign".into();
+            return Reply::Drop;
+        }
         let version = if model.mode == Mode::NullVersion {
             "x-amz-version-id: null\r\n"
         } else {
@@ -285,7 +306,14 @@ fn respond(
             &if model.mode == Mode::MissingEtag {
                 String::new()
             } else {
-                format!("ETag: {tag}\r\n{version}")
+                format!(
+                    "ETag: {}\r\n{version}",
+                    if model.mode == Mode::FalseReceipt {
+                        "\"false-receipt\""
+                    } else {
+                        &tag
+                    }
+                )
             },
             b"",
             0,
@@ -299,6 +327,12 @@ fn respond(
         return response(204, "", b"", 0);
     }
     if method == "HEAD" || method == "GET" {
+        if model.mode == Mode::RevokeReads {
+            return error(403);
+        }
+        if method == "GET" && model.mode == Mode::StallGet {
+            return Reply::Stall;
+        }
         if method == "GET" && headers.get("if-match") != Some(&obj.tag) {
             return error(412);
         }
@@ -320,6 +354,10 @@ fn respond(
             return response(200, &head, b"", obj.bytes.len());
         }
         let mut bytes = obj.bytes.clone();
+        if model.mode == Mode::ShortGet {
+            bytes.truncate(bytes.len() / 2);
+            return response(200, &head, &bytes, obj.bytes.len());
+        }
         if model.mode == Mode::CorruptGet && !bytes.is_empty() {
             bytes[0] ^= 1;
         }

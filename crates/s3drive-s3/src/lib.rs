@@ -1,9 +1,11 @@
-//! S3 reads and explicitly scoped conformance probes. Application upload APIs
-//! and writable mounts remain disabled.
+//! S3 reads, explicitly scoped conformance probes and a journal executor whose
+//! production construction remains disabled. Existing mounts are read-only.
 
 mod error;
 pub mod probe;
 mod reader;
+mod transport;
+pub mod uploads;
 
 pub use error::{Error, ErrorKind, Result};
 pub use reader::{

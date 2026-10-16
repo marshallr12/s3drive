@@ -11,7 +11,8 @@ acceptance required for each published source. P5a1 adds the local staged-
 generation/journal library. P5a2a adds one shared async owner for cache/journal
 commands and immutable local snapshot handles. P5a2b adds local edit plans and
 pinned-base hydration. P5b1 adds an explicit disposable-key transport/probe.
-P5b2a adds local durable remote-attempt records and single-use send claims;
+P5b2a adds local durable remote-attempt records and single-use send claims.
+P5b2b connects a quarantined SDK executor with local wire/recovery evidence;
 live Wasabi write evidence awaits the new scoped authorization. Goal active;
 application remote commits,
 writable mounts, workstation reboot/SSH checks and packaging remain.
@@ -24,68 +25,71 @@ repository `marshallr12/s3drive` are complete. The first usable read-only
 milestone is verified. Do not call the broader editable-drive goal complete
 until the documented safe-write contract and its OS acceptance gates pass.
 
-## Current phase: P5b2a durable remote-attempt records
+## Current phase: P5b2b journal-driven SDK executor
 
-Branch `durable-upload-intents` starts from published private main
-`a77e1707fdfdd17aec9ccb156a4297939240a3bb`. Its preceding P5b1 checkpoint passed
-all jobs in [run 38975881747](https://github.com/marshallr12/s3drive/actions/runs/38975881747)
-and was verified on remote main. Windows runs remotely on GitHub's Windows
-Server 2025 VMs with the real WinFsp driver; this workstation runs Linux.
-The user was explicitly told this again. Actual Windows 10/11 desktop,
-workstation reboot/full sign-out and real SSH authentication remain unverified.
+Branch `journaled-s3-executor` starts from published private main
+`803ee3785cd0dafbe51c3862edacdd01891a8a1e`. P5b2a passed terminal all-green
+[run 38979093279](https://github.com/marshallr12/s3drive/actions/runs/38979093279)
+and was verified on remote main. Its native evidence includes 70 Linux / 68
+Windows state tests, 341 FUSE and 749 WinFsp read-only requests, cache/session
+checks and book. Logs: `/tmp/s3drive-remote-intent-{linux,windows,book}-ci.log`.
+Windows runs on GitHub's Windows Server 2025 VM, not this Linux workstation.
+The user was explicitly told this; actual Windows 10/11 desktop, reboot/full
+sign-out and real SSH authentication remain unverified on target workstations.
 
-`s3drive-state/src/remote.rs` and migration `006.sql` implement local records
-for prepared/in-flight/uncertain/verified/rejected/cancelled attempts. The same
-async `Storage` owner exposes `uploads()` without another connection/thread/lock.
-Prepare binds the current sealed generation, exact target, complete body hash,
-manifest, random 256-bit operation ID and initial absence/strong-ETag guard.
-Verified earlier ancestors supply a descendant's ETag guard plus receipt hash.
-Cross-binding history requires explicit resolution; it is never silently adopted.
+`crates/s3drive-s3/src/uploads.rs` connects the durable journal to real SDK
+single-PUT and full-byte observation. Its exported `Executor` has private
+fields and **no production constructor**; tests alone construct it with local
+TCP endpoints and dummy credentials. Normal builds compile/lint its methods.
+No capability enum or probe report constructs it. Existing configurations,
+CLI commands and mounted adapters retain their read-only application boundary.
+Provider acceptance and explicit application write policy precede a factory.
 
-Claim revalidates the body/current head/runtime binding, retains the attempt and
-commits in-flight state before issuing a non-cloneable `SendPermit`. Lost replies
-cannot issue another permit. Managed startup converts interrupted in-flight
-attempts to uncertain, including a crash before the actual send. Absent/rival
-observations never authorize retry. Rejected attempts quarantine the target.
-Only a never-claimed prepared intent can cancel. Every generation keeps its
-original identity, including cancelled records; a new attempt needs a new local
-generation and the applicable resolution rules.
+`submit` checks the pinned runtime binding/full prefixed key before preparing,
+reads/hashes bounded local bytes before claiming, and consumes a non-cloneable
+permit in one private send function. An already claimed intent only observes;
+`reconcile` never prepares or sends. Full HEAD/conditional-GET operation, length,
+metadata, revision and SHA-256 checks precede verified journal state, even after
+a valid PUT response. A false receipt cannot verify. No lost response, absent or
+rival observation, error or cancellation authorizes replay or rebase. 409/412
+remains a retained conflict. Local acknowledgment failure after network commit
+recovers by reopening and observing the same attempt, never issuing a new PUT.
 
-`Verification` is caller-supplied data, not remote proof or authorization. A
-future network coordinator must establish exact operation/key/binding, full
-bytes/checksum and valid revision. Receipt replay is idempotent, never rewinds a
-newer local head, and never removes pending intent or sealed payloads. No network
-executor, flush, upload API, multipart, writable callback or reclamation is added.
-Single-PUT body bound 8 MiB; default record quota 4,096, hard bound 65,536. Larger
-and sparse local generations remain preserved/readable. Canonical intent/state
-hashes, retained FK markers, bounded shape checks and global streaming validation
-refuse corruption; they are not authentication against an owner rewriting the DB.
+The executor shares four slots across clones, fails extra admission before
+journal preparation, and retains the 8 MiB single-PUT bound. Unknown/rejected
+records and all local bytes remain retained. No multipart, remote flush, dirty
+payload reclamation, credential rebinding, unresolved-attempt resolution or
+writable callbacks are added. Error context carries generation/operation IDs.
 
-Local state tests cover seven real process-kill boundaries, lost prepare/claim/
-verification results and an async committed-claim reply, unknown observations,
-parent receipts with newer dirty heads, credential isolation, stale selection,
-record quotas, empty/exact-8-MiB/oversized bodies, real SQLITE_FULL and schema-5
-migration/rollback. The final local gate passed 70 state tests, 29 S3 tests,
-12 filesystem tests, clippy, builds and book checks. The disk-full fixture now explicitly exhausts reusable
-SQLite pages. One initial parallel run hit a transient reopen-lock failure in an
-existing Unicode/local-head test; its isolated run and subsequent full local gate
-passed without weakening ownership checks. Keep watching native CI for recurrence.
+Private reusable transport is now `s3drive-s3/src/transport.rs`; fixture-only
+preflight/versioning/deletion stays in `probe/transport.rs`. The provider crate
+adds the existing state dependency for the coordinator, without a dependency
+cycle or transitive version changes. The HTTP fixture is reused by executor
+tests and adds adversarial response modes, not live-provider behavior claims.
 
-Local real FUSE passed 341 read-only fixture requests; no-systemd cache-enabled
-startup/session tests passed with schema 6. Logs:
-`/tmp/s3drive-remote-intent-linux.log`, `/tmp/s3drive-remote-intent-session.log`.
-The final gate is recorded in `/tmp/s3drive-remote-intent-gate.log` (exit 0).
-Require exact-tip Linux/Windows/book CI before main publication; locate the run
-with `gh run list --branch durable-upload-intents`.
-See `docs/src/remote-journal.md` and the visually inspected `remote-journal.png`.
-The Windows session fixture now expects schema 6. No local config, credentials,
-real startup registration or cloud objects changed. The scoped Wasabi approval
-question below remains pending; do not run it without an actual user approval.
+The final local gate passed 43 S3 tests, 70 state tests, filesystem/CLI checks,
+clippy, builds and book checks. It includes independent-journal create/replace races,
+Unicode/empty/exact-8-MiB bodies, dropped/malformed success, exact GET verification,
+corrupt/short/wrong metadata, false receipts, revoked reads, stalled PUT/GET,
+slot pressure, mismatched credentials, invalid/full/oversized keys, lost local
+ack and a killed executor process after server commit. Both outcomes preserve
+local conflict bytes; assertions count actual SDK PUTs. Existing local-head
+lock timing failure from the prior phase has not recurred in these full gates.
 
-Next: connect a separately authorized/proven single-attempt transport to these
-records, implement trusted full-byte observation and unresolved-attempt resolution,
-then multipart, remote flush and reference/pin-aware acknowledgment cleanup.
-Credential rebinding and cross-machine publication semantics remain required.
+Gate log: `/tmp/s3drive-upload-executor-gate.log` (exit 0). Real FUSE passed 341
+read-only requests; the no-systemd cache-enabled startup/session gate passed
+with schema 6. Logs: `/tmp/s3drive-upload-executor-linux.log` and
+`/tmp/s3drive-upload-executor-session.log`, both exit 0. Final book diagnostics
+are in `/tmp/s3drive-upload-executor-book.log`. Require exact-final-tip Linux/Windows/book CI before main
+publication. Find the run with `gh run list --branch journaled-s3-executor`.
+See `docs/src/upload-executor.md`; the updated `remote-journal.png` was visually
+inspected. No local config, credentials, real startup registration or Wasabi
+objects changed. The scoped cloud approval question below remains pending.
+
+Next: live provider acceptance after an actual user approval; explicit source-
+bound application write policy/factory; unresolved-intent/credential rebinding;
+multipart, remote flush and reference/pin-aware acknowledgment cleanup, then
+real writable FUSE/WinFsp application workflows. The overall goal remains active.
 
 ## Current implementation
 

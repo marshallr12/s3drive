@@ -14,6 +14,7 @@
 - [Local staged generations](staged-writes.md)
 - [Conditional uploads and provider probe](conditional-uploads.md)
 - [Durable remote-attempt journal](remote-journal.md)
+- [Journal-driven single-PUT executor](upload-executor.md)
 - [Linux and Windows integration](platform-integration.md)
 - [Security and operations](security-and-operations.md)
 - [Phased implementation plan](implementation-plan.md)

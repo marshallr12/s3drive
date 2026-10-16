@@ -19,6 +19,8 @@ An explicit [disposable-key write probe](docs/src/conditional-uploads.md)
 can test a provider's conditional PUT behavior; application uploads remain disabled.
 A [local remote-attempt journal](docs/src/remote-journal.md) now preserves
 single-use send claims and uncertain outcomes without executing network writes.
+A [journal-driven SDK executor](docs/src/upload-executor.md) is tested against
+local HTTP fixtures; it has no production constructor pending provider/write-policy acceptance.
 [Linux sign-in startup](docs/src/startup-and-sessions.md) works without systemd,
 including MX Linux, and has a native terminal-disconnect acceptance test.
 Windows startup uses a per-user scheduled task and an NTFS folder shared across
@@ -81,7 +83,8 @@ cargo run --locked -- read s3drive.local.toml documents/report.pdf --offset 0 --
 
 `read` writes raw bytes to stdout. These commands perform real S3 requests;
 see the [provider contract](docs/src/provider-contract.md) for credentials,
-limits, pagination and current verification scope. No write/delete APIs exist. For a drive, use
+limits, pagination and current verification scope. Application write/delete APIs
+remain disabled. For a drive, use
 `cargo run --locked -- mount s3drive.local.toml /path/to/empty-owned-directory`
 on Linux with `/dev/fuse` and `fusermount3`.
 On Windows with WinFsp installed, choose an unused letter:

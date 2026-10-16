@@ -2,8 +2,10 @@
 
 **P5b2a, implemented 2026-10-16:** schema 6 adds local attempt records on the
 same SQLite connection and bounded async owner as cache and staging work.
-This is a local recovery library. No network executor, remote flush, writable
-mount, multipart upload or dirty-data reclamation is enabled by this phase.
+This is a local recovery library. P5b2b now connects it to a
+[quarantined SDK executor](upload-executor.md), tested with local HTTP fixtures.
+Production construction, remote flush, writable mounts, multipart uploads and
+dirty-data reclamation remain disabled.
 Wasabi conditional-write evidence still requires the separately authorized
 [provider probe](conditional-uploads.md).
 
@@ -62,11 +64,12 @@ that never applied and one followed by another writer's deletion or replacement.
 ## Verification is a caller obligation
 
 `Verification` is a data-transfer structure, not a proof or capability token.
-The future network coordinator must establish the exact binding, key, operation
+The network coordinator must establish the exact binding, key, operation
 metadata, length, full body SHA-256 and valid revision using its pinned runtime
 credentials. The journal checks the supplied fields against the immutable intent
-and stores the receipt transactionally. Local tests use simulated observations;
-they establish journal behavior, not provider conformance or a successful upload.
+and stores the receipt transactionally. The journal's own unit tests use simulated
+observations; P5b2b separately exercises real SDK/TCP observation. Neither is
+live-provider conformance or evidence that application uploads are enabled.
 
 Matching verification is idempotent; a different revision for an already verified
 attempt fails. A literal `null` version is normalized to no immutable version.

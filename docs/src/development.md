@@ -205,3 +205,12 @@ runner. The passing Windows job for published `a77e170` is
 [117225090437](https://github.com/marshallr12/s3drive/actions/runs/38975881747/job/117225090437).
 Windows 10/11 desktop use, actual reboot, full sign-out and real SSH authentication
 remain separate target-host acceptance checks.
+
+`uploads/tests.rs` reuses the SDK/TCP probe fixture with real local SQLite
+directories. It checks actual PUT counts after dropped/malformed responses,
+body/metadata/receipt failures, cancellation and closed local owners. A helper
+process is killed after server commit; reopening and observing must verify the
+same attempt without another PUT. Independent local journals race both create
+and replacement guards. The executor's normal-build implementation has no
+production constructor, so these fixtures do not enable uploads from a mount or
+read-only configuration. See the [executor contract](upload-executor.md).

@@ -1,6 +1,7 @@
 //! Explicit disposable-key capability probes. Never run from a filesystem open
 //! or mount, and never interpret compatibility marketing as a verified guard.
 mod transport;
+use crate::transport::{hex, is_hex};
 use crate::{Error, ErrorKind, Result, S3Reader, reader::source_fingerprint};
 use s3drive_core::Source;
 use serde::{Deserialize, Serialize};
@@ -407,15 +408,6 @@ fn now() -> Result<u64> {
         .map(|v| v.as_secs())
         .map_err(|_| Error::new("probe-clock", ErrorKind::Configuration))
 }
-fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
-}
-fn is_hex(value: &str, length: usize) -> bool {
-    value.len() == length
-        && value
-            .bytes()
-            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-}
 fn payload(index: usize, variant: u8) -> Vec<u8> {
     if index == 5 {
         return vec![];
@@ -426,4 +418,4 @@ fn payload(index: usize, variant: u8) -> Vec<u8> {
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
