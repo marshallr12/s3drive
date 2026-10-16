@@ -8,6 +8,7 @@ repository.workspace = true
 [dependencies]
 s3drive-core.workspace = true
 s3drive-s3.workspace = true
+s3drive-state.workspace = true
 tokio.workspace = true
 
 [lints]

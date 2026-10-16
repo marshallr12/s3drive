@@ -61,6 +61,7 @@ fn storage_error(error: Error) -> FspError {
         Error::InvalidName => STATUS_OBJECT_NAME_INVALID,
         Error::AmbiguousName => STATUS_OBJECT_NAME_COLLISION,
         Error::ResourceLimit => STATUS_INSUFFICIENT_RESOURCES,
+        Error::NoSpace => STATUS_DISK_FULL,
         Error::Timeout => STATUS_IO_TIMEOUT,
         _ => STATUS_UNEXPECTED_IO_ERROR,
     }
@@ -383,6 +384,7 @@ pub async fn run(
     mountpoint: &Path,
     unmount_on_stdin_close: bool,
 ) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let cache = fs.cache_control();
     let point = mount_point(mountpoint)?;
     let mut ctrl_c = tokio::signal::windows::ctrl_c()?;
     let mut ctrl_break = tokio::signal::windows::ctrl_break()?;
@@ -421,5 +423,8 @@ pub async fn run(
         _ = &mut stdin_shutdown, if unmount_on_stdin_close => {},
     }
     tokio::task::spawn_blocking(move || drop(mounted)).await?;
+    if let Some(cache) = cache {
+        cache.close().await?;
+    }
     Ok(())
 }

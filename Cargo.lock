@@ -1979,6 +1979,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "percent-encoding",
+ "rusqlite",
  "s3drive-core",
  "s3drive-fs",
  "s3drive-fuse",
@@ -2006,6 +2007,7 @@ version = "0.1.0"
 dependencies = [
  "s3drive-core",
  "s3drive-s3",
+ "s3drive-state",
  "tokio",
 ]
 

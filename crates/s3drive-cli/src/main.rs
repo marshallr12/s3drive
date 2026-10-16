@@ -148,12 +148,14 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
             #[cfg(target_os = "linux")]
             {
                 let config = Config::parse(&fs::read_to_string(config)?)?;
+                check_cache_location(&config, &mountpoint)?;
                 let filesystem = s3drive_fs::ReadOnlyFs::new(&config).await?;
                 s3drive_fuse::run(filesystem, &mountpoint).await?;
             }
             #[cfg(target_os = "windows")]
             {
                 let config = Config::parse(&fs::read_to_string(config)?)?;
+                check_cache_location(&config, &mountpoint)?;
                 let filesystem = s3drive_fs::ReadOnlyFs::new(&config).await?;
                 s3drive_winfsp::run(filesystem, &mountpoint, unmount_on_stdin_close).await?;
             }
@@ -184,4 +186,54 @@ async fn reader_for_path(
         .ok_or("key outside source prefix")?
         .to_owned();
     Ok((S3Reader::from_source(source).await?, key))
+}
+
+/// Check before initializing local state or mounting. Resolve existing ancestor
+/// aliases as well as lexical paths, without creating any directories.
+fn check_cache_location(
+    config: &Config,
+    mountpoint: &std::path::Path,
+) -> Result<(), Box<dyn Error + Send + Sync>> {
+    let Some(cache) = &config.cache else {
+        return Ok(());
+    };
+    fn projected(path: &std::path::Path) -> std::io::Result<PathBuf> {
+        let absolute = std::path::absolute(path)?;
+        let mut current = absolute.as_path();
+        let mut tail = Vec::new();
+        let mut result = loop {
+            match fs::canonicalize(current) {
+                Ok(path) => break path,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                    let Some(name) = current.file_name() else {
+                        return Ok(absolute);
+                    };
+                    tail.push(name.to_owned());
+                    current = current.parent().ok_or(error)?;
+                }
+                Err(error) => return Err(error),
+            }
+        };
+        for name in tail.into_iter().rev() {
+            result.push(name);
+        }
+        Ok(result)
+    }
+    fn parts(path: &std::path::Path) -> Vec<String> {
+        #[cfg(windows)]
+        let path = PathBuf::from(
+            path.to_string_lossy()
+                .trim_start_matches(r"\\?\")
+                .to_uppercase(),
+        );
+        path.components()
+            .map(|part| part.as_os_str().to_string_lossy().into_owned())
+            .collect()
+    }
+    let local = parts(&projected(&cache.directory)?);
+    let mount = parts(&projected(mountpoint)?);
+    if local.starts_with(&mount) || mount.starts_with(&local) {
+        return Err("cache directory and mountpoint must be separate local trees".into());
+    }
+    Ok(())
 }

@@ -46,6 +46,9 @@ allow_http_loopback=true
 path_style=true
 profile='nonexistent-startup-test'
 """)
+    cache = root / "cache"
+    with config.open("a") as stream:
+        stream.write("\n[cache]\ndirectory=" + json.dumps(str(cache)) + "\n")
     profile = root / "profile"
     profile.write_text("# Existing user settings must survive\n")
     profile.chmod(0o640)
@@ -91,6 +94,8 @@ profile='nonexistent-startup-test'
         assert profile.read_text() == "# Existing user settings must survive\n"
         assert (profile.stat().st_mode & 0o777) == 0o640
         assert config.exists() and mount.is_dir()
+        assert (cache / "metadata.sqlite3").is_file()
+        run(binary, "init-state", "--directory", cache, env=env)
         print("PASS: no-systemd desktop/SSH startup, duplicate starts, terminal loss, status and removal")
     finally:
         subprocess.run(["tmux", "-L", session, "kill-server"], env=env, capture_output=True, timeout=10)

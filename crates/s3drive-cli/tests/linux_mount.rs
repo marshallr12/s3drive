@@ -13,6 +13,8 @@ use tokio::{
     process::Command,
 };
 
+#[path = "support/cache.rs"]
+mod cache;
 #[path = "support/fixture.rs"]
 mod fixture;
 #[path = "support/unicode.rs"]
@@ -204,6 +206,7 @@ async fn actual_kernel_mount_reads_pagination_revisions_and_teardown() {
             .is_err()
     );
     assert!(std::fs::read_dir(&mountpoint).unwrap().next().is_none());
+    cache::verify(&fixture, dir.path()).await;
     assert!(!fixture.server.is_finished(), "fixture server failed");
     {
         let requests = fixture.requests.lock().unwrap();

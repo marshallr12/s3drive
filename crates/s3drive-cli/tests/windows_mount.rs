@@ -1,5 +1,7 @@
 //! Explicit native Windows acceptance; a missing driver is a failure, not a skip.
 #![cfg(windows)]
+#[path = "support/cache.rs"]
+mod cache;
 #[path = "support/fixture.rs"]
 mod fixture;
 #[path = "support/unicode.rs"]
@@ -386,6 +388,7 @@ async fn actual_windows_drive_names_reads_security_and_teardown() {
         String::from_utf8_lossy(&startup.stderr)
     );
     assert!(String::from_utf8_lossy(&startup.stdout).contains("PASS: non-admin registration"));
+    cache::verify(&fixture, dir.path()).await;
     assert!(!fixture.server.is_finished(), "fixture server failed");
     {
         let requests = fixture.requests.lock().unwrap();

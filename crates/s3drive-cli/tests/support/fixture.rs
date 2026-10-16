@@ -1,6 +1,9 @@
 use std::{
     collections::BTreeMap,
-    sync::{Arc, Mutex},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
     time::Duration,
 };
 use tokio::{
@@ -16,6 +19,9 @@ pub struct Fixture {
     pub requests: Arc<Mutex<Vec<String>>>,
     pub server: JoinHandle<()>,
     pub stalled: Arc<tokio::sync::Notify>,
+    pub deny_head: Arc<AtomicBool>,
+    pub deny_get: Arc<AtomicBool>,
+    pub offline: Arc<AtomicBool>,
 }
 impl Drop for Fixture {
     fn drop(&mut self) {
@@ -30,6 +36,12 @@ impl Fixture {
         let requests = Arc::new(Mutex::new(Vec::new()));
         let stalled = Arc::new(tokio::sync::Notify::new());
         let stalled_request = stalled.clone();
+        let deny_head = Arc::new(AtomicBool::new(false));
+        let deny_get = Arc::new(AtomicBool::new(false));
+        let offline = Arc::new(AtomicBool::new(false));
+        let head_policy = deny_head.clone();
+        let get_policy = deny_get.clone();
+        let availability = offline.clone();
         let data = objects.clone();
         let seen = requests.clone();
         let server = tokio::spawn(async move {
@@ -40,6 +52,9 @@ impl Fixture {
                         let (mut socket, _) = connection.unwrap();
                         let objects = data.clone(); let requests = seen.clone();
                         let stalled = stalled_request.clone();
+                        let deny_head = head_policy.clone();
+                        let deny_get = get_policy.clone();
+                        let offline = availability.clone();
                         workers.spawn(async move {
                             tokio::time::timeout(Duration::from_secs(20), async move {
                                 let mut bytes = Vec::new();
@@ -51,7 +66,13 @@ impl Fixture {
                                 let first = request.lines().next().unwrap();
                                 requests.lock().unwrap().push(first.to_owned());
                                 assert!(request.contains("Credential=TESTPROFILE/"));
-                                if first.starts_with("GET /other-bucket/stalled") {
+                                if offline.load(Ordering::SeqCst) { return; }
+                                if (first.starts_with("HEAD ") && deny_head.load(Ordering::SeqCst)) ||
+                                    (first.starts_with("GET ") && !first.contains("list-type=2") && deny_get.load(Ordering::SeqCst)) {
+                                    let _ = socket.write_all(&response("403 Forbidden", "", b"", 0)).await;
+                                    return;
+                                }
+                                if first.starts_with("GET /other-bucket/stalled") || first.starts_with("GET /test-bucket/cache/stalled") {
                                     stalled.notify_one();
                                     let mut byte = [0];
                                     let _ = socket.read(&mut byte).await;
@@ -72,6 +93,9 @@ impl Fixture {
             requests,
             server,
             stalled,
+            deny_head,
+            deny_get,
+            offline,
         }
     }
     pub fn put(&self, path: &str, bytes: &[u8], etag: &str) {

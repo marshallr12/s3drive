@@ -101,8 +101,9 @@ actually returned, rather than inferring them from a profile name.
 Each operation has a 30-second overall deadline; range-read timing includes the
 response body, not just receipt of headers. The SDK has a five-second connect
 timeout and at most three attempts. Dropping a read future cancels it. These
-defaults are currently fixed, and queue/concurrency limits belong to the future
-filesystem engine. No cache or offline data path exists yet.
+defaults are currently fixed. The shared engine adds bounded optional caching
+above this transport; the transport itself always performs the requested S3
+operation. New offline filesystem opens remain unsupported.
 
 ## Errors and identity
 
@@ -127,13 +128,13 @@ never persist the raw credentials. This binding is neither a provider-global
 account ID nor an authorization token. It distinguishes credential generations,
 including secret/token changes under an unchanged profile or access key ID.
 
-The planned cache must still require an online HEAD for each new open. A stored
+The mounted cache requires an online HEAD for each new open. A stored
 binding cannot authorize access; successful HEAD establishes only the provider's
 authorization for that object at that time. A newly issued credential generation
-gets a cold namespace even if it belongs to the same account. Revocation during
-an already-open handle and explicit offline access require separate policies.
-Bindings exclude object key/revision/size, which must also be included in future
-cache-entry keys. No file data is cached yet. See [SQLite migration](storage-and-recovery.md).
+gets a cold namespace even if it belongs to the same account. Already-open fully cached handles retain their authorized immutable bytes
+until release, including after revocation/network loss. New offline opens are
+denied. Bindings exclude object key/revision/size; mounted cache keys include
+all of these independently. See [SQLite migration](storage-and-recovery.md).
 
 ## Verification and remaining work
 
@@ -162,5 +163,5 @@ records authenticated LIST/HEAD/GET, pagination, exact bytes and Linux mounting
 against user-approved isolated objects. Stale validators, versioned reads and
 mutating provider capabilities remain unverified. The OS adapters now implement
 mounting and native name projection. The credential binding and schema migration
-are cache prerequisites; data caching, recovery and filesystem mutations remain
-later work.
+support the optional mounted clean cache described in the storage chapter.
+Upload recovery and filesystem mutations remain later work.

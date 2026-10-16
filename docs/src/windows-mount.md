@@ -67,8 +67,10 @@ Four synchronous WinFsp workers run I/O futures on the shared Tokio runtime.
 All callback I/O has a 60-second deadline and cancellation path. Limits are
 256 open contexts and 100,000 retained directory entries per mount, in addition
 to shared namespace limits. Directory metadata currently requires HEAD per
-file, so large remote listings can be slow and may reach the deadline. No disk
-cache, uploads, offline operation or capacity estimation exists.
+file, so large remote listings can be slow and may reach the deadline. Optional
+[SQLite caching](storage-and-recovery.md) retains complete small-file snapshots;
+new opens still authorize online. Uploads, new offline opens and capacity
+estimation remain unsupported.
 
 Unsafe Rust is confined to `s3drive-winfsp/src/native.rs`: process-token/SID
 querying, construction/copying of a self-relative security descriptor, native
@@ -111,3 +113,13 @@ a fake mount. The linked run passed the full native gate, including both mount
 sessions, Unicode names, PowerShell/ACL/Shell checks, the upstream volume test
 and cancellation of an in-flight GET.
 [WinFsp 2.1 installer and published digest](https://github.com/winfsp/winfsp/releases/tag/v2.1)
+
+## Optional cached reads
+
+The native gate includes a separate NTFS folder with caching enabled: GET-denied
+hits, concurrent fills, Unicode, old snapshots/fresh revisions, restart/process
+death, denied/offline new opens, changed credentials, integrity repair and quota
+pressure. The ordinary-account scheduled-task fixture also enables a private
+cache, reads through distinct logons and verifies preserved/reopenable state
+after removal. Driver/API evidence still does not prove target-workstation
+reboot or incoming SSH authentication.

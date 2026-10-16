@@ -1,7 +1,10 @@
 //! Configuration and a bucket-alias namespace. No filesystem or network I/O.
 
 use serde::Deserialize;
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    path::{Component, PathBuf},
+};
 use url::Url;
 
 /// Phase 0 deliberately accepts only the first planned mount mode.
@@ -17,6 +20,53 @@ pub struct Config {
     pub version: u32,
     pub mode: Mode,
     pub sources: Vec<Source>,
+    pub cache: Option<CacheConfig>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CacheConfig {
+    /// Explicit private local directory outside the mounted tree.
+    pub directory: PathBuf,
+    #[serde(default = "default_cache_bytes")]
+    pub max_bytes: u64,
+    #[serde(default = "default_cache_file")]
+    pub max_file_bytes: usize,
+    #[serde(default = "default_cache_entries")]
+    pub max_entries: usize,
+}
+fn default_cache_bytes() -> u64 {
+    64 * 1024 * 1024
+}
+fn default_cache_file() -> usize {
+    1024 * 1024
+}
+fn default_cache_entries() -> usize {
+    4096
+}
+impl CacheConfig {
+    fn validate(&self) -> Result<(), String> {
+        if !self.directory.is_absolute()
+            || self
+                .directory
+                .components()
+                .any(|c| matches!(c, Component::ParentDir))
+            || self.directory.as_os_str().as_encoded_bytes().contains(&0)
+        {
+            return Err(
+                "cache directory must be an absolute local path without parent traversal or NUL"
+                    .into(),
+            );
+        }
+        if !(1..=1024 * 1024 * 1024).contains(&self.max_bytes)
+            || !(1..=1024 * 1024).contains(&self.max_file_bytes)
+            || self.max_file_bytes as u64 > self.max_bytes
+            || !(1..=65_536).contains(&self.max_entries)
+        {
+            return Err("cache limits require 1..1073741824 payload bytes, 1..1048576 bytes/file within that budget, and 1..65536 entries".into());
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -73,6 +123,9 @@ impl Config {
         }
         if self.sources.is_empty() {
             return Err("at least one source is required".into());
+        }
+        if let Some(cache) = &self.cache {
+            cache.validate()?;
         }
         let mut aliases = HashSet::new();
         for (index, source) in self.sources.iter().enumerate() {
@@ -207,6 +260,38 @@ fn validate_relative(path: &str) -> Result<(), String> {
 mod tests {
     use super::*;
     const EXAMPLE: &str = include_str!("../../../examples/s3drive.toml");
+
+    #[test]
+    fn optional_cache_has_bounded_defaults_and_requires_absolute_local_path() {
+        assert!(Config::parse(EXAMPLE).unwrap().cache.is_none());
+        let directory = std::env::temp_dir().join("s3drive-config-cache");
+        let path = directory
+            .to_str()
+            .unwrap()
+            .replace('\\', "\\\\")
+            .replace('"', "\\\"");
+        let input = format!("{EXAMPLE}\n[cache]\ndirectory=\"{path}\"\n");
+        let cache = Config::parse(&input).unwrap().cache.unwrap();
+        assert_eq!(cache.directory, directory);
+        assert_eq!(
+            (cache.max_bytes, cache.max_file_bytes, cache.max_entries),
+            (64 * 1024 * 1024, 1024 * 1024, 4096)
+        );
+        for extra in [
+            "max_bytes=0",
+            "max_file_bytes=1048577",
+            "max_entries=0",
+            "max_entries=65537",
+            "max_bytes=2\nmax_file_bytes=3",
+            "unknown=true",
+        ] {
+            assert!(
+                Config::parse(&format!("{input}{extra}\n")).is_err(),
+                "{extra}"
+            );
+        }
+        assert!(Config::parse(&format!("{EXAMPLE}\n[cache]\ndirectory='relative'\n")).is_err());
+    }
 
     #[test]
     fn routes_sources_and_preserves_literal_key_bytes() {

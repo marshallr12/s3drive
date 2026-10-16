@@ -2,7 +2,8 @@
 
 P4a implements credential bindings and SQLite migration. P4b1 adds private local
 directory ownership. P4b2a implements the bounded clean-cache storage library and
-worker. Mount integration, offline access and the upload journal remain planned.
+worker. P4b2b connects that cache to read-only mounts. New offline opens and the
+upload journal remain unsupported.
 An initialized database is not an implemented or proven upload journal.
 
 ## Implemented SQLite state and migration
@@ -23,14 +24,16 @@ See the [credential-binding contract](provider-contract.md).
 Fresh initialization and migration from schema 1 run inside an immediate
 transaction, including application/version markers. A migration failure rolls
 back table renaming and the version update. Foreign databases, unsupported
-schema versions and missing expected columns fail explicitly. The schema does
+schema versions and missing expected columns fail explicitly. The schema
 includes clean snapshots in schema 3, but no upload jobs.
 
 The connection uses WAL, `synchronous=FULL`, foreign keys, and a five-second
 busy timeout. Tests cover restart, settings, binding isolation/rebinding refusal,
 shape constraints, legacy-row preservation and migration rollback. The CLI's
-`init-state` now initializes or migrates to schema 3. Mounts do not yet register
-bindings or use this database; integration belongs to the next cache phase.
+`init-state` now initializes or migrates to schema 3. Mounts with an explicit
+`[cache]` table register authorized source bindings and
+use this database for clean snapshots. Mounts without that table keep direct
+S3 range reads.
 `State::open_managed` and `init-state` now acquire a private local directory and
 retain its process lock until the SQLite connection closes. The internal
 unmanaged schema helper is no longer a public API.
@@ -87,7 +90,8 @@ by reopening committed state, private permissions, symlinks/junctions, file
 hard links, broad Windows ACLs, unknown entries and preserved unrelated bytes.
 The native Windows session fixture additionally initializes and reopens state
 from separate ordinary-account logons and denies a different account's file
-read. These are state ownership tests; mounted file data caching is not enabled.
+read. Cache-enabled session fixtures additionally reopen preserved state after
+shutdown. Mounted cache behavior has its own native acceptance corpus below.
 
 ## Implemented clean-cache storage library (P4b2a)
 
@@ -113,7 +117,7 @@ The default library policy permits 64 MiB of logical payload, 4,096 entries and
 files up to 1 MiB. Limits are validated before creating state. The API allows a
 smaller threshold and byte/entry budgets, bounded above by 1 MiB per file, 1 GiB
 of logical payload and 65,536 entries. Larger files return an ineligible result;
-the future mount integration will retain direct revision-pinned range reads.
+mounted reads retain direct revision-pinned range reads.
 Empty objects consume an entry even though they use no payload bytes.
 
 Each lookup checks size/source/shape before allocating a BLOB, verifies its
@@ -150,10 +154,70 @@ committed payload and during an uncommitted eviction; reopening preserves the
 committed bytes. This tests the SQLite durability boundary, not hardware power
 loss. [SQLite page limit](https://sqlite.org/pragma.html#pragma_max_page_count)
 
-**Still required before mounted caching is claimed:** configure and connect this
-worker to the shared filesystem, authorize every new open before cache access,
-coalesce concurrent misses, bound downloads, and run cache-hit/revision/denied
-open tests through real FUSE and WinFsp mounts. Current mounts remain uncached.
+## Implemented mounted cache (P4b2b)
+
+Caching is opt-in for `mount`; the standalone `list`/`stat`/`read` tools continue
+to access S3 directly. Add one top-level table to the same TOML as `sources`:
+
+```toml
+[cache]
+directory = "/home/YOUR-USER/.cache/s3drive/default"
+max_bytes = 67108864
+max_file_bytes = 1048576
+max_entries = 4096
+```
+
+Use an absolute path for this computer. On Windows, a TOML literal string can
+hold `directory = 'C:\Users\YOUR-USER\AppData\Local\S3Drive\cache'`.
+Create its parent first. The private final component is created by S3Drive;
+existing directories must meet the ownership contract above. Neither `~` nor
+environment variables are expanded inside TOML. Defaults apply when the three
+limits are omitted. Omit the whole table to disable caching. `config-check`
+validates syntax/limits without creating state or contacting S3.
+
+Before initializing the cache, the CLI rejects overlap between the cache and
+mount trees, resolving existing ancestor aliases. State must remain on supported
+local storage. Each mount owns its cache directory exclusively; separate mounted
+processes need separate directories. Buckets within one mount share its quota
+and remain isolated by their source/credential bindings.
+
+Every file open resolves credentials and completes an online HEAD before a
+cache address can be constructed. First read then checks the exact binding,
+key, revision and size. A hit returns checksum-verified bytes. A miss downloads
+the complete eligible file through the handle's conditional range GET, then
+commits it locally before replying. Sixteen fixed lock stripes coalesce
+same-revision misses. Four slots bound concurrent cache operations and whole-file
+downloads. No SQL transaction spans a network request, and the potentially large
+SDK read futures are heap-pinned for native callback stack use.
+
+A successful cached read retains an immutable `Pinned` snapshot in that open
+file context. Later reads through it can continue after remote replacement,
+revocation or loss of network; they retain the bytes authorized for that open.
+A new open must authorize again and sees a new revision or an error. An already
+open handle that has not yet cached its bytes still needs a conditional GET;
+replacement can therefore produce a stale-handle error. This avoids mixing
+revisions without promising immediate revocation of already-open cached bytes.
+Restart the mount after editing static AWS profile files; refreshable providers
+retain their own refresh behavior.
+
+Files above the threshold use direct range reads. Zero-length/EOF reads return
+without downloading or adding an empty cache entry. If clean quota is fully
+pinned, the first requested read is served from the verified download and that
+handle switches to direct conditional range reads; no unaccounted snapshot is
+retained. A real SQLite disk-full error maps to Linux `ENOSPC` or Windows
+`STATUS_DISK_FULL`. Other failed SQL operations produce I/O errors. Committed
+entries survive a failed insertion/eviction transaction. Disable caching or
+resolve the local error before retrying; the database is never silently reset.
+
+Adapters close the worker only after native callbacks stop. Successful unmount
+waits for SQLite and its process lock to close. Startup helpers preserve cache
+data on removal. The native corpus on both platforms exercises warm hits while
+GET is denied, concurrent misses, Unicode/NFC/NFD separation, fully cached old
+snapshots, new revisions, denied/deleted/offline new opens, graceful restart and
+forced process death, corruption/missing-entry refetch, changed static secrets,
+pinned quota bypass, cancellation during a stalled fill, and an injected SQLite
+insertion failure. Storage tests separately induce real `SQLITE_FULL`. These are deterministic local fixtures;
+live Wasabi cached-read acceptance is still separate work.
 
 ## Planned state layout
 

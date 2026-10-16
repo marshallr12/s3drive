@@ -12,6 +12,41 @@ fn mount_requires_explicit_config_and_mountpoint() {
     assert!(error.contains("<CONFIG> <MOUNTPOINT>"), "{error}");
 }
 
+#[cfg(any(target_os = "linux", windows))]
+#[test]
+fn cache_mount_overlap_is_rejected_before_creating_state() {
+    let temporary = tempfile::tempdir().unwrap();
+    let mount = temporary.path().join("mount");
+    std::fs::create_dir(&mount).unwrap();
+    let local = mount.join("cache");
+    let path = local
+        .to_str()
+        .unwrap()
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"");
+    let config = temporary.path().join("drive.toml");
+    std::fs::write(
+        &config,
+        format!(
+            "{}\n[cache]\ndirectory=\"{path}\"\n",
+            include_str!("../../../examples/s3drive.toml")
+        ),
+    )
+    .unwrap();
+    let result = cli()
+        .arg("mount")
+        .arg(&config)
+        .arg(&mount)
+        .output()
+        .unwrap();
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr).contains("separate local trees"));
+    assert!(
+        !local.exists(),
+        "overlap validation created cache data inside the mount"
+    );
+}
+
 #[test]
 fn config_and_state_commands_work_without_credentials() {
     let config =

@@ -72,15 +72,15 @@ Proposed rules:
    space. Local staging limits must still enforce disk-pressure errors.
 
 P0 only validates portable ASCII aliases and conservative configured prefixes;
-the `resolve` command is not the final cross-platform name projection. Remote
-listing collision detection is unimplemented.
+the `resolve` command is not the final cross-platform name projection. The current adapters reject ambiguous remote listing projections.
 
 ## Coherence, conflicts and errors
 
 For an open reader, prefer version-ID GETs when available. Otherwise send a
 revision precondition on each range request. If the object changes or a pinned
-version disappears, fail the handle rather than splice ranges from different
-versions. A directory listing assembled across pages is not assumed to be a
+version disappears before its bytes are cached, fail rather than splice ranges
+from different versions. A fully cached open handle retains its immutable
+authorized snapshot until release; each new open still authorizes online. A directory listing assembled across pages is not assumed to be a
 snapshot during concurrent mutation.
 [GetObject API](https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html)
 

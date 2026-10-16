@@ -1,12 +1,17 @@
-//! Shared read-only namespace. No OS bindings and no persistent cache.
+//! Shared read-only namespace and optional revision-bound clean cache.
 use s3drive_core::Config;
-use s3drive_s3::{ListPage, ObjectMetadata, ReadHandle, S3Reader};
+use s3drive_s3::{ListPage, MAX_READ_BYTES, ObjectMetadata, ReadHandle, S3Reader};
+use s3drive_state::cache::{Cache, Key, Options, Pinned};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     fmt,
-    sync::{Arc, Mutex},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
     time::Duration,
 };
+use tokio::sync::{Mutex as AsyncMutex, OnceCell, Semaphore};
 
 pub const ROOT: u64 = 1;
 pub const MAX_DIRECTORY_ENTRIES: usize = 10_000;
@@ -40,8 +45,10 @@ pub enum Error {
     AmbiguousName,
     InvalidListing,
     ResourceLimit,
+    NoSpace,
     Timeout,
     Internal,
+    Cache(String),
 }
 pub type Result<T> = std::result::Result<T, Error>;
 impl From<s3drive_s3::Error> for Error {
@@ -53,6 +60,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Storage(e) => e.fmt(f),
+            Self::Cache(e) => write!(f, "local cache: {e}"),
             _ => write!(f, "filesystem: {self:?}"),
         }
     }
@@ -70,18 +78,93 @@ pub struct ReadOnlyFs {
     readers: Vec<S3Reader>,
     nodes: Mutex<Nodes>,
     aliases: Vec<Arc<Node>>,
+    cache: Option<Arc<CacheBackend>>,
+}
+
+struct CacheBackend {
+    worker: Cache,
+    // Fixed stripes coalesce same-revision misses without an unbounded map.
+    stripes: [AsyncMutex<()>; 16],
+    slots: Semaphore,
 }
 
 pub struct OpenFile {
     pub node: Arc<Node>,
     handle: ReadHandle,
+    cache: Option<(Arc<CacheBackend>, Key)>,
+    snapshot: OnceCell<Pinned>,
+    bypass: AtomicBool,
 }
 impl OpenFile {
     pub fn metadata(&self) -> &ObjectMetadata {
         self.handle.metadata()
     }
     pub async fn read(&self, offset: u64, length: usize) -> Result<Vec<u8>> {
-        Ok(self.handle.read_range(offset, length).await?)
+        // Keep the transport's validation/EOF behavior on cached reads too.
+        if length > MAX_READ_BYTES {
+            return Err(s3drive_s3::Error {
+                operation: "read",
+                kind: s3drive_s3::ErrorKind::InvalidInput,
+                http_status: None,
+            }
+            .into());
+        }
+        if length == 0 || offset >= self.metadata().size {
+            return Ok(Vec::new());
+        }
+        if let Some(snapshot) = self.snapshot.get() {
+            return Ok(slice(snapshot.bytes(), offset, length));
+        }
+        let Some((cache, key)) = &self.cache else {
+            return Ok(Box::pin(self.handle.read_range(offset, length)).await?);
+        };
+        if self.bypass.load(Ordering::Relaxed) {
+            return Ok(Box::pin(self.handle.read_range(offset, length)).await?);
+        }
+        let _stripe = cache.stripes[key.stripe()].lock().await;
+        let _slot = cache.slots.acquire().await.map_err(|_| Error::Internal)?;
+        if let Some(snapshot) = self.snapshot.get() {
+            return Ok(slice(snapshot.bytes(), offset, length));
+        }
+        if self.bypass.load(Ordering::Relaxed) {
+            return Ok(Box::pin(self.handle.read_range(offset, length)).await?);
+        }
+        if let Some(snapshot) = cache.worker.get(key.clone()).await.map_err(cache_error)? {
+            let bytes = slice(snapshot.bytes(), offset, length);
+            self.snapshot.set(snapshot).map_err(|_| Error::Internal)?;
+            return Ok(bytes);
+        }
+        // No SQL transaction spans this request. At most four complete small
+        // files are being downloaded/processed per mount at once.
+        let bytes: Arc<[u8]> = Box::pin(self.handle.read_range(0, self.metadata().size as usize))
+            .await?
+            .into();
+        let result = slice(&bytes, offset, length);
+        match cache
+            .worker
+            .put(key.clone(), bytes)
+            .await
+            .map_err(cache_error)?
+        {
+            Some(snapshot) => {
+                self.snapshot.set(snapshot).map_err(|_| Error::Internal)?;
+            }
+            None => {
+                self.bypass.store(true, Ordering::Relaxed);
+            }
+        }
+        Ok(result)
+    }
+}
+fn slice(bytes: &[u8], offset: u64, length: usize) -> Vec<u8> {
+    let start = (offset.min(bytes.len() as u64)) as usize;
+    bytes[start..start + length.min(bytes.len() - start)].to_vec()
+}
+fn cache_error(error: Box<dyn std::error::Error + Send + Sync>) -> Error {
+    if s3drive_state::cache::is_disk_full(error.as_ref()) {
+        Error::NoSpace
+    } else {
+        Error::Cache(error.to_string())
     }
 }
 
@@ -118,11 +201,35 @@ impl ReadOnlyFs {
             aliases.push(node);
         }
         aliases.sort_by(|a, b| a.name.cmp(&b.name));
+        let cache = if let Some(settings) = &config.cache {
+            Some(Arc::new(CacheBackend {
+                worker: Cache::open(
+                    &settings.directory,
+                    Options {
+                        max_bytes: settings.max_bytes,
+                        max_file_bytes: settings.max_file_bytes,
+                        max_entries: settings.max_entries,
+                    },
+                )
+                .await
+                .map_err(cache_error)?,
+                stripes: std::array::from_fn(|_| AsyncMutex::new(())),
+                slots: Semaphore::new(4),
+            }))
+        } else {
+            None
+        };
         Ok(Self {
             readers,
             nodes: Mutex::new(nodes),
             aliases,
+            cache,
         })
+    }
+
+    /// Adapters close this worker only after native callbacks and handles stop.
+    pub fn cache_control(&self) -> Option<Cache> {
+        self.cache.as_ref().map(|cache| cache.worker.clone())
     }
 
     pub fn node(&self, id: u64) -> Result<Arc<Node>> {
@@ -217,10 +324,32 @@ impl ReadOnlyFs {
         if node.kind != Kind::File {
             return Err(Error::IsDirectory);
         }
-        let handle = self.readers[node.source.ok_or(Error::Internal)?]
-            .open(&node.key)
-            .await?;
-        Ok(OpenFile { node, handle })
+        let reader = &self.readers[node.source.ok_or(Error::Internal)?];
+        let handle = reader.open(&node.key).await?;
+        // Authorization above always precedes cache-key construction/acquisition.
+        let cache = match &self.cache {
+            Some(cache) if cache.worker.accepts(handle.metadata().size) => {
+                let meta = handle.metadata();
+                let key = Key::new(
+                    *handle.cache_identity().as_bytes(),
+                    reader.configuration_fingerprint(),
+                    &meta.key,
+                    meta.revision.etag.as_deref(),
+                    meta.revision.version_id.as_deref(),
+                    meta.size,
+                )
+                .map_err(cache_error)?;
+                Some((cache.clone(), key))
+            }
+            _ => None,
+        };
+        Ok(OpenFile {
+            node,
+            handle,
+            cache,
+            snapshot: OnceCell::new(),
+            bypass: AtomicBool::new(false),
+        })
     }
 }
 

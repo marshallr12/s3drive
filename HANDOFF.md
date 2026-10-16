@@ -6,8 +6,9 @@ without systemd; native session tests passed locally. P3.5b adds Windows
 startup with native cross-logon acceptance. P4a adds credential-bound handles
 and SQLite schema 2 migration/registry. P4b1 adds private managed state directories
 and process ownership. P4b2a implements a bounded clean-cache storage worker
-with SQLite BLOBs; it is not yet connected to mounts. Goal active; actual
-workstation reboot/SSH checks, mounted caching, safe writes and packaging remain.
+with SQLite BLOBs. P4b2b connects it to optional mounted caching, with native
+acceptance required for each published source. Goal active; actual workstation
+reboot/SSH checks, safe writes and packaging remain.
 
 ## Goal and scope
 
@@ -39,8 +40,9 @@ until the documented safe-write contract and its OS acceptance gates pass.
   access key, secret or token changes cause a new binding. Debug is redacted.
 - SQLite schema 2 adds a source-binding registry and preserves schema 1 rows
   separately as `legacy_cached_objects_v1`; migration failures roll back.
-  Registration is idempotent and rejects conflicting fingerprints. Mounts do
-  not yet use the registry; the first cache must authorize each new open online.
+  Registration is idempotent and rejects conflicting fingerprints.
+  Cache-enabled mounts register successful credential generations and still
+  authorize each new open online.
 - Public `State::open_managed` now owns a private directory and nonblocking
   kernel file lock for the connection lifetime. `init-state` uses it; its parent
   must already exist. Link/type/ownership checks precede SQLite access. Linux
@@ -51,9 +53,12 @@ until the documented safe-write contract and its OS acceptance gates pass.
   Keys bind the authorized source generation, fingerprint, exact object key,
   ETag/version and size; independent SHA-256 checksums verify payloads. LRU
   eviction skips pinned entries; quota pressure is an explicit bypass result.
-  SQLite insertion and eviction are atomic. See the storage chapter for bounds
-  and remaining integration. No CLI/mount path uses the cache worker yet.
-- No uploads, mutations, offline support or desktop packaging yet.
+  SQLite insertion and eviction are atomic. See the storage chapter for the exact limits. The shared engine now uses this worker when `[cache]` is set.
+  New file opens authorize through S3 before cache access. Fully cached open
+  handles retain their authorized immutable bytes until release; denied or
+  offline new opens fail. Large files and pinned-quota pressure use direct
+  conditional range reads. Both adapters close the worker after callbacks stop.
+- No uploads, mutations, new offline opens or desktop packaging yet.
 
 ## Current user requirements and startup work
 
@@ -269,7 +274,7 @@ Small clean BLOBs replace the originally proposed separate small-file payloads:
 this gives bytes/checksum/metadata and eviction one SQLite transaction boundary.
 Large cached files and durable staged writes remain future external-file work.
 The logical cache quota excludes DB/WAL overhead. Performance is unmeasured.
-Mounts still do no caching; no real user config or state was changed.
+P4b2b now opts mounted reads into this worker. No real user config or state was changed.
 
 Local tests cover key/credential/revision/Unicode separation, corruption and
 missing rows, pins/LRU/zero-byte entry quotas, restart with reduced limits,
@@ -287,12 +292,48 @@ and `/tmp/s3drive-blob-windows-ci.log`. The final documentation update fixes a
 rendered decision-table row; locate exact-tip CI with
 `gh run list --branch revision-cache` before publication.
 
-Next implementation is P4b2b: connect the cache worker to configuration and the
-shared engine, coalesce misses and bound downloads, retain direct range reads
-for files larger than the threshold, and close the worker after callbacks stop.
-Authorization must precede every cache acquisition on a new open. Verify hits,
-cache reuse after process restart, denied/offline new opens, stale revisions,
-credential changes and corruption repair through real Linux/Windows mounts.
+P4b2a's final source `393737f737f6647ba7efe1919b8b5899a319b018` passed
+[run 38957620186](https://github.com/marshallr12/s3drive/actions/runs/38957620186)
+and was published to main. Final Windows log:
+`/tmp/s3drive-blob-final-windows.log`.
+
+P4b2b is implemented on `mounted-cache`. `Config.cache` is optional, with an
+absolute private local directory and byte/file/entry limits. The CLI rejects
+cache/mount tree overlap before state initialization. It does not expand `~`
+or environment variables in TOML. Standalone S3 read tools remain direct.
+The shared engine uses sixteen fixed lock stripes and four slots, lazy whole
+small-file fills and immutable snapshots per open file. New opens always HEAD
+before key construction. Cache quota pressure switches that handle to range
+reads without retaining an unaccounted snapshot. SQLite disk-full is classified
+across the worker boundary and mapped to ENOSPC/STATUS_DISK_FULL; other SQL errors
+remain I/O failures. Adapters explicitly close the cache after callbacks stop.
+SDK range futures are heap-pinned to limit inline native callback stack use.
+
+Both native gates now call `crates/s3drive-cli/tests/support/cache.rs`:
+GET-denied hits, coalescing, Unicode/NFC/NFD, old snapshots and new revisions,
+denied/deleted/offline new opens, restart/process death, corrupt/missing repair,
+changed static secrets, pinned quota bypass, SQL insertion failure propagation,
+and cancellation during a stalled cached fill. SQL failure is injected only in
+the stopped disposable DB; real SQLITE_FULL has separate state evidence.
+Linux ordinary external unmount refuses open reads; the stalled-fill test uses
+the daemon's SIGTERM cancellation path and requires successful teardown.
+Both startup fixtures now enable caching. Linux checks retained state ownership
+across stop/start and after removal. Windows additionally uses an ordinary
+account and separate authentication sessions, then reopens preserved cache state
+as that account after removal. Its fixture cleanup removes private DBs as owner.
+
+Local logs: `/tmp/s3drive-mounted-linux.log` (native cached/uncached gates),
+`/tmp/s3drive-mounted-session.log` (non-systemd startup with cache),
+`/tmp/s3drive-mounted-gate.log` and `/tmp/s3drive-mounted-book.log`.
+Require all-green CI at the exact final branch SHA before fast-forwarding main;
+locate it with `gh run list --branch mounted-cache`. Current Windows behavior
+must be proved remotely, never inferred from the Linux pass.
+
+Next required work is P5a: immutable local staging generations and a durable
+journal against an in-memory storage test double, with kill/fault injection at
+local durability boundaries. Network mutations and writable mounts stay disabled.
+Broader live Wasabi cached-read acceptance and workload/performance tests are
+separate pending work; new provider uploads need concrete scoped authorization.
 Use the handle binding plus exact key/revision/size; no binding alone authorizes
 cached access. Keep cache/state outside mounted trees. Writes require separate staged
 generations and a durable journal (P5a), provider conditional commits/recovery

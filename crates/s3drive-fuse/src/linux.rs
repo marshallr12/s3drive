@@ -342,6 +342,7 @@ fn errno(error: Error) -> Errno {
         Error::InvalidName => Errno::EILSEQ,
         Error::AmbiguousName => Errno::EIO,
         Error::ResourceLimit => Errno::ENOSPC,
+        Error::NoSpace => Errno::ENOSPC,
         Error::Timeout => Errno::ETIMEDOUT,
         Error::Storage(error) => match error.kind {
             ErrorKind::PermissionDenied => Errno::EACCES,
@@ -375,6 +376,7 @@ impl Drop for UnmountGuard {
 /// Serve until normal external unmount, Ctrl-C or SIGTERM. All callbacks run on
 /// four FUSE threads; network futures use the caller's long-lived Tokio runtime.
 pub async fn run(fs: ReadOnlyFs, mountpoint: &Path) -> io::Result<()> {
+    let cache = fs.cache_control();
     // Install signals before mounting so termination cannot leave a live mount.
     let mut interrupt = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
     let mut terminate = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
@@ -429,6 +431,9 @@ pub async fn run(fs: ReadOnlyFs, mountpoint: &Path) -> io::Result<()> {
         result = &mut running => { result.map_err(io::Error::other)??; }
         _ = interrupt.recv() => { guard.unmount()?; running.await.map_err(io::Error::other)??; }
         _ = terminate.recv() => { guard.unmount()?; running.await.map_err(io::Error::other)??; }
+    }
+    if let Some(cache) = cache {
+        cache.close().await.map_err(io::Error::other)?;
     }
     Ok(())
 }

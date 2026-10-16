@@ -17,3 +17,12 @@ region = "us-east-1"
 prefix = ""
 endpoint = "https://s3.example.com"
 path_style = true
+
+# Optional mounted clean cache. Use a private absolute path on this computer;
+# create its parent first. Omit this table to keep direct S3 range reads.
+# [cache]
+# directory = "/home/YOUR-USER/.cache/s3drive/default"
+# Windows alternative: directory = 'C:\Users\YOUR-USER\AppData\Local\S3Drive\cache'
+# max_bytes = 67108864
+# max_file_bytes = 1048576
+# max_entries = 4096

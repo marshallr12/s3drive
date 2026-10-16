@@ -2,8 +2,7 @@
 
 The P2 implementation adds `s3drive-fs`, a platform-neutral namespace and file
 handle engine, and a Linux-only `fuser` 0.18 adapter. It exposes one directory
-per source alias. No object data is persisted locally and no S3 mutation API is
-exposed. SQLite remains reserved for the later cache/recovery phase.
+per source alias. S3 mutation APIs remain disabled. Optional clean caching uses private local SQLite outside the mount.
 
 ## Run
 
@@ -52,8 +51,9 @@ it does not evict on kernel `forget`. This avoids stale references identifying
 another object. Open files retain independent S3 revision-bound handles.
 
 Each file open performs HEAD. Reads use its version/ETag preconditions and exact
-range checks. A changed unversioned object yields Linux `ESTALE`; reopen to see
-the new revision. A pinned version remains readable only if the provider still
+range checks. Without a fully cached snapshot, a changed unversioned object
+yields Linux `ESTALE`; reopen to see the new revision. A fully cached handle
+retains its authorized old bytes. A pinned remote version requires the provider to still
 serves it. Open-handle attributes use the pinned size; ordinary path attributes
 are fresh HEAD results. Attribute/entry TTLs are zero. Files use FUSE direct I/O
 to prevent the kernel page cache from mixing revisions from different opens.
@@ -113,3 +113,11 @@ characters. It also traverses `目录-📁/résumé-🎉.txt`. The shared corpus
 Wasabi acceptance
 remains separate: the fixture tests our HTTP/kernel contract, not Wasabi's
 service, authentication implementation or concurrency semantics.
+
+## Optional cached reads
+
+The [cache contract](storage-and-recovery.md) describes the opt-in TOML table,
+limits, online authorization and immutable open snapshots. The native mount gate
+also mounts a separate cached tree and checks GET suppression, concurrent fills,
+restart/process death, denied/offline opens, credential changes, corruption and
+quota/error handling. The uncached stale-handle and stalled-GET tests remain.

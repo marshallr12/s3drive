@@ -17,6 +17,13 @@ const MAX_ENTRIES: usize = 65_536;
 const QUEUE_SIZE: usize = 8;
 const DEADLINE: Duration = Duration::from_secs(30);
 
+/// Preserve SQLite's real disk-full classification across the worker boundary.
+pub fn is_disk_full(error: &(dyn std::error::Error + 'static)) -> bool {
+    error
+        .downcast_ref::<rusqlite::Error>()
+        .is_some_and(|error| error.sqlite_error_code() == Some(rusqlite::ErrorCode::DiskFull))
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Options {
     /// Logical clean payload quota; SQLite pages, WAL and metadata are extra.

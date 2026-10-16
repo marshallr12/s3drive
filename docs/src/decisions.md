@@ -25,7 +25,8 @@ to the user.
 | D017 | User requirement; Linux and Windows launchers implemented | Start at sign-in after reboot; keep the mount accessible from later same-account SSH sessions and surviving tmux processes. Support MX Linux without systemd. Linux terminal-loss and Windows cross-logon checks passed; actual workstation reboot/SSH authentication acceptance remains pending |
 | D018 | Proposed after research | Evaluate Turso Cloud behind an authoritative coordination API; retain local SQLite. Do not use offline last-push-wins sync for leases or publication, or treat SQL/S3 as one transaction |
 | D019 | Implemented prerequisite for P4 | Bind each successful open to its resolved credential generation and source configuration. Require online HEAD on new opens; credential rotation creates a separate cache namespace. Preserve schema 1 rows as unbound legacy data during migration to schema 2. This does not establish a provider-global principal or enable offline access |
-| D020 | Implemented storage; mount integration pending | SQLite BLOBs for clean snapshots up to 1 MiB make bytes/checksum/metadata atomic. Use one bounded worker, explicit byte/entry limits and pins. Bulk files and staged writes remain separate future storage; no performance or offline-access claim |
+| D020 | Implemented | SQLite BLOBs for clean snapshots up to 1 MiB make bytes/checksum/metadata atomic. Use one bounded worker, explicit byte/entry limits and pins. Bulk files and staged writes remain separate future storage; no performance or offline-access claim |
+| D021 | Implemented for P4b2b | Opt-in mounted clean cache: authorize every new open online, retain immutable fully cached snapshots until handle release, coalesce fills, and use direct reads for large files or pinned quota pressure. This permits already-open cached reads during network loss but denies new offline opens |
 
 ## Questions to resolve at the relevant phase
 

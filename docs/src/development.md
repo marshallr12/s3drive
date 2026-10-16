@@ -134,3 +134,14 @@ power loss, uploads are crash safe, or arbitrary S3 providers are compatible.
 Record the exact source commit, command, host/platform and result when each
 future acceptance gate is executed. Refresh the root handoff after a verified
 phase so the next session starts from evidence rather than inference.
+
+## Mounted cache acceptance
+
+Both native mount gates call `tests/support/cache.rs`. It controls only their
+isolated HTTP fixture and private temporary SQLite state. The corpus verifies
+GET counts, denied/offline opens despite cached bytes, credential-generation
+isolation, Unicode snapshots, restart/kill recovery, corruption/missing data,
+quota/pin behavior and rollback after an injected insertion failure. A separate
+state test uses SQLite's page limit to cause real SQLITE_FULL; native SQL-error
+coverage does not claim physical disk exhaustion. Startup fixtures now enable
+cache ownership and verify preserved state can reopen after daemon removal.

@@ -133,15 +133,20 @@ Windows fixture also checks state access across logons. See the
 P4b2a implements bounded small-file BLOB storage with checksum/revision keys,
 eviction/pinning and a bounded database worker, using the owned directory.
 Storage tests cover quota pressure, corruption, restart, forced termination and
-SQLITE_FULL rollback. It does not yet serve files through the mount.
+SQLITE_FULL rollback. P4b2b now serves these snapshots through optional mounted caching.
 
-P4b2b must connect the worker to the shared engine and configuration.
-Mount integration must authorize
-each new open online before cache lookup. Prove cache hits, stale revisions,
-credential rotation, disk-full handling, corrupt/missing data and restart with
-deterministic fixtures, then rerun real Linux and Windows mount gates with
-caching enabled. New offline opens remain denied until an explicit offline
-authorization policy is designed. P4a/P4b1/P4b2a do not complete the mounted file cache phase.
+P4b2b connects the worker to the shared engine and optional `[cache]` configuration.
+Each new open authorizes online before cache access. Native Linux/Windows gates
+include cache hits, immutable old snapshots/fresh revisions, static credential
+rotation, pinned quota pressure, corrupt/missing data, restart/process death and
+SQL failure propagation. State tests separately induce SQLITE_FULL and both
+adapters map it to no-space. Session fixtures run with cache enabled and preserve
+its data on removal. See the storage chapter for defaults and bounds.
+
+Broader workload/performance testing, bulk/sparse caching and live Wasabi cached
+reads remain separate acceptance work. New offline opens remain denied. P4's
+clean-cache boundary is the prerequisite for P5a staged writes; the upload
+journal and all remote mutations remain disabled.
 
 ### Optional coordination investigation
 

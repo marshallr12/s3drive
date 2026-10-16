@@ -48,8 +48,9 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Linux sign-in startup, including MX without systemd | [Detached launcher implemented](startup-and-sessions.md); native desktop/login-hook/terminal-loss checks passed |
 | Windows startup across login sessions | [Scheduled task and shared NTFS folder implemented](startup-and-sessions.md); native cross-logon reads/removal passed; workstation reboot/SSH authentication pending |
 | Cross-machine coordination with Turso | [Research and design proposal](turso-coordination.md); no dependency or cloud service enabled |
-| Clean-cache storage library | Bounded worker, checksums, LRU/pins and recovery tests; mount integration pending |
-| Mounted caching, upload journal, offline use, tray UI | Planned |
+| Clean-cache storage library | Bounded worker, checksums, LRU/pins and recovery tests |
+| Mounted caching | Opt-in; online HEAD on new opens, revision snapshots, restart and integrity checks |
+| Upload journal, new offline opens, tray UI | Planned |
 
 The initial research/scaffold delivery is complete. Work has advanced to the
 [read-only provider adapter](provider-contract.md). The overall product goal

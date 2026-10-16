@@ -3,15 +3,14 @@
 The diagram describes the target system. P0 added configuration, evidence
 types, SQLite initialization and explicit adapter stubs. P1 adds the read-only
 S3 transport. P2 adds the shared read-only namespace/handle engine and Linux
-adapter; P3 adds Windows WinFsp. The clean-cache storage worker is implemented;
-mount integration and writes remain planned. See the
+adapter; P3 adds Windows WinFsp. The optional clean-cache path is implemented; safe writes remain planned. See the
 platform contracts for native acceptance scope.
 
 ![Local applications reach the Rust filesystem engine through FUSE or WinFsp; its S3 client reads remote bucket data. Local SQLite and cache have separate roles.](images/architecture.png)
 
-The blue read path is implemented. The amber persistence path is not yet wired
-into mounts: SQLite now has bindings and a bounded small-file cache worker;
-external bulk files and the upload journal remain planned. [Startup and remote sessions](startup-and-sessions.md)
+The blue read/cache path is implemented. New opens authorize with S3 before
+SQLite cache access; a hit avoids the data GET. Amber external bulk files,
+staging and coordination components remain planned. [Startup and remote sessions](startup-and-sessions.md)
 include MX Linux without systemd. [Turso coordination](turso-coordination.md)
 evaluates an optional shared metadata authority, separate from each host's local database.
 
@@ -69,7 +68,7 @@ credentials used for HEAD and all reads through that handle; new opens resolve
 credentials again. Configuration or credential changes select a different
 namespace, and every new open still requires online authorization. SQLite
 schema 3 retains the binding registry and unbound legacy rows, and adds clean
-snapshots. Mount integration must still enforce authorization before lookup.
+snapshots. The engine enforces online authorization before cache lookup.
 This is not a provider-global account identifier. See the implemented
 [provider contract](provider-contract.md) and [migration](storage-and-recovery.md).
 

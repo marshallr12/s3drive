@@ -191,6 +191,7 @@ fn sqlite_full_rolls_back_eviction_and_payload_together() {
         .err()
         .expect("expected SQLITE_FULL");
     let sql = error.downcast_ref::<rusqlite::Error>().expect("SQL error");
+    assert!(is_disk_full(error.as_ref()));
     assert_eq!(sql.sqlite_error_code(), Some(rusqlite::ErrorCode::DiskFull));
     assert_eq!(
         store.get(&key("keep", 8)).unwrap().unwrap().bytes(),

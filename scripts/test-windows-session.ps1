@@ -201,6 +201,7 @@ $state=Join-Path $root 'state'
 $mount=Join-Path $root 'mounted'
 $manager=Join-Path $root 'source-manager.ps1'
 $databaseState=Join-Path $root 'database-state'
+$cacheState=Join-Path $root 'cache-state'
 # Without loading HKCU, the secondary-logon environment can point USERPROFILE
 # at Default. Use the path returned by CreateProfile for fixture file setup;
 # the actual scheduled daemon must discover its loaded profile independently.
@@ -210,8 +211,8 @@ function Manage([string]$Action) {
     if ($LASTEXITCODE -ne 0) { throw "Manager $Action failed" }
     return $output
 }
-function Initialize-LocalState {
-    $output=& (Join-Path $root 's3drive.exe') init-state --directory $databaseState | Out-String
+function Initialize-LocalState([string]$Directory=$databaseState) {
+    $output=& (Join-Path $root 's3drive.exe') init-state --directory $Directory | Out-String
     if ($LASTEXITCODE -ne 0 -or $output -notmatch 'schema=3, journal=wal') {
         throw 'Private local state initialization/reopen failed'
     }
@@ -231,6 +232,10 @@ try {
             [IO.File]::WriteAllText((Join-Path $aws 'credentials'), "[fixture]`naws_access_key_id=TESTPROFILE`naws_secret_access_key=TESTPROFILESECRET`n")
             [IO.File]::WriteAllText((Join-Path $aws 'config'), '')
             Initialize-LocalState
+            # Give the scheduled ordinary account its own cache. JSON string
+            # escaping is valid for this TOML basic-string filesystem path.
+            $cachePath=$cacheState | ConvertTo-Json -Compress
+            [IO.File]::AppendAllText((Join-Path $root 'drive.toml'), "`n[cache]`ndirectory=$cachePath`nmax_file_bytes=65536`n")
             & $manager -Action Install -Name acceptance -StateDirectory $state -Executable (Join-Path $root 's3drive.exe') -Config (Join-Path $root 'drive.toml') -MountPoint $mount -Credential $credential
             if ($LASTEXITCODE -ne 0) { throw 'Install failed' }
             $null=Manage Start
@@ -267,15 +272,19 @@ try {
             $null=Manage Remove
             if ([IO.Directory]::Exists($mount)) { throw 'Directory mount remains after removal' }
             if (-not [IO.File]::Exists((Join-Path $root 'drive.toml')) -or -not [IO.File]::Exists((Join-Path $profileDirectory '.aws\credentials'))) { throw 'Removal deleted config or credentials' }
+            if (-not [IO.File]::Exists((Join-Path $cacheState 'metadata.sqlite3'))) { throw 'Mounted cache was not created or removal deleted it' }
+            Initialize-LocalState $cacheState
         }
         'CleanupState' {
             # Fixture disposal only: application removal preserves local data.
             # This protected directory grants its owning account and SYSTEM
             # access. Remove it as its owner before deleting that account.
-            if ([IO.Directory]::Exists($databaseState)) {
-                Remove-Item -LiteralPath $databaseState -Recurse -Force
+            foreach ($directory in @($databaseState,$cacheState)) {
+                if ([IO.Directory]::Exists($directory)) {
+                    Remove-Item -LiteralPath $directory -Recurse -Force
+                }
+                if ([IO.Directory]::Exists($directory)) { throw 'Private database fixture remains after cleanup' }
             }
-            if ([IO.Directory]::Exists($databaseState)) { throw 'Private database fixture remains after cleanup' }
         }
         'Diagnostics' {
             if ([IO.File]::Exists((Join-Path $state 'startup.json'))) {

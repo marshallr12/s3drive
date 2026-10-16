@@ -2,7 +2,8 @@
 
 The [provider contract](provider-contract.md) records the security boundaries
 already implemented in P1. P2 adds an owner-only read-only Linux mount with
-non-executable files and signal cancellation. The cache/service requirements remain
+non-executable files and signal cancellation. Private cache ownership and online authorization on new opens are implemented.
+The remaining service requirements are
 future work.
 
 ## Credentials and endpoints
@@ -80,3 +81,9 @@ many small files, a large directory, sequential and random reads, then writable
 save/replace workloads. Compare with rclone under the same credentials,
 dataset and cache budget. Record versions, configuration and host/network
 conditions so results can be reproduced.
+
+Cached file data remains readable by an already-open, fully cached handle until
+release, even if remote access is subsequently revoked. New opens require online
+HEAD and cannot use cached bytes to bypass a denied or unavailable provider.
+The cache's private local directory protects plaintext BLOBs with user ownership
+and OS permissions; privileged local administrators remain outside that boundary.
