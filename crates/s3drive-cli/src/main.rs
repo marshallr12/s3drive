@@ -1,11 +1,12 @@
 use clap::{Parser, Subcommand};
 use s3drive_core::Config;
-use std::{error::Error, fs, path::PathBuf};
+use s3drive_s3::S3Reader;
+use std::{error::Error, fs, io::Write, path::PathBuf};
 
 #[derive(Parser)]
 #[command(
     version,
-    about = "S3Drive research scaffold (mounts and S3 I/O are not implemented)"
+    about = "S3Drive read-only S3 tools (filesystem mounts are not implemented yet)"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -25,11 +26,34 @@ enum Command {
     },
     /// Display implemented and planned components, without probing the host.
     Status,
+    /// List one bounded page under a source; pass the returned token unchanged.
+    List {
+        config: PathBuf,
+        source: String,
+        #[arg(default_value = "")]
+        directory: String,
+        #[arg(long, default_value_t = 1000)]
+        max_keys: u16,
+        #[arg(long)]
+        token: Option<String>,
+    },
+    /// Inspect a remote file's metadata without downloading its contents.
+    Stat { config: PathBuf, path: String },
+    /// Write a revision-pinned range of a remote file to standard output.
+    Read {
+        config: PathBuf,
+        path: String,
+        #[arg(long, default_value_t = 0)]
+        offset: u64,
+        #[arg(long, default_value_t = 65536)]
+        length: usize,
+    },
     /// Reserved for future adapters; currently fails without mounting anything.
     Mount,
 }
 
-fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     match Cli::parse().command {
         Command::ConfigCheck { config } => {
             let config = Config::parse(&fs::read_to_string(config)?)?;
@@ -63,12 +87,61 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
             );
         }
         Command::Status => {
-            println!("Phase P0 research scaffold; host={}", std::env::consts::OS);
+            println!(
+                "Phase P1 read-only transport; host={}",
+                std::env::consts::OS
+            );
             println!("Implemented: config validation, namespace planning, local SQLite bootstrap.");
             println!("S3: {}", s3drive_s3::IMPLEMENTATION_STATUS);
             println!("Linux: {}", s3drive_fuse::IMPLEMENTATION_STATUS);
             println!("Windows: {}", s3drive_winfsp::IMPLEMENTATION_STATUS);
             println!("See docs/src/implementation-plan.md for the acceptance gates.");
+        }
+        Command::List {
+            config,
+            source,
+            directory,
+            max_keys,
+            token,
+        } => {
+            let config = Config::parse(&fs::read_to_string(config)?)?;
+            let source = config
+                .sources
+                .iter()
+                .find(|entry| entry.alias == source)
+                .ok_or("unknown source alias")?;
+            let reader = S3Reader::from_source(source).await?;
+            let page = reader
+                .list_page(&directory, token.as_deref(), max_keys)
+                .await?;
+            println!(
+                "configuration-fingerprint={}",
+                reader.configuration_fingerprint()
+            );
+            for directory in page.directories {
+                println!("directory\t{directory:?}");
+            }
+            for object in page.objects {
+                println!("object\t{}\t{:?}", object.size, object.key);
+            }
+            if let Some(token) = page.next_token {
+                println!("next-token={token:?}");
+            }
+        }
+        Command::Stat { config, path } => {
+            let (reader, key) = reader_for_path(config, &path).await?;
+            println!("{:#?}", reader.head(&key).await?);
+        }
+        Command::Read {
+            config,
+            path,
+            offset,
+            length,
+        } => {
+            let (reader, key) = reader_for_path(config, &path).await?;
+            let handle = reader.open(&key).await?;
+            let bytes = handle.read_range(offset, length).await?;
+            std::io::stdout().lock().write_all(&bytes)?;
         }
         Command::Mount => {
             #[cfg(target_os = "linux")]
@@ -80,4 +153,23 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         }
     }
     Ok(())
+}
+
+async fn reader_for_path(
+    config: PathBuf,
+    path: &str,
+) -> Result<(S3Reader, String), Box<dyn Error + Send + Sync>> {
+    let config = Config::parse(&fs::read_to_string(config)?)?;
+    let location = config.resolve(path)?;
+    let source = config
+        .sources
+        .iter()
+        .find(|source| source.alias == location.alias)
+        .ok_or("unknown source alias")?;
+    let key = location
+        .key
+        .strip_prefix(&source.prefix)
+        .ok_or("key outside source prefix")?
+        .to_owned();
+    Ok((S3Reader::from_source(source).await?, key))
 }

@@ -1,4 +1,10 @@
-//! Provider evidence types. An S3 client and capability probes are planned in P1.
+//! Read-only S3 transport and provider evidence types. No mutation APIs.
+
+mod error;
+mod reader;
+
+pub use error::{Error, ErrorKind, Result};
+pub use reader::{ListPage, ListedObject, MAX_READ_BYTES, ObjectMetadata, ReadHandle, S3Reader};
 
 /// Unknown is distinct from unsupported and must never enable a mutation.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -28,4 +34,5 @@ pub struct ObjectRevision {
     pub version_id: Option<String>,
 }
 
-pub const IMPLEMENTATION_STATUS: &str = "planned: no S3 requests or capability probes implemented";
+pub const IMPLEMENTATION_STATUS: &str =
+    "read-only S3 list/head/revision-pinned range reads; live-provider conformance pending";

@@ -49,7 +49,7 @@ as required engineering work. [winfsp-rs](https://github.com/SnowflakePowered/wi
 
 | Library | Strength | Decision |
 | --- | --- | --- |
-| [`aws-sdk-s3` 1.152.0](https://docs.rs/aws-sdk-s3/1.152.0/aws_sdk_s3/) | Direct S3 operation APIs; first-party AWS implementation | Preferred P1 spike because S3-specific conditional operations and upload recovery need explicit control |
+| [`aws-sdk-s3` 1.152.0](https://docs.rs/aws-sdk-s3/1.152.0/aws_sdk_s3/) | Direct S3 operation APIs; first-party AWS implementation | Selected for P1 reads; mutation and recovery behavior still require verification |
 | [`object_store` 0.14.2](https://docs.rs/object_store/0.14.2/object_store/) | Async object API, range reads, streaming and conditional puts | Strong alternative if it exposes every required precondition and multipart recovery detail |
 | [Apache OpenDAL 0.59.4](https://opendal.apache.org/docs/rust/opendal/) | Many storage services and composable layers | Prefer if expanding beyond S3 becomes a near-term requirement |
 
@@ -66,9 +66,10 @@ recovery design before selecting it.
 [ObjectStore conditional writes](https://docs.rs/object_store/0.14.2/object_store/),
 [S3 builder](https://docs.rs/object_store/0.14.2/object_store/aws/struct.AmazonS3Builder.html)
 
-No network or filesystem binding dependency is linked in P0. This keeps the
-initial build small and avoids suggesting an adapter was implemented merely
-because a dependency compiled. Actual scaffold dependencies are locked in
-`Cargo.lock`: `serde`, `toml`, `url`, `clap`, `rusqlite` with bundled SQLite, and
-`tempfile` for isolated tests. SQLite operations should run on a dedicated
-worker once the async engine exists.
+P0 linked no network or filesystem bindings. P1 now links `aws-sdk-s3`,
+`aws-config` and Tokio for the read-only adapter, plus SHA-256 configuration
+fingerprints and percent decoding for list responses. Native filesystem
+bindings remain deferred. All dependencies are locked in `Cargo.lock`.
+The local components use `serde`, `toml`, `url`, `clap`, `rusqlite` with bundled
+SQLite, and `tempfile` for isolated tests. SQLite operations should run on a
+dedicated worker once the filesystem engine exists.

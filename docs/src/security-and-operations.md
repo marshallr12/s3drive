@@ -1,7 +1,8 @@
 # Security and operations
 
-These are implementation requirements for future network/mount phases, not a
-claim that the scaffold already enforces runtime security policies.
+The [provider contract](provider-contract.md) records the security boundaries
+already implemented in P1. The mount/cache/service requirements below remain
+future work.
 
 ## Credentials and endpoints
 
@@ -13,13 +14,16 @@ assume the process-wide default identity is correct for every bucket.
 [AWS Rust credential providers](https://docs.aws.amazon.com/sdk-for-rust/latest/dg/credproviders.html)
 
 The committed config contains placeholders and optional profile names only.
-P0 rejects unknown fields, endpoint userinfo/query/fragment and non-HTTPS
-endpoints. Parsing errors report a byte range instead of echoing the TOML source.
-P1 must define precedence between explicit source settings and SDK environment
-overrides so an ambient endpoint setting cannot silently redirect a source.
+The parser rejects unknown fields and endpoint userinfo/query/fragment.
+HTTPS is required except for the explicit numeric-loopback testing option.
+Parsing errors report a byte range instead of echoing the TOML source.
+P1 constructs the S3 client separately from SDK shared endpoint settings:
+source endpoint, region and addressing are authoritative. Explicit profiles use
+the profile credential provider, avoiding unrelated environment credentials.
 
-For local integration tests, add a narrowly scoped loopback HTTP test option
-only when needed; never weaken certificate validation globally. Remote URLs,
+For local integration tests, `allow_http_loopback = true` permits HTTP only for
+a numeric loopback address with `path_style = true`. Certificate verification
+remains enabled for HTTPS. Remote URLs,
 object keys and profile names can be sensitive even when they are not passwords.
 Redact authorization headers, session tokens, signed URLs and request bodies.
 An SDK debug dump is not a suitable production log record.

@@ -1,8 +1,9 @@
 # Phased implementation plan
 
 Each phase must leave a buildable tree, explicit behavior contract and durable
-verification evidence. P0 is the current delivery. No target provider or native
-mounted filesystem has been tested yet.
+verification evidence. P0 is complete; P1 has a read-only transport and local
+wire tests. Live-provider conformance, persistent cache identity/migration and
+native mounted filesystems remain unverified or unimplemented.
 
 | Phase | Deliverable | Completion evidence |
 | --- | --- | --- |
@@ -36,6 +37,20 @@ mounted filesystem has been tested yet.
 Mutating capability probes require a dedicated disposable prefix and explicit
 test configuration; they must not run automatically during a read-only mount.
 Never test collision or overwrite behavior on ordinary user objects.
+
+### P1 progress
+
+Implemented: per-source SDK configuration, paginated LIST, HEAD, bounded range
+reads, revision-bound handles, sanitized errors, operation deadlines, a
+configuration fingerprint, and `list`/`stat`/`read` CLI commands. The local TCP
+contract tests exercise the real SDK HTTP path with dummy credentials. See
+[the implemented contract](provider-contract.md).
+
+Still required before declaring full provider conformance: an explicitly
+selected live provider/test prefix, support evidence tied to that provider,
+and broader malformed-response/real-service coverage. The configuration hash
+is not an authenticated account identity; persistent cache adoption must add
+that identity and migrate the reserved P0 table before storing live cache data.
 
 ## Test matrix
 

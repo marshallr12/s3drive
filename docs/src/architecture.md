@@ -1,7 +1,8 @@
 # Proposed architecture
 
-The diagram describes the target system. P0 contains configuration, evidence
-types, SQLite initialization and explicit adapter stubs only.
+The diagram describes the target system. P0 added configuration, evidence
+types, SQLite initialization and explicit adapter stubs. P1 adds the read-only
+S3 transport; the shared filesystem engine, cache and adapters remain planned.
 
 ```text
 Local applications
@@ -34,9 +35,9 @@ s3drive-fuse                      s3drive-winfsp
 semantics. It must not depend on FUSE, Windows types, or S3 HTTP status codes.
 It currently owns only configuration and namespace planning.
 
-`s3drive-s3` will translate storage operations to the chosen SDK and retain
-ETags/version IDs as opaque validators. Its first implementation should expose
-bounded/paginated list, head and streaming range reads; mutation APIs arrive
+`s3drive-s3` translates read operations to the AWS SDK and retains
+ETags/version IDs as opaque validators. Its current implementation exposes
+paginated list, head and bounded range reads; mutation APIs arrive
 only with their precondition and recovery tests. Avoid designing a broad
 generic VFS trait before the first real adapter reveals the necessary contract.
 

@@ -16,9 +16,11 @@ s3drive-s3.workspace = true
 s3drive-state.workspace = true
 s3drive-fuse.workspace = true
 s3drive-winfsp.workspace = true
+tokio.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+tokio = { workspace = true, features = ["process"] }
 
 [lints]
 workspace = true

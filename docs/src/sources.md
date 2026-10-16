@@ -26,6 +26,7 @@ These references support the research, not claims of live integration testing.
 | --- | --- |
 | [AWS S3 consistency](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html#ConsistencyModel) | Single-key atomicity and cross-key limitations |
 | [S3 key names](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html) | Byte limits, case sensitivity and prefix hierarchy |
+| [ListObjectsV2](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html) | Pagination, delimiters and URL-encoded key responses |
 | [GetObject](https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html) | Ranges, revision conditions and version reads |
 | [HeadObject](https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html) | Metadata and permission-dependent missing-object errors |
 | [PutObject](https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html) | Object replacement and write preconditions |

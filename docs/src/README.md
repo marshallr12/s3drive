@@ -41,13 +41,14 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Alias + prefix + file-path resolution | Implemented as a planning utility |
 | Local SQLite schema bootstrap and version/ownership checks | Implemented |
 | mdBook research, design and acceptance plan | Implemented |
-| S3 transport and credentials | Planned |
+| S3 transport and credentials | Implemented read-only adapter; live-provider conformance pending |
 | Linux filesystem mount | Planned; stub returns error |
 | Windows drive mount | Planned; stub returns error |
 | Read cache, upload journal, offline use, tray UI | Planned |
 
-The concrete delivery scope of this initial session is research and a tested
-scaffold. The overall product goal remains open until both OS adapters and the
+The initial research/scaffold delivery is complete. Work has advanced to the
+[read-only provider adapter](provider-contract.md). The overall product goal
+remains open until both OS adapters and the
 agreed filesystem contract have passed their acceptance tests.
 
 ## Assumptions for planning

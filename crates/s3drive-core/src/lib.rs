@@ -19,7 +19,7 @@ pub struct Config {
     pub sources: Vec<Source>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Source {
     pub alias: String,
@@ -30,6 +30,9 @@ pub struct Source {
     pub endpoint: Option<String>,
     #[serde(default)]
     pub path_style: bool,
+    /// Opt in to plaintext only for numeric loopback endpoints in local tests.
+    #[serde(default)]
+    pub allow_http_loopback: bool,
     /// An AWS shared-config profile name, never a credential value.
     pub profile: Option<String>,
 }
@@ -94,7 +97,7 @@ impl Config {
 }
 
 impl Source {
-    fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<(), String> {
         if self.alias.is_empty()
             || self.alias.len() > 63
             || !self
@@ -143,7 +146,14 @@ impl Source {
         }
         if let Some(endpoint) = &self.endpoint {
             let url = Url::parse(endpoint).map_err(|_| "endpoint must be an absolute HTTPS URL")?;
-            if url.scheme() != "https"
+            let loopback = match url.host() {
+                Some(url::Host::Ipv4(ip)) => ip.is_loopback(),
+                Some(url::Host::Ipv6(ip)) => ip.is_loopback(),
+                _ => false,
+            };
+            let permitted_http =
+                url.scheme() == "http" && self.allow_http_loopback && loopback && self.path_style;
+            if (url.scheme() != "https" && !permitted_http)
                 || url.host_str().is_none()
                 || !url.username().is_empty()
                 || url.password().is_some()
@@ -151,7 +161,7 @@ impl Source {
                 || url.fragment().is_some()
                 || url.path() != "/"
             {
-                return Err("endpoint must be HTTPS with a host and no credentials, path, query or fragment".into());
+                return Err("endpoint must be HTTPS (or opted-in numeric loopback HTTP with path_style), with no credentials, path, query or fragment".into());
             }
         }
         if self
@@ -264,6 +274,30 @@ mod tests {
         config.sources[0].endpoint = None;
         for prefix in ["/", "unsafe", "../", "a//", "a/../"] {
             config.sources[0].prefix = prefix.into();
+            assert!(config.validate().is_err());
+        }
+    }
+
+    #[test]
+    fn plaintext_is_opt_in_and_restricted_to_numeric_loopback() {
+        let mut config = Config::parse(EXAMPLE).unwrap();
+        config.sources[0].endpoint = Some("http://127.0.0.1:9000".into());
+        assert!(config.validate().is_err());
+        config.sources[0].allow_http_loopback = true;
+        assert!(config.validate().is_err());
+        config.sources[0].path_style = true;
+        assert!(config.validate().is_ok());
+        for endpoint in ["http://[::1]:9000", "http://127.0.0.2:9000"] {
+            config.sources[0].endpoint = Some(endpoint.into());
+            assert!(config.validate().is_ok());
+        }
+        for endpoint in [
+            "http://localhost:9000",
+            "http://10.0.0.1:9000",
+            "http://example.com:9000",
+            "http://127.0.0.1:9000/secret",
+        ] {
+            config.sources[0].endpoint = Some(endpoint.into());
             assert!(config.validate().is_err());
         }
     }

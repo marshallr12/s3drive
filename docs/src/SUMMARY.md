@@ -4,6 +4,7 @@
 - [Existing tools and Rust libraries](landscape.md)
 - [Proposed architecture](architecture.md)
 - [Filesystem behavior contract](filesystem-contract.md)
+- [Implemented read-only provider contract](provider-contract.md)
 - [Cache, SQLite and recovery](storage-and-recovery.md)
 - [Linux and Windows integration](platform-integration.md)
 - [Security and operations](security-and-operations.md)

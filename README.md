@@ -3,9 +3,10 @@
 Research and Rust workspace for making one or more S3-compatible buckets appear
 as a local filesystem on Linux and Windows.
 
-**Status: research scaffold (P0), not a working drive.** Configuration checking,
-bucket/key resolution, and SQLite initialization work. There is no S3 client,
-file cache, synchronization engine, or working filesystem mount yet. `mount`
+**Status: read-only S3 transport (P1), not a working drive.** Configuration checking,
+bucket/key resolution, SQLite initialization, S3 listing, metadata lookup and
+revision-pinned range reads work. There is no file cache, synchronization engine,
+or working filesystem mount yet. `mount`
 deliberately returns an error. See the [implementation plan](docs/src/implementation-plan.md).
 
 The proposed architecture uses **FUSE on Linux**, **WinFsp on Windows**, a shared
@@ -46,16 +47,28 @@ The two example sources are placeholders. Configuration validation does not
 establish that an endpoint or bucket exists. State initialization writes only a
 local SQLite database; use a private local directory outside any future mount.
 
+With your own configuration and credentials, the read-only network commands are:
+
+```bash
+cargo run --locked -- list s3drive.local.toml documents --max-keys 100
+cargo run --locked -- stat s3drive.local.toml documents/report.pdf
+cargo run --locked -- read s3drive.local.toml documents/report.pdf --offset 0 --length 4096
+```
+
+`read` writes raw bytes to stdout. These commands perform real S3 requests;
+see the [provider contract](docs/src/provider-contract.md) for credentials,
+limits, pagination and current verification scope. No write/delete APIs exist.
+
 ## Workspace
 
 | Crate | Current responsibility |
 | --- | --- |
 | `s3drive-core` | Validate TOML and resolve virtual paths to bucket/key pairs |
-| `s3drive-s3` | Provider capability/revision types; network implementation deferred |
+| `s3drive-s3` | Read-only AWS SDK adapter, revision-bound handles and sanitized errors |
 | `s3drive-state` | Versioned local SQLite initialization and ownership checks |
 | `s3drive-fuse` | Explicitly unimplemented Linux adapter boundary |
 | `s3drive-winfsp` | Explicitly unimplemented Windows adapter boundary |
-| `s3drive-cli` | Local developer commands and truthful implementation status |
+| `s3drive-cli` | Local developer commands plus read-only S3 inspection/read commands |
 
 See [development](docs/src/development.md) for verification scope and
 [HANDOFF.md](HANDOFF.md) for the next phase. All crates have `publish = false`.

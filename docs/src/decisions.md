@@ -12,12 +12,13 @@ to the user.
 | D004 | Proposed | Direct object layout first, preserving existing S3 interoperability |
 | D005 | Adopted for scaffold/first milestone | Read-only mode; no implicit write or deletion support |
 | D006 | Proposed | One alias per bucket/prefix under a virtual root; no union, sharding or replication |
-| D007 | Proposed | AWS SDK first transport spike; evaluate object_store/OpenDAL against concrete recovery requirements |
+| D007 | Adopted for P1 reads | AWS SDK implements list/head/range reads; mutation/recovery requirements still need evaluation |
 | D008 | Proposed | Explicit flush means remote durability by default; offline local durability must be a separate mode |
 | D009 | Adopted | Unknown capabilities remain unknown; no fallback from failed conditional writes to unconditional overwrite |
 | D010 | Deferred | Windows binding/distribution license and installer arrangement; P0 links neither runtime nor wrapper |
 | D011 | Deferred | Full POSIX/NTFS compatibility, distributed locks, writable database workloads and cross-source atomicity |
 | D012 | Deferred | Tray UI and optional Cloud Files surface until the shared engine is reliable |
+| D013 | Adopted for P1 | Source configuration controls S3 endpoint/region; explicit profiles do not fall back to ambient keys; numeric-loopback HTTP is test-only opt-in |
 
 ## Questions to resolve at the relevant phase
 
