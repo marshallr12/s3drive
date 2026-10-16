@@ -12,11 +12,30 @@ use windows::{
             },
             GetTokenInformation, PSECURITY_DESCRIPTOR, TOKEN_QUERY, TOKEN_USER, TokenUser,
         },
+        Storage::FileSystem::GetVolumeInformationW,
         System::Threading::{GetCurrentProcess, OpenProcessToken},
     },
     core::{HSTRING, PWSTR},
 };
 use winfsp::Result;
+
+pub fn is_ntfs(root: &str) -> Result<bool> {
+    let mut name = [0u16; 32];
+    // SAFETY: root is a stable NUL-terminated drive root and name is a writable
+    // buffer. Optional outputs are unused; the API checks its supplied length.
+    unsafe {
+        GetVolumeInformationW(
+            &HSTRING::from(root),
+            None,
+            None,
+            None,
+            None,
+            Some(&mut name),
+        )?;
+    }
+    let length = name.iter().position(|c| *c == 0).unwrap_or(name.len());
+    Ok(String::from_utf16_lossy(&name[..length]).eq_ignore_ascii_case("NTFS"))
+}
 
 struct Token(HANDLE);
 impl Drop for Token {

@@ -1,5 +1,13 @@
 # Windows read-only drive
 
+P3.5b now implements an additional absolute NTFS directory mount path, for
+example `C:\Users\you\S3Drive`. Its parent must exist; the target itself must
+not exist. Existing directories, relative paths, UNC paths and junction/symlink
+ancestors are rejected. WinFsp creates the mount directory and removes it on
+teardown. Native directory acceptance is being added; the earlier P3 evidence
+below applies to drive letters. Persistent session startup is a separate step.
+[WinFsp mount implementation](https://github.com/winfsp/winfsp/blob/v2.1/src/dll/mount.c)
+
 Implemented and natively verified on 2026-10-16. The read-only acceptance gate
 passed on Windows x64 with WinFsp 2.1 in
 [CI run 38928960490](https://github.com/marshallr12/s3drive/actions/runs/38928960490)
@@ -18,8 +26,9 @@ cargo run --locked -- mount s3drive.local.toml S:
 
 Choose an unused drive letter. Ctrl+C or Ctrl+Break unmounts and stops the
 process. Supervisors may pass `--unmount-on-stdin-close` and keep stdin open;
-closing the pipe requests the same shutdown. Directory mountpoints, services,
-automatic drive selection and packaged installers are not implemented.
+closing the pipe requests the same shutdown. A directory path may replace `S:`
+subject to the constraints above. Services, automatic drive selection and
+packaged installers are not implemented.
 
 The prototype links `winfsp` 0.13.1 and `windows` 0.61.3 only on Windows. Both
 the adapter's and executable's build scripts emit the required delay-load

@@ -62,8 +62,11 @@ including Linux startup, Linux/Windows native mounts and book checks.
 Actual reboot, full desktop logout
 policy and incoming SSH authentication/PAM need separate acceptance.
 
-The Windows foreground mount still accepts only drive letters. P3.5b must add
-an NTFS directory mount and a session-independent backend; validate same-account
+On `windows-session-startup`, the Windows foreground mount also accepts a new
+absolute NTFS directory path, with existing parents and no junctions/symlinks.
+Directory tests cover Unicode reads, occupied targets, graceful teardown and
+forced process termination; native CI is pending for this change. P3.5b still
+needs a session-independent backend; validate same-account
 access through independent logon tokens, graceful cleanup and sign-in startup.
 WinFsp supports directory mounts, but its directory creation/removal contract
 must be implemented and tested natively. A password-backed scheduled task or
@@ -163,13 +166,12 @@ was fixed and the complete native gate rerun; none is acceptance evidence.
 
 ## Publication and next work
 
-P3 is published to private `origin/main` at
-`6e9de9695b8f3eb019eb6da279f10259142faa1b`; final-source CI run
-[38929689424](https://github.com/marshallr12/s3drive/actions/runs/38929689424)
-passed. Startup/research work is on `persistent-startup`; its verified source
-checkpoint and CI are recorded above. Baseline and updated local gates passed
-(`/tmp/s3drive-startup-baseline.log`, `/tmp/s3drive-startup-gate.log`).
-This evidence update changes documentation only. Publication requires the exact branch tip's
+Linux startup/research is published to private `origin/main` at
+`3eeb40bf94f990e2917c49b4107f74a4679ef61a`; final-source CI run
+[38933907710](https://github.com/marshallr12/s3drive/actions/runs/38933907710)
+passed. Windows startup work is on `windows-session-startup`. Baseline and
+directory-mount local gates passed (`/tmp/s3drive-windows-startup-baseline.log`,
+`/tmp/s3drive-windows-folder-gate.log`). Publication requires the exact branch tip's
 terminal CI success, then a fast-forward. Check current Git and Actions state
 when resuming; preserve ignored user configuration.
 

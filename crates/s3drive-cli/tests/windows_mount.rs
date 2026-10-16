@@ -102,8 +102,8 @@ async fn actual_windows_drive_names_reads_security_and_teardown() {
         .arg(&config)
         .arg(&drive)
         .arg("--unmount-on-stdin-close")
-        .env("AWS_SHARED_CREDENTIALS_FILE", credentials)
-        .env("AWS_CONFIG_FILE", aws_config)
+        .env("AWS_SHARED_CREDENTIALS_FILE", &credentials)
+        .env("AWS_CONFIG_FILE", &aws_config)
         .env("AWS_EC2_METADATA_DISABLED", "true")
         .stdin(Stdio::piped())
         .stderr(Stdio::piped())
@@ -259,6 +259,82 @@ async fn actual_windows_drive_names_reads_security_and_teardown() {
     );
     stop(&mut child).await;
     assert!(!mount.exists(), "drive remains after normal teardown");
+    // A folder provides one stable path across logon sessions. WinFsp must
+    // create/remove only its new directory, never reuse an existing directory.
+    let folder = dir.path().join("mounted café 文書");
+    let folder_command = |point: &Path| {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_s3drive"));
+        command
+            .args(["mount"])
+            .arg(&config)
+            .arg(point)
+            .arg("--unmount-on-stdin-close")
+            .env("AWS_SHARED_CREDENTIALS_FILE", &credentials)
+            .env("AWS_CONFIG_FILE", &aws_config)
+            .env("AWS_EC2_METADATA_DISABLED", "true")
+            .stdin(Stdio::piped())
+            .stderr(Stdio::piped())
+            .stdout(Stdio::null())
+            .kill_on_drop(true);
+        command
+    };
+    let existing = dir.path().join("existing");
+    std::fs::create_dir(&existing).unwrap();
+    std::fs::write(existing.join("keep"), b"untouched").unwrap();
+    for rejected in [
+        &existing,
+        &dir.path().join("missing/child"),
+        Path::new("relative"),
+        Path::new("C:relative"),
+    ] {
+        let result =
+            tokio::time::timeout(Duration::from_secs(15), folder_command(rejected).output())
+                .await
+                .unwrap()
+                .unwrap();
+        assert!(
+            !result.status.success(),
+            "invalid directory mount succeeded"
+        );
+    }
+    assert_eq!(std::fs::read(existing.join("keep")).unwrap(), b"untouched");
+    let mut folder_child = folder_command(&folder).spawn().unwrap();
+    ready(&mut folder_child).await;
+    let occupied = tokio::time::timeout(Duration::from_secs(15), folder_command(&folder).output())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(
+        !occupied.status.success(),
+        "occupied directory mount succeeded"
+    );
+    let path = folder.clone();
+    tokio::task::spawn_blocking(move || {
+        unicode::verify(&path.join("docs/unicode"));
+        assert_eq!(
+            std::fs::read(path.join("other/readme")).unwrap(),
+            b"other bucket"
+        );
+        assert!(std::fs::write(path.join("docs/new"), b"no").is_err());
+    })
+    .await
+    .unwrap();
+    stop(&mut folder_child).await;
+    assert!(
+        std::fs::symlink_metadata(&folder).is_err(),
+        "directory remains after normal teardown"
+    );
+    let mut folder_child = folder_command(&folder).spawn().unwrap();
+    ready(&mut folder_child).await;
+    folder_child.kill().await.unwrap();
+    tokio::time::timeout(Duration::from_secs(15), async {
+        while std::fs::symlink_metadata(&folder).is_ok() {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    })
+    .await
+    .expect("directory remains after mount process termination");
+    assert_eq!(std::fs::read(existing.join("keep")).unwrap(), b"untouched");
     fixture.put("/other-bucket/stalled", b"stalled", "stalled");
     let mut child = command.spawn().unwrap();
     ready(&mut child).await;
@@ -286,7 +362,7 @@ async fn actual_windows_drive_names_reads_security_and_teardown() {
                 .all(|r| r.starts_with("GET ") || r.starts_with("HEAD "))
         );
         eprintln!(
-            "Verified {} read-only S3 requests through two real WinFsp drive sessions",
+            "Verified {} read-only S3 requests through drive and directory WinFsp sessions",
             requests.len()
         );
     }

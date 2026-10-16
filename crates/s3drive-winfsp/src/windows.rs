@@ -6,6 +6,7 @@ use std::{
     collections::BTreeMap,
     ffi::c_void,
     future::Future,
+    os::windows::fs::MetadataExt,
     path::Path,
     sync::{Arc, Mutex},
     time::Duration,
@@ -333,24 +334,59 @@ impl Drop for Mounted {
     }
 }
 
-/// Foreground, per-user drive letter mount. EOF supervision is opt-in; otherwise
+fn mount_point(
+    path: &Path,
+) -> std::result::Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    let point = path
+        .to_str()
+        .ok_or("mountpoint must be valid Unicode")?
+        .replace('/', "\\");
+    let bytes = point.as_bytes();
+    if bytes.len() == 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':' {
+        return Ok(point);
+    }
+    if bytes.len() < 4
+        || !bytes[0].is_ascii_alphabetic()
+        || &bytes[1..3] != b":\\"
+        || point[3..].split('\\').any(|part| !valid_component(part))
+    {
+        return Err("Windows mountpoint must be an unused drive letter or an absolute local directory path with normal components".into());
+    }
+    let path = Path::new(&point);
+    match std::fs::symlink_metadata(path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error.into()),
+        Ok(_) => return Err(
+            "Windows directory mountpoint must not already exist; WinFsp creates and removes it"
+                .into(),
+        ),
+    }
+    for parent in path.ancestors().skip(1) {
+        let info = std::fs::symlink_metadata(parent)?;
+        if !info.is_dir() || info.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT.0 != 0 {
+            return Err(
+                "Mountpoint ancestors must be existing directories without junctions or symlinks"
+                    .into(),
+            );
+        }
+    }
+    if !native::is_ntfs(&point[..3])? {
+        return Err("Directory mountpoints require a local NTFS volume".into());
+    }
+    Ok(point)
+}
+
+/// Foreground, per-user drive letter or NTFS directory mount. EOF supervision is opt-in; otherwise
 /// Ctrl+C/Ctrl+Break trigger cancellation and graceful teardown.
 pub async fn run(
     fs: ReadOnlyFs,
     mountpoint: &Path,
     unmount_on_stdin_close: bool,
 ) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let point = mountpoint
-        .to_str()
-        .ok_or("mountpoint must be a drive letter such as S:")?;
-    let bytes = point.as_bytes();
-    if bytes.len() != 2 || !bytes[0].is_ascii_alphabetic() || bytes[1] != b':' {
-        return Err("Windows mountpoint must be an unused drive letter such as S:".into());
-    }
+    let point = mount_point(mountpoint)?;
     let mut ctrl_c = tokio::signal::windows::ctrl_c()?;
     let mut ctrl_break = tokio::signal::windows::ctrl_break()?;
     let runtime = tokio::runtime::Handle::current();
-    let point = point.to_owned();
     let mounted = tokio::task::spawn_blocking(move || -> Result<Mounted> {
         let _init = winfsp::winfsp_init()?;
         let descriptor = native::owner_descriptor()?;
@@ -365,7 +401,7 @@ pub async fn run(
         host.mount(&point)?;
         host.start_with_threads(4)?;
         Ok(Mounted { host, cancel })
-    }).await?.map_err(|e| format!("WinFsp mount failed ({e:?}); install WinFsp 2.1 with Developer files and choose an unused drive letter"))?;
+    }).await?.map_err(|e| format!("WinFsp mount failed ({e:?}); check WinFsp 2.1 installation and use an unused drive letter or new NTFS directory path"))?;
     let (stdin_closed, mut stdin_shutdown) = tokio::sync::oneshot::channel();
     if unmount_on_stdin_close {
         // A detached reader is deliberate: a blocked console read must not keep
