@@ -224,6 +224,10 @@ Resolved AWS SDK 1.152.0's Config::credentials_provider getter is deprecated
 and always returns None. S3Reader retains the actual provider separately;
 open resolves it within the overall deadline and replaces the pinned client's
 identity resolver. Do not recover the provider through that getter.
+The SDK profile provider parses static credential/config files once. Restart
+the mount after editing them; resolving a provider per open is not a file watch.
+Refreshable provider chains keep their own refresh behavior. Cache bindings use
+the actual returned credential tuple, never an inferred profile identity.
 
 Target-workstation reboot/sign-in, full sign-out policy and SSH authentication
 acceptance remain pending. Next implementation is P4b: private cache-directory

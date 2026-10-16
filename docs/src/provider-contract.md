@@ -84,12 +84,19 @@ requested length, rejects a short/oversized body, clips reads at EOF, and avoids
 network requests for zero-length/EOF reads. ETags are not content checksums.
 No automatic reopen is performed after a revision conflict.
 
-Credential rotation affects new opens. Existing handles retain their original
+When the provider returns rotated credentials, they affect new opens. Existing handles retain their original
 credentials for GET, so an SDK refresh cannot silently switch a handle to a
 different account. If those credentials expire or are revoked, a subsequent
 remote read can fail; the caller must close and reopen. The 30-second open
 deadline includes both credential resolution and HEAD. Credential-provider
 failures are sanitized configuration errors; stalled resolution is a timeout.
+
+Resolving again does not make the SDK watch credential files. Its profile
+provider parses those files once and caches the parsed contents. Restart the
+mount after editing static credentials or profile definitions; refreshable
+providers retain their own refresh behavior. The binding uses the credentials
+actually returned, rather than inferring them from a profile name.
+[AWS profile provider](https://docs.rs/aws-config/1.12.0/aws_config/profile/struct.ProfileFileCredentialsProvider.html)
 
 Each operation has a 30-second overall deadline; range-read timing includes the
 response body, not just receipt of headers. The SDK has a five-second connect
