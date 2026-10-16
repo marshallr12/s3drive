@@ -5,7 +5,7 @@ param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $runner = [Security.Principal.WindowsIdentity]::GetCurrent()
-if (-not ([Security.Principal.WindowsPrincipal]::new($runner)).IsInRole('Administrator')) {
+if (-not ([Security.Principal.WindowsPrincipal]::new($runner)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     throw 'Native session acceptance requires an elevated disposable Windows runner'
 }
 $suffix = [Guid]::NewGuid().ToString('N').Substring(0,10)
