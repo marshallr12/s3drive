@@ -1,0 +1,15 @@
+[book]
+title = "S3Drive: Research and Implementation Plan"
+authors = ["Marshall"]
+language = "en"
+src = "src"
+description = "A Rust design for S3-backed virtual drives on Linux and Windows"
+
+[build]
+build-dir = "book"
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/marshallr12/s3drive"
+edit-url-template = "https://github.com/marshallr12/s3drive/edit/main/docs/{path}"

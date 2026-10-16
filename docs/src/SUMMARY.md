@@ -1,0 +1,13 @@
+# Summary
+
+- [Purpose and current status](README.md)
+- [Existing tools and Rust libraries](landscape.md)
+- [Proposed architecture](architecture.md)
+- [Filesystem behavior contract](filesystem-contract.md)
+- [Cache, SQLite and recovery](storage-and-recovery.md)
+- [Linux and Windows integration](platform-integration.md)
+- [Security and operations](security-and-operations.md)
+- [Phased implementation plan](implementation-plan.md)
+- [Development and verification](development.md)
+- [Decisions and open questions](decisions.md)
+- [Research sources](sources.md)

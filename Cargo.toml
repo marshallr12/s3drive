@@ -1,0 +1,29 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+default-members = ["crates/s3drive-cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+publish = false
+repository = "https://github.com/marshallr12/s3drive"
+
+[workspace.dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
+rusqlite = { version = "0.40.2", default-features = false, features = ["bundled"] }
+serde = { version = "1.0.229", features = ["derive"] }
+tempfile = "3.27.0"
+toml = "1.1.8"
+url = "2.5.8"
+s3drive-core = { path = "crates/s3drive-core" }
+s3drive-s3 = { path = "crates/s3drive-s3" }
+s3drive-state = { path = "crates/s3drive-state" }
+s3drive-fuse = { path = "crates/s3drive-fuse" }
+s3drive-winfsp = { path = "crates/s3drive-winfsp" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = "warn"

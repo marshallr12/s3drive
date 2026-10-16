@@ -1,0 +1,9 @@
+/target/
+/docs/book/
+/.s3drive/
+/.env
+/.env.*
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+/s3drive.local.toml

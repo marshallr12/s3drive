@@ -1,0 +1,19 @@
+# Placeholder names only. No credentials belong in this file.
+# These are planned source mappings; the scaffold does not connect or mount.
+version = 1
+mode = "read-only"
+
+[[sources]]
+alias = "documents"
+bucket = "replace-me-documents"
+region = "us-east-1"
+prefix = "desktop/"
+# profile = "personal"
+
+[[sources]]
+alias = "photos"
+bucket = "replace-me-photos"
+region = "us-east-1"
+prefix = ""
+endpoint = "https://s3.example.com"
+path_style = true
