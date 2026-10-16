@@ -54,7 +54,8 @@ On Linux, the directory must belong to the effective user with mode `0700`.
 Ancestors must belong to that user or root and prevent other accounts from
 replacing entries; root-owned sticky directories such as `/tmp` are supported.
 Known files must be owned regular files with one link. Files from the earlier
-SQLite bootstrap are tightened to `0600` only after those checks, inside the
+SQLite bootstrap are tightened to `0600` only after those checks and successful
+database application/schema validation, inside the
 already-private directory. Symlink and hard-link targets are never changed.
 The initial filesystem allowlist is ext2/3/4, btrfs, xfs, f2fs and tmpfs. Network,
 FUSE, overlay and other unverified filesystem types are refused. Tmpfs state

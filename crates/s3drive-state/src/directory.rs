@@ -102,6 +102,30 @@ impl OwnedDirectory {
     pub(crate) fn database_path(&self) -> PathBuf {
         self.path.join(DATABASE)
     }
+
+    #[cfg(any(target_os = "linux", windows))]
+    pub(crate) fn finish_initialization(&self) -> Result<()> {
+        // Recheck SQLite-created sidecars as well as preexisting files. The
+        // connection has now established application/schema ownership.
+        for name in FILES {
+            let path = self.path.join(name);
+            match fs::symlink_metadata(&path) {
+                Ok(_) => (),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+                Err(e) => return Err(e.into()),
+            }
+            let file = platform::open_file(&path, false)?;
+            platform::verify_private(&file, false)?;
+            #[cfg(target_os = "linux")]
+            platform::restrict_file(&file)?;
+        }
+        Ok(())
+    }
+
+    #[cfg(not(any(target_os = "linux", windows)))]
+    pub(crate) fn finish_initialization(&self) -> Result<()> {
+        Err("managed local state is supported on Linux and Windows only".into())
+    }
 }
 
 #[cfg(test)]

@@ -268,6 +268,15 @@ try {
             if ([IO.Directory]::Exists($mount)) { throw 'Directory mount remains after removal' }
             if (-not [IO.File]::Exists((Join-Path $root 'drive.toml')) -or -not [IO.File]::Exists((Join-Path $profileDirectory '.aws\credentials'))) { throw 'Removal deleted config or credentials' }
         }
+        'CleanupState' {
+            # Fixture disposal only: application removal preserves local data.
+            # This protected directory grants its owning account and SYSTEM
+            # access. Remove it as its owner before deleting that account.
+            if ([IO.Directory]::Exists($databaseState)) {
+                Remove-Item -LiteralPath $databaseState -Recurse -Force
+            }
+            if ([IO.Directory]::Exists($databaseState)) { throw 'Private database fixture remains after cleanup' }
+        }
         'Diagnostics' {
             if ([IO.File]::Exists((Join-Path $state 'startup.json'))) {
                 try { Manage Status } catch { Write-Output ("Status diagnostic failed: " + $_.Exception.Message) }
@@ -366,6 +375,10 @@ exit 0
                 Wait-Process -Id $process.ProcessId -Timeout 15 -ErrorAction SilentlyContinue
             }
         }
+        if ([IO.File]::Exists($worker)) {
+            try { $null=User-Action CleanupState }
+            catch { $cleanupFailures.Add('Could not remove private database fixture as its owner: ' + $_.Exception.Message) }
+        }
         if ($batchRightGranted) {
             try { [S3DriveFixtureNative]::Set($account.SID,$false) }
             catch { $cleanupFailures.Add('Could not remove disposable batch-logon right') }
@@ -414,9 +427,11 @@ exit 0
         # The private manager state belongs to the disposable user. The elevated
         # runner takes ownership only of this isolated directory during cleanup.
         & takeown.exe /F $root /R /D Y | Out-Null
+        if ($LASTEXITCODE -ne 0) { $cleanupFailures.Add('Could not take ownership of disposable test directory') }
         & icacls.exe $root /grant "*$($runner.User.Value):(OI)(CI)F" /T /Q | Out-Null
+        if ($LASTEXITCODE -ne 0) { $cleanupFailures.Add('Could not grant cleanup access to disposable test directory') }
         try { Remove-Item -LiteralPath $root -Recurse -Force }
-        catch { $cleanupFailures.Add('Could not remove disposable test directory') }
+        catch { $cleanupFailures.Add('Could not remove disposable test directory: ' + $_.Exception.Message) }
     }
     $plainPassword=$null
     $password.Dispose()

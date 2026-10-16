@@ -117,6 +117,28 @@ fn linux_permissions_and_symlinks_are_checked_before_sqlite() {
     }
 }
 
+#[cfg(target_os = "linux")]
+#[test]
+fn foreign_database_permissions_are_preserved() {
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
+    let temporary = tempfile::tempdir().unwrap();
+    let path = temporary.path().join("state");
+    drop(State::open_managed(&path).unwrap());
+    fs::remove_file(path.join(DATABASE)).unwrap();
+    let db = rusqlite::Connection::open(path.join(DATABASE)).unwrap();
+    db.execute_batch("CREATE TABLE personal(value TEXT); INSERT INTO personal VALUES ('keep');")
+        .unwrap();
+    drop(db);
+    fs::set_permissions(path.join(DATABASE), fs::Permissions::from_mode(0o644)).unwrap();
+    let before = fs::read(path.join(DATABASE)).unwrap();
+    assert!(State::open_managed(&path).is_err());
+    assert_eq!(fs::read(path.join(DATABASE)).unwrap(), before);
+    assert_eq!(
+        fs::metadata(path.join(DATABASE)).unwrap().mode() & 0o777,
+        0o644
+    );
+}
+
 #[cfg(windows)]
 #[test]
 fn windows_rejects_broad_acl_and_junctions() {

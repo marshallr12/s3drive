@@ -69,15 +69,17 @@ pub(super) fn verify_private(file: &File, directory: bool) -> Result<()> {
     {
         return Err("state entry must be owned by this account and have the expected type; file hard links are refused".into());
     }
-    if directory {
-        if metadata.mode() & 0o777 != 0o700 {
-            return Err("state directory must have mode 0700".into());
-        }
-    } else if metadata.mode() & 0o777 != 0o600 {
-        // Legacy SQLite bootstrap used the user's umask. These are known files
-        // inside an already-private directory, owned by us and not hard-linked.
-        file.set_permissions(fs::Permissions::from_mode(0o600))?;
+    if directory && metadata.mode() & 0o777 != 0o700 {
+        return Err("state directory must have mode 0700".into());
     }
+    Ok(())
+}
+
+pub(super) fn restrict_file(file: &File) -> Result<()> {
+    // Legacy bootstrap files used the user's umask. The private directory
+    // protects them while SQLite verifies application ownership. Never change
+    // an unrelated database's permissions merely because its filename matches.
+    file.set_permissions(fs::Permissions::from_mode(0o600))?;
     Ok(())
 }
 

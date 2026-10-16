@@ -242,10 +242,17 @@ Target-workstation reboot/sign-in, full sign-out policy and SSH authentication
 acceptance remain pending. P4b1 is implemented on `cache-directory-ownership`.
 Local tests cover single-process and cross-process contention, killing the
 owner and reopening committed SQLite state, permission/link refusal and
-unmanaged-file preservation. Windows tests cover broad ACLs and junctions;
+unmanaged-file preservation. Legacy Linux file permissions are tightened only
+after application/schema validation; a foreign database keeps its bytes and
+permissions. Windows tests cover broad ACLs and junctions;
 the native session fixture initializes/reopens state as an ordinary account
 and checks another account cannot read the database. Publication requires a
 successful final-tip CI run on this branch; use `gh run list` to locate it.
+Candidate `fa2c030` passed unit tests and native mount/logon assertions, but
+failed disposable-directory cleanup in run 38953271290. The fixture now removes
+its protected database as the owning ordinary account before deleting that
+account; application uninstall still preserves data. Cleanup failures remain
+fatal and native command exit codes are checked. This is pending exact-tip CI.
 Local logs: `/tmp/s3drive-directory-tests.log`, `/tmp/s3drive-directory-gate.log`.
 The full local gate and Linux mount/session checks passed; their native logs are
 `/tmp/s3drive-directory-linux.log` and `/tmp/s3drive-directory-session.log`.

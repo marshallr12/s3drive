@@ -32,6 +32,8 @@ impl State {
     pub fn open_managed(directory: &Path) -> Result<Self> {
         let owner = directory::OwnedDirectory::acquire(directory)?;
         let mut state = Self::open(&owner.database_path())?;
+        // Only tighten legacy file modes after confirming this is our DB.
+        owner.finish_initialization()?;
         state._directory = Some(owner);
         Ok(state)
     }
