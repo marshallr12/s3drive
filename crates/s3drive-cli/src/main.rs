@@ -6,7 +6,7 @@ use std::{error::Error, fs, io::Write, path::PathBuf};
 #[derive(Parser)]
 #[command(
     version,
-    about = "S3Drive read-only S3 tools (filesystem mounts are not implemented yet)"
+    about = "S3Drive read-only S3 tools and Linux filesystem mounts"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -48,8 +48,11 @@ enum Command {
         #[arg(long, default_value_t = 65536)]
         length: usize,
     },
-    /// Reserved for future adapters; currently fails without mounting anything.
-    Mount,
+    /// Mount a read-only drive in the foreground (Linux; Windows is pending).
+    Mount {
+        config: PathBuf,
+        mountpoint: PathBuf,
+    },
 }
 
 #[tokio::main]
@@ -88,7 +91,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         }
         Command::Status => {
             println!(
-                "Phase P1 read-only transport; host={}",
+                "Read-only transport and Linux FUSE adapter; host={}",
                 std::env::consts::OS
             );
             println!("Implemented: config validation, namespace planning, local SQLite bootstrap.");
@@ -143,13 +146,23 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
             let bytes = handle.read_range(offset, length).await?;
             std::io::stdout().lock().write_all(&bytes)?;
         }
-        Command::Mount => {
+        Command::Mount { config, mountpoint } => {
             #[cfg(target_os = "linux")]
-            s3drive_fuse::mount()?;
+            {
+                let config = Config::parse(&fs::read_to_string(config)?)?;
+                let filesystem = s3drive_fs::ReadOnlyFs::new(&config).await?;
+                s3drive_fuse::run(filesystem, &mountpoint).await?;
+            }
             #[cfg(target_os = "windows")]
-            s3drive_winfsp::mount()?;
+            {
+                let _ = (config, mountpoint);
+                s3drive_winfsp::mount()?;
+            }
             #[cfg(not(any(target_os = "linux", target_os = "windows")))]
-            return Err("only Linux and Windows adapters are planned".into());
+            {
+                let _ = (config, mountpoint);
+                return Err("only Linux and Windows adapters are planned".into());
+            }
         }
     }
     Ok(())

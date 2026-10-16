@@ -1,0 +1,13 @@
+# Template only: replace bucket, region and endpoint with your bucket's location.
+# Configure the named profile outside this repository; never add access keys here.
+version = 1
+mode = "read-only"
+
+[[sources]]
+alias = "wasabi"
+bucket = "replace-me-wasabi-bucket"
+region = "us-east-1"
+endpoint = "https://s3.us-east-1.wasabisys.com"
+prefix = ""
+profile = "wasabi-s3drive"
+path_style = true

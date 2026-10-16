@@ -1,6 +1,6 @@
 # Implemented read-only provider contract
 
-P1 adds a real AWS SDK transport, not a mounted filesystem. Its exposed storage
+P1 adds the AWS SDK transport now used by the P2 Linux mount. Its exposed storage
 operations are LIST, HEAD and ranged GET only. It does not write objects, create
 buckets, probe mutations or alter policies. Provider capabilities remain unknown
 until separately tested.

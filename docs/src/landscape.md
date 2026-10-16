@@ -66,7 +66,8 @@ recovery design before selecting it.
 [ObjectStore conditional writes](https://docs.rs/object_store/0.14.2/object_store/),
 [S3 builder](https://docs.rs/object_store/0.14.2/object_store/aws/struct.AmazonS3Builder.html)
 
-P0 linked no network or filesystem bindings. P1 now links `aws-sdk-s3`,
+P0 linked no network or filesystem bindings. P2 links Linux-only `fuser` 0.18
+(MIT); the Windows binding remains undecided. P1 links `aws-sdk-s3`,
 `aws-config` and Tokio for the read-only adapter, plus SHA-256 configuration
 fingerprints and percent decoding for list responses. Native filesystem
 bindings remain deferred. All dependencies are locked in `Cargo.lock`.

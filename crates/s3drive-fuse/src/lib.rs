@@ -1,8 +1,8 @@
-//! Linux adapter boundary. The fuser dependency and callbacks arrive in P2.
+//! Linux FUSE adapter for the shared read-only filesystem.
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "linux")]
+pub use linux::run;
 
-pub const IMPLEMENTATION_STATUS: &str = "planned: Linux FUSE adapter; no mount implementation";
-
-/// Fail explicitly until real callbacks and unmount handling are verified.
-pub fn mount() -> Result<(), &'static str> {
-    Err(IMPLEMENTATION_STATUS)
-}
+pub const IMPLEMENTATION_STATUS: &str =
+    "read-only Linux FUSE adapter; no writable mount or disk cache";

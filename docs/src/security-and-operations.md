@@ -1,7 +1,8 @@
 # Security and operations
 
 The [provider contract](provider-contract.md) records the security boundaries
-already implemented in P1. The mount/cache/service requirements below remain
+already implemented in P1. P2 adds an owner-only read-only Linux mount with
+non-executable files and signal cancellation. The cache/service requirements remain
 future work.
 
 ## Credentials and endpoints

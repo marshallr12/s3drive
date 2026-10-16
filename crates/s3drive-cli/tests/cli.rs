@@ -5,11 +5,11 @@ fn cli() -> Command {
 }
 
 #[test]
-fn unfinished_mount_never_reports_success() {
+fn mount_requires_explicit_config_and_mountpoint() {
     let result = cli().arg("mount").output().unwrap();
     assert!(!result.status.success());
     let error = String::from_utf8_lossy(&result.stderr);
-    assert!(error.contains("planned"), "{error}");
+    assert!(error.contains("<CONFIG> <MOUNTPOINT>"), "{error}");
 }
 
 #[test]

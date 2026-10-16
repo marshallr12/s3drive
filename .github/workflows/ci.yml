@@ -22,6 +22,17 @@ jobs:
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked
       - run: cargo build --workspace --locked
+      - name: Prepare Linux FUSE acceptance
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fuse3
+          sudo modprobe fuse
+          test -c /dev/fuse
+      - name: Verify real Linux mount and teardown
+        if: runner.os == 'Linux'
+        timeout-minutes: 10
+        run: cargo test -p s3drive-cli --test linux_mount --locked -- --ignored --nocapture
   book:
     runs-on: ubuntu-latest
     steps:

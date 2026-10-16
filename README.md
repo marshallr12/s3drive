@@ -3,11 +3,13 @@
 Research and Rust workspace for making one or more S3-compatible buckets appear
 as a local filesystem on Linux and Windows.
 
-**Status: read-only S3 transport (P1), not a working drive.** Configuration checking,
-bucket/key resolution, SQLite initialization, S3 listing, metadata lookup and
-revision-pinned range reads work. There is no file cache, synchronization engine,
-or working filesystem mount yet. `mount`
-deliberately returns an error. See the [implementation plan](docs/src/implementation-plan.md).
+**Status: read-only S3 transport and Linux FUSE implementation.** Configuration
+checking, bucket/key resolution, SQLite initialization, S3 listing, metadata
+lookup and revision-pinned reads work. Linux `mount` exposes source aliases
+through FUSE; see the [mount contract](docs/src/linux-mount.md) and handoff for
+native verification. Windows mounts, file caching and writes remain planned.
+[Wasabi](docs/src/wasabi.md) is the selected first hosted provider; live Wasabi
+conformance has not yet been tested.
 
 The proposed architecture uses **FUSE on Linux**, **WinFsp on Windows**, a shared
 Rust engine, and **SQLite on local disk** for metadata and eventual recovery state.
@@ -57,7 +59,9 @@ cargo run --locked -- read s3drive.local.toml documents/report.pdf --offset 0 --
 
 `read` writes raw bytes to stdout. These commands perform real S3 requests;
 see the [provider contract](docs/src/provider-contract.md) for credentials,
-limits, pagination and current verification scope. No write/delete APIs exist.
+limits, pagination and current verification scope. No write/delete APIs exist. For a drive, use
+`cargo run --locked -- mount s3drive.local.toml /path/to/empty-owned-directory`
+on Linux with `/dev/fuse` and `fusermount3`.
 
 ## Workspace
 
@@ -66,9 +70,10 @@ limits, pagination and current verification scope. No write/delete APIs exist.
 | `s3drive-core` | Validate TOML and resolve virtual paths to bucket/key pairs |
 | `s3drive-s3` | Read-only AWS SDK adapter, revision-bound handles and sanitized errors |
 | `s3drive-state` | Versioned local SQLite initialization and ownership checks |
-| `s3drive-fuse` | Explicitly unimplemented Linux adapter boundary |
+| `s3drive-fs` | Shared bounded namespace, inode identities and revision-bound handles |
+| `s3drive-fuse` | Linux read-only FUSE callbacks and signal-driven unmount |
 | `s3drive-winfsp` | Explicitly unimplemented Windows adapter boundary |
-| `s3drive-cli` | Local developer commands plus read-only S3 inspection/read commands |
+| `s3drive-cli` | Local commands, read-only S3 tools and foreground Linux mounting |
 
 See [development](docs/src/development.md) for verification scope and
 [HANDOFF.md](HANDOFF.md) for the next phase. All crates have `publish = false`.

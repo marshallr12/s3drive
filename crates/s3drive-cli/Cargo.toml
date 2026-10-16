@@ -12,14 +12,17 @@ path = "src/main.rs"
 [dependencies]
 clap.workspace = true
 s3drive-core.workspace = true
+s3drive-fs.workspace = true
 s3drive-s3.workspace = true
 s3drive-state.workspace = true
 s3drive-fuse.workspace = true
 s3drive-winfsp.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["signal"] }
 
 [dev-dependencies]
 tempfile.workspace = true
+url.workspace = true
+percent-encoding.workspace = true
 tokio = { workspace = true, features = ["process"] }
 
 [lints]

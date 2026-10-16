@@ -1,17 +1,18 @@
 # Linux and Windows integration
 
-These adapters are planned. The scaffold compiles their dependency-free
-boundaries on both platforms; it does not yet compile or test actual FUSE or
-WinFsp bindings.
+Linux now has a read-only FUSE implementation; the Windows adapter remains a
+stub. See [the Linux contract](linux-mount.md) for commands, limits and the
+explicit native acceptance gate.
 
 ## Linux: FUSE with fuser
 
-Implement `fuser::Filesystem` callbacks in a Linux-only dependency section.
-First support lookup, getattr, readdir, open, read, release and a deliberate
-statfs policy. Implement correct lookup/forget accounting, stable inode IDs,
-directory offsets and reply ownership. Use a managed background session with
-explicit unmount and shutdown. Review the pinned release's exact signatures
-locally; old examples may not match 0.18's typed IDs/configuration.
+The Linux-only `fuser` 0.18 dependency supplies lookup, getattr, directory,
+open/read/release and read-only flush callbacks. Inodes are retained under a
+mount-wide cap instead of recycled on `forget`; directory handles keep stable
+snapshots and offsets. Four FUSE threads run network futures on a shared Tokio
+runtime. Signals cancel outstanding futures and request unmount. The exact
+resolved source was inspected before implementing typed callback IDs and
+session lifecycle APIs.
 [fuser API](https://docs.rs/fuser/0.18.0/fuser/)
 
 Use per-user mounts initially, with conservative `nodev`, `nosuid` and read-only
@@ -82,7 +83,8 @@ distribution model; do not assume the runtime exception applies to the wrapper.
 [WinFsp license](https://github.com/winfsp/winfsp/blob/master/License.txt),
 [winfsp-rs license](https://github.com/SnowflakePowered/winfsp-rs/blob/master/LICENSE.md)
 
-P0 links neither dependency and selects no project distribution license. This
+The current Linux adapter links fuser (MIT). No Windows binding is linked and
+no project distribution license has been selected. This
 does not block private research. Before distributing a working Windows build,
 resolve whether to use this wrapper under compatible terms, another reviewed
 binding arrangement, or an alternative adapter. Also account for installer

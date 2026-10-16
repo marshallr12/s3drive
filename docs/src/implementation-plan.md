@@ -2,8 +2,9 @@
 
 Each phase must leave a buildable tree, explicit behavior contract and durable
 verification evidence. P0 is complete; P1 has a read-only transport and local
-wire tests. Live-provider conformance, persistent cache identity/migration and
-native mounted filesystems remain unverified or unimplemented.
+wire tests. P2 adds a shared read-only engine and Linux FUSE adapter with a separate native
+acceptance gate. Live Wasabi conformance, persistent cache identity/migration
+and Windows mounts remain unverified or unimplemented.
 
 | Phase | Deliverable | Completion evidence |
 | --- | --- | --- |
@@ -19,7 +20,7 @@ native mounted filesystems remain unverified or unimplemented.
 
 ## P1 concrete tasks
 
-1. Select the first provider and dedicated test bucket/prefix. Add AWS SDK client
+1. Wasabi is the selected first provider; identify a dedicated test bucket/prefix. Add AWS SDK client
    setup with explicit per-source endpoint/region/addressing/profile precedence.
    Pin and inspect resolved APIs. Keep credentials out of fixtures.
 2. Establish a storage error taxonomy and streaming/cancellation contract.
@@ -51,6 +52,16 @@ selected live provider/test prefix, support evidence tied to that provider,
 and broader malformed-response/real-service coverage. The configuration hash
 is not an authenticated account identity; persistent cache adoption must add
 that identity and migrate the reserved P0 table before storing live cache data.
+
+### P2 progress
+
+Implemented and locally verified on 2026-10-16: shared bounded namespace,
+Linux FUSE callbacks, real kernel reads from two fixture buckets, pagination,
+Unicode/literal names, open-revision conflicts, rejected mutations, external
+unmount and SIGTERM cancellation during a stalled GET. The native gate remounts
+and verifies cleanup. See [Linux contract](linux-mount.md) for the exact scope.
+Large-scale performance, desktop applications, cache and real Wasabi behavior
+are not covered by this isolated gate. Windows is the next independent phase.
 
 ## Test matrix
 

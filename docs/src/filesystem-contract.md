@@ -1,6 +1,7 @@
 # Filesystem behavior contract
 
-This is a **proposed acceptance contract**, not P0 functionality. The first
+This is the broader **proposed acceptance contract**. See the narrower
+[implemented Linux contract](linux-mount.md) for current behavior. The first
 working release should expose a conservative read-only filesystem. Writable
 operation support must be advertised individually, with unsupported operations
 returning the appropriate OS error rather than succeeding silently.

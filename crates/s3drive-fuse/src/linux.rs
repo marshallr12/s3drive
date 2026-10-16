@@ -1,0 +1,434 @@
+use fuser::{
+    Errno, FileAttr, FileHandle, FileType, Filesystem, FopenFlags, Generation, INodeNo, LockOwner,
+    MountOption, OpenAccMode, OpenFlags, ReplyAttr, ReplyData, ReplyDirectory, ReplyEmpty,
+    ReplyEntry, ReplyOpen, Request,
+};
+use s3drive_fs::{Error, Kind, Node, OpenFile, ReadOnlyFs};
+use s3drive_s3::{ErrorKind, ObjectMetadata};
+use std::{
+    collections::HashMap,
+    ffi::OsStr,
+    io,
+    os::unix::fs::MetadataExt,
+    path::Path,
+    sync::{Arc, Mutex},
+    time::{Duration, SystemTime},
+};
+use tokio::runtime::Handle;
+
+const TTL: Duration = Duration::ZERO;
+const MAX_HANDLES: usize = 256;
+const MAX_DIRECTORY_REFERENCES: usize = 100_000;
+
+enum OpenHandle {
+    File(Box<OpenFile>),
+    Directory { ino: u64, entries: Vec<Arc<Node>> },
+}
+struct Handles {
+    next: u64,
+    entries: HashMap<u64, Arc<OpenHandle>>,
+    directory_references: usize,
+}
+impl Handles {
+    fn insert(&mut self, handle: OpenHandle) -> Result<u64, Errno> {
+        let count = match &handle {
+            OpenHandle::Directory { entries, .. } => entries.len(),
+            _ => 0,
+        };
+        if self.entries.len() >= MAX_HANDLES
+            || self.directory_references + count > MAX_DIRECTORY_REFERENCES
+        {
+            return Err(Errno::EMFILE);
+        }
+        let id = self.next;
+        self.next = id.checked_add(1).ok_or(Errno::EMFILE)?;
+        self.directory_references += count;
+        self.entries.insert(id, Arc::new(handle));
+        Ok(id)
+    }
+    fn remove(&mut self, id: u64) {
+        if let Some(handle) = self.entries.remove(&id)
+            && let OpenHandle::Directory { entries, .. } = &*handle
+        {
+            self.directory_references -= entries.len();
+        }
+    }
+}
+struct Adapter {
+    fs: ReadOnlyFs,
+    runtime: Handle,
+    cancelled: tokio::sync::watch::Receiver<bool>,
+    handles: Mutex<Handles>,
+    uid: u32,
+    gid: u32,
+}
+impl Adapter {
+    fn wait<T>(
+        &self,
+        future: impl std::future::Future<Output = s3drive_fs::Result<T>>,
+    ) -> Result<T, Errno> {
+        let mut cancelled = self.cancelled.clone();
+        self.runtime.block_on(async {
+            if *cancelled.borrow() {
+                return Err(Errno::ECANCELED);
+            }
+            tokio::select! {
+                _ = cancelled.changed() => Err(Errno::ECANCELED),
+                result = future => result.map_err(errno),
+            }
+        })
+    }
+    fn handle(&self, id: FileHandle) -> Result<Arc<OpenHandle>, Errno> {
+        self.handles
+            .lock()
+            .map_err(|_| Errno::EIO)?
+            .entries
+            .get(&id.0)
+            .cloned()
+            .ok_or(Errno::EBADF)
+    }
+    fn add_handle(&self, handle: OpenHandle) -> Result<u64, Errno> {
+        self.handles.lock().map_err(|_| Errno::EIO)?.insert(handle)
+    }
+    fn attr(&self, node: &Node, metadata: Option<&ObjectMetadata>) -> FileAttr {
+        let size = metadata.map_or(0, |m| m.size);
+        let time = metadata
+            .and_then(|m| m.modified_unix_seconds)
+            .and_then(|s| {
+                if s >= 0 {
+                    SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(s as u64))
+                } else {
+                    SystemTime::UNIX_EPOCH.checked_sub(Duration::from_secs(s.unsigned_abs()))
+                }
+            })
+            .unwrap_or(SystemTime::UNIX_EPOCH);
+        FileAttr {
+            ino: INodeNo(node.id),
+            size,
+            blocks: size.div_ceil(512),
+            atime: time,
+            mtime: time,
+            ctime: time,
+            crtime: time,
+            kind: file_type(node.kind),
+            perm: if node.kind == Kind::Directory {
+                0o500
+            } else {
+                0o400
+            },
+            nlink: if node.kind == Kind::Directory { 2 } else { 1 },
+            uid: self.uid,
+            gid: self.gid,
+            rdev: 0,
+            blksize: 4096,
+            flags: 0,
+        }
+    }
+    fn attributes(&self, ino: INodeNo, fh: Option<FileHandle>) -> Result<FileAttr, Errno> {
+        if let Some(fh) = fh {
+            let handle = self.handle(fh)?;
+            if let OpenHandle::File(file) = &*handle {
+                if file.node.id != ino.0 {
+                    return Err(Errno::EBADF);
+                }
+                return Ok(self.attr(&file.node, Some(file.metadata())));
+            }
+        }
+        let node = self.fs.node(ino.0).map_err(errno)?;
+        let metadata = self.wait(self.fs.metadata(ino.0))?;
+        Ok(self.attr(&node, metadata.as_ref()))
+    }
+}
+impl Filesystem for Adapter {
+    fn lookup(&self, _req: &Request, parent: INodeNo, name: &OsStr, reply: ReplyEntry) {
+        let result = name
+            .to_str()
+            .ok_or(Errno::EINVAL)
+            .and_then(|name| self.wait(self.fs.lookup(parent.0, name)))
+            .and_then(|node| self.attributes(INodeNo(node.id), None));
+        match result {
+            Ok(attr) => reply.entry(&TTL, &attr, Generation(0)),
+            Err(e) => reply.error(e),
+        }
+    }
+    fn getattr(&self, _req: &Request, ino: INodeNo, fh: Option<FileHandle>, reply: ReplyAttr) {
+        match self.attributes(ino, fh) {
+            Ok(attr) => reply.attr(&TTL, &attr),
+            Err(e) => reply.error(e),
+        }
+    }
+    fn open(&self, _req: &Request, ino: INodeNo, flags: OpenFlags, reply: ReplyOpen) {
+        if flags.acc_mode() != OpenAccMode::O_RDONLY {
+            reply.error(Errno::EROFS);
+            return;
+        }
+        let result = self
+            .wait(self.fs.open(ino.0))
+            .and_then(|file| self.add_handle(OpenHandle::File(Box::new(file))));
+        match result {
+            Ok(fh) => reply.opened(FileHandle(fh), FopenFlags::FOPEN_DIRECT_IO),
+            Err(e) => reply.error(e),
+        }
+    }
+    fn read(
+        &self,
+        _req: &Request,
+        ino: INodeNo,
+        fh: FileHandle,
+        offset: u64,
+        size: u32,
+        _flags: OpenFlags,
+        _lock_owner: Option<LockOwner>,
+        reply: ReplyData,
+    ) {
+        let result = self.handle(fh).and_then(|handle| match &*handle {
+            OpenHandle::File(file) if file.node.id == ino.0 => {
+                self.wait(file.read(offset, size as usize))
+            }
+            _ => Err(Errno::EBADF),
+        });
+        match result {
+            Ok(bytes) => reply.data(&bytes),
+            Err(e) => reply.error(e),
+        }
+    }
+    fn flush(
+        &self,
+        _req: &Request,
+        ino: INodeNo,
+        fh: FileHandle,
+        _lock_owner: LockOwner,
+        reply: ReplyEmpty,
+    ) {
+        self.check_file_handle(ino, fh, reply);
+    }
+    fn fsync(
+        &self,
+        _req: &Request,
+        ino: INodeNo,
+        fh: FileHandle,
+        _datasync: bool,
+        reply: ReplyEmpty,
+    ) {
+        self.check_file_handle(ino, fh, reply);
+    }
+    fn release(
+        &self,
+        _req: &Request,
+        _ino: INodeNo,
+        fh: FileHandle,
+        _flags: OpenFlags,
+        _owner: Option<LockOwner>,
+        _flush: bool,
+        reply: ReplyEmpty,
+    ) {
+        self.release_handle(fh, reply);
+    }
+    fn opendir(&self, _req: &Request, ino: INodeNo, flags: OpenFlags, reply: ReplyOpen) {
+        if flags.acc_mode() != OpenAccMode::O_RDONLY {
+            reply.error(Errno::EROFS);
+            return;
+        }
+        let result = self.wait(self.fs.list(ino.0)).and_then(|children| {
+            let node = self.fs.node(ino.0).map_err(errno)?;
+            let parent = self.fs.node(node.parent).map_err(errno)?;
+            let mut entries = Vec::with_capacity(children.len() + 2);
+            entries.push(node);
+            entries.push(parent);
+            entries.extend(children);
+            self.add_handle(OpenHandle::Directory {
+                ino: ino.0,
+                entries,
+            })
+        });
+        match result {
+            Ok(fh) => reply.opened(FileHandle(fh), FopenFlags::empty()),
+            Err(e) => reply.error(e),
+        }
+    }
+    fn readdir(
+        &self,
+        _req: &Request,
+        ino: INodeNo,
+        fh: FileHandle,
+        offset: u64,
+        mut reply: ReplyDirectory,
+    ) {
+        let handle = match self.handle(fh) {
+            Ok(handle) => handle,
+            Err(e) => {
+                reply.error(e);
+                return;
+            }
+        };
+        let OpenHandle::Directory {
+            ino: directory_ino,
+            entries,
+        } = &*handle
+        else {
+            reply.error(Errno::EBADF);
+            return;
+        };
+        if *directory_ino != ino.0 {
+            reply.error(Errno::EBADF);
+            return;
+        }
+        let Ok(offset) = usize::try_from(offset) else {
+            reply.error(Errno::EINVAL);
+            return;
+        };
+        if offset > entries.len() {
+            reply.error(Errno::EINVAL);
+            return;
+        }
+        for (index, entry) in entries.iter().enumerate().skip(offset) {
+            let name = match index {
+                0 => ".",
+                1 => "..",
+                _ => &entry.name,
+            };
+            if reply.add(
+                INodeNo(entry.id),
+                (index + 1) as u64,
+                file_type(entry.kind),
+                name,
+            ) {
+                break;
+            }
+        }
+        reply.ok();
+    }
+    fn releasedir(
+        &self,
+        _req: &Request,
+        _ino: INodeNo,
+        fh: FileHandle,
+        _flags: OpenFlags,
+        reply: ReplyEmpty,
+    ) {
+        self.release_handle(fh, reply);
+    }
+}
+impl Adapter {
+    fn release_handle(&self, fh: FileHandle, reply: ReplyEmpty) {
+        match self.handles.lock() {
+            Ok(mut handles) => {
+                handles.remove(fh.0);
+                reply.ok();
+            }
+            Err(_) => reply.error(Errno::EIO),
+        }
+    }
+    fn check_file_handle(&self, ino: INodeNo, fh: FileHandle, reply: ReplyEmpty) {
+        match self.handle(fh) {
+            Ok(handle) if matches!(&*handle, OpenHandle::File(file) if file.node.id == ino.0) => {
+                reply.ok()
+            }
+            _ => reply.error(Errno::EBADF),
+        }
+    }
+}
+fn file_type(kind: Kind) -> FileType {
+    match kind {
+        Kind::Directory => FileType::Directory,
+        Kind::File => FileType::RegularFile,
+    }
+}
+fn errno(error: Error) -> Errno {
+    match error {
+        Error::NotFound => Errno::ENOENT,
+        Error::NotDirectory => Errno::ENOTDIR,
+        Error::IsDirectory => Errno::EISDIR,
+        Error::InvalidName => Errno::EILSEQ,
+        Error::AmbiguousName => Errno::EIO,
+        Error::ResourceLimit => Errno::ENOSPC,
+        Error::Timeout => Errno::ETIMEDOUT,
+        Error::Storage(error) => match error.kind {
+            ErrorKind::PermissionDenied => Errno::EACCES,
+            ErrorKind::NotFound => Errno::ENOENT,
+            ErrorKind::RevisionChanged => Errno::ESTALE,
+            ErrorKind::Timeout => Errno::ETIMEDOUT,
+            ErrorKind::InvalidInput | ErrorKind::InvalidRange => Errno::EINVAL,
+            ErrorKind::Unsupported => Errno::EOPNOTSUPP,
+            _ => Errno::EIO,
+        },
+        _ => Errno::EIO,
+    }
+}
+
+struct UnmountGuard {
+    unmounter: fuser::SessionUnmounter,
+    cancel: tokio::sync::watch::Sender<bool>,
+}
+impl UnmountGuard {
+    fn unmount(&mut self) -> io::Result<()> {
+        let _ = self.cancel.send(true);
+        self.unmounter.unmount()
+    }
+}
+impl Drop for UnmountGuard {
+    fn drop(&mut self) {
+        let _ = self.unmount();
+    }
+}
+
+/// Serve until normal external unmount, Ctrl-C or SIGTERM. All callbacks run on
+/// four FUSE threads; network futures use the caller's long-lived Tokio runtime.
+pub async fn run(fs: ReadOnlyFs, mountpoint: &Path) -> io::Result<()> {
+    // Install signals before mounting so termination cannot leave a live mount.
+    let mut interrupt = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
+    let mut terminate = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
+    let mountpoint = mountpoint.to_path_buf();
+    let runtime = Handle::current();
+    let (cancel, cancelled) = tokio::sync::watch::channel(false);
+    let (session, unmounter) = tokio::task::spawn_blocking(move || {
+        let meta = std::fs::symlink_metadata(&mountpoint)?;
+        if !meta.is_dir()
+            || meta.uid() != nix::unistd::geteuid().as_raw()
+            || std::fs::read_dir(&mountpoint)?.next().is_some()
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "mountpoint must be an existing empty directory owned by this user, not a symlink",
+            ));
+        }
+        let adapter = Adapter {
+            fs,
+            runtime,
+            cancelled,
+            handles: Mutex::new(Handles {
+                next: 1,
+                entries: HashMap::new(),
+                directory_references: 0,
+            }),
+            uid: meta.uid(),
+            gid: meta.gid(),
+        };
+        // No allow_other, executable bits, device nodes, suid, or writeback cache.
+        let mut options = fuser::Config::default();
+        options.mount_options = vec![
+            MountOption::RO,
+            MountOption::NoDev,
+            MountOption::NoSuid,
+            MountOption::NoExec,
+            MountOption::DefaultPermissions,
+            MountOption::NoAtime,
+            MountOption::FSName("s3drive".into()),
+        ];
+        options.n_threads = Some(4);
+        let mut session = fuser::Session::new(adapter, mountpoint, &options)?;
+        let unmounter = session.unmount_callable();
+        Ok::<_, io::Error>((session, unmounter))
+    })
+    .await
+    .map_err(io::Error::other)??;
+    let mut guard = UnmountGuard { unmounter, cancel };
+    let mut running = tokio::task::spawn_blocking(move || session.run());
+    eprintln!("Mounted read-only S3Drive. Use Ctrl-C or fusermount3 -u to unmount.");
+    tokio::select! {
+        result = &mut running => { result.map_err(io::Error::other)??; }
+        _ = interrupt.recv() => { guard.unmount()?; running.await.map_err(io::Error::other)??; }
+        _ = terminate.recv() => { guard.unmount()?; running.await.map_err(io::Error::other)??; }
+    }
+    Ok(())
+}

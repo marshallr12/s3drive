@@ -8,10 +8,10 @@ to the user.
 | --- | --- | --- |
 | D001 | Adopted for scaffold | Rust Cargo workspace with shared core and separate OS adapters; mdBook holds research and plans |
 | D002 | Adopted for scaffold | Local SQLite via rusqlite; bundled SQLite avoids relying on a host-installed library |
-| D003 | Proposed | FUSE/fuser on Linux and WinFsp on Windows for genuine filesystem mounts and drive letters |
+| D003 | Linux implemented; Windows proposed | FUSE/fuser on Linux and WinFsp on Windows for genuine filesystem mounts and drive letters |
 | D004 | Proposed | Direct object layout first, preserving existing S3 interoperability |
 | D005 | Adopted for scaffold/first milestone | Read-only mode; no implicit write or deletion support |
-| D006 | Proposed | One alias per bucket/prefix under a virtual root; no union, sharding or replication |
+| D006 | Adopted for P2 | One alias per bucket/prefix under a virtual root; no union, sharding or replication |
 | D007 | Adopted for P1 reads | AWS SDK implements list/head/range reads; mutation/recovery requirements still need evaluation |
 | D008 | Proposed | Explicit flush means remote durability by default; offline local durability must be a separate mode |
 | D009 | Adopted | Unknown capabilities remain unknown; no fallback from failed conditional writes to unconditional overwrite |
@@ -20,11 +20,14 @@ to the user.
 | D012 | Deferred | Tray UI and optional Cloud Files surface until the shared engine is reliable |
 | D013 | Adopted for P1 | Source configuration controls S3 endpoint/region; explicit profiles do not fall back to ambient keys; numeric-loopback HTTP is test-only opt-in |
 
+| D014 | User selected | Wasabi is the first hosted integration target; region and isolated test prefix remain unspecified |
+| D015 | Adopted for P2 | Bounded, uncached read-only namespace; collisions fail the directory, handles pin revisions, Linux direct I/O avoids mixed kernel cache revisions |
+
 ## Questions to resolve at the relevant phase
 
-- **Before provider integration:** Which providers and regions are first (AWS,
-  self-hosted or another S3 service)? What authentication and private CA setup
-  must work? Which disposable bucket/prefix is available for conformance tests?
+- **Before live Wasabi integration:** Which region, local credential profile and
+  disposable test bucket/prefix should be used? What authentication setup must
+  work? Wasabi is selected; this remaining information is not yet available.
 - **Before the first mount:** Typical file sizes, directory sizes and working
   set? How much local disk may the cache consume? Which Windows/Linux versions
   and CPU architectures need support?

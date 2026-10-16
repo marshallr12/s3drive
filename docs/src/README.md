@@ -25,7 +25,7 @@ documents -> configured endpoint / bucket / desktop/report.pdf
 photos    -> another endpoint / another bucket / image.jpg
 ```
 
-These are intended mount paths, not commands or features implemented today.
+Linux now implements this namespace; the Windows path remains a planned surface.
 Preserve native object names and content in the initial design, accepting a
 documented subset of filesystem semantics. Random writes, durable upload,
 conflict handling and rename are separate milestones. If atomic shared
@@ -42,7 +42,7 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Local SQLite schema bootstrap and version/ownership checks | Implemented |
 | mdBook research, design and acceptance plan | Implemented |
 | S3 transport and credentials | Implemented read-only adapter; live-provider conformance pending |
-| Linux filesystem mount | Planned; stub returns error |
+| Linux filesystem mount | Implemented read-only FUSE; see [mount contract](linux-mount.md) and native evidence in handoff |
 | Windows drive mount | Planned; stub returns error |
 | Read cache, upload journal, offline use, tray UI | Planned |
 
@@ -57,6 +57,6 @@ An individual user runs one process per volume with local SSD space available.
 The first namespace is one folder per configured source, not a merged union,
 RAID array, automatic sharding, or replication scheme. Existing objects should
 remain useful through independent S3 tools. Read-only access is the first usable
-milestone. Providers, workload sizes and packaging requirements are not yet
-specified; [open questions](decisions.md) record those choices without blocking
+milestone. Wasabi is the selected first hosted provider; region, test prefix, workload
+sizes and packaging requirements remain open; [open questions](decisions.md) record those choices without blocking
 the scaffold.

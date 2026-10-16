@@ -2,7 +2,8 @@
 
 The diagram describes the target system. P0 added configuration, evidence
 types, SQLite initialization and explicit adapter stubs. P1 adds the read-only
-S3 transport; the shared filesystem engine, cache and adapters remain planned.
+S3 transport. P2 adds the shared read-only namespace/handle engine and Linux
+adapter; cache, writes and Windows mounts remain planned.
 
 ```text
 Local applications
@@ -31,9 +32,10 @@ s3drive-fuse                      s3drive-winfsp
 
 ## Crate ownership and process model
 
-`s3drive-core` owns virtual IDs, path projection, open handles and operation
-semantics. It must not depend on FUSE, Windows types, or S3 HTTP status codes.
-It currently owns only configuration and namespace planning.
+`s3drive-core` owns configuration validation and path resolution.
+`s3drive-fs` owns the shared read-only namespace, inode identities and open
+handles. It depends on the S3 reader but not on FUSE or Windows types. OS
+adapters translate its errors and project metadata into native structures.
 
 `s3drive-s3` translates read operations to the AWS SDK and retains
 ETags/version IDs as opaque validators. Its current implementation exposes
