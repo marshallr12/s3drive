@@ -54,7 +54,7 @@ jobs:
         timeout-minutes: 5
         run: python3 scripts/test-linux-session.py
       - name: Save Rust build cache
-        if: always()
+        if: success()
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |

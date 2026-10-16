@@ -42,13 +42,9 @@ function User-Action([string]$Operation) {
         $output = $process.StandardOutput.ReadToEndAsync()
         $errors = $process.StandardError.ReadToEndAsync()
         if ($Operation -eq 'Install') {
-            # Windows PowerShell can give Process.StandardInput a BOM-emitting
-            # console encoding. Send ASCII fixture bytes directly so no Unicode
-            # preamble becomes part of the password consumed by ReadLine.
-            $bytes=[Text.Encoding]::ASCII.GetBytes($plainPassword + "`n")
-            $process.StandardInput.BaseStream.Write($bytes,0,$bytes.Length)
-            $process.StandardInput.BaseStream.Flush()
-            [Array]::Clear($bytes,0,$bytes.Length)
+            # The receiving StreamReader recognizes the encoding preamble from
+            # Windows PowerShell's console-derived StandardInput writer.
+            $process.StandardInput.WriteLine($plainPassword)
         }
         $process.StandardInput.Close()
         if (-not $process.WaitForExit(90000)) { $process.Kill(); throw "Timed out in disposable-user $Operation" }
@@ -93,7 +89,8 @@ function Manage([string]$Action) {
 try {
     switch ($Operation) {
         'Install' {
-            $received=[Console]::In.ReadLine()
+            $reader=[IO.StreamReader]::new([Console]::OpenStandardInput(),[Text.Encoding]::UTF8,$true)
+            try { $received=$reader.ReadLine() } finally { $reader.Dispose() }
             if (-not $received.StartsWith('S3d!aA9-') -or $received.Length -ne 40) { throw 'Disposable credential pipe changed the fixture bytes' }
             $secure=ConvertTo-SecureString $received -AsPlainText -Force
             $received=$null
