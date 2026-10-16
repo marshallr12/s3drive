@@ -1,8 +1,10 @@
 # Local staged generations
 
-**P5a1/P5a2a, implemented 2026-10-16:** `s3drive-state::journal` provides a blocking
+**P5a1/P5a2, implemented 2026-10-16:** `s3drive-state::journal` provides a blocking
 owner-thread library for immutable generations and pending local intent.
 `s3drive-state::worker::Storage` adds a shared bounded async owner for cache and journal.
+`s3drive-fs::edits` plans local patches/truncation, hydrating unchanged ranges
+through the existing pinned S3 reader.
 Filesystem mounts remain read-only. No S3 mutation, upload executor, writable
 callback or staging CLI is enabled by this phase.
 
@@ -10,7 +12,9 @@ callback or staging CLI is enabled by this phase.
 
 ## Storage decision
 
-Schema 4 stores staged payloads as bounded SQLite chunks. A generation can span
+Schema 4 stores staged payloads as bounded SQLite chunks. Schema 5 adds a
+durable operation-key mapping and preserves existing schema-4 data/manifests.
+A generation can span
 many chunks and explicit sparse zero extents; it is not limited to one BLOB.
 This refines the earlier external-generation-file proposal so payload references
 and local publication share the database's transaction boundary. External bulk
@@ -34,7 +38,9 @@ once its create/rename/directory durability protocol is established.
 ## Generations, intent and identity
 
 A target records the opaque source/credential binding, configuration fingerprint
-and exact object key. A base condition is either `Missing` or an existing opaque
+and exact source-relative key. Its configuration fingerprint includes the
+configured prefix, which the S3 adapter adds when addressing the bucket.
+A base condition is either `Missing` or an existing opaque
 ETag/version tuple. Parent generations retain that original remote base;
 changing the base silently is rejected. Raw object keys and revision metadata
 are private local journal data. Credentials are never stored. Target Debug output
@@ -47,6 +53,9 @@ an error; only an explicit zero extent produces zeros. SHA-256 addresses payload
 chunks and detects their corruption. Identical chunks can be shared by several
 generations. A manifest digest covers the target, base, lineage, length, and
 ordered extent offsets/lengths/chunk references.
+Operation-bound generations use manifest domain v2, which also covers the
+intent key; older unmapped generations retain v1. Losing or changing a sealed
+operation mapping invalidates its manifest instead of silently adopting it.
 
 `seal` validates complete coverage, all payload checksums and the expected local
 head. One transaction then retains referenced chunks, seals the immutable
@@ -78,11 +87,12 @@ refused for new staging acknowledgments. Inspection/recovery reads remain
 available there. Windows acquisition already requires fixed NTFS; hardware
 and virtual-disk persistence still depend on the host storage contract. Callers
 must not run these methods on Tokio's executor or hold SQL transactions over
-network I/O. File-edit coordination is P5a2b work.
+network I/O. The file-edit coordinator below uses their async equivalents.
 
 | Method | Result |
 | --- | --- |
 | `begin` | Unpublished generation ID; validates target, base and expected local parent |
+| `begin_operation` | Recover or atomically allocate the generation bound to a complete edit-intent key |
 | `append` / `append_zero` | Durable builder progress; no publication receipt |
 | `append_at` / `append_zero_at` | Cursor-guarded, idempotent retry of an extent |
 | `seal` | Atomic local publication receipt and pending intent |
@@ -91,6 +101,7 @@ network I/O. File-edit coordination is P5a2b work.
 | `read_draft` | Explicit recovery reads clipped to unpublished progress |
 | `pending` / `drafts` | Cursor-based pages of up to 1,000 records |
 | `abort` | Explicit disposal of an unpublished builder only |
+| `copy_next_at` | Copy one verified parent piece, preserving large sparse zero spans without allocating their logical length |
 
 Abort reclaims only that builder's unretained chunks with no references from
 other generations. The chunk foreign key is deferred until that transaction
@@ -121,7 +132,7 @@ Payload bounds are checked before admission: append chunks at most 1 MiB, reads
 at most 8 MiB, and recovery pages at most 1,000 records. Every call has a
 30-second deadline including time in the queue. These bound individual calls
 and queued payloads; they are not throughput or maximum disk-latency guarantees.
-Checksum and SQL work stay off Tokio's executor. A stalled network hydration
+Payload/manifest verification and SQL work stay off Tokio's executor. A stalled network hydration
 must never occupy the owner or an open SQL transaction.
 
 The async `Staging` API exposes begin, guarded append/zero append, seal, abort,
@@ -144,9 +155,11 @@ reports an unknown outcome on timeout even if still waiting for queue capacity.
 The worker skips a queued request if its caller has already gone away. A
 cancellation racing execution cannot roll back a completed commit. Callers
 must inspect `info`/`head`/`drafts`/`pending`, then replay an exact guarded append
-or seal as appropriate. `begin` does not yet take an operation ID: an unknown
-begin result requires draft inspection and must not be retried blindly.
-Application-level edit plans and remote operation IDs remain later work.
+or seal as appropriate. The lower-level `begin` still has no operation ID: an
+unknown begin result requires draft inspection and must not be retried blindly.
+Edit plans use `begin_operation`, whose intent mapping and generation commit
+together. Repeating the same key recovers the same builder or receipt.
+Remote operation IDs remain later work.
 
 `snapshot(id)` validates a sealed manifest and returns a lightweight immutable
 generation handle. It stores metadata, not the whole body; each bounded read
@@ -170,6 +183,66 @@ replies, competing builders, immutable old snapshots, a SQLite writer stall,
 disk-full rollback, worker failure, last-client draining and close/reopen.
 The lost-response cases deliberately hold the owner after commit until the
 caller deadline expires. No test substitutes cancellation for a rollback.
+
+## Editing a file
+
+![A fixed input is combined with a bounded patch or truncation and explicit zeros. Unchanged remote ranges use pinned reads outside SQLite; the complete builder is sealed into a new local snapshot.](images/file-edits.png)
+
+P5a2b adds `s3drive-fs::edits::Coordinator`. Use one coordinator per volume;
+it accepts at most four executing plans. `new_file(target)` starts from empty
+bytes with an original `Missing` condition. This does not authorize a cloud
+create. `from_s3(handle)` derives the target binding, exact key, fingerprint,
+size and original revision from one already-authorized `ReadHandle`.
+`local(generation)` selects an existing sealed local snapshot.
+
+An editor is a fixed input. `write(offset, bytes)` plans a nonempty patch up to
+8 MiB; `truncate(size)` plans shrinkage or growth. Planning changes no database
+or remote object. `execute()` fills an unpublished generation, seals it and
+returns a new immutable snapshot. Read that snapshot for read-your-writes; use
+its generation as the next editor's input. Older snapshots/editors retain their
+input. For example, patching `abcdef` at offset 2 with `XY` produces `abXYef`;
+truncating to 3 produces `abX`; growth appends explicit zeros.
+
+The intent key hashes the source binding/fingerprint, exact key, original base,
+input size, local input manifest where present, requested size and operation
+type/offset/payload digest. Reconstructing the same plan from the same fixed
+input gives the same local operation. It is semantic deduplication, not a
+globally unique remote request ID. Future adapters must advance the input after
+each successful write; a new write must not silently adopt a stale editor.
+The key is not an authorization token or a provider-global principal.
+Planning hashes up to 8 MiB of immutable patch data synchronously on its caller;
+this bounded CPU work has not been benchmarked for native callback latency.
+
+Unchanged local ranges copy verified parent pieces; huge zero extents remain
+huge zero extents. Writes beyond EOF explicitly fill the gap with zeros.
+Remote unchanged ranges are downloaded in at most 1 MiB pieces, outside the
+SQL worker. Each has a 30-second deadline and must have exactly the requested
+length. The SDK pins credentials and enforces its stored revision/response
+validators; a changed or denied base fails instead of filling missing bytes
+with zeros. A full overwrite or truncate-to-zero needs no inherited data GET.
+
+Execution replays guarded pieces on retry. Partially hydrated remote ranges
+may be downloaded again; if that old revision is no longer readable, the
+builder stays recoverable and the plan fails. It never silently switches to a
+new remote revision. Once sealed, retry validates and returns the existing
+snapshot without rehydrating or rewinding a newer head. Identical concurrent
+plans converge on one generation; different plans compare the same local
+parent and report a conflict rather than overwrite one another.
+
+An edit error exposes its known generation ID and underlying typed cause.
+Retain the exact plan until success, or reconstruct it using the same input and
+patch after restart. The operation key and completed chunks are durable; the
+uncommitted remainder of a patch remains caller-owned until publication.
+Dropping a plan/future never aborts its builder. Recovery pages retain failed
+builders, and only explicit abort discards one. A lost begin reply is safely
+recovered by the intent key. There is no total-duration guarantee for a large
+edit and no remote durability receipt in this phase.
+
+The local copy implementation validates the parent's entire manifest metadata
+per copied piece. This favors integrity while performance remains unmeasured;
+many small extents can make repeated edits expensive. Large sparse tests prove
+bounded allocation, not large-workload throughput. A future indexed verification
+scheme must preserve the current corruption checks.
 
 ## Bounds and failure behavior
 
@@ -209,8 +282,11 @@ injected errors test lost append/seal acknowledgments. These are application-
 owned transaction boundaries, not fault injection inside SQLite's `xSync` or a
 physical power-cut test.
 
-An in-memory base test changes its revision during hydration and proves no
-mixed generation is published. A complete write coordinator still needs patch/
-truncate/read-your-writes operations and broader fake-storage failure schedules
-(P5a2b). Conditional remote commit/reconciliation (P5b),
+The edit coordinator has a deterministic 120-step byte-vector model, sparse
+patch/truncate tests, transient/short/stalled/changed-revision memory sources,
+restart replay, concurrent plans, cancellation/deadline and quota tests.
+The SDK integration fixture hydrates an exact Unicode key through real signed
+HEAD/GET calls, and a changed base returns HTTP 412 without local publication.
+Only dummy credentials and isolated local HTTP/state are used.
+Conditional remote commit/reconciliation (P5b),
 writable OS callbacks and desktop save workflows (P5c) remain disabled.

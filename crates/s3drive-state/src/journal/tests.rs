@@ -19,6 +19,180 @@ fn opts(bytes: u64) -> Options {
 }
 
 #[test]
+fn operation_keys_recover_progress_and_receipts_without_rewinding_heads() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("state");
+    let mut state = State::open_managed(&path).unwrap();
+    let mut j = Journal::new(&mut state, opts(100)).unwrap();
+    let key = [9; 32];
+    let id = j
+        .begin_operation(&key, &target(), Base::Missing, None, 3)
+        .unwrap();
+    j.append_at(id, 0, b"abc").unwrap();
+    assert_eq!(
+        j.begin_operation(&key, &target(), Base::Missing, None, 3)
+            .unwrap(),
+        id
+    );
+    assert!(
+        j.begin_operation(&key, &target(), Base::Missing, None, 4)
+            .is_err()
+    );
+    let receipt = j.seal(id).unwrap();
+    let child = j.begin(&target(), Base::Missing, Some(id), 0).unwrap();
+    j.seal(child).unwrap();
+    drop(state);
+    let mut state = State::open_managed(&path).unwrap();
+    let mut j = Journal::new(&mut state, opts(1)).unwrap();
+    assert_eq!(
+        j.begin_operation(&key, &target(), Base::Missing, None, 3)
+            .unwrap(),
+        id
+    );
+    assert_eq!(j.seal(id).unwrap(), receipt);
+    assert_eq!(j.head(&target()).unwrap().unwrap().id, child);
+    assert_eq!(j.read(id, 0, 3).unwrap(), b"abc");
+    // A damaged mapping must invalidate the bound manifest, not associate the
+    // old sealed bytes with a different intent or fall back to an old digest.
+    state
+        .connection
+        .execute(
+            "UPDATE staged_operations SET operation_key=?1",
+            [[8; 32].as_slice()],
+        )
+        .unwrap();
+    assert!(
+        Journal::new(&mut state, opts(100))
+            .unwrap()
+            .read(id, 0, 3)
+            .is_err()
+    );
+}
+
+#[test]
+fn begin_operation_failure_rolls_back_mapping_and_generation_and_abort_removes_only_draft_key() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut state = State::open_managed(&temp.path().join("state")).unwrap();
+    state.connection.execute_batch("CREATE TRIGGER reject_intent BEFORE INSERT ON staged_operations BEGIN SELECT RAISE(ABORT,'injected'); END;").unwrap();
+    assert!(
+        Journal::new(&mut state, opts(100))
+            .unwrap()
+            .begin_operation(&[1; 32], &target(), Base::Missing, None, 0)
+            .is_err()
+    );
+    let count: i64 = state
+        .connection
+        .query_row("SELECT count(*) FROM staged_generations", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(count, 0);
+    state
+        .connection
+        .execute_batch("DROP TRIGGER reject_intent")
+        .unwrap();
+    let mut j = Journal::new(&mut state, opts(100)).unwrap();
+    let id = j
+        .begin_operation(&[1; 32], &target(), Base::Missing, None, 0)
+        .unwrap();
+    j.abort(id).unwrap();
+    let next = j
+        .begin_operation(&[1; 32], &target(), Base::Missing, None, 0)
+        .unwrap();
+    assert!(next > id);
+    j.seal(next).unwrap();
+    assert!(j.abort(next).is_err());
+}
+
+#[test]
+fn copying_parent_pieces_preserves_sparse_holes_and_idempotent_partial_chunks() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut state = State::open_managed(&temp.path().join("state")).unwrap();
+    let mut j = Journal::new(&mut state, opts(100)).unwrap();
+    let hole = 3 * 1024_u64.pow(4);
+    let parent = j
+        .begin_operation(&[1; 32], &target(), Base::Missing, None, hole + 6)
+        .unwrap();
+    j.append(parent, b"abc").unwrap();
+    j.append_zero(parent, hole).unwrap();
+    j.append(parent, b"xyz").unwrap();
+    let receipt = j.seal(parent).unwrap();
+    let child = j
+        .begin_operation(&[2; 32], &target(), Base::Missing, Some(parent), hole + 4)
+        .unwrap();
+    let mut range = CopyRange {
+        generation: parent,
+        manifest_hash: receipt.manifest_hash,
+        offset: 1,
+        length: hole + 4,
+    };
+    assert_eq!(j.copy_next_at(child, 0, range).unwrap(), 2);
+    assert_eq!(j.copy_next_at(child, 0, range).unwrap(), 2);
+    range.offset = 3;
+    range.length = hole + 2;
+    assert_eq!(j.copy_next_at(child, 2, range).unwrap(), hole);
+    range.offset = hole + 3;
+    range.length = 2;
+    assert_eq!(j.copy_next_at(child, hole + 2, range).unwrap(), 2);
+    j.seal(child).unwrap();
+    assert_eq!(j.read(child, 0, 4).unwrap(), b"bc\0\0");
+    assert_eq!(j.read(child, hole + 1, 10).unwrap(), b"\0xy");
+    let draft = j.begin(&target(), Base::Missing, Some(child), 1).unwrap();
+    range.generation = child;
+    range.manifest_hash = [0; 32];
+    range.offset = 0;
+    range.length = 1;
+    assert!(j.copy_next_at(draft, 0, range).is_err());
+    assert_eq!(j.info(draft).unwrap().filled, 0);
+}
+
+#[test]
+fn schema_four_migration_preserves_legacy_manifests_and_rolls_back_conflicting_operations() {
+    for conflict in [false, true] {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("state");
+        let mut state = State::open_managed(&path).unwrap();
+        let mut j = Journal::new(&mut state, opts(100)).unwrap();
+        let id = j.begin(&target(), Base::Missing, None, 3).unwrap();
+        j.append(id, b"old").unwrap();
+        let receipt = j.seal(id).unwrap();
+        state
+            .connection
+            .execute_batch("DROP TABLE staged_operations; PRAGMA user_version=4;")
+            .unwrap();
+        if conflict {
+            state.connection.execute_batch("CREATE TABLE staged_operations (personal TEXT); INSERT INTO staged_operations VALUES ('preserve');").unwrap();
+        }
+        drop(state);
+        let result = State::open_managed(&path);
+        assert_eq!(result.is_err(), conflict);
+        if let Ok(mut state) = result {
+            assert_eq!(state.info().unwrap().schema_version, crate::SCHEMA_VERSION);
+            let mut j = Journal::new(&mut state, opts(100)).unwrap();
+            assert_eq!(j.seal(id).unwrap(), receipt);
+            assert_eq!(j.read(id, 0, 3).unwrap(), b"old");
+        } else {
+            let db = Connection::open(path.join("metadata.sqlite3")).unwrap();
+            assert_eq!(
+                db.pragma_query_value(None, "user_version", |r| r.get::<_, i32>(0))
+                    .unwrap(),
+                4
+            );
+            assert_eq!(
+                db.query_row("SELECT personal FROM staged_operations", [], |r| r
+                    .get::<_, String>(0))
+                    .unwrap(),
+                "preserve"
+            );
+            assert_eq!(
+                db.query_row("SELECT count(*) FROM staged_generations", [], |r| r
+                    .get::<_, i64>(0))
+                    .unwrap(),
+                1
+            );
+        }
+    }
+}
+
+#[test]
 fn empty_files_limits_and_failed_appends_keep_precise_builder_progress() {
     let temp = tempfile::tempdir().unwrap();
     let mut state = State::open_managed(&temp.path().join("state")).unwrap();
@@ -477,7 +651,7 @@ fn migration_three_preserves_clean_data_and_rolls_back_on_conflicting_tables() {
                 ],
             )
             .unwrap();
-        state.connection.execute_batch("DROP TABLE write_journal; DROP TABLE staged_heads; DROP TABLE staged_extents; DROP TABLE retained_staged_chunks; DROP TABLE staged_chunks; DROP TABLE staged_generations; PRAGMA user_version=3;").unwrap();
+        state.connection.execute_batch("DROP TABLE staged_operations; DROP TABLE write_journal; DROP TABLE staged_heads; DROP TABLE staged_extents; DROP TABLE retained_staged_chunks; DROP TABLE staged_chunks; DROP TABLE staged_generations; PRAGMA user_version=3;").unwrap();
         if conflict {
             state.connection.execute_batch("CREATE TABLE staged_chunks(personal TEXT); INSERT INTO staged_chunks VALUES ('keep');").unwrap();
         }
@@ -489,7 +663,7 @@ fn migration_three_preserves_clean_data_and_rolls_back_on_conflicting_tables() {
         let version: i32 = db
             .pragma_query_value(None, "user_version", |r| r.get(0))
             .unwrap();
-        assert_eq!(version, if conflict { 3 } else { 4 });
+        assert_eq!(version, if conflict { 3 } else { crate::SCHEMA_VERSION });
         let count: i64 = db
             .query_row("SELECT count(*) FROM source_bindings", [], |r| r.get(0))
             .unwrap();
@@ -521,7 +695,9 @@ fn crash_child() {
     let mut j = Journal::new(&mut state, opts(100)).unwrap();
     let t = target();
     let old = stage(&mut j, &t, None, b"before");
-    let id = j.begin(&t, Base::Missing, Some(old), 5).unwrap();
+    let id = j
+        .begin_operation(&[7; 32], &t, Base::Missing, Some(old), 5)
+        .unwrap();
     let signal = |name: String| -> Result<()> {
         if name == point {
             let marker = std::path::PathBuf::from(&ready).with_extension("tmp");
@@ -592,6 +768,11 @@ fn process_death_at_local_transaction_boundaries_preserves_receipts() {
         child.0.wait().unwrap();
         let mut state = State::open_managed(&path).unwrap();
         let mut j = Journal::new(&mut state, opts(100)).unwrap();
+        assert_eq!(
+            j.begin_operation(&[7; 32], &target(), Base::Missing, Some(GenerationId(1)), 5)
+                .unwrap(),
+            id
+        );
         let committed = point == "SealCommitted";
         let progress = if point.starts_with("Seal") || point == "AppendCommitted" {
             5

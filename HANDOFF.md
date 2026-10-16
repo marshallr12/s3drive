@@ -9,7 +9,8 @@ and process ownership. P4b2a implements a bounded clean-cache storage worker
 with SQLite BLOBs. P4b2b connects it to optional mounted caching, with native
 acceptance required for each published source. P5a1 adds the local staged-
 generation/journal library. P5a2a adds one shared async owner for cache/journal
-commands and immutable local snapshot handles. Goal active; file-edit coordination, remote commit,
+commands and immutable local snapshot handles. P5a2b adds local edit plans and
+pinned-base hydration. Goal active; conditional remote commit,
 writable mounts, workstation reboot/SSH checks and packaging remain.
 
 ## Goal and scope
@@ -70,6 +71,11 @@ until the documented safe-write contract and its OS acceptance gates pass.
   bounded queue and owner thread. Rejected commands are distinct from accepted
   commands with lost/expired replies. Guarded append/seal operations reconcile
   those uncertain outcomes. Snapshot handles read a fixed sealed generation.
+- Schema 5 maps complete edit-intent keys to generations. New mapped manifests
+  use domain v2 including that key; older unmapped v1 manifests remain readable.
+  `s3drive-fs::edits` plans patch/truncate/sparse growth, copies immutable local
+  parent pieces, and hydrates remote unchanged ranges through a pinned handle.
+  A successful plan returns a new local snapshot; mounted writes remain disabled.
 - No uploads, writable mounts, new offline opens or desktop packaging yet.
 
 ## Current user requirements and startup work
@@ -428,9 +434,64 @@ Local logs: `/tmp/s3drive-worker-tests.log`, `/tmp/s3drive-worker-clippy.log`,
 exact-tip Linux/Windows/book CI before fast-forwarding main. Use
 `gh run list --branch shared-state-worker` to locate authoritative run state.
 
-Next required work is P5a2b: patch/truncate/read-your-writes coordination,
-pinned-base hydration and a fuller
-in-memory storage model. Preserve parent/supersession dependencies and define
+P5a2a's exact final source `0d282e4aecfb4548aacac095710646a10e884bdb` passed
+[run 38968191261](https://github.com/marshallr12/s3drive/actions/runs/38968191261)
+and was published to private main. Native evidence: 51 Linux / 49 Windows state
+tests, 341 FUSE requests, 749 WinFsp requests, cache/session gates and book.
+Full CI log: `/tmp/s3drive-worker-ci.log`.
+
+P5a2b is implemented on `file-edit-plans`. Sources:
+`crates/s3drive-fs/src/edits.rs`, its `edits/tests.rs`,
+`crates/s3drive-cli/tests/staged_edits.rs`, migration 005, and journal/worker
+extensions. `Coordinator` allows four executing plans per volume. Editors use
+fixed empty/local/pinned-S3 inputs. Nonempty patches are <=8 MiB; unchanged S3
+pieces <=1 MiB have a 30-second deadline outside SQL. Sparse local zeros retain
+their logical spans. Each completed edit seals one immutable local snapshot.
+Read that snapshot for read-your-writes and select it as the next editor input.
+
+`begin_operation` commits a complete intent key and generation atomically, so
+lost begin replies/restart recover the same ID. Keys hash target, input/base,
+requested size and operation/payload digest. They are semantic local deduplication,
+not globally unique remote operation IDs or authorization tokens. Reconstructing
+the same fixed-input plan identifies the same operation. Future adapters must
+advance their input after a successful write. Old sealed replay never rewinds
+a newer head. Metadata conflicts fail; sealed v2 manifests bind their operation
+keys and detect missing/changed mappings. Migration 5 preserves old v1 bodies
+and rolls back conflicting tables/version changes.
+
+Plan failures expose a known builder ID and preserve partial progress. Replays
+verify exact guarded pieces, potentially rereading hydrated remote ranges.
+If the old revision is no longer readable, fail and retain the draft. A completed
+plan replays locally without S3 reads. Plan/patch remainder is caller-owned until
+publication; no whole edit-plan document is persisted. Identical concurrent
+plans share one receipt; different plans compare the same local parent and
+conflict. There is no total edit-duration guarantee or upload executor.
+Parent-manifest metadata is currently scanned per copied piece; fragmented-file
+performance is unmeasured. No sealed-generation GC is implemented.
+
+Tests: 120 deterministic model steps, sparse growth/shrink/overwrite, restart
+with reduced quota, transient/short/changed/stalled memory bases, cancellation,
+deadlines, quotas, concurrent plans, mapping rollback/corruption, lost begin
+replies, and all nine process-kill boundaries with operation-bound generations.
+The real SDK HTTP fixture hydrates an exact Unicode key and rejects a changed
+base with HTTP 412. It uses a child process and isolated dummy credential files;
+all waits have deadlines and kill-on-drop cleanup. No HTTP mutation is allowed.
+The Windows session fixture now expects init-state schema 5.
+
+The local full gate passed: 12 filesystem and 56 state tests plus SDK hydration
+and book checks. Real Linux FUSE passed 341 requests, and the cache-enabled
+no-systemd session gate passed at schema 5. The new `file-edits.png` diagram was
+visually inspected; related book chapters/diagrams describe the boundary.
+Logs: `/tmp/s3drive-edits-gate.log`, `/tmp/s3drive-edits-tests.log`,
+`/tmp/s3drive-edits-sdk.log`, `/tmp/s3drive-edits-linux.log`,
+`/tmp/s3drive-edits-session.log` and `/tmp/s3drive-edits-book.log`.
+Require exact-final-tip Linux/Windows/book CI before main publication; locate it
+with `gh run list --branch file-edit-plans`. No live user config, credentials,
+startup registration or cloud objects were changed.
+
+Next required work is P5b: conditional remote commits and uncertain-result
+reconciliation, followed by reference/pin-aware remote-ack cleanup.
+Preserve parent/supersession dependencies and define
 credential rebinding before P5b conditionally publishes to S3. No remote ack or
 sealed-generation GC is implemented yet. P5c exposes writes only after those
 contracts and their provider/OS acceptance tests pass.

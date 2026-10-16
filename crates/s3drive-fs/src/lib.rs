@@ -1,4 +1,5 @@
 //! Shared read-only namespace and optional revision-bound clean cache.
+pub mod edits;
 use s3drive_core::Config;
 use s3drive_s3::{ListPage, MAX_READ_BYTES, ObjectMetadata, ReadHandle, S3Reader};
 use s3drive_state::cache::{Cache, Key, Options, Pinned};

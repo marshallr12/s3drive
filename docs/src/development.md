@@ -167,3 +167,20 @@ Tests exercise the public cache/staging APIs; private owner jobs provide only
 the local scheduling and fault-injection controls. All pauses have deadlines.
 Use `cargo test -p s3drive-state --locked` for the focused storage gate, followed
 by the repository gate and both native mount/startup jobs before publication.
+
+`s3drive-fs/src/edits/tests.rs` compares 120 deterministic write/truncate steps
+with a separate byte-vector model, retains old snapshots, and reopens final
+state with a lower quota. It also covers 3 TiB sparse growth, transient/short/
+changed/stalled base reads, cancellation/deadlines, duplicate concurrent plans,
+competing plans, quota refusal and exact operation identity. The private pinned
+reader seam supports these failure schedules; the public constructor takes a
+real S3 `ReadHandle`.
+
+`staged_edits.rs` runs the real SDK and coordinator in a subprocess with a
+temporary dummy credential profile. The parent owns an ephemeral HTTP fixture
+and changes a separate object only after the child has opened its old revision.
+It requires exact Unicode hydration, correct patched bytes, HTTP 412 on the
+stale base and no HTTP mutation. Child startup/execution have deadlines and
+kill-on-drop cleanup. The state tests additionally cover schema-4 migration,
+operation-mapping rollback, lost begin replies and manifest-bound intent keys;
+all nine process-kill points now exercise operation-bound generations too.

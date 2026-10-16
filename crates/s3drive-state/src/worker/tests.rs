@@ -438,7 +438,7 @@ async fn worker_failure_after_commit_reports_unknown_and_releases_ownership() {
     let storage = open(&path).await;
     let id = storage
         .staging()
-        .begin(target("crashed"), Base::Missing, None, 3)
+        .begin_operation([5; 32], target("crashed"), Base::Missing, None, 3)
         .await
         .unwrap();
     let result: Result<()> = storage
@@ -461,6 +461,14 @@ async fn worker_failure_after_commit_reports_unknown_and_releases_ownership() {
     .await
     .unwrap();
     let reopened = open(&path).await;
+    assert_eq!(
+        reopened
+            .staging()
+            .begin_operation([5; 32], target("crashed"), Base::Missing, None, 3)
+            .await
+            .unwrap(),
+        id
+    );
     assert_eq!(reopened.staging().read(id, 0, 100).await.unwrap(), b"abc");
     assert_eq!(
         reopened
@@ -473,6 +481,43 @@ async fn worker_failure_after_commit_reports_unknown_and_releases_ownership() {
         id
     );
     reopened.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn lost_begin_operation_reply_recovers_the_same_builder() {
+    let temp = tempfile::tempdir().unwrap();
+    let storage = open(&temp.path().join("state")).await;
+    let (release, wait) = blocking::channel();
+    let (ready, committed) = oneshot::channel();
+    let owner = storage.owner.clone();
+    let running = tokio::spawn(async move {
+        owner
+            .call_with_deadline(
+                move |store| {
+                    let id = Journal::new(&mut store.state, journal::Options::default())?
+                        .begin_operation(&[6; 32], &target("lost-begin"), Base::Missing, None, 0)?;
+                    ready.send(id).unwrap();
+                    wait.recv_timeout(Duration::from_secs(10)).unwrap();
+                    Ok(id)
+                },
+                Duration::from_secs(2),
+            )
+            .await
+    });
+    let expected = tokio::time::timeout(Duration::from_secs(5), committed)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_worker_failure(running.await.unwrap(), Failure::OutcomeUnknown);
+    release.send(()).unwrap();
+    let id = storage
+        .staging()
+        .begin_operation([6; 32], target("lost-begin"), Base::Missing, None, 0)
+        .await
+        .unwrap();
+    assert_eq!(id, expected);
+    assert_eq!(storage.staging().drafts(None, 100).await.unwrap().len(), 1);
+    storage.close().await.unwrap();
 }
 
 #[tokio::test]

@@ -340,6 +340,11 @@ impl S3Reader {
 }
 
 impl ReadHandle {
+    /// Configuration of this pinned handle, including its exact prefix dialect.
+    pub fn configuration_fingerprint(&self) -> &str {
+        &self.reader.fingerprint
+    }
+
     pub fn cache_identity(&self) -> CacheIdentity {
         self.cache_identity
     }

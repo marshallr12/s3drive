@@ -14,7 +14,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 4;
+pub const SCHEMA_VERSION: i32 = 5;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub struct State {
@@ -88,6 +88,10 @@ impl State {
             }
             if version == 3 {
                 tx.execute_batch(include_str!("../migrations/004.sql"))?;
+                version = 4;
+            }
+            if version == 4 {
+                tx.execute_batch(include_str!("../migrations/005.sql"))?;
             }
             // Catch a damaged/current-version database before returning success.
             tx.prepare("SELECT source_alias, object_key, etag, version_id, size_bytes FROM legacy_cached_objects_v1 LIMIT 0")?;
@@ -99,6 +103,7 @@ impl State {
             tx.prepare("SELECT generation_id, offset_bytes, length_bytes, chunk_hash FROM staged_extents LIMIT 0")?;
             tx.prepare("SELECT source_id, object_key, generation_id FROM staged_heads LIMIT 0")?;
             tx.prepare("SELECT generation_id, status FROM write_journal LIMIT 0")?;
+            tx.prepare("SELECT operation_key, generation_id FROM staged_operations LIMIT 0")?;
             if version != SCHEMA_VERSION {
                 tx.pragma_update(None, "user_version", SCHEMA_VERSION)?;
             }

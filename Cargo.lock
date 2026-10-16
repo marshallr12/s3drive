@@ -2008,6 +2008,8 @@ dependencies = [
  "s3drive-core",
  "s3drive-s3",
  "s3drive-state",
+ "sha2",
+ "tempfile",
  "tokio",
 ]
 

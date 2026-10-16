@@ -29,6 +29,7 @@ to the user.
 | D021 | Implemented for P4b2b | Opt-in mounted clean cache: authorize every new open online, retain immutable fully cached snapshots until handle release, coalesce fills, and use direct reads for large files or pinned quota pressure. This permits already-open cached reads during network loss but denies new offline opens |
 | D022 | Implemented local P5a1 foundation | Non-evictable bounded SQLite chunks, manifests and pending intent make local generation publication transactional across Linux/Windows. Local receipts do not acknowledge remote writes. External bulk files remain optional and need a separate durability proof |
 | D023 | Implemented P5a2a | One async owner serves cache and journal commands on the same connection and process lock. Bound the queue and inputs; an accepted request with a lost reply has an unknown outcome. Inspect durable state and use guarded append/seal replay; never infer rollback from cancellation |
+| D024 | Implemented P5a2b library | Immutable edit plans bind the complete fixed input and patch/truncate intent to a durable operation key. Hydrate unchanged S3 ranges through a pinned handle outside SQL, preserve sparse local extents and publish one complete local snapshot. Failed builders stay recoverable; no writable callback or remote commit is enabled |
 
 ## Questions to resolve at the relevant phase
 

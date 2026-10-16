@@ -153,6 +153,14 @@ pub struct Receipt {
     pub manifest_hash: [u8; 32],
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct CopyRange {
+    pub generation: GenerationId,
+    pub manifest_hash: [u8; 32],
+    pub offset: u64,
+    pub length: u64,
+}
+
 /// Borrows the already-owned State; a future worker can combine journal/cache
 /// commands on this same connection. Do not call these methods on Tokio's
 /// executor or keep a transaction across external I/O.
@@ -194,6 +202,30 @@ impl<'a> Journal<'a> {
         expected_parent: Option<GenerationId>,
         size: u64,
     ) -> Result<GenerationId> {
+        self.begin_inner(target, base, expected_parent, size, None)
+    }
+
+    /// Recover or allocate the generation for a complete caller-bound intent.
+    /// The key must hash all operation semantics, including input identity and
+    /// desired bytes. It is local idempotency, not cloud authorization.
+    pub fn begin_operation(
+        &mut self,
+        key: &[u8; 32],
+        target: &Target,
+        base: Base,
+        expected_parent: Option<GenerationId>,
+        size: u64,
+    ) -> Result<GenerationId> {
+        self.begin_inner(target, base, expected_parent, size, Some(key))
+    }
+    fn begin_inner(
+        &mut self,
+        target: &Target,
+        base: Base,
+        expected_parent: Option<GenerationId>,
+        size: u64,
+        operation: Option<&[u8; 32]>,
+    ) -> Result<GenerationId> {
         self.state.verify_staging_storage()?;
         base.validate()?;
         if size > i64::MAX as u64 {
@@ -205,6 +237,28 @@ impl<'a> Journal<'a> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        if let Some(key) = operation {
+            let existing: Option<i64> = tx
+                .query_row(
+                    "SELECT generation_id FROM staged_operations WHERE operation_key=?1",
+                    [key.as_slice()],
+                    |r| r.get(0),
+                )
+                .optional()?;
+            if let Some(id) = existing {
+                let existing = load(&tx, GenerationId(id))?;
+                if existing.target != *target
+                    || existing.base != base
+                    || existing.parent != expected_parent
+                    || existing.size != size
+                {
+                    return Err("staged operation key conflicts with intent metadata".into());
+                }
+                validate_manifest(&tx, &existing, false)?;
+                current_head(&tx, target)?;
+                return Ok(existing.id);
+            }
+        }
         if current_head(&tx, target)? != expected_parent {
             return Err(Failure::LocalConflict.into());
         }
@@ -223,8 +277,62 @@ impl<'a> Journal<'a> {
         let (absent, etag, version) = base.fields();
         tx.execute("INSERT INTO staged_generations (source_id,object_key,parent_id,base_absent,base_etag,base_version,size_bytes) VALUES (?1,?2,?3,?4,?5,?6,?7)",params![target.source.as_slice(),target.key,expected_parent.map(|id|id.0),absent,etag,version,size as i64])?;
         let id = GenerationId(tx.last_insert_rowid());
+        if let Some(key) = operation {
+            tx.execute(
+                "INSERT INTO staged_operations VALUES (?1,?2)",
+                params![key.as_slice(), id.0],
+            )?;
+        }
         tx.commit()?;
         Ok(id)
+    }
+
+    /// Append one piece of the immutable parent, preserving explicit large
+    /// zero extents. Exact-cursor replay is safe after losing a copy response.
+    /// Metadata validation currently scans the parent manifest per piece.
+    pub fn copy_next_at(&mut self, id: GenerationId, offset: u64, range: CopyRange) -> Result<u64> {
+        let CopyRange {
+            generation: source,
+            manifest_hash,
+            offset: source_offset,
+            length: max_length,
+        } = range;
+        let parent = load(&self.state.connection, source)?;
+        let destination = load(&self.state.connection, id)?;
+        if parent.phase != Phase::Sealed
+            || parent.manifest_hash != Some(manifest_hash)
+            || destination.parent != Some(source)
+            || destination.target != parent.target
+            || destination.base != parent.base
+            || max_length == 0
+            || source_offset >= parent.size
+        {
+            return Err("invalid staged copy source or range".into());
+        }
+        validate_manifest(&self.state.connection, &parent, false)?;
+        let (start, length, digest): (i64,i64,Option<Vec<u8>>) = self.state.connection.query_row(
+            "SELECT offset_bytes,length_bytes,chunk_hash FROM staged_extents WHERE generation_id=?1 AND offset_bytes<=?2 ORDER BY offset_bytes DESC LIMIT 1",
+            params![source.0,source_offset as i64], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?)),
+        )?;
+        let skip = source_offset
+            .checked_sub(number(start)?)
+            .ok_or("invalid staged copy offset")?;
+        let remaining = number(length)?
+            .checked_sub(skip)
+            .filter(|n| *n > 0)
+            .ok_or("missing staged copy extent")?;
+        let length = max_length.min(remaining).min(parent.size - source_offset);
+        match digest {
+            None => self.append_zero_at(id, offset, length)?,
+            Some(digest) => {
+                let bytes = read_chunk(&self.state.connection, &digest32(digest)?)?;
+                let bytes = bytes
+                    .get(skip as usize..(skip + length) as usize)
+                    .ok_or("invalid staged copy chunk")?;
+                self.append_at(id, offset, bytes)?;
+            }
+        }
+        Ok(length)
     }
 
     /// Append one bounded immutable chunk. Builder progress is durable but is
@@ -616,7 +724,27 @@ fn validate_manifest(
     verify_payloads: bool,
 ) -> Result<[u8; 32]> {
     let mut hash = Sha256::new();
-    hash.update(b"s3drive-staged-manifest-v1\0");
+    let key_length: Option<i64> = connection
+        .query_row(
+            "SELECT length(operation_key) FROM staged_operations WHERE generation_id=?1",
+            [generation.id.0],
+            |r| r.get(0),
+        )
+        .optional()?;
+    if let Some(length) = key_length {
+        if length != 32 {
+            return Err("invalid staged operation key shape".into());
+        }
+        let key: Vec<u8> = connection.query_row(
+            "SELECT operation_key FROM staged_operations WHERE generation_id=?1",
+            [generation.id.0],
+            |r| r.get(0),
+        )?;
+        hash.update(b"s3drive-staged-manifest-v2\0");
+        hash.update(key);
+    } else {
+        hash.update(b"s3drive-staged-manifest-v1\0");
+    }
     hash.update(generation.id.0.to_be_bytes());
     hash.update(generation.target.source);
     field(&mut hash, Some(generation.target.fingerprint.as_bytes()));

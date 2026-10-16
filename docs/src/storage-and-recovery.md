@@ -3,14 +3,15 @@
 P4a implements credential bindings and SQLite migration. P4b1 adds private local
 directory ownership. P4b2a implements the bounded clean-cache storage library and
 worker. P4b2b connects that cache to read-only mounts. New offline opens and the
-writable mounts remain unsupported. The [P5a1 local staged-generation library](staged-writes.md)
-now implements pending local intent; upload execution remains disabled.
+writable mounts remain unsupported. The [local staged-generation and edit libraries](staged-writes.md)
+implement pending local intent, patch/truncate and pinned-base hydration;
+upload execution remains disabled.
 An initialized database is not an implemented or proven upload journal.
 
 ## Implemented SQLite state and migration
 
 `s3drive-state` uses `rusqlite` with bundled SQLite. Initialization marks a
-database with an application ID and `user_version = 4`. Schema 1's reserved
+database with an application ID and `user_version = 5`. Schema 1's reserved
 `cached_objects` table had only source aliases, with no credential binding.
 Migration 2 renames it to `legacy_cached_objects_v1` and preserves every row for
 inspection. None of those rows is adopted into an active cache namespace.
@@ -28,11 +29,13 @@ back table renaming and the version update. Foreign databases, unsupported
 schema versions and missing expected columns fail explicitly. Schema 4 preserves
 schema-3 clean snapshots and adds staged chunks, manifests,
 local heads and pending intent. It does not execute remote upload jobs.
+Schema 5 adds operation-key recovery for edit plans, preserves older manifests,
+and binds new operation keys into manifest domain v2. It adds no remote jobs.
 
 The connection uses WAL, `synchronous=FULL`, foreign keys, and a five-second
 busy timeout. Tests cover restart, settings, binding isolation/rebinding refusal,
 shape constraints, legacy-row preservation and migration rollback. The CLI's
-`init-state` now initializes or migrates to schema 4. Mounts with an explicit
+`init-state` now initializes or migrates to schema 5. Mounts with an explicit
 `[cache]` table register authorized source bindings and
 use this database for clean snapshots. Mounts without that table keep direct
 S3 range reads.
@@ -233,7 +236,8 @@ live Wasabi cached-read acceptance is still separate work.
 | Diagnostic logs | Redacted operational evidence | Rotated and size-limited |
 
 Schema 4 also includes `staged_generations`, `staged_chunks`, `staged_extents`,
-`retained_staged_chunks`, `staged_heads` and `write_journal`; see the staged-generation chapter. Future
+`retained_staged_chunks`, `staged_heads` and `write_journal`; see the staged-generation chapter.
+Schema 5 also adds `staged_operations` for local intent recovery. Future
 schema tables should build on these with volume ownership,
 `nodes` (stable IDs and parent links), `cache_extents`,
 `upload_jobs`, `upload_parts`, `conflicts`, and `provider_capabilities` with

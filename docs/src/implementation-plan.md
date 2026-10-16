@@ -11,7 +11,7 @@ launching SSH terminal disconnects. See [startup/session design](startup-and-ses
 P4a now adds credential-bound read handles and a SQLite binding registry with
 migration. Optional mounted clean caching is implemented and natively tested.
 P5a1 adds local staged-generation storage, and P5a2a shares the async cache/journal
-owner; file-edit coordination, remote commit
+owner. P5a2b implements local file-edit plans and pinned-base hydration; remote commit
 and writable OS callbacks remain subsequent phases.
 
 | Phase | Deliverable | Completion evidence |
@@ -28,6 +28,7 @@ and writable OS callbacks remain subsequent phases.
 | P4 — cache and local recovery | Revision-aware disk cache, eviction, pinning, single-process ownership, state migrations | Cache isolation, disk-full, stale revision, offline miss and restart tests; no dirty data exists yet |
 | P5a1 — local generation store | Immutable chunked payloads, manifests, local heads and pending intent | Native state tests, nine process-kill boundaries, lost acknowledgments, corruption and SQLITE_FULL rollback |
 | P5a2a — shared async owner | Cache/journal commands on one connection and lock; bounded queue, uncertain outcomes and immutable snapshot handles | Native storage concurrency, queue pressure, cancellation/response loss, worker failure, draining/close and disk-full tests |
+| P5a2b — file-edit plans | Patch/truncate, sparse parent copying, pinned S3 hydration, durable intent-key recovery and immutable read-your-writes snapshots | Deterministic 120-step model, process-kill/response-loss/restart recovery, conflicting/concurrent plans, quota and changed/short/stalled base tests; real SDK HTTP hydration |
 | P5a — staged writes | In-memory storage test double plus immutable local generations and durable journal | Fault injection at every local boundary; acknowledged local state survives restart; network mutation remains disabled |
 | P5b — conditional remote commits | Create/replace and multipart recovery; explicit flush contract | Provider preconditions verified; two-writer conflict tests; crash/timeout replay never overwrites unseen edits |
 | P5c — desktop mutations | Safe delete, documented rename behavior, open-handle semantics, real application workflows | Delete races, save/replace, concurrent open, unmount failures and data-loss tests on both OSes |
@@ -204,8 +205,11 @@ garbage collection, upload executor or writable mount yet.
 P5a2a now adds the bounded async owner on the same connection as cache work.
 It validates request bounds before admission, distinguishes rejected requests
 from unknown accepted outcomes, and exposes immutable generation snapshots.
-P5a2b must add patch/truncate/read-your-writes operations, hydration from a pinned
-base and a fuller in-memory storage failure model. P5b must verify provider
+P5a2b now implements patch/truncate/read-your-writes plans, hydration from a pinned
+base and a deterministic in-memory storage failure model. Schema 5 maps complete
+edit intent keys to generations; lost begin replies recover the same builder.
+The SDK hydration fixture checks real conditional GETs with an exact Unicode key.
+P5b must verify provider
 preconditions and reconcile uncertain remote results before P5c exposes writes.
 Credential-generation rebinding and parent/supersession dependencies need
 explicit policies; a pending local record is not permission to upload.

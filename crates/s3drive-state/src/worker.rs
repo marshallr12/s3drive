@@ -201,6 +201,32 @@ impl Staging {
         self.call(move |journal| journal.begin(&target, base, expected_parent, size))
             .await
     }
+    pub async fn begin_operation(
+        &self,
+        key: [u8; 32],
+        target: Target,
+        base: Base,
+        expected_parent: Option<GenerationId>,
+        size: u64,
+    ) -> Result<GenerationId> {
+        base.validate()?;
+        if size > i64::MAX as u64 {
+            return Err("staged size exceeds supported offset range".into());
+        }
+        self.call(move |journal| {
+            journal.begin_operation(&key, &target, base, expected_parent, size)
+        })
+        .await
+    }
+    pub async fn copy_next_at(
+        &self,
+        id: GenerationId,
+        offset: u64,
+        range: journal::CopyRange,
+    ) -> Result<u64> {
+        self.call(move |journal| journal.copy_next_at(id, offset, range))
+            .await
+    }
     /// Bounded input is checked before admission. Replays must match the exact
     /// previous chunk; no unguarded sequential-append variant is exposed here.
     pub async fn append_at(&self, id: GenerationId, offset: u64, bytes: Arc<[u8]>) -> Result<()> {
