@@ -54,10 +54,15 @@ public static class S3DriveFixtureNative {
     static extern bool CloseHandle(IntPtr handle);
     [DllImport("userenv.dll", CharSet=CharSet.Unicode)]
     static extern int CreateProfile(string sid, string user, StringBuilder path, uint length);
+    [DllImport("userenv.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+    static extern bool DeleteProfile(string sid, string path, string computer);
     public static string CreateFixtureProfile(SecurityIdentifier sid, string user) {
         var path = new StringBuilder(260);
         Marshal.ThrowExceptionForHR(CreateProfile(sid.Value, user, path, (uint)path.Capacity));
         return path.ToString();
+    }
+    public static void DeleteFixtureProfile(SecurityIdentifier sid) {
+        if (!DeleteProfile(sid.Value, null, null)) throw new Win32Exception(Marshal.GetLastWin32Error());
     }
     public static string AuthenticationId(IntPtr process) {
         IntPtr token;
@@ -287,7 +292,6 @@ exit 0
     try { $null=$service.GetFolder('\').GetTask($taskName) }
     catch { if ($_.Exception.GetBaseException().HResult -eq -2147024894) { $removed=$true } else { throw } }
     if (-not $removed) { throw 'Task remains after removal' }
-    Write-Output 'PASS: non-admin registration, independent same-account logons, exact S3 and Unicode reads, duplicate starts, retained mount and removal'
 } catch {
     # Keep the original assertion visible even if cleanup independently fails.
     Write-Output ("Session acceptance failed: " + $_.Exception.Message)
@@ -351,19 +355,23 @@ exit 0
             catch { $cleanupFailures.Add('Could not remove disposable batch-logon right') }
         }
         try {
-            # The scheduler/user-profile service can release the batch logon
-            # after the last mount handle disappears. Wait for that condition.
+            # Ask the supported deletion API rather than treating the WMI
+            # Loaded property as proof that deletion must fail. Retry boundedly
+            # while the profile service releases its own references.
             $deadline=[DateTime]::UtcNow.AddSeconds(30)
             while ($true) {
                 $profile=Get-CimInstance Win32_UserProfile | Where-Object SID -eq $account.SID.Value
-                if (-not $profile -or -not $profile.Loaded) { break }
-                if ([DateTime]::UtcNow -gt $deadline) {
-                    Write-Output ($profile | Select-Object SID,Loaded,RefCount,Status | ConvertTo-Json -Compress)
-                    throw 'Disposable profile is still loaded after all owned processes stopped'
+                if (-not $profile) { break }
+                try { [S3DriveFixtureNative]::DeleteFixtureProfile($account.SID); break }
+                catch {
+                    if ([DateTime]::UtcNow -gt $deadline) {
+                        Write-Output ($profile | Select-Object SID,Loaded,RefCount,Status | ConvertTo-Json -Compress)
+                        throw
+                    }
                 }
                 Start-Sleep -Milliseconds 200
             }
-            if ($profile) { $profile | Remove-CimInstance }
+            if (Get-CimInstance Win32_UserProfile | Where-Object SID -eq $account.SID.Value) { throw 'Profile registration remains after deletion' }
         } catch { $cleanupFailures.Add('Could not remove disposable profile: ' + $_.Exception.Message) }
         try { Remove-LocalUser -Name $userName }
         catch { $cleanupFailures.Add('Could not remove disposable user: ' + $_.Exception.Message) }
@@ -380,3 +388,4 @@ exit 0
     $password.Dispose()
     if ($cleanupFailures.Count) { throw ($cleanupFailures -join '; ') }
 }
+Write-Output 'PASS: non-admin registration, independent same-account logons, exact S3 and Unicode reads, duplicate starts, retained mount and removal'
