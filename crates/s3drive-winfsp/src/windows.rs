@@ -528,26 +528,26 @@ impl FileSystemContext for Adapter {
         self.wait(async { object.set_delete(delete).await.map_err(storage_error) })
     }
     fn cleanup(&self, context: &FileContext, _name: Option<&U16CStr>, flags: u32) {
-        if let Some(object) = &context.native {
-            // Actual void observations are persisted even during cancellation.
-            if let Err(error) = self.runtime.block_on(object.cleanup(flags)) {
-                use std::io::Write;
-                let _ = writeln!(
-                    std::io::stderr().lock(),
-                    "Native cleanup retained for recovery: {error}"
-                );
-            }
+        // Actual void observations are persisted even during cancellation.
+        if let Some(object) = &context.native
+            && let Err(error) = self.runtime.block_on(object.cleanup(flags))
+        {
+            use std::io::Write;
+            let _ = writeln!(
+                std::io::stderr().lock(),
+                "Native cleanup retained for recovery: {error}"
+            );
         }
     }
     fn close(&self, context: FileContext) {
-        if let Some(object) = &context.native {
-            if let Err(error) = self.runtime.block_on(object.close()) {
-                use std::io::Write;
-                let _ = writeln!(
-                    std::io::stderr().lock(),
-                    "Native close retained for recovery: {error}"
-                );
-            }
+        if let Some(object) = &context.native
+            && let Err(error) = self.runtime.block_on(object.close())
+        {
+            use std::io::Write;
+            let _ = writeln!(
+                std::io::stderr().lock(),
+                "Native close retained for recovery: {error}"
+            );
         }
         drop(context);
     }

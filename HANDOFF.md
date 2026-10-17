@@ -29,9 +29,14 @@ must freeze both original controls; no silent rebind or permanent refusal as a
 substitute. Use publication/edit/controller lock order. Require full local and
 exact-source hosted native/reference/startup gates before guarded publication.
 
-Current candidate6199af5, run39069635074 is terminal failure: Linux/book pass,
+Candidate43a45ce run39071127420 passed Windows type checking but failed Clippy
+on a collapsible nested `if` in Close, before native tests. Both void callbacks
+now use equivalent let chains. Book passed; Linux was still running at the check.
+Windows log `/tmp/s3drive-lifecycle-windows2.log`. Native acceptance remains pending.
+
+Prior candidate6199af5, run39069635074 is terminal failure: Linux/book pass,
 Windows117504375158 Clippy failed on an Open/Create initialization insertion and
-FILE_DISPOSITION_INFO_EX_FLAGS lacking BitOr. Corrected locally, not pushed yet.
+FILE_DISPOSITION_INFO_EX_FLAGS lacking BitOr. Corrected in43a45ce.
 Windows compile log `/tmp/s3drive-lifecycle-windows1.log`; no native run occurred.
 A subsequent local gate5 exposed the stack overflow again. Traces narrowed it to
 S3 HEAD during reopening uploaded data; boxing generated HEAD/GET send futures
@@ -42,7 +47,7 @@ write guard; file/directory denial now passes without provider PUT or namespace
 admission (`/tmp/s3drive-lifecycle-policy1.log`). Local gate6 passed exit0 at
 `/tmp/s3drive-lifecycle-gate6.log`: 255 state, ten HTTP, seventeen SDK, lifecycle
 engine/policy, original mutation regression, lint/build/book.
-Windows-only fixes and non-panicking void-callback logging are pending source.
+Windows-only fixes and non-panicking void-callback logging are in43a45ce.
 CI now runs the new complete native test early, and skips only that same test in
 the later existing native suite; expect 1+7 Windows native, seven Linux native.
 Do not publish main or claim native success until final exact-source all-green.
