@@ -710,6 +710,9 @@ pub struct Opens {
     owner: Owner,
 }
 impl Opens {
+    pub async fn retire(&self, id: String) -> Result<()> {
+        self.call(move |j| j.retire(&id)).await
+    }
     pub async fn reply(
         &self,
         id: String,

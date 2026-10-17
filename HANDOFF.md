@@ -1,42 +1,55 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b3b4b3b3b executable disposition controller**
-on `codex/windows-disposition-controller`. Goal ACTIVE. Read
-`docs/src/windows-disposition-controller.md` and the implementation plan.
+Updated: 2026-10-17. Current phase: **completed-open retirement** on
+`codex/windows-open-retirement`. Goal ACTIVE. Read the implementation plan and
+`docs/src/windows-open-retirement.md` before continuing.
 
-Baseline verified live: private clean local/remote main
-`b3267a49d34f9920faed49e5913634aaa164319a`, terminal all-green
-[run 39051731184](https://github.com/marshallr12/s3drive/actions/runs/39051731184).
-Linux `117451535559`, Windows `117451535459`, book `117451535446`;
-212/208 state, nine HTTP, fourteen SDK, seven native cases per OS, fourteen frozen
-NTFS traces, four upstream cases and nine malformed-fixture rejections. Non-admin
-independent-logon startup passed after correcting its exact schema expectation.
-Proof `/tmp/s3drive-open-journal-publication.json`. Schema17/config6 baseline.
+Published baseline verified live: private clean local/remote main
+`28c527e2e56351fbab7214bcaeaa36f27c0b892a`, terminal all-green
+[run 39055610947](https://github.com/marshallr12/s3drive/actions/runs/39055610947).
+Linux117462844538, Windows117462844330, book117462844593. 220/216 state,
+nine HTTP, fifteen SDK, seven native cases per OS, fourteen NTFS traces, four
+pinned upstream and nine malformed-fixture checks passed. Linux no-systemd and
+Windows non-admin independent-logon startup passed. Source-bound reference
+artifact12109825160 matched every typed record and OS at2026-10-17T17:57:21Z.
+Proof `/tmp/s3drive-controller-publication.json`; logs
+`/tmp/s3drive-controller-{linux,windows,book}.log`. Schema18/config6 baseline.
+GitHub unexpectedly reported public during that phase; restored private per the
+user's request and verified after publication. Do not assume privacy persists.
 
-The journal retains exact admission/activation and linked namespace proofs,
-per-file-object cleanup/close facts, original sessions/control bindings and
-callback/ack headroom. Five SDK stages preserve three immutable objects with
-three PUTs through killed owners. It is not the full policy; synthetic callback
-ordering is not native acceptance. CleanupDelete unlinks during cleanup; late I/O
-must remain possible through Close. Do not invent deletion only at close.
+The Publisher-backed disposition controller has planned responses, same-fence
+rejection compensation, repeated True/False, deleting cleanup/current IDs,
+nonempty-directory preservation and late detached writes through Close. No
+kernel response acknowledgment is inferred. Its accepted local gate is
+`/tmp/s3drive-controller-gate4.log`. CleanupDelete unlinks during cleanup, not
+only at Close. Five killed SDK stages used six retained immutable PUTs.
 
-Current scope: real Publisher-backed disposition controller, durable callback
-response/completion, same-fence compensation for rejected uncertain requests,
-True/False mode policy, deleting cleanup/current IDs and ordinary final release.
-False retains D while opens remain, avoiding cancel/re-arm gaps. Schema18 semantic
-extension preserves legacy evidence; update exact startup schema expectation.
-No native callbacks/config enablement, new Wasabi writes or NNP bypass. Next
-retention/mount-session recovery and WinFsp integration, including deferred target
-replacement reference/native proof, before full deletion acceptance.
+Current work: lossless retirement of fully completed controlled opens to free
+live 256-open/4096-event admission. Keep full input/event/namespace proof rows,
+seal the final row, refuse identity reuse and new events, permit exact history
+replay. Controller Close and recovery retry retirement after failed bookkeeping.
+Schema19 adds only the retirement index; old hashes/config6 remain unchanged.
+Historical-schema fixtures must remove that table; Windows startup expects19.
+Require SQL-full/ignored writes/corruption/migration, >256 lifetimes with a live
+reader, killed SDK owners and exact-tip all-three native/reference/startup CI.
 
-Local final gate exit0: `/tmp/s3drive-controller-gate4.log`, 220 state, nine
-HTTP and fifteen SDK cases; formatting/clippy/build/book passed. Five killed SDK
-stages use six immutable PUTs without replay; eight new state cases include
-actual SQLite-full, quota, response/compensation proofs and schema17 migration.
-Latest open-ID replay/closed-ID refusal checks are included. Schema18 init/reopen
-and exact Windows startup assertion agree. Require terminal exact-tip all-three
-CI, native/startup logs and source-bound reference artifact before guarded private
-main publication from b3267a4. No provider or native enablement claim is implied.
+This is not evidence pruning or completed mount-session recovery. Unclosed,
+unknown or incomplete records remain live; a different session ID never proves
+old process death or fabricates cleanup. Namespace journal and disk admission
+limits still apply. Next resolve exclusive mount-session recovery/quarantine and
+native reply acknowledgment, measure deferred destination replacement against
+selected WinFsp, then integrate the complete native lifecycle with explicit new
+config. Native SetDelete/DoC remain unsupported until full native acceptance.
+No new Wasabi writes, NNP bypass or workstation startup changes are authorized.
+
+Final local gate passed exit0: `/tmp/s3drive-retirement-gate1.log`, 228 state,
+nine HTTP, fifteen SDK, formatting/Clippy/build/book. Eight retirement cases
+exercise 300 lifetimes/>4096 retained events with a live reader, SQL-full/ignored
+writes, corruption, exact replay/identity refusal and schema18 migration/refusal.
+Six SDK stages retain six immutable PUTs after failed retirement/killed owner.
+Targeted SDK `/tmp/s3drive-retirement-sdk1.log` passed; final gate includes the
+strengthened seal check. Require terminal exact-tip all-three hosted acceptance
+and source-bound reference verification before guarded publication from28c527e.
 
 ## Previous expanded reference phase
 

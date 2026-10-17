@@ -16,8 +16,9 @@ async fn disposition_controller_runs_mode_cleanup_late_io_and_recovers_rejected_
             "controller_false_recover",
             "controller_orphan_recover",
             "controller_finish",
+            "controller_retirement_recover",
         ],
-        &[5, 5, 5, 6, 6],
+        &[5, 5, 5, 6, 6, 6],
         &[FIRST, NEXT, LATE, b""],
     )
     .await;
@@ -349,15 +350,38 @@ async fn step(
         loss.store(6, Ordering::SeqCst);
         assert!(c.cleanup(&id(1050), &id(6150), 1).await.is_err());
         assert_eq!(loss.load(Ordering::SeqCst), 0);
-    } else {
-        assert_eq!(mode_name, "controller_finish");
+    } else if mode_name == "controller_finish" {
         c.recover(&id(50)).await.unwrap();
         assert!(p.read(&id(50)).await.is_err());
-        c.close(&id(1050), &id(6250)).await.unwrap();
+        let db =
+            rusqlite::Connection::open(root.join("controller-client/metadata.sqlite3")).unwrap();
+        db.execute_batch("CREATE TRIGGER ignore_retirement BEFORE INSERT ON retired_windows_opens BEGIN SELECT RAISE(IGNORE); END").unwrap();
+        assert!(c.close(&id(1050), &id(6250)).await.is_err());
+        db.execute_batch("DROP TRIGGER ignore_retirement").unwrap();
+        drop(db);
         let r = p.storage().opens().get(id(1050)).await.unwrap();
         assert!(r.pending().is_empty());
         assert!(r.completed(&id(6150)) && r.completed(&id(6250)));
         assert!(p.owned_removal(&id(50)).await.unwrap().is_none());
+        for edit in [5000, 5001, 5002, 5003, 5050, 5051] {
+            p.flush_edit(&id(edit)).await.unwrap();
+        }
+    } else {
+        assert_eq!(mode_name, "controller_retirement_recover");
+        c.recover(&id(50)).await.unwrap();
+        let r = p.storage().opens().get(id(1050)).await.unwrap();
+        assert!(r.completed(&id(6250)));
+        assert!(
+            p.storage()
+                .opens()
+                .records()
+                .await
+                .unwrap()
+                .iter()
+                .all(|r| r.input.id != id(1050))
+        );
+        assert!(c.open(r.input.clone()).await.is_err());
+        c.close(&id(1050), &id(6250)).await.unwrap();
         for edit in [5000, 5001, 5002, 5003, 5050, 5051] {
             p.flush_edit(&id(edit)).await.unwrap();
         }

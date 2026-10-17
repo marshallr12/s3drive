@@ -45,8 +45,10 @@ it cannot invent success from local flags. Reopen/replay use original IDs.
 Remote publication, retained dirty data, actual node-wide policy and disposition
 acceptance continue through the existing journals and upcoming controller.
 
-The bounded prototype retains 256 open records and 4,096 events without automatic
-pruning. Ordinary history must leave slots for activation, one cleanup and one
+The original bounded prototype retained 256 open records and 4,096 events without
+automatic pruning. [Completed-open retirement](windows-open-retirement.md) now
+removes completed controlled records from live budgets while retaining all proof
+bytes and refusing identity reuse. Ordinary live history must leave slots for activation, one cleanup and one
 close per open, plus acknowledgment of already linked effects. This protects
 callback evidence, not physical disk space or capacity for a new RPC effect.
 The namespace journal separately protects remote closing slots. Full disks and

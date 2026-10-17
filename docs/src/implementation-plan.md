@@ -547,3 +547,22 @@ retains old schema17 hashes; config6 and native unsupported paths stay unchanged
 Response-proof, compensation, full-disk/quota and exact open-ID checks passed.
 Require terminal exact-tip hosted native/reference/startup CI before publication;
 next resolve retention and abandoned-session policy before native integration.
+
+
+### Completed-open retirement (2026-10-17)
+
+Controller accepted at `28c527e`, terminal CI39055610947, schema18/config6.
+Implement [lossless retirement](windows-open-retirement.md) on the same SQLite
+worker, including controller Close/recovery. Only completed controlled records
+leave live budgets; full proof rows remain immutable and old IDs never reopen.
+Require >256 lifetimes with retained live readers, SQL-full/ignored writes,
+corruption/migration, killed SDK retirement and exact-tip hosted acceptance.
+Then resolve abandoned-session/response acknowledgment and deferred replacement
+before complete native WinFsp integration. Do not infer cleanup from a new ID.
+
+Local full gate passed: 228 state, nine HTTP and fifteen SDK cases. Eight new
+retirement tests and six SDK process stages preserve complete proof/data history,
+reuse live admission and recover failed retirement without PUT replay. Schema19
+and the strict Windows startup expectation agree; config6/native deletion paths
+stay unchanged. Require terminal exact-tip hosted native/reference/startup CI
+before private publication; then implement the remaining mount-session policy.

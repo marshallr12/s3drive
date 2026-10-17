@@ -1,6 +1,7 @@
 //! Durable per-file-object facts, not a substitute for kernel deletion policy.
 //! Namespace effects keep their exact existing journal and proof boundary.
 use super::*;
+mod retirement;
 use namespace::{ROOT, RemovalMode};
 const OPEN_LIMIT: usize = 256;
 const EVENT_LIMIT: usize = 4096;
@@ -220,6 +221,7 @@ pub(super) fn check_schema(db: &Connection) -> Result<()> {
     db.prepare("SELECT open_id,owner_id,input,event_count,head_hash,state_hash FROM windows_open_journal LIMIT 0")?;
     db.prepare("SELECT open_id,input_hash FROM retained_windows_opens LIMIT 0")?;
     db.prepare("SELECT event_id,open_id,ordinal,action,previous_hash,state_hash FROM windows_open_events LIMIT 0")?;
+    db.prepare("SELECT open_id,state_hash FROM retired_windows_opens LIMIT 0")?;
     Ok(())
 }
 fn outcome(db: &Connection, input: &Input) -> Result<Vec<u8>> {
@@ -484,10 +486,12 @@ fn load(db: &Connection, key: &str) -> Result<Option<(Row, OpenRecord)>> {
     if record.events.len() != row.count || previous != row.head {
         return Err("per-open event head missing or changed".into());
     }
+    retirement::check(db, &row, &record)?;
     Ok(Some((row, record)))
 }
 fn all(db: &Connection) -> Result<Vec<(Row, OpenRecord)>> {
-    let ids=db.prepare("SELECT open_id FROM windows_open_journal UNION SELECT open_id FROM retained_windows_opens LIMIT 257")?.query_map([],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+    retirement::check_index(db)?;
+    let ids=db.prepare("SELECT open_id FROM windows_open_journal WHERE open_id NOT IN (SELECT open_id FROM retired_windows_opens) UNION SELECT open_id FROM retained_windows_opens WHERE open_id NOT IN (SELECT open_id FROM retired_windows_opens) LIMIT 257")?.query_map([],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
     if ids.len() > OPEN_LIMIT {
         return Err("per-open journal limit or integrity failure".into());
     }
@@ -496,7 +500,12 @@ fn all(db: &Connection) -> Result<Vec<(Row, OpenRecord)>> {
         .map(|key| load(db, key)?.ok_or_else(|| "per-open row missing".into()))
         .collect::<Result<Vec<_>>>()?;
     let count: i64 = db.query_row("SELECT count(*) FROM windows_open_events", [], |r| r.get(0))?;
-    if count as usize != records.iter().map(|(r, _)| r.count).sum::<usize>() {
+    let expected: i64 = db.query_row(
+        "SELECT coalesce(sum(event_count),0) FROM windows_open_journal",
+        [],
+        |r| r.get(0),
+    )?;
+    if count != expected {
         return Err("orphaned per-open event history".into());
     }
     Ok(records)
@@ -566,6 +575,9 @@ impl<'a> Journal<'a> {
         let owner = identity::ensure(self.state)?;
         valid_input(&input, &owner)?;
         if let Some((_, old)) = load(&self.state.connection, &input.id)? {
+            if retirement::is_retired(&self.state.connection, &input.id)? {
+                return Err("retired open identity cannot be admitted again".into());
+            }
             if old.input != input {
                 return Err("per-open input changed; recover original identity".into());
             }
@@ -839,6 +851,9 @@ impl<'a> Journal<'a> {
                 return Err("per-open event identity changed".into());
             }
             return Ok(record);
+        }
+        if retirement::is_retired(&tx, key)? {
+            return Err("retired open history is immutable".into());
         }
         let old_hash = checksum(&row)?;
         let previous = row.head.clone();

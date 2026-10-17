@@ -1,4 +1,5 @@
 mod controlled;
+mod retirement;
 use super::*;
 fn key(n: u64) -> String {
     format!("{n:032x}")
@@ -653,9 +654,9 @@ fn schema_sixteen_migration_preserves_original_namespace_receipt_identity_and_so
         .get(&admission.request.operation)
         .unwrap();
     let owner = identity::read(&f.client.connection).unwrap();
-    f.client.connection.execute_batch("DROP TABLE windows_open_events;DROP TABLE retained_windows_opens;DROP TABLE windows_open_journal;PRAGMA user_version=16").unwrap();
+    f.client.connection.execute_batch("DROP TABLE retired_windows_opens; DROP TABLE windows_open_events;DROP TABLE retained_windows_opens;DROP TABLE windows_open_journal;PRAGMA user_version=16").unwrap();
     f.reopen();
-    assert_eq!(f.client.info().unwrap().schema_version, 18);
+    assert_eq!(f.client.info().unwrap().schema_version, 19);
     assert_eq!(
         super::super::Journal::new(&mut f.client)
             .unwrap()
@@ -675,7 +676,7 @@ fn schema_sixteen_migration_preserves_original_namespace_receipt_identity_and_so
 #[test]
 fn conflicting_schema_seventeen_migration_is_non_destructive() {
     let mut f = Fixture::new();
-    f.client.connection.execute_batch("DROP TABLE windows_open_events;DROP TABLE retained_windows_opens;DROP TABLE windows_open_journal;CREATE TABLE windows_open_journal(keep TEXT);INSERT INTO windows_open_journal VALUES('untouched');PRAGMA user_version=16").unwrap();
+    f.client.connection.execute_batch("DROP TABLE retired_windows_opens; DROP TABLE windows_open_events;DROP TABLE retained_windows_opens;DROP TABLE windows_open_journal;CREATE TABLE windows_open_journal(keep TEXT);INSERT INTO windows_open_journal VALUES('untouched');PRAGMA user_version=16").unwrap();
     let p = State::open_managed(&f.tmp.path().join("placeholder")).unwrap();
     drop(std::mem::replace(&mut f.client, p));
     assert!(State::open_managed(&f.tmp.path().join("client")).is_err());

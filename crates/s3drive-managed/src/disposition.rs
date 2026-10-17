@@ -354,15 +354,18 @@ impl Controller {
         }
         for record in self.records(node).await? {
             for event in &record.events {
-                if except.is_some_and(|(o, c)| o == record.input.id && c == event.id)
-                    || record.completed(&event.id)
-                {
+                if except.is_some_and(|(o, c)| o == record.input.id && c == event.id) {
                     continue;
                 }
                 if matches!(event.action, Action::Callback(Callback::Close))
                     && record.cleanup().is_some_and(|c| record.completed(&c.id))
                 {
                     Box::pin(self.close_inner(&record.input.id, &event.id)).await?;
+                    self.p()
+                        .storage()
+                        .opens()
+                        .retire(record.input.id.clone())
+                        .await?;
                 }
             }
         }
@@ -713,7 +716,8 @@ impl Controller {
             .callback(open.into(), cb.into(), Callback::Close)
             .await?;
         Box::pin(self.recover_void(&record.input.node, Some((open, cb)))).await?;
-        Box::pin(self.close_inner(open, cb)).await
+        Box::pin(self.close_inner(open, cb)).await?;
+        self.p().storage().opens().retire(open.into()).await
     }
     async fn close_inner(&self, open: &str, cb: &str) -> Result<()> {
         let record = self.record(open).await?;
