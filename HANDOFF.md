@@ -13,6 +13,8 @@ commands and immutable local snapshot handles. P5a2b adds local edit plans and
 pinned-base hydration. P5b1 adds an explicit disposable-key transport/probe.
 P5b2a adds local durable remote-attempt records and single-use send claims.
 P5b2b connects a quarantined SDK executor with local wire/recovery evidence.
+P5b2c adds an explicit source/evidence-bound library policy and factory, plus a
+local-only policy checker; normal configuration and mounts remain read-only.
 The separately approved live Wasabi single-PUT probe passed all ten checks and
 removed its six fixtures. Goal active;
 application remote commits,
@@ -26,7 +28,65 @@ repository `marshallr12/s3drive` are complete. The first usable read-only
 milestone is verified. Do not call the broader editable-drive goal complete
 until the documented safe-write contract and its OS acceptance gates pass.
 
-## Current phase: P5b2b journal-driven SDK executor
+## Current phase: P5b2c explicit source-bound library policy
+
+Branch `source-write-policy` starts from published private main
+`ff04001ee21c98e385c5d9a603700572ec0d0b21`. That exact tip passed all jobs in
+[run 38982835785](https://github.com/marshallr12/s3drive/actions/runs/38982835785):
+Windows job 117247420393, Linux 117247420687 and book 117247420587. Main SHA and
+private visibility were verified after publication. Logs:
+`/tmp/s3drive-upload-executor-final-{linux,windows,book}-ci.log`.
+
+`uploads::WritePolicy::from_toml` separately validates explicit application
+intent, the complete source-bound probe plan and exact full local report. It
+requires all ten checks, cleanup success, valid plan/report binding and bounded
+timestamps; it does not trust a boolean capability or sanitized JSON summary.
+Policy names source fingerprint, exact report SHA-256, writable relative prefix,
+byte limit, create-only/create-and-replace, markers-only metadata and evidence
+maximum age. Files are trusted local owner input, not signed attestations.
+No policy has been installed for the user's bucket.
+
+`Executor::open` now checks source configuration and pinned credential generation
+against that evidence before making any S3 request. `target` creates exact bound
+local staging targets. New intents enforce prefix/size/age before preparation;
+guard permission and freshness precede claims. A denied replacement may retain
+an unclaimed Prepared record. Expired/narrowed policy still observes already
+claimed attempts without another PUT. No automatic probe/refresh/rebind exists.
+All legacy executor tests now use the public factory; model evidence in tests
+is not live-provider acceptance. A complete wire probe's actual report also
+constructs the factory and commits a new empty Unicode key on the local model.
+
+`upload-policy-check` reads local files only, without loading credentials,
+opening storage, contacting a provider or rewriting its inputs. Example policy:
+`examples/write-policy.toml`; contract: `docs/src/write-policy.md`.
+No ordinary upload command, writable configuration/mount, remote flush,
+multipart, acknowledgment cleanup or uncertain-intent resolution is enabled.
+The existing Wasabi probe approval is fully consumed; no new cloud mutation is
+authorized. See the completed evidence below.
+
+Local gate passed: `/tmp/s3drive-write-policy-gate.log` (exit 0), including 47
+S3 tests, 70 state tests, 12 FS tests, two offline probe/policy CLI checks,
+clippy, builds and book. Native FUSE passed 341 read-only requests with 11
+distinct Unicode filenames and a Unicode directory; no-systemd session/cache
+acceptance passed with schema 6. Logs: `/tmp/s3drive-write-policy-linux.log` and
+`/tmp/s3drive-write-policy-session.log`, both exit 0. The complete saved Wasabi
+plan/report passed `upload-policy-check` using a private temporary check policy;
+the temporary file was removed, original file hashes unchanged, and no credential
+lookup, provider request, storage opening or startup registration occurred.
+Require terminal exact-tip Linux/Windows/book CI before main publication.
+The diagram generator
+and `remote-journal.png` now show the policy-bound library boundary; the PNG was
+visually inspected. Cargo.lock only adds existing sha2/toml edges for CLI tests;
+no dependency versions change.
+
+Next: uncertain-intent/supersession and credential-rebinding contracts, multipart,
+remote flush and pin/reference-aware acknowledgment cleanup before writable
+FUSE/WinFsp callbacks and desktop acceptance. Overall goal remains active.
+
+## Completed P5b2b journal-driven SDK executor
+
+The construction restriction below describes checkpoint `8eeda5b`; P5b2c above
+supersedes it with an explicit policy-bound library factory.
 
 Branch `journaled-s3-executor` starts from published private main
 `803ee3785cd0dafbe51c3862edacdd01891a8a1e`. P5b2a passed terminal all-green
@@ -89,9 +149,8 @@ are in `/tmp/s3drive-upload-executor-book.log`. Code checkpoint
 43 S3 tests on both OSes, 70 Linux / 68 Windows state tests, 341 FUSE and 749
 WinFsp requests, startup/cache gates and book. Logs:
 `/tmp/s3drive-upload-executor-{linux,windows,book}-ci.log`.
-Final live-evidence/research documentation follows that tested code checkpoint;
-require exact-final-tip CI before main publication. Locate it with
-`gh run list --branch journaled-s3-executor`.
+Final live-evidence/research documentation was published as `ff04001`, after
+terminal exact-tip run 38982835785 described above.
 See `docs/src/upload-executor.md`; the updated `remote-journal.png` was visually
 inspected. No local config, credentials or real startup registration changed.
 Only the six explicitly approved Wasabi fixtures changed; all were removed.
@@ -112,8 +171,8 @@ do not inherit AWS's larger limit for Wasabi. Completion has separate guarded,
 builder fields; multipart conditions remain unverified. A future live multipart
 plan needs fresh concrete authorization beyond this completed small-PUT scope.
 
-Next: explicit source-bound application write policy/factory using the scoped
-single-PUT evidence; unresolved-intent/credential rebinding;
+The source-bound application write policy/factory using scoped single-PUT
+evidence is now P5b2c above. Remaining: unresolved-intent/credential rebinding;
 multipart, remote flush and reference/pin-aware acknowledgment cleanup, then
 real writable FUSE/WinFsp application workflows. The overall goal remains active.
 
@@ -172,7 +231,7 @@ real writable FUSE/WinFsp application workflows. The overall goal remains active
   `s3drive-fs::edits` plans patch/truncate/sparse growth, copies immutable local
   parent pieces, and hydrates remote unchanged ranges through a pinned handle.
   A successful plan returns a new local snapshot; mounted writes remain disabled.
-- No application uploads, writable mounts, new offline opens or desktop packaging yet.
+- No ordinary CLI uploads, writable mounts, new offline opens or desktop packaging yet.
 - A separate explicit `probe-writes` CLI can create/replace/delete only six
   reviewed fixture keys. Its private transport makes one mutation attempt and
   observes metadata plus full bytes after uncertain results. Application uploads

@@ -101,3 +101,86 @@ fn offline_plan_and_confirmation_guards_preserve_existing_local_files() {
     assert!(String::from_utf8_lossy(&output.stderr).contains("probe-plan-confirmation"));
     assert!(!report.exists());
 }
+
+#[test]
+fn policy_check_is_offline_and_never_rewrites_its_inputs() {
+    use sha2::{Digest, Sha256};
+    let temp = tempfile::tempdir().unwrap();
+    let config_path = temp.path().join("drive.toml");
+    config(&config_path);
+    let source = s3drive_core::Config::parse(&fs::read_to_string(&config_path).unwrap())
+        .unwrap()
+        .sources
+        .remove(0);
+    let plan = Plan::prepare(&source).unwrap();
+    let plan_text = plan.to_toml().unwrap();
+    let value: toml::Value = toml::from_str(&plan_text).unwrap();
+    let fingerprint = value["source_fingerprint"].as_str().unwrap();
+    let observed = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let mut report = format!(
+        "version=1\nprobe_version='conditional-put-v1'\nobserved_unix_seconds={observed}\nplan_digest='{}'\nsource_fingerprint='{fingerprint}'\ncredential_generation='{}'\npassed=true\nerrors=[]\nremaining_keys=[]\n",
+        plan.digest().unwrap(),
+        "01".repeat(32)
+    );
+    for name in [
+        "conditional-create",
+        "existing-key-create-rejected",
+        "conditional-replace",
+        "stale-replace-rejected",
+        "wrong-validator-rejected",
+        "concurrent-create-one-winner",
+        "concurrent-replace-one-winner",
+        "unicode-literal-key-replace",
+        "empty-object-round-trip",
+        "receipt-independent-observation",
+    ] {
+        report.push_str(&format!(
+            "[[checks]]\nname='{name}'\npassed=true\ndetail='local fixture'\n"
+        ));
+    }
+    let report_digest = Sha256::digest(report.as_bytes())
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    let policy = format!(
+        "version=1\nsource_fingerprint='{fingerprint}'\nreport_sha256='{report_digest}'\nwritable_prefix='documents/'\nmax_object_bytes=4096\noperations='create-only'\nobject_metadata='s3drive-markers-only'\nevidence_max_age_seconds=86400\n",
+    );
+    let plan_path = temp.path().join("plan.toml");
+    let report_path = temp.path().join("report.toml");
+    let policy_path = temp.path().join("policy.toml");
+    fs::write(&plan_path, &plan_text).unwrap();
+    fs::write(&report_path, &report).unwrap();
+    fs::write(&policy_path, &policy).unwrap();
+    let run = || {
+        command()
+            .arg("upload-policy-check")
+            .arg(&config_path)
+            .arg("fixture")
+            .arg("--policy")
+            .arg(&policy_path)
+            .arg("--plan")
+            .arg(&plan_path)
+            .arg("--report")
+            .arg(&report_path)
+            .output()
+            .unwrap()
+    };
+    let result = run();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert!(String::from_utf8_lossy(&result.stdout).contains("No credentials resolved"));
+    assert_eq!(fs::read_to_string(&plan_path).unwrap(), plan_text);
+    assert_eq!(fs::read_to_string(&report_path).unwrap(), report);
+    assert_eq!(fs::read_to_string(&policy_path).unwrap(), policy);
+    fs::write(&report_path, format!("{report}\n# changed")).unwrap();
+    let result = run();
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr).contains("Evidence"));
+    assert_eq!(fs::read_to_string(&policy_path).unwrap(), policy);
+}

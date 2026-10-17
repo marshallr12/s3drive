@@ -1,5 +1,5 @@
-//! S3 reads, explicitly scoped conformance probes and a journal executor whose
-//! production construction remains disabled. Existing mounts are read-only.
+//! S3 reads, explicitly scoped conformance probes and a policy/evidence-bound
+//! library upload executor. Existing configurations and mounts are read-only.
 
 mod error;
 pub mod probe;
@@ -40,4 +40,4 @@ pub struct ObjectRevision {
     pub version_id: Option<String>,
 }
 
-pub const IMPLEMENTATION_STATUS: &str = "read-only S3 list/head/revision-pinned range reads; scoped write probe; application uploads disabled";
+pub const IMPLEMENTATION_STATUS: &str = "read-only mounts and S3 reads; scoped write probe; explicit policy/evidence-bound library single-PUT executor; no ordinary upload command or writable mount";

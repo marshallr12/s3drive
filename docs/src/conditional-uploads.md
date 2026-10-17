@@ -3,7 +3,7 @@
 **P5b1, implemented 2026-10-16:** a private single-attempt transport and explicit
 `probe-writes` CLI can test a provider in a reserved namespace. Mounted drives
 remain read-only. A [local attempt journal](remote-journal.md) now records durable
-claims and uncertain outcomes. A [quarantined SDK executor](upload-executor.md)
+claims and uncertain outcomes. A [policy-bound SDK executor](upload-executor.md)
 now exercises those records with local HTTP fixtures. Production construction,
 remote flush, multipart writes and dirty-data cleanup remain subsequent P5b work.
 
@@ -159,8 +159,8 @@ confirmation, edited-key refusal and existing-report preservation.
 
 P5b2a adds durable attempt/uncertain/verified states, random operation IDs and
 verified-parent guards in the local journal. P5b2b adds the journal-driven SDK
-executor. P5b still needs a production write policy/factory,
-unresolved-attempt/supersession resolution, explicit credential rebinding,
+executor. P5b2c adds the [explicit source-bound library policy/factory](write-policy.md).
+P5b still needs unresolved-attempt/supersession resolution, explicit credential rebinding,
 multipart recovery, flush semantics, and reference/pin-aware acknowledgment
 cleanup. Direct `If-Match` is an ETag guard, not a version-ID fence. Preserve
 these limits when deciding whether direct mode or managed metadata is needed.

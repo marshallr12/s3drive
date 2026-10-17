@@ -17,8 +17,9 @@ adapter, and a Windows WinFsp adapter. Use a local SQLite database for metadata
 and a local pending-intent journal. An async owner shares the cache and journal
 connection; local edit plans provide patch/truncate and pinned-base hydration.
 The [local attempt journal](remote-journal.md) preserves single-use claims and
-uncertain outcomes. A [quarantined SDK executor](upload-executor.md) is tested
-against local HTTP fixtures; production construction remains disabled. An [explicit write-capability probe](conditional-uploads.md)
+uncertain outcomes. A [journal-driven SDK executor](upload-executor.md) is tested
+against local HTTP fixtures; its [explicit write policy](write-policy.md) binds
+construction to source configuration and recorded evidence. An [explicit write-capability probe](conditional-uploads.md)
 reserves disposable keys and records provider evidence without enabling mounted writes.
 Store small clean snapshots in SQLite; bulk cache files remain future work.
 Begin with explicit, read-only bucket roots such as:
@@ -59,7 +60,7 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Local staging/journal foundation | Immutable chunked generations and pending intent; [no upload execution yet](staged-writes.md) |
 | Conditional write probe | [Scoped Wasabi single-PUT acceptance passed](wasabi.md#conditional-put-acceptance--2026-10-16); all six fixtures removed |
 | Durable remote-attempt journal | [Local single-use claims and uncertain-result recovery](remote-journal.md); executor described below |
-| Journal-driven SDK executor | [Implemented and tested on Linux/Windows](upload-executor.md); production construction disabled pending source-bound write-policy integration |
+| Journal-driven SDK executor | [Implemented and tested on Linux/Windows](upload-executor.md); explicit source/evidence-bound library factory; CLI/mount writes remain disabled |
 | Application upload/flush, writable mounts, new offline opens, tray UI | Planned |
 
 The initial research/scaffold delivery is complete. Work has advanced to the

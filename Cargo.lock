@@ -1986,8 +1986,10 @@ dependencies = [
  "s3drive-s3",
  "s3drive-state",
  "s3drive-winfsp",
+ "sha2",
  "tempfile",
  "tokio",
+ "toml",
  "url",
  "winfsp",
 ]

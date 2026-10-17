@@ -1,0 +1,11 @@
+# Separate library policy, NOT a table in s3drive.local.toml.
+# Replace both placeholders using the exact source and full local probe report.
+# This example is intentionally invalid until both SHA-256 values are supplied.
+version = 1
+source_fingerprint = "REPLACE_WITH_64_LOWERCASE_HEX_SOURCE_FINGERPRINT"
+report_sha256 = "REPLACE_WITH_64_LOWERCASE_HEX_OF_EXACT_FULL_REPORT_FILE"
+writable_prefix = "documents/" # relative to this source's configured prefix
+max_object_bytes = 4096        # 1..8388608; zero-byte objects are supported
+operations = "create-only"    # or "create-and-replace", both conditional
+object_metadata = "s3drive-markers-only"
+evidence_max_age_seconds = 86400 # 1..2592000; never refreshes/reruns a probe

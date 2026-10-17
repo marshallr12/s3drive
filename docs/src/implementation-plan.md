@@ -32,6 +32,7 @@ and writable OS callbacks remain subsequent phases.
 | P5b1 — conditional transport probe | Private single-attempt PUT/observation and an explicit six-key, source-bound probe plan/run/cleanup CLI | Real SDK/TCP tests for lost responses, enforced/ignored guards, races, corruption and guarded fixture disposal; live provider evidence requires separately authorized execution |
 | P5b2a — durable remote-attempt records | Schema 6, single-use send claims, uncertain-result recovery and verified-parent guards on the shared async owner | Process-kill boundaries, lost owner reply, no duplicate permission, exact observation matching, newer dirty-head preservation, quota/disk-full/corruption/migration tests; no network executor |
 | P5b2b — journal-driven SDK executor | Single-PUT permit consumption, pinned binding, full-byte observation, four execution slots; production construction gated | Real SDK/TCP lost-response/timeout/cancellation tests, independent-journal create/replace races, process death after server commit and recovery without a second PUT; live provider acceptance/write policy still required |
+| P5b2c — explicit library write policy | Source/report-bound factory, exact prefix and byte limits, credential-generation matching and evidence expiry | Strict local evidence parsing, denied targets before send claims, full SDK/TCP tests through the public factory, observation-only recovery after expiry; no live mutations or mount configuration changes |
 | P5a — staged writes | In-memory storage test double plus immutable local generations and durable journal | Fault injection at every local boundary; acknowledged local state survives restart; network mutation remains disabled |
 | P5b — conditional remote commits | Create/replace and multipart recovery; explicit flush contract | Provider preconditions verified; two-writer conflict tests; crash/timeout replay never overwrites unseen edits |
 | P5c — desktop mutations | Safe delete, documented rename behavior, open-handle semantics, real application workflows | Delete races, save/replace, concurrent open, unmount failures and data-loss tests on both OSes |
@@ -154,7 +155,7 @@ its data on removal. See the storage chapter for defaults and bounds.
 Broader workload/performance testing, bulk/sparse caching and live Wasabi cached
 reads remain separate acceptance work. New offline opens remain denied. P4's
 clean-cache boundary is the prerequisite for P5a staged writes; the upload
-journal's application upload execution and mounted mutations remain disabled.
+journal now has a policy-bound library executor; mounted mutations remain disabled.
 The explicit P5b1 provider probe is a separate disposable-key tool.
 
 ### Optional coordination investigation
@@ -218,11 +219,11 @@ preconditions and reconcile uncertain remote results before P5c exposes writes.
 P5b1 prepares the [scoped conditional-write probe](conditional-uploads.md).
 P5b2a adds the [local attempt journal](remote-journal.md), preserving single-use
 claims, uncertain outcomes and verified-parent ETag guards. P5b2b adds the
-[journal-driven executor](upload-executor.md), compiled in normal builds but
-constructible only inside local tests until provider/write-policy acceptance.
-No application upload, remote flush or dirty-byte reclamation is enabled yet.
-The scoped Wasabi single-PUT probe has now passed with cleanup. The source-bound
-write policy/factory remains subsequent work. Multipart is a separate capability;
+[journal-driven executor](upload-executor.md). P5b2c adds its explicit
+[source/evidence-bound library policy and factory](write-policy.md). No ordinary
+upload command, writable mount, remote flush or dirty-byte reclamation is enabled.
+The scoped Wasabi single-PUT probe passed with cleanup; no real application
+write policy has been installed. Multipart is a separate capability;
 the [current research and protocol plan](multipart-plan.md) records provider
 limit differences and the remaining durability boundaries.
 Credential-generation rebinding and unresolved-attempt/supersession resolution

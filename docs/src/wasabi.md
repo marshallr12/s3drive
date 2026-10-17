@@ -10,7 +10,9 @@ acceptance, not proof of every provider capability.
 
 The separately approved [conditional-PUT probe](#conditional-put-acceptance--2026-10-16)
 also passed later that day. Its six fixtures were removed and its prefix was
-empty afterward. Application uploads and mounted writes remain disabled.
+empty afterward. Ordinary CLI uploads and mounted writes remain disabled. A separate
+[source-bound library policy](write-policy.md) is required to construct an executor;
+no real application policy has been installed.
 
 ## Configuration
 

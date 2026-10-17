@@ -386,6 +386,52 @@ async fn complete_probe_verifies_guards_unicode_races_and_cleanup() {
             .any(|(_, key)| key.contains("%252F"))
     );
     assert!(!report.to_toml().unwrap().contains("TESTSECRET"));
+    assert!(report.acceptance(&plan).is_ok());
+    // Exercise the public factory with a report produced by the complete wire
+    // probe, rather than only the synthetic policy-parser fixtures.
+    let report = report.to_toml().unwrap();
+    let policy = format!(
+        "version = 1\nsource_fingerprint = '{}'\nreport_sha256 = '{}'\nwritable_prefix = 'documents/'\nmax_object_bytes = 4096\noperations = 'create-and-replace'\nobject_metadata='s3drive-markers-only'\nevidence_max_age_seconds = 86400\n",
+        source_fingerprint(&server.source()),
+        hex(Sha256::digest(report.as_bytes()).as_slice()),
+    );
+    let policy = crate::uploads::WritePolicy::from_toml(
+        &server.source(),
+        &policy,
+        &plan.to_toml().unwrap(),
+        &report,
+    )
+    .unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let storage = s3drive_state::worker::Storage::open(
+        &temp.path().join("state"),
+        s3drive_state::cache::Options::default(),
+        s3drive_state::journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    let executor = crate::uploads::Executor::open(server.reader(), storage.clone(), policy)
+        .await
+        .unwrap();
+    assert_eq!(server.count("PUT"), 14); // Opening never writes or re-probes.
+    let target = executor.target("documents/日本語.txt").unwrap();
+    let staging = storage.staging();
+    let id = staging
+        .begin(target, s3drive_state::journal::Base::Missing, None, 0)
+        .await
+        .unwrap();
+    staging.seal(id).await.unwrap();
+    assert_eq!(
+        executor.submit(id).await.unwrap().phase,
+        s3drive_state::remote::Phase::Verified
+    );
+    assert_eq!(
+        executor.reconcile(id).await.unwrap().phase,
+        s3drive_state::remote::Phase::Verified
+    );
+    assert_eq!(server.count("PUT"), 15);
+    assert_eq!(server.count("DELETE"), 6);
+    storage.close().await.unwrap();
 }
 
 #[tokio::test]

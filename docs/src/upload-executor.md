@@ -3,16 +3,16 @@
 **P5b2b, implemented 2026-10-16:** the durable journal is now connected to the
 real AWS SDK's single-attempt PUT and full-byte observation path. Local TCP
 fixtures exercise the complete sequence, including killing the executor process
-after the server commits. **Production construction is disabled.** No upload
-command, writable mount, remote flush or automatic dirty-byte reclamation is
-enabled. The [scoped Wasabi single-PUT probe](wasabi.md#conditional-put-acceptance--2026-10-16)
-has now passed. An explicit source-bound application write policy and its
-acceptance remain prerequisites for enabling an executor factory.
+after the server commits. **P5b2c adds an explicit library factory** bound to a
+[separate write policy and full provider evidence](write-policy.md). No ordinary
+upload command, writable mount, remote flush or automatic dirty-byte reclamation
+is enabled. The [scoped Wasabi single-PUT probe](wasabi.md#conditional-put-acceptance--2026-10-16)
+has passed; no real application write policy has been installed.
 
-The exported `s3drive_s3::uploads::Executor` has private fields and no production
-constructor. Its implementation is compiled and linted in normal builds; test
-code alone constructs it with isolated local endpoints and dummy credentials.
-Neither a `Capabilities` value nor a disposable probe report can construct one.
+The exported `s3drive_s3::uploads::Executor` has private fields. Its public
+`open` factory pins credentials only after checking the policy's source binding,
+then requires the evidence's credential generation to match. A `Capabilities`
+value or disposable probe report alone cannot construct one.
 Existing `mode = "read-only"` configuration behavior is unchanged.
 
 ![The local journal grants one send claim; the gated SDK executor sends once and observes exact remote bytes.](images/remote-journal.png)
@@ -21,7 +21,8 @@ Existing `mode = "read-only"` configuration behavior is unchanged.
 
 `submit(generation)` first checks the generation's target against the pinned
 runtime credentials and configuration, including the full prefixed S3 key.
-It does this before preparing an intent. The journal then selects the current
+For new attempts, prefix, size and evidence age checks precede intent preparation;
+guard permission and a fresh age check precede claim. The journal selects the current
 sealed head and its guard. The executor reads and hashes the bounded local body
 before claiming a send permit. Claim rechecks the body, binding and current
 head on the SQLite owner; only the committed non-cloneable permit can enter
@@ -96,10 +97,9 @@ provider probe must still detect an incompatible endpoint.
 
 ## Required next work
 
-Preserve the scoped Wasabi single-PUT evidence when defining a source-bound
-application write policy. Enable construction only after that policy's
-acceptance requirements pass. The completed six-key probe authorization does
-not extend to ordinary bucket contents or multipart operations.
+The [write-policy contract](write-policy.md) defines the explicit opt-in, its
+strict local validation and expiry behavior. The completed six-key probe
+authorization does not extend to ordinary bucket contents or multipart operations.
 
 Uncertain/rejected intent resolution, explicit credential rebinding, multipart
 recovery, remote flush and reference/pin-aware acknowledgment cleanup remain

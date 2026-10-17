@@ -211,6 +211,6 @@ directories. It checks actual PUT counts after dropped/malformed responses,
 body/metadata/receipt failures, cancellation and closed local owners. A helper
 process is killed after server commit; reopening and observing must verify the
 same attempt without another PUT. Independent local journals race both create
-and replacement guards. The executor's normal-build implementation has no
-production constructor, so these fixtures do not enable uploads from a mount or
-read-only configuration. See the [executor contract](upload-executor.md).
+and replacement guards. The executor's public factory requires an explicit
+[source-bound policy and complete evidence](write-policy.md). Existing mounts
+and their configuration remain read-only; tests do not install an application policy. See the [executor contract](upload-executor.md).

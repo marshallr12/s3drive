@@ -21,11 +21,10 @@ async fn make(session: Session, path: &Path) -> Executor {
     let storage = Storage::open(path, cache::Options::default(), journal::Options::default())
         .await
         .unwrap();
-    Executor(Arc::new(Shared {
-        session,
-        storage,
-        slots: Semaphore::new(4),
-    }))
+    let policy = policy::tests::fixture_policy(&session);
+    Executor::open(session.reader, storage, policy)
+        .await
+        .unwrap()
 }
 fn target(executor: &Executor, key: &str) -> Target {
     Target::new(
@@ -35,7 +34,7 @@ fn target(executor: &Executor, key: &str) -> Target {
     )
     .unwrap()
 }
-async fn stage(
+pub(super) async fn stage(
     executor: &Executor,
     key: &str,
     parent: Option<GenerationId>,
@@ -502,6 +501,7 @@ async fn reconcile_never_prepares_or_sends_and_runtime_binding_is_checked_before
     .await
     .unwrap();
     let wrong = Executor(Arc::new(Shared {
+        policy: policy::tests::fixture_policy(&session),
         session,
         storage: executor.0.storage.clone(),
         slots: Semaphore::new(4),
@@ -672,8 +672,8 @@ async fn invalid_full_keys_and_large_generations_never_reach_the_network() {
             .await
             .unwrap_err()
             .cause()
-            .downcast_ref::<remote::Failure>(),
-        Some(&remote::Failure::TooLarge)
+            .downcast_ref::<Failure>(),
+        Some(&Failure::PolicySize)
     );
     assert_eq!(
         (

@@ -3,11 +3,11 @@
 **P5b2a, implemented 2026-10-16:** schema 6 adds local attempt records on the
 same SQLite connection and bounded async owner as cache and staging work.
 This is a local recovery library. P5b2b now connects it to a
-[quarantined SDK executor](upload-executor.md), tested with local HTTP fixtures.
-Production construction, remote flush, writable mounts, multipart uploads and
-dirty-data reclamation remain disabled.
+[policy-bound SDK executor](upload-executor.md), tested with local HTTP fixtures.
+P5b2c adds a [source/evidence-bound factory](write-policy.md). Remote flush,
+writable mounts, multipart uploads and dirty-data reclamation remain disabled.
 The separately authorized [Wasabi single-PUT probe](conditional-uploads.md)
-has passed; application write-policy integration remains subsequent work.
+has passed; no real application write policy has been installed.
 
 ![A sealed generation becomes a prepared intent, then one durable send claim. Lost results remain uncertain until matching remote evidence is established.](images/remote-journal.png)
 

@@ -22,6 +22,17 @@ enum Command {
     },
     /// Validate a local configuration without contacting a provider.
     ConfigCheck { config: PathBuf },
+    /// Validate explicit upload policy and recorded evidence locally; no S3 or credentials.
+    UploadPolicyCheck {
+        config: PathBuf,
+        source: String,
+        #[arg(long)]
+        policy: PathBuf,
+        #[arg(long)]
+        plan: PathBuf,
+        #[arg(long)]
+        report: PathBuf,
+    },
     /// Show which bucket/key a slash-separated virtual file path would use.
     Resolve { config: PathBuf, path: String },
     /// Create or reopen a local SQLite metadata database (no network access).
@@ -102,6 +113,24 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     match Cli::parse().command {
         // Keep SDK mutation futures out of the existing mount startup envelope.
         Command::ProbeWrites { command } => Box::pin(run_probe(command)).await?,
+        Command::UploadPolicyCheck {
+            config,
+            source,
+            policy,
+            plan,
+            report,
+        } => {
+            let source = probe_source(config, &source)?;
+            s3drive_s3::uploads::WritePolicy::from_toml(
+                &source,
+                &read_evidence(policy)?,
+                &read_evidence(plan)?,
+                &read_evidence(report)?,
+            )?;
+            println!(
+                "Valid source-bound policy and local evidence. No credentials resolved or provider connection attempted. New claims still require fresh evidence and matching runtime credentials; mounts remain read-only."
+            );
+        }
         Command::ConfigCheck { config } => {
             let config = Config::parse(&fs::read_to_string(config)?)?;
             println!(
@@ -318,6 +347,14 @@ fn create_private_new(path: &std::path::Path) -> std::io::Result<fs::File> {
         options.mode(0o600);
     }
     options.open(path)
+}
+fn read_evidence(path: PathBuf) -> std::io::Result<String> {
+    use std::io::Read as _;
+    let mut text = String::new();
+    fs::File::open(path)?
+        .take(32769)
+        .read_to_string(&mut text)?;
+    Ok(text)
 }
 
 async fn reader_for_path(

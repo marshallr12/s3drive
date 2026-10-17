@@ -1,14 +1,14 @@
 //! Journal-driven single-PUT execution and observation.
 //!
-//! This type deliberately has no production constructor yet. Local SDK/TCP
-//! tests exercise the complete executor, but provider acceptance and an explicit
-//! application write policy must precede enabling construction. Existing
-//! configurations and mounts remain read-only. A probe report is not a token
-//! that can construct this executor.
+//! Construction requires a separate, explicit source-bound write policy and
+//! complete local provider evidence. Existing configurations and mounts remain
+//! read-only. A probe report alone never authorizes application writes.
+mod policy;
 use crate::{
     ErrorKind, ObjectRevision,
     transport::{self, Condition, Intent, Observation, Outcome, Session},
 };
+pub use policy::{SetupError, WritePolicy};
 use s3drive_state::{
     journal::{GenerationId, Target},
     remote::{self, Guard, Info, OperationId, Phase, Reason, SendPermit},
@@ -60,6 +60,10 @@ pub enum Failure {
     BindingMismatch,
     MissingIntent,
     Integrity,
+    PolicyScope,
+    PolicySize,
+    PolicyExpired,
+    PolicyOperation,
 }
 impl fmt::Display for Failure {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -70,6 +74,10 @@ impl fmt::Display for Failure {
             Self::Integrity => {
                 "upload payload or receipt integrity check failed; local data was preserved"
             }
+            Self::PolicyScope => "upload target is outside the explicit writable prefix",
+            Self::PolicySize => "upload body exceeds the explicit write policy limit",
+            Self::PolicyExpired => "upload evidence has expired or the clock is inconsistent; observation remains available",
+            Self::PolicyOperation => "upload policy permits creation only; replacement was not claimed",
         })
     }
 }
@@ -79,14 +87,52 @@ struct Shared {
     session: Session,
     storage: Storage,
     slots: Semaphore,
+    policy: WritePolicy,
 }
 
 /// One pinned credential generation, local storage owner and four bounded
-/// execution slots. Exported for its contract, but construction remains private
-/// until provider acceptance and application write-policy integration.
+/// execution slots, with explicit local application intent and scoped evidence.
 #[derive(Clone)]
 pub struct Executor(Arc<Shared>);
 impl Executor {
+    /// Pins one credential generation and validates both bindings before any S3
+    /// request. This does not run a probe, send an upload or change mount mode.
+    /// Expired evidence permits observation-only recovery, never a new claim.
+    pub async fn open(
+        reader: crate::S3Reader,
+        storage: Storage,
+        policy: WritePolicy,
+    ) -> std::result::Result<Self, SetupError> {
+        if !policy.source_matches(&reader) {
+            return Err(SetupError::SourceMismatch);
+        }
+        let session = Session::pin(reader)
+            .await
+            .map_err(SetupError::Credentials)?;
+        if !policy.credentials_match(&session.binding) {
+            return Err(SetupError::CredentialMismatch);
+        }
+        Ok(Self(Arc::new(Shared {
+            session,
+            storage,
+            slots: Semaphore::new(4),
+            policy,
+        })))
+    }
+
+    /// Produce an exact, credential/configuration-bound local staging target.
+    /// No provider request is made; final size/age/guard checks occur at submit.
+    pub fn target(&self, key: &str) -> std::result::Result<Target, SetupError> {
+        if !self.0.policy.permits_key(&self.0.session.reader, key) {
+            return Err(SetupError::Target);
+        }
+        Target::new(
+            self.0.session.binding_id,
+            self.0.session.reader.configuration_fingerprint(),
+            key,
+        )
+        .map_err(|_| SetupError::Target)
+    }
     /// Prepare/claim at most once, then observe. Only `Phase::Verified` is a
     /// verified historical remote receipt. Rejected/uncertain are not success.
     /// Repeated calls on a claimed intent only observe; they never send again.
@@ -104,13 +150,37 @@ impl Executor {
             .await
             .map_err(|e| Error::new(generation, None, e))?;
         self.target_binding(generation, None, &selected.target)?;
-        let info = self
-            .0
-            .storage
-            .uploads()
-            .prepare(generation)
+        let uploads = self.0.storage.uploads();
+        let previous = uploads
+            .for_generation(generation)
             .await
             .map_err(|e| Error::new(generation, None, e))?;
+        // Recovery of an already claimed request cannot acquire new write
+        // authority. It remains possible after expiry or a narrowed policy.
+        if previous.is_none()
+            || previous
+                .as_ref()
+                .is_some_and(|i| i.phase == Phase::Prepared)
+        {
+            self.0
+                .policy
+                .admission(
+                    &self.0.session.reader,
+                    selected.target.object_key(),
+                    selected.size,
+                )
+                .map_err(|e| Error::new(generation, previous.as_ref().map(|i| i.operation), e))?;
+        }
+        let info = if let Some(info) = previous {
+            info
+        } else {
+            self.0
+                .storage
+                .uploads()
+                .prepare(generation)
+                .await
+                .map_err(|e| Error::new(generation, None, e))?
+        };
         self.binding(&info)?;
         match info.phase {
             Phase::Verified | Phase::Rejected | Phase::Cancelled => Ok(info),
@@ -119,9 +189,18 @@ impl Executor {
                 self.observe(&info, &intent, None).await
             }
             Phase::Prepared => {
+                self.0
+                    .policy
+                    .guard(&info.guard)
+                    .map_err(|e| Error::new(generation, Some(info.operation), e))?;
                 // Materialize and check bounded local bytes before issuing the
                 // claim. No network operation occurs on the SQLite owner.
                 let intent = self.intent(&info).await?;
+                // Recheck freshness after potentially slow local body hashing.
+                self.0
+                    .policy
+                    .admission(&self.0.session.reader, info.target.object_key(), info.size)
+                    .map_err(|e| Error::new(generation, Some(info.operation), e))?;
                 let permit = self
                     .0
                     .storage

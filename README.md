@@ -16,11 +16,12 @@ bounded async owner; writable mounts and remote commits remain planned.
 Local edit plans support patch/truncate and revision-pinned hydration with
 restart replay; the native mount adapters still expose read-only files.
 An explicit [disposable-key write probe](docs/src/conditional-uploads.md)
-can test a provider's conditional PUT behavior; application uploads remain disabled.
+can test a provider's conditional PUT behavior; mounted writes remain disabled.
 A [local remote-attempt journal](docs/src/remote-journal.md) now preserves
 single-use send claims and uncertain outcomes without executing network writes.
 A [journal-driven SDK executor](docs/src/upload-executor.md) is tested against
-local HTTP fixtures; it has no production constructor pending source-bound write-policy integration.
+local HTTP fixtures and has an explicit [source/evidence-bound library policy](docs/src/write-policy.md).
+No ordinary upload command or writable mount is enabled.
 [Linux sign-in startup](docs/src/startup-and-sessions.md) works without systemd,
 including MX Linux, and has a native terminal-disconnect acceptance test.
 Windows startup uses a per-user scheduled task and an NTFS folder shared across
@@ -29,8 +30,8 @@ Actual workstation reboot, sign-out policy and SSH authentication remain separat
 [Wasabi read acceptance](docs/src/wasabi.md) passed against isolated test
 objects, including a real Linux mount. Broader provider conformance is pending.
 The separately authorized [Wasabi single-PUT probe](docs/src/wasabi.md#conditional-put-acceptance--2026-10-16)
-also passed ten checks; all six disposable fixtures were removed. Application
-uploads remain disabled.
+also passed ten checks; all six disposable fixtures were removed. CLI uploads
+and mounted writes remain disabled.
 
 The proposed architecture uses **FUSE on Linux**, **WinFsp on Windows**, a shared
 Rust engine, and **SQLite on local disk** for metadata and eventual recovery state.
@@ -86,8 +87,8 @@ cargo run --locked -- read s3drive.local.toml documents/report.pdf --offset 0 --
 
 `read` writes raw bytes to stdout. These commands perform real S3 requests;
 see the [provider contract](docs/src/provider-contract.md) for credentials,
-limits, pagination and current verification scope. Application write/delete APIs
-remain disabled. For a drive, use
+limits, pagination and current verification scope. Ordinary CLI upload/delete commands
+remain unavailable. For a drive, use
 `cargo run --locked -- mount s3drive.local.toml /path/to/empty-owned-directory`
 on Linux with `/dev/fuse` and `fusermount3`.
 On Windows with WinFsp installed, choose an unused letter:
@@ -98,7 +99,7 @@ On Windows with WinFsp installed, choose an unused letter:
 | Crate | Current responsibility |
 | --- | --- |
 | `s3drive-core` | Validate TOML and resolve virtual paths to bucket/key pairs |
-| `s3drive-s3` | Read-only AWS SDK adapter, revision-bound handles and sanitized errors |
+| `s3drive-s3` | S3 reads, scoped probes and policy-bound single-PUT library executor |
 | `s3drive-state` | Private SQLite state, bounded clean cache and local staged-generation journal |
 | `s3drive-fs` | Shared namespace, revision-bound handles and optional cache orchestration |
 | `s3drive-fuse` | Linux read-only FUSE callbacks and signal-driven unmount |

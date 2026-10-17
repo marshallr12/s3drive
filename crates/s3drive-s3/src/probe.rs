@@ -21,6 +21,18 @@ const NAMES: [&str; 6] = [
     "empty",
 ];
 const MAX_PLAN_BYTES: usize = 32 * 1024;
+pub(crate) const CHECK_NAMES: [&str; 10] = [
+    "conditional-create",
+    "existing-key-create-rejected",
+    "conditional-replace",
+    "stale-replace-rejected",
+    "wrong-validator-rejected",
+    "concurrent-create-one-winner",
+    "concurrent-replace-one-winner",
+    "unicode-literal-key-replace",
+    "empty-object-round-trip",
+    "receipt-independent-observation",
+];
 
 /// A concrete, source-bound reservation of exactly six disposable keys. The
 /// serialized file contains no credentials. Execution regenerates every key
@@ -356,7 +368,8 @@ impl Plan {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Check {
     pub name: String,
     pub passed: bool,
@@ -369,7 +382,8 @@ fn check(checks: &mut Vec<Check>, name: &str, passed: bool, detail: String) {
         detail,
     });
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Report {
     version: u32,
     probe_version: String,
@@ -383,6 +397,36 @@ pub struct Report {
     pub remaining_keys: Vec<String>,
 }
 impl Report {
+    /// Strict, bounded local evidence parsing. Parsing does not authorize any
+    /// S3 mutation or imply that the local file is authenticated.
+    pub fn from_toml(text: &str) -> Result<Self> {
+        if text.len() > MAX_PLAN_BYTES {
+            return Err(Error::new("probe-report-size", ErrorKind::InvalidInput));
+        }
+        toml::from_str(text).map_err(|_| Error::new("probe-report-format", ErrorKind::InvalidInput))
+    }
+    pub(crate) fn acceptance(&self, plan: &Plan) -> Result<(String, u64)> {
+        if self.version != 1
+            || self.probe_version != "conditional-put-v1"
+            || self.observed_unix_seconds < plan.created_unix_seconds
+            || self.plan_digest != plan.digest()?
+            || self.source_fingerprint != plan.source_fingerprint
+            || !is_hex(&self.credential_generation, 64)
+            || !self.passed
+            || !self.errors.is_empty()
+            || !self.remaining_keys.is_empty()
+            || self.checks.len() != CHECK_NAMES.len()
+            || self.checks.iter().zip(CHECK_NAMES).any(|(c, name)| {
+                c.name != name || !c.passed || c.detail.is_empty() || c.detail.len() > 1024
+            })
+        {
+            return Err(Error::new("probe-acceptance", ErrorKind::InvalidInput));
+        }
+        Ok((
+            self.credential_generation.clone(),
+            self.observed_unix_seconds,
+        ))
+    }
     fn new(plan: &Plan, binding: String) -> Result<Self> {
         Ok(Self {
             version: 1,

@@ -1,5 +1,5 @@
 //! Private single-attempt S3 transport shared by the scoped provider probe and
-//! the quarantined journal executor. This module grants no upload authority.
+//! the policy-bound journal executor. This module grants no upload authority.
 use crate::{
     Error, ErrorKind, ObjectRevision, Result, S3Reader, error::sdk_error,
     reader::credential_binding,
