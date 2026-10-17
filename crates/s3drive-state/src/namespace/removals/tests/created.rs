@@ -285,6 +285,19 @@ fn create_capacity_reserves_promotion_and_commit_without_leaving_partial_nodes()
 
 #[test]
 fn killed_authority_owner_recovers_exact_created_node_and_reservation() {
+    let mut w = World::new();
+    let request = input(&mut w, "killed create 資料 🦀", Kind::EmptyFile);
+    let original = killed_apply(&mut w, &request);
+    let before = w.state.namespace_volume().unwrap();
+    assert_eq!(w.state.namespace_apply(&request), Ok(original.clone()));
+    assert_eq!(w.state.namespace_volume().unwrap(), before);
+    let p = w.inspect(&original.node);
+    assert_eq!(p.fence.intent, request.operation);
+    assert_eq!(p.mode, RemovalMode::Deferred);
+    assert_eq!(p.node, original.node);
+}
+
+pub(super) fn killed_apply(w: &mut World, request: &Apply) -> Receipt {
     use std::{
         io::BufRead,
         process::{Command, Stdio},
@@ -297,8 +310,6 @@ fn killed_authority_owner_recovers_exact_created_node_and_reservation() {
             self.0.stdin.take();
         }
     }
-    let mut w = World::new();
-    let request = input(&mut w, "killed create 資料 🦀", Kind::EmptyFile);
     let path = w.tmp.path().join("authority");
     let request_path = w.tmp.path().join("create.json");
     std::fs::write(&request_path, serde_json::to_vec(&request).unwrap()).unwrap();
@@ -342,17 +353,9 @@ fn killed_authority_owner_recovers_exact_created_node_and_reservation() {
     reader.join().unwrap();
     signaled.unwrap();
     w.state = State::open_managed(&path).unwrap();
-    let original = w
-        .state
+    w.state
         .namespace_operation(&w.volume, &request.operation)
         .unwrap()
         .unwrap()
-        .unwrap();
-    let before = w.state.namespace_volume().unwrap();
-    assert_eq!(w.state.namespace_apply(&request), Ok(original.clone()));
-    assert_eq!(w.state.namespace_volume().unwrap(), before);
-    let p = w.inspect(&original.node);
-    assert_eq!(p.fence.intent, request.operation);
-    assert_eq!(p.mode, RemovalMode::Deferred);
-    assert_eq!(p.node, original.node);
+        .unwrap()
 }

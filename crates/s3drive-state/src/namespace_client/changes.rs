@@ -108,6 +108,13 @@ pub(super) fn validate(input: &Input) -> Result<()> {
             parent,
             destination,
             ..
+        }
+        | Mutation::MoveDeferredEntry {
+            node,
+            source_parent,
+            parent,
+            destination,
+            ..
         } => {
             let count = if destination.as_ref().is_some_and(|d| d.id != node.id) {
                 2
@@ -144,7 +151,8 @@ pub(super) fn effects(input: &Input, r: &Receipt) -> Result<Vec<Node>> {
         | Mutation::PrepareRemoval { .. }
         | Mutation::TransitionRemoval { .. }
         | Mutation::CancelRemoval { .. } => (false, None),
-        Mutation::MoveEntry { parent, name, .. } => {
+        Mutation::MoveEntry { parent, name, .. }
+        | Mutation::MoveDeferredEntry { parent, name, .. } => {
             expected.parent = parent.id.clone();
             expected.name = name.clone();
             (false, input.entries.get(1))
@@ -162,14 +170,27 @@ pub(super) fn effects(input: &Input, r: &Receipt) -> Result<Vec<Node>> {
     {
         return Err("namespace source receipt does not match frozen input".into());
     }
-    if let Some(fence) = super::removals::fence(input) {
+    if let Some(fence) = super::removals::fence(input)
+        && !matches!(input.request.mutation, Mutation::MoveDeferredEntry { .. })
+    {
         if r.artifact != Some(Artifact::Removal(fence)) {
             return Err("removal receipt changed ownership fence".into());
         }
         return Ok(vec![r.node.clone()]);
     }
-    let Some(Artifact::Namespace { displaced: actual }) = &r.artifact else {
-        return Err("namespace receipt lacks entry artifact".into());
+    let actual = match (&input.request.mutation, &r.artifact) {
+        (
+            Mutation::MoveDeferredEntry { fence, .. },
+            Some(Artifact::RemovalMove {
+                fence: actual,
+                displaced,
+            }),
+        ) if fence.as_ref() == actual => displaced,
+        (
+            Mutation::MoveEntry { .. } | Mutation::RemoveEntry { .. },
+            Some(Artifact::Namespace { displaced }),
+        ) => displaced,
+        _ => return Err("namespace receipt lacks exact entry/fence artifact".into()),
     };
     let mut nodes = vec![r.node.clone()];
     match (displaced, actual) {

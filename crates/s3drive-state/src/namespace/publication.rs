@@ -59,8 +59,14 @@ pub struct Payload {
     deny_unknown_fields
 )]
 pub enum Artifact {
-    Namespace { displaced: Option<Node> },
+    Namespace {
+        displaced: Option<Node>,
+    },
     Removal(RemovalFence),
+    RemovalMove {
+        fence: RemovalFence,
+        displaced: Option<Node>,
+    },
     Store(Store),
     Reservation(Reservation),
     Published(Payload),

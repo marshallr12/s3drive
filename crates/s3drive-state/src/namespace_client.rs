@@ -37,6 +37,7 @@ impl Input {
             Mutation::CreateEntry { .. }
                 | Mutation::CreateDeferredEntry { .. }
                 | Mutation::MoveEntry { .. }
+                | Mutation::MoveDeferredEntry { .. }
                 | Mutation::RemoveEntry { .. }
                 | Mutation::ArmRemoval { .. }
                 | Mutation::PrepareRemoval { .. }
@@ -226,7 +227,11 @@ impl<'a> Journal<'a> {
                 self.options,
                 &input.request.volume,
                 entry,
-                i == 0 && matches!(input.request.mutation, Mutation::MoveEntry { .. }),
+                i == 0
+                    && matches!(
+                        input.request.mutation,
+                        Mutation::MoveEntry { .. } | Mutation::MoveDeferredEntry { .. }
+                    ),
             )?;
         }
         self.state

@@ -486,3 +486,24 @@ recovery uses the original frozen input, and unknown predicted IDs block further
 effects. Native callbacks remain unsupported; require terminal exact-tip hosted
 mount/reference/startup CI before publication. The next implementation phase is
 same-fence owner rename/move, followed by the persistent per-open lifecycle.
+
+
+### P6m3b3b4b3b2 — deferred owner rename/move (2026-10-17)
+
+Atomic create accepted at `317a047`, terminal CI 39045723902, and published
+privately. Implement the [owner move contract](deferred-owner-move.md), retaining
+the same fence and original frozen binding with immutable identity lineage.
+Require corruption/atomic rollback/quota/kill, TCP and actual SDK recovery plus
+all existing native/reference/startup gates. Then implement the persistent full
+Windows per-open/node-wide lifecycle, including explicit deferred destination
+replacement proof before enabling delete callbacks.
+
+Local full gate passed: 197 state, nine authority HTTP and thirteen SDK cases.
+Same-fence move and ordinary replacement preserve identity lineage, original
+bindings, dirty generations staged during unknown results, both closing slots
+and exact replay. Four SDK stages made six PUTs, retained every immutable blob
+and recovered metadata without replay. Schema16/config6 remain unchanged.
+Require terminal exact-tip hosted native/reference/startup CI before private
+publication. Next deferred destination replacement reference/native proof and
+persistent per-open/node-wide Windows integration, including duplicated handles,
+cleanup followed by I/O, multiple DoC opens, cancellation and recovery.

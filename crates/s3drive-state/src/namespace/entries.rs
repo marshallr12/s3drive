@@ -75,11 +75,26 @@ pub(super) fn mutate(
             parent: p,
             name,
             destination,
+        }
+        | Mutation::MoveDeferredEntry {
+            node: guard,
+            source_parent,
+            parent: p,
+            name,
+            destination,
+            ..
         } => {
             if guard.id == ROOT {
                 return Err(Error::Root);
             }
-            let mut n = guarded(db, guard)?;
+            let mut n = if let Mutation::MoveDeferredEntry {
+                fence, previous, ..
+            } = &request.mutation
+            {
+                removals::moves::guarded(db, guard, fence, previous)?
+            } else {
+                guarded(db, guard)?
+            };
             let source = parent(db, source_parent)?;
             let p = parent(db, p)?;
             if n.parent.as_ref() != Some(&source.id) {
@@ -89,6 +104,12 @@ pub(super) fn mutate(
             let target = match (destination, found) {
                 (None, None) => None,
                 (None, Some(_)) => return Err(Error::AlreadyExists),
+                (Some(g), Some(id)) if id == g.id && id == n.id => {
+                    if *g != *guard {
+                        return Err(Error::Conflict);
+                    }
+                    Some(n.clone())
+                }
                 (Some(g), Some(id)) if id == g.id => Some(guarded(db, g)?),
                 _ => return Err(Error::Conflict),
             };

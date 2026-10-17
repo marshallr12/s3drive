@@ -77,6 +77,7 @@ impl Request {
                 "pending-removal-v1".into(),
                 "deferred-removal-v1".into(),
                 "deferred-create-v1".into(),
+                "deferred-owner-move-v1".into(),
             ])),
             Self::Info {} => state.namespace_volume().map(Reply::Info),
             Self::Store { volume, store } => {

@@ -186,6 +186,15 @@ pub enum Mutation {
         name: String,
         destination: Option<NodeGuard>,
     },
+    MoveDeferredEntry {
+        node: NodeGuard,
+        source_parent: NodeGuard,
+        parent: NodeGuard,
+        name: String,
+        destination: Option<NodeGuard>,
+        fence: Box<RemovalFence>,
+        previous: Box<str>,
+    },
     RemoveEntry {
         node: NodeGuard,
         parent: NodeGuard,
@@ -346,8 +355,17 @@ impl Apply {
                 parent,
                 name,
                 destination,
+            }
+            | Mutation::MoveDeferredEntry {
+                node,
+                source_parent,
+                parent,
+                name,
+                destination,
+                ..
             } => {
-                node.valid(self.expected_sequence)
+                (!matches!(&self.mutation, Mutation::MoveDeferredEntry { fence, previous, .. } if !fence.valid() || !valid_id(previous) || previous.as_ref() == ROOT))
+                    && node.valid(self.expected_sequence)
                     && source_parent.valid(self.expected_sequence)
                     && parent.valid(self.expected_sequence)
                     && names::collision_key(name).is_some()
@@ -697,6 +715,7 @@ impl State {
                 Mutation::CreateEntry { .. }
                     | Mutation::CreateDeferredEntry { .. }
                     | Mutation::MoveEntry { .. }
+                    | Mutation::MoveDeferredEntry { .. }
                     | Mutation::RemoveEntry { .. }
                     | Mutation::ArmRemoval { .. }
                     | Mutation::PrepareRemoval { .. }
@@ -755,6 +774,10 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
         let (changed, artifact) = publication::mutate(db, request, sequence)?;
         return finish(db, request, sequence, &changed, Some(artifact));
     }
+    if matches!(&request.mutation, Mutation::MoveDeferredEntry { .. }) {
+        let (changed, artifact) = removals::moves::mutate(db, request, sql_sequence)?;
+        return finish(db, request, sequence, &changed, Some(artifact));
+    }
     if matches!(
         &request.mutation,
         Mutation::ArmRemoval { .. }
@@ -792,6 +815,7 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
         | Mutation::ReserveDetachedContent { .. }
         | Mutation::Publish { .. }
         | Mutation::MoveEntry { .. }
+        | Mutation::MoveDeferredEntry { .. }
         | Mutation::RemoveEntry { .. }
         | Mutation::ReservePendingContent { .. }
         | Mutation::ArmRemoval { .. }

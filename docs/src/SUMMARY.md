@@ -18,6 +18,7 @@
   - [Deferred removal authority](deferred-removal.md)
   - [Unknown mode cancellation recovery](mode-cancellation-recovery.md)
   - [Atomic deferred creation](atomic-deferred-create.md)
+  - [Deferred owner rename and move](deferred-owner-move.md)
   - [Publication while deletion is pending](pending-owner-publication.md)
 - [Turso and cross-machine coordination](turso-coordination.md)
 - [Filesystem behavior contract](filesystem-contract.md)

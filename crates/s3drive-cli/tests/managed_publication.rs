@@ -8,6 +8,8 @@ pub mod fixture;
 mod mode_cancellation;
 #[path = "support/owned_disposition.rs"]
 mod owned_disposition;
+#[path = "support/owner_move.rs"]
+mod owner_move;
 #[path = "support/pending_owner.rs"]
 mod pending_owner;
 #[path = "support/writes.rs"]
@@ -346,6 +348,13 @@ async fn proxy(
                     ..
                 },
         } => 8,
+        Request::Apply {
+            request:
+                Apply {
+                    mutation: Mutation::MoveDeferredEntry { .. },
+                    ..
+                },
+        } => 9,
         _ => 0,
     };
     if kind != 0
@@ -397,6 +406,7 @@ async fn managed_child() {
         || mode.starts_with("fenced_")
         || mode.starts_with("mode_cancel_")
         || mode.starts_with("atomic_create_")
+        || mode.starts_with("owner_move_")
     {
         Authority::open_with_policy(root.join("authority"), "portable-collision-v1".into())
             .await
@@ -406,6 +416,13 @@ async fn managed_child() {
     };
     let (wire, stop, server) = serve(authority.client()).await;
     let volume = info(&wire).await.id;
+    if mode.starts_with("owner_move_") {
+        Box::pin(owner_move::run_mode(&mode, &config, &root, &wire, &volume)).await;
+        stop.send(()).unwrap();
+        server.await.unwrap();
+        authority.shutdown().await.unwrap();
+        return;
+    }
     if mode.starts_with("atomic_create_") {
         Box::pin(atomic_create::run_mode(
             &mode, &config, &root, &wire, &volume,

@@ -46,6 +46,13 @@ async fn fenced_confirmed_conflicts_require_explicit_retention_before_closing_an
     .await;
 }
 pub(super) async fn run_children(modes: &[&str], expected_puts: &[usize]) {
+    run_children_retaining(modes, expected_puts, &[]).await;
+}
+pub(super) async fn run_children_retaining(
+    modes: &[&str],
+    expected_puts: &[usize],
+    retained: &[&[u8]],
+) {
     let f = fixture::Fixture::start().await;
     let tmp = tempfile::tempdir().unwrap();
     let setup = writes::setup(&f, tmp.path()).await;
@@ -139,6 +146,17 @@ pub(super) async fn run_children(modes: &[&str], expected_puts: &[usize]) {
         *expected_puts.last().unwrap(),
         "conflicting/orphan objects stay retained"
     );
+    for bytes in retained {
+        assert!(
+            f.objects
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|(key, (body, _))| key.contains("/writable/.s3drive/")
+                    && body.as_slice() == *bytes),
+            "retained immutable object bytes"
+        );
+    }
 }
 fn guard(n: &Node) -> NodeGuard {
     NodeGuard {

@@ -10,6 +10,7 @@ pub struct OwnedRemoval {
     pub receipt: Receipt,
     pub fence: RemovalFence,
     pub mode: RemovalMode,
+    pub event: String,
 }
 pub(super) fn fence(input: &Input) -> Option<RemovalFence> {
     match &input.request.mutation {
@@ -22,6 +23,7 @@ pub(super) fn fence(input: &Input) -> Option<RemovalFence> {
         Mutation::CancelRemoval { fence, .. }
         | Mutation::CommitRemoval { fence, .. }
         | Mutation::TransitionRemoval { fence, .. } => Some(fence.clone()),
+        Mutation::MoveDeferredEntry { fence, .. } => Some(fence.as_ref().clone()),
         _ => None,
     }
 }
@@ -88,6 +90,7 @@ fn history(records: &[Record]) -> Result<History<'_>> {
                     OwnedRemoval {
                         input: r.input.clone(),
                         receipt: receipt.clone(),
+                        event: r.input.request.operation.clone(),
                         fence: f,
                         mode: if matches!(
                             r.input.request.mutation,
@@ -124,6 +127,16 @@ fn history(records: &[Record]) -> Result<History<'_>> {
                     }
                     old.mode = *mode;
                     old.receipt = receipt.clone();
+                    old.event = r.input.request.operation.clone();
+                    active.insert(key, old);
+                }
+                Mutation::MoveDeferredEntry { previous, .. } => {
+                    if old.mode != RemovalMode::Deferred || previous.as_ref() != old.event {
+                        return Err("owner move changed previous event or deferred mode".into());
+                    }
+                    check_retained(&old, &r.input)?;
+                    old.receipt = receipt.clone();
+                    old.event = r.input.request.operation.clone();
                     active.insert(key, old);
                 }
                 Mutation::CommitRemoval { .. } if old.mode != RemovalMode::Pending => {
@@ -258,7 +271,7 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
     let records = records(db)?;
     let h = history(&records)?;
     let owned = &h.active;
-    if let Some(f) = fence(input) {
+    if fence(input).is_some() {
         let created = matches!(input.request.mutation, Mutation::CreateDeferredEntry { .. });
         let id = if created {
             &input.request.operation
@@ -273,7 +286,8 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
                 if old.is_none() => {}
             Mutation::CancelRemoval { .. }
             | Mutation::CommitRemoval { .. }
-            | Mutation::TransitionRemoval { .. } => {
+            | Mutation::TransitionRemoval { .. }
+            | Mutation::MoveDeferredEntry { .. } => {
                 let old = old.ok_or("removal closure requires acknowledged local arm")?;
                 if matches!(&input.request.mutation, Mutation::CommitRemoval { .. })
                     && old.mode != RemovalMode::Pending
@@ -285,19 +299,12 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
                 {
                     return Err("removal transition mode mismatch".into());
                 }
-                let e = &input.entries[0];
-                let n = &old.receipt.node;
-                if old.fence != f
-                    || !same_control(&old.input, input)
-                    || e.revision < n.revision
-                    || Some(&e.parent) != n.parent.as_ref()
-                    || e.name != n.name
-                    || e.placement != n.placement
-                    || (e.kind == namespace::Kind::Directory)
-                        != (n.kind == namespace::Kind::Directory)
+                if let Mutation::MoveDeferredEntry { previous, .. } = &input.request.mutation
+                    && (old.mode != RemovalMode::Deferred || previous.as_ref() != old.event)
                 {
-                    return Err("removal closure changed retained ownership or identity".into());
+                    return Err("owner move requires the latest deferred event".into());
                 }
+                check_retained(old, input)?;
             }
             _ => return Err("removal already owned; recover exact disposition first".into()),
         }
@@ -312,6 +319,7 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
                 Mutation::CancelRemoval { .. }
                     | Mutation::CommitRemoval { .. }
                     | Mutation::TransitionRemoval { .. }
+                    | Mutation::MoveDeferredEntry { .. }
             ) && input.entries[0].id == *node;
             let child_only = reservation.mode == RemovalMode::Deferred
                 && !input.entries.iter().any(|e| e.id == *node);
@@ -382,6 +390,11 @@ fn touched(input: &Input) -> Vec<&str> {
             source_parent,
             parent,
             ..
+        }
+        | Mutation::MoveDeferredEntry {
+            source_parent,
+            parent,
+            ..
         } => {
             ids.push(&source_parent.id);
             ids.push(&parent.id);
@@ -389,4 +402,20 @@ fn touched(input: &Input) -> Vec<&str> {
         _ => (),
     }
     ids
+}
+
+fn check_retained(old: &OwnedRemoval, input: &Input) -> Result<()> {
+    let e = &input.entries[0];
+    let n = &old.receipt.node;
+    if fence(input).as_ref() != Some(&old.fence)
+        || !same_control(&old.input, input)
+        || e.revision < n.revision
+        || Some(&e.parent) != n.parent.as_ref()
+        || e.name != n.name
+        || e.placement != n.placement
+        || (e.kind == namespace::Kind::Directory) != (n.kind == namespace::Kind::Directory)
+    {
+        return Err("removal changed retained ownership or identity".into());
+    }
+    Ok(())
 }

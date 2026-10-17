@@ -1,33 +1,43 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b3b4b3b1 atomic deferred create**
-on `codex/atomic-deferred-create`. Goal ACTIVE. Read
-`docs/src/atomic-deferred-create.md` and the implementation plan.
+Updated: 2026-10-17. Current phase: **P6m3b3b4b3b2 deferred owner rename/move**
+on `codex/deferred-owner-move`. Goal ACTIVE. Read
+`docs/src/deferred-owner-move.md` and the implementation plan.
 
 Baseline verified live: private clean local/remote main
-`cc23aa4b1b868ef1be632dab7bbcef0b4806fb97`, terminal all-green
-[run 39042534931](https://github.com/marshallr12/s3drive/actions/runs/39042534931).
-Linux `117424735132`, Windows `117424735098`, book `117424734930`;
-173/169 state, seven HTTP, 11 SDK, seven native cases per OS, fourteen frozen
+`317a047e1a96ba030d3623955dcbdc6415a67ff7`, terminal all-green
+[run 39045723902](https://github.com/marshallr12/s3drive/actions/runs/39045723902).
+Linux `117433927418`, Windows `117433927254`, book `117433927431`;
+183/179 state, eight HTTP, twelve SDK, seven native cases per OS, fourteen frozen
 NTFS traces, four selected upstream legacy cases and nine checker rejections.
-Native/startup gates passed. Proof `/tmp/s3drive-extra-reference-publication.json`.
+Native/startup gates passed. Proof `/tmp/s3drive-create-publication.json`.
 
-Current scope: atomic guarded CreateDeferredEntry, exact origin/node/fence proof,
-client ownership with no fabricated before-node, predicted-ID unknown barriers,
-closing headroom and SDK recovery. Keep schema16/config6 and unsupported native
-Windows deletion unchanged. No live Wasabi mutation or NNP bypass.
+Atomic CreateDeferredEntry commits node/reservation/origin/result together.
+Unknown predicted-node barriers, exact receipts, closing headroom, killed-owner
+recovery and binary/empty/Unicode SDK publication passed. Schema16/config6.
 
-Implementation and local full gate passed, exit 0:
-`/tmp/s3drive-create-gate3.log`. 183 state, eight authority HTTP and twelve managed
-SDK tests, strict lint/build/book. Killed authority and four SDK client stages
-recover exact creation IDs/fences, preserve children/dirty bytes and newer
-epochs, and perform exactly three fixture PUTs without replay. Initial gate
-failures were an unused-unit lint and its formatting correction; neither was
-suppressed. Require terminal exact-tip all-three hosted CI, including existing
-native/reference/startup acceptance, before guarded publication from baseline
-`cc23aa4`. Next same-fence owner rename/move, then persistent Windows per-open
-lifecycle. Deferred target replacement still requires explicit reference/native
-proof that old target cleanup cannot remove its replacement. Goal remains ACTIVE.
+Current scope: same-fence deferred owner moves with guarded ordinary replacement,
+immutable prior-event identity lineage, client acknowledgment/recovery and SDK
+recovery. Keep native Windows deletion unsupported. Reserved destination
+replacement still needs explicit reference/native proof that old target cleanup
+cannot remove its replacement. No live Wasabi mutation or NNP bypass.
+Next persistent full Windows per-open/node-wide lifecycle; do not substitute
+permanently refused rename/DoC or SetDelete-only behavior.
+
+Implementation and full local gate passed, exit 0:
+`/tmp/s3drive-owner-move-gate4.log`; 197 state, nine HTTP, thirteen SDK cases,
+strict lint/build/book. New source modules: namespace/removals/moves.rs and
+namespace_client/removals.rs. Previous-event chains prove identity changes;
+OwnedRemoval retains the original input while receipt/event advance. Unknown
+moves block publication/cancellation until exact recovery. SDK four-process
+case preserves late dirty bytes, children and replaced snapshots, keeps all six
+immutable objects and makes exactly six PUTs. Full disk/ignored SQL/quota/kill,
+corruption and normalized HTTP destination races passed. Schema16/config6.
+Initial gate diagnostics led to compact new-variant fields; existing rejection
+and Request serialization was not changed. An overstrict local-write test was
+corrected to prove retained dirty data plus blocked remote publication.
+Require terminal exact-tip all-three hosted CI before guarded publication from
+`317a047`. No new live Wasabi mutations; native Windows deletion stays disabled.
 
 ## Previous expanded reference phase
 

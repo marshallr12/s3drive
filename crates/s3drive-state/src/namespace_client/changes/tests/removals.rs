@@ -3,6 +3,7 @@ use namespace::RemovalFence;
 mod cancellation;
 mod created;
 mod deferred;
+mod moved;
 
 fn owner(f: &mut Fixture) -> String {
     Journal::new(&mut f.client)

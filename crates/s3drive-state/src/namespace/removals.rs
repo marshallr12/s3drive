@@ -1,6 +1,7 @@
 //! Reversible namespace reservation. No OS callback or S3 deletion occurs here.
 use super::*;
 mod events;
+pub(super) mod moves;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -154,23 +155,7 @@ fn verify_current(
     mode: RemovalMode,
 ) -> Result<()> {
     let now = node(db, id)?;
-    if now.revision < receipt.node.revision
-        || now.parent != receipt.node.parent
-        || now.name != receipt.node.name
-        || now.placement != receipt.node.placement
-        || (now.kind == Kind::Directory) != (receipt.node.kind == Kind::Directory)
-        || (now.revision == receipt.node.revision && now != receipt.node)
-        || (now.revision > receipt.node.revision
-            && (now.payload == receipt.node.payload
-                || now
-                    .payload
-                    .as_ref()
-                    .and_then(|p| p.reservation.guard.as_ref())
-                    .and_then(|g| g.removal.as_ref())
-                    != Some(fence)))
-    {
-        return Err(Error::Internal);
-    }
+    moves::verify_revision(&now, &receipt.node, fence)?;
     if mode == RemovalMode::Pending && empty(db, id).is_err() {
         return Err(Error::Internal);
     }
@@ -182,7 +167,7 @@ fn pending(db: &Connection, id: &str) -> Result<Option<Tag>> {
     match (raw, latest) {
         (None, None) => Ok(None),
         (None, Some(event)) if event.closed() => {
-            events::proof(db, &event)?;
+            moves::chain(db, &event)?;
             Ok(None)
         }
         (Some(tag), Some(event))
@@ -191,32 +176,7 @@ fn pending(db: &Connection, id: &str) -> Result<Option<Tag>> {
                 && event.fence == tag.fence
                 && event.mode == tag.mode.text() =>
         {
-            let (initial, initial_mode) = origin(db, id, &tag.fence)?;
-            let first = events::get(db, id, &tag.fence.intent)?.ok_or(Error::Internal)?;
-            if first.mode != initial_mode.text()
-                || first.sequence != initial.sequence
-                || first.fence != tag.fence
-            {
-                return Err(Error::Internal);
-            }
-            events::proof(db, &first)?;
-            let receipt = events::proof(db, &event)?;
-            if receipt.sequence < initial.sequence
-                || receipt.node.parent != initial.node.parent
-                || receipt.node.name != initial.node.name
-                || receipt.node.placement != initial.node.placement
-                || (receipt.node.kind == Kind::Directory) != (initial.node.kind == Kind::Directory)
-                || (receipt.node.payload != initial.node.payload
-                    && receipt
-                        .node
-                        .payload
-                        .as_ref()
-                        .and_then(|p| p.reservation.guard.as_ref())
-                        .and_then(|g| g.removal.as_ref())
-                        != Some(&tag.fence))
-            {
-                return Err(Error::Internal);
-            }
+            let receipt = moves::chain(db, &event)?;
             verify_current(db, id, &receipt, &tag.fence, tag.mode)?;
             Ok(Some(tag))
         }
