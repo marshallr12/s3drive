@@ -46,11 +46,11 @@ checked 2026-10-17. No service, credentials or real S3 objects are changed.
 Rust probes cover repeated true/false disposition, deletion at a nonarming
 final handle, late retained-handle I/O, deferred second opens, nonempty versus
 empty directory cleanup, and ordinary nonempty deletion refusal. Three probes
-record unresolved observations rather than inventing expectations: cancellation
+initially recorded observations rather than inventing expectations: cancellation
 through another context, legacy cancellation of delete-on-close, and new child
 creation during a deferred directory lifetime. They emit structured
-`S3DRIVE_DISPOSITION_REFERENCE` JSON in CI logs. Those observations must be
-reviewed before specifying their authority transitions.
+`S3DRIVE_DISPOSITION_REFERENCE` JSON in CI logs. The measured NTFS fixture below now pins those results; WinFsp equivalence
+still needs independent evidence before its authority transitions are fixed.
 
 All paths are owned temporary fixtures. Linux compiles the portable workspace
 but does not execute these Windows probes. A missing runtime, missing selected
@@ -77,3 +77,32 @@ client lifecycle state, diagnostics and recovery. Native callbacks wait for
 normal/deferred opens, cancellation, multiple contexts, late I/O, volume loss,
 Unicode and concurrent-client acceptance. Windows Server CI is not Windows
 10/11 desktop reboot acceptance; actual workstation startup remains separate.
+
+
+## Observed NTFS results (2026-10-17)
+
+The first reference run `6e5fef7`,
+[CI 39032499844](https://github.com/marshallr12/s3drive/actions/runs/39032499844),
+passed on Windows Server 2025. Its [structured trace](evidence/windows-disposition-reference-20261017.json)
+is now the native reference fixture; the gate compares every field before
+accepting a later run. These are measured NTFS results, not a claim that WinFsp
+matches every cross-context detail.
+
+| Case | Observed result |
+| --- | --- |
+| Deferred file open | Both handles report no pending deletion before cleanup; another open succeeds. Closing the DoC handle makes the retained handle pending and new opens fail with Win32 error 5. |
+| Nonarming final handle | Retained read/write/flush succeeds; the file is absent after its final close. |
+| Nonempty deferred directory | Open/close succeeds, preserving its child. A later empty-directory DoC cleanup removes it. |
+| Child creation while deferred | Child creation succeeds; the nonempty directory and child remain after cleanup. |
+| Cross-context ordinary cancellation | Both handles report not pending, reopening succeeds before and after arming-handle cleanup, and the file remains after both close. |
+| Legacy cancellation of DoC | It reports not pending before cleanup, but cleanup reasserts pending; reopening fails and final close removes the file. |
+| Ordinary nonempty disposition | Refused with HRESULT 0x80070091; child bytes remain. |
+| Repeated true/false | Repeated cancellation succeeds and bytes remain after close. |
+
+The pinned WinFsp legacy disk/network create_test also passed, confirming the
+nonempty deferred-directory behavior on those reference backends. The driver
+sources distinguish shared pending state and per-file-object flags; do not
+extrapolate NTFS query results to every WinFsp handle. Still probe deferred
+rename/replacement, new-file DoC and multiple DoC descriptors before the full
+native bridge is enabled. The deferred authority design must account for these
+remaining operations rather than permanently freeze names as a shortcut.

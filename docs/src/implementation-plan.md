@@ -383,3 +383,8 @@ structured JSON before fixing protocol semantics. Next add deferred authority
 state with immutable promotion evidence, then durable client lifecycle and full
 native deletion acceptance. Keep schema 15, version 6 and unsupported Windows
 delete callbacks unchanged throughout this reference phase.
+
+The first reference run `6e5fef7` / CI 39032499844 passed. Its eight measured
+NTFS outcomes are in the book's JSON evidence fixture. The finalized script
+compares all fields and rejects missing/duplicate cases; its exact-tip native
+run is required. NTFS cross-context observations do not establish WinFsp parity.

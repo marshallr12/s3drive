@@ -14,6 +14,21 @@ $records = @($referenceText -split "`n" | ForEach-Object {
 if ($referenceExit -ne 0 -or $referenceText -notmatch '8 passed; 0 failed' -or $records.Count -ne 8 -or @($records.case | Sort-Object -Unique).Count -ne 8) {
     throw "NTFS disposition reference failed or omitted cases: $referenceExit"
 }
+$fixture = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot '..\docs\src\evidence\windows-disposition-reference-20261017.json') | ConvertFrom-Json
+if (@($fixture.records).Count -ne 8 -or @($fixture.records.case | Sort-Object -Unique).Count -ne 8) { throw 'Invalid reference fixture cases' }
+foreach ($expected in $fixture.records) {
+    $matchingRecords = @($records | Where-Object { $_.case -ceq $expected.case })
+    if ($matchingRecords.Count -ne 1 -or $matchingRecords[0].backend -cne $expected.backend) { throw "Reference case missing or changed: $($expected.case)" }
+    $actual = $matchingRecords[0].observations
+    $keys = @($expected.observations.PSObject.Properties.Name)
+    if (@($actual.PSObject.Properties).Count -ne $keys.Count) { throw "Reference fields changed: $($expected.case)" }
+    foreach ($key in $keys) {
+        $actualValue = ConvertTo-Json -InputObject $actual.$key -Compress
+        $expectedValue = ConvertTo-Json -InputObject $expected.observations.$key -Compress
+        if ($actualValue -cne $expectedValue) { throw "Reference observation changed: $($expected.case).$key" }
+    }
+}
+Write-Output 'PASS: all eight NTFS traces match the recorded Windows Server 2025 reference'
 $root = Join-Path $env:RUNNER_TEMP ('s3drive-disposition-reference-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $root | Out-Null
 $passed = $false

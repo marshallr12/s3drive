@@ -43,8 +43,13 @@ Eight explicit ignored Rust NTFS probes live under the audited native FFI test
 boundary in s3drive-winfsp/src/native/disposition_reference.rs. JSON observations
 cover repeated cancellation, final nonarming cleanup, retained I/O, deferred
 opens, nonempty/empty directory cleanup and ordinary nonempty refusal. Three
-probes collect unresolved cross-context/legacy-DoC-cancel/child-create traces;
-review observed outcomes before pinning their authority rules. Test-only
+probes initially collected cross-context/legacy-DoC-cancel/child-create traces.
+First native run 39032499844 at 6e5fef7 passed; measured NTFS results are now
+recorded in the book and JSON fixture, and the script compares every field.
+Cross-context ordinary cancellation clears both handles; legacy DoC cancellation
+is reasserted at cleanup; deferred directory child creation succeeds. Do not
+assume NTFS/WinFsp cross-context equivalence or skip deferred rename/new-file DoC
+and multiple-DoC-descriptor probes. Test-only
 serde_json/tempfile dependencies stay Windows-specific; lock only adds the two
 existing workspace dependencies to that package, no version upgrades.
 
@@ -59,10 +64,12 @@ New SVG lifecycle illustration is browser-rendered and its text rectangles fit
 within the image. Browser screenshot capture timed out; do not claim pixel
 screenshot review. CairoSVG/rsvg-convert are unavailable locally; no system
 packages were installed. Full local gate passed, exit 0:
-`/tmp/s3drive-disposition-reference-gate1.log` (156 state, eight managed-publication
+`/tmp/s3drive-disposition-reference-gate2.log` (156 state, eight managed-publication
 cases, six authority TCP, 50 S3, 13 FS, build/lint/book). The new Windows-only
 probes are not executed here. Terminal exact-tip Linux/Windows/book CI, reference
-JSON review and original native/startup regressions are required before publication.
+JSON review and original native/startup regressions are required before publication. The first run passed all existing seven native
+cases per OS and startup checks, plus the eight NTFS and upstream WinFsp reference
+cases. Final trace-fixture comparison requires a new exact-tip run.
 
 Next: use reference evidence to define deferred name reservation, guarded
 promotion with immutable transition proof (not a weakened corruption check),

@@ -1,0 +1,82 @@
+{
+  "sha": "6e5fef73f0f262c35f0f0b9b83741ab3bb4855d8",
+  "run": 39032499844,
+  "platform": "Windows Server 2025",
+  "records": [
+    {
+      "backend": "ntfs",
+      "case": "deferred-file-open",
+      "observations": {
+        "new_open_error_after": 5,
+        "other_pending_before": false,
+        "pending_after_cleanup": true,
+        "pending_before_cleanup": false
+      }
+    },
+    {
+      "backend": "ntfs",
+      "case": "nonarming-final-handle",
+      "observations": {
+        "late_io": true,
+        "removed": true
+      }
+    },
+    {
+      "backend": "ntfs",
+      "case": "nonempty-deferred-directory",
+      "observations": {
+        "child_preserved": true,
+        "empty_cleanup_removed": true,
+        "nonempty_open_succeeded": true
+      }
+    },
+    {
+      "backend": "ntfs",
+      "case": "deferred-directory-child-create",
+      "observations": {
+        "created": true,
+        "directory_exists_after_cleanup": true,
+        "error": null
+      }
+    },
+    {
+      "backend": "ntfs",
+      "case": "cross-context-cancel",
+      "observations": {
+        "a_pending": false,
+        "b_pending": false,
+        "exists_after_all_close": true,
+        "pending_after_a_cleanup": false,
+        "reopened": true,
+        "reopened_after_a_cleanup": true
+      }
+    },
+    {
+      "backend": "ntfs",
+      "case": "legacy-cancel-delete-on-close",
+      "observations": {
+        "exists_after_all_close": false,
+        "pending_after_cleanup": true,
+        "pending_before": false,
+        "reopened_after_cleanup": false
+      }
+    },
+    {
+      "backend": "ntfs",
+      "case": "ordinary-nonempty-refusal",
+      "observations": {
+        "child_preserved": true,
+        "hresult": -2147024751
+      }
+    },
+    {
+      "backend": "ntfs",
+      "case": "repeated-cancel",
+      "observations": {
+        "live_after_close": true
+      }
+    }
+  ],
+  "source_url": "https://github.com/marshallr12/s3drive/actions/runs/39032499844",
+  "scope": "NTFS observations only; WinFsp cross-context equivalence remains unverified"
+}
