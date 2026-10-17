@@ -167,7 +167,7 @@ pub fn read_private_secret(path: &Path, limit: usize) -> crate::Result<Vec<u8>> 
     {
         return Err("private secret requires an absolute local path".into());
     }
-    if !(1..=4096).contains(&limit) {
+    if !(1..=65_536).contains(&limit) {
         return Err("invalid private secret size limit".into());
     }
     let parent = path.parent().ok_or("missing secret parent")?;
@@ -258,6 +258,17 @@ mod secret_tests {
             b"private fixture bytes"
         );
         assert!(read_private_secret(&path, 3).is_err());
+    }
+    #[test]
+    fn private_tls_material_has_a_finite_read_bound() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = create_private_secret(&dir.path().join("tls"), b"fixture").unwrap();
+        let bytes = vec![b'x'; 8192];
+        std::fs::write(&path, &bytes).unwrap();
+        assert_eq!(read_private_secret(&path, 65_536).unwrap(), bytes);
+        assert!(read_private_secret(&path, 8191).is_err());
+        assert!(read_private_secret(&path, 65_537).is_err());
+        assert!(read_private_secret(&path, 0).is_err());
     }
     #[cfg(target_os = "linux")]
     #[test]

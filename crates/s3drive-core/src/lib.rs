@@ -30,6 +30,8 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ManagedConfig {
+    /// Optional owner-private PEM roots for HTTPS; replaces platform trust.
+    pub authority_ca_file: Option<PathBuf>,
     #[serde(rename = "windows-disposition")]
     pub windows_disposition: Option<WindowsDisposition>,
     pub default_store: Option<String>,
@@ -61,8 +63,8 @@ impl ManagedConfig {
         let ip = url
             .host_str()
             .and_then(|s| s.trim_matches(['[', ']']).parse::<std::net::IpAddr>().ok());
-        if url.scheme() != "http"
-            || !ip.is_some_and(|a| a.is_loopback())
+        if !(url.scheme() == "https" && url.host().is_some()
+            || url.scheme() == "http" && ip.is_some_and(|a| a.is_loopback()))
             || url.path() != "/v1/namespace"
             || !url.username().is_empty()
             || url.password().is_some()
@@ -70,10 +72,14 @@ impl ManagedConfig {
             || url.fragment().is_some()
             || !id(&self.volume)
             || !absolute_local(&self.token_file)
+            || self
+                .authority_ca_file
+                .as_ref()
+                .is_some_and(|p| url.scheme() != "https" || !absolute_local(p))
             || self.stores.is_empty()
             || self.stores.len() > 16
         {
-            return Err("managed read-only mode requires a numeric loopback authority, volume ID, absolute private token file and 1..16 store mappings".into());
+            return Err("managed mode requires HTTPS or numeric loopback HTTP, a volume ID, absolute private token/optional HTTPS CA files and 1..16 store mappings".into());
         }
         let mut ids = HashSet::new();
         for s in &self.stores {
@@ -489,15 +495,31 @@ mod tests {
         }
         let config = Config::parse(&text).unwrap();
         assert!(config.resolve("documents/a.txt").is_err());
+        let https = text.replace(
+            "http://127.0.0.1:43128/v1/namespace",
+            "https://metadata.example.test/v1/namespace",
+        );
+        assert!(Config::parse(&https).is_ok());
+        let ca = token.parent().unwrap().join("authority-ca.pem");
+        let with_ca = https.replace(
+            "[managed]",
+            &format!("[managed]\nauthority_ca_file={:?}", ca.to_str().unwrap()),
+        );
+        assert!(Config::parse(&with_ca).is_ok());
+        assert!(
+            Config::parse(&with_ca.replace("https://metadata.example.test", "http://127.0.0.1"))
+                .is_err()
+        );
+        assert!(
+            Config::parse(&https.replace("/v1/namespace", "/v1/namespace?secret=bad")).is_err()
+        );
+        assert!(Config::parse(&https.replace("https://", "https://secret@")).is_err());
+        assert!(Config::parse(&https.replace("https://", "http://")).is_err());
         for (from, to) in [
             ("read-only", "read-write"),
             (
                 "http://127.0.0.1:43128/v1/namespace",
                 "http://localhost:43128/v1/namespace",
-            ),
-            (
-                "http://127.0.0.1:43128/v1/namespace",
-                "https://example.com/v1/namespace",
             ),
             (
                 "http://127.0.0.1:43128/v1/namespace",

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 660" role="img" aria-labelledby="title desc">
+<title id="title">S3Drive shared metadata and file storage</title>
+<desc id="desc">Linux and Windows each run a Rust filesystem, S3 client and local SQLite journal. HTTPS metadata requests go to one Rust coordinator with shared SQLite. File bytes go directly to Wasabi. Turso is an optional future coordinator database.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#294d69"/></marker></defs>
+<rect width="1200" height="660" rx="20" fill="#f5f8fc"/>
+<g font-family="sans-serif" fill="#17344d">
+<text x="38" y="46" font-size="26" font-weight="bold">One shared namespace, separate local recovery</text>
+<text x="38" y="76" font-size="16">Rust coordinator • SQLite today • optional Turso backend under evaluation</text>
+<rect x="35" y="110" width="345" height="220" rx="14" fill="#e5f1ff" stroke="#5484b0" stroke-width="2"/>
+<text x="55" y="142" font-size="21" font-weight="bold">Linux workstation</text>
+<text x="55" y="176" font-size="17">Local drive → FUSE → Rust engine</text>
+<rect x="55" y="194" width="305" height="47" rx="8" fill="white"/>
+<text x="70" y="224" font-size="17">S3 client + private credentials</text>
+<rect x="55" y="254" width="305" height="55" rx="8" fill="white"/>
+<text x="70" y="278" font-size="17">Local SQLite: cache + journal</text>
+<text x="70" y="298" font-size="14">Outside the mounted tree</text>
+<rect x="35" y="362" width="345" height="220" rx="14" fill="#e5f1ff" stroke="#5484b0" stroke-width="2"/>
+<text x="55" y="394" font-size="21" font-weight="bold">Windows workstation</text>
+<text x="55" y="428" font-size="17">Local drive → WinFsp → Rust engine</text>
+<rect x="55" y="446" width="305" height="47" rx="8" fill="white"/>
+<text x="70" y="476" font-size="17">S3 client + private credentials</text>
+<rect x="55" y="506" width="305" height="55" rx="8" fill="white"/>
+<text x="70" y="530" font-size="17">Local SQLite: cache + journal</text>
+<text x="70" y="550" font-size="14">Outside the mounted tree</text>
+<rect x="515" y="195" width="310" height="292" rx="14" fill="#e5f5ec" stroke="#548d70" stroke-width="2"/>
+<text x="535" y="233" font-size="22" font-weight="bold">Shared Rust coordinator</text>
+<text x="535" y="268" font-size="17">TLS + bearer authentication</text>
+<text x="535" y="299" font-size="17">Names, folders, revisions</text>
+<text x="535" y="330" font-size="17">Atomic changes + conflict checks</text>
+<rect x="535" y="351" width="270" height="58" rx="8" fill="white"/>
+<text x="552" y="375" font-size="17">Authoritative SQLite</text>
+<text x="552" y="397" font-size="14">Turso optional; not enabled</text>
+<text x="535" y="445" font-size="17" font-weight="bold">No file bytes or S3 credentials</text>
+<text x="535" y="469" font-size="14">Single volume, trusted owner devices</text>
+<rect x="940" y="195" width="225" height="292" rx="14" fill="#fff0d8" stroke="#b58b4b" stroke-width="2"/>
+<text x="960" y="233" font-size="22" font-weight="bold">Wasabi / S3</text>
+<text x="960" y="271" font-size="17">One or more buckets</text>
+<rect x="960" y="299" width="185" height="91" rx="8" fill="white"/>
+<text x="974" y="328" font-size="17">Immutable objects</text>
+<text x="974" y="356" font-size="17">Actual file bytes</text>
+<text x="960" y="427" font-size="15">Old generations retained</text>
+<text x="960" y="452" font-size="15">No automatic reclamation</text>
+<g fill="none" stroke="#294d69" stroke-width="2.5" marker-end="url(#arrow)">
+<path d="M380 180H446V267H513"/>
+<path d="M380 430H446V333H513"/>
+<path d="M380 218H410V126H1050V193"/>
+<path d="M380 470H410V593H1050V489"/>
+</g>
+<rect x="402" y="275" width="91" height="48" rx="6" fill="#f5f8fc"/>
+<text x="414" y="294" font-size="14">HTTPS</text><text x="408" y="314" font-size="14">metadata</text>
+<rect x="601" y="105" width="242" height="34" rx="6" fill="#f5f8fc"/>
+<text x="615" y="128" font-size="16">S3 HTTPS: upload / read bytes</text>
+<rect x="601" y="576" width="242" height="34" rx="6" fill="#f5f8fc"/>
+<text x="615" y="599" font-size="16">S3 HTTPS: upload / read bytes</text>
+<text x="38" y="638" font-size="16">Publish a new immutable object, then conditionally commit its reference. Unknown results retain the original operation ID.</text>
+</g></svg>

@@ -160,13 +160,29 @@ struct Service {
     child: Child,
     endpoint: String,
     volume: String,
+    ca_file: Option<PathBuf>,
 }
 impl Service {
     async fn start(root: &Path) -> Self {
         Self::start_policy(root, "exact-utf8-v1").await
     }
     async fn start_policy(root: &Path, policy: &str) -> Self {
-        let mut child = Command::new(env!("CARGO_BIN_EXE_s3drive"))
+        Self::start_options(root, policy, None).await
+    }
+    async fn start_tls(root: &Path, policy: &str) -> Self {
+        let rcgen::CertifiedKey { cert, signing_key } =
+            rcgen::generate_simple_self_signed(vec!["127.0.0.1".into()]).unwrap();
+        let cert_file =
+            s3drive_state::create_private_secret(&root.join("tls-cert"), b"fixture").unwrap();
+        let key_file =
+            s3drive_state::create_private_secret(&root.join("tls-key"), b"fixture").unwrap();
+        std::fs::write(&cert_file, cert.pem()).unwrap();
+        std::fs::write(&key_file, signing_key.serialize_pem()).unwrap();
+        Self::start_options(root, policy, Some((cert_file, key_file))).await
+    }
+    async fn start_options(root: &Path, policy: &str, tls: Option<(PathBuf, PathBuf)>) -> Self {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_s3drive"));
+        command
             .arg("authority-serve")
             .args(["--name-policy", policy])
             .arg("--directory")
@@ -177,9 +193,15 @@ impl Service {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
-            .kill_on_drop(true)
-            .spawn()
-            .unwrap();
+            .kill_on_drop(true);
+        if let Some((cert, key)) = &tls {
+            command
+                .arg("--tls-cert")
+                .arg(cert)
+                .arg("--tls-key")
+                .arg(key);
+        }
+        let mut child = command.spawn().unwrap();
         let mut lines = BufReader::new(child.stdout.take().unwrap()).lines();
         let line = tokio::time::timeout(Duration::from_secs(20), lines.next_line())
             .await
@@ -191,6 +213,7 @@ impl Service {
             child,
             endpoint: v["endpoint"].as_str().unwrap().into(),
             volume: v["volume"].as_str().unwrap().into(),
+            ca_file: tls.map(|(cert, _)| cert),
         }
     }
     async fn stop(mut self) {
@@ -211,6 +234,18 @@ struct Harness {
     mount: PathBuf,
 }
 impl Harness {
+    async fn use_tls(self, old: Service, f: &Fixture) -> (Self, Service) {
+        let policy = info(&wire(&cfg(&self.config))).await.name_policy;
+        let volume = old.volume.clone();
+        old.stop().await;
+        let server = Service::start_tls(&self.root, &policy).await;
+        assert_eq!(
+            server.volume, volume,
+            "TLS restart changed the volume identity"
+        );
+        self.configure(&server, f);
+        (self, server)
+    }
     async fn new(root: &Path, f: &Fixture) -> (Self, Service) {
         Self::new_policy(root, f, false).await
     }
@@ -279,6 +314,9 @@ impl Harness {
             s.volume,
             self.root.join("secrets/authority.token").to_str().unwrap()
         );
+        if let Some(ca) = &s.ca_file {
+            text += &format!("authority_ca_file={:?}\n", ca.to_str().unwrap());
+        }
         for (n, alias) in [(200, "viewer-first"), (201, "viewer-second")] {
             text += &format!("[[managed.stores]]\nid={:?}\nsource={alias:?}\n", id(n));
         }
@@ -531,11 +569,7 @@ fn cfg(path: &Path) -> s3drive_core::Config {
 }
 fn wire(c: &s3drive_core::Config) -> WireClient {
     let m = c.managed.as_ref().unwrap();
-    WireClient::loopback(
-        &m.authority,
-        Token::from_private_file(&m.token_file).unwrap(),
-    )
-    .unwrap()
+    WireClient::from_config(m, Token::from_private_file(&m.token_file).unwrap()).unwrap()
 }
 async fn publish(
     root: &Path,
@@ -1187,6 +1221,7 @@ pub async fn portable_writes() {
     let f = Fixture::start().await;
     let tmp = tempfile::tempdir().unwrap();
     let (h, s) = Harness::new(tmp.path(), &f).await;
+    let (h, s) = h.use_tls(s, &f).await;
     h.configure_writable();
     let before = puts(&f);
     h.child("rw-stage").await;
@@ -1200,12 +1235,16 @@ pub async fn portable_writes() {
     h.child("rw-conflict-reopen").await;
     assert_eq!(puts(&f), before + 7, "conflict replay emitted PUT");
     s.stop().await;
+    eprintln!(
+        "PASS: managed CLI/shared-FS writes and exact recovery through native Rust HTTPS with private CA"
+    );
 }
 
 pub async fn native_writes() {
     let f = Fixture::start().await;
     let tmp = tempfile::tempdir().unwrap();
     let (h, s) = Harness::new(tmp.path(), &f).await;
+    let (h, s) = h.use_tls(s, &f).await;
     h.configure_writable();
     let mut producer = Producer::start(&h).await;
     let seed_puts = puts(&f);
@@ -1333,7 +1372,7 @@ pub async fn native_writes() {
     producer.stop().await;
     s.stop().await;
     eprintln!(
-        "managed native writes: Unicode, two stores, patch/truncate/append/sparse, rename, dirty restart, uncertain PUT recovery and retained conflict passed"
+        "PASS: managed native HTTPS writes with private CA: Unicode, two stores, patch/truncate/append/sparse, rename, dirty restart, uncertain PUT recovery and retained conflict"
     );
 }
 

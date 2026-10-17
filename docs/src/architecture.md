@@ -7,9 +7,12 @@ payloads and each machine's private SQLite cache/journal. See the executable
 
 ![The target has local Rust drives and SQLite on two computers, a shared metadata authority, and immutable payloads in S3.](images/managed-architecture.png)
 
-The authority and [managed publication library](managed-publication.md) now join
-SQLite, the loopback HTTP API and the real S3 SDK. [Managed read-only native integration](managed-native.md) uses the same engine
-and adapters. Remote deployment and managed native writes remain planned. No bucket migration or Turso service is enabled.
+The authority and [managed publication library](managed-publication.md) join
+SQLite, its HTTP API and the real S3 SDK. Managed native writes and the explicit
+[Windows lifecycle](native-windows-lifecycle.md) passed native acceptance at0f6104c.
+[Shared HTTPS transport](remote-authority.md) is the next implementation phase;
+remote deployment, backup/failover and Turso acceptance remain outstanding.
+No bucket migration or Turso service is enabled.
 
 The existing direct-layout implementation below has native read/cache, explicit
 existing-file writes and [guarded file creation](native-creation.md). It remains

@@ -1,6 +1,6 @@
-//! Managed namespace authority prototype. Loopback-only transport; no S3 writes,
-//! remote deployment or Turso backend is enabled. Managed read-only mounts use
-//! this development transport, including opt-in managed native editing.
+//! Single-volume managed namespace authority. Optional authenticated HTTPS;
+//! no S3 writes, remote provisioning or Turso backend is enabled implicitly.
+mod tls;
 mod wire;
 use axum::{
     Json, Router,
@@ -13,6 +13,7 @@ use axum::{
 use s3drive_state::{State, namespace};
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::Arc, thread};
+pub use tls::{ServerTls, TlsError, serve_tls};
 use tokio::sync::{Semaphore, mpsc, oneshot};
 pub use wire::{WireClient, WireError};
 
@@ -224,8 +225,8 @@ impl Token {
         else {
             return false;
         };
-        // Compare all bytes of a correctly sized token. This prototype is not a
-        // hardened public network authentication implementation.
+        // Compare every byte for correctly sized bearer tokens. The token grants
+        // this authority's one volume; it is not a multi-tenant identity service.
         value.len() == self.0.len()
             && value
                 .bytes()
@@ -286,16 +287,18 @@ where
             "authority prototype requires loopback",
         ));
     }
+    axum::serve(listener, router(client, token))
+        .with_graceful_shutdown(shutdown)
+        .await
+}
+fn router(client: Client, token: Token) -> Router {
     let context = HttpContext {
         client,
         token,
         slots: Arc::new(Semaphore::new(QUEUE)),
     };
-    let app = Router::new()
+    Router::new()
         .route("/v1/namespace", post(handle))
         .layer(DefaultBodyLimit::max(BODY_LIMIT))
-        .with_state(context);
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown)
-        .await
+        .with_state(context)
 }

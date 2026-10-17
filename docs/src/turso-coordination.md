@@ -140,3 +140,14 @@ schema/application identification and differ on journaling/busy timeout.
 No Turso account, database, token or subscription was created during this
 research. Native Sync is not adopted for locks, and the current read-only
 filesystem remains independent of Turso availability.
+
+## Cost discussion (2026-10-17)
+
+For one shared metadata database, [current monthly pricing](https://turso.tech/pricing?frequency=monthly)
+offers Free at$0 and Developer at$5.99/month;
+[annual billing](https://turso.tech/pricing) advertises about$4.99/month for
+Developer. Our preliminary personal-workstation budget is$0–$5.99/month for the
+database, pending measured usage. Coordinator hosting and Wasabi are separate;
+filesystem operations can amplify into multiple database rows. Hosting remains
+undecided. See the [Rust HTTPS service design](remote-authority.md); adding Turso
+would replace its shared database backend, not each computer's local SQLite.

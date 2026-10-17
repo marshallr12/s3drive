@@ -14,9 +14,15 @@ serde.workspace = true
 serde_json.workspace = true
 s3drive-state.workspace = true
 tokio.workspace = true
+rustls.workspace = true
+tokio-rustls.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+zeroize.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+rcgen.workspace = true
 
 [lints]
 workspace = true

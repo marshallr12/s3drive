@@ -186,6 +186,34 @@ fn authority_refuses_remote_bind_before_reading_token_or_creating_state() {
 }
 
 #[test]
+fn authority_tls_requires_complete_private_material_before_creating_state() {
+    let root = tempfile::tempdir().unwrap();
+    let key =
+        s3drive_state::create_private_secret(&root.path().join("key"), b"never-print-private-key")
+            .unwrap();
+    for pair in [false, true] {
+        let state = root.path().join(if pair { "invalid" } else { "missing" });
+        let mut command = cli();
+        command
+            .arg("authority-serve")
+            .arg("--directory")
+            .arg(&state)
+            .arg("--token-file")
+            .arg(root.path().join("absent.token"))
+            .arg("--tls-key")
+            .arg(&key);
+        if pair {
+            command.arg("--tls-cert").arg(&key);
+        }
+        let result = command.output().unwrap();
+        assert!(!result.status.success());
+        assert!(!state.exists());
+        assert!(result.stdout.is_empty());
+        assert!(!String::from_utf8_lossy(&result.stderr).contains("never-print-private-key"));
+    }
+}
+
+#[test]
 fn managed_token_mount_overlap_is_rejected_before_secret_access() {
     let root = tempfile::tempdir().unwrap();
     let mount = root.path().join("mount");

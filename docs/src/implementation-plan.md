@@ -655,3 +655,20 @@ recover previous exclusive sessions without inventing kernel receipt. Require
 local gates and complete new native acceptance before publication; versions1–6
 keep unsupported deletion. This phase must connect the native callbacks, not stop
 at another disconnected metadata API.
+
+Accepted at0f6104c, terminal all-green
+[CI39072688497](https://github.com/marshallr12/s3drive/actions/runs/39072688497).
+255/251 state, ten HTTP, seventeen SDK, seven Linux and1+7 Windows native cases;
+both startup gates and typed21/14 reference artifacts passed. Explicit extended
+ON_CLOSE refusal reflects the pinned WinFsp kernel limit. Main is private/clean.
+
+### P6m4a — shared HTTPS authority transport (2026-10-17)
+
+Implement the [transport contract](remote-authority.md): explicit native TLS
+listener, authenticated HTTPS client, private certificate/key/optional CA inputs,
+unchanged stable IDs and exact uncertain-operation recovery. Keep numeric
+loopback HTTP for existing local configurations. Require real CLI/shared-FS
+HTTPS and SDK tests plus native Linux/Windows acceptance. No host or Turso
+provisioning; the user chose to keep both hosting options open. Real multi-host
+deployment, startup supervision, backup/failover and optional Turso remain later
+requirements, not implied by successful local TLS tests.

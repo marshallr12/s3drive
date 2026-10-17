@@ -1,93 +1,55 @@
 # S3Drive handoff
 
-Updated2026-10-17. Current phase **complete native Windows lifecycle bridge** on
-`codex/native-windows-lifecycle`. Goal ACTIVE. Read the
-[bridge contract](docs/src/native-windows-lifecycle.md) and implementation plan.
+Updated2026-10-17. Goal ACTIVE. Current phase **shared HTTPS authority** on
+`codex/remote-authority-tls`. Read `docs/src/implementation-plan.md` and
+`docs/src/remote-authority.md` before implementation.
 
-Accepted private clean main `971c6fb8410311a1ed3e0fc26cd832ed95d6d190`, terminal
-CI39066548525: Linux117495320843, Windows117495320680, book117495320856 all green.
-253/249 state, ten HTTP, seventeen SDK and seven native per OS; strict21 artifact
-12113965736 and strict14 artifact12113722321 matched exact source/platform/types.
-No-systemd Linux and independent Windows-logon startup passed. Windows retained
-a locked fixture profile, dummy credentials removed; directory deletion deferred
-to disposable VM teardown under its explicit flag. Proof
-`/tmp/s3drive-owned-target-publication.json`, logs
-`/tmp/s3drive-owned-target-{linux,windows,book}.log`. Schema22/config6. GitHub
-visibility unexpectedly public at final check; restored and repeatedly verified
-private before/after publication. Cause unverified. Recheck live visibility.
+Accepted private clean main0f6104c7cd5b7f0d921f16044c2131eff9962f42, terminal
+all-green CI39072688497: Linux117513381553, Windows117513381333,
+book117513381566. 255/251 state, ten HTTP, seventeen SDK, seven Linux and1+7
+Windows native cases; strict21/14 artifacts12116106272/12115719715 exactly
+matched source/platform/types. Both startup gates passed. Schema23/config7,
+explicit posix-v1 native lifecycle now accepted; configs1–6 remain unsupported
+for native Windows deletion. Proof `/tmp/s3drive-lifecycle-publication.json`,
+logs `/tmp/s3drive-lifecycle-{linux,windows,book}.log`, local gate7 exit0.
 
-Current work includes schema23 optional paired physical controls and per-open
-POSIX proof, config7 explicit native profile, full shared Writes/controller/native
-bridge and native acceptance. Keep config1–6 deletion unsupported. No claim of
-current native deletion or physical workstation reboot acceptance. Do not bypass
-NoNewPrivs=1, mutate Wasabi, install real startup entries or rotate credentials.
+Pinned WinFsp rejects extended ON_CLOSE in-kernel before Rust; exact refusal,
+retained bytes and unchanged DoC effect tested. Physical workstation reboot,
+PAM/SSH and desktop Windows10/11 acceptance remain unverified. Windows locked
+fresh fixture profile remains for VM teardown; dummy credentials removed.
+Do not bypass NoNewPrivs, mutate Wasabi, install real startup entries or rotate
+credentials. Privacy drift occurred historically; current API confirmed private.
 
-Native integration must use stable node/open IDs, journal actual void facts before
-network, retain uncertain returnable work, support early deleting cleanup with
-other file objects and preserve old-target late I/O. Multi-store owned replacement
-must freeze both original controls; no silent rebind or permanent refusal as a
-substitute. Use publication/edit/controller lock order. Require full local and
-exact-source hosted native/reference/startup gates before guarded publication.
+The user keeps SQLite-host and optional Turso hosting choices open. Current
+transport only allows numeric loopback HTTP. New phase adds native Rust TLS,
+verified HTTPS clients, optional private CA roots, owner-private bounded PEM
+inputs and request/connection/shutdown bounds. No remote provisioning.
+Metadata/S3 mutation protocols and exact uncertain IDs stay unchanged. Shared
+SQLite remains authoritative; Turso, real multi-host, authority supervision and
+backup/failover require later acceptance. Pricing checked2026-10-17: Free$0,
+Developer$5.99 monthly/about$4.99 annual; see cited book discussion. Rust service
+hosting and Wasabi costs are separate.
 
-Candidate366828a run39071505814 Windows117509914273 reached the real native test:
-atomic file/directory DoC, duplicate handles and regular clear/reassert passed,
-then ON_CLOSE extended cancellation failed HRESULT0x80070032. Pinned upstream
-v2.1 `src/sys/fileinfo.c:1493` explicitly rejects ON_CLOSE in-kernel, before any
-Rust callback. Profile now documents this NTFS difference; test requires exact
-refusal, intact bytes and unchanged DoC effect rather than claiming cancellation.
-Log `/tmp/s3drive-lifecycle-windows3.log`. Remaining native cases still pending.
+TLS wire tests now include independent-client CAS and unread-reply recovery,
+bad trust/hostname/expiry/token/volume, slow handshake/header/body, plaintext
+refusal, no redirects/replay and sanitized errors. One initial plaintext-refusal
+assertion was corrected to allow TLS alerts. The same real CLI/SDK managed
+writer test is being switched to HTTPS on portable and native OS paths. No
+remote transport acceptance or publication claimed yet. Require local gate and
+exact-source Linux/Windows/book/native/reference/startup gates before guarded
+private main publication. Refresh this current section with evidence; preserve
+older durable checkpoints below.
 
-Candidate10899f2 run39071909778 Windows117511092054 failed native open with
-`logical observation regressed` (log `/tmp/s3drive-lifecycle-windows4.log`).
-Portable barrier regression reproduced a disposition overtaking a paused Node
-reply (`/tmp/s3drive-lifecycle-race-before.log`, exit101). Managed read/open now
-authorizes under publication/edit locks through adoption; same test passed
-(`/tmp/s3drive-lifecycle-race-after.log`, exit0). Test also covers actual Cleanup.
-Monotonic state guard unchanged. Next full gate and native candidate required.
-Full local gate7 passed exit0 (`/tmp/s3drive-lifecycle-gate7.log`), including both
-barrier cases, 255 state/ten HTTP/seventeen SDK, old mutation/reopen regressions,
-format/lint/build/book. No larger stack or relaxed state guard. Next run exact-tip
-hosted native/reference/startup acceptance before publishing main.
-
-Candidate43a45ce run39071127420 passed Windows type checking but failed Clippy
-on a collapsible nested `if` in Close, before native tests. Both void callbacks
-now use equivalent let chains. Book passed; Linux was still running at the check.
-Windows log `/tmp/s3drive-lifecycle-windows2.log`. Native acceptance remains pending.
-
-Prior candidate6199af5, run39069635074 is terminal failure: Linux/book pass,
-Windows117504375158 Clippy failed on an Open/Create initialization insertion and
-FILE_DISPOSITION_INFO_EX_FLAGS lacking BitOr. Corrected in43a45ce.
-Windows compile log `/tmp/s3drive-lifecycle-windows1.log`; no native run occurred.
-A subsequent local gate5 exposed the stack overflow again. Traces narrowed it to
-S3 HEAD during reopening uploaded data; boxing generated HEAD/GET send futures
-inside deadlines fixes the original test after all traces are removed
-(`/tmp/s3drive-lifecycle-stack11.log`, exit0). No stack limit increase.
-Narrow-policy test also exposed/fixed metadata-only DoC creation missing its
-write guard; file/directory denial now passes without provider PUT or namespace
-admission (`/tmp/s3drive-lifecycle-policy1.log`). Local gate6 passed exit0 at
-`/tmp/s3drive-lifecycle-gate6.log`: 255 state, ten HTTP, seventeen SDK, lifecycle
-engine/policy, original mutation regression, lint/build/book.
-Windows-only fixes and non-panicking void-callback logging are in43a45ce.
-CI now runs the new complete native test early, and skips only that same test in
-the later existing native suite; expect 1+7 Windows native, seven Linux native.
-Do not publish main or claim native success until final exact-source all-green.
-
-Local portable gate `/tmp/s3drive-lifecycle-gate4.log` passed exit0: 255 state,
-ten HTTP, seventeen SDK, new shared-FS lifecycle engine, lint/build/book. The
-engine exercised early unlink with another object active, detached late writes,
-actual non-delete cleanup, two-store owned replacement, nonempty renamed DoC
-directory and root refusal through real SDK/HTTP. Two new state tests prove
-paired control rejection and schema22/profile retention. Old configs remain on
-the old native path. A new harness dispatch future caused a stack overflow in
-an existing test; boxing that branch fixed it, and the original test/gate passed.
-Windows-only acceptance added afterward is formatted but not yet compiled here:
-NTFS control + atomic directory/file DoC, duplicate/multiple objects, SetDelete
-clear/reassert, extended cancellation/POSIX early unlink, four replacement modes,
-retained I/O, cross-store replacement and lost native admission/SetDelete replies
-with killed mount owners. New tests run automatically in the Windows ignored
-native suite. Need actual hosted evidence before enabling/publishing config7.
-Unsafe test-only calls stay under audited native.rs and target-specific features.
-Next run exact candidate CI; do not call native acceptance from the Linux gate.
+Local full gate passed exit0 (`/tmp/s3drive-remote-gate2.log`): 256 state, ten
+HTTP, five real TLS, seventeen SDK, CLI HTTPS shared-FS writes/recovery, lint,
+build and54-book-link checks. Focused TLS `/tmp/s3drive-remote-tls3.log` and
+CLI writer `/tmp/s3drive-remote-engine2.log` passed. Initial gate1 terminated143
+during test compilation; no test failure, ample resources, cause unverified.
+Only that terminal process was restarted; gate2 is complete. Diagram SVG was
+rendered with librsvg/Cairo and visually inspected. Existing dependency versions
+retained; new TLS/platform-verifier/test-cert graph additions only.
+Next push exact candidate and inspect terminal all-three CI, native HTTPS marker,
+full lifecycle1+7, Linux7, typed21/14 source artifacts and both startup gates.
 
 ## Prior owned-target replacement checkpoint
 

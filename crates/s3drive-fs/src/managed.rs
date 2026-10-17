@@ -8,8 +8,7 @@ pub(super) struct Backend {
 pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
     let settings = config.managed.as_ref().ok_or(Error::Configuration)?;
     let token = Token::from_private_file(&settings.token_file).map_err(|_| Error::Configuration)?;
-    let authority =
-        WireClient::loopback(&settings.authority, token).map_err(|_| Error::Configuration)?;
+    let authority = WireClient::from_config(settings, token).map_err(|_| Error::Configuration)?;
     if config.writes.is_some() {
         let reply = authority
             .request(&s3drive_authority::Request::Features {})

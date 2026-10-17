@@ -20,12 +20,18 @@ enum Command {
         #[arg(long)]
         directory: PathBuf,
     },
-    /// Run the loopback metadata authority in the foreground (development).
+    /// Run the metadata authority (HTTP loopback or explicit TLS).
     AuthorityServe {
         #[arg(long)]
         directory: PathBuf,
         #[arg(long)]
         token_file: PathBuf,
+        /// Owner-private PEM certificate chain. Required with --tls-key.
+        #[arg(long, requires = "tls_key")]
+        tls_cert: Option<PathBuf>,
+        /// Owner-private unencrypted PEM key. Required with --tls-cert.
+        #[arg(long, requires = "tls_cert")]
+        tls_key: Option<PathBuf>,
         #[arg(long, default_value = "127.0.0.1:0")]
         listen: std::net::SocketAddr,
         #[arg(long)]
@@ -139,6 +145,8 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         Command::AuthorityServe {
             directory,
             token_file,
+            tls_cert,
+            tls_key,
             listen,
             stop_on_stdin_close,
             name_policy,
@@ -149,6 +157,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
                 listen,
                 stop_on_stdin_close,
                 name_policy,
+                tls_cert.zip(tls_key),
             )
             .await?;
         }
@@ -469,6 +478,12 @@ fn check_cache_location(
         .into_iter()
         .chain(config.writes.as_ref().map(|w| &w.directory))
         .chain(config.managed.as_ref().map(|m| &m.token_file))
+        .chain(
+            config
+                .managed
+                .as_ref()
+                .and_then(|m| m.authority_ca_file.as_ref()),
+        )
     {
         let local = parts(&projected(directory)?);
         if local.starts_with(&mount) || mount.starts_with(&local) {
@@ -484,11 +499,18 @@ async fn run_authority(
     listen: std::net::SocketAddr,
     stdin_close: bool,
     name_policy: String,
+    tls_files: Option<(PathBuf, PathBuf)>,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     use s3drive_authority::{Authority, Reply, Request, Token};
-    if !listen.ip().is_loopback() {
-        return Err("authority development server requires a numeric loopback listener".into());
+    if !listen.ip().is_loopback() && tls_files.is_none() {
+        return Err(
+            "a nonloopback authority listener requires explicit TLS certificate and key files"
+                .into(),
+        );
     }
+    let tls = tls_files
+        .map(|(cert, key)| s3drive_authority::ServerTls::from_private_files(&cert, &key))
+        .transpose()?;
     let token=Token::from_private_file(&token_file).map_err(|_|"authority token must be an owner-private local file containing 64 hexadecimal characters")?;
     let authority = Authority::open_with_policy(directory, name_policy)
         .await
@@ -499,7 +521,7 @@ async fn run_authority(
     };
     println!(
         "{}",
-        serde_json::json!({"endpoint":format!("http://{}/v1/namespace",listener.local_addr()?),"volume":volume.id,"name_policy":volume.name_policy})
+        serde_json::json!({"endpoint":format!("{}://{}/v1/namespace",if tls.is_some(){"https"}else{"http"},listener.local_addr()?),"volume":volume.id,"name_policy":volume.name_policy})
     );
     std::io::stdout().flush()?;
     let (closed, receive) = tokio::sync::oneshot::channel();
@@ -538,8 +560,11 @@ async fn run_authority(
         };
         tokio::select! {_ = interrupt=>{},_ = terminate=>{},_ = stdin=>{}}
     };
-    let result =
-        s3drive_authority::serve_loopback(listener, authority.client(), token, shutdown).await;
+    let result = if let Some(tls) = tls {
+        s3drive_authority::serve_tls(listener, authority.client(), token, tls, shutdown).await
+    } else {
+        s3drive_authority::serve_loopback(listener, authority.client(), token, shutdown).await
+    };
     authority
         .shutdown()
         .await

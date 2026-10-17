@@ -1,10 +1,13 @@
 # Native Windows lifecycle bridge
 
-Design date: 2026-10-17. **Under implementation; not accepted or enabled on
-published main.** Baseline `971c6fb` passed terminal CI39066548525 with schema22,
-config6. Its complete proof is `/tmp/s3drive-owned-target-publication.json` on the
-development workstation. Repository visibility was restored to private before
-that publication; continue checking it before and after future publication.
+Design/acceptance date: 2026-10-17. Accepted at0f6104c, terminal all-green
+[CI39072688497](https://github.com/marshallr12/s3drive/actions/runs/39072688497),
+schema23/config7. Linux117513381553, Windows117513381333 and book117513381566
+succeeded; 255/251 state, ten HTTP, seventeen SDK, seven Linux and1+7 Windows
+native cases. Typed21/14 reference artifacts12116106272/12115719715 matched the
+exact source and platform. Startup passed without systemd and across independent
+Windows logons. Private clean main was verified before/after publication. Proof:
+`/tmp/s3drive-lifecycle-publication.json` on the development workstation.
 
 Version7 selects `managed.windows-disposition = "posix-v1"` explicitly. Versions
 1–6 keep their existing unsupported native deletion paths. This selects the
@@ -57,7 +60,8 @@ The directory probe uses NtCreateFile with synchronous directory/Create/DoC
 options, DELETE access and initialized NT structures; it first runs the same
 owned request on local NTFS to validate the oracle. This is based on Microsoft's
 [NtCreateFile contract](https://learn.microsoft.com/en-us/windows/win32/api/winternl/nf-winternl-ntcreatefile),
-read2026-10-17. Actual target behavior remains unverified until the native run.
+read2026-10-17. The same request passed the NTFS control and WinFsp native run;
+this does not certify other OS/driver versions.
 
 
 ## Portable checkpoint
@@ -72,13 +76,16 @@ remaining overflow to nested S3 HEAD state during reopen; generated HEAD/GET
 send futures now stay on the heap inside their deadlines. The original test
 passes without diagnostic instrumentation or larger stack limits.
 
-The new Windows-only suite remains unverified here. It includes an actual NTFS
+The accepted Windows-only suite includes an actual NTFS
 directory-create control, atomic DoC creation, duplicates/multiple objects,
 regular cancellation, explicit extended-cancellation refusal, POSIX early cleanup, four replacement
 modes, cross-store retained I/O and native lost-response/killed-owner recovery.
-It must compile and pass on the actual runner along with the frozen reference
-matrices and existing startup/mount gates before config7 is published to main.
+It passed on the actual runner along with the frozen reference matrices and
+existing startup/mount gates. Windows retained a locked disposable fixture profile;
+dummy credentials were removed and directory deletion deferred to VM teardown.
+Actual workstation reboot/PAM/SSH and Windows10/11 desktop acceptance remain open.
 
+## Implementation history
 
 Candidate `6199af5` (CI39069635074) passed Linux/book but stopped Windows Clippy
 on misplaced Open/Create context initialization and typed flag composition.
