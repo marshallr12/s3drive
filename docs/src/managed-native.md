@@ -4,7 +4,13 @@ Implementation date: **2026-10-17**. P6m3a connects the managed namespace and
 immutable-file reader to the existing Linux FUSE and Windows WinFsp adapters.
 The version-3 configuration is explicit. Existing version-1/2 configurations
 retain their direct layout; no bucket or configuration is converted implicitly.
-Native acceptance is a separate gate; see the current evidence in `HANDOFF.md`.
+Native acceptance passed on Linux and Windows at
+[`653c804`](https://github.com/marshallr12/s3drive/commit/653c80499cd1c5bf892eebeb45e81d1499fe023b),
+[terminal run 39002521132](https://github.com/marshallr12/s3drive/actions/runs/39002521132).
+Linux job `117308259596`, Windows job `117308259773` and book job
+`117308259813` all succeeded. Both native suites ran four cases, including
+the managed reader. This is owned-loopback provider evidence on CI hosts,
+not live managed Wasabi or multi-host deployment acceptance.
 
 ![Managed reads use the namespace authority and its SQLite database for names, and an S3 client for verified immutable file bytes.](images/managed-native.png)
 

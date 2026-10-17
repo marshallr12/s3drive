@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3a managed native reads**; implementation and portable integration added; exact-tip native CI pending.
+Updated: 2026-10-17. Current phase: **P6m3a managed native reads**; implemented; local gate and native Linux/Windows acceptance passed at `653c804`.
 Goal active. Linux/Windows read-only drives and startup foundations work;
 library writes/flush are progressing toward safe writable native filesystems.
 Do not call the broader editable-drive goal complete before its documented
@@ -85,7 +85,7 @@ serde_json 1.0.151 and reqwest 0.13.5 (now also the loopback authority client), 
   least-privilege password-backed scheduled task with shared NTFS folder.
   Do not change machine policy or install a real user startup entry implicitly.
 
-## P6m3a candidate: codex/managed-native-read
+## P6m3a: native acceptance and publication candidate
 
 Based on published main `77db279d6c12208d4cc6e0d2bfff0aa405230a01`, whose terminal
 exact-source Linux/Windows/book run `39000302465` passed. P6m3a connects the
@@ -118,7 +118,14 @@ See [managed native contract](docs/src/managed-native.md).
 Local integration logs: `/tmp/s3drive-managed-native-{portable,regression,token-tests,cli-tests}.log`.
 Local full gate passed at `/tmp/s3drive-managed-native-gate-final.log`; final-tip
 confirmation is `/tmp/s3drive-managed-native-gate-tip.log` (check its terminal
-status). Native acceptance requires a terminal exact-tip CI run.
+status). Native acceptance passed at exact source `653c80499cd1c5bf892eebeb45e81d1499fe023b`
+in terminal all-green run `39002521132`: Linux `117308259596`, Windows
+`117308259773`, book `117308259813`. Four native cases passed per OS,
+including the managed reader; Linux no-systemd and Windows cross-logon
+regressions passed. Linux has 93 state tests, Windows 90; both have 50 S3,
+12 FS and four authority TCP tests. Native logs:
+`/tmp/s3drive-managed-native-{linux,windows}-ci.log`. Documentation-only
+follow-up must still meet exact-tip CI before main publication.
 New/updated diagrams are generated from `scripts/draw-architecture.py`.
 
 Next P6m3b: durable logical edit heads, managed create/save/replace/rename/delete,
@@ -228,7 +235,8 @@ were already removed. Do not infer remaining cleanup from old plans/logs.
 
 ## Next implementation and durable decisions
 
-Complete P6m3a real native acceptance, then implement P6m3b managed writable integration. Stable storage/file identities,
+P6m3a native acceptance passed. Implement P6m3b managed writable integration in
+the b1/b2/b3 steps documented in the implementation plan. Stable storage/file identities,
 create-only unique blob keys and metadata CAS are now separate from the direct
 writer's mutable-key ETag lineage; preserve that distinction during integration. Keep uncertain bytes and new physical blob
 references distinct; an S3 upload alone does not acknowledge filesystem flush.

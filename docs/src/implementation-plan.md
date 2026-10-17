@@ -40,7 +40,7 @@ The user selected managed layout on 2026-10-16; P6m phases now define the target
 | P5c1c — direct directories | Archived experiment on `codex/persistent-directories`; superseded by managed choice | Local engine passed; native run 38995625850 failed, helper corrected without claiming acceptance; not merged |
 | P6m1 — managed namespace authority | Private SQLite authority, stable IDs, sequence CAS, atomic create/move/remove, operation-result recovery and loopback HTTP | Independent TCP clients, concurrent cycles/creates, lost reply/restart, process death, full disk, migration and limits |
 | P6m2 — immutable payload publication | Implemented library: store IDs, reservations, create-only verified blobs, metadata CAS and separate logical acknowledgment | Two-writer SDK/authority races, unknown upload/commit outcomes, retained conflicts; separate approved provider acceptance |
-| P6m3a — managed native reads | Explicit version-3 read-only mounts, shared namespace, multi-store pinned payloads and private-token foreground authority CLI | SDK/HTTP/SQLite integration plus real FUSE/WinFsp gates; see [contract](managed-native.md) |
+| P6m3a — managed native reads | Explicit version-3 read-only mounts, shared namespace, multi-store pinned payloads and private-token foreground authority CLI | SDK/HTTP/SQLite and real FUSE/WinFsp acceptance passed at `653c804`, run 39002521132; see [contract](managed-native.md) |
 | P6m3b — managed native writes | Shared engine and FUSE/WinFsp use authoritative namespace and pinned blobs; portable names, save/replace, open-unlinked handles | Both real native suites plus cross-machine invalidation, failure/recovery and approved provider checks |
 | P6m4 — authority deployment/Turso | Authenticated TLS service, migrations, backup/failover; optional pinned Turso backend | Real multi-host/partition/commit-uncertainty/authorization tests; no offline replica ownership decisions |
 | P5a — staged writes | In-memory storage test double plus immutable local generations and durable journal | Fault injection at every local boundary; acknowledged local state survives restart; network mutation remains disabled |
@@ -279,3 +279,40 @@ portable naming, concurrent save/replace conflicts and retained open-unlinked
 snapshots. P6m4 separately deploys/supervises the authority and tests real
 multi-host/Turso coordination. Sign-in supervision must include authority
 availability and retain MX/no-systemd and Windows cross-logon requirements.
+
+
+## P6m3b managed writable steps (proposed, 2026-10-17)
+
+P6m3a now has real native read acceptance. Complete these independently green
+steps before enabling managed writes in configuration:
+
+1. **P6m3b1: durable logical edit heads.** Persist volume/node/store identity,
+   the base authority file revision and payload reference separately from each
+   physical blob key. Store bounded immutable local edits and intent-key replay
+   on the existing SQLite owner. Link an exact sealed logical generation to
+   its reservation/publication operation IDs before network effects. Only a
+   verified S3 upload, metadata CAS and committed local logical settlement may
+   acknowledge it; settlement of an older generation must retain a newer head.
+   Acceptance: process death/lost replies at each durable boundary, full-disk
+   rollback, corruption/refusal, concurrent local edits and retained conflicts.
+2. **P6m3b2: existing-file native editing.** Add explicit policy-bound managed
+   write configuration and a shared local file view, patch/truncate/append,
+   local read-your-writes and generation-specific remote fsync. Coalesce local
+   writes before publication rather than uploading each patch. An external
+   change must not silently replace the stored base file revision. Reconcile
+   the same uncertain operation IDs; retain and report conflicts. Acceptance:
+   actual FUSE/WinFsp editing, simultaneous readers/writers, external competing
+   publication, restart and failed/uncertain flush without a repeated PUT.
+3. **P6m3b3: managed namespace and application saves.** Add create/mkdir,
+   rename-overwrite/replace-save and unlink callbacks with stable open-handle
+   identity and a versioned portable naming/collision policy. Keep metadata
+   transactions independent of uploads and reference-aware reclamation disabled.
+   Acceptance: real application save patterns on both platforms, concurrent
+   folder/name edits, open-unlinked files, collisions and recovery. A metadata
+   unlink alone must never become an unconditional S3 object deletion.
+
+P6m4 separately supplies authority supervision, authenticated remote deployment,
+backup/failover and optional Turso acceptance. Include authority availability in
+managed sign-in startup and test MX without systemd, Windows cross-logon access,
+SSH/tmux disconnect and actual workstation reboot. These remain requirements,
+not behaviors proved by the current local-loopback tests.
