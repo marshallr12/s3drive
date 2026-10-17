@@ -112,7 +112,15 @@ The first gate exposed those outdated fixtures; the corrected gate log is
 `/tmp/s3drive-managed-gate-final.log`. Also see `/tmp/s3drive-managed-tests.log`
 and `/tmp/s3drive-managed-state-tests.log`. Exact-tip CI is required below;
 retrieve it with `gh run list --branch codex/managed-authority --limit 3`.
- The new managed architecture PNG was generated
+Initial implementation `ba7be22` passed Linux/book and Windows workspace tests
+(84 state plus four authority TCP tests), and both writable native cases, in
+run 38997028876. The Windows session fixture still asserted `schema=7` and
+failed after the schema-8 upgrade. Its assertion is corrected to schema 8;
+full native acceptance must pass on the corrected tip before publication.
+Initial logs: `/tmp/s3drive-managed-linux-ci.log` and
+`/tmp/s3drive-managed-windows-ci-initial.log`. The follow-up local gate log is
+`/tmp/s3drive-managed-gate-schema8.log`.
+The new managed architecture PNG was generated
 and visually inspected. No real user configuration or cloud state changed.
 
 The direct-directory experiment is archived on `codex/persistent-directories`
