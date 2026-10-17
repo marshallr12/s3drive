@@ -1,5 +1,8 @@
 # Journal-driven single-PUT executor
 
+This chapter records its library phase. Subsequent [version-2 native integration](native-writes.md)
+adds explicit existing-file editing; the real user configuration remains read-only.
+
 **P5b2b, implemented 2026-10-16:** the durable journal is now connected to the
 real AWS SDK's single-attempt PUT and full-byte observation path. Local TCP
 fixtures exercise the complete sequence, including killing the executor process

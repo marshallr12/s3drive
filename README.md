@@ -6,8 +6,8 @@ as a local filesystem on Linux and Windows.
 **Status: native read-only drives work on Linux and Windows.** Optional
 [mounted caching](docs/src/storage-and-recovery.md) uses bounded SQLite snapshots;
 new opens still authorize online. A separate version-2 configuration now connects
-[existing-file writes](docs/src/native-writes.md) to both adapters, under native
-acceptance. It requires explicit source/prefix policies and full provider evidence.
+[existing-file writes](docs/src/native-writes.md) to both adapters, with native
+Linux/Windows acceptance. It requires explicit source/prefix policies and full provider evidence.
 No real writable user configuration is installed. Creation, rename/delete,
 multipart and staging reclamation remain subsequent work; this is not yet a
 complete editable desktop drive.

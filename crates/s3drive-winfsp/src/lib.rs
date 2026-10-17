@@ -9,4 +9,4 @@ mod windows;
 #[cfg(windows)]
 pub use windows::run;
 
-pub const IMPLEMENTATION_STATUS: &str = "WinFsp with optional SQLite cache; read-only acceptance verified; explicit existing-file writes under native acceptance";
+pub const IMPLEMENTATION_STATUS: &str = "WinFsp with optional SQLite cache; read-only acceptance verified; explicit existing-file writes with native acceptance";

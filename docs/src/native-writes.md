@@ -1,10 +1,9 @@
 # Native existing-file writes
 
-**P5c1a, implementation under native acceptance, 2026-10-16.** A separate
+**P5c1a, native acceptance passed, 2026-10-16.** A separate
 version-2 configuration opts selected sources into existing-file editing.
 Version-1 configurations remain read-only. The shared engine is connected to
-both adapters; local SDK/SQLite integration passes. Native Linux and Windows
-acceptance must pass before publication. No real Wasabi configuration, policy,
+both adapters; local SDK/SQLite integration and native Linux/Windows tests pass. No real Wasabi configuration, policy,
 credentials, startup registration or objects are changed by these tests.
 
 This phase edits existing files only. File/directory creation, deletion,
@@ -118,6 +117,15 @@ New file sizes must fit the explicit policy and the 8 MiB single-PUT bound.
 
 ## Evidence and remaining acceptance
 
+Implementation `cf5e456` passed both native suites in
+[run 38990445390](https://github.com/marshallr12/s3drive/actions/runs/38990445390):
+Linux job 117271446300 and Windows job 117271446336. Each ran the existing-file
+write workflow plus lost replies, restart without replay and conflict retention,
+alongside read-only/cache/session regressions. Native Windows runs remotely on
+GitHub's Windows Server 2025 VM. The final conflict error mapping and documentation
+refresh must also pass exact-tip CI before publication.
+
+
 The local child-process engine test uses the real CLI's full conditional probe,
 strict policy factory, SDK TCP transport and SQLite. It exercises binary/Unicode
 edits, shared readers, sparse/truncate/append/constrained writes, repeated flush,
@@ -128,7 +136,9 @@ Native tests use ordinary file syscalls through actual FUSE/WinFsp and the same
 owned loopback fixture. They exercise existing-file writes, shared reads,
 truncation, zero growth, append, remote flush, limits, prefix protection and
 restart. Lost replies are verified without replay; observation failures retain
-local bytes and fail fsync until restart can reconcile the remote operation.
+local bytes and fail fsync until restart can reconcile the remote operation. Rejected
+remote attempts return the shared conflict error (Linux `ESTALE`, Windows
+`STATUS_FILE_INVALID`); unknown results remain I/O failures.
 Native competing-writer tests retain the rejected local snapshot and verify
 that the rival remote bytes remain unchanged.
 The fixture's mutation support is explicitly disabled for read-only
@@ -137,6 +147,6 @@ regression cases. No cloud account is contacted.
 The current local executor has `NoNewPrivs=1`; its setuid FUSE helper cannot
 mount. An isolated user/mount namespace mounts read-only FUSE, but maps root
 ancestors to an unmapped UID and is refused by the unchanged private-state
-checks. Those checks were retained. Thus this phase's driver evidence must come
+checks. Those checks were retained. This phase's driver evidence comes
 from Linux CI and the remote Windows Server 2025 VM. Native writable acceptance
 on this workstation's normal desktop/login session remains separate work.

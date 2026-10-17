@@ -327,12 +327,27 @@ impl Writes {
         self.flush_generation(file, id).await
     }
     async fn flush_generation(&self, file: &File, id: GenerationId) -> Result<()> {
-        let receipt = self.sources[file.source]
+        let result = self.sources[file.source]
             .as_ref()
             .ok_or(Error::ReadOnly)?
             .flush(id)
-            .await
-            .map_err(write_error)?;
+            .await;
+        let receipt = match result {
+            Ok(receipt) => receipt,
+            Err(error) => {
+                if self
+                    .storage
+                    .uploads()
+                    .for_generation(id)
+                    .await
+                    .map_err(cache_error)?
+                    .is_some_and(|info| info.phase == Phase::Rejected)
+                {
+                    return Err(Error::Conflict);
+                }
+                return Err(write_error(error));
+            }
+        };
         let revision = receipt.info().revision.as_ref().ok_or(Error::Internal)?;
         file.current
             .lock()

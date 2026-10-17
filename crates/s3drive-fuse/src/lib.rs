@@ -5,4 +5,4 @@ mod linux;
 pub use linux::run;
 
 pub const IMPLEMENTATION_STATUS: &str =
-    "Linux FUSE with optional SQLite cache; explicit existing-file writes under native acceptance";
+    "Linux FUSE with optional SQLite cache; explicit existing-file writes with native acceptance";

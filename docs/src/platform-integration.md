@@ -2,12 +2,13 @@
 
 Linux FUSE and Windows WinFsp read-only adapters have passed their native gates. See the
 [Windows contract](windows-mount.md). See [the Linux contract](linux-mount.md) for commands, limits and the
-explicit native acceptance gate.
+explicit native acceptance gate. [Opt-in existing-file editing](native-writes.md)
+adds write/truncate/flush callbacks with separate native acceptance on both OSes.
 
 ## Linux: FUSE with fuser
 
 The Linux-only `fuser` 0.18 dependency supplies lookup, getattr, directory,
-open/read/release and read-only flush callbacks. Inodes are retained under a
+open/read/release and flush callbacks; version 2 adds write and size changes. Inodes are retained under a
 mount-wide cap instead of recycled on `forget`; directory handles keep stable
 snapshots and offsets. Four FUSE threads run network futures on a shared Tokio
 runtime. Signals cancel outstanding futures and request unmount. The exact
@@ -39,8 +40,8 @@ linking, and offers a `system` feature for installed libraries. Prototype on
 Implement and test file information, directory enumeration, file contexts,
 security descriptors, read offsets, sharing modes, cleanup/close ordering,
 delete-pending behavior and case handling. Windows callbacks cannot be mapped
-one-for-one to Unix assumptions. Later writes require overwrite/flush paths,
-rename replacement rules and byte-range lock policy.
+one-for-one to Unix assumptions. P5c1a adds overwrite/write/size/flush callbacks.
+Rename replacement rules and byte-range lock policy remain subsequent work.
 
 Separate driver installation from running the user agent. A Windows service's
 session/account context may differ from the interactive desktop; verify that

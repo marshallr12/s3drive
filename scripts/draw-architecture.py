@@ -47,7 +47,7 @@ class Diagram:
         self.image.save(OUT / name, optimize=True)
 
 
-d = Diagram("S3Drive: what runs where", "Working read/cache path in blue  •  Bulk files, writes and coordination roadmap in amber")
+d = Diagram("S3Drive: what runs where", "Read/cache and explicit write components  •  Bulk files and coordination remain proposed")
 d.draw.rounded_rectangle((25, 120, 835, 885), 20, fill="#ffffff", outline="#d5dfe9", width=2)
 d.draw.rounded_rectangle((865, 120, 1255, 885), 20, fill="#edf7f4", outline="#bcdcd0", width=2)
 d.text(50, 136, "YOUR COMPUTER", 16, bold=True, color=MUTED)
@@ -59,19 +59,19 @@ d.box(440, 340, 365, 125, "Shared Rust engine", ["Aliases, exact keys, handles",
 d.arrow([(620, 295), (620, 340)])
 d.box(50, 340, 330, 125, "Local configuration", ["Bucket / endpoint / prefix", "Credentials stay on this host"])
 d.arrow([(380, 400), (440, 400)])
-d.box(440, 515, 365, 125, "S3 client + Tokio", ["AWS SDK for Rust", "LIST / HEAD / ranged GET"])
+d.box(440, 515, 365, 125, "S3 client + Tokio", ["AWS SDK for Rust", "LIST / HEAD / GET / guarded PUT"])
 d.arrow([(620, 465), (620, 515)])
 d.box(890, 440, 340, 200, "S3-compatible service", ["Wasabi / other providers", "Bucket A: documents/…", "Bucket B: photos/…", "Stores the actual file bytes"], color=GREEN, fill="#dff1e9")
 d.arrow([(805, 560), (890, 560)], label="HTTPS", position=(816, 532))
 d.box(50, 515, 330, 125, "Startup supervisors", ["Linux: hooks, no systemd", "Windows: Task Scheduler"])
 d.arrow([(380, 575), (415, 575), (415, 420), (440, 420)])
-d.box(50, 705, 350, 135, "Local SQLite + owner", ["One bounded async queue", "Clean cache / staged journal", "Write integration pending"], color=BLUE, fill="#e9f3fb")
+d.box(50, 705, 350, 135, "Local SQLite + owner", ["One bounded async queue", "Clean cache / staged journal", "Cache / edits / flush receipts"], color=BLUE, fill="#e9f3fb")
 d.box(440, 705, 365, 125, "Future bulk files", ["Optional payload backend", "Separate durability proof"], color=AMBER, fill="#fff4de", planned=True)
 d.arrow([(620, 640), (620, 705)], color=AMBER)
 d.arrow([(440, 615), (420, 615), (420, 675), (225, 675), (225, 705)], color=BLUE, label="Authorized snapshots", position=(65, 649))
 d.arrow([(440, 766), (400, 766)], color=AMBER)
 d.box(890, 705, 340, 125, "Optional Turso service", ["Shared metadata authority", "Separate from local SQLite"], color=AMBER, fill="#fff4de", planned=True)
-d.text(50, 850, "State and cache stay outside the mounted filesystem. Current mounts are read-only.", 17, color=MUTED)
+d.text(50, 850, "State outside mount. V1: read-only. V2 existing-file edits: native acceptance passed.", 17, color=MUTED)
 d.save("architecture.png")
 
 d = Diagram("A session ends; the mount keeps running", "Linux terminal loss + Windows cross-logon reads verified  •  Workstation reboot checks pending", 790)
@@ -197,7 +197,7 @@ d.box(40, 795, 1195, 115, "A lost reply is not rollback", ["Restart or inspect t
 d.save("flush-receipts.png")
 
 
-d = Diagram("Existing-file edits: one shared path on both OSes", "P5c1a implementation • Native acceptance tracked separately • No automatic rebase", height=960)
+d = Diagram("Existing-file edits: one shared path on both OSes", "P5c1a • Native Linux/Windows acceptance passed • No automatic rebase", height=960)
 d.box(40, 140, 360, 130, "Applications + OS adapter", ["Ordinary write / truncate / fsync", "Linux FUSE or Windows WinFsp", "Owner account only"])
 d.box(470, 140, 770, 130, "Shared Rust file engine", ["Online authorization on new opens; per-file serialization", "Patch, append and sparse growth; four mutation slots", "Open readers share the current immutable snapshot"])
 d.arrow([(400, 205), (470, 205)])

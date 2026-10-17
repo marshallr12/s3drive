@@ -166,11 +166,11 @@ async fn engine_child() {
     assert!(fs.open_write(readonly.id).await.is_err());
     println!("READY_FOR_RIVAL");
     wait_signal(&root, "rival-ready").await;
-    assert!(
+    assert!(matches!(
         file.write(0, Arc::from(b"mine".as_slice()), false, false)
-            .await
-            .is_err()
-    );
+            .await,
+        Err(s3drive_fs::Error::Conflict)
+    ));
     assert_eq!(&file.read(0, 100).await.unwrap()[..4], b"mine");
     assert!(file.flush().await.is_err());
     assert!(fs.open_write(node.id).await.is_err());

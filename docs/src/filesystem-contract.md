@@ -4,7 +4,10 @@ This is the broader **proposed acceptance contract**. See the narrower
 [implemented Linux contract](linux-mount.md) for current behavior. The first
 working release should expose a conservative read-only filesystem. Writable
 operation support must be advertised individually, with unsupported operations
-returning the appropriate OS error rather than succeeding silently.
+returning the appropriate OS error rather than succeeding silently. The narrower
+[version-2 existing-file write contract](native-writes.md) records the current
+integration and remaining native acceptance. Creation and rename/delete remain
+unsupported.
 
 ## What S3 guarantees, and what it does not
 

@@ -4,15 +4,16 @@ The diagram describes the target system. P0 added configuration, evidence
 types, SQLite initialization and explicit adapter stubs. P1 adds the read-only
 S3 transport. P2 adds the shared read-only namespace/handle engine and Linux
 adapter; P3 adds Windows WinFsp. Optional clean caching and the local staging
-library and local file-edit plans are implemented. Writable mount integration and conditional remote
-commit remain planned. See platform contracts for native acceptance scope.
+library, local file-edit plans, guarded remote commit and flush receipts are
+implemented. P5c1a connects opt-in existing-file edits to both native adapters,
+with native acceptance on both OSes. See [the detailed write path](native-writes.md).
 
 ![Local applications reach the Rust filesystem engine through FUSE or WinFsp; its S3 client reads remote bucket data. Local SQLite and cache have separate roles.](images/architecture.png)
 
 The blue read/cache path is implemented. New opens authorize with S3 before
-SQLite cache access; a hit avoids the data GET. Amber external bulk files,
-writable mount integration and coordination components remain planned. The
-local staging/journal library is implemented separately from mounted writes.
+SQLite cache access; a hit avoids the data GET. Amber external bulk files and coordination components remain planned. Existing
+configurations stay read-only; explicit version-2 editing requires separate
+source-bound policies and evidence.
 [Startup and remote sessions](startup-and-sessions.md)
 include MX Linux without systemd. [Turso coordination](turso-coordination.md)
 evaluates an optional shared metadata authority, separate from each host's local database.
@@ -21,24 +22,24 @@ evaluates an optional shared metadata authority, separate from each host's local
 ## Crate ownership and process model
 
 `s3drive-core` owns configuration validation and path resolution.
-`s3drive-fs` owns the shared read-only namespace, inode identities and open
+`s3drive-fs` owns the shared namespace, inode identities and open
 handles. It depends on the S3 reader but not on FUSE or Windows types. OS
 adapters translate its errors and project metadata into native structures.
 
 `s3drive-s3` translates read operations to the AWS SDK and retains
 ETags/version IDs as opaque validators. Its current implementation exposes
-paginated list, head and bounded range reads; mutation APIs arrive
-only with their precondition and recovery tests. Avoid designing a broad
+paginated list, head and bounded range reads, a scoped provider probe and a
+policy-bound guarded single-PUT executor with durable recovery. Avoid designing a broad
 generic VFS trait before the first real adapter reveals the necessary contract.
 
 `s3drive-state` owns SQLite migrations, persistent identity, cache metadata,
-local staged generations and eventual remote upload jobs. Its clean cache uses
+local staged generations, remote upload attempts and flush receipts. Its clean cache uses
 BLOBs up to 1 MiB so bytes and integrity metadata commit together. P5a1 stages
 complete generations as bounded SQLite chunks, with local intent in the same
 transaction boundary. Optional external bulk files remain future work. The
 cache and journal now share one bounded SQL worker through `worker::Storage`.
-Mounted reads use its cache handle; staged writes are a library API until the
-remaining write phases pass. No SQL transaction spans a network request. A local process lock must prevent two daemon instances from owning
+Mounted reads use its cache handle; opt-in writable callbacks share the same
+owner and immutable-generation APIs. No SQL transaction spans a network request. A local process lock must prevent two daemon instances from owning
 the same volume/cache; SQLite locking alone does not coordinate cache files.
 
 The platform crates own only OS callback translation, reply lifetimes, mount
@@ -69,14 +70,16 @@ delete. No transparent failover, replication or balancing is promised. Different
 providers can have different credentials, latency and capabilities.
 
 Implemented storage cache keys include the credential/configuration binding,
-exact object key, size and revision. P4a binds successful opens to the actual
-credentials used for HEAD and all reads through that handle; new opens resolve
-credentials again. Configuration or credential changes select a different
-namespace, and every new open still requires online authorization. SQLite
-schema 6 retains the binding registry, unbound legacy rows, clean snapshots,
+exact object key, size and revision. P4a binds successful read-only opens to the actual
+credentials used for HEAD and reads through that handle; new read-only opens
+resolve credentials again. Version 2 pins the policy-matching credential
+generation at mount startup. It does not implicitly rebind pending writes when
+a profile changes. Both modes require online authorization for every new open.
+Changed configuration or credentials select a different binding namespace. SQLite
+schema 7 retains the binding registry, unbound legacy rows, clean snapshots,
 staged generations/local intent and edit operation keys. It adds the
 [remote-attempt journal](remote-journal.md) with single-use send claims and
-uncertain-result recovery. The [SDK executor](upload-executor.md) is tested with
+uncertain-result recovery, plus generation-specific flush acknowledgment. The [SDK executor](upload-executor.md) is tested with
 local HTTP fixtures; production construction remains gated.
 The engine enforces online authorization before cache lookup.
 This is not a provider-global account identifier. See the implemented

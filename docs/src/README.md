@@ -62,7 +62,7 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Durable remote-attempt journal | [Local single-use claims and uncertain-result recovery](remote-journal.md); executor described below |
 | Journal-driven SDK executor | [Implemented and tested on Linux/Windows](upload-executor.md); explicit source/evidence-bound factory; native integration below |
 | Generation-specific remote flush | [Library receipt and atomic acknowledgment](flush-receipts.md); retain newer heads and all snapshots |
-| Existing-file write mounts | [Version-2 opt-in implementation](native-writes.md), under native acceptance; no real writable configuration installed |
+| Existing-file write mounts | [Version-2 opt-in implementation](native-writes.md), native Linux/Windows acceptance passed; no real writable configuration installed |
 | Creation, rename/delete, new offline opens, tray UI | Planned |
 
 The initial research/scaffold delivery is complete. Work has advanced to the

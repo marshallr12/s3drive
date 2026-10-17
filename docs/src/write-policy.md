@@ -1,5 +1,8 @@
 # Explicit application write policy
 
+This chapter records its library phase. Subsequent [version-2 native integration](native-writes.md)
+adds explicit existing-file editing; the real user configuration remains read-only.
+
 **P5b2c, implemented 2026-10-16:** the single-PUT library executor can now be
 constructed from an explicit source-bound policy and complete local probe
 evidence. Existing configurations still accept only `mode = "read-only"`.

@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated: 2026-10-16. Current phase: **P5c1a native existing-file writes**, under acceptance.
+Updated: 2026-10-16. Current phase: **P5c1a native existing-file writes**; native acceptance passed.
 Goal active. Linux/Windows read-only drives and startup foundations work;
 library writes/flush are progressing toward safe writable native filesystems.
 Do not call the broader editable-drive goal complete before its documented
@@ -13,8 +13,8 @@ safe-write contract and real OS acceptance pass.
 - One or more S3-compatible buckets/prefixes exposed through source aliases.
   Wasabi is the first live provider; other endpoints need separate conformance.
 - Linux FUSE and Windows WinFsp adapters have stable read-only acceptance.
-  The current branch adds opt-in existing-file editing; native writable
-  acceptance is pending.
+  The current branch adds opt-in existing-file editing with native writable
+  acceptance. Full desktop editing remains unfinished.
   New online opens authorize through S3; pinned old handles preserve revisions.
   No ordinary CLI upload command, file creation, delete/rename,
   multipart, payload reclamation, new offline opens or desktop packaging yet.
@@ -101,22 +101,36 @@ refused by the existing private-state checks. Do not weaken ownership checks,
 clear NoNewPrivs or use an external privileged launcher to bypass this.
 Logs: `/tmp/s3drive-native-write-linux.log` and
 `/tmp/s3drive-native-write-linux-namespace.log`. Neither is native RW acceptance.
-Initial implementation `5fc39c4` passed Linux native writes, 341 RO requests and
-no-systemd startup in job 117270659528, run 38990194704. Windows is still running.
-The expanded tests add lost replies, restart reconciliation without replay and
-native 412 conflicts; their exact-tip native CI is still required. Normal
-desktop/login-session acceptance remains separate.
+Implementation `cf5e456` passed the expanded native suites in
+[run 38990445390](https://github.com/marshallr12/s3drive/actions/runs/38990445390):
+Linux job 117271446300, Windows job 117271446336, book 117271446202.
+Both OSes exercised lost replies, uncertain restart without another PUT and
+412 conflict preservation, alongside read-only/cache/session regressions.
+Linux terminal success and 341 RO requests are recorded in
+`/tmp/s3drive-native-write-linux-ci-expanded.log`. At this handoff refresh,
+Windows native steps passed and its job was finishing cache upload; verify the
+terminal result, then record the exact-tip final run after this refresh.
+Initial `5fc39c4` also passed all three jobs in run 38990194704, including
+749 read-only WinFsp requests and native writable restart. Logs:
+`/tmp/s3drive-native-write-{linux,windows}-ci-initial.log`.
 
-## Required publication gate
+The final shared error mapping turns journal-rejected flushes into Conflict
+(Linux ESTALE / Windows STATUS_FILE_INVALID). Portable engine assertions cover
+that distinction. `/tmp/s3drive-native-write-gate-final.log` is a successful
+full local gate; documentation and diagram refresh follow it. Both generated
+architecture images were visually inspected. Normal desktop/login-session,
+physical power-cut and actual workstation reboot remain separate acceptance.
 
-Push `native-writable-files`, wait for terminal exact-tip Linux/Windows/book CI,
-inspect both new native writable tests and all read-only/session regressions,
-then fast-forward/push main and verify remote SHA/private visibility. Do not
-infer terminal success while a job is still saving its cache. Preserve unrelated
-user files. Run `bash scripts/gate.sh` locally; separate native commands are:
+## Publication protocol
+
+Before publishing this or any subsequent change, require terminal exact-tip
+Linux/Windows/book CI and inspect native results. Then fast-forward/push main
+and verify remote SHA/private visibility. Do not infer terminal success while
+a job is still saving its cache. Preserve unrelated user files.
+`bash scripts/gate.sh` remains the local gate; separate native commands are
 `cargo test -p s3drive-cli --test linux_mount --locked -- --ignored --nocapture`
-and `python3 scripts/test-linux-session.py`. Windows native tests run on the
-GitHub VM, not locally. No new live cloud mutation is authorized.
+and `python3 scripts/test-linux-session.py`. Windows runs on the GitHub VM.
+No new live cloud mutation is authorized.
 
 ## Completed live Wasabi approval: consumed, do not rerun
 
@@ -147,9 +161,10 @@ were already removed. Do not infer remaining cleanup from old plans/logs.
 
 ## Next implementation and durable decisions
 
-Finish native existing-file write acceptance, then implement creation and
-namespace workflows, reference/pin-aware staging reclamation and explicit
-conflict recovery. Preserve explicit conflict/uncertain states and metadata limits.
+Next implement guarded native file creation in existing directories (P5c1b),
+then persistent directories and namespace workflows (P5c1c), reference/pin-aware
+staging reclamation and explicit conflict recovery. Do not expose delete/rename
+based on fixture cleanup: that is not provider-verified application deletion. Preserve explicit conflict/uncertain states and metadata limits.
 Do not keep adding isolated wrappers while deferring integration indefinitely.
 Multipart, explicit uncertain-intent recovery/forking and credential rebinding
 need independently testable contracts; follow `docs/src/implementation-plan.md`.

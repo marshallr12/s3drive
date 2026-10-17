@@ -50,8 +50,10 @@ Windows testing runs remotely in the private repository's GitHub Actions
 workstation. The 2026-10-16 run logs identify Windows Server 2025
 (`10.0.26100`, image `windows-2025-vs2026`). This is native Windows driver/API
 evidence, not acceptance on a user's Windows 10/11 desktop or a rebooted PC.
-The local Linux workstation separately runs its real FUSE and non-systemd
-startup checks.
+Earlier local Linux gates ran real FUSE and no-systemd startup. The current
+executor has `NoNewPrivs=1`, preventing setuid `fusermount3`; the current phase
+therefore requires native Linux CI rather than weakening local ownership or
+execution checks. See [native write acceptance](native-writes.md).
 
 Behavioral tests cover namespace isolation/traversal, exact key bytes and byte
 limits, endpoint/config rejection, alias collisions, SQLite persistence/schema

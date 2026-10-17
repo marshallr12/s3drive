@@ -1,5 +1,8 @@
 # Generation-specific remote flush
 
+This chapter records its library phase. Subsequent [version-2 native integration](native-writes.md)
+adds explicit existing-file editing; the real user configuration remains read-only.
+
 **P5b2d, implemented 2026-10-16:** the library can flush a selected immutable
 generation and commit its local acknowledgment. `Executor::flush(generation)`
 returns a private-field `remote::FlushReceipt` only after exact remote
