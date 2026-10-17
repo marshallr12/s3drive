@@ -24,6 +24,8 @@ pub struct Fixture {
     pub deny_get: Arc<AtomicBool>,
     pub offline: Arc<AtomicBool>,
     pub writable: Arc<AtomicBool>,
+    pub lose_put_reply: Arc<AtomicBool>,
+    pub hide_committed: Arc<AtomicBool>,
     metadata: Arc<Mutex<Metadata>>,
 }
 impl Drop for Fixture {
@@ -47,6 +49,10 @@ impl Fixture {
         let availability = offline.clone();
         let writable = Arc::new(AtomicBool::new(false));
         let writes = writable.clone();
+        let lose_put_reply = Arc::new(AtomicBool::new(false));
+        let lost = lose_put_reply.clone();
+        let hide_committed = Arc::new(AtomicBool::new(false));
+        let hidden = hide_committed.clone();
         let metadata = Arc::new(Mutex::new(Metadata::new()));
         let metas = metadata.clone();
         let data = objects.clone();
@@ -63,6 +69,7 @@ impl Fixture {
                         let deny_get = get_policy.clone();
                         let offline = availability.clone();
                         let writable=writes.clone();let metadata=metas.clone();
+                        let lose_put_reply=lost.clone(); let hide_committed=hidden.clone();
                         workers.spawn(async move {
                             tokio::time::timeout(Duration::from_secs(20), async move {
                                 let mut bytes = Vec::new();
@@ -104,6 +111,13 @@ impl Fixture {
                                             response("200 OK",&format!("ETag: {tag}\r\n"),b"",0)
                                         }
                                     };
+                                    if result.starts_with(b"HTTP/1.1 200") {
+                                        if hide_committed.swap(false,Ordering::SeqCst) {
+                                            deny_head.store(true,Ordering::SeqCst); deny_get.store(true,Ordering::SeqCst);
+                                            return;
+                                        }
+                                        if lose_put_reply.swap(false,Ordering::SeqCst) {return;}
+                                    }
                                     socket.write_all(&result).await.unwrap();return;
                                 }
                                 if offline.load(Ordering::SeqCst) { return; }
@@ -137,6 +151,8 @@ impl Fixture {
             deny_get,
             offline,
             writable,
+            lose_put_reply,
+            hide_committed,
             metadata,
         }
     }

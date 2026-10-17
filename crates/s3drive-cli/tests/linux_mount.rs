@@ -244,20 +244,9 @@ async fn actual_kernel_mount_existing_file_writes_and_restart() {
         .kill_on_drop(true);
     let mut child = command.spawn().unwrap();
     wait_ready(&mut child).await;
-    let path = mount.clone();
-    let server = fixture.objects.clone();
-    let checks = tokio::task::spawn_blocking(move || {
-        let path = path.join("docs/writable").join(writes::NAME);
-        let mut file = std::fs::OpenOptions::new().write(true).open(&path).unwrap();
-        std::io::Write::write_all(&mut file, b"FIRST").unwrap();
-        file.sync_all().unwrap();
-        assert_eq!(std::fs::read(&path).unwrap(), b"FIRSTfghij");
-        assert_eq!(server.lock().unwrap()[writes::KEY].0, b"FIRSTfghij");
-    });
-    tokio::time::timeout(Duration::from_secs(60), checks)
-        .await
-        .unwrap()
-        .unwrap();
+    tokio::task::block_in_place(|| writes::exercise(&mount, &fixture));
+    let expected = tokio::task::block_in_place(|| writes::uncertain_write(&mount, &fixture));
+    let puts = writes::put_count(&fixture);
     std::process::Command::new("kill")
         .args(["-INT", &child.id().unwrap().to_string()])
         .status()
@@ -269,6 +258,7 @@ async fn actual_kernel_mount_existing_file_writes_and_restart() {
             .unwrap()
             .success()
     );
+    writes::restore_observation(&fixture);
     let mut command = setup.command(&mount);
     command
         .stdout(Stdio::null())
@@ -280,16 +270,20 @@ async fn actual_kernel_mount_existing_file_writes_and_restart() {
     let checks = tokio::task::spawn_blocking(move || {
         assert_eq!(
             std::fs::read(path.join("docs/writable").join(writes::NAME)).unwrap(),
-            b"FIRSTfghij"
+            expected
         );
     });
     tokio::time::timeout(Duration::from_secs(60), checks)
         .await
         .unwrap()
         .unwrap();
-    // Run the common platform-independent syscall exercise while the async
-    // listener continues serving the real mounted process.
-    tokio::task::block_in_place(|| writes::exercise(&mount, &fixture));
+    assert_eq!(
+        puts,
+        writes::put_count(&fixture),
+        "restart replayed an uncertain PUT"
+    );
+    eprintln!("PASS: native uncertain-write restart observed and acknowledged without another PUT");
+    let rejected = tokio::task::block_in_place(|| writes::conflict_write(&mount, &fixture));
     std::process::Command::new("kill")
         .args(["-INT", &child.id().unwrap().to_string()])
         .status()
@@ -301,15 +295,7 @@ async fn actual_kernel_mount_existing_file_writes_and_restart() {
             .unwrap()
             .success()
     );
-    let state = s3drive_state::worker::Storage::open(
-        &setup.state,
-        s3drive_state::cache::Options::default(),
-        s3drive_state::journal::Options::default(),
-    )
-    .await
-    .unwrap();
-    assert!(state.staging().pending(None, 100).await.unwrap().is_empty());
-    state.close().await.unwrap();
+    writes::inspect_conflict(&setup.state, &rejected).await;
     assert!(!fixture.server.is_finished());
     fixture.server.abort();
     let _ = (&mut fixture.server).await;

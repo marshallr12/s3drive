@@ -136,7 +136,14 @@ pub fn exercise(mount: &Path, fixture: &Fixture) {
         .append(true)
         .open(&path)
         .unwrap();
+    let before = put_count(fixture);
+    fixture.lose_put_reply.store(true, Ordering::SeqCst);
     append.write_all(b"tail").unwrap();
+    assert_eq!(
+        put_count(fixture),
+        before + 1,
+        "lost PUT reply caused replay"
+    );
     append.sync_all().unwrap();
     assert_eq!(std::fs::read(&path).unwrap(), b"abXY\0\0\0\0\0\0\0\0tail");
     assert!(first.set_len(8 * 1024 * 1024 + 1).is_err());
@@ -175,4 +182,110 @@ pub fn exercise(mount: &Path, fixture: &Fixture) {
     eprintln!(
         "PASS: native write, shared reads, truncate, sparse growth, append, remote flush, bounds and read-only prefix"
     );
+}
+
+pub fn put_count(fixture: &Fixture) -> usize {
+    fixture
+        .requests
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|l| l.starts_with("PUT "))
+        .count()
+}
+/// Commit remotely, lose the reply AND deny observation. Native write/fsync
+/// must fail while preserving the already-published local immutable generation.
+pub fn uncertain_write(mount: &Path, fixture: &Fixture) -> Vec<u8> {
+    let path = mount.join("docs/writable").join(NAME);
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&path)
+        .unwrap();
+    let mut reader = std::fs::File::open(&path).unwrap();
+    let mut expected = std::fs::read(&path).unwrap();
+    expected[..4].copy_from_slice(b"lost");
+    let before = put_count(fixture);
+    fixture.hide_committed.store(true, Ordering::SeqCst);
+    assert!(
+        file.write_all(b"lost").is_err(),
+        "unobservable write reported success"
+    );
+    let mut actual = Vec::new();
+    reader.read_to_end(&mut actual).unwrap();
+    assert_eq!(actual, expected, "failed write lost staged bytes");
+    assert!(
+        file.sync_all().is_err(),
+        "unobservable fsync reported success"
+    );
+    assert_eq!(fixture.objects.lock().unwrap()[KEY].0, expected);
+    assert_eq!(
+        put_count(fixture),
+        before + 1,
+        "uncertain write was replayed"
+    );
+    expected
+}
+pub fn restore_observation(fixture: &Fixture) {
+    fixture.deny_head.store(false, Ordering::SeqCst);
+    fixture.deny_get.store(false, Ordering::SeqCst);
+}
+
+/// A rival replacement must survive a guarded native write. The failed local
+/// generation remains readable through its existing handle and in SQLite.
+pub fn conflict_write(mount: &Path, fixture: &Fixture) -> Vec<u8> {
+    let path = mount.join("docs/writable").join(NAME);
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&path)
+        .unwrap();
+    let mut reader = std::fs::File::open(&path).unwrap();
+    let mut expected = std::fs::read(&path).unwrap();
+    expected[..4].copy_from_slice(b"mine");
+    fixture.put(KEY, b"external rival", "rival");
+    assert!(
+        file.write_all(b"mine").is_err(),
+        "conflict reported success"
+    );
+    assert!(
+        file.sync_all().is_err(),
+        "conflicted fsync reported success"
+    );
+    let mut local = Vec::new();
+    reader.read_to_end(&mut local).unwrap();
+    assert_eq!(local, expected);
+    assert_eq!(fixture.objects.lock().unwrap()[KEY].0, b"external rival");
+    assert!(
+        std::fs::OpenOptions::new().write(true).open(path).is_err(),
+        "conflicted reopen silently rebased"
+    );
+    eprintln!("PASS: native conflict preserves rival remote bytes and rejected local snapshot");
+    expected
+}
+pub async fn inspect_conflict(state: &Path, expected: &[u8]) {
+    let storage = s3drive_state::worker::Storage::open(
+        state,
+        s3drive_state::cache::Options::default(),
+        s3drive_state::journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    let pending = storage.staging().pending(None, 100).await.unwrap();
+    assert_eq!(pending.len(), 1);
+    assert_eq!(
+        storage.staging().read(pending[0].id, 0, 100).await.unwrap(),
+        expected
+    );
+    assert_eq!(
+        storage
+            .uploads()
+            .for_generation(pending[0].id)
+            .await
+            .unwrap()
+            .unwrap()
+            .phase,
+        s3drive_state::remote::Phase::Rejected
+    );
+    storage.close().await.unwrap();
 }

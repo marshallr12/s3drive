@@ -101,7 +101,11 @@ refused by the existing private-state checks. Do not weaken ownership checks,
 clear NoNewPrivs or use an external privileged launcher to bypass this.
 Logs: `/tmp/s3drive-native-write-linux.log` and
 `/tmp/s3drive-native-write-linux-namespace.log`. Neither is native RW acceptance.
-Native CI and normal desktop/login-session acceptance are still required.
+Initial implementation `5fc39c4` passed Linux native writes, 341 RO requests and
+no-systemd startup in job 117270659528, run 38990194704. Windows is still running.
+The expanded tests add lost replies, restart reconciliation without replay and
+native 412 conflicts; their exact-tip native CI is still required. Normal
+desktop/login-session acceptance remains separate.
 
 ## Required publication gate
 

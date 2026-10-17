@@ -14,6 +14,8 @@ save workflow that creates a temporary file and renames it is not yet supported.
 
 ## Data path and durability
 
+![Native adapters share one SQLite-backed edit and guarded S3 upload path](images/native-writes.png)
+
 Both adapters use the same edit coordinator, credential-bound upload executor
 and **one SQLite owner**, including when optional clean caching is enabled.
 Four mutations may execute concurrently per mount; operations on one file are
@@ -125,7 +127,11 @@ competitor's bytes stay unchanged and rejected local bytes remain pending.
 Native tests use ordinary file syscalls through actual FUSE/WinFsp and the same
 owned loopback fixture. They exercise existing-file writes, shared reads,
 truncation, zero growth, append, remote flush, limits, prefix protection and
-restart. The fixture's mutation support is explicitly disabled for read-only
+restart. Lost replies are verified without replay; observation failures retain
+local bytes and fail fsync until restart can reconcile the remote operation.
+Native competing-writer tests retain the rejected local snapshot and verify
+that the rival remote bytes remain unchanged.
+The fixture's mutation support is explicitly disabled for read-only
 regression cases. No cloud account is contacted.
 
 The current local executor has `NoNewPrivs=1`; its setuid FUSE helper cannot

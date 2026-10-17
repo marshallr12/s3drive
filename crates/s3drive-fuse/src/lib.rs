@@ -1,8 +1,8 @@
-//! Linux FUSE adapter for the shared read-only filesystem.
+//! Linux FUSE adapter for the shared filesystem engine.
 #[cfg(target_os = "linux")]
 mod linux;
 #[cfg(target_os = "linux")]
 pub use linux::run;
 
 pub const IMPLEMENTATION_STATUS: &str =
-    "read-only Linux FUSE adapter; no writable mount or disk cache";
+    "Linux FUSE with optional SQLite cache; explicit existing-file writes under native acceptance";

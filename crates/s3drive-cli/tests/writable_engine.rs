@@ -34,10 +34,30 @@ async fn shared_engine_writes_restarts_and_preserves_conflicts() {
         errors.read_to_string(&mut text).await.unwrap();
         text
     });
-    let ready = tokio::time::timeout(Duration::from_secs(40), async {
+    let mut unknown_puts = None;
+    let ready = tokio::time::timeout(Duration::from_secs(60), async {
         while let Some(line) = output.next_line().await.unwrap() {
-            if line == "READY_FOR_RIVAL" {
-                return true;
+            match line.as_str() {
+                "READY_FOR_UNKNOWN" => {
+                    fixture
+                        .hide_committed
+                        .store(true, std::sync::atomic::Ordering::SeqCst);
+                    std::fs::write(temp.path().join("unknown-ready"), b"ready").unwrap();
+                }
+                "READY_TO_RESTART" => {
+                    unknown_puts = Some(writes::put_count(&fixture));
+                    writes::restore_observation(&fixture);
+                    std::fs::write(temp.path().join("restart-ready"), b"ready").unwrap();
+                }
+                "READY_FOR_RIVAL" => {
+                    assert_eq!(
+                        Some(writes::put_count(&fixture)),
+                        unknown_puts,
+                        "restart replayed uncertain PUT"
+                    );
+                    return true;
+                }
+                _ => {}
             }
         }
         false
@@ -119,11 +139,23 @@ async fn engine_child() {
     );
     file.flush().await.unwrap();
     file.flush().await.unwrap();
-    let expected = reader.read(0, 100).await.unwrap();
+    let mut expected = reader.read(0, 100).await.unwrap();
+    println!("READY_FOR_UNKNOWN");
+    wait_signal(&root, "unknown-ready").await;
+    assert!(
+        file.write(0, Arc::from(b"lost".as_slice()), false, false)
+            .await
+            .is_err()
+    );
+    expected[..4].copy_from_slice(b"lost");
+    assert_eq!(reader.read(0, 100).await.unwrap(), expected);
+    assert!(file.flush().await.is_err());
     fs.cache_control().unwrap().close().await.unwrap();
     drop(reader);
     drop(file);
     drop(fs);
+    println!("READY_TO_RESTART");
+    wait_signal(&root, "restart-ready").await;
     let fs = s3drive_fs::ReadOnlyFs::new(&config).await.unwrap();
     let alias = fs.lookup(s3drive_fs::ROOT, "docs").await.unwrap();
     let directory = fs.lookup(alias.id, "writable").await.unwrap();
@@ -133,11 +165,7 @@ async fn engine_child() {
     let readonly = fs.lookup(alias.id, "readonly.txt").await.unwrap();
     assert!(fs.open_write(readonly.id).await.is_err());
     println!("READY_FOR_RIVAL");
-    let deadline = std::time::Instant::now() + Duration::from_secs(15);
-    while !root.join("rival-ready").exists() {
-        assert!(std::time::Instant::now() < deadline);
-        tokio::time::sleep(Duration::from_millis(10)).await;
-    }
+    wait_signal(&root, "rival-ready").await;
     assert!(
         file.write(0, Arc::from(b"mine".as_slice()), false, false)
             .await
@@ -177,4 +205,14 @@ async fn engine_child() {
         s3drive_state::remote::Phase::Rejected
     );
     storage.close().await.unwrap();
+}
+
+async fn wait_signal(root: &std::path::Path, name: &str) {
+    tokio::time::timeout(Duration::from_secs(15), async {
+        while !root.join(name).exists() {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("parent signal deadline");
 }

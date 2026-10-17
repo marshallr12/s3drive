@@ -40,4 +40,4 @@ pub struct ObjectRevision {
     pub version_id: Option<String>,
 }
 
-pub const IMPLEMENTATION_STATUS: &str = "read-only mounts and S3 reads; scoped write probe; explicit policy/evidence-bound library single-PUT executor; no ordinary upload command or writable mount";
+pub const IMPLEMENTATION_STATUS: &str = "S3 reads, scoped write probe and explicit policy/evidence-bound single-PUT executor; no ordinary CLI upload command";

@@ -47,6 +47,32 @@ fn cache_mount_overlap_is_rejected_before_creating_state() {
     );
 }
 
+#[cfg(any(target_os = "linux", windows))]
+#[test]
+fn writable_state_mount_overlap_is_rejected_before_evidence_or_state_access() {
+    let temporary = tempfile::tempdir().unwrap();
+    let mount = temporary.path().join("mount");
+    std::fs::create_dir(&mount).unwrap();
+    let local = mount.join("state");
+    let missing = temporary.path().join("missing-evidence.toml");
+    let example = include_str!("../../../examples/s3drive.toml")
+        .replace("version = 1", "version = 2")
+        .replace("read-only", "read-write");
+    let config = temporary.path().join("drive.toml");
+    std::fs::write(&config,format!("{example}\n[writes]\ndirectory={:?}\n[[writes.sources]]\nalias='documents'\npolicy={:?}\nplan={:?}\nreport={:?}\n",local.to_str().unwrap(),missing.to_str().unwrap(),missing.to_str().unwrap(),missing.to_str().unwrap())).unwrap();
+    let result = cli().arg("mount").arg(config).arg(mount).output().unwrap();
+    assert!(!result.status.success());
+    assert!(
+        String::from_utf8_lossy(&result.stderr).contains("separate local trees"),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert!(
+        !local.exists(),
+        "overlap validation created writable state inside mount"
+    );
+}
+
 #[test]
 fn config_and_state_commands_work_without_credentials() {
     let config =

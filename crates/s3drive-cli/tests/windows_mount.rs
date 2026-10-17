@@ -71,8 +71,10 @@ async fn actual_windows_existing_file_writes_and_restart() {
     let mut child = command.spawn().unwrap();
     ready(&mut child).await;
     tokio::task::block_in_place(|| writes::exercise(&mount, &fixture));
-    let expected = fixture.objects.lock().unwrap()[writes::KEY].0.clone();
+    let expected = tokio::task::block_in_place(|| writes::uncertain_write(&mount, &fixture));
+    let puts = writes::put_count(&fixture);
     stop(&mut child).await;
+    writes::restore_observation(&fixture);
     let mut command = setup.command(&mount);
     command
         .arg("--unmount-on-stdin-close")
@@ -89,16 +91,15 @@ async fn actual_windows_existing_file_writes_and_restart() {
             .unwrap(),
         expected
     );
+    assert_eq!(
+        puts,
+        writes::put_count(&fixture),
+        "restart replayed an uncertain PUT"
+    );
+    eprintln!("PASS: native uncertain-write restart observed and acknowledged without another PUT");
+    let rejected = tokio::task::block_in_place(|| writes::conflict_write(&mount, &fixture));
     stop(&mut child).await;
-    let state = s3drive_state::worker::Storage::open(
-        &setup.state,
-        s3drive_state::cache::Options::default(),
-        s3drive_state::journal::Options::default(),
-    )
-    .await
-    .unwrap();
-    assert!(state.staging().pending(None, 100).await.unwrap().is_empty());
-    state.close().await.unwrap();
+    writes::inspect_conflict(&setup.state, &rejected).await;
     assert!(!fixture.server.is_finished());
     assert!(!fixture.server.is_finished());
     fixture.server.abort();
