@@ -7,7 +7,7 @@ use crate::{
     namespace::{self, Apply, Mutation, Receipt, Store},
 };
 pub use changes::Entry;
-pub use removals::OwnedRemoval;
+pub use removals::{OwnedRemoval, TransitionCancellation};
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -175,23 +175,9 @@ pub(crate) fn authorize_publication(db: &Connection, input: &crate::managed::Inp
     }
 }
 pub(crate) fn pending_for_node(db: &Connection, volume: &str, node: &str) -> Result<bool> {
-    let ids = db
-        .prepare("SELECT operation_id FROM namespace_intents WHERE outcome IS NULL LIMIT 4097")?
-        .query_map([], |r| r.get::<_, String>(0))?
-        .collect::<rusqlite::Result<Vec<_>>>()?;
-    if ids.len() > LIMIT as usize {
-        return Err("namespace pending limit".into());
-    }
-    for id in ids {
-        let record = load(db, &id)?.ok_or("namespace pending row vanished")?;
-        if record.input.request.volume == volume
-            && record.input.entries.iter().any(|e| e.id == node)
-        {
-            return Ok(true);
-        }
-    }
-    Ok(false)
+    removals::blocks_for_node(db, volume, node, None)
 }
+
 pub struct Journal<'a> {
     state: &'a mut State,
     options: crate::journal::Options,
@@ -213,6 +199,13 @@ impl<'a> Journal<'a> {
     pub fn owned_removal(&self, volume: &str, node: &str) -> Result<Option<OwnedRemoval>> {
         removals::owned(&self.state.connection, volume, node)
     }
+    /// Inspect a verified cancellation without inventing the transition outcome.
+    pub fn transition_cancellation(
+        &self,
+        operation: &str,
+    ) -> Result<Option<TransitionCancellation>> {
+        removals::transition_cancellation(&self.state.connection, operation)
+    }
     pub fn begin(&mut self, input: Input) -> Result<Record> {
         input.validate()?;
         if let Some(r) = load(&self.state.connection, &input.request.operation)? {
@@ -223,7 +216,12 @@ impl<'a> Journal<'a> {
         }
         removals::check_begin(&self.state.connection, &input)?;
         for entry in &input.entries {
-            if pending_for_node(&self.state.connection, &input.request.volume, &entry.id)? {
+            if removals::blocks_for_node(
+                &self.state.connection,
+                &input.request.volume,
+                &entry.id,
+                Some(&input),
+            )? {
                 return Err(
                     "recover pending namespace effect before another change to this node".into(),
                 );

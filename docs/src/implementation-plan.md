@@ -420,3 +420,26 @@ documentation tip still requires CI before publication. Next prioritize explicit
 same-fence cancel recovery for unresolved mode changes at local quota: prove both
 authority orderings and late receipt observation without discarding history or
 dirty bytes. Then add atomic deferred create/move and the per-open lifecycle.
+
+
+### P6m3b3b4b3a2 — unknown mode cancellation recovery (2026-10-17)
+
+Baseline `2d9d479` passed terminal CI 39037304416 and guarded publication.
+Implement the [recovery contract](mode-cancellation-recovery.md). Explicit
+same-fence cancellation may pass an unknown transition; exact cancellation
+history proves epoch closure without inventing the original outcome. Keep
+unknown audit rows, dirty bytes and original bindings. Test real authority
+quota rejection without a retained result, both authority orderings, late
+results and a successor fence, atomic/full-disk failure, barriers, corruption
+and actual SDK killed clients. Require local gate and terminal exact-tip
+native/reference/startup CI before publication. Then proceed to atomic deferred
+create/owner-fenced moves and the full Windows per-open lifecycle.
+
+
+Local gate passed with 173 state tests, seven authority HTTP tests and 11 managed
+SDK cases, including killed owners in both authority orderings. Typed epoch
+closure proof is separate from the original unknown result; the audit row is
+retained. Publisher refuses a closed unknown transition before HTTP. Schema 16
+and configuration 6 remain unchanged. Require terminal exact-commit hosted CI
+before publication, then measure deferred rename/multiple DoC references and
+implement atomic deferred create/move before the native Windows lifecycle.

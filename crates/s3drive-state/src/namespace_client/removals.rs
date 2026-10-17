@@ -52,7 +52,11 @@ fn same_control(a: &Input, b: &Input) -> bool {
         && a.fingerprint == b.fingerprint
 }
 type Key = (String, String);
-fn active(records: &[Record]) -> Result<HashMap<Key, OwnedRemoval>> {
+struct History<'a> {
+    active: HashMap<Key, OwnedRemoval>,
+    cancellations: HashMap<Key, &'a Record>,
+}
+fn history(records: &[Record]) -> Result<History<'_>> {
     let mut ordered = BTreeMap::new();
     for r in records {
         if fence(&r.input).is_some()
@@ -65,6 +69,7 @@ fn active(records: &[Record]) -> Result<HashMap<Key, OwnedRemoval>> {
         }
     }
     let mut active: HashMap<Key, OwnedRemoval> = HashMap::new();
+    let mut cancellations = HashMap::new();
     for r in ordered.values() {
         let Some(Ok(receipt)) = &r.outcome else {
             unreachable!()
@@ -101,6 +106,13 @@ fn active(records: &[Record]) -> Result<HashMap<Key, OwnedRemoval>> {
             if old.fence != f || !same_control(&old.input, &r.input) {
                 return Err("closing removal changed retained ownership".into());
             }
+            if matches!(r.input.request.mutation, Mutation::CancelRemoval { .. })
+                && cancellations
+                    .insert((r.input.request.volume.clone(), f.intent.clone()), *r)
+                    .is_some()
+            {
+                return Err("duplicate cancellation epoch".into());
+            }
             match &r.input.request.mutation {
                 Mutation::TransitionRemoval { expected, mode, .. } => {
                     if old.mode != *expected {
@@ -117,10 +129,101 @@ fn active(records: &[Record]) -> Result<HashMap<Key, OwnedRemoval>> {
             }
         }
     }
-    Ok(active)
+    Ok(History {
+        active,
+        cancellations,
+    })
 }
 pub(crate) fn owned(db: &Connection, volume: &str, node: &str) -> Result<Option<OwnedRemoval>> {
-    Ok(active(&records(db)?)?.remove(&(volume.into(), node.into())))
+    Ok(history(&records(db)?)?
+        .active
+        .remove(&(volume.into(), node.into())))
+}
+/// Evidence of epoch closure; the transition's original outcome remains intact.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TransitionCancellation {
+    pub transition: Record,
+    pub cancellation: Record,
+}
+impl<'a> History<'a> {
+    fn cancellation(&self, input: &Input) -> Result<Option<&'a Record>> {
+        let Mutation::TransitionRemoval { node, fence, .. } = &input.request.mutation else {
+            return Ok(None);
+        };
+        let Some(close) = self
+            .cancellations
+            .get(&(input.request.volume.clone(), fence.intent.clone()))
+            .copied()
+        else {
+            return Ok(None);
+        };
+        let Some(Ok(receipt)) = &close.outcome else {
+            return Err("cancellation proof lacks exact receipt".into());
+        };
+        let mut expected = input.entries[0].clone();
+        expected.revision = receipt.sequence;
+        if !cancels_transition(&close.input, input)
+            || receipt.sequence <= input.request.expected_sequence
+            || receipt.node.id != node.id
+            || !expected.matches(&receipt.node)
+            || receipt.node.deleted
+        {
+            return Err("closed transition changed frozen binding or identity".into());
+        }
+        Ok(Some(close))
+    }
+}
+fn cancels_transition(cancel: &Input, transition: &Input) -> bool {
+    match (&cancel.request.mutation, &transition.request.mutation) {
+        (
+            Mutation::CancelRemoval { node, fence },
+            Mutation::TransitionRemoval {
+                node: before,
+                fence: old,
+                ..
+            },
+        ) => node == &before.id && fence == old && same_control(cancel, transition),
+        _ => false,
+    }
+}
+pub(super) fn transition_cancellation(
+    db: &Connection,
+    operation: &str,
+) -> Result<Option<TransitionCancellation>> {
+    let rows = records(db)?;
+    let h = history(&rows)?;
+    let r = rows
+        .iter()
+        .find(|r| r.input.request.operation == operation)
+        .ok_or("namespace intent not found")?;
+    if r.outcome.is_some() {
+        return Ok(None);
+    }
+    Ok(h.cancellation(&r.input)?
+        .map(|close| TransitionCancellation {
+            transition: r.clone(),
+            cancellation: close.clone(),
+        }))
+}
+pub(super) fn blocks_for_node(
+    db: &Connection,
+    volume: &str,
+    node: &str,
+    cancellation: Option<&Input>,
+) -> Result<bool> {
+    let rows = records(db)?;
+    let h = history(&rows)?;
+    for r in &rows {
+        if r.outcome.is_none()
+            && r.input.request.volume == volume
+            && r.input.entries.iter().any(|e| e.id == node)
+            && h.cancellation(&r.input)?.is_none()
+            && !cancellation.is_some_and(|c| cancels_transition(c, &r.input))
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 // Deferred ownership reserves promotion plus final closure; pending reserves closure.
 fn required_slots(records: &[Record]) -> Result<usize> {
@@ -133,7 +236,8 @@ fn required_slots(records: &[Record]) -> Result<usize> {
             _ => 0,
         })
         .sum::<usize>();
-    let reserved = active(records)?
+    let reserved = history(records)?
+        .active
         .values()
         .map(|o| o.mode.closing_slots())
         .sum::<usize>();
@@ -148,7 +252,8 @@ pub(super) fn check_capacity(records: &[Record]) -> Result<()> {
 pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
     check_identity(db, input)?;
     let records = records(db)?;
-    let owned = active(&records)?;
+    let h = history(&records)?;
+    let owned = &h.active;
     if let Some(f) = fence(input) {
         let e = &input.entries[0];
         let old = owned.get(&(input.request.volume.clone(), e.id.clone()));
@@ -187,7 +292,7 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
     // Block source, target and parent use *before* persisting a doomed ordinary
     // intent. Otherwise its temporary server refusal could block cancellation.
     let touched = touched(input);
-    for ((volume, node), reservation) in &owned {
+    for ((volume, node), reservation) in owned {
         if volume == &input.request.volume && touched.contains(&node.as_str()) {
             let own_close = matches!(
                 input.request.mutation,
@@ -204,6 +309,8 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
     }
     for r in &records {
         if r.outcome.is_none()
+            && h.cancellation(&r.input)?.is_none()
+            && !cancels_transition(input, &r.input)
             && r.input.request.volume == input.request.volume
             && fence(&r.input).is_some()
             && r.input

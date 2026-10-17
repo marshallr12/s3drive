@@ -652,6 +652,13 @@ impl Namespace {
     ) -> Result<Option<crate::namespace_client::OwnedRemoval>> {
         self.call(move |j| j.owned_removal(&volume, &node)).await
     }
+    pub async fn transition_cancellation(
+        &self,
+        operation: String,
+    ) -> Result<Option<crate::namespace_client::TransitionCancellation>> {
+        self.call(move |j| j.transition_cancellation(&operation))
+            .await
+    }
     async fn call<T: Send + 'static>(
         &self,
         work: impl FnOnce(&mut crate::namespace_client::Journal<'_>) -> Result<T> + Send + 'static,

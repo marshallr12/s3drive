@@ -2,6 +2,8 @@
 //! confined to the owned loopback fixture with dummy credentials.
 #[path = "support/fixture.rs"]
 pub mod fixture;
+#[path = "support/mode_cancellation.rs"]
+mod mode_cancellation;
 #[path = "support/owned_disposition.rs"]
 mod owned_disposition;
 #[path = "support/pending_owner.rs"]
@@ -328,6 +330,13 @@ async fn proxy(
                     ..
                 },
         } => 6,
+        Request::Apply {
+            request:
+                Apply {
+                    mutation: Mutation::TransitionRemoval { .. },
+                    ..
+                },
+        } => 7,
         _ => 0,
     };
     if kind != 0
@@ -377,6 +386,7 @@ async fn managed_child() {
         || mode.starts_with("pending_")
         || mode.starts_with("owned_")
         || mode.starts_with("fenced_")
+        || mode.starts_with("mode_cancel_")
     {
         Authority::open_with_policy(root.join("authority"), "portable-collision-v1".into())
             .await
@@ -386,6 +396,16 @@ async fn managed_child() {
     };
     let (wire, stop, server) = serve(authority.client()).await;
     let volume = info(&wire).await.id;
+    if mode.starts_with("mode_cancel_") {
+        Box::pin(mode_cancellation::run_mode(
+            &mode, &config, &root, &wire, &volume,
+        ))
+        .await;
+        stop.send(()).unwrap();
+        server.await.unwrap();
+        authority.shutdown().await.unwrap();
+        return;
+    }
     if mode.starts_with("fenced_") {
         Box::pin(pending_owner::run_mode(
             &mode, &config, &root, &wire, &volume,

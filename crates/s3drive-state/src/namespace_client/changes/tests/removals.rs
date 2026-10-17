@@ -1,5 +1,6 @@
 use super::*;
 use namespace::RemovalFence;
+mod cancellation;
 mod deferred;
 
 fn owner(f: &mut Fixture) -> String {

@@ -45,7 +45,7 @@ async fn fenced_confirmed_conflicts_require_explicit_retention_before_closing_an
     )
     .await;
 }
-async fn run_children(modes: &[&str], expected_puts: &[usize]) {
+pub(super) async fn run_children(modes: &[&str], expected_puts: &[usize]) {
     let f = fixture::Fixture::start().await;
     let tmp = tempfile::tempdir().unwrap();
     let setup = writes::setup(&f, tmp.path()).await;
@@ -136,7 +136,7 @@ async fn run_children(modes: &[&str], expected_puts: &[usize]) {
         .count();
     assert_eq!(
         count,
-        if modes[0].ends_with("_stage") { 2 } else { 3 },
+        *expected_puts.last().unwrap(),
         "conflicting/orphan objects stay retained"
     );
 }
@@ -152,7 +152,7 @@ fn parent() -> NodeGuard {
         revision: 0,
     }
 }
-async fn request(w: &WireClient, op: u64, mutation: Mutation) -> Apply {
+pub(super) async fn request(w: &WireClient, op: u64, mutation: Mutation) -> Apply {
     let v = info(w).await;
     Apply {
         volume: v.id,
@@ -173,7 +173,13 @@ async fn disposition(
         .unwrap();
     p.change_namespace(input).await.unwrap()
 }
-async fn arm(p: &Publisher, w: &WireClient, n: u64, op: u64, deferred: bool) -> RemovalFence {
+pub(super) async fn arm(
+    p: &Publisher,
+    w: &WireClient,
+    n: u64,
+    op: u64,
+    deferred: bool,
+) -> RemovalFence {
     let file = p
         .storage()
         .logical()
@@ -197,7 +203,7 @@ async fn arm(p: &Publisher, w: &WireClient, n: u64, op: u64, deferred: bool) -> 
     disposition(p, w, op, &file.base, mutation).await;
     p.owned_removal(&id(n)).await.unwrap().unwrap().fence
 }
-async fn close(p: &Publisher, w: &WireClient, n: u64, op: u64, commit: bool) {
+pub(super) async fn close(p: &Publisher, w: &WireClient, n: u64, op: u64, commit: bool) {
     let file = p
         .storage()
         .logical()
@@ -217,7 +223,7 @@ async fn close(p: &Publisher, w: &WireClient, n: u64, op: u64, commit: bool) {
     disposition(p, w, op, &file.base, mutation).await;
     assert!(p.owned_removal(&id(n)).await.unwrap().is_none());
 }
-async fn stage(p: &Publisher, w: &WireClient, n: u64, edit: u64, bytes: &[u8]) {
+pub(super) async fn stage(p: &Publisher, w: &WireClient, n: u64, edit: u64, bytes: &[u8]) {
     let file = p
         .storage()
         .logical()
@@ -231,7 +237,14 @@ async fn stage(p: &Publisher, w: &WireClient, n: u64, edit: u64, bytes: &[u8]) {
     .await
     .unwrap();
 }
-async fn prepare(p: &Publisher, w: &WireClient, n: u64, edit: u64, op: u64, pending: bool) {
+pub(super) async fn prepare(
+    p: &Publisher,
+    w: &WireClient,
+    n: u64,
+    edit: u64,
+    op: u64,
+    pending: bool,
+) {
     let local = p.storage().logical();
     let r = local.get(id(edit)).await.unwrap();
     let file = local.file(r.input.volume, r.input.node).await.unwrap();

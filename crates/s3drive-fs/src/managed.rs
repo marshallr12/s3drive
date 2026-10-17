@@ -200,7 +200,7 @@ pub(super) fn error<E: Into<Box<dyn std::error::Error + Send + Sync>>>(e: E) -> 
             Failure::Busy => Error::Busy,
             Failure::NotFound => Error::NotFound,
             Failure::IsDirectory => Error::IsDirectory,
-            Failure::RetainedConflict => Error::Conflict,
+            Failure::RetainedConflict | Failure::CancelledTransition => Error::Conflict,
             Failure::Authority(s3drive_authority::Error::NotFound) => Error::NotFound,
             Failure::Authority(s3drive_authority::Error::AlreadyExists) => Error::AlreadyExists,
             Failure::Authority(s3drive_authority::Error::Invalid) => Error::InvalidName,

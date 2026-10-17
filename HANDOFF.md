@@ -1,10 +1,53 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b3b4b3a deferred authority and client journal**
-on `codex/deferred-removal-authority`. Goal ACTIVE. Native Windows deletion
-remains unsupported. Read `docs/src/deferred-removal.md` before continuing.
+Updated: 2026-10-17. Current phase: **P6m3b3b4b3a2 mode cancellation recovery**
+on `codex/mode-cancellation-recovery`. Goal ACTIVE. Read
+`docs/src/mode-cancellation-recovery.md`. Native Windows deletion remains unsupported.
 
-## Current phase and verification
+Current baseline verified live: private clean local/remote main
+`2d9d4799d09ab1c62c1fbcccb2b320da9333af10`, terminal all-green
+[run 39037304416](https://github.com/marshallr12/s3drive/actions/runs/39037304416).
+Linux `117409620202`, Windows `117409620337`, book `117409620302`; 167/163 state,
+seven TCP, nine managed SDK cases, seven native cases per OS and unchanged
+startup/reference acceptance. Proof `/tmp/s3drive-deferred-publication.json`.
+
+This phase admits explicitly fenced cancellation past only an unresolved
+same-epoch mode transition. Keep the original unknown outcome and expose a
+typed cancellation proof from exact acknowledged history; ignore only proven
+closed transition barriers. Do not fabricate an authority result when quota
+prevented retaining one. Preserve payload/local observations and dirty data,
+prepared-publication barriers and successor epochs. No new schema/config,
+provider permission, native callback or workstation startup changes.
+
+Local verification: final repository gate exit 0, 173 state tests, seven
+HTTP authority tests, 11 managed-publication cases, 50 S3 and 13 FS tests;
+formatting, clippy, builds, local documentation links and mdBook checks passed.
+Logs `/tmp/s3drive-cancel-gate3.log`, `/tmp/s3drive-cancel-tests2.log`,
+`/tmp/s3drive-cancel-sdk1.log`. The final guard test is included in gate3.
+Actual SDK cases kill clients after the unknown transition and cancellation,
+then recover exact IDs, publish a successor and preserve binary/empty/Unicode
+bytes without duplicate PUTs. Real SQLite-full cancellation rollback and
+exhausted authority/client quota with an unretained original result passed.
+Typed proofs retain unknown audit rows. Publisher returns CancelledTransition
+without RPC for such a closed unknown request. Late exact results preserve
+newer observed metadata and ownership. Schema 16/config 6 stay unchanged.
+
+Publication requires terminal all-green CI for exactly the candidate SHA,
+including existing seven native cases per OS, eight NTFS reference traces,
+pinned upstream WinFsp disk/network create_test and startup gates. Confirm
+local/remote main, privacy and clean tree, then guarded fast-forward without
+checking out an older tree beneath the mdBook watcher. The exact-commit GitHub
+workflow result is authoritative; do not infer acceptance from this source note.
+
+Next implement atomic deferred create and owner-fenced rename/move before the
+Windows per-descriptor/node-wide lifecycle. First measure deferred rename and
+multiple DoC descriptor reference cases; NTFS observations do not establish
+WinFsp parity. Do not enable a SetDelete-only or permanently name-fenced shortcut.
+No live Wasabi writes, new provider policy, Turso deployment, workstation startup
+or credential changes are authorized by this phase. Never bypass workstation
+NoNewPrivs. Goal remains ACTIVE; native Windows deletion remains unsupported.
+
+## Previous deferred-authority phase and verification
 
 Published baseline at phase start: **e091a3da82163891f50491be5580e02a602f79d9**,
 terminal all-green [run 39033496306](https://github.com/marshallr12/s3drive/actions/runs/39033496306).

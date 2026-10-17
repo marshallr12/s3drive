@@ -24,6 +24,7 @@ pub enum Failure {
     Integrity,
     Protocol,
     RetainedConflict,
+    CancelledTransition,
     Authority(s3drive_authority::Error),
 }
 impl fmt::Display for Failure {
@@ -278,6 +279,22 @@ impl Publisher {
         }
         Ok(())
     }
+    pub async fn transition_cancellation(
+        &self,
+        operation: &str,
+    ) -> Result<Option<s3drive_state::namespace_client::TransitionCancellation>> {
+        let proof = self
+            .0
+            .storage
+            .namespace()
+            .transition_cancellation(operation.into())
+            .await?;
+        if let Some(proof) = &proof {
+            self.check_namespace_input(&proof.transition.input)?;
+            self.check_namespace_input(&proof.cancellation.input)?;
+        }
+        Ok(proof)
+    }
     /// Persist before RPC; commit local namespace outcome and all tracked file
     /// observations together. Retries keep exactly the original operation ID.
     pub async fn change_namespace(
@@ -290,6 +307,13 @@ impl Publisher {
         let record = local.begin(input).await?;
         if record.outcome.is_some() {
             return Self::namespace_result(record);
+        }
+        if self
+            .transition_cancellation(&record.input.request.operation)
+            .await?
+            .is_some()
+        {
+            return Err(Failure::CancelledTransition.into());
         }
         let outcome = match self
             .0

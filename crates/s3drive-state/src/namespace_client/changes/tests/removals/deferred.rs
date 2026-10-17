@@ -1,6 +1,6 @@
 use super::*;
 use namespace::RemovalMode;
-fn prepare(f: &mut Fixture, n: &Node) -> Input {
+pub(super) fn prepare(f: &mut Fixture, n: &Node) -> Input {
     let mut i = arm(f, n);
     let Mutation::ArmRemoval {
         node,
@@ -17,7 +17,7 @@ fn prepare(f: &mut Fixture, n: &Node) -> Input {
     };
     i
 }
-fn transition(f: &mut Fixture, n: &Node, mode: RemovalMode) -> Input {
+pub(super) fn transition(f: &mut Fixture, n: &Node, mode: RemovalMode) -> Input {
     let old = owned(f, n).unwrap();
     f.input(
         Mutation::TransitionRemoval {

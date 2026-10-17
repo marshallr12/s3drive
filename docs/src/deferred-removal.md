@@ -57,9 +57,10 @@ its original identity and cannot consume future successful-closing headroom
 by acknowledging a failure at the limit. This is not a disk-space reservation.
 No history pruning, S3 deletion or ownership timeout is introduced.
 At exhausted history capacity a rejected mode change can remain locally
-unacknowledged: it is not discarded to free a closing slot. Automated
-cancel-as-recovery for an unresolved transition is not implemented in this
-phase; the native lifecycle must resolve that case before enabling cleanup.
+unacknowledged: it is not discarded to free a closing slot. The original foundation did not resolve that case. The subsequent
+[cancellation-recovery contract](mode-cancellation-recovery.md) now adds an
+explicit same-fence closure proof while retaining the unknown original.
+Native cleanup still requires its complete lifecycle acceptance.
 
 ## Acceptance and remaining native work
 
@@ -104,4 +105,6 @@ an unknown same-epoch transition, even at exhausted local history capacity. Test
 cancellation both before and after the in-flight authority transition, restart,
 late successful/rejected receipts, publication barriers and a successor fence.
 Historical receipts must be recorded without rewinding current file observations
-or adopting another epoch. This is a requirement, not implemented behavior.
+or adopting another epoch. This requirement is implemented by the subsequent
+[cancellation-recovery phase](mode-cancellation-recovery.md); its acceptance
+is separate from native Windows deletion.
