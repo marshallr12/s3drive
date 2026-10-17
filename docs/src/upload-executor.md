@@ -4,8 +4,9 @@
 real AWS SDK's single-attempt PUT and full-byte observation path. Local TCP
 fixtures exercise the complete sequence, including killing the executor process
 after the server commits. **P5b2c adds an explicit library factory** bound to a
-[separate write policy and full provider evidence](write-policy.md). No ordinary
-upload command, writable mount, remote flush or automatic dirty-byte reclamation
+[separate write policy and full provider evidence](write-policy.md). The
+[library flush contract](flush-receipts.md) now adds atomic local acknowledgment.
+No ordinary upload command, writable mount or automatic dirty-byte reclamation
 is enabled. The [scoped Wasabi single-PUT probe](wasabi.md#conditional-put-acceptance--2026-10-16)
 has passed; no real application write policy has been installed.
 
@@ -102,6 +103,6 @@ strict local validation and expiry behavior. The completed six-key probe
 authorization does not extend to ordinary bucket contents or multipart operations.
 
 Uncertain/rejected intent resolution, explicit credential rebinding, multipart
-recovery, remote flush and reference/pin-aware acknowledgment cleanup remain
+recovery and reference/pin-aware payload reclamation remain
 required. Writable FUSE/WinFsp callbacks and desktop application acceptance
 follow those contracts. Existing mounts remain read-only.

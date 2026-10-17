@@ -188,6 +188,18 @@ impl Uploads {
     pub async fn verified(&self, proof: remote::Verification) -> Result<remote::Info> {
         self.call(move |j| j.verified(proof)).await
     }
+    pub async fn acknowledge(&self, id: remote::OperationId) -> Result<remote::FlushReceipt> {
+        self.call(move |j| j.acknowledge(id)).await
+    }
+    pub async fn flush_receipt(
+        &self,
+        generation: GenerationId,
+    ) -> Result<Option<remote::FlushReceipt>> {
+        self.call(move |j| j.flush_receipt(generation)).await
+    }
+    pub async fn settlement(&self, generation: GenerationId) -> Result<Option<remote::Settlement>> {
+        self.call(move |j| j.settlement(generation)).await
+    }
 }
 
 #[derive(Clone)]

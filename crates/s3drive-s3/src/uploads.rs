@@ -64,6 +64,7 @@ pub enum Failure {
     PolicySize,
     PolicyExpired,
     PolicyOperation,
+    UnverifiedFlush,
 }
 impl fmt::Display for Failure {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -78,6 +79,7 @@ impl fmt::Display for Failure {
             Self::PolicySize => "upload body exceeds the explicit write policy limit",
             Self::PolicyExpired => "upload evidence has expired or the clock is inconsistent; observation remains available",
             Self::PolicyOperation => "upload policy permits creation only; replacement was not claimed",
+            Self::UnverifiedFlush => "flush has no verified remote receipt; inspect the retained attempt",
         })
     }
 }
@@ -95,6 +97,26 @@ struct Shared {
 #[derive(Clone)]
 pub struct Executor(Arc<Shared>);
 impl Executor {
+    /// Flush one selected immutable generation. A receipt requires both exact
+    /// remote verification and committed local acknowledgment. Repetition can
+    /// reconcile lost results but never reissue a claimed PUT. It does not
+    /// promise publication of later edits or reclaim any retained local bytes.
+    pub async fn flush(&self, generation: GenerationId) -> Result<remote::FlushReceipt> {
+        let info = Box::pin(self.submit(generation)).await?;
+        if info.phase != Phase::Verified {
+            return Err(Error::new(
+                generation,
+                Some(info.operation),
+                Failure::UnverifiedFlush,
+            ));
+        }
+        self.0
+            .storage
+            .uploads()
+            .acknowledge(info.operation)
+            .await
+            .map_err(|e| Error::new(generation, Some(info.operation), e))
+    }
     /// Pins one credential generation and validates both bindings before any S3
     /// request. This does not run a probe, send an upload or change mount mode.
     /// Expired evidence permits observation-only recovery, never a new claim.

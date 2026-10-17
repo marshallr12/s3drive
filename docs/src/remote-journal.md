@@ -4,8 +4,9 @@
 same SQLite connection and bounded async owner as cache and staging work.
 This is a local recovery library. P5b2b now connects it to a
 [policy-bound SDK executor](upload-executor.md), tested with local HTTP fixtures.
-P5b2c adds a [source/evidence-bound factory](write-policy.md). Remote flush,
-writable mounts, multipart uploads and dirty-data reclamation remain disabled.
+P5b2c adds a [source/evidence-bound factory](write-policy.md), and P5b2d adds
+[generation-specific flush acknowledgment](flush-receipts.md). Writable mounts,
+multipart uploads and dirty-data reclamation remain disabled.
 The separately authorized [Wasabi single-PUT probe](conditional-uploads.md)
 has passed; no real application write policy has been installed.
 
@@ -73,9 +74,10 @@ live-provider conformance or evidence that application uploads are enabled.
 
 Matching verification is idempotent; a different revision for an already verified
 attempt fails. A literal `null` version is normalized to no immutable version.
-Receipt verification never acknowledges remote `flush`, removes pending local
-intent or frees sealed bytes. Reference/pin-aware acknowledgment and reclamation
-remain separate required work.
+Receipt verification alone never acknowledges remote `flush`, removes pending
+local intent or frees sealed bytes. [Generation-specific flush](flush-receipts.md)
+now adds separate atomic acknowledgment/settlement records. Reference/pin-aware
+payload reclamation remains required work.
 
 ## Bounds, ownership and recovery
 

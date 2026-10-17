@@ -12,7 +12,8 @@ Native read-only acceptance passed on both platforms. Optional [mounted caching]
 uses bounded SQLite snapshots with checksums, eviction, pins and recovery tests.
 Each new open still authorizes online. A [local staging/journal library](docs/src/staged-writes.md)
 now preserves immutable write generations. Cache and staging commands share a
-bounded async owner; writable mounts and remote commits remain planned.
+bounded async owner; the library now supports [generation-specific remote flush](docs/src/flush-receipts.md).
+Writable mounts remain planned.
 Local edit plans support patch/truncate and revision-pinned hydration with
 restart replay; the native mount adapters still expose read-only files.
 An explicit [disposable-key write probe](docs/src/conditional-uploads.md)

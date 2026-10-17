@@ -1,9 +1,12 @@
 //! Durable single-PUT attempt records. No network, provider authorization,
 //! upload executor or payload reclamation is performed by this module.
+mod acknowledgments;
 use crate::{
     Result, State,
     journal::{self, Base, GenerationId, Target},
 };
+pub(crate) use acknowledgments::validate_all as validate_acknowledgments;
+pub use acknowledgments::{FlushReceipt, Settlement};
 use rusqlite::{Connection, TransactionBehavior, params};
 use sha2::{Digest, Sha256};
 use std::fmt;
@@ -417,6 +420,7 @@ impl<'a> Journal<'a> {
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         scan(&tx, |_| Ok(()))?;
+        acknowledgments::validate_all(&tx)?;
         let mut info = load_operation(&tx, id)?;
         if info.phase != Phase::Prepared {
             return Err(Failure::AlreadyDispatched.into());
@@ -579,6 +583,7 @@ pub(crate) fn recover_interrupted(state: &mut State) -> Result<()> {
     // Validate globally before granting any future permission. Stream rows;
     // never materialize an unbounded history or trust a mutable target index.
     scan(&tx, |_| Ok(()))?;
+    acknowledgments::validate_all(&tx)?;
     let ids = {
         let mut q=tx.prepare("SELECT generation_id FROM remote_intents WHERE phase='in-flight' ORDER BY generation_id")?;
         q.query_map([], |r| r.get::<_, i64>(0))?

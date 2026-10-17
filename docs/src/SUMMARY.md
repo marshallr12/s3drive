@@ -16,6 +16,7 @@
 - [Durable remote-attempt journal](remote-journal.md)
 - [Journal-driven single-PUT executor](upload-executor.md)
 - [Explicit application write policy](write-policy.md)
+- [Generation-specific remote flush](flush-receipts.md)
 - [Multipart uploads: research and plan](multipart-plan.md)
 - [Linux and Windows integration](platform-integration.md)
 - [Security and operations](security-and-operations.md)

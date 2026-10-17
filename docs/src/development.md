@@ -214,3 +214,12 @@ same attempt without another PUT. Independent local journals race both create
 and replacement guards. The executor's public factory requires an explicit
 [source-bound policy and complete evidence](write-policy.md). Existing mounts
 and their configuration remain read-only; tests do not install an application policy. See the [executor contract](upload-executor.md).
+
+The [generation-specific flush](flush-receipts.md) tests add schema-7 migration,
+ancestor settlement and newer-head preservation. Process-kill fixtures stop
+after root insertion, settlement insertion and commit. Real SQLite page limits
+force full-disk rollback; a paused owner loses its post-commit reply and recovers
+the same receipt. Snapshot bytes remain readable. Corrupted/missing/unrelated
+markers cannot suppress pending work or grant a send claim. SDK/TCP fixtures
+flush binary, empty and Unicode bodies, retain uncertain/rejected bytes and
+recover a killed uploader without another PUT. No live Wasabi mutation occurs.

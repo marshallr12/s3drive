@@ -586,10 +586,13 @@ impl<'a> Journal<'a> {
         if !(1..=1000).contains(&limit) {
             return Err("invalid staged recovery page size".into());
         }
+        if !drafts {
+            crate::remote::validate_acknowledgments(&self.state.connection)?;
+        }
         let sql = if drafts {
             "SELECT generation_id FROM staged_generations WHERE phase='building' AND generation_id>?1 ORDER BY generation_id LIMIT ?2"
         } else {
-            "SELECT generation_id FROM write_journal WHERE status='pending' AND generation_id>?1 ORDER BY generation_id LIMIT ?2"
+            "SELECT generation_id FROM write_journal WHERE status='pending' AND generation_id>?1 AND NOT EXISTS(SELECT 1 FROM write_settlements s WHERE s.generation_id=write_journal.generation_id) ORDER BY generation_id LIMIT ?2"
         };
         let mut statement = self.state.connection.prepare(sql)?;
         let ids = statement

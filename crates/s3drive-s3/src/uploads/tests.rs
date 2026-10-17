@@ -149,6 +149,135 @@ async fn exact_unicode_and_empty_generations_verify_full_bytes_without_replaying
 }
 
 #[tokio::test]
+async fn flush_acknowledges_exact_unicode_and_empty_generations_and_never_replays() {
+    for body in [b"binary\0\xff".as_slice(), b""] {
+        let server = Server::new(Mode::DropAfterCommit).await;
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("state");
+        let executor = make(server.session().await, &path).await;
+        let first = stage(&executor, KEY, None, b"superseded locally").await;
+        let selected = stage(&executor, KEY, Some(first), body).await;
+        let snapshot = executor.0.storage.staging().snapshot(first).await.unwrap();
+        let receipt = executor.flush(selected).await.unwrap();
+        assert_eq!(receipt.info().generation, selected);
+        assert_eq!(receipt.covered_generations(), 2);
+        assert_eq!(server.count("PUT"), 1);
+        assert_eq!(
+            executor.flush(selected).await.unwrap().checksum(),
+            receipt.checksum()
+        );
+        assert!(
+            executor
+                .0
+                .storage
+                .staging()
+                .pending(None, 100)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(snapshot.read(0, 100).await.unwrap(), b"superseded locally");
+        let newer = stage(&executor, KEY, Some(selected), b"newer dirty").await;
+        assert_eq!(
+            executor.flush(selected).await.unwrap().checksum(),
+            receipt.checksum()
+        );
+        assert_eq!(
+            executor
+                .0
+                .storage
+                .staging()
+                .pending(None, 100)
+                .await
+                .unwrap()[0]
+                .id,
+            newer
+        );
+        executor.0.storage.close().await.unwrap();
+        let executor = make(server.session().await, &path).await;
+        assert_eq!(
+            executor.flush(selected).await.unwrap().checksum(),
+            receipt.checksum()
+        );
+        assert_eq!(server.count("PUT"), 1);
+        let next = executor.flush(newer).await.unwrap();
+        assert_eq!(
+            next.info().guard,
+            Guard::Match(receipt.info().revision.as_ref().unwrap().etag().into())
+        );
+        assert_eq!(server.count("PUT"), 2);
+        assert_eq!(next.covered_generations(), 3);
+        assert_eq!(
+            executor
+                .0
+                .storage
+                .staging()
+                .read(selected, 0, 100)
+                .await
+                .unwrap(),
+            body
+        );
+        executor.0.storage.close().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn uncertain_and_rejected_flushes_never_acknowledge_or_discard_local_edits() {
+    for mode in [
+        Mode::DropBeforeCommit,
+        Mode::DeleteAfterCommit,
+        Mode::Status503,
+        Mode::Reject409,
+        Mode::CorruptGet,
+        Mode::OtherAfterCommit,
+    ] {
+        let server = Server::new(mode).await;
+        let temp = tempfile::tempdir().unwrap();
+        let executor = make(server.session().await, &temp.path().join("state")).await;
+        let id = stage(&executor, KEY, None, b"retain failed flush").await;
+        assert!(executor.flush(id).await.is_err());
+        assert!(
+            executor
+                .0
+                .storage
+                .uploads()
+                .flush_receipt(id)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            executor
+                .0
+                .storage
+                .uploads()
+                .settlement(id)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert_eq!(
+            executor
+                .0
+                .storage
+                .staging()
+                .pending(None, 100)
+                .await
+                .unwrap()[0]
+                .id,
+            id
+        );
+        assert_eq!(
+            executor.0.storage.staging().read(id, 0, 100).await.unwrap(),
+            b"retain failed flush"
+        );
+        assert!(executor.flush(id).await.is_err());
+        assert_eq!(server.count("PUT"), 1);
+        executor.0.storage.close().await.unwrap();
+    }
+}
+
+#[tokio::test]
 async fn lost_or_malformed_success_is_verified_through_metadata_and_complete_get() {
     for mode in [Mode::DropAfterCommit, Mode::MissingEtag] {
         let server = Server::new(mode).await;
@@ -701,7 +830,7 @@ async fn executor_crash_child() {
     )
     .await;
     let id = stage(&executor, KEY, None, b"process death bytes").await;
-    executor.submit(id).await.unwrap();
+    executor.flush(id).await.unwrap();
 }
 
 #[tokio::test]
@@ -754,7 +883,20 @@ async fn process_death_after_server_commit_reopens_and_observes_without_replay()
         .unwrap();
     assert_eq!(before.phase, Phase::Uncertain);
     assert_eq!(before.reason, Reason::Interrupted);
-    assert_eq!(reopened.submit(id).await.unwrap().phase, Phase::Verified);
+    assert_eq!(
+        reopened.flush(id).await.unwrap().info().phase,
+        Phase::Verified
+    );
+    assert!(
+        reopened
+            .0
+            .storage
+            .staging()
+            .pending(None, 100)
+            .await
+            .unwrap()
+            .is_empty()
+    );
     assert_eq!(server.count("PUT"), 1);
     assert_eq!(
         reopened.0.storage.staging().read(id, 0, 100).await.unwrap(),

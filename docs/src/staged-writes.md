@@ -108,7 +108,8 @@ other generations. The chunk foreign key is deferred until that transaction
 removes the aborted builder's extents. All remaining references must be valid
 at commit. A chunk that was ever published is retained even if its manifest is
 later damaged. There is no automatic sealed-generation garbage collection or
-remote-acknowledgment cleanup yet.
+payload reclamation yet. [Generation-specific remote flush](flush-receipts.md)
+now records acknowledgment separately; it preserves these retained intent rows.
 [SQLite deferred foreign keys](https://sqlite.org/foreignkeys.html#fk_deferred)
 
 Reads verify manifest metadata and requested chunk checksums. Corruption is an
@@ -288,5 +289,6 @@ restart replay, concurrent plans, cancellation/deadline and quota tests.
 The SDK integration fixture hydrates an exact Unicode key through real signed
 HEAD/GET calls, and a changed base returns HTTP 412 without local publication.
 Only dummy credentials and isolated local HTTP/state are used.
-Conditional remote commit/reconciliation (P5b),
-writable OS callbacks and desktop save workflows (P5c) remain disabled.
+The policy-bound [remote executor](upload-executor.md) and
+[flush acknowledgment](flush-receipts.md) now build on this library. Writable OS
+callbacks and desktop save workflows (P5c) remain disabled.

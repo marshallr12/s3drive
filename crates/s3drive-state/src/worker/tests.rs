@@ -36,6 +36,107 @@ fn assert_worker_failure<T>(result: Result<T>, expected: Failure) {
     assert_eq!(error.downcast_ref::<Failure>(), Some(&expected));
 }
 
+#[tokio::test]
+async fn lost_running_ack_reply_recovers_a_stable_receipt_and_preserves_snapshots() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("state");
+    let storage = open(&path).await;
+    let first = generation(&storage.staging(), None, b"first")
+        .await
+        .generation;
+    let snapshot = storage.staging().snapshot(first).await.unwrap();
+    let info = storage.uploads().prepare(first).await.unwrap();
+    storage
+        .uploads()
+        .claim(info.operation, info.target.clone())
+        .await
+        .unwrap();
+    storage
+        .uploads()
+        .verified(remote::Verification {
+            operation: info.operation,
+            target: info.target.clone(),
+            payload_sha256: info.payload_sha256,
+            size: info.size,
+            revision: remote::Revision::new("\"verified\"", None).unwrap(),
+        })
+        .await
+        .unwrap();
+    let second = generation(&storage.staging(), Some(first), b"newer")
+        .await
+        .generation;
+    let (ready, started) = oneshot::channel();
+    let (release, wait) = blocking::channel();
+    let owner = storage.owner.clone();
+    let running = tokio::spawn(async move {
+        owner
+            .call_with_deadline(
+                move |store| {
+                    let receipt =
+                        remote::Journal::new(&mut store.state, remote::Options::default())?
+                            .acknowledge(info.operation)?;
+                    ready.send(()).unwrap();
+                    wait.recv_timeout(Duration::from_secs(10)).unwrap();
+                    Ok(receipt)
+                },
+                Duration::from_secs(2),
+            )
+            .await
+    });
+    tokio::time::timeout(Duration::from_secs(5), started)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_worker_failure(running.await.unwrap(), Failure::OutcomeUnknown);
+    release.send(()).unwrap();
+    let receipt = storage
+        .uploads()
+        .flush_receipt(first)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(receipt.info().generation, first);
+    assert_eq!(receipt.covered_generations(), 1);
+    assert_eq!(
+        storage
+            .staging()
+            .pending(None, 100)
+            .await
+            .unwrap()
+            .iter()
+            .map(|g| g.id)
+            .collect::<Vec<_>>(),
+        [second]
+    );
+    assert_eq!(snapshot.read(0, 100).await.unwrap(), b"first");
+    assert_eq!(
+        storage
+            .uploads()
+            .acknowledge(receipt.info().operation)
+            .await
+            .unwrap()
+            .checksum(),
+        receipt.checksum()
+    );
+    storage.close().await.unwrap();
+    let storage = open(&path).await;
+    assert_eq!(
+        storage
+            .uploads()
+            .flush_receipt(first)
+            .await
+            .unwrap()
+            .unwrap()
+            .checksum(),
+        receipt.checksum()
+    );
+    assert_eq!(
+        storage.staging().read(second, 0, 100).await.unwrap(),
+        b"newer"
+    );
+    storage.close().await.unwrap();
+}
+
 // A deterministic owner-thread pause. It never blocks the async runtime and
 // has its own fatal deadline so a broken test cannot strand a worker forever.
 async fn pause(owner: &Owner) -> blocking::Sender<()> {

@@ -6,12 +6,13 @@ worker. P4b2b connects that cache to read-only mounts. New offline opens and the
 writable mounts remain unsupported. The [local staged-generation and edit libraries](staged-writes.md)
 implement pending local intent, patch/truncate and pinned-base hydration;
 an explicit [policy-bound library executor](write-policy.md) can commit bounded
-single-PUT generations. Initializing a database alone grants no upload authority.
+single-PUT generations. [Remote flush](flush-receipts.md) adds atomic acknowledgment
+without reclaiming payloads. Initializing a database alone grants no upload authority.
 
 ## Implemented SQLite state and migration
 
 `s3drive-state` uses `rusqlite` with bundled SQLite. Initialization marks a
-database with an application ID and `user_version = 6`. Schema 1's reserved
+database with an application ID and `user_version = 7`. Schema 1's reserved
 `cached_objects` table had only source aliases, with no credential binding.
 Migration 2 renames it to `legacy_cached_objects_v1` and preserves every row for
 inspection. None of those rows is adopted into an active cache namespace.

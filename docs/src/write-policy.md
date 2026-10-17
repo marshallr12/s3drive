@@ -3,7 +3,8 @@
 **P5b2c, implemented 2026-10-16:** the single-PUT library executor can now be
 constructed from an explicit source-bound policy and complete local probe
 evidence. Existing configurations still accept only `mode = "read-only"`.
-There is no ordinary upload command, writable mount, remote flush or automatic
+The [library remote flush](flush-receipts.md) now records verified-generation
+acknowledgment. There is no ordinary upload command, writable mount or automatic
 payload reclamation. No real application write policy has been installed for
 the user's bucket, and this phase makes no live provider requests.
 
@@ -125,6 +126,6 @@ bounds in the [executor contract](upload-executor.md) still apply. Local tests
 exercise the public factory, strict parsing, complete wire-generated probe
 evidence, changed credentials, prefix escapes, size/guard denials and recovery
 under expired/narrowed policy. These tests do not authorize cloud mutations.
-Multipart, uncertain-intent resolution, credential rebinding, flush,
-acknowledgment cleanup and writable FUSE/WinFsp acceptance remain subsequent
+Multipart, uncertain-intent resolution, credential rebinding, payload
+reclamation and writable FUSE/WinFsp acceptance remain subsequent
 phases.

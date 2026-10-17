@@ -4,8 +4,10 @@
 `probe-writes` CLI can test a provider in a reserved namespace. Mounted drives
 remain read-only. A [local attempt journal](remote-journal.md) now records durable
 claims and uncertain outcomes. A [policy-bound SDK executor](upload-executor.md)
-now exercises those records with local HTTP fixtures. Production construction,
-remote flush, multipart writes and dirty-data cleanup remain subsequent P5b work.
+now exercises those records with local HTTP fixtures. Its public factory requires
+an [explicit source-bound write policy](write-policy.md).
+[Generation-specific remote flush](flush-receipts.md) now adds durable local
+acknowledgment; multipart writes and dirty-data cleanup remain subsequent P5b work.
 
 ## Provider contract and evidence
 
