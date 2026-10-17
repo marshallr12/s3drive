@@ -103,6 +103,14 @@ pub enum Mutation {
         sha256: String,
         expected_payload: Option<String>,
     },
+    ReserveDetachedContent {
+        node: String,
+        expected_revision: u64,
+        store: String,
+        size: u64,
+        sha256: String,
+        expected_payload: Option<String>,
+    },
     Publish {
         reservation: String,
         upload_operation: String,
@@ -196,6 +204,9 @@ impl Apply {
         }
         | Mutation::ReserveContent {
             expected_revision, ..
+        }
+        | Mutation::ReserveDetachedContent {
+            expected_revision, ..
         } = &self.mutation
             && *expected_revision > self.expected_sequence
         {
@@ -205,6 +216,7 @@ impl Apply {
             Mutation::RegisterStore { .. }
             | Mutation::Reserve { .. }
             | Mutation::ReserveContent { .. }
+            | Mutation::ReserveDetachedContent { .. }
             | Mutation::Publish { .. } => publication::valid(&self.mutation),
             Mutation::CreateEntry {
                 parent,
@@ -605,6 +617,7 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
         Mutation::RegisterStore { .. }
             | Mutation::Reserve { .. }
             | Mutation::ReserveContent { .. }
+            | Mutation::ReserveDetachedContent { .. }
             | Mutation::Publish { .. }
     ) {
         let (changed, artifact) = publication::mutate(db, request, sequence)?;
@@ -627,6 +640,7 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
         Mutation::RegisterStore { .. }
         | Mutation::Reserve { .. }
         | Mutation::ReserveContent { .. }
+        | Mutation::ReserveDetachedContent { .. }
         | Mutation::Publish { .. }
         | Mutation::MoveEntry { .. }
         | Mutation::RemoveEntry { .. } => {

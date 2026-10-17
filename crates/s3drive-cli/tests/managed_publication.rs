@@ -271,7 +271,10 @@ async fn proxy(
         Request::Apply {
             request:
                 Apply {
-                    mutation: Mutation::Reserve { .. },
+                    mutation:
+                        Mutation::Reserve { .. }
+                        | Mutation::ReserveContent { .. }
+                        | Mutation::ReserveDetachedContent { .. },
                     ..
                 },
         } => 1,
@@ -282,6 +285,13 @@ async fn proxy(
                     ..
                 },
         } => 2,
+        Request::Apply {
+            request:
+                Apply {
+                    mutation: Mutation::RemoveEntry { .. },
+                    ..
+                },
+        } => 3,
         _ => 0,
     };
     if kind != 0
@@ -327,9 +337,22 @@ async fn managed_child() {
         &std::fs::read_to_string(std::env::var("S3DRIVE_MANAGED_CONFIG").unwrap()).unwrap(),
     )
     .unwrap();
-    let authority = Authority::open(root.join("authority")).await.unwrap();
+    let authority = if mode.starts_with("detached_") {
+        Authority::open_with_policy(root.join("authority"), "portable-collision-v1".into())
+            .await
+            .unwrap()
+    } else {
+        Authority::open(root.join("authority")).await.unwrap()
+    };
     let (wire, stop, server) = serve(authority.client()).await;
     let volume = info(&wire).await.id;
+    if mode.starts_with("detached_") {
+        detached_mode(&mode, &config, &root, &wire, &volume).await;
+        stop.send(()).unwrap();
+        server.await.unwrap();
+        authority.shutdown().await.unwrap();
+        return;
+    }
     if mode.starts_with("edits_") {
         logical_edits_mode(&mode, &config, &root, &wire, &volume).await;
         stop.send(()).unwrap();
@@ -872,4 +895,372 @@ async fn logical_edits_mode(
         );
         p.storage().close().await.unwrap();
     }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn unlinked_dirty_sdk_generations_recover_without_resurrection_or_repeated_puts() {
+    let f = fixture::Fixture::start().await;
+    let tmp = tempfile::tempdir().unwrap();
+    let setup = writes::setup(&f, tmp.path()).await;
+    for mode in ["detached_stage", "detached_resume", "detached_finish"] {
+        if mode == "detached_resume" {
+            f.lose_put_reply.store(true, Ordering::SeqCst);
+            f.hide_committed.store(true, Ordering::SeqCst);
+        }
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "managed_child", "--nocapture"])
+            .env("S3DRIVE_MANAGED_MODE", mode)
+            .env("S3DRIVE_MANAGED_CONFIG", &setup.config)
+            .env("S3DRIVE_MANAGED_ROOT", tmp.path())
+            .env("AWS_SHARED_CREDENTIALS_FILE", &setup.credentials)
+            .env("AWS_CONFIG_FILE", &setup.aws_config)
+            .env("AWS_EC2_METADATA_DISABLED", "true")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+        let mut lines = BufReader::new(child.stdout.take().unwrap()).lines();
+        let mut errors = child.stderr.take().unwrap();
+        let error_task = tokio::spawn(async move {
+            let mut s = String::new();
+            errors.read_to_string(&mut s).await.unwrap();
+            s
+        });
+        let protocol = tokio::time::timeout(Duration::from_secs(120), async {
+            while let Some(line) = lines.next_line().await.unwrap() {
+                match line.as_str() {
+                    "CRASH_DETACHED_NAMESPACE" => {
+                        assert_eq!(puts(&f), 0);
+                        return true;
+                    }
+                    "CRASH_DETACHED_UPLOAD" => {
+                        assert_eq!(puts(&f), 1);
+                        return true;
+                    }
+                    "DETACHED_ACK_RECOVERED" => {
+                        assert_eq!(puts(&f), 1, "recovery reissued a PUT");
+                        signal(tmp.path(), "detached-observed");
+                    }
+                    _ => (),
+                }
+            }
+            false
+        })
+        .await;
+        let crash = protocol.as_ref().copied().unwrap_or(false);
+        if crash || protocol.is_err() {
+            child.kill().await.unwrap();
+        }
+        let status = tokio::time::timeout(Duration::from_secs(15), child.wait())
+            .await
+            .unwrap()
+            .unwrap();
+        let errors = error_task.await.unwrap();
+        assert!(
+            protocol.is_ok()
+                && if mode == "detached_finish" {
+                    status.success() && !crash
+                } else {
+                    crash
+                },
+            "{mode}: {status}: {errors}"
+        );
+        writes::restore_observation(&f);
+    }
+    assert_eq!(puts(&f), 2, "one immutable PUT per detached generation");
+    let objects = f.objects.lock().unwrap();
+    let blobs = objects
+        .iter()
+        .filter(|(key, _)| key.contains("/writable/.s3drive/"))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        blobs.len(),
+        2,
+        "both unlinked generations must remain retained"
+    );
+    assert!(
+        blobs
+            .iter()
+            .any(|(_, (b, _))| b == b"unlinked binary\0\xff")
+    );
+    assert!(
+        blobs
+            .iter()
+            .any(|(_, (b, _))| b == b"newer retained unlinked data")
+    );
+}
+async fn detached_prepare(p: &Publisher, w: &WireClient, edit: u64, op: u64) {
+    let local = p.storage().logical();
+    let r = local.get(id(edit)).await.unwrap();
+    let file = local
+        .file(r.input.volume.clone(), r.input.node.clone())
+        .await
+        .unwrap();
+    assert!(file.base.deleted);
+    p.stage_edit(
+        &id(edit),
+        Apply {
+            volume: r.input.volume,
+            operation: id(op),
+            expected_sequence: info(w).await.sequence,
+            mutation: Mutation::ReserveDetachedContent {
+                node: file.binding.node.id,
+                expected_revision: file.base.revision,
+                store: p.store().id.clone(),
+                size: r.input.size,
+                sha256: r.input.sha256,
+                expected_payload: s3drive_authority::payload_reference(&file.base.payload),
+            },
+        },
+        id(op + 1000),
+    )
+    .await
+    .unwrap();
+}
+async fn detached_mode(
+    mode: &str,
+    config: &s3drive_core::Config,
+    root: &Path,
+    w: &WireClient,
+    volume: &str,
+) {
+    if mode == "detached_stage" {
+        let reader = s3drive_s3::S3Reader::from_source(&config.sources[0])
+            .await
+            .unwrap();
+        change(
+            w,
+            200,
+            Mutation::RegisterStore {
+                route: reader.storage_fingerprint(),
+                root: "writable/.s3drive/".into(),
+            },
+        )
+        .await;
+        change(
+            w,
+            10,
+            Mutation::CreateEntry {
+                parent: s3drive_authority::ROOT.into(),
+                parent_revision: 0,
+                store: Some(id(200)),
+                name: "removed 日本語 🦀.bin".into(),
+                node_kind: Kind::EmptyFile,
+            },
+        )
+        .await;
+        // The real authority commits unlink; the forwarding service then drops
+        // that successful reply. No local observation may be acknowledged yet.
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}/v1/namespace", listener.local_addr().unwrap());
+        let app = axum::Router::new()
+            .route("/v1/namespace", axum::routing::post(proxy))
+            .with_state(Proxy {
+                upstream: w.clone(),
+                loss: Arc::new(AtomicU8::new(3)),
+            });
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let wire = WireClient::loopback(&endpoint, Token::new(SECRET.into()).unwrap()).unwrap();
+        let p = publisher(config, root, "detached-client", wire, volume.into()).await;
+        let file = p.bind_edit_file(&id(10)).await.unwrap();
+        p.stage_local(
+            s3drive_state::logical::Input::from_bytes(
+                id(900),
+                &file.binding,
+                None,
+                b"unlinked binary\0\xff",
+            ),
+            Arc::from(&b"unlinked binary\0\xff"[..]),
+        )
+        .await
+        .unwrap();
+        let request = Apply {
+            volume: volume.into(),
+            operation: id(4000),
+            expected_sequence: info(w).await.sequence,
+            mutation: Mutation::RemoveEntry {
+                node: s3drive_authority::NodeGuard {
+                    id: id(10),
+                    revision: file.base.revision,
+                },
+                parent: s3drive_authority::NodeGuard {
+                    id: s3drive_authority::ROOT.into(),
+                    revision: 0,
+                },
+            },
+        };
+        let input = p
+            .namespace_change_input(request, std::slice::from_ref(&file.base))
+            .unwrap();
+        assert!(p.change_namespace(input).await.is_err());
+        assert_eq!(
+            p.storage()
+                .namespace()
+                .pending(None, 100)
+                .await
+                .unwrap()
+                .len(),
+            1
+        );
+        assert!(
+            !p.storage()
+                .logical()
+                .file(volume.into(), id(10))
+                .await
+                .unwrap()
+                .base
+                .deleted
+        );
+        assert!(node(w, volume, 10).await.deleted);
+        assert!(p.read(&id(10)).await.is_err());
+        assert!(!server.is_finished());
+        checkpoint("CRASH_DETACHED_NAMESPACE");
+        std::future::pending::<()>().await;
+    }
+    let p = publisher(config, root, "detached-client", w.clone(), volume.into()).await;
+    let local = p.storage().logical();
+    if mode == "detached_resume" {
+        let input = p
+            .storage()
+            .namespace()
+            .pending(None, 100)
+            .await
+            .unwrap()
+            .pop()
+            .unwrap()
+            .input;
+        let sequence = info(w).await.sequence;
+        p.change_namespace(input).await.unwrap();
+        assert_eq!(
+            info(w).await.sequence,
+            sequence,
+            "namespace replay repeated unlink"
+        );
+        let file = local.file(volume.into(), id(10)).await.unwrap();
+        assert!(file.base.deleted);
+        assert!(file.settled.is_none());
+        change(
+            w,
+            11,
+            Mutation::CreateEntry {
+                parent: s3drive_authority::ROOT.into(),
+                parent_revision: 0,
+                store: Some(id(200)),
+                name: file.base.name.clone(),
+                node_kind: Kind::EmptyFile,
+            },
+        )
+        .await;
+        detached_prepare(&p, w, 900, 5000).await;
+        assert!(
+            p.flush_edit(&id(900)).await.is_err(),
+            "fault did not retain uncertain upload"
+        );
+        let old = local.get(id(900)).await.unwrap();
+        assert!(old.receipt.is_none());
+        p.stage_local(
+            s3drive_state::logical::Input::from_bytes(
+                id(901),
+                &file.binding,
+                old.generation,
+                b"newer retained unlinked data",
+            ),
+            Arc::from(&b"newer retained unlinked data"[..]),
+        )
+        .await
+        .unwrap();
+        checkpoint("CRASH_DETACHED_UPLOAD");
+        std::future::pending::<()>().await;
+    }
+    p.flush_edit(&id(900)).await.unwrap();
+    let file = local.file(volume.into(), id(10)).await.unwrap();
+    assert!(file.base.deleted);
+    assert_ne!(file.head, file.settled);
+    assert!(p.read(&id(10)).await.is_err());
+    checkpoint("DETACHED_ACK_RECOVERED");
+    wait(root, "detached-observed").await;
+    detached_prepare(&p, w, 901, 5001).await;
+    p.flush_edit(&id(901)).await.unwrap();
+    let final_file = local.file(volume.into(), id(10)).await.unwrap();
+    assert!(final_file.base.deleted);
+    assert_eq!(final_file.head, final_file.settled);
+    let live = node(w, volume, 11).await;
+    assert!(!live.deleted);
+    assert!(live.payload.is_none());
+    let sequence = info(w).await.sequence;
+    let original = p
+        .namespace_change_input(
+            Apply {
+                volume: volume.into(),
+                operation: id(4000),
+                expected_sequence: 2,
+                mutation: Mutation::RemoveEntry {
+                    node: s3drive_authority::NodeGuard {
+                        id: id(10),
+                        revision: 2,
+                    },
+                    parent: s3drive_authority::NodeGuard {
+                        id: s3drive_authority::ROOT.into(),
+                        revision: 0,
+                    },
+                },
+            },
+            std::slice::from_ref(&final_file.binding.node),
+        )
+        .unwrap();
+    p.change_namespace(original).await.unwrap();
+    assert_eq!(info(w).await.sequence, sequence);
+    assert_eq!(
+        local.file(volume.into(), id(10)).await.unwrap().base,
+        final_file.base
+    );
+    // A retained semantic rejection remains an error on cached replay too.
+    change(
+        w,
+        12,
+        Mutation::CreateEntry {
+            parent: s3drive_authority::ROOT.into(),
+            parent_revision: 0,
+            store: Some(id(200)),
+            name: "rejected unlink".into(),
+            node_kind: Kind::EmptyFile,
+        },
+    )
+    .await;
+    let stale = node(w, volume, 12).await;
+    let mutation = Mutation::RemoveEntry {
+        node: s3drive_authority::NodeGuard {
+            id: stale.id.clone(),
+            revision: stale.revision,
+        },
+        parent: s3drive_authority::NodeGuard {
+            id: s3drive_authority::ROOT.into(),
+            revision: 0,
+        },
+    };
+    let input = p
+        .namespace_change_input(
+            Apply {
+                volume: volume.into(),
+                operation: id(7000),
+                expected_sequence: info(w).await.sequence,
+                mutation: mutation.clone(),
+            },
+            std::slice::from_ref(&stale),
+        )
+        .unwrap();
+    change(w, 7001, mutation).await;
+    let sequence = info(w).await.sequence;
+    for _ in 0..2 {
+        let error = p.change_namespace(input.clone()).await.unwrap_err();
+        assert!(matches!(
+            error.downcast_ref::<s3drive_managed::Failure>(),
+            Some(s3drive_managed::Failure::Authority(
+                s3drive_authority::Error::Conflict
+            ))
+        ));
+    }
+    assert_eq!(info(w).await.sequence, sequence);
+    p.storage().close().await.unwrap();
 }

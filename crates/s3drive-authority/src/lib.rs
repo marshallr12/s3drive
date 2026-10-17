@@ -70,6 +70,7 @@ impl Request {
                 "content-cas-v1".into(),
                 "namespace-create-v1".into(),
                 "namespace-entry-cas-v1".into(),
+                "detached-content-cas-v1".into(),
             ])),
             Self::Info {} => state.namespace_volume().map(Reply::Info),
             Self::Store { volume, store } => {

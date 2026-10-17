@@ -185,6 +185,9 @@ fn file_row(db: &Connection, volume: &str, node: &str) -> Result<FileRow> {
     if let Some(node) = &f.observed {
         let mut binding = f.binding.clone();
         binding.node = node.clone();
+        // Only journaled namespace outcomes can install this observation;
+        // immutable original bindings remain live and keep their target hash.
+        binding.node.deleted = false;
         binding.validate()?;
         if node.id != f.binding.node.id {
             return Err("observed logical identity changed".into());
@@ -635,6 +638,13 @@ impl<'a> Journal<'a> {
             }
             return Ok(r);
         }
+        if crate::namespace_client::pending_for_node(
+            &self.state.connection,
+            &r.input.volume,
+            &r.input.node,
+        )? {
+            return Err("recover namespace outcome before preparing publication".into());
+        }
         let file = self.file(&r.input.volume, &r.input.node)?;
         let g = r.generation.ok_or("logical bytes not staged")?;
         let metadata = journal::load(&self.state.connection, g)?;
@@ -658,6 +668,7 @@ impl<'a> Journal<'a> {
                 .guard
                 .as_ref()
                 .is_some_and(|g| g.expected != namespace::payload_reference(&file.base.payload))
+            || reserve.guard.as_ref().is_some_and(|g| g.detached) != file.base.deleted
             || reserve.expected_revision != file.base.revision
             || reserve.size != r.input.size
             || reserve.sha256 != r.input.sha256
@@ -791,3 +802,76 @@ impl<'a> Journal<'a> {
 }
 #[cfg(test)]
 mod tests;
+
+/// Validate retained file state before a new namespace effect. A prepared
+/// publication must be resolved first; it cannot be rebound to a tombstone.
+pub(crate) fn check_namespace_entry(
+    state: &mut State,
+    options: journal::Options,
+    volume: &str,
+    entry: &crate::namespace_client::Entry,
+    source_move: bool,
+) -> Result<()> {
+    let Some(file) = Journal::new(state, options)?.lookup(volume, &entry.id)? else {
+        return Ok(());
+    };
+    if !entry.matches(&file.base) || file.base.deleted {
+        return Err("namespace precondition conflicts with retained local base".into());
+    }
+    if source_move && file.head != file.settled {
+        return Err("publish the dirty source before exposing a namespace move".into());
+    }
+    let prepared:bool=state.connection.query_row("SELECT EXISTS(SELECT 1 FROM logical_edits WHERE volume=?1 AND node=?2 AND publication IS NOT NULL AND receipt IS NULL)",params![volume,entry.id],|r|r.get(0))?;
+    if prepared {
+        return Err("resolve prepared publication before namespace mutation".into());
+    }
+    Ok(())
+}
+pub(crate) struct NamespaceObservation {
+    volume: String,
+    node: String,
+    old_hash: Vec<u8>,
+    row: FileRow,
+}
+impl NamespaceObservation {
+    pub(crate) fn apply(self, db: &Connection) -> Result<()> {
+        let changed=db.execute("UPDATE logical_files SET observed_base=?1,state_hash=?2 WHERE volume=?3 AND node=?4 AND state_hash=?5",params![self.row.observed.as_ref().map(serde_json::to_vec).transpose()?,hash(&self.row)?,self.volume,self.node,self.old_hash])?;
+        if changed != 1 || hash(&file_row(db, &self.volume, &self.node)?)? != hash(&self.row)? {
+            return Err("namespace file observation was not durably applied".into());
+        }
+        Ok(())
+    }
+}
+pub(crate) fn namespace_observation(
+    state: &mut State,
+    options: journal::Options,
+    volume: &str,
+    before: &crate::namespace_client::Entry,
+    after: &Node,
+) -> Result<Option<NamespaceObservation>> {
+    let Some(file) = Journal::new(state, options)?.lookup(volume, &before.id)? else {
+        return Ok(None);
+    };
+    if file.base == *after || file.base.revision > after.revision {
+        return Ok(None);
+    }
+    if !before.matches(&file.base) || file.base.deleted {
+        return Err("namespace outcome conflicts with retained local file".into());
+    }
+    if namespace::payload_reference(&after.payload)
+        != namespace::payload_reference(&file.base.payload)
+        || after.id != file.binding.node.id
+        || after.placement != file.base.placement
+    {
+        return Err("namespace outcome cannot rebase retained bytes".into());
+    }
+    let mut row = file_row(&state.connection, volume, &before.id)?;
+    let old_hash = hash(&row)?;
+    row.observed = Some(after.clone());
+    Ok(Some(NamespaceObservation {
+        volume: volume.into(),
+        node: before.id.clone(),
+        old_hash,
+        row,
+    }))
+}

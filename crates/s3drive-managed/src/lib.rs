@@ -229,16 +229,70 @@ impl Publisher {
             store: self.0.store.clone(),
             source: *target.source(),
             fingerprint: target.fingerprint().into(),
+            entries: Vec::new(),
         })
+    }
+    pub fn namespace_change_input(
+        &self,
+        request: Apply,
+        before: &[Node],
+    ) -> Result<s3drive_state::namespace_client::Input> {
+        let mut input = self.namespace_input(request)?;
+        input.entries = before
+            .iter()
+            .map(s3drive_state::namespace_client::Entry::from_node)
+            .collect::<std::result::Result<_, _>>()?;
+        Ok(input)
     }
     pub fn check_namespace_input(
         &self,
         input: &s3drive_state::namespace_client::Input,
     ) -> Result<()> {
-        if self.namespace_input(input.request.clone())? != *input {
+        let mut expected = self.namespace_input(input.request.clone())?;
+        expected.entries = input.entries.clone();
+        if expected != *input {
             return Err(Failure::Binding.into());
         }
         Ok(())
+    }
+    /// Persist before RPC; commit local namespace outcome and all tracked file
+    /// observations together. Retries keep exactly the original operation ID.
+    pub async fn change_namespace(
+        &self,
+        input: s3drive_state::namespace_client::Input,
+    ) -> Result<s3drive_state::namespace_client::Record> {
+        let _slot = self.0.slots.try_acquire().map_err(|_| Failure::Busy)?;
+        self.check_namespace_input(&input)?;
+        let local = self.0.storage.namespace();
+        let record = local.begin(input).await?;
+        if record.outcome.is_some() {
+            return Self::namespace_result(record);
+        }
+        let outcome = match self
+            .0
+            .authority
+            .request(&Request::Apply {
+                request: record.input.request.clone(),
+            })
+            .await?
+        {
+            Reply::Applied(r) => Ok(r),
+            Reply::Error(e) => Err(e),
+            _ => return Err(Failure::Protocol.into()),
+        };
+        let saved = local
+            .acknowledge(record.input.request.operation, outcome)
+            .await?;
+        Self::namespace_result(saved)
+    }
+    fn namespace_result(
+        record: s3drive_state::namespace_client::Record,
+    ) -> Result<s3drive_state::namespace_client::Record> {
+        match record.outcome.as_ref() {
+            Some(Err(e)) => Err(Failure::Authority(*e).into()),
+            Some(Ok(_)) => Ok(record),
+            None => Err(Failure::Incomplete.into()),
+        }
     }
     pub fn check_edit_binding(&self, binding: &s3drive_state::logical::Binding) -> Result<()> {
         let target = self

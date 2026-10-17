@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b3b1 guarded authority entry transactions** on `codex/managed-entry-transactions`. Metadata implementation and the full local gate pass; terminal Linux/Windows/book CI, existing native regressions and publication remain required. Native rename/removal are still unsupported.
+Updated: 2026-10-17. Current phase: **P6m3b3b2 atomic namespace acknowledgment / detached publication** on `codex/managed-detached-publication`. The full local gate passes; terminal Linux/Windows/book CI, existing native regressions and publication remain required. Native rename/removal remain unsupported until their next integration phase.
 Goal active. Linux/Windows read-only drives and startup foundations work;
 library writes/flush are progressing toward safe writable native filesystems.
 Do not call the broader editable-drive goal complete before its documented
@@ -36,33 +36,35 @@ safe-write contract and real OS acceptance pass.
 ## Authoritative publication baseline
 
 Published private main at phase start:
-`ec0f4902c2572d37300dd4f4c7b262bce2faa40b` (managed creation/directories).
-Terminal all-green [run 39014033363](https://github.com/marshallr12/s3drive/actions/runs/39014033363):
-Linux `117342308172`, Windows `117342308295`, book `117342308235`.
-Schema 12, 116 Linux / 112 Windows state tests, 13 FS and six native cases per
-OS, with no-systemd startup and Windows non-admin cross-logon acceptance.
-Logs: `/tmp/s3drive-namespace-final-{linux,windows,book}-ci.log`.
-Local/remote main/private visibility and a clean worktree were verified.
+`9f3a2b11c5e65ab6280034d272415f278d3859b9` (guarded authority entry CAS).
+Terminal all-green [run 39015566494](https://github.com/marshallr12/s3drive/actions/runs/39015566494):
+Linux `117346870493`, Windows `117346870650`, book `117346870575`.
+Schema 12, 123 Linux / 119 Windows state tests, five authority TCP tests,
+13 FS and six existing native cases per OS, including no-systemd startup and
+Windows non-admin cross-logon acceptance. Local/remote main/private visibility
+and a clean worktree were verified. Logs: `/tmp/s3drive-entry-final-{linux,windows,book}-ci.log`.
 
-Current branch adds `NodeGuard`, portable-volume `MoveEntry`/`RemoveEntry`,
-`namespace-entry-cas-v1` and a namespace artifact with the retained displaced
-node. Exact source/target/both-parent guards, collision-key admission, type,
-cycle, emptiness and child-count bounds commit with exact dedup outcomes.
-Tombstones preserve payloads and placements; no new schema or S3 operation.
-Ignored SQL result insertions now roll back the entire effect. Requests are
-boxed within the existing bounded authority queue after the larger guard
-variant exceeded the enum size lint.
+Current branch adds compact complete-payload-digest namespace preconditions,
+atomic namespace outcome + affected logical-file observation acknowledgment,
+and a default-omitted detached content guard. Ignored/deleted intent insertions
+cannot admit an RPC; semantic SDK rejection and cached rejection both return errors. Original live bindings/target
+hashes and old serialized records stay unchanged. Explicit detached reservation
+and publication require `deleted=true`, preserve the tombstone and guard the
+complete prior payload. Live readers continue refusing new deleted-node opens.
+No schema change, S3 deletion, reclamation or native callback is enabled.
 
-Seven new state tests and an actual TCP race/restart/replay test cover this
-contract, including real SQLITE_FULL rollback/retry and ignored writes.
-Focused evidence: `/tmp/s3drive-entry-guard-final-tests.log`,
-`/tmp/s3drive-entry-state-authority-tests.log` and
-`/tmp/s3drive-entry-clippy-final.log`.
-Full local gate: `/tmp/s3drive-entry-gate-final.log`, exit 0; 123 Linux state tests, five authority TCP tests, 50 S3 and 13 FS tests. Documentation links/build/tests also pass.
-See `docs/src/managed-namespace-plan.md` for the contract and remaining bridge.
-This metadata phase does not enable native rename/removal or acknowledge
-unpublished dirty source bytes. Native creation and prior editing behavior stay
-at their accepted boundaries.
+Six state tests cover atomic two-file observations, ignored updates, actual
+SQLITE_FULL rollback/retry, retained dirty data/restart, pending-effect/publication
+ordering, input tampering, legacy serialization, content races and name reuse.
+The actual SDK/HTTP forwarding fixture loses a committed unlink reply, kills
+the client, recovers the exact operation, then loses an accepted S3 PUT and kills
+it again with a newer local head. Recovery settles without another PUT and
+publishes the newer head. Exactly two immutable blobs remain; a newly created
+file at the old name stays untouched. Focused logs:
+`/tmp/s3drive-detached-state-final.log`, `/tmp/s3drive-detached-sdk.log`,
+`/tmp/s3drive-detached-clippy.log`. Full gate log: `/tmp/s3drive-detached-gate-complete.log`.
+Full local gate passed: `/tmp/s3drive-detached-gate-complete.log`, exit 0; 129 Linux state tests, 50 S3, 13 FS, five authority TCP and four managed publication cases (including its child helper). Book links/build/tests pass. The new diagram was generated and visually inspected.
+See `docs/src/managed-unlinked.md` for the library contract and native boundary.
 
 Use `bash scripts/gate.sh` locally, then require terminal exact-tip Linux,
 Windows and book jobs before main publication. Native cases remain serialized
@@ -137,7 +139,7 @@ rename. Its three immutable PUTs are confined to owned loopback fixtures.
 Local evidence: `/tmp/s3drive-logical-{state-final,recovery-tests-final,sdk-tests,clippy-final}.log`.
 Local full gate passed at `/tmp/s3drive-logical-gate-complete.log`: 106 Linux
 state tests, 50 S3, 12 FS, four authority TCP and the SDK publication/recovery
-tests. The new diagram was generated and visually inspected.
+tests. Full local gate passed: `/tmp/s3drive-detached-gate-complete.log`, exit 0; 129 Linux state tests, 50 S3, 13 FS, five authority TCP and four managed publication cases (including its child helper). Book links/build/tests pass. The new diagram was generated and visually inspected.
 Native FUSE/WinFsp/startup regressions are separate; publication requires terminal
 Linux/Windows/book CI for the exact tip. A controlled Linux process-spawn diagnostic reproduced inherited-directory-lock
 retention after State drop. The owner now explicitly unlocks after SQLite closes;
@@ -267,7 +269,7 @@ were already removed. Do not infer remaining cleanup from old plans/logs.
 
 ## Next implementation and durable decisions
 
-P6m3b3a is published. Finish P6m3b3b1 verification/publication, then extend the private namespace intent/acknowledgment bridge, detached open-unlinked publication and real FUSE/WinFsp rename/removal, followed by application save workflows as laid out in the namespace plan. Stable storage/file identities,
+P6m3b3b1 is published. Finish P6m3b3b2 verification/publication, then integrate real FUSE/WinFsp rename/removal and retained open-unlinked file views, followed by application save workflows as laid out in the namespace plan. Namespace changes must use the same publish/edit serialization as local writes and capture verified source/target states. Windows needs explicit reversible delete intent, cancellation, crash and cleanup recovery: `set_delete` must not delete immediately, while cleanup cannot return an error. Re-read the resolved API and design the durable lifecycle before enabling it. Stable storage/file identities,
 create-only unique blob keys and metadata CAS are now separate from the direct
 writer's mutable-key ETag lineage; preserve that distinction during integration. Keep uncertain bytes and new physical blob
 references distinct; an S3 upload alone does not acknowledge filesystem flush.

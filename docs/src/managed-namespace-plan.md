@@ -18,7 +18,7 @@ editable desktop drive.
    Acceptance includes Unicode, two clients racing for a name, policy bounds,
    lost metadata replies/process death, no incidental S3 PUT/DELETE for empty
    metadata, nested file write/reopen, collisions, and both native drivers.
-2. **P6m3b3b: rename, replacement and removal — authority entry CAS implemented; client/native integration remains required.** Guard source and destination
+2. **P6m3b3b: rename, replacement and removal — authority entry CAS and [local/detached publication bridge](managed-unlinked.md) implemented; native integration remains required.** Guard source and destination
    node revisions/identities, parent revisions and expected target absence.
    Commit replacement plus target tombstone atomically. Flush pending source
    bytes before exposing a replacement. Retain displaced/removed objects and
@@ -163,9 +163,5 @@ page budget. A real TCP test races two independent clients against one target,
 restarts the authority, replays both outcomes, unlinks the winner, and checks
 that replay does not resurrect it.
 
-Remaining integration is mandatory: extend the private namespace intent journal
-and atomic local acknowledgment bridge; publish pending source bytes before a
-replacement; support open-unlinked generations with publication confined to the
-tombstone; wire FUSE rename/unlink/rmdir and WinFsp rename/delete cleanup; and
-pass real application save/replacement/recovery tests. Until then native
+The [private namespace acknowledgment and detached publication bridge](managed-unlinked.md) now implements the local transaction and retained unlinked-generation contract. Remaining native integration is mandatory: publish pending source bytes before a replacement, retain open handles, wire FUSE rename/unlink/rmdir and WinFsp rename/delete cleanup, and pass real application save/replacement/recovery tests. Until then native
 rename/removal callbacks remain unsupported, and dirty data is retained.

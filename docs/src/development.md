@@ -435,3 +435,29 @@ Exact-tip Linux/Windows/book CI and existing native/startup regressions remain
 publication requirements. Their results are available in the
 [entry transaction branch history](https://github.com/marshallr12/s3drive/actions?query=branch%3Acodex%2Fmanaged-entry-transactions).
 These checks do not claim native rename/removal acceptance.
+
+
+## Atomic namespace acknowledgment and unlinked publication (2026-10-17)
+
+The [library bridge](managed-unlinked.md) is exercised by
+`cargo test -p s3drive-state --locked namespace_client::changes` (six new state
+tests) and `cargo test -p s3drive-cli --test managed_publication --locked
+unlinked_dirty_sdk` (actual SDK/HTTP service, two killed-client boundaries).
+The proxy drops the committed unlink result; the S3 fixture loses an accepted
+binary upload and denies observation. Recovery must use exactly two total PUTs
+for two immutable generations, preserve a newer head and leave the new file at
+the reused name untouched. SQL-full/ignored updates cannot partially commit a
+namespace outcome or file observation. The new PNG diagram was visually inspected.
+
+Existing live content guards omit the new false flag in serialization. Native
+callback enablement is separate; retain all six native regressions, startup gates
+and terminal exact-tip Linux/Windows/book CI before publication. This phase
+performs no live Wasabi operation, real startup registration or credential change.
+
+
+The full local gate passed at `/tmp/s3drive-detached-gate-complete.log`: 129 Linux
+state tests, 50 S3, 13 FS, five authority TCP and the SDK publication suite.
+Terminal exact-tip Linux/Windows/book CI and the existing native/startup cases
+remain required before main publication. See the
+[detached publication branch history](https://github.com/marshallr12/s3drive/actions?query=branch%3Acodex%2Fmanaged-detached-publication)
+for that source-specific result. Native unlink/rename acceptance is not implied.

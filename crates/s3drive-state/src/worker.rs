@@ -108,6 +108,7 @@ impl Storage {
     pub fn namespace(&self) -> Namespace {
         Namespace {
             owner: self.owner.clone(),
+            options: self.staging_options,
         }
     }
     pub fn logical(&self) -> Logical {
@@ -622,16 +623,19 @@ impl Logical {
 #[derive(Clone)]
 pub struct Namespace {
     owner: Owner,
+    options: journal::Options,
 }
 impl Namespace {
     async fn call<T: Send + 'static>(
         &self,
         work: impl FnOnce(&mut crate::namespace_client::Journal<'_>) -> Result<T> + Send + 'static,
     ) -> Result<T> {
+        let options = self.options;
         self.owner
             .call(move |store| {
-                work(&mut crate::namespace_client::Journal::new(
+                work(&mut crate::namespace_client::Journal::with_options(
                     &mut store.state,
+                    options,
                 )?)
             })
             .await

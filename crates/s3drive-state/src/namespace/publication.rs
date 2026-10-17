@@ -13,6 +13,11 @@ pub struct Store {
 #[serde(deny_unknown_fields)]
 pub struct ContentGuard {
     pub expected: Option<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub detached: bool,
+}
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 pub fn payload_reference(payload: &Option<Payload>) -> Option<String> {
     payload.as_ref().map(|p| {
@@ -116,7 +121,7 @@ fn valid_proof(operation: &str, etag: &str, version: Option<&str>) -> bool {
 }
 pub(super) fn uses_content_guard(db: &Connection, m: &Mutation) -> Result<bool> {
     match m {
-        Mutation::ReserveContent { .. } => Ok(true),
+        Mutation::ReserveContent { .. } | Mutation::ReserveDetachedContent { .. } => Ok(true),
         Mutation::Publish {
             reservation: id, ..
         } => match reservation(db, id) {
@@ -129,6 +134,7 @@ pub(super) fn uses_content_guard(db: &Connection, m: &Mutation) -> Result<bool> 
 }
 fn base_matches(n: &Node, revision: u64, guard: Option<&ContentGuard>) -> bool {
     n.kind != Kind::Directory
+        && n.deleted == guard.is_some_and(|g| g.detached)
         && match guard {
             Some(g) => payload_reference(&n.payload) == g.expected,
             None => n.revision == revision,
@@ -136,6 +142,9 @@ fn base_matches(n: &Node, revision: u64, guard: Option<&ContentGuard>) -> bool {
 }
 pub(super) fn valid(m: &Mutation) -> bool {
     if let Mutation::ReserveContent {
+        expected_payload, ..
+    }
+    | Mutation::ReserveDetachedContent {
         expected_payload, ..
     } = m
         && expected_payload.as_ref().is_some_and(|s| !digest(s))
@@ -150,6 +159,14 @@ pub(super) fn valid(m: &Mutation) -> bool {
             store,
             size,
             sha256,
+        }
+        | Mutation::ReserveDetachedContent {
+            node,
+            expected_revision,
+            store,
+            size,
+            sha256,
+            ..
         }
         | Mutation::ReserveContent {
             node,
@@ -267,6 +284,14 @@ pub(super) fn mutate(
             size,
             sha256,
         }
+        | Mutation::ReserveDetachedContent {
+            node: id,
+            expected_revision,
+            store: store_id,
+            size,
+            sha256,
+            ..
+        }
         | Mutation::ReserveContent {
             node: id,
             expected_revision,
@@ -278,12 +303,20 @@ pub(super) fn mutate(
             let guard = match &request.mutation {
                 Mutation::ReserveContent {
                     expected_payload, ..
+                }
+                | Mutation::ReserveDetachedContent {
+                    expected_payload, ..
                 } => Some(ContentGuard {
                     expected: expected_payload.clone(),
+                    detached: matches!(request.mutation, Mutation::ReserveDetachedContent { .. }),
                 }),
                 _ => None,
             };
-            let n = live_node(db, id)?;
+            let n = if guard.as_ref().is_some_and(|g| g.detached) {
+                node(db, id)?
+            } else {
+                live_node(db, id)?
+            };
             if n.placement.as_ref().is_some_and(|p| &p.id != store_id) {
                 return Err(Error::Conflict);
             }
@@ -326,7 +359,11 @@ pub(super) fn mutate(
             version,
         } => {
             let r = reservation(db, id)?;
-            let n = live_node(db, &r.node)?;
+            let n = if r.guard.as_ref().is_some_and(|g| g.detached) {
+                node(db, &r.node)?
+            } else {
+                live_node(db, &r.node)?
+            };
             if !base_matches(&n, r.expected_revision, r.guard.as_ref()) {
                 return Err(Error::Conflict);
             }
@@ -345,7 +382,7 @@ pub(super) fn mutate(
                 version: version.clone(),
             };
             let bytes = encode(&p)?;
-            let changed=sql(db.execute("UPDATE namespace_nodes SET payload=?1,revision=?2 WHERE node_id=?3 AND revision=?4 AND deleted=0",params![bytes,sequence as i64,p.reservation.node,n.revision as i64]))?;
+            let changed=sql(db.execute("UPDATE namespace_nodes SET payload=?1,revision=?2 WHERE node_id=?3 AND revision=?4 AND deleted=?5",params![bytes,sequence as i64,p.reservation.node,n.revision as i64,n.deleted]))?;
             if changed != 1 {
                 return Err(Error::Conflict);
             }

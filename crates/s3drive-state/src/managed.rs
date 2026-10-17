@@ -47,6 +47,14 @@ impl Input {
                 size,
                 sha256,
                 expected_payload,
+            }
+            | Mutation::ReserveDetachedContent {
+                node,
+                expected_revision,
+                store,
+                size,
+                sha256,
+                expected_payload,
             } => (
                 node,
                 expected_revision,
@@ -55,6 +63,10 @@ impl Input {
                 sha256,
                 Some(crate::namespace::ContentGuard {
                     expected: expected_payload.clone(),
+                    detached: matches!(
+                        self.reserve.mutation,
+                        Mutation::ReserveDetachedContent { .. }
+                    ),
                 }),
             ),
             _ => return Err("managed input must reserve a blob".into()),
@@ -225,6 +237,11 @@ fn check_receipt(r: &Record, receipt: &Receipt) -> Result<()> {
     }) || receipt.node.revision != receipt.sequence
         || receipt.node.id != payload.reservation.node
         || receipt.node.deleted
+            != r.input
+                .reservation()?
+                .guard
+                .as_ref()
+                .is_some_and(|g| g.detached)
         || receipt.node.kind != Kind::File
         || receipt.node.payload.as_ref() != Some(&payload)
         || receipt.artifact != Some(Artifact::Published(payload))

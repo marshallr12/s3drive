@@ -1,8 +1,10 @@
 //! Client-local metadata intents. Persist exact admission and request before RPC.
+mod changes;
 use crate::{
     Result, State,
     namespace::{self, Apply, Mutation, Receipt, Store},
 };
+pub use changes::Entry;
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -14,6 +16,8 @@ pub struct Input {
     pub store: Store,
     pub source: [u8; 32],
     pub fingerprint: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub entries: Vec<Entry>,
 }
 impl std::fmt::Debug for Input {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -25,8 +29,12 @@ impl Input {
         self.request
             .validate()
             .map_err(|_| "invalid namespace request")?;
-        if !matches!(self.request.mutation, Mutation::CreateEntry { .. })
-            || !self.store.valid()
+        if !matches!(
+            self.request.mutation,
+            Mutation::CreateEntry { .. }
+                | Mutation::MoveEntry { .. }
+                | Mutation::RemoveEntry { .. }
+        ) || !self.store.valid()
             || !namespace::publication::digest(&self.fingerprint)
         {
             return Err("invalid namespace intent binding".into());
@@ -38,6 +46,7 @@ impl Input {
         {
             return Err("namespace placement changed".into());
         }
+        changes::validate(self)?;
         if serde_json::to_vec(self)?.len() > 8192 {
             return Err("namespace intent too large".into());
         }
@@ -65,6 +74,10 @@ fn checked_outcome(input: &Input, outcome: &namespace::Result<Receipt>) -> Resul
         Err(_) => return Ok(()),
         Ok(r) => r,
     };
+    if !matches!(input.request.mutation, Mutation::CreateEntry { .. }) {
+        changes::effects(input, receipt)?;
+        return Ok(());
+    }
     let Mutation::CreateEntry {
         parent,
         name,
@@ -126,13 +139,35 @@ fn load(db: &Connection, id: &str) -> Result<Option<Record>> {
     }
     Ok(Some(r))
 }
+pub(crate) fn pending_for_node(db: &Connection, volume: &str, node: &str) -> Result<bool> {
+    let ids = db
+        .prepare("SELECT operation_id FROM namespace_intents WHERE outcome IS NULL LIMIT 4097")?
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    if ids.len() > LIMIT as usize {
+        return Err("namespace pending limit".into());
+    }
+    for id in ids {
+        let record = load(db, &id)?.ok_or("namespace pending row vanished")?;
+        if record.input.request.volume == volume
+            && record.input.entries.iter().any(|e| e.id == node)
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
 pub struct Journal<'a> {
     state: &'a mut State,
+    options: crate::journal::Options,
 }
 impl<'a> Journal<'a> {
     pub fn new(state: &'a mut State) -> Result<Self> {
+        Self::with_options(state, crate::journal::Options::default())
+    }
+    pub fn with_options(state: &'a mut State, options: crate::journal::Options) -> Result<Self> {
         state.verify_staging_storage()?;
-        Ok(Self { state })
+        Ok(Self { state, options })
     }
     pub fn get(&self, id: &str) -> Result<Record> {
         load(&self.state.connection, id)?.ok_or_else(|| "unknown namespace intent".into())
@@ -144,6 +179,22 @@ impl<'a> Journal<'a> {
                 return Err("namespace intent input changed".into());
             }
             return Ok(r);
+        }
+        for entry in &input.entries {
+            if pending_for_node(&self.state.connection, &input.request.volume, &entry.id)? {
+                return Err(
+                    "recover pending namespace effect before another change to this node".into(),
+                );
+            }
+        }
+        for (i, entry) in input.entries.iter().enumerate() {
+            crate::logical::check_namespace_entry(
+                self.state,
+                self.options,
+                &input.request.volume,
+                entry,
+                i == 0 && matches!(input.request.mutation, Mutation::MoveEntry { .. }),
+            )?;
         }
         self.state
             .register_source(&input.source, &input.fingerprint)?;
@@ -160,7 +211,7 @@ impl<'a> Journal<'a> {
         if count >= LIMIT {
             return Err("namespace intent limit reached".into());
         }
-        tx.execute(
+        let inserted = tx.execute(
             "INSERT INTO namespace_intents VALUES(?1,?2,NULL,?3)",
             params![
                 r.input.request.operation,
@@ -168,6 +219,12 @@ impl<'a> Journal<'a> {
                 hash(&r)?
             ],
         )?;
+        if inserted != 1
+            || load(&tx, &r.input.request.operation)?
+                .is_none_or(|saved| saved.input != r.input || saved.outcome.is_some())
+        {
+            return Err("namespace intent was not durably persisted".into());
+        }
         tx.commit()?;
         Ok(r)
     }
@@ -180,6 +237,28 @@ impl<'a> Journal<'a> {
             }
             return Ok(r);
         }
+        let updates = if let Ok(receipt) = &outcome {
+            if r.input.entries.is_empty() {
+                Vec::new()
+            } else {
+                let nodes = changes::effects(&r.input, receipt)?;
+                let mut updates = Vec::new();
+                for (entry, after) in r.input.entries.iter().zip(nodes.iter()) {
+                    if let Some(update) = crate::logical::namespace_observation(
+                        self.state,
+                        self.options,
+                        &r.input.request.volume,
+                        entry,
+                        after,
+                    )? {
+                        updates.push(update);
+                    }
+                }
+                updates
+            }
+        } else {
+            Vec::new()
+        };
         r.outcome = Some(outcome);
         let tx = self
             .state
@@ -188,6 +267,12 @@ impl<'a> Journal<'a> {
         let rows=tx.execute("UPDATE namespace_intents SET outcome=?1,state_hash=?2 WHERE operation_id=?3 AND outcome IS NULL",params![serde_json::to_vec(r.outcome.as_ref().unwrap())?,hash(&r)?,id])?;
         if rows != 1 {
             return Err("namespace receipt was not durably updated".into());
+        }
+        for update in updates {
+            update.apply(&tx)?;
+        }
+        if load(&tx, id)?.as_ref().and_then(|r| r.outcome.as_ref()) != r.outcome.as_ref() {
+            return Err("namespace acknowledgment readback mismatch".into());
         }
         tx.commit()?;
         self.get(id)
@@ -243,6 +328,7 @@ mod tests {
             },
             source: [1; 32],
             fingerprint: "b".repeat(64),
+            entries: Vec::new(),
         }
     }
     fn receipt(i: &Input) -> Receipt {
