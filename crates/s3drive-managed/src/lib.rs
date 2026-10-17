@@ -1,6 +1,6 @@
 //! Managed immutable-file publication through the real S3 executor, private
 //! local journal and authority HTTP API, plus a bounded reader used by native
-//! managed read-only mounts. Native managed writes remain a later phase.
+//! managed mounts. Policy-bound native editing uses the same durable journal.
 mod reader;
 pub use reader::Reader;
 use s3drive_authority::{Apply, Artifact, Kind, Node, Receipt, Reply, Request, Store, WireClient};
@@ -62,6 +62,8 @@ impl FlushReceipt {
 pub struct FileSnapshot(Arc<Snapshot>);
 struct Snapshot {
     metadata: Node,
+    volume: String,
+    authorization: Option<([u8; 32], String)>,
     bytes: Arc<[u8]>,
     _permit: OwnedSemaphorePermit,
 }
@@ -210,6 +212,43 @@ impl Publisher {
                 fingerprint: target.fingerprint().into(),
             })
             .await
+    }
+    pub fn can_edit(&self, node: &str, size: u64) -> bool {
+        let key = format!(
+            "{}v1/{}/{}/{}",
+            self.0.store.root,
+            self.0.volume,
+            node,
+            "1".repeat(32)
+        );
+        self.0.executor.check_create(&key, size).is_ok()
+    }
+    /// Adopt only metadata whose payload this exact reader authorized and verified.
+    pub async fn observe_edit_file(
+        &self,
+        snapshot: &FileSnapshot,
+    ) -> Result<s3drive_state::logical::File> {
+        let target = self
+            .0
+            .executor
+            .recovery_target(&format!("{}binding", self.0.store.root))?;
+        if snapshot.0.volume != self.0.volume
+            || snapshot
+                .0
+                .authorization
+                .as_ref()
+                .is_some_and(|(source, fp)| source != target.source() || fp != target.fingerprint())
+        {
+            return Err(Failure::Binding.into());
+        }
+        let binding = s3drive_state::logical::Binding {
+            volume: self.0.volume.clone(),
+            node: snapshot.metadata().clone(),
+            store: self.0.store.clone(),
+            source: *target.source(),
+            fingerprint: target.fingerprint().into(),
+        };
+        self.0.storage.logical().observe(binding).await
     }
     /// Coalesce a complete local edit without reserving or sending any object.
     /// An exact durable intent key recovers the same immutable generation.

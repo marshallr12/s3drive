@@ -184,10 +184,15 @@ impl Reader {
         if node.kind == Kind::Directory {
             return Err(Failure::IsDirectory.into());
         }
+        let mut authorization = None;
         let bytes = if let Some(payload) = &node.payload {
             let r = &payload.reservation;
             let (_, reader) = self.0.stores.get(&r.store.id).ok_or(Failure::Binding)?;
             let handle = Box::pin(reader.open(&r.key)).await?;
+            authorization = Some((
+                *handle.cache_identity().as_bytes(),
+                handle.configuration_fingerprint().into(),
+            ));
             let m = handle.metadata();
             if m.size != r.size
                 || m.revision.etag.as_deref() != Some(&payload.etag)
@@ -208,6 +213,8 @@ impl Reader {
         };
         Ok(FileSnapshot(Arc::new(Snapshot {
             metadata: node,
+            volume: self.0.volume.clone(),
+            authorization,
             bytes,
             _permit: permit,
         })))

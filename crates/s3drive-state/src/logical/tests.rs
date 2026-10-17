@@ -359,7 +359,7 @@ fn logical_migration_preserves_schema9_data_and_rejects_unknown_shapes_atomicall
             assert!(db.prepare("SELECT * FROM logical_files").is_err());
         } else {
             let mut s = open(&root);
-            assert_eq!(s.info().unwrap().schema_version, 10);
+            assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
             assert_eq!(
                 journal::Journal::new(&mut s, journal::Options::default())
                     .unwrap()
@@ -582,4 +582,134 @@ fn publication_ids_are_exclusively_bound_to_one_logical_edit() {
     assert!(l.prepare(&b.input.id, second).is_err());
     assert!(l.get(&b.input.id).unwrap().publication.is_none());
     assert!(l.get(&a.input.id).unwrap().publication.is_some());
+}
+
+#[test]
+fn verified_observation_preserves_identity_and_rejects_dirty_external_changes() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("state");
+    let mut s = open(&root);
+    let original = binding();
+    let mut l = Journal::new(&mut s, journal::Options::default()).unwrap();
+    l.bind(original.clone()).unwrap();
+    let mut renamed = original.clone();
+    renamed.node.name = "renamed 🦀".into();
+    renamed.node.revision = 2;
+    let f = l.observe(renamed.clone()).unwrap();
+    assert_eq!(f.binding, original);
+    assert_eq!(f.base, renamed.node);
+    // Simulate an old schema-10 file, preserving its original hash encoding.
+    s.connection.execute_batch("UPDATE logical_files SET observed_base=NULL; ALTER TABLE logical_files DROP COLUMN observed_base; PRAGMA user_version=10").unwrap();
+    let row = FileRow {
+        binding: original.clone(),
+        settled: None,
+        publication: None,
+        observed: None,
+    };
+    s.connection
+        .execute(
+            "UPDATE logical_files SET state_hash=?",
+            [hash(&row).unwrap()],
+        )
+        .unwrap();
+    drop(s);
+    let mut s = open(&root);
+    let staged = stage(&mut s, 1, None, b"dirty bytes");
+    let mut l = Journal::new(&mut s, journal::Options::default()).unwrap();
+    let f = l.observe(renamed.clone()).unwrap();
+    assert_eq!(f.head, staged.generation);
+    let mut remote = renamed.clone();
+    remote.node.kind = Kind::File;
+    remote.node.payload = Some(namespace::Payload {
+        reservation: namespace::Reservation {
+            id: id(1000),
+            volume: original.volume.clone(),
+            node: original.node.id.clone(),
+            expected_revision: 2,
+            store: original.store.clone(),
+            key: format!(
+                "{}v1/{}/{}/{}",
+                original.store.root,
+                original.volume,
+                original.node.id,
+                id(1000)
+            ),
+            size: 0,
+            sha256: hex(&Sha256::digest([])),
+            guard: None,
+        },
+        upload_operation: "e".repeat(64),
+        etag: "\"remote\"".into(),
+        version: None,
+    });
+    remote.node.revision = 3;
+    assert!(l.observe(remote.clone()).is_err());
+    assert_eq!(
+        l.file(&original.volume, &original.node.id).unwrap().head,
+        staged.generation
+    );
+    // A separate clean identity adopts the same verified remote base.
+    let mut clean = original.clone();
+    clean.node.id = id(11);
+    l.bind(clean.clone()).unwrap();
+    remote.node.id = id(11);
+    remote.node.payload.as_mut().unwrap().reservation.node = id(11);
+    remote.node.payload.as_mut().unwrap().reservation.key = format!(
+        "{}v1/{}/{}/{}",
+        original.store.root,
+        original.volume,
+        id(11),
+        id(1000)
+    );
+    assert_eq!(l.observe(remote.clone()).unwrap().base, remote.node);
+    drop(s);
+    let mut s = open(&root);
+    let mut l = Journal::new(&mut s, journal::Options::default()).unwrap();
+    assert_eq!(l.file(&original.volume, &id(11)).unwrap().base, remote.node);
+    assert_eq!(
+        l.file(&original.volume, &id(10)).unwrap().head,
+        staged.generation
+    );
+}
+
+#[test]
+fn schema10_settled_file_and_legacy_receipts_keep_their_hashes() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("state");
+    let mut s = open(&root);
+    let a = stage(&mut s, 1, None, b"legacy committed bytes");
+    let r = Journal::new(&mut s, journal::Options::default())
+        .unwrap()
+        .prepare(&a.input.id, publication(&a, 1))
+        .unwrap();
+    physical_commit(&mut s, &r, false);
+    let r = Journal::new(&mut s, journal::Options::default())
+        .unwrap()
+        .acknowledge(&a.input.id)
+        .unwrap();
+    let reservation = r.publication.as_ref().unwrap().reservation().unwrap();
+    let encoded = serde_json::to_vec(&reservation).unwrap();
+    assert!(!String::from_utf8_lossy(&encoded).contains("guard"));
+    let checksum: Vec<u8> = s
+        .connection
+        .query_row("SELECT state_hash FROM logical_files", [], |r| r.get(0))
+        .unwrap();
+    s.connection
+        .execute_batch(
+            "ALTER TABLE logical_files DROP COLUMN observed_base; PRAGMA user_version=10",
+        )
+        .unwrap();
+    drop(s);
+    let mut s = open(&root);
+    let mut l = Journal::new(&mut s, journal::Options::default()).unwrap();
+    let file = l.file(&id(999), &id(10)).unwrap();
+    assert_eq!(file.head, r.generation);
+    assert_eq!(file.head, file.settled);
+    assert_eq!(file.base, r.receipt.unwrap().node);
+    assert!(l.pending(None, 10).unwrap().is_empty());
+    let after: Vec<u8> = s
+        .connection
+        .query_row("SELECT state_hash FROM logical_files", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(checksum, after);
 }

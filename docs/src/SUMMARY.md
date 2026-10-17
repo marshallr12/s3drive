@@ -8,6 +8,7 @@
 - [Managed immutable-file publication](managed-publication.md)
 - [Managed native read-only drives](managed-native.md)
 - [Durable managed local edits](managed-edits.md)
+- [Managed existing-file editing](managed-write-plan.md)
 - [Turso and cross-machine coordination](turso-coordination.md)
 - [Filesystem behavior contract](filesystem-contract.md)
 - [Implemented read-only provider contract](provider-contract.md)

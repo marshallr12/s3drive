@@ -2,7 +2,7 @@
 //! No S3 publication or platform name-comparison semantics are implemented here.
 pub mod publication;
 use crate::State;
-pub use publication::{Artifact, Payload, Reservation, Store};
+pub use publication::{Artifact, ContentGuard, Payload, Reservation, Store, payload_reference};
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 
@@ -78,6 +78,14 @@ pub enum Mutation {
         size: u64,
         sha256: String,
     },
+    ReserveContent {
+        node: String,
+        expected_revision: u64,
+        store: String,
+        size: u64,
+        sha256: String,
+        expected_payload: Option<String>,
+    },
     Publish {
         reservation: String,
         upload_operation: String,
@@ -150,6 +158,9 @@ impl Apply {
         }
         if let Mutation::Reserve {
             expected_revision, ..
+        }
+        | Mutation::ReserveContent {
+            expected_revision, ..
         } = &self.mutation
             && *expected_revision > self.expected_sequence
         {
@@ -158,6 +169,7 @@ impl Apply {
         let valid = match &self.mutation {
             Mutation::RegisterStore { .. }
             | Mutation::Reserve { .. }
+            | Mutation::ReserveContent { .. }
             | Mutation::Publish { .. } => publication::valid(&self.mutation),
             Mutation::Create {
                 parent,
@@ -400,7 +412,10 @@ impl State {
         }
         // A savepoint rolls back any partial mutation before retaining rejection.
         sql(tx.execute_batch("SAVEPOINT namespace_effect"))?;
-        let outcome = if request.expected_sequence != v.sequence {
+        let content_guard = publication::uses_content_guard(&tx, &request.mutation)?;
+        let outcome = if request.expected_sequence > v.sequence
+            || (!content_guard && request.expected_sequence != v.sequence)
+        {
             Err(Error::Conflict)
         } else {
             mutate(&tx, request, v.sequence + 1)
@@ -425,13 +440,19 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
     let sql_sequence = i64::try_from(sequence).map_err(|_| Error::Invalid)?;
     if matches!(
         &request.mutation,
-        Mutation::RegisterStore { .. } | Mutation::Reserve { .. } | Mutation::Publish { .. }
+        Mutation::RegisterStore { .. }
+            | Mutation::Reserve { .. }
+            | Mutation::ReserveContent { .. }
+            | Mutation::Publish { .. }
     ) {
         let (changed, artifact) = publication::mutate(db, request, sequence)?;
         return finish(db, request, sequence, &changed, Some(artifact));
     }
     let changed = match &request.mutation {
-        Mutation::RegisterStore { .. } | Mutation::Reserve { .. } | Mutation::Publish { .. } => {
+        Mutation::RegisterStore { .. }
+        | Mutation::Reserve { .. }
+        | Mutation::ReserveContent { .. }
+        | Mutation::Publish { .. } => {
             return Err(Error::Invalid);
         }
         Mutation::Create {
@@ -510,13 +531,13 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
 }
 fn finish(
     db: &Connection,
-    request: &Apply,
+    _request: &Apply,
     sequence: u64,
     changed: &str,
     artifact: Option<Artifact>,
 ) -> Result<Receipt> {
     let sql_sequence = i64::try_from(sequence).map_err(|_| Error::Invalid)?;
-    let expected = i64::try_from(request.expected_sequence).map_err(|_| Error::Invalid)?;
+    let expected = sql_sequence.checked_sub(1).ok_or(Error::Invalid)?;
     let rows = sql(db.execute(
         "UPDATE namespace_volume SET sequence=?1 WHERE singleton=1 AND sequence=?2",
         params![sql_sequence, expected],

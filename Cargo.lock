@@ -2118,6 +2118,7 @@ dependencies = [
 name = "s3drive-fs"
 version = "0.1.0"
 dependencies = [
+ "getrandom 0.4.3",
  "s3drive-authority",
  "s3drive-core",
  "s3drive-managed",

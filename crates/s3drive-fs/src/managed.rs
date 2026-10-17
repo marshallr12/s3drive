@@ -1,28 +1,95 @@
 use super::*;
+pub(super) mod writes;
 use s3drive_authority::{Token, WireClient};
 pub(super) struct Backend {
     pub reader: s3drive_managed::Reader,
+    pub writes: Option<Arc<writes::Writes>>,
 }
 pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
     let settings = config.managed.as_ref().ok_or(Error::Configuration)?;
     let token = Token::from_private_file(&settings.token_file).map_err(|_| Error::Configuration)?;
     let authority =
         WireClient::loopback(&settings.authority, token).map_err(|_| Error::Configuration)?;
+    if config.writes.is_some() {
+        let reply = authority
+            .request(&s3drive_authority::Request::Features {})
+            .await
+            .map_err(error)?;
+        if !matches!(reply,s3drive_authority::Reply::Features(ref features) if features.iter().any(|f|f=="content-cas-v1"))
+        {
+            return Err(Error::Configuration);
+        }
+    }
+    let storage = if let Some(w) = &config.writes {
+        Some(
+            s3drive_state::worker::Storage::open(
+                &w.directory,
+                Options::default(),
+                s3drive_state::journal::Options::default(),
+            )
+            .await
+            .map_err(error)?,
+        )
+    } else {
+        None
+    };
     let mut bindings = Vec::new();
+    let mut publishers = HashMap::new();
     for mapping in &settings.stores {
         let source = config
             .sources
             .iter()
             .find(|s| s.alias == mapping.source)
             .ok_or(Error::Configuration)?;
-        bindings.push((
-            mapping.id.clone(),
-            Box::pin(S3Reader::from_source(source)).await?,
-        ));
+        let mut reader = Box::pin(S3Reader::from_source(source)).await?;
+        if let Some(w) = config
+            .writes
+            .as_ref()
+            .and_then(|w| w.sources.iter().find(|w| w.alias == source.alias))
+        {
+            fn text(path: &std::path::Path) -> Result<String> {
+                use std::io::Read;
+                let file = std::fs::File::open(path).map_err(|_| Error::Configuration)?;
+                if !file.metadata().map_err(|_| Error::Configuration)?.is_file() {
+                    return Err(Error::Configuration);
+                }
+                let mut text = String::new();
+                file.take(32769)
+                    .read_to_string(&mut text)
+                    .map_err(|_| Error::Configuration)?;
+                Ok(text)
+            }
+            let policy = s3drive_s3::uploads::WritePolicy::from_toml(
+                source,
+                &text(&w.policy)?,
+                &text(&w.plan)?,
+                &text(&w.report)?,
+            )
+            .map_err(|_| Error::Configuration)?;
+            let executor = s3drive_s3::uploads::Executor::open(
+                reader,
+                storage.clone().ok_or(Error::Internal)?,
+                policy,
+            )
+            .await
+            .map_err(error)?;
+            reader = executor.reader();
+            let publisher = s3drive_managed::Publisher::open(
+                executor,
+                authority.clone(),
+                settings.volume.clone(),
+                mapping.id.clone(),
+            )
+            .await
+            .map_err(error)?;
+            publishers.insert(mapping.id.clone(), publisher);
+        }
+        bindings.push((mapping.id.clone(), reader));
     }
-    let reader = s3drive_managed::Reader::open(authority, settings.volume.clone(), bindings)
-        .await
-        .map_err(error)?;
+    let reader =
+        s3drive_managed::Reader::open(authority.clone(), settings.volume.clone(), bindings)
+            .await
+            .map_err(error)?;
     let root = Arc::new(Node {
         id: ROOT,
         parent: ROOT,
@@ -44,7 +111,18 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
         aliases: Vec::new(),
         cache: None,
         writes: None,
-        managed: Some(Arc::new(Backend { reader })),
+        managed: Some(Arc::new(Backend {
+            reader,
+            writes: storage.map(|s| {
+                Arc::new(writes::Writes::new(
+                    s,
+                    settings.volume.clone(),
+                    authority,
+                    publishers,
+                    settings.default_store.clone().unwrap_or_default(),
+                ))
+            }),
+        })),
     })
 }
 impl Nodes {
@@ -94,7 +172,8 @@ pub(super) fn metadata(node: &s3drive_authority::Node) -> ObjectMetadata {
         modified_unix_seconds: None,
     }
 }
-pub(super) fn error(e: Box<dyn std::error::Error + Send + Sync>) -> Error {
+pub(super) fn error<E: Into<Box<dyn std::error::Error + Send + Sync>>>(e: E) -> Error {
+    let e = e.into();
     if let Some(f) = e.downcast_ref::<s3drive_managed::Failure>() {
         use s3drive_managed::Failure;
         return match f {
@@ -102,6 +181,7 @@ pub(super) fn error(e: Box<dyn std::error::Error + Send + Sync>) -> Error {
             Failure::NotFound => Error::NotFound,
             Failure::IsDirectory => Error::IsDirectory,
             Failure::Authority(s3drive_authority::Error::NotFound) => Error::NotFound,
+            Failure::Authority(s3drive_authority::Error::Conflict) => Error::Conflict,
             Failure::Authority(s3drive_authority::Error::NotDirectory) => Error::NotDirectory,
             Failure::Authority(s3drive_authority::Error::Limit) => Error::ResourceLimit,
             Failure::Authority(s3drive_authority::Error::Unavailable) => Error::Busy,

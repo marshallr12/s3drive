@@ -17,8 +17,8 @@ use tokio::sync::{Semaphore, mpsc, oneshot};
 pub use wire::{WireClient, WireError};
 
 pub use namespace::{
-    Apply, Artifact, Error, Kind, Listing, Mutation, Node, Payload, ROOT, Receipt, Reservation,
-    Store, Volume,
+    Apply, Artifact, ContentGuard, Error, Kind, Listing, Mutation, Node, Payload, ROOT, Receipt,
+    Reservation, Store, Volume, payload_reference,
 };
 const BODY_LIMIT: usize = 4096;
 const QUEUE: usize = 8;
@@ -26,6 +26,7 @@ const QUEUE: usize = 8;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "action", rename_all = "kebab-case", deny_unknown_fields)]
 pub enum Request {
+    Features {},
     Info {},
     Store { volume: String, store: String },
     Reservation { volume: String, reservation: String },
@@ -42,6 +43,7 @@ pub enum Request {
     deny_unknown_fields
 )]
 pub enum Reply {
+    Features(Vec<String>),
     Info(Volume),
     Store(Store),
     Reservation(Reservation),
@@ -64,6 +66,7 @@ impl Request {
     }
     fn execute(self, state: &mut State) -> Reply {
         let reply = match self {
+            Self::Features {} => Ok(Reply::Features(vec!["content-cas-v1".into()])),
             Self::Info {} => state.namespace_volume().map(Reply::Info),
             Self::Store { volume, store } => {
                 state.namespace_store(&volume, &store).map(Reply::Store)

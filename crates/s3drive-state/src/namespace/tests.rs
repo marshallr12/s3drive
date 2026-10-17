@@ -251,3 +251,114 @@ fn forced_process_death_retains_metadata_and_operation_result() {
     );
     assert_eq!(s.namespace_list(&v.id, ROOT).unwrap().children.len(), 1);
 }
+
+#[test]
+fn content_cas_allows_independent_files_and_renames_but_rejects_stale_content() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut s = State::open_managed(&dir.path().join("authority")).unwrap();
+    let volume = s.namespace_initialize().unwrap().id;
+    let id = |n: u64| format!("{n:032x}");
+    let apply = |s: &mut State, operation: u64, mutation: Mutation| {
+        let seq = s.namespace_volume().unwrap().sequence;
+        s.namespace_apply(&Apply {
+            volume: volume.clone(),
+            operation: id(operation),
+            expected_sequence: seq,
+            mutation,
+        })
+        .unwrap()
+    };
+    apply(
+        &mut s,
+        200,
+        Mutation::RegisterStore {
+            route: "a".repeat(64),
+            root: "internal/".into(),
+        },
+    );
+    for n in [10, 11] {
+        apply(
+            &mut s,
+            n,
+            Mutation::Create {
+                parent: ROOT.into(),
+                name: format!("file-{n}"),
+                node_kind: Kind::EmptyFile,
+            },
+        );
+    }
+    let seq = s.namespace_volume().unwrap().sequence;
+    let reserve = |op, node| Apply {
+        volume: volume.clone(),
+        operation: id(op),
+        expected_sequence: seq,
+        mutation: Mutation::ReserveContent {
+            node: id(node),
+            expected_revision: 1,
+            store: id(200),
+            size: 0,
+            sha256: "b".repeat(64),
+            expected_payload: None,
+        },
+    };
+    let first = reserve(1000, 10);
+    let second = reserve(1001, 11);
+    let loser = reserve(1002, 10);
+    let r = s.namespace_apply(&first).unwrap();
+    assert_eq!(s.namespace_apply(&first), Ok(r));
+    s.namespace_apply(&second).unwrap();
+    s.namespace_apply(&loser).unwrap();
+    apply(
+        &mut s,
+        2000,
+        Mutation::Move {
+            node: id(10),
+            parent: ROOT.into(),
+            name: "renamed 🦀".into(),
+        },
+    );
+    let publish = |op, reservation| Apply {
+        volume: volume.clone(),
+        operation: id(op),
+        expected_sequence: seq,
+        mutation: Mutation::Publish {
+            reservation: id(reservation),
+            upload_operation: "c".repeat(64),
+            etag: "\"tag\"".into(),
+            version: None,
+        },
+    };
+    let winner = s.namespace_apply(&publish(3000, 1000)).unwrap();
+    assert_eq!(winner.node.name, "renamed 🦀");
+    assert!(winner.sequence > seq + 1);
+    assert!(s.namespace_apply(&publish(3001, 1001)).is_ok());
+    assert_eq!(
+        s.namespace_apply(&publish(3002, 1002)),
+        Err(Error::Conflict)
+    );
+    let stale = Apply {
+        volume: volume.clone(),
+        operation: id(4000),
+        expected_sequence: seq,
+        mutation: Mutation::Reserve {
+            node: id(11),
+            expected_revision: 1,
+            store: id(200),
+            size: 0,
+            sha256: "d".repeat(64),
+        },
+    };
+    assert_eq!(s.namespace_apply(&stale), Err(Error::Conflict));
+    let reference = payload_reference(&winner.node.payload).unwrap();
+    assert_eq!(reference.len(), 64);
+    // Full payload reference differs for a new publication of identical bytes.
+    let mut other = winner.node.payload.clone();
+    other.as_mut().unwrap().reservation.id = id(9999);
+    assert_ne!(payload_reference(&other), Some(reference));
+    let mut mismatch = first.clone();
+    mismatch.expected_sequence += 1;
+    assert_eq!(s.namespace_apply(&mismatch), Err(Error::OperationMismatch));
+    drop(s);
+    let mut s = State::open_managed(&dir.path().join("authority")).unwrap();
+    assert_eq!(s.namespace_apply(&publish(3000, 1000)), Ok(winner));
+}

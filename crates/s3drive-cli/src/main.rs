@@ -80,7 +80,7 @@ enum Command {
         #[arg(long, default_value_t = 65536)]
         length: usize,
     },
-    /// Mount a drive in the foreground (version 1 read-only; explicit version 2 writes).
+    /// Mount a drive in the foreground (versions 1/3 read-only; explicit versions 2/4 writes).
     Mount {
         config: PathBuf,
         mountpoint: PathBuf,

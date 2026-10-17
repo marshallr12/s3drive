@@ -2,7 +2,7 @@
 
 **P6m3b1 implementation, 2026-10-17.** This joins local logical-file heads to
 [immutable S3 publication](managed-publication.md). It is a library/storage
-checkpoint for managed writable drives. Version-3 native mounts remain
+checkpoint underlying [version-4 existing-file editing](managed-write-plan.md). Version-3 native mounts remain
 [read-only](managed-native.md); no real bucket, credential, write policy or
 startup registration is changed by this phase.
 
@@ -22,9 +22,7 @@ new logical file.
 It does not download base bytes or prove an S3 read. An exact original binding,
 or a live node matching this client's last verified publication receipt, reuses
 the original local target. New credentials, changed store routing, or an external
-revision cannot silently replace the stored base. A future writable coordinator
-must authorize/hydrate partial edits and implement explicit conflict/rebinding
-policies; this phase accepts complete desired file bytes.
+revision cannot silently replace the stored base. The version-4 coordinator authorizes/hydrates partial edits and provides explicit verified clean-base observation; this lower-level method still accepts only exact bindings. Dirty or credential rebinding remains explicit.
 
 `Publisher::stage_local` durably records an edit ID, expected local parent,
 size and SHA-256, then stages immutable chunks and seals the local generation.
@@ -37,7 +35,7 @@ The other builder and its bytes remain available for inspection.
 The full byte hash is checked inside the sealing transaction, together with the
 journal's manifest/retention/head changes. A mismatch rolls back sealing and head
 advancement. All operations share the existing bounded SQLite owner and directory
-lock. Schema 10 adds `logical_files`, `logical_edits` and the exclusive publication
+lock. Schema 10 originally adds `logical_files`, `logical_edits` and the exclusive publication
 operation registry. Migration preserves schema-9 data and refuses conflicting
 unknown table shapes without advancing the version. An authority database cannot
 host local edits, and a database containing only a logical binding cannot become
@@ -67,7 +65,7 @@ an authority.
    latest settled base.
 
 Logical pending enumeration uses ancestry coverage and validates retained records,
-including covered rows. It does not erase physical attempts that may still need
+including covered rows. Schema 11 adds a separately hashed verified-base observation without changing original identities or legacy hashes. It does not erase physical attempts that may still need
 reconciliation. Generic staged generations remain retained; managed callers must
 use the logical pending view for logical dirtiness. Corrupted or missing settlement
 markers fail explicitly rather than turning into a clean cache miss.

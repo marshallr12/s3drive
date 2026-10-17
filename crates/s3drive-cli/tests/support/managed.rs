@@ -5,7 +5,7 @@ use s3drive_managed::Publisher;
 use s3drive_state::{cache, journal, worker::Storage};
 use sha2::{Digest, Sha256};
 use std::{
-    io::{Read, Seek, SeekFrom},
+    io::{Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
     process::Stdio,
     sync::{Arc, atomic::Ordering},
@@ -169,6 +169,31 @@ impl Harness {
         }
         std::fs::write(&self.config, text).unwrap();
     }
+    fn configure_writable(&self) {
+        let old = std::fs::read_to_string(&self.config).unwrap();
+        let mut text = old
+            .replace("version=3", "version=4")
+            .replace("mode='read-only'", "mode='read-write'")
+            .replace(
+                "[managed]",
+                &format!("[managed]\ndefault_store={:?}", id(200)),
+            )
+            .replace("viewer-first", "docs")
+            .replace("viewer-second", "docs2");
+        text += &format!(
+            "\n[writes]\ndirectory={:?}\n",
+            self.root.join("managed-write-state").to_str().unwrap()
+        );
+        for (which, alias) in [("first", "docs"), ("second", "docs2")] {
+            text += &format!(
+                "[[writes.sources]]\nalias={alias:?}\npolicy={:?}\nplan={:?}\nreport={:?}\n",
+                self.root.join(which).join("policy.toml").to_str().unwrap(),
+                self.root.join(which).join("plan.toml").to_str().unwrap(),
+                self.root.join(which).join("report.toml").to_str().unwrap()
+            );
+        }
+        std::fs::write(&self.config, text).unwrap();
+    }
     fn environment(&self, c: &mut Command) {
         c.env("AWS_SHARED_CREDENTIALS_FILE", &self.credentials)
             .env("AWS_CONFIG_FILE", self.root.join("no-ambient-config"))
@@ -216,7 +241,7 @@ impl Harness {
         tokio::time::timeout(Duration::from_secs(30), async {
             while let Some(line) = lines.next_line().await.unwrap() {
                 eprintln!("{line}");
-                if line.starts_with("Mounted read-only") {
+                if line.starts_with("Mounted read-only") || line.starts_with("Mounted read-write") {
                     return;
                 }
             }
@@ -244,6 +269,26 @@ impl Drop for Mount {
     }
 }
 impl Mount {
+    async fn kill(mut self) {
+        self.child.kill().await.unwrap();
+        #[cfg(target_os = "linux")]
+        assert!(
+            std::process::Command::new("fusermount3")
+                .args(["-uz"])
+                .arg(&self.path)
+                .status()
+                .unwrap()
+                .success()
+        );
+        #[cfg(windows)]
+        tokio::time::timeout(Duration::from_secs(20), async {
+            while std::fs::symlink_metadata(&self.path).is_ok() {
+                tokio::time::sleep(Duration::from_millis(25)).await;
+            }
+        })
+        .await
+        .unwrap();
+    }
     async fn stop(mut self) {
         #[cfg(target_os = "linux")]
         assert!(
@@ -420,6 +465,113 @@ pub async fn child() {
             .await
         }
         "unlink" => change(&w, 3042, Mutation::Remove { node: id(11) }).await,
+        "rw-stage" => {
+            let fs = s3drive_fs::ReadOnlyFs::new(&c).await.unwrap();
+            assert!(!fs.is_read_only());
+            let d = fs.lookup(s3drive_fs::ROOT, DIR).await.unwrap();
+            let n = fs.lookup(d.id, FILE).await.unwrap();
+            assert!(fs.writable(&n));
+            assert!(!fs.writable_directory(&d));
+            let file = fs.open_write(n.id).await.unwrap();
+            let reader = fs.open(n.id).await.unwrap();
+            assert_eq!(
+                file.write(2, Arc::from(&b"ABC"[..]), false, false)
+                    .await
+                    .unwrap(),
+                3
+            );
+            assert_eq!(reader.read(2, 3).await.unwrap(), b"ABC");
+            file.truncate(5).await.unwrap();
+            file.write(0, Arc::from(&b"xyz"[..]), true, false)
+                .await
+                .unwrap();
+            file.write(12, Arc::from(&b"!"[..]), false, false)
+                .await
+                .unwrap();
+            assert_eq!(reader.read(5, 100).await.unwrap(), b"xyz\0\0\0\0!");
+            assert_eq!(file.current_metadata().unwrap().size, 13);
+            assert!(file.truncate(8 * 1024 * 1024 + 1).await.is_err());
+            reader.flush_on_close().await.unwrap();
+            // No writable close/fsync: process exit retains the durable head.
+        }
+        "rw-resume" => {
+            let fs = s3drive_fs::ReadOnlyFs::new(&c).await.unwrap();
+            let d = fs.lookup(s3drive_fs::ROOT, DIR).await.unwrap();
+            let n = fs.lookup(d.id, FILE).await.unwrap();
+            let file = fs.open_write(n.id).await.unwrap();
+            assert_eq!(file.read(5, 100).await.unwrap(), b"xyz\0\0\0\0!");
+            file.flush().await.unwrap();
+            file.flush().await.unwrap();
+            let empty = fs.lookup(s3drive_fs::ROOT, "empty 🦀").await.unwrap();
+            let empty = fs.open_write(empty.id).await.unwrap();
+            empty
+                .write(0, Arc::from(&b"x"[..]), false, false)
+                .await
+                .unwrap();
+            empty.truncate(0).await.unwrap();
+            empty.flush().await.unwrap();
+            assert!(empty.read(0, 100).await.unwrap().is_empty());
+            drop(empty);
+            // Two stores share the authority and local owner, without alias keys.
+            let other = fs
+                .lookup(s3drive_fs::ROOT, "other bucket.txt")
+                .await
+                .unwrap();
+            let second = fs.open_write(other.id).await.unwrap();
+            second.truncate(0).await.unwrap();
+            second
+                .write(0, Arc::from(&b"second-local"[..]), false, false)
+                .await
+                .unwrap();
+            second.flush().await.unwrap();
+            drop(second);
+            // A metadata-only rename must not invalidate the content guard.
+            file.write(0, Arc::from(&b"rename-safe"[..]), false, false)
+                .await
+                .unwrap();
+            change(
+                &w,
+                3041,
+                Mutation::Move {
+                    node: id(11),
+                    parent: id(10),
+                    name: MOVED.into(),
+                },
+            )
+            .await;
+            file.flush().await.unwrap();
+            assert_eq!(file.read(0, 11).await.unwrap(), b"rename-safe");
+            drop(file);
+            // Verified clean refresh adopts another publisher's content. Old
+            // handles remain pinned and cannot write their stale original base.
+            let old = fs.open_write(n.id).await.unwrap();
+            publish(&root, &w, "first", 200, 11, 1040, &data(1)).await;
+            let fresh = fs.open_write(n.id).await.unwrap();
+            assert_eq!(fresh.read(0, 100).await.unwrap(), data(1)[..100]);
+            assert_eq!(old.read(0, 11).await.unwrap(), b"rename-safe");
+            assert!(old.flush().await.is_err());
+            assert!(
+                old.write(0, Arc::from(&b"stale"[..]), false, false)
+                    .await
+                    .is_err()
+            );
+            drop(old);
+            fresh
+                .write(0, Arc::from(&b"dirty conflict"[..]), false, false)
+                .await
+                .unwrap();
+            publish(&root, &w, "first", 200, 11, 1050, &data(2)).await;
+            assert!(fresh.flush().await.is_err());
+            assert_eq!(fresh.read(0, 14).await.unwrap(), b"dirty conflict");
+            assert!(fs.open(n.id).await.is_err());
+        }
+        "rw-conflict-reopen" => {
+            let fs = s3drive_fs::ReadOnlyFs::new(&c).await.unwrap();
+            let d = fs.lookup(s3drive_fs::ROOT, DIR).await.unwrap();
+            let n = fs.lookup(d.id, MOVED).await.unwrap();
+            assert!(fs.open_write(n.id).await.is_err());
+            assert!(fs.flush_all().await.is_err());
+        }
         "engine" => {
             let fs = s3drive_fs::ReadOnlyFs::new(&c).await.unwrap();
             assert!(fs.is_read_only());
@@ -604,5 +756,139 @@ pub async fn native() {
     );
     eprintln!(
         "Managed native acceptance: Unicode, two buckets, old/new handles, rename/unlink, authorization denial, authority restart; exactly 3 immutable PUTs"
+    );
+}
+
+pub async fn portable_writes() {
+    let f = Fixture::start().await;
+    let tmp = tempfile::tempdir().unwrap();
+    let (h, s) = Harness::new(tmp.path(), &f).await;
+    h.configure_writable();
+    let before = puts(&f);
+    h.child("rw-stage").await;
+    assert_eq!(puts(&f), before, "local writes/read-only close emitted PUT");
+    h.child("rw-resume").await;
+    assert_eq!(
+        puts(&f),
+        before + 6,
+        "empty publication, coalesced flushes, second store, rename and two producer updates"
+    );
+    h.child("rw-conflict-reopen").await;
+    assert_eq!(puts(&f), before + 6, "conflict replay emitted PUT");
+    s.stop().await;
+}
+
+pub async fn native_writes() {
+    let f = Fixture::start().await;
+    let tmp = tempfile::tempdir().unwrap();
+    let (h, s) = Harness::new(tmp.path(), &f).await;
+    h.configure_writable();
+    let seed_puts = puts(&f);
+    let m = h.mount().await;
+    let empty = h.mount.join("empty 🦀");
+    let mut empty = std::fs::OpenOptions::new()
+        .write(true)
+        .open(&empty)
+        .unwrap();
+    empty.write_all(b"x").unwrap();
+    empty.set_len(0).unwrap();
+    empty.sync_all().unwrap();
+    drop(empty);
+    assert_eq!(puts(&f), seed_puts + 1);
+    let before = puts(&f);
+    let path = h.mount.join(DIR).join(FILE);
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&path)
+        .unwrap();
+    file.set_len(0).unwrap();
+    file.write_all(b"abcdefghij").unwrap();
+    file.seek(SeekFrom::Start(2)).unwrap();
+    file.write_all(b"XY\0\xff").unwrap();
+    assert_eq!(std::fs::read(&path).unwrap(), b"abXY\0\xffghij");
+    assert_eq!(puts(&f), before, "read-only close flushed dirty file");
+    file.sync_all().unwrap();
+    assert_eq!(puts(&f), before + 1);
+    file.set_len(5).unwrap();
+    let mut append = std::fs::OpenOptions::new()
+        .append(true)
+        .open(&path)
+        .unwrap();
+    append.write_all(b"tail").unwrap();
+    append.sync_all().unwrap();
+    drop(append);
+    file.seek(SeekFrom::Start(12)).unwrap();
+    file.write_all(b"!").unwrap();
+    assert_eq!(std::fs::read(&path).unwrap(), b"abXY\0tail\0\0\0!");
+    assert!(file.set_len(8 * 1024 * 1024 + 1).is_err());
+    assert!(std::fs::write(h.mount.join("new file"), b"unsupported").is_err());
+    let other = h.mount.join("other bucket.txt");
+    let mut second = std::fs::OpenOptions::new()
+        .write(true)
+        .open(&other)
+        .unwrap();
+    second.set_len(0).unwrap();
+    second.write_all(b"second-local").unwrap();
+    second.sync_all().unwrap();
+    drop(second);
+    h.child("rename").await;
+    file.sync_all().unwrap();
+    assert_eq!(puts(&f), before + 4);
+    let moved = h.mount.join(DIR).join(MOVED);
+    assert_eq!(std::fs::read(&moved).unwrap(), b"abXY\0tail\0\0\0!");
+    file.seek(SeekFrom::Start(0)).unwrap();
+    file.write_all(b"durable").unwrap();
+    let expected = std::fs::read(&moved).unwrap();
+    assert_eq!(puts(&f), before + 4);
+    m.kill().await;
+    drop(file);
+    let m = h.mount().await;
+    assert_eq!(std::fs::read(&moved).unwrap(), expected);
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&moved)
+        .unwrap();
+    file.sync_all().unwrap();
+    assert_eq!(puts(&f), before + 5, "dirty restart replayed writes");
+    // Actual SDK PUT commits, loses its reply, and refuses observation. The
+    // native write is locally durable; fsync must fail and retain its IDs.
+    f.hide_committed.store(true, Ordering::SeqCst);
+    file.write_all(b"lost").unwrap();
+    assert_eq!(puts(&f), before + 5);
+    assert!(file.sync_all().is_err());
+    assert_eq!(puts(&f), before + 6);
+    m.kill().await;
+    drop(file);
+    writes::restore_observation(&f);
+    let m = h.mount().await;
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&moved)
+        .unwrap();
+    file.sync_all().unwrap();
+    assert_eq!(puts(&f), before + 6, "uncertain PUT replayed after restart");
+    assert_eq!(&std::fs::read(&moved).unwrap()[..4], b"lost");
+    // Another machine wins while local edits remain dirty. Its object survives.
+    file.seek(SeekFrom::Start(4)).unwrap();
+    file.write_all(b"conflict").unwrap();
+    h.child("update").await;
+    assert!(file.sync_all().is_err());
+    let mut local = Vec::new();
+    file.seek(SeekFrom::Start(0)).unwrap();
+    file.read_to_end(&mut local).unwrap();
+    assert_eq!(&local[..4], b"lost");
+    assert_eq!(&local[4..12], b"conflict");
+    assert!(std::fs::File::open(&moved).is_err());
+    assert_eq!(puts(&f), before + 7);
+    m.kill().await;
+    drop(file);
+    h.child("rw-conflict-reopen").await;
+    assert_eq!(puts(&f), before + 7);
+    s.stop().await;
+    eprintln!(
+        "managed native writes: Unicode, two stores, patch/truncate/append/sparse, rename, dirty restart, uncertain PUT recovery and retained conflict passed"
     );
 }

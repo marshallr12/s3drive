@@ -371,7 +371,7 @@ impl FileSystemContext for Adapter {
         if let Some(context) = context {
             self.wait(async {
                 if let Some(file) = &context.file {
-                    file.flush().await.map_err(storage_error)?;
+                    file.flush_on_close().await.map_err(storage_error)?;
                 }
                 Ok(())
             })?;

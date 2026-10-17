@@ -512,3 +512,9 @@ async fn managed_native_child() {
 async fn actual_managed_namespace_and_immutable_reads() {
     managed::native().await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "native managed write acceptance: requires the real OS filesystem driver"]
+async fn actual_managed_existing_file_writes_and_recovery() {
+    managed::native_writes().await;
+}

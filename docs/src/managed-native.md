@@ -145,9 +145,9 @@ must never issue PUT or DELETE. CI uses real drivers on Linux and a remote
 Windows Server 2025 VM, not this Linux workstation or Windows desktop emulation.
 
 [P6m3b1](managed-edits.md) adds durable local logical heads and publication settlement.
-P6m3b2 must connect local edit views, patch/truncate, remote fsync and recovery
-to existing-file callbacks. P6m3b3 adds portable names and managed
-create/save/replace/rename/delete. Native writable acceptance, service
-supervision, multi-host/Turso deployment, large files, garbage collection and
-live-provider managed acceptance remain unfinished. Existing direct writable
+[P6m3b2](managed-write-plan.md) adds version-4 local edit views, patch/truncate,
+remote fsync and recovery for existing-file callbacks, with its own native case.
+P6m3b3 still needs portable names and managed create/save/replace/rename/delete.
+Service supervision, multi-host/Turso deployment, large files, garbage collection
+and live-provider managed acceptance remain unfinished. Existing direct writable
 mount evidence does not certify those behaviors.

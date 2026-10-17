@@ -280,7 +280,7 @@ CLI test also kills a real SDK/authority client after metadata commit but before
 local settlement. Its restart must settle without another PUT, retain a newer
 head and preserve a later conflicting blob. No new Wasabi approval is consumed.
 Native suites still exercise managed read-only and direct-write regressions;
-writable managed callbacks require their own subsequent acceptance.
+writable managed callbacks have their own subsequent acceptance case below.
 
 ### Linux ownership release during process creation
 
@@ -300,3 +300,34 @@ an inherited descriptor does not become a new State owner. The pinned Rust
 Strict migration reopen checks remain immediate, without retries. A Linux
 regression runs one hundred migration rounds while another thread creates
 processes, alongside the existing live-owner and process-death exclusion tests.
+
+
+## Managed existing-file editing acceptance (2026-10-17)
+
+[Version-4 managed editing](managed-write-plan.md) adds schema-11 verified base
+observations and `content-cas-v1`. The portable managed engine test uses actual
+SDK/authority processes and exactly eight immutable PUTs total: two seed payloads,
+a coalesced recovered head, empty-file publication, another store, rename-safe
+publication and two external updates. Retrying the retained conflict adds no PUT.
+State tests separately verify independent file guards, old request hashes,
+metadata-only renames, same-file rejection, migration and retained dirty bases.
+The pinned getrandom 0.4.3 `fill` implementation was inspected locally before using
+it for durable operation IDs; no new dependency version was introduced.
+
+The Linux/Windows ignored suites each add
+`actual_managed_existing_file_writes_and_recovery`. They must pass real driver
+edits, read-only close without publication, Unicode/empty/two-store operations,
+metadata rename, a killed dirty mount and restart, an unknown committed PUT whose
+observation is blocked, another restart without PUT replay, and retained competing
+changes. Native editing results must come from terminal CI for the exact source;
+the [branch CI history](https://github.com/marshallr12/s3drive/actions?query=branch%3Acodex%2Fmanaged-native-writes)
+identifies candidate runs. Windows runs on a remote Server 2025 VM. This local
+MX executor cannot acquire a FUSE mount under NoNewPrivs; do not work around it.
+
+The authoritative phase-start checkpoint is
+`e216fb869ef58e77969b7ef92dd69e2932f0b21d`,
+[run 39006862182](https://github.com/marshallr12/s3drive/actions/runs/39006862182),
+which passed Linux/Windows/book with the four prior native cases per OS.
+That checkpoint certifies the local-edit library, not the new native writer.
+No new live Wasabi upload, startup registration or Turso deployment is authorized
+or performed by the fixture gates.

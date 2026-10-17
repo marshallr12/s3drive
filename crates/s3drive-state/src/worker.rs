@@ -502,6 +502,9 @@ impl Managed {
     pub async fn begin(&self, input: crate::managed::Input) -> Result<crate::managed::Record> {
         self.call(move |j| j.begin(input)).await
     }
+    pub async fn lookup(&self, id: String) -> Result<Option<crate::managed::Record>> {
+        self.call(move |j| j.lookup(&id)).await
+    }
     pub async fn get(&self, id: String) -> Result<crate::managed::Record> {
         self.call(move |j| j.get(&id)).await
     }
@@ -548,6 +551,20 @@ pub struct Logical {
     options: journal::Options,
 }
 impl Logical {
+    pub async fn lookup(
+        &self,
+        volume: String,
+        node: String,
+    ) -> Result<Option<crate::logical::File>> {
+        self.call(move |j| j.lookup(&volume, &node)).await
+    }
+    pub async fn observe(&self, binding: crate::logical::Binding) -> Result<crate::logical::File> {
+        self.call(move |j| j.observe(binding)).await
+    }
+    pub async fn for_generation(&self, g: GenerationId) -> Result<crate::logical::Record> {
+        self.call(move |j| j.for_generation(g)).await
+    }
+
     async fn call<T: Send + 'static>(
         &self,
         work: impl FnOnce(&mut crate::logical::Journal<'_>) -> Result<T> + Send + 'static,

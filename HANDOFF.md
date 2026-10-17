@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b1 durable managed local edits**; library implemented. Run local and exact-source CI gates before publication.
+Updated: 2026-10-17. Current phase: **P6m3b2 native managed existing-file edits**; implemented on `codex/managed-native-writes`. Run local and exact-source CI gates before publication.
 Goal active. Linux/Windows read-only drives and startup foundations work;
 library writes/flush are progressing toward safe writable native filesystems.
 Do not call the broader editable-drive goal complete before its documented
@@ -17,8 +17,7 @@ safe-write contract and real OS acceptance pass.
   Wasabi is the first live provider; other endpoints need separate conformance.
 - Linux FUSE and Windows WinFsp adapters have stable read-only acceptance.
   Existing opt-in editing and guarded file creation passed native acceptance.
-  Version-3 managed read-only integration is added; managed writable callbacks
-  and full desktop editing remain unfinished.
+  Version-3 managed read-only integration is accepted. Version-4 managed existing-file callbacks are implemented with separate native acceptance; namespace/save-replace remains unfinished.
   New online opens authorize through S3; pinned old handles preserve revisions.
   No ordinary CLI upload command, directory creation, delete/rename,
   multipart, payload reclamation, new offline opens or desktop packaging yet.
@@ -37,18 +36,20 @@ safe-write contract and real OS acceptance pass.
 ## Authoritative publication baseline
 
 Published private main at phase start:
-`eceecf2ae96d6967a0a1e6219fca46ecb540272e` (managed native read-only drives).
-Terminal all-green [run 39003888047](https://github.com/marshallr12/s3drive/actions/runs/39003888047):
-Linux `117312272102`, Windows `117312271979`, book `117312272097`.
-The automatic same-SHA main run `39004701691` also completed successfully.
-Remote main SHA/private visibility and clean local main were verified before
-this branch. Topic branch: `codex/managed-logical-edits`.
+`e216fb869ef58e77969b7ef92dd69e2932f0b21d` (durable managed logical edits).
+Terminal all-green [run 39006862182](https://github.com/marshallr12/s3drive/actions/runs/39006862182):
+Linux `117320990545`, Windows `117320990468`, book `117320990552`.
+Baseline: schema 10, 106 Linux / 102 Windows state tests, 50 S3, 12 FS,
+four authority TCP tests and four native cases per OS. Prior accepted logs:
+`/tmp/s3drive-logical-{linux,windows,book}-ci.log`.
 
-Baseline: schema 9; 93 Linux / 90 Windows state tests, 50 S3, 12 FS and four
-authority TCP tests. Four native cases per OS include managed read-only,
-direct RO/cache/session, existing-file writes and creation. No-systemd and
-Windows non-admin cross-logon checks passed. Exact baseline logs:
-`/tmp/s3drive-managed-native-final-{linux,windows,book}-ci.log`.
+Current branch adds schema 11, content-reference CAS and capability negotiation,
+version-4 config/default store, snapshot-authorized base observation, shared local
+native editing/coalescing and exact-ID recovery. Mutations/base adoption and
+publication are serialized conservatively; reads keep owned snapshots. No native
+namespace mutation/save-replace is enabled. See `docs/src/managed-write-plan.md`.
+Local gate log: `/tmp/s3drive-managed-writer-gate-final2.log`. Before publication require
+terminal exact-tip Linux/Windows/book CI including the fifth native case per OS.
 
 Windows testing runs remotely on GitHub's **Windows Server 2025 VM**, not this
 Linux workstation. Native folder/drive/security/UTF-16 tests and distinct
@@ -249,9 +250,7 @@ were already removed. Do not infer remaining cleanup from old plans/logs.
 
 ## Next implementation and durable decisions
 
-P6m3a native acceptance passed; P6m3b1 now supplies the durable logical-edit
-bridge. Complete P6m3b2 native existing-file editing, then P6m3b3 namespace/save
-workflows, following the implementation plan. Stable storage/file identities,
+P6m3a and P6m3b1 are published. P6m3b2 now connects native existing-file edits; finish its exact-source native gate/publication, then implement P6m3b3 namespace/save workflows following the implementation plan. Stable storage/file identities,
 create-only unique blob keys and metadata CAS are now separate from the direct
 writer's mutable-key ETag lineage; preserve that distinction during integration. Keep uncertain bytes and new physical blob
 references distinct; an S3 upload alone does not acknowledge filesystem flush.

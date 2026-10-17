@@ -1,12 +1,26 @@
 //! Immutable payload reservations and publication CAS. The authenticated client
 //! must verify S3 bytes; the metadata service does not possess S3 credentials.
 use super::*;
+use sha2::{Digest, Sha256};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Store {
     pub id: String,
     pub route: String,
     pub root: String,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ContentGuard {
+    pub expected: Option<String>,
+}
+pub fn payload_reference(payload: &Option<Payload>) -> Option<String> {
+    payload.as_ref().map(|p| {
+        let mut h = Sha256::new();
+        h.update(b"s3drive-content-reference-v1\0");
+        h.update(serde_json::to_vec(p).expect("payload serialization"));
+        h.finalize().iter().map(|b| format!("{b:02x}")).collect()
+    })
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -19,6 +33,8 @@ pub struct Reservation {
     pub key: String,
     pub size: u64,
     pub sha256: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub guard: Option<ContentGuard>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -74,6 +90,10 @@ impl Reservation {
             && self.expected_revision < i64::MAX as u64
             && self.size <= 8 * 1024 * 1024
             && digest(&self.sha256)
+            && self
+                .guard
+                .as_ref()
+                .is_none_or(|g| g.expected.as_ref().is_none_or(|s| digest(s)))
             && self.key
                 == format!(
                     "{}v1/{}/{}/{}",
@@ -93,7 +113,34 @@ fn valid_proof(operation: &str, etag: &str, version: Option<&str>) -> bool {
         && version.is_none_or(|v| v != "null" && v.len() <= 1024)
         && crate::remote::Revision::new(etag, version).is_ok()
 }
+pub(super) fn uses_content_guard(db: &Connection, m: &Mutation) -> Result<bool> {
+    match m {
+        Mutation::ReserveContent { .. } => Ok(true),
+        Mutation::Publish {
+            reservation: id, ..
+        } => match reservation(db, id) {
+            Ok(r) => Ok(r.guard.is_some()),
+            Err(Error::NotFound) => Ok(false),
+            Err(e) => Err(e),
+        },
+        _ => Ok(false),
+    }
+}
+fn base_matches(n: &Node, revision: u64, guard: Option<&ContentGuard>) -> bool {
+    n.kind != Kind::Directory
+        && match guard {
+            Some(g) => payload_reference(&n.payload) == g.expected,
+            None => n.revision == revision,
+        }
+}
 pub(super) fn valid(m: &Mutation) -> bool {
+    if let Mutation::ReserveContent {
+        expected_payload, ..
+    } = m
+        && expected_payload.as_ref().is_some_and(|s| !digest(s))
+    {
+        return false;
+    }
     match m {
         Mutation::RegisterStore { route, root: r } => digest(route) && root(r),
         Mutation::Reserve {
@@ -102,6 +149,14 @@ pub(super) fn valid(m: &Mutation) -> bool {
             store,
             size,
             sha256,
+        }
+        | Mutation::ReserveContent {
+            node,
+            expected_revision,
+            store,
+            size,
+            sha256,
+            ..
         } => {
             valid_id(node)
                 && node != ROOT
@@ -210,9 +265,25 @@ pub(super) fn mutate(
             store: store_id,
             size,
             sha256,
+        }
+        | Mutation::ReserveContent {
+            node: id,
+            expected_revision,
+            store: store_id,
+            size,
+            sha256,
+            ..
         } => {
+            let guard = match &request.mutation {
+                Mutation::ReserveContent {
+                    expected_payload, ..
+                } => Some(ContentGuard {
+                    expected: expected_payload.clone(),
+                }),
+                _ => None,
+            };
             let n = live_node(db, id)?;
-            if n.kind == Kind::Directory || n.revision != *expected_revision {
+            if !base_matches(&n, *expected_revision, guard.as_ref()) {
                 return Err(Error::Conflict);
             }
             let count: i64 =
@@ -233,6 +304,7 @@ pub(super) fn mutate(
                 store,
                 size: *size,
                 sha256: sha256.clone(),
+                guard,
             };
             if !reservation.valid() {
                 return Err(Error::Invalid);
@@ -251,7 +323,7 @@ pub(super) fn mutate(
         } => {
             let r = reservation(db, id)?;
             let n = live_node(db, &r.node)?;
-            if n.kind == Kind::Directory || n.revision != r.expected_revision {
+            if !base_matches(&n, r.expected_revision, r.guard.as_ref()) {
                 return Err(Error::Conflict);
             }
             let prior: Option<Vec<u8>> = sql(db.query_row(
@@ -269,7 +341,7 @@ pub(super) fn mutate(
                 version: version.clone(),
             };
             let bytes = encode(&p)?;
-            let changed=sql(db.execute("UPDATE namespace_nodes SET payload=?1,revision=?2 WHERE node_id=?3 AND revision=?4 AND deleted=0",params![bytes,sequence as i64,p.reservation.node,p.reservation.expected_revision as i64]))?;
+            let changed=sql(db.execute("UPDATE namespace_nodes SET payload=?1,revision=?2 WHERE node_id=?3 AND revision=?4 AND deleted=0",params![bytes,sequence as i64,p.reservation.node,n.revision as i64]))?;
             if changed != 1 {
                 return Err(Error::Conflict);
             }

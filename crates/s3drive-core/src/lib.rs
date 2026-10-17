@@ -29,6 +29,7 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ManagedConfig {
+    pub default_store: Option<String>,
     pub authority: String,
     pub volume: String,
     pub token_file: PathBuf,
@@ -197,19 +198,40 @@ impl Config {
 
     pub fn validate(&self) -> Result<(), String> {
         if let Some(managed) = &self.managed {
-            if self.version != 3
-                || self.mode != Mode::ReadOnly
-                || self.writes.is_some()
-                || self.cache.is_some()
+            if !matches!(
+                (&self.mode, self.version, &self.writes),
+                (Mode::ReadOnly, 3, None) | (Mode::ReadWrite, 4, Some(_))
+            ) || self.cache.is_some()
             {
-                return Err("version 3 currently supports managed read-only mode without local writes/cache".into());
+                return Err("managed mode requires version 3/read-only or version 4/read-write with policies, without a separate cache".into());
             }
             managed.validate(&self.sources)?;
+            if self.version == 3 && managed.default_store.is_some() {
+                return Err(
+                    "read-only managed settings do not select a default write store".into(),
+                );
+            }
+            if self.version == 4
+                && !managed.default_store.as_ref().is_some_and(|id| {
+                    managed.stores.iter().any(|s| {
+                        &s.id == id
+                            && self
+                                .writes
+                                .as_ref()
+                                .unwrap()
+                                .sources
+                                .iter()
+                                .any(|w| w.alias == s.source)
+                    })
+                })
+            {
+                return Err("managed writes require a mapped policy-bound default_store for unpublished empty files".into());
+            }
         }
         match (&self.mode, self.version, &self.writes) {
             (Mode::ReadOnly, 3, None) if self.managed.is_some() => {}
             (Mode::ReadOnly, 1, None) if self.managed.is_none() => {}
-            (Mode::ReadWrite, 2, Some(writes)) if self.managed.is_none() => {
+            (Mode::ReadWrite, version, Some(writes)) if (version==2 && self.managed.is_none()) || (version==4 && self.managed.is_some()) => {
                 if !absolute_local(&writes.directory)
                     || writes.sources.is_empty()
                     || self
@@ -232,7 +254,7 @@ impl Config {
                 }
             }
             _ => return Err(
-                "version 1 is read-only; version 2 requires writes; version 3 requires read-only managed settings"
+                "version 1 is read-only; version 2 requires writes; versions 3/4 require managed read-only/read-write settings"
                     .into(),
             ),
         }
@@ -422,6 +444,31 @@ mod tests {
             EXAMPLE.replace("version = 1", "version = 3"),
             token.to_str().unwrap()
         );
+        let writable = format!(
+            "{}\n[writes]\ndirectory={:?}\n[[writes.sources]]\nalias='documents'\npolicy={:?}\nplan={:?}\nreport={:?}\n",
+            text.replace("version = 3", "version = 4")
+                .replace("read-only", "read-write")
+                .replace(
+                    "[managed]",
+                    "[managed]\ndefault_store='00000000000000000000000000000002'"
+                ),
+            token.parent().unwrap().join("writes").to_str().unwrap(),
+            token.parent().unwrap().join("policy").to_str().unwrap(),
+            token.parent().unwrap().join("plan").to_str().unwrap(),
+            token.parent().unwrap().join("report").to_str().unwrap()
+        );
+        assert!(Config::parse(&writable).is_ok());
+        for (from, to) in [
+            ("default_store='00000000000000000000000000000002'", ""),
+            (
+                "default_store='00000000000000000000000000000002'",
+                "default_store='00000000000000000000000000000003'",
+            ),
+            ("version = 4", "version = 3"),
+            ("alias='documents'", "alias='photos'"),
+        ] {
+            assert!(Config::parse(&writable.replace(from, to)).is_err());
+        }
         let config = Config::parse(&text).unwrap();
         assert!(config.resolve("documents/a.txt").is_err());
         for (from, to) in [

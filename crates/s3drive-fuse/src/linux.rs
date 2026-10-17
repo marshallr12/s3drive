@@ -345,7 +345,7 @@ impl Filesystem for Adapter {
         _lock_owner: LockOwner,
         reply: ReplyEmpty,
     ) {
-        self.flush_handle(ino, fh, reply);
+        self.flush_handle(ino, fh, reply, true);
     }
     fn fsync(
         &self,
@@ -355,7 +355,7 @@ impl Filesystem for Adapter {
         _datasync: bool,
         reply: ReplyEmpty,
     ) {
-        self.flush_handle(ino, fh, reply);
+        self.flush_handle(ino, fh, reply, false);
     }
     fn release(
         &self,
@@ -464,11 +464,17 @@ impl Adapter {
             Err(_) => reply.error(Errno::EIO),
         }
     }
-    fn flush_handle(&self, ino: INodeNo, fh: FileHandle, reply: ReplyEmpty) {
+    fn flush_handle(&self, ino: INodeNo, fh: FileHandle, reply: ReplyEmpty, closing: bool) {
         match self.handle(fh) {
             Ok(handle) if matches!(&*handle, OpenHandle::File(file) if file.node.id == ino.0) => {
                 let result = match &*handle {
-                    OpenHandle::File(file) => self.wait(file.flush()),
+                    OpenHandle::File(file) => {
+                        if closing {
+                            self.wait(file.flush_on_close())
+                        } else {
+                            self.wait(file.flush())
+                        }
+                    }
                     _ => Err(Errno::EBADF),
                 };
                 match result {

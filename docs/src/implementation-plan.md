@@ -284,7 +284,7 @@ availability and retain MX/no-systemd and Windows cross-logon requirements.
 ## P6m3b managed writable steps (updated 2026-10-17)
 
 P6m3a now has real native read acceptance. Complete these independently green
-steps before enabling managed writes in configuration:
+steps before claiming full managed filesystem/save support:
 
 1. **P6m3b1: durable logical edit heads — library implemented.** See the
    [contract and recovery acceptance](managed-edits.md). Persist volume/node/store identity,
@@ -296,7 +296,7 @@ steps before enabling managed writes in configuration:
    acknowledge it; settlement of an older generation must retain a newer head.
    Acceptance: process death/lost replies at each durable boundary, full-disk
    rollback, corruption/refusal, concurrent local edits and retained conflicts.
-2. **P6m3b2: existing-file native editing.** Add explicit policy-bound managed
+2. **P6m3b2: existing-file native editing — implemented, separate native acceptance.** See [the phase contract](managed-write-plan.md). Add explicit policy-bound managed
    write configuration and a shared local file view, patch/truncate/append,
    local read-your-writes and generation-specific remote fsync. Coalesce local
    writes before publication rather than uploading each patch. An external

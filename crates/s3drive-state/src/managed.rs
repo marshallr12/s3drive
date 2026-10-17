@@ -32,15 +32,32 @@ impl Input {
         self.reserve
             .validate()
             .map_err(|_| "invalid managed reservation")?;
-        let Mutation::Reserve {
-            node,
-            expected_revision,
-            store,
-            size,
-            sha256,
-        } = &self.reserve.mutation
-        else {
-            return Err("managed input must reserve a blob".into());
+        let (node, expected_revision, store, size, sha256, guard) = match &self.reserve.mutation {
+            Mutation::Reserve {
+                node,
+                expected_revision,
+                store,
+                size,
+                sha256,
+            } => (node, expected_revision, store, size, sha256, None),
+            Mutation::ReserveContent {
+                node,
+                expected_revision,
+                store,
+                size,
+                sha256,
+                expected_payload,
+            } => (
+                node,
+                expected_revision,
+                store,
+                size,
+                sha256,
+                Some(crate::namespace::ContentGuard {
+                    expected: expected_payload.clone(),
+                }),
+            ),
+            _ => return Err("managed input must reserve a blob".into()),
         };
         let r = Reservation {
             id: self.id().into(),
@@ -57,6 +74,7 @@ impl Input {
             ),
             size: *size,
             sha256: sha256.clone(),
+            guard,
         };
         let probe = Apply {
             volume: r.volume.clone(),
@@ -199,8 +217,12 @@ fn check_receipt(r: &Record, receipt: &Receipt) -> Result<()> {
         etag: etag.clone(),
         version: version.clone(),
     };
-    if receipt.sequence != p.expected_sequence + 1
-        || receipt.node.revision != receipt.sequence
+    let content = r.input.reservation()?.guard.is_some();
+    if (if content {
+        receipt.sequence <= p.expected_sequence
+    } else {
+        receipt.sequence != p.expected_sequence + 1
+    }) || receipt.node.revision != receipt.sequence
         || receipt.node.id != payload.reservation.node
         || receipt.node.deleted
         || receipt.node.kind != Kind::File
@@ -231,6 +253,9 @@ impl<'a> Journal<'a> {
             state,
             options: options.validate()?,
         })
+    }
+    pub fn lookup(&self, id: &str) -> Result<Option<Record>> {
+        load(&self.state.connection, id)
     }
     pub fn get(&self, id: &str) -> Result<Record> {
         load(&self.state.connection, id)?.ok_or_else(|| "unknown managed publication".into())

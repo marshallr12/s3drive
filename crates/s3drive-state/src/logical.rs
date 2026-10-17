@@ -148,28 +148,47 @@ pub struct File {
     pub head: Option<GenerationId>,
     pub settled: Option<GenerationId>,
     pub base: Node,
+    pub base_observed: bool,
 }
 #[derive(Clone, Serialize, Deserialize)]
 struct FileRow {
     binding: Binding,
     settled: Option<GenerationId>,
     publication: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    observed: Option<Node>,
 }
 fn record_hash(r: &Record) -> Result<Vec<u8>> {
     hash(&(&r.input, &r.generation, &r.publication, &r.receipt))
 }
+type EncodedFileRow = (
+    Vec<u8>,
+    Option<i64>,
+    Option<String>,
+    Vec<u8>,
+    Option<Vec<u8>>,
+);
 fn file_row(db: &Connection, volume: &str, node: &str) -> Result<FileRow> {
-    let shape:bool=db.query_row("SELECT length(input)<=32768 AND length(state_hash)=32 AND coalesce(length(settled_publication),0)<=32 FROM logical_files WHERE volume=?1 AND node=?2",params![volume,node],|r|r.get(0))?;
+    let shape:bool=db.query_row("SELECT length(input)<=32768 AND length(state_hash)=32 AND coalesce(length(settled_publication),0)<=32 AND coalesce(length(observed_base),0)<=32768 FROM logical_files WHERE volume=?1 AND node=?2",params![volume,node],|r|r.get(0))?;
     if !shape {
         return Err("invalid logical file record shape".into());
     }
-    let (input,generation,publication,checksum):(Vec<u8>,Option<i64>,Option<String>,Vec<u8>)=db.query_row("SELECT input,settled_generation,settled_publication,state_hash FROM logical_files WHERE volume=?1 AND node=?2",params![volume,node],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?)))?;
+    let (input,generation,publication,checksum,observed):EncodedFileRow=db.query_row("SELECT input,settled_generation,settled_publication,state_hash,observed_base FROM logical_files WHERE volume=?1 AND node=?2",params![volume,node],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?)))?;
     let f = FileRow {
         binding: serde_json::from_slice(&input)?,
         settled: generation.map(GenerationId::from_database).transpose()?,
         publication,
+        observed: observed.map(|b| serde_json::from_slice(&b)).transpose()?,
     };
     f.binding.validate()?;
+    if let Some(node) = &f.observed {
+        let mut binding = f.binding.clone();
+        binding.node = node.clone();
+        binding.validate()?;
+        if node.id != f.binding.node.id {
+            return Err("observed logical identity changed".into());
+        }
+    }
     if f.binding.volume != volume
         || f.binding.node.id != node
         || f.settled.is_some() != f.publication.is_some()
@@ -290,7 +309,7 @@ fn ancestor(
     Err("logical ancestry exceeds retained bounds".into())
 }
 pub(crate) fn check_schema(db: &Connection) -> Result<()> {
-    db.prepare("SELECT volume,node,input,settled_generation,settled_publication,state_hash FROM logical_files LIMIT 0")?;
+    db.prepare("SELECT volume,node,input,settled_generation,settled_publication,state_hash,observed_base FROM logical_files LIMIT 0")?;
     db.prepare("SELECT operation_id,volume,node,input,generation_id,publication,receipt,state_hash FROM logical_edits LIMIT 0")?;
     db.prepare("SELECT operation_id,edit_id FROM logical_publication_links LIMIT 0")?;
     Ok(())
@@ -347,9 +366,10 @@ impl<'a> Journal<'a> {
             binding: binding.clone(),
             settled: None,
             publication: None,
+            observed: None,
         };
         tx.execute(
-            "INSERT INTO logical_files VALUES(?1,?2,?3,NULL,NULL,?4)",
+            "INSERT INTO logical_files(volume,node,input,settled_generation,settled_publication,state_hash) VALUES(?1,?2,?3,NULL,NULL,?4)",
             params![
                 binding.volume,
                 binding.node.id,
@@ -358,6 +378,85 @@ impl<'a> Journal<'a> {
             ],
         )?;
         tx.commit()?;
+        self.file(&binding.volume, &binding.node.id)
+    }
+    pub fn lookup(&mut self, volume: &str, node: &str) -> Result<Option<File>> {
+        let exists: bool = self.state.connection.query_row(
+            "SELECT EXISTS(SELECT 1 FROM logical_files WHERE volume=?1 AND node=?2)",
+            params![volume, node],
+            |r| r.get(0),
+        )?;
+        if exists {
+            self.file(volume, node).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+    pub fn for_generation(&mut self, g: GenerationId) -> Result<Record> {
+        let id: String = self.state.connection.query_row(
+            "SELECT operation_id FROM logical_edits WHERE generation_id=?",
+            [g.value()],
+            |r| r.get(0),
+        )?;
+        self.get(&id)
+    }
+    /// Caller supplies a freshly authorized immutable snapshot. Never discard
+    /// a draft or adopt different remote content over any dirty local head.
+    pub fn observe(&mut self, binding: Binding) -> Result<File> {
+        binding.validate()?;
+        let Some(file) = self.lookup(&binding.volume, &binding.node.id)? else {
+            return self.bind(binding);
+        };
+        let mut original = binding.clone();
+        original.node = file.binding.node.clone();
+        if original != file.binding {
+            return Err("logical credential binding changed".into());
+        }
+        if binding.node == file.base {
+            return Ok(file);
+        }
+        if binding.node.revision <= file.base.revision {
+            return Err("logical observation regressed".into());
+        }
+        let changed = namespace::payload_reference(&binding.node.payload)
+            != namespace::payload_reference(&file.base.payload);
+        if changed {
+            if file.head != file.settled {
+                return Err("external content conflicts with dirty head".into());
+            }
+            let ids = self
+                .state
+                .connection
+                .prepare("SELECT operation_id FROM logical_edits WHERE volume=?1 AND node=?2")?
+                .query_map(params![binding.volume, binding.node.id], |r| {
+                    r.get::<_, String>(0)
+                })?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            for id in ids {
+                let r = self.get(&id)?;
+                let covered = match (r.generation, file.settled) {
+                    (Some(g), Some(s)) => ancestor(&self.state.connection, &file.binding, g, s)?,
+                    _ => false,
+                };
+                if !covered {
+                    return Err("external content conflicts with retained draft".into());
+                }
+            }
+        }
+        let mut row = file_row(&self.state.connection, &binding.volume, &binding.node.id)?;
+        row.observed = Some(binding.node.clone());
+        let rows = self.state.connection.execute(
+            "UPDATE logical_files SET observed_base=?1,state_hash=?2 WHERE volume=?3 AND node=?4",
+            params![
+                serde_json::to_vec(&binding.node)?,
+                hash(&row)?,
+                binding.volume,
+                binding.node.id
+            ],
+        )?;
+        if rows != 1 {
+            return Err("logical observation not persisted".into());
+        }
         self.file(&binding.volume, &binding.node.id)
     }
     pub fn file(&mut self, volume: &str, node: &str) -> Result<File> {
@@ -399,7 +498,8 @@ impl<'a> Journal<'a> {
             binding: row.binding,
             head,
             settled: row.settled,
-            base,
+            base_observed: row.observed.is_some(),
+            base: row.observed.unwrap_or(base),
         })
     }
     pub fn get(&mut self, id: &str) -> Result<Record> {
@@ -553,6 +653,10 @@ impl<'a> Journal<'a> {
             || reserve.volume != r.input.volume
             || reserve.node != r.input.node
             || reserve.store != file.binding.store
+            || reserve
+                .guard
+                .as_ref()
+                .is_some_and(|g| g.expected != namespace::payload_reference(&file.base.payload))
             || reserve.expected_revision != file.base.revision
             || reserve.size != r.input.size
             || reserve.sha256 != r.input.sha256
@@ -630,6 +734,7 @@ impl<'a> Journal<'a> {
             {
                 return Err("settlement would change lineage".into());
             }
+            row.observed = None;
             row.settled = Some(g);
             row.publication = Some(r.publication.as_ref().unwrap().id().into());
         } else if !ancestor(
@@ -646,7 +751,7 @@ impl<'a> Journal<'a> {
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         save(&tx, &r)?;
-        let changed=tx.execute("UPDATE logical_files SET settled_generation=?1,settled_publication=?2,state_hash=?3 WHERE volume=?4 AND node=?5",params![row.settled.map(|g|g.value()),row.publication,hash(&row)?,row.binding.volume,row.binding.node.id])?;
+        let changed=tx.execute("UPDATE logical_files SET settled_generation=?1,settled_publication=?2,state_hash=?3,observed_base=?6 WHERE volume=?4 AND node=?5",params![row.settled.map(|g|g.value()),row.publication,hash(&row)?,row.binding.volume,row.binding.node.id,row.observed.as_ref().map(serde_json::to_vec).transpose()?])?;
         if changed != 1 {
             return Err("logical settlement was not durably updated".into());
         }

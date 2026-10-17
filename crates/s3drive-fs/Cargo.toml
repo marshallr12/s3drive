@@ -13,6 +13,7 @@ s3drive-s3.workspace = true
 s3drive-state.workspace = true
 tokio.workspace = true
 sha2.workspace = true
+getrandom.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

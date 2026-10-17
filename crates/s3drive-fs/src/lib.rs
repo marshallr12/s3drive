@@ -107,6 +107,7 @@ pub struct OpenFile {
     handle: Option<ReadHandle>,
     initial_metadata: ObjectMetadata,
     managed: Option<s3drive_managed::FileSnapshot>,
+    managed_write: Option<(Arc<managed::writes::Writes>, Arc<managed::writes::File>)>,
     cache: Option<(Arc<CacheBackend>, Key)>,
     snapshot: OnceCell<Pinned>,
     bypass: AtomicBool,
@@ -115,6 +116,9 @@ pub struct OpenFile {
 }
 impl OpenFile {
     pub fn current_metadata(&self) -> Result<ObjectMetadata> {
+        if let Some((_, file)) = &self.managed_write {
+            return file.metadata();
+        }
         match &self.writes {
             Some((_, file)) => file.metadata(),
             None => Ok(self.initial_metadata.clone()),
@@ -130,6 +134,9 @@ impl OpenFile {
         if !self.writable_open {
             return Err(Error::ReadOnly);
         }
+        if let Some((writer, file)) = &self.managed_write {
+            return Box::pin(writer.write(file, offset, bytes, append, constrained)).await;
+        }
         let (writer, file) = self.writes.as_ref().ok_or(Error::ReadOnly)?;
         Box::pin(writer.write(file, offset, bytes, append, constrained)).await
     }
@@ -137,19 +144,34 @@ impl OpenFile {
         if !self.writable_open {
             return Err(Error::ReadOnly);
         }
+        if let Some((writer, file)) = &self.managed_write {
+            return Box::pin(writer.truncate(file, size)).await;
+        }
         let (writer, file) = self.writes.as_ref().ok_or(Error::ReadOnly)?;
         Box::pin(writer.truncate(file, size)).await
     }
     pub async fn flush(&self) -> Result<()> {
+        if let Some((writer, file)) = &self.managed_write {
+            Box::pin(writer.flush(file)).await?;
+        }
         if let Some((writer, file)) = &self.writes {
             Box::pin(writer.flush(file)).await?;
         }
         Ok(())
     }
+    pub async fn flush_on_close(&self) -> Result<()> {
+        if self.managed_write.is_some() && !self.writable_open {
+            return Ok(());
+        }
+        self.flush().await
+    }
     pub fn metadata(&self) -> &ObjectMetadata {
         &self.initial_metadata
     }
     pub async fn read(&self, offset: u64, length: usize) -> Result<Vec<u8>> {
+        if let Some((_, file)) = &self.managed_write {
+            return file.read(offset, length).await;
+        }
         if let Some((_, file)) = &self.writes {
             return file.read(offset, length).await;
         }
@@ -381,11 +403,22 @@ impl ReadOnlyFs {
             .as_ref()
             .map(|cache| cache.worker.clone())
             .or_else(|| self.writes.as_ref().map(|w| w.storage.cache()))
+            .or_else(|| {
+                self.managed
+                    .as_ref()
+                    .and_then(|m| m.writes.as_ref())
+                    .map(|w| w.storage.cache())
+            })
     }
     pub fn is_read_only(&self) -> bool {
-        self.writes.is_none()
+        self.writes.is_none() && self.managed.as_ref().is_none_or(|m| m.writes.is_none())
     }
     pub async fn capacity(&self) -> Result<Option<s3drive_state::journal::Capacity>> {
+        if let Some(w) = self.managed.as_ref().and_then(|m| m.writes.as_ref()) {
+            return Ok(Some(
+                w.storage.staging().capacity().await.map_err(cache_error)?,
+            ));
+        }
         match &self.writes {
             Some(w) => Ok(Some(
                 w.storage.staging().capacity().await.map_err(cache_error)?,
@@ -394,6 +427,9 @@ impl ReadOnlyFs {
         }
     }
     pub fn writable(&self, node: &Node) -> bool {
+        if let Some(w) = self.managed.as_ref().and_then(|m| m.writes.as_ref()) {
+            return node.kind == Kind::File && w.permits(&node.key);
+        }
         node.kind == Kind::File
             && node.source.is_some_and(|source| {
                 self.writes
@@ -454,6 +490,9 @@ impl ReadOnlyFs {
         Box::pin(self.open_mode(node.id, writing)).await
     }
     pub async fn flush_all(&self) -> Result<()> {
+        if let Some(w) = self.managed.as_ref().and_then(|m| m.writes.as_ref()) {
+            w.flush_all().await?;
+        }
         if let Some(writes) = &self.writes {
             writes.flush_all().await?;
         }
@@ -487,7 +526,12 @@ impl ReadOnlyFs {
             return listing
                 .children
                 .into_iter()
-                .map(|n| nodes.insert_managed(&n, parent.id))
+                .map(|n| {
+                    if let Some(w) = &backend.writes {
+                        w.remember(&n)?;
+                    }
+                    nodes.insert_managed(&n, parent.id)
+                })
                 .collect();
         }
         let Some(source) = parent.source else {
@@ -565,7 +609,15 @@ impl ReadOnlyFs {
             return Ok(if live.kind == s3drive_authority::Kind::Directory {
                 None
             } else {
-                Some(managed::metadata(&live))
+                {
+                    if let Some(w) = &backend.writes {
+                        w.remember(&live)?;
+                        if let Some(metadata) = w.metadata(&live.id)? {
+                            return Ok(Some(metadata));
+                        }
+                    }
+                    Some(managed::metadata(&live))
+                }
             });
         }
         if self.writes.is_some() && node.kind == Kind::File {
@@ -593,22 +645,35 @@ impl ReadOnlyFs {
             return Err(Error::IsDirectory);
         }
         if let Some(backend) = &self.managed {
-            if writing {
+            if writing && backend.writes.is_none() {
                 return Err(Error::ReadOnly);
             }
             let snapshot = Box::pin(backend.reader.read(&node.key))
                 .await
                 .map_err(managed::error)?;
+            let initial_metadata = managed::metadata(snapshot.metadata());
+            let managed_write = if let Some(w) = &backend.writes {
+                w.open(snapshot.clone(), writing)
+                    .await?
+                    .map(|file| (w.clone(), file))
+            } else {
+                None
+            };
             return Ok(OpenFile {
-                initial_metadata: managed::metadata(snapshot.metadata()),
+                initial_metadata,
                 node,
                 handle: None,
-                managed: Some(snapshot),
+                managed: if managed_write.is_none() {
+                    Some(snapshot)
+                } else {
+                    None
+                },
+                managed_write,
                 cache: None,
                 snapshot: OnceCell::new(),
                 bypass: AtomicBool::new(false),
                 writes: None,
-                writable_open: false,
+                writable_open: writing,
             });
         }
         let reader = &self.readers[node.source.ok_or(Error::Internal)?];
@@ -649,6 +714,7 @@ impl ReadOnlyFs {
             initial_metadata: handle.metadata().clone(),
             handle: Some(handle),
             managed: None,
+            managed_write: None,
             cache,
             snapshot: OnceCell::new(),
             bypass: AtomicBool::new(false),
