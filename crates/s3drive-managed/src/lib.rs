@@ -213,6 +213,20 @@ impl Publisher {
             })
             .await
     }
+    pub fn check_edit_binding(&self, binding: &s3drive_state::logical::Binding) -> Result<()> {
+        let target = self
+            .0
+            .executor
+            .recovery_target(&format!("{}binding", self.0.store.root))?;
+        if binding.volume != self.0.volume
+            || binding.store != self.0.store
+            || binding.source != *target.source()
+            || binding.fingerprint != target.fingerprint()
+        {
+            return Err(Failure::Binding.into());
+        }
+        Ok(())
+    }
     pub fn can_edit(&self, node: &str, size: u64) -> bool {
         let key = format!(
             "{}v1/{}/{}/{}",

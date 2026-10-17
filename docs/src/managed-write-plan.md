@@ -36,7 +36,7 @@ identity and may still be observed after policy expiry.
 Handles in one mount share a mutable view of each current logical file. Successful
 patch, append, truncate and zero-filled sparse extension seal a complete local
 SQLite generation before acknowledging the write. Readers see that durable local
-head. No reservation or PUT happens for each patch. Initial files remain bounded
+head. Metadata lookup reports the durable dirty size even before the first open after restart. Removing a store's write policy fails closed over its retained dirty head rather than silently exposing old remote bytes. No reservation or PUT happens for each patch. Initial files remain bounded
 to 8 MiB, four hydrated file snapshots to 32 MiB, and retained file/edit counts to
 the existing journal quotas. Dirty bytes are never evicted to make room.
 

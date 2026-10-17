@@ -48,7 +48,7 @@ version-4 config/default store, snapshot-authorized base observation, shared loc
 native editing/coalescing and exact-ID recovery. Mutations/base adoption and
 publication are serialized conservatively; reads keep owned snapshots. No native
 namespace mutation/save-replace is enabled. See `docs/src/managed-write-plan.md`.
-Local gate log: `/tmp/s3drive-managed-writer-gate-final2.log`. Before publication require
+Local gate log: `/tmp/s3drive-managed-writer-gate-diagnostics.log`. Before publication require
 terminal exact-tip Linux/Windows/book CI including the fifth native case per OS.
 
 Windows testing runs remotely on GitHub's **Windows Server 2025 VM**, not this

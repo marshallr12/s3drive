@@ -612,7 +612,7 @@ impl ReadOnlyFs {
                 {
                     if let Some(w) = &backend.writes {
                         w.remember(&live)?;
-                        if let Some(metadata) = w.metadata(&live.id)? {
+                        if let Some(metadata) = w.metadata(&live).await? {
                             return Ok(Some(metadata));
                         }
                     }

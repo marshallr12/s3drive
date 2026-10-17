@@ -236,6 +236,7 @@ impl Harness {
         let mut m = Mount {
             child: c.spawn().unwrap(),
             path: self.mount.clone(),
+            diagnostics: None,
         };
         let mut lines = BufReader::new(m.child.stderr.take().unwrap()).lines();
         tokio::time::timeout(Duration::from_secs(30), async {
@@ -249,15 +250,24 @@ impl Harness {
         })
         .await
         .unwrap();
+        m.diagnostics = Some(tokio::spawn(async move {
+            while let Ok(Some(line)) = lines.next_line().await {
+                eprintln!("{line}");
+            }
+        }));
         m
     }
 }
 struct Mount {
+    diagnostics: Option<tokio::task::JoinHandle<()>>,
     child: Child,
     path: PathBuf,
 }
 impl Drop for Mount {
     fn drop(&mut self) {
+        if let Some(task) = self.diagnostics.take() {
+            task.abort();
+        }
         #[cfg(target_os = "linux")]
         let _ = std::process::Command::new("fusermount3")
             .args(["-uz"])
@@ -498,6 +508,11 @@ pub async fn child() {
             let fs = s3drive_fs::ReadOnlyFs::new(&c).await.unwrap();
             let d = fs.lookup(s3drive_fs::ROOT, DIR).await.unwrap();
             let n = fs.lookup(d.id, FILE).await.unwrap();
+            assert_eq!(
+                fs.metadata(n.id).await.unwrap().unwrap().size,
+                13,
+                "dirty size before first open after restart"
+            );
             let file = fs.open_write(n.id).await.unwrap();
             assert_eq!(file.read(5, 100).await.unwrap(), b"xyz\0\0\0\0!");
             file.flush().await.unwrap();
@@ -541,6 +556,15 @@ pub async fn child() {
             .await;
             file.flush().await.unwrap();
             assert_eq!(file.read(0, 11).await.unwrap(), b"rename-safe");
+            let observer = fs.open(n.id).await.unwrap();
+            drop(observer);
+            file.write(0, Arc::from(&b"rename-safe"[..]), false, false)
+                .await
+                .unwrap();
+            let observer = fs.open(n.id).await.unwrap();
+            assert_eq!(observer.read(0, 11).await.unwrap(), b"rename-safe");
+            drop(observer);
+            file.flush().await.unwrap();
             drop(file);
             // Verified clean refresh adopts another publisher's content. Old
             // handles remain pinned and cannot write their stale original base.
@@ -571,6 +595,22 @@ pub async fn child() {
             let n = fs.lookup(d.id, MOVED).await.unwrap();
             assert!(fs.open_write(n.id).await.is_err());
             assert!(fs.flush_all().await.is_err());
+            fs.cache_control().unwrap().close().await.unwrap();
+            drop(fs);
+            // Removing a store's policy cannot silently expose its old remote
+            // bytes over a retained dirty local head.
+            let mut c = cfg(&root.join("managed.toml"));
+            c.writes
+                .as_mut()
+                .unwrap()
+                .sources
+                .retain(|s| s.alias == "docs2");
+            c.managed.as_mut().unwrap().default_store = Some(id(201));
+            let fs = s3drive_fs::ReadOnlyFs::new(&c).await.unwrap();
+            let d = fs.lookup(s3drive_fs::ROOT, DIR).await.unwrap();
+            let n = fs.lookup(d.id, MOVED).await.unwrap();
+            assert!(fs.open(n.id).await.is_err());
+            assert!(fs.metadata(n.id).await.is_err());
         }
         "engine" => {
             let fs = s3drive_fs::ReadOnlyFs::new(&c).await.unwrap();
@@ -770,11 +810,11 @@ pub async fn portable_writes() {
     h.child("rw-resume").await;
     assert_eq!(
         puts(&f),
-        before + 6,
+        before + 7,
         "empty publication, coalesced flushes, second store, rename and two producer updates"
     );
     h.child("rw-conflict-reopen").await;
-    assert_eq!(puts(&f), before + 6, "conflict replay emitted PUT");
+    assert_eq!(puts(&f), before + 7, "conflict replay emitted PUT");
     s.stop().await;
 }
 

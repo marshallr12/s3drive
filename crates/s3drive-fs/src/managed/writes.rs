@@ -105,14 +105,56 @@ impl Writes {
             .and_then(|s| self.publishers.get(&s))
             .is_some_and(|p| p.can_edit(node, 0))
     }
-    pub fn metadata(&self, node: &str) -> Result<Option<ObjectMetadata>> {
-        self.entries
-            .lock()
-            .map_err(|_| Error::Internal)?
-            .get(node)
-            .and_then(Weak::upgrade)
-            .map(|f| f.metadata())
-            .transpose()
+    async fn require_clean_unbound(&self, node: &str) -> Result<()> {
+        if self
+            .storage
+            .logical()
+            .lookup(self.volume.clone(), node.into())
+            .await
+            .map_err(error)?
+            .is_some_and(|f| f.head != f.settled)
+        {
+            return Err(Error::Conflict);
+        }
+        Ok(())
+    }
+    pub async fn metadata(&self, node: &s3drive_authority::Node) -> Result<Option<ObjectMetadata>> {
+        let store = node
+            .payload
+            .as_ref()
+            .map(|p| p.reservation.store.id.as_str())
+            .unwrap_or(&self.default_store);
+        let Some(publisher) = self.publishers.get(store) else {
+            self.require_clean_unbound(&node.id).await?;
+            return Ok(None);
+        };
+        let Some(state) = self
+            .storage
+            .logical()
+            .lookup(self.volume.clone(), node.id.clone())
+            .await
+            .map_err(error)?
+        else {
+            return Ok(None);
+        };
+        publisher
+            .check_edit_binding(&state.binding)
+            .map_err(error)?;
+        if state.head == state.settled {
+            return Ok(None);
+        }
+        if payload_reference(&node.payload) != payload_reference(&state.base.payload) {
+            return Err(Error::Conflict);
+        }
+        let info = self
+            .storage
+            .staging()
+            .info(state.head.ok_or(Error::Conflict)?)
+            .await
+            .map_err(error)?;
+        let mut value = metadata(node);
+        value.size = info.size;
+        Ok(Some(value))
     }
     pub async fn open(&self, snapshot: FileSnapshot, writing: bool) -> Result<Option<Arc<File>>> {
         self.remember(snapshot.metadata())?;
@@ -123,6 +165,7 @@ impl Writes {
             .map(|p| p.reservation.store.id.as_str())
             .unwrap_or(&self.default_store);
         let Some(publisher) = self.publishers.get(store) else {
+            self.require_clean_unbound(&snapshot.metadata().id).await?;
             if writing {
                 return Err(Error::ReadOnly);
             }

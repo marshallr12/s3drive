@@ -46,6 +46,13 @@ struct Adapter {
     entries: Arc<Semaphore>,
 }
 fn storage_error(error: Error) -> FspError {
+    if let Error::Managed(detail) = &error {
+        use std::io::Write;
+        let _ = writeln!(
+            std::io::stderr().lock(),
+            "Managed operation failed; local data retained: {detail}"
+        );
+    }
     match error {
         Error::Storage(e) => match e.kind {
             ErrorKind::PermissionDenied => STATUS_ACCESS_DENIED,

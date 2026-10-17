@@ -493,6 +493,13 @@ fn file_type(kind: Kind) -> FileType {
     }
 }
 fn errno(error: Error) -> Errno {
+    if let Error::Managed(detail) = &error {
+        use std::io::Write;
+        let _ = writeln!(
+            std::io::stderr().lock(),
+            "Managed operation failed; local data retained: {detail}"
+        );
+    }
     match error {
         Error::NotFound => Errno::ENOENT,
         Error::AlreadyExists => Errno::EEXIST,

@@ -306,9 +306,9 @@ processes, alongside the existing live-owner and process-death exclusion tests.
 
 [Version-4 managed editing](managed-write-plan.md) adds schema-11 verified base
 observations and `content-cas-v1`. The portable managed engine test uses actual
-SDK/authority processes and exactly eight immutable PUTs total: two seed payloads,
+SDK/authority processes and exactly nine immutable PUTs total: two seed payloads,
 a coalesced recovered head, empty-file publication, another store, rename-safe
-publication and two external updates. Retrying the retained conflict adds no PUT.
+publication, a second dirty/read open and two external updates. Retrying the retained conflict adds no PUT.
 State tests separately verify independent file guards, old request hashes,
 metadata-only renames, same-file rejection, migration and retained dirty bases.
 The pinned getrandom 0.4.3 `fill` implementation was inspected locally before using
