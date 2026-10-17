@@ -147,12 +147,14 @@ fn measure_deferred_replacement_on_ntfs_and_selected_winfsp_legacy() {
     for case in cases {
         probe(&ntfs, "ntfs", None, case);
     }
-    let point = tmp.path().join("winfsp");
-    let mut mounted = host::Mounted::new(&point);
-    for case in cases {
-        probe(&point, "winfsp-legacy", Some(&mounted.state), case);
+    for (backend, posix) in [("winfsp-legacy", false), ("winfsp-posix", true)] {
+        let point = tmp.path().join(backend);
+        let mut mounted = host::Mounted::new(&point, posix);
+        for case in cases {
+            probe(&point, backend, Some(&mounted.state), case);
+        }
+        mounted.stop();
+        drop(mounted);
     }
-    mounted.stop();
-    drop(mounted);
     tmp.close().unwrap();
 }

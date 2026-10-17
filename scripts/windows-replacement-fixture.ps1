@@ -5,8 +5,8 @@ function Assert-WindowsReplacementReference {
         if($Observation.$field -cne $Fixture.$field) {throw "Replacement reference platform changed: $field"}
     }
     $actual=@($Observation.records);$expected=@($Fixture.records)
-    if($actual.Count -ne 14 -or $expected.Count -ne 14) {throw 'Replacement reference requires fourteen records'}
-    foreach($backend in @('ntfs','winfsp-legacy')) {
+    if($actual.Count -ne 21 -or $expected.Count -ne 21) {throw 'Replacement reference requires twenty-one records'}
+    foreach($backend in @('ntfs','winfsp-legacy','winfsp-posix')) {
         foreach($case in $cases) {
             $e=@($expected|Where-Object {$_.backend -ceq $backend -and $_.case -ceq $case})
             $a=@($actual|Where-Object {$_.backend -ceq $backend -and $_.case -ceq $case})

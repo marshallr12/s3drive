@@ -30,3 +30,23 @@ malformed-data rejection checks in a new exact-tip hosted run before publication
 Keep the original fourteen NTFS/four pinned-upstream/native/startup gates intact.
 Then use the measured legacy contract for the full native lifecycle bridge;
 do not replace it with SetDelete-only support or permanent application refusals.
+
+
+## Initial measurement (2026-10-17)
+
+Source `8abc469`, [measurement CI39062113865](https://github.com/marshallr12/s3drive/actions/runs/39062113865),
+Windows Server2025 Datacenter, WinFsp `2.1.25156.ddca7bd`, observed19:25:26UTC.
+The [original fourteen records](evidence/windows-replacement-legacy-measurement-20261017.json)
+are retained unchanged. NTFS replaced ordinary/deferred/cleared/duplicated open
+targets and preserved old-target I/O; old-target cleanup did not remove the new
+source. Legacy WinFsp rejected every open-target replacement with Win32 error5
+before Rename reached the reference host. A closed-target control succeeded.
+A pending target refused replacement on both backends. With both files deferred,
+NTFS removed the new destination when the source's DoC handle finally closed;
+legacy WinFsp had refused the move and subsequently removed the original names.
+These are reference observations, not S3Drive native deletion acceptance.
+
+Measure the same seven cases with the pinned runtime's POSIX capability enabled
+before selecting the native bridge profile. Do not assume that advertising the
+capability is enough: immediate unlink, old-context I/O and extended disposition
+must be implemented and natively tested before enabling that profile in S3Drive.

@@ -6,7 +6,7 @@ $output=& cargo test -p s3drive-winfsp --locked replacement_reference -- --ignor
 $exit=$LASTEXITCODE
 $output|Write-Output
 $records=@(($output -join "`n") -split "`n"|ForEach-Object {if($_ -match 'S3DRIVE_REPLACEMENT_REFERENCE (\{.*\})') {$Matches[1]|ConvertFrom-Json}})
-if($exit -ne 0 -or ($output -join "`n") -notmatch '1 passed; 0 failed' -or $records.Count -ne 14) {throw "Replacement reference omitted or failed cases: $exit"}
+if($exit -ne 0 -or ($output -join "`n") -notmatch '1 passed; 0 failed' -or $records.Count -ne 21) {throw "Replacement reference omitted or failed cases: $exit"}
 $sha=(& git rev-parse HEAD).Trim()
 if($LASTEXITCODE -ne 0 -or $sha -cne $env:GITHUB_SHA) {throw 'Replacement source does not match CI commit'}
 $directory=(Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\WinFsp').InstallDir
@@ -22,10 +22,10 @@ if($Measure) {
     # Measurement validates the full matrix and captures observations. It does
     # not freeze guessed outcomes or count as parity/native acceptance.
     Assert-WindowsReplacementReference -Fixture ([pscustomobject]$observed) -Observation ([pscustomobject]$observed)
-    Write-Output 'MEASURED: seven cases on NTFS and selected WinFsp legacy; review before publication'
+    Write-Output 'MEASURED: seven cases on NTFS and selected WinFsp legacy/POSIX profiles; review before publication'
 } else {
     $fixture=Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot '..\docs\src\evidence\windows-replacement-reference-20261017.json')|ConvertFrom-Json
     Assert-WindowsReplacementReference -Fixture $fixture -Observation ([pscustomobject]$observed)
-    Write-Output 'PASS: fourteen typed replacement observations match the recorded platform'
+    Write-Output 'PASS: twenty-one typed replacement observations match the recorded platform'
 }
 $observed|ConvertTo-Json -Depth 8|Set-Content -LiteralPath (Join-Path $env:RUNNER_TEMP 'windows-replacement-reference.json') -Encoding utf8

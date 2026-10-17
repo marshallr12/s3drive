@@ -211,7 +211,7 @@ pub(super) struct Mounted {
     stopped: bool,
 }
 impl Mounted {
-    pub(super) fn new(path: &Path) -> Self {
+    pub(super) fn new(path: &Path, posix: bool) -> Self {
         let _init = winfsp::winfsp_init().unwrap();
         let root = Arc::new(Node {
             id: 1,
@@ -232,7 +232,7 @@ impl Mounted {
             .case_preserved_names(true)
             .unicode_on_disk(true)
             .persistent_acls(true)
-            .supports_posix_unlink_rename(false)
+            .supports_posix_unlink_rename(posix)
             .file_info_timeout(0)
             .dir_info_timeout(0)
             .flush_and_purge_on_cleanup(true);
