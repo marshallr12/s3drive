@@ -55,6 +55,7 @@ async fn frozen_open(p: &Publisher, w: &WireClient, n: u64) -> OpenInput {
         source: admission.source,
         fingerprint: admission.fingerprint.clone(),
         delete_on_close: true,
+        controlled: false,
         admission: Some(Box::new(admission)),
     }
 }

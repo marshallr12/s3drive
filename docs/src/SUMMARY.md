@@ -20,6 +20,7 @@
   - [Atomic deferred creation](atomic-deferred-create.md)
   - [Deferred owner rename and move](deferred-owner-move.md)
   - [Durable per-open callback journal](windows-open-journal.md)
+  - [Windows disposition controller](windows-disposition-controller.md)
   - [Publication while deletion is pending](pending-owner-publication.md)
 - [Turso and cross-machine coordination](turso-coordination.md)
 - [Filesystem behavior contract](filesystem-contract.md)

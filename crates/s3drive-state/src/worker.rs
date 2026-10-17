@@ -647,6 +647,10 @@ pub struct Namespace {
     options: journal::Options,
 }
 impl Namespace {
+    pub async fn get(&self, id: String) -> Result<crate::namespace_client::Record> {
+        self.call(move |j| j.get(&id)).await
+    }
+
     pub async fn client_identity(&self) -> Result<String> {
         self.call(|j| j.client_identity()).await
     }
@@ -706,6 +710,25 @@ pub struct Opens {
     owner: Owner,
 }
 impl Opens {
+    pub async fn reply(
+        &self,
+        id: String,
+        event: String,
+        callback: String,
+        error: Option<crate::namespace::Error>,
+    ) -> Result<crate::namespace_client::opens::OpenRecord> {
+        self.call(move |j| j.reply(&id, &event, &callback, error))
+            .await
+    }
+    pub async fn complete(
+        &self,
+        id: String,
+        event: String,
+        callback: String,
+    ) -> Result<crate::namespace_client::opens::OpenRecord> {
+        self.call(move |j| j.complete(&id, &event, &callback)).await
+    }
+
     async fn call<T: Send + 'static>(
         &self,
         work: impl FnOnce(&mut crate::namespace_client::opens::Journal<'_>) -> Result<T>

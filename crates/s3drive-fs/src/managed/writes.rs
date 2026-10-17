@@ -626,6 +626,20 @@ impl Writes {
                         sha256: r.input.sha256.clone(),
                         expected_payload: payload_reference(&state.base.payload),
                     }
+                } else if let Some(owned) = publisher
+                    .owned_removal(&r.input.node)
+                    .await
+                    .map_err(error)?
+                {
+                    Mutation::ReservePendingContent {
+                        node: r.input.node.clone(),
+                        expected_revision: state.base.revision,
+                        store: publisher.store().id.clone(),
+                        size: r.input.size,
+                        sha256: r.input.sha256.clone(),
+                        expected_payload: payload_reference(&state.base.payload),
+                        fence: owned.fence,
+                    }
                 } else {
                     Mutation::ReserveContent {
                         node: r.input.node.clone(),

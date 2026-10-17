@@ -2,6 +2,8 @@
 //! confined to the owned loopback fixture with dummy credentials.
 #[path = "support/atomic_create.rs"]
 mod atomic_create;
+#[path = "support/disposition_controller.rs"]
+mod disposition_controller;
 #[path = "support/fixture.rs"]
 pub mod fixture;
 #[path = "support/mode_cancellation.rs"]
@@ -359,6 +361,21 @@ async fn proxy(
         } => 9,
         _ => 0,
     };
+    if kind == 7
+        && p.loss
+            .compare_exchange(11, 0, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+    {
+        return axum::http::StatusCode::SERVICE_UNAVAILABLE.into_response();
+    }
+    if kind == 7
+        && p.loss
+            .compare_exchange(10, 0, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+    {
+        checkpoint("FENCED_CHECKPOINT");
+        std::future::pending::<()>().await;
+    }
     if kind != 0
         && p.loss
             .compare_exchange(kind, 0, Ordering::SeqCst, Ordering::SeqCst)
@@ -410,6 +427,7 @@ async fn managed_child() {
         || mode.starts_with("atomic_create_")
         || mode.starts_with("owner_move_")
         || mode.starts_with("open_journal_")
+        || mode.starts_with("controller_")
     {
         Authority::open_with_policy(root.join("authority"), "portable-collision-v1".into())
             .await
@@ -419,6 +437,16 @@ async fn managed_child() {
     };
     let (wire, stop, server) = serve(authority.client()).await;
     let volume = info(&wire).await.id;
+    if mode.starts_with("controller_") {
+        Box::pin(disposition_controller::run_mode(
+            &mode, &config, &root, &wire, &volume,
+        ))
+        .await;
+        stop.send(()).unwrap();
+        server.await.unwrap();
+        authority.shutdown().await.unwrap();
+        return;
+    }
     if mode.starts_with("open_journal_") {
         Box::pin(open_journal::run_mode(
             &mode, &config, &root, &wire, &volume,

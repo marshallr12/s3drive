@@ -528,3 +528,22 @@ namespace/content hashes. Five SDK stages recover killed owners and three PUTs
 without replay. Require terminal exact-tip hosted native/reference/startup CI
 before publication. Next integrate the full lifecycle controller and WinFsp;
 callback facts alone neither implement disposition policy nor prove deletion.
+
+
+### P6m3b3b4b3b3b — executable disposition controller (2026-10-17)
+
+Per-open journal accepted at `b3267a4`, terminal CI39051731184, schema17/config6.
+Implement the [controller contract](windows-disposition-controller.md): durable
+callback response/completion, same-fence rejected-response recovery, node-wide
+mode changes, deleting cleanup, ordinary final release and protected closing
+work. Exercise the real SDK and existing worker, not a disconnected state model.
+Require local and exact-tip hosted native/reference/startup gates. Then finish
+retention/session recovery and integrate WinFsp with explicit new config and full
+native DoC/cancellation/cleanup/late-I/O/replacement acceptance before enablement.
+
+Local full gate passed: 220 state, nine HTTP and fifteen SDK cases, including
+five killed controller stages and six immutable PUTs without replay. Schema18
+retains old schema17 hashes; config6 and native unsupported paths stay unchanged.
+Response-proof, compensation, full-disk/quota and exact open-ID checks passed.
+Require terminal exact-tip hosted native/reference/startup CI before publication;
+next resolve retention and abandoned-session policy before native integration.

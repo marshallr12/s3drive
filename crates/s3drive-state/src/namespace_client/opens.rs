@@ -15,7 +15,12 @@ pub struct OpenInput {
     pub source: [u8; 32],
     pub fingerprint: String,
     pub delete_on_close: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub controlled: bool,
     pub admission: Option<Box<Input>>,
+}
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 impl std::fmt::Debug for OpenInput {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -53,6 +58,14 @@ pub enum Action {
     Acknowledge {
         operation: String,
         outcome_hash: Vec<u8>,
+    },
+    Reply {
+        callback: String,
+        error: Option<namespace::Error>,
+        proof: Option<Box<ActivationProof>>,
+    },
+    Completed {
+        callback: String,
     },
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -95,6 +108,31 @@ impl OpenRecord {
         }).collect()
     }
 }
+impl OpenRecord {
+    pub fn completed(&self, callback: &str) -> bool {
+        self.events
+            .iter()
+            .any(|e| matches!(&e.action, Action::Completed { callback: c } if c == callback))
+    }
+    pub fn reply(&self, callback: &str) -> Option<Option<namespace::Error>> {
+        self.events.iter().find_map(|e| match &e.action {
+            Action::Reply {
+                callback: c, error, ..
+            } if c == callback => Some(*error),
+            _ => None,
+        })
+    }
+    pub fn links(&self, callback: &str) -> Vec<&Input> {
+        self.events
+            .iter()
+            .filter_map(|e| match &e.action {
+                Action::Link { callback: c, input } if c == callback => Some(input.as_ref()),
+                _ => None,
+            })
+            .collect()
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 struct Row {
     input: OpenInput,
@@ -266,6 +304,121 @@ fn reduce(db: &Connection, record: &mut OpenRecord, event: &Event) -> Result<()>
                 return Err("per-open acknowledgment lacks exact namespace proof".into());
             }
         }
+        Action::Reply {
+            callback,
+            error,
+            proof,
+        } if record.input.controlled => {
+            let delete = record
+                .events
+                .iter()
+                .find_map(|e| match &e.action {
+                    Action::Callback(Callback::SetDelete { delete }) if &e.id == callback => {
+                        Some(*delete)
+                    }
+                    _ => None,
+                })
+                .ok_or("reply lacks disposition callback")?;
+            if record.reply(callback).is_some() || record.completed(callback) {
+                return Err("disposition response already planned".into());
+            }
+            if let Some(proof) = proof {
+                let saved = super::load(db, &proof.input.request.operation)?
+                    .ok_or("reply namespace proof missing")?;
+                let mode = match &proof.input.request.mutation {
+                    Mutation::ArmRemoval { .. } => Some(RemovalMode::Pending),
+                    Mutation::PrepareRemoval { .. }
+                    | Mutation::CreateDeferredEntry { .. }
+                    | Mutation::MoveDeferredEntry { .. } => Some(RemovalMode::Deferred),
+                    Mutation::TransitionRemoval { mode, .. } => Some(*mode),
+                    _ => None,
+                };
+                let node = if let Mutation::MoveDeferredEntry { node, .. } =
+                    &proof.input.request.mutation
+                {
+                    Some(node.id.as_str())
+                } else {
+                    target(&proof.input)
+                };
+                if error.is_some()
+                    || !control(&record.input, &proof.input)
+                    || node != Some(record.input.node.as_str())
+                    || mode
+                        != Some(if delete {
+                            RemovalMode::Pending
+                        } else {
+                            RemovalMode::Deferred
+                        })
+                    || removals::fence(&proof.input).as_ref().map(|f| &f.owner)
+                        != Some(&record.owner)
+                    || saved.input != *proof.input
+                    || !matches!(saved.outcome, Some(Ok(_)))
+                    || super::hash(&saved)? != proof.outcome_hash
+                {
+                    return Err("disposition reply changed namespace proof".into());
+                }
+            } else if error.is_none() && (delete || !record.links(callback).is_empty()) {
+                return Err("accepted disposition lacks exact proof".into());
+            }
+            if error.is_none()
+                && record
+                    .links(callback)
+                    .iter()
+                    .any(|i| record.pending().contains(i))
+            {
+                return Err("disposition result remains unknown".into());
+            }
+        }
+        Action::Completed { callback } if record.input.controlled => {
+            let kind = record
+                .events
+                .iter()
+                .find_map(|e| match &e.action {
+                    Action::Callback(c) if &e.id == callback => Some(c),
+                    _ => None,
+                })
+                .ok_or("completion lacks callback")?;
+            if record.completed(callback)
+                || record
+                    .links(callback)
+                    .iter()
+                    .any(|i| record.pending().contains(i))
+            {
+                return Err("callback completion remains unknown or duplicate".into());
+            }
+            if let Callback::SetDelete { .. } = kind {
+                let reply = record
+                    .reply(callback)
+                    .ok_or("disposition response not planned")?;
+                if reply.is_some() {
+                    let links = record.links(callback);
+                    let mut successes = Vec::new();
+                    for input in &links {
+                        let saved = super::load(db, &input.request.operation)?
+                            .ok_or("callback namespace proof missing")?;
+                        if matches!(saved.outcome, Some(Ok(_))) {
+                            successes.push(*input);
+                        }
+                    }
+                    if let Some(first) = successes.first() {
+                        let expected = match &first.request.mutation {
+                            Mutation::ArmRemoval { .. } => RemovalMode::Deferred,
+                            Mutation::TransitionRemoval { expected, .. } => *expected,
+                            _ => return Err("rejected disposition has no mode restoration".into()),
+                        };
+                        let last = successes.last().unwrap();
+                        if !matches!(&last.request.mutation, Mutation::TransitionRemoval{mode,..} if *mode==expected)
+                            || removals::fence(first) != removals::fence(last)
+                        {
+                            return Err("rejected disposition not restored with same fence".into());
+                        }
+                    }
+                }
+            }
+            if matches!(kind, Callback::Close) && record.cleanup().is_none() {
+                return Err("close has no cleanup evidence".into());
+            }
+        }
         _ => return Err("invalid per-open event ordering".into()),
     }
     record.events.push(event.clone());
@@ -354,6 +507,9 @@ fn capacity(records: &[(Row, OpenRecord)]) -> Result<()> {
     let slots = records
         .iter()
         .map(|(_, r)| {
+            if r.input.controlled {
+                return controlled_slots(r);
+            }
             r.events.len()
                 + usize::from(!r.active())
                 + usize::from(r.cleanup().is_none())
@@ -368,6 +524,36 @@ fn capacity(records: &[(Row, OpenRecord)]) -> Result<()> {
     }
     Ok(())
 }
+fn controlled_slots(r: &OpenRecord) -> usize {
+    let mut slots = r.events.len() + usize::from(!r.active());
+    for event in &r.events {
+        let Action::Callback(kind) = &event.action else {
+            continue;
+        };
+        if r.completed(&event.id) {
+            continue;
+        }
+        let budget = match kind {
+            Callback::SetDelete { .. } => 7usize,
+            Callback::Cleanup { .. } => 6,
+            Callback::Close => 4,
+        };
+        let links = r.links(&event.id);
+        let used = 1
+            + links.len()
+            + links.iter().filter(|i| !r.pending().contains(i)).count()
+            + usize::from(r.reply(&event.id).is_some());
+        slots += budget.saturating_sub(used);
+    }
+    if r.cleanup().is_none() {
+        slots += 6;
+    }
+    if r.close().is_none() {
+        slots += 4;
+    }
+    slots
+}
+
 pub struct Journal<'a> {
     state: &'a mut State,
 }
@@ -582,6 +768,62 @@ impl<'a> Journal<'a> {
                 action: Action::Acknowledge {
                     operation: operation.into(),
                     outcome_hash: hash,
+                },
+            },
+        )
+    }
+    pub fn reply(
+        &mut self,
+        key: &str,
+        event: &str,
+        callback: &str,
+        error: Option<namespace::Error>,
+    ) -> Result<OpenRecord> {
+        let record = self.get(key)?;
+        if let Some(old) = record.events.iter().find(|e| e.id == event) {
+            if !matches!(&old.action,Action::Reply{callback:c,error:old_error,..} if c==callback && *old_error==error)
+            {
+                return Err("callback reply identity changed".into());
+            }
+            return self.append(key, old.clone());
+        }
+        let proof = if error.is_none() {
+            if let Some(owned) = removals::owned(
+                &self.state.connection,
+                &record.input.volume,
+                &record.input.node,
+            )? {
+                let saved = super::load(&self.state.connection, &owned.event)?
+                    .ok_or("reply event missing")?;
+                Some(Box::new(ActivationProof {
+                    outcome_hash: super::hash(&saved)?,
+                    input: Box::new(saved.input),
+                }))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        self.append(
+            key,
+            Event {
+                id: event.into(),
+                action: Action::Reply {
+                    callback: callback.into(),
+                    error,
+                    proof,
+                },
+            },
+        )
+    }
+    pub fn complete(&mut self, key: &str, event: &str, callback: &str) -> Result<OpenRecord> {
+        self.append(
+            key,
+            Event {
+                id: event.into(),
+                action: Action::Completed {
+                    callback: callback.into(),
                 },
             },
         )

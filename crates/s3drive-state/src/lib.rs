@@ -20,7 +20,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 17;
+pub const SCHEMA_VERSION: i32 = 18;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub struct State {
@@ -159,7 +159,10 @@ impl State {
             }
             if version == 16 {
                 tx.execute_batch(include_str!("../migrations/017.sql"))?;
+                version = 17;
             }
+            // Version 18 adds controlled callback semantics in the existing
+            // hash-bound JSON log. No old rows/hashes are rewritten.
             logical::check_schema(&tx)?;
             managed::check_schema(&tx)?;
             namespace::check_schema(&tx)?;

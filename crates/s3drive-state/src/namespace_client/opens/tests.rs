@@ -1,3 +1,4 @@
+mod controlled;
 use super::*;
 fn key(n: u64) -> String {
     format!("{n:032x}")
@@ -101,6 +102,7 @@ impl Fixture {
             source: [1; 32],
             fingerprint: "b".repeat(64),
             delete_on_close: admission.is_some(),
+            controlled: false,
             admission: admission.map(Box::new),
         }
     }
@@ -653,7 +655,7 @@ fn schema_sixteen_migration_preserves_original_namespace_receipt_identity_and_so
     let owner = identity::read(&f.client.connection).unwrap();
     f.client.connection.execute_batch("DROP TABLE windows_open_events;DROP TABLE retained_windows_opens;DROP TABLE windows_open_journal;PRAGMA user_version=16").unwrap();
     f.reopen();
-    assert_eq!(f.client.info().unwrap().schema_version, 17);
+    assert_eq!(f.client.info().unwrap().schema_version, 18);
     assert_eq!(
         super::super::Journal::new(&mut f.client)
             .unwrap()

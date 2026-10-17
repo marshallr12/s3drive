@@ -1,6 +1,7 @@
 //! Managed immutable-file publication through the real S3 executor, private
 //! local journal and authority HTTP API, plus a bounded reader used by native
 //! managed mounts. Policy-bound native editing uses the same durable journal.
+pub mod disposition;
 mod reader;
 pub use reader::Reader;
 use s3drive_authority::{Apply, Artifact, Kind, Node, Receipt, Reply, Request, Store, WireClient};
@@ -45,6 +46,7 @@ struct Shared {
     store: Store,
     slots: Semaphore,
     reader: Reader,
+    disposition: tokio::sync::Mutex<()>,
 }
 #[derive(Clone)]
 pub struct Publisher(Arc<Shared>);
@@ -125,6 +127,7 @@ impl Publisher {
             store,
             slots: Semaphore::new(4),
             reader,
+            disposition: tokio::sync::Mutex::new(()),
         })))
     }
     /// Persist the complete immutable reservation request BEFORE network or

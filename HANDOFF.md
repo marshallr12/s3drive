@@ -1,56 +1,42 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b3b4b3b3a durable per-open callback journal**
-on `codex/windows-open-journal`. Goal ACTIVE. Read
-`docs/src/windows-open-journal.md` and the implementation plan.
+Updated: 2026-10-17. Current phase: **P6m3b3b4b3b3b executable disposition controller**
+on `codex/windows-disposition-controller`. Goal ACTIVE. Read
+`docs/src/windows-disposition-controller.md` and the implementation plan.
 
 Baseline verified live: private clean local/remote main
-`dda0464f06b65cf65f754fc43486dd71f29e0a54`, terminal all-green
-[run 39048160996](https://github.com/marshallr12/s3drive/actions/runs/39048160996).
-Linux `117440994003`, Windows `117440993908`, book `117440993624`;
-197/193 state, nine HTTP, thirteen SDK, seven native cases per OS, fourteen frozen
-NTFS traces, four selected upstream legacy cases and nine checker rejections.
-Proof `/tmp/s3drive-owner-move-publication.json`. Schema16/config6 baseline.
+`b3267a49d34f9920faed49e5913634aaa164319a`, terminal all-green
+[run 39051731184](https://github.com/marshallr12/s3drive/actions/runs/39051731184).
+Linux `117451535559`, Windows `117451535459`, book `117451535446`;
+212/208 state, nine HTTP, fourteen SDK, seven native cases per OS, fourteen frozen
+NTFS traces, four upstream cases and nine malformed-fixture rejections. Non-admin
+independent-logon startup passed after correcting its exact schema expectation.
+Proof `/tmp/s3drive-open-journal-publication.json`. Schema17/config6 baseline.
 
-Owner moves retain the original fence/binding with previous-event identity
-lineage. Four SDK stages preserve late dirty data, child/target bytes and exact
-replay with six PUTs and six retained immutable objects. Unknown moves block
-publication/cancellation until exact recovery. Native Windows deletion remains
-unsupported; no live Wasabi mutation or NNP bypass.
+The journal retains exact admission/activation and linked namespace proofs,
+per-file-object cleanup/close facts, original sessions/control bindings and
+callback/ack headroom. Five SDK stages preserve three immutable objects with
+three PUTs through killed owners. It is not the full policy; synthetic callback
+ordering is not native acceptance. CleanupDelete unlinks during cleanup; late I/O
+must remain possible through Close. Do not invent deletion only at close.
 
-Current scope: schema17 per-file-object admission and callback/effect journal,
-raw cleanup/close facts, original session/source/store/owner, hash anchors,
-existing Storage worker, exact namespace proof acknowledgment and SDK recovery.
-This is durable evidence, not the full disposition policy or native deletion.
-Next node-wide/per-open policy and WinFsp integration; resolve deferred target
-replacement proof, final closing-work admission and journal retention before
-callbacks are enabled. Do not OR handle flags or replace full DoC support with
-SetDelete-only behavior or permanently refused rename.
+Current scope: real Publisher-backed disposition controller, durable callback
+response/completion, same-fence compensation for rejected uncertain requests,
+True/False mode policy, deleting cleanup/current IDs and ordinary final release.
+False retains D while opens remain, avoiding cancel/re-arm gaps. Schema18 semantic
+extension preserves legacy evidence; update exact startup schema expectation.
+No native callbacks/config enablement, new Wasabi writes or NNP bypass. Next
+retention/mount-session recovery and WinFsp integration, including deferred target
+replacement reference/native proof, before full deletion acceptance.
 
-Full local gate passed, exit0: `/tmp/s3drive-open-journal-gate2.log`;
-212 state, nine HTTP, fourteen SDK cases, strict lint/build/book. New modules:
-namespace_client/opens.rs + opens/tests.rs; worker Storage.opens() shares the
-existing owner. Migration017 and schema17/config6; legacy migration fixtures
-remove all new tables to represent real old schemas. Fifteen new state cases
-cover quota, corruption, full disk and migration. The five-stage SDK test in
-support/open_journal.rs forcibly kills owners across unknown create, promotion,
-publication and final commit; keeps binary/empty/Unicode data, three PUTs and all
-three immutable objects, no DELETE. Synthetic callbacks do not prove native
-ordering or full lifecycle acceptance.
-
-Review after the first green gate added exact activation proof retention;
-gate2 is the final source gate. Closed records may still contain unknown effects:
-startup must scan all records, not just the old-session unclosed helper. Native
-policy, accepted/rejected callback responses, unknown cancellation/cleanup
-ordering, full closing-work admission/retention and deferred replacement proof
-remain before enablement. Require terminal exact-tip all-three hosted CI before
-guarded private publication from `dda0464`. Goal ACTIVE, no NNP/provider changes.
-
-First candidate `500b5e6`, CI39050701516: Linux/book green, Windows 208 state,
-SDK/reference passed but non-admin startup fixture still asserted schema16.
-Update the exact PowerShell expectation to17; do not weaken it or claim the
-failed run passed native/startup acceptance. Rust source remains gate2's source;
-validate PowerShell AST plus init/reopen locally, then require new exact-tip CI.
+Local final gate exit0: `/tmp/s3drive-controller-gate4.log`, 220 state, nine
+HTTP and fifteen SDK cases; formatting/clippy/build/book passed. Five killed SDK
+stages use six immutable PUTs without replay; eight new state cases include
+actual SQLite-full, quota, response/compensation proofs and schema17 migration.
+Latest open-ID replay/closed-ID refusal checks are included. Schema18 init/reopen
+and exact Windows startup assertion agree. Require terminal exact-tip all-three
+CI, native/startup logs and source-bound reference artifact before guarded private
+main publication from b3267a4. No provider or native enablement claim is implied.
 
 ## Previous expanded reference phase
 
