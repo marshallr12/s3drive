@@ -18,8 +18,10 @@ not live managed Wasabi or multi-host deployment acceptance.
 
 `s3drive-managed::Reader` requires the authority endpoint, volume ID, private
 bearer-token file and 1–16 mappings from global store IDs to local S3 sources.
-Store identity includes endpoint/bucket/region/prefix/addressing. Local source
-aliases and credential profile names may differ between computers. Pointing a
+The routing digest covers normalized endpoint, bucket, region and source prefix.
+Local aliases, credential profiles, LIST encoding and addressing style are
+excluded; transport options are still validated in each local configuration.
+These local settings may differ between computers. Pointing a
 registered store ID at a different bucket fails before a mount is established.
 The reader requires no upload policy or writer journal. All referenced stores
 must be mapped; a missing or mismatched route fails explicitly.

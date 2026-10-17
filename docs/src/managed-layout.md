@@ -15,13 +15,13 @@ The target design separates three kinds of state:
 | --- | --- | --- |
 | Local SQLite on each computer | Cache, staged bytes, unknown attempts, recovery; outside the mounted tree | Existing implementation; managed logical-file binding still needs integration |
 | One authoritative metadata database | Volume/node identities, directory entries, revisions, operation outcomes, immutable payload references | SQLite namespace and payload references implemented; Turso backend pending |
-| One or more S3-compatible buckets | Immutable file-generation bytes; never derive these keys from directory names | [Managed publisher library](managed-publication.md) joins SDK and metadata; native integration pending |
+| One or more S3-compatible buckets | Immutable file-generation bytes; never derive these keys from directory names | [Managed publisher library](managed-publication.md) joins SDK and metadata; [native reads](managed-native.md) passed, native writes pending |
 
 The namespace is authoritative at the service, rather than assembled from S3
 LIST results. A directory move changes its parent/name in one metadata
 transaction; descendants retain stable node IDs. No folder markers, object
 copies or recursive S3 deletes are required for that move. One authority volume
-can eventually reference registered stores in multiple buckets. Renames within
+can reference registered stores in multiple buckets. Renames within
 that volume need no data relocation; cross-volume atomic rename is unsupported.
 This is our design, not a provider feature claim.
 

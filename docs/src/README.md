@@ -60,7 +60,7 @@ namespace edits; direct-key behavior below describes the existing compatibility 
 | Windows drive mount | Implemented WinFsp adapter; [native read-only acceptance passed](windows-mount.md) |
 | Linux sign-in startup, including MX without systemd | [Detached launcher implemented](startup-and-sessions.md); native desktop/login-hook/terminal-loss checks passed |
 | Windows startup across login sessions | [Scheduled task and shared NTFS folder implemented](startup-and-sessions.md); native cross-logon reads/removal passed; workstation reboot/SSH authentication pending |
-| Managed file publication | [Real SDK/HTTP/SQLite library](managed-publication.md); native/deployment/live-provider acceptance pending |
+| Managed file publication | [Real SDK/HTTP/SQLite library](managed-publication.md); native writable/deployment/live-provider acceptance pending |
 | Managed namespace authority | [SQLite and authenticated loopback development service](managed-layout.md); private token CLI and explicit version-3 read-only mounts |
 | Managed native reads | [Authority namespace and verified immutable payloads](managed-native.md); real FUSE/WinFsp acceptance passed |
 | Cross-machine coordination with Turso | [Research and design proposal](turso-coordination.md); no dependency or cloud service enabled |

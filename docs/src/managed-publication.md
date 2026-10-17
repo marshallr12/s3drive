@@ -2,8 +2,10 @@
 
 **P6m2 library implementation, 2026-10-16.** The managed publisher now joins the
 real S3 SDK executor, the authority HTTP API and each client's private SQLite
-journal. Native managed mounts and a deployed authority remain subsequent
-acceptance phases. No real bucket, credentials, configuration or service changed.
+journal. [Managed native read-only mounts](managed-native.md) now use the same
+verified reader. Native managed writes and a deployed authority remain subsequent
+acceptance phases. This library phase changed no real bucket, credentials,
+configuration or service.
 
 ![An immutable generation passes through local staging, authority reservation, one guarded S3 upload, metadata CAS and local acknowledgment.](images/managed-publication.png)
 
