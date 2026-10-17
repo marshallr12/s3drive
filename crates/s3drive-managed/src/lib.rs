@@ -213,6 +213,26 @@ impl Publisher {
             })
             .await
     }
+    /// Stable operational owner in the private local database, not a credential.
+    pub async fn client_identity(&self) -> Result<String> {
+        self.0.storage.namespace().client_identity().await
+    }
+    /// Inspect acknowledged ownership without adopting a foreign reservation.
+    pub async fn owned_removal(
+        &self,
+        node: &str,
+    ) -> Result<Option<s3drive_state::namespace_client::OwnedRemoval>> {
+        let owned = self
+            .0
+            .storage
+            .namespace()
+            .owned_removal(self.0.volume.clone(), node.into())
+            .await?;
+        if let Some(owned) = &owned {
+            self.check_namespace_input(&owned.input)?;
+        }
+        Ok(owned)
+    }
     pub fn namespace_input(
         &self,
         request: Apply,

@@ -95,7 +95,7 @@ deleted or reclaimed.
 
 ## Independently green implementation phases
 
-1. **P6m3b3b4a — pending-removal authority, current phase.** Add schema 13,
+1. **P6m3b3b4a — pending-removal authority, accepted.** Add schema 13,
    reversible mutations, publication fencing, explicit inspection and wire
    capability. Preserve old serialized nodes, ordinary content guards and
    request hashes. Prove exact replay/restart, competing clients, cancellation,
@@ -155,3 +155,57 @@ later kernel cleanup flag. A failed or unknown cancellation is not permission
 to silently re-arm with fresh guards after another client changes the file.
 The native lifecycle phase must test these orderings and expose retained
 conflicts before enabling callbacks.
+
+
+## Client ownership checkpoint (P6m3b3b4b1)
+
+**Implementation and verification, 2026-10-17.** Schema 14 adds a random 128-bit
+client owner ID with a separate retained checksum anchor, created in one SQLite
+transaction on the existing bounded local owner. It is an operational fence,
+not a credential or authentication identity. It survives restart and unrelated
+source/credential registration. Identity alone pins the local database role;
+an authority database cannot mint one. Missing or mismatched halves fail closed.
+If both disappear while disposition history remains, history validation refuses
+a replacement. Keep the complete private state directory; copying it to two
+active machines would duplicate an owner and is unsupported.
+
+The local namespace journal now accepts arm, cancel and commit with the exact
+before-node digest, frozen control source/store/fingerprint and retained client
+identity. It persists the request before HTTP. Successful receipts and local
+logical-file observations commit together; a crash or full disk retains the
+same unknown request for replay. Ownership is derived from successful receipts
+ordered by authority sequence. Replaying an old acknowledged cancel cannot
+clear a newer arm. Inspection reports acknowledged local ownership; it does not
+claim the service is reachable or that the remote reservation still exists.
+Unknown pending work must be reconciled with its original request.
+
+Prepared publications must settle before arming or closing. Unprepared dirty
+bytes and immutable original bindings survive all three transitions. Locally
+owned or unknown dispositions block ordinary namespace admission for affected
+nodes/parents before a blocked request can enter the journal. Ordinary
+publication preparation refuses an owned pending reservation. Pending-owner
+SDK publication is explicitly deferred to **P6m3b3b4b2**; the existing native
+Windows callbacks still refuse deletion. Per-open disposition and cleanup
+recovery are a later **P6m3b3b4b3** contract, with native acceptance in b4c.
+
+The bounded 4,096-record namespace journal reserves a closing receipt slot for
+each active or unknown arm. At the final reserved slot, a failed close cannot
+be acknowledged at the cost of successful closure capacity; it stays pending.
+There is no automatic history pruning or quota expansion. Physical disk space
+is not reserved. Full-disk uncertainty requires restoring space and replaying
+the exact operation, never silently changing its fence or bytes.
+
+State tests exercise ignored SQL writes, complete dirty-byte retention, old
+replay after re-arm, independent identity/fence refusal, pending-directory child
+admission, actual SQLITE_FULL, successful schema-13 migration, non-destructive
+migration refusal and closing quota. The actual SDK/HTTP fixture discards a
+committed arm, cancel and commit reply and forcibly kills both client and
+authority after each. Restart retains the owner, retries original IDs without
+advancing authority sequence, uploads exactly once after cancellation, and
+retains a newer dirty head after final tombstone acknowledgment. Its no-DELETE
+assertion compares against fixture setup's approved synthetic probe cleanup.
+These are loopback fixtures with dummy credentials, not Wasabi acceptance or
+WinFsp deletion tests. The full local gate passed (150 state tests, six actual
+managed SDK cases, six authority TCP, 50 S3 and 13 FS, plus lint/build/book).
+Terminal exact-tip Linux/Windows/book CI and existing native/startup acceptance
+remain required before publication.

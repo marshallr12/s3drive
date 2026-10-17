@@ -321,3 +321,25 @@ backup/failover and optional Turso acceptance. Include authority availability in
 managed sign-in startup and test MX without systemd, Windows cross-logon access,
 SSH/tmux disconnect and actual workstation reboot. These remain requirements,
 not behaviors proved by the current local-loopback tests.
+
+
+### P6m3b3b4b1 — durable client disposition ownership (2026-10-17)
+
+The accepted authority checkpoint is `4bca4ad`, terminal Linux/Windows/book
+[run 39026528993](https://github.com/marshallr12/s3drive/actions/runs/39026528993),
+including seven native cases per OS and pending-directory cancellation/open.
+The next independently green checkpoint adds schema-14 client identity, exact
+arm/cancel/commit journaling and atomic logical observation. It derives owned
+fences from immutable receipt history, blocks ordinary local admission against
+owned reservations, and preserves closure capacity and dirty bytes. See the
+[client ownership contract](windows-delete-plan.md#client-ownership-checkpoint-p6m3b3b4b1).
+
+Acceptance requires migration/refusal, identity/ownership corruption, ignored
+SQLite updates, real full disk, replay after re-arm, closing quota and killed
+client/authority recovery through actual HTTP/SDK. Run the repository gate and
+terminal exact-tip Linux/Windows/book CI, preserving all seven existing native
+cases and startup acceptance. Windows session checks strictly require schema 14.
+Next b4b2 adds pending-owner SDK publication; b4b3 adds durable per-open/node-wide
+lifecycle. Native Windows deletion remains refused until b4c acceptance. No live
+provider writes, installed startup changes or Turso deployment are part of this
+local checkpoint.

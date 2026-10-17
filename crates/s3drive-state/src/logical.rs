@@ -645,6 +645,15 @@ impl<'a> Journal<'a> {
         )? {
             return Err("recover namespace outcome before preparing publication".into());
         }
+        if crate::namespace_client::removal_owned(
+            &self.state.connection,
+            &r.input.volume,
+            &r.input.node,
+        )? {
+            return Err(
+                "pending-owner SDK publication is not supported yet; retain dirty bytes".into(),
+            );
+        }
         let file = self.file(&r.input.volume, &r.input.node)?;
         let g = r.generation.ok_or("logical bytes not staged")?;
         let metadata = journal::load(&self.state.connection, g)?;

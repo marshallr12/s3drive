@@ -626,6 +626,16 @@ pub struct Namespace {
     options: journal::Options,
 }
 impl Namespace {
+    pub async fn client_identity(&self) -> Result<String> {
+        self.call(|j| j.client_identity()).await
+    }
+    pub async fn owned_removal(
+        &self,
+        volume: String,
+        node: String,
+    ) -> Result<Option<crate::namespace_client::OwnedRemoval>> {
+        self.call(move |j| j.owned_removal(&volume, &node)).await
+    }
     async fn call<T: Send + 'static>(
         &self,
         work: impl FnOnce(&mut crate::namespace_client::Journal<'_>) -> Result<T> + Send + 'static,

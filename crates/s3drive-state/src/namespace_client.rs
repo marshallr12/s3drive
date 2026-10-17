@@ -1,10 +1,13 @@
 //! Client-local metadata intents. Persist exact admission and request before RPC.
 mod changes;
+mod identity;
+mod removals;
 use crate::{
     Result, State,
     namespace::{self, Apply, Mutation, Receipt, Store},
 };
 pub use changes::Entry;
+pub use removals::OwnedRemoval;
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -34,6 +37,9 @@ impl Input {
             Mutation::CreateEntry { .. }
                 | Mutation::MoveEntry { .. }
                 | Mutation::RemoveEntry { .. }
+                | Mutation::ArmRemoval { .. }
+                | Mutation::CancelRemoval { .. }
+                | Mutation::CommitRemoval { .. }
         ) || !self.store.valid()
             || !namespace::publication::digest(&self.fingerprint)
         {
@@ -113,6 +119,8 @@ fn checked_outcome(input: &Input, outcome: &namespace::Result<Receipt>) -> Resul
 }
 pub(crate) fn check_schema(db: &Connection) -> Result<()> {
     db.prepare("SELECT operation_id,input,outcome,state_hash FROM namespace_intents LIMIT 0")?;
+    db.prepare("SELECT singleton,owner_id,state_hash FROM client_identity LIMIT 0")?;
+    db.prepare("SELECT singleton,state_hash FROM retained_client_identity LIMIT 0")?;
     Ok(())
 }
 fn load(db: &Connection, id: &str) -> Result<Option<Record>> {
@@ -132,6 +140,7 @@ fn load(db: &Connection, id: &str) -> Result<Option<Record>> {
         outcome: outcome.map(|v| serde_json::from_slice(&v)).transpose()?,
     };
     r.input.validate()?;
+    removals::check_identity(db, &r.input)?;
     if r.input.request.operation != id || hash(&r)? != checksum {
         return Err("namespace intent integrity failure".into());
     }
@@ -139,6 +148,9 @@ fn load(db: &Connection, id: &str) -> Result<Option<Record>> {
         checked_outcome(&r.input, o)?;
     }
     Ok(Some(r))
+}
+pub(crate) fn removal_owned(db: &Connection, volume: &str, node: &str) -> Result<bool> {
+    Ok(removals::owned(db, volume, node)?.is_some())
 }
 pub(crate) fn pending_for_node(db: &Connection, volume: &str, node: &str) -> Result<bool> {
     let ids = db
@@ -173,6 +185,12 @@ impl<'a> Journal<'a> {
     pub fn get(&self, id: &str) -> Result<Record> {
         load(&self.state.connection, id)?.ok_or_else(|| "unknown namespace intent".into())
     }
+    pub fn client_identity(&mut self) -> Result<String> {
+        identity::ensure(self.state)
+    }
+    pub fn owned_removal(&self, volume: &str, node: &str) -> Result<Option<OwnedRemoval>> {
+        removals::owned(&self.state.connection, volume, node)
+    }
     pub fn begin(&mut self, input: Input) -> Result<Record> {
         input.validate()?;
         if let Some(r) = load(&self.state.connection, &input.request.operation)? {
@@ -181,6 +199,7 @@ impl<'a> Journal<'a> {
             }
             return Ok(r);
         }
+        removals::check_begin(&self.state.connection, &input)?;
         for entry in &input.entries {
             if pending_for_node(&self.state.connection, &input.request.volume, &entry.id)? {
                 return Err(
@@ -272,6 +291,7 @@ impl<'a> Journal<'a> {
         for update in updates {
             update.apply(&tx)?;
         }
+        removals::check_capacity(&removals::records(&tx)?)?;
         if load(&tx, id)?.as_ref().and_then(|r| r.outcome.as_ref()) != r.outcome.as_ref() {
             return Err("namespace acknowledgment readback mismatch".into());
         }

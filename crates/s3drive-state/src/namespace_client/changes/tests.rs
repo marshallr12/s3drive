@@ -1,6 +1,7 @@
 use super::*;
 use crate::{journal, logical};
 use namespace::{Artifact, NodeGuard, ROOT};
+mod removals;
 fn id(n: u64) -> String {
     format!("{n:032x}")
 }

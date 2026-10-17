@@ -53,7 +53,7 @@ namespace edits; direct-key behavior below describes the existing compatibility 
 | Rust workspace and CLI | Implemented |
 | TOML parsing and source/namespace validation | Implemented; no network checks |
 | Alias + prefix + file-path resolution | Implemented as a planning utility |
-| Local SQLite state | Schema 13; reversible pending-removal reservations plus logical managed edits, namespace intents, portable collision keys, authoritative empty-file placement and publication/authority tables plus bindings, clean BLOBs, staged generations, remote attempts, flush receipts and private process ownership |
+| Local SQLite state | Schema 14; durable client identity and owned disposition receipts, reversible pending-removal reservations plus logical managed edits, namespace intents, portable collision keys, authoritative empty-file placement and publication/authority tables plus bindings, clean BLOBs, staged generations, remote attempts, flush receipts and private process ownership |
 | mdBook research, design and acceptance plan | Implemented |
 | S3 transport and credentials | Implemented; [Wasabi read acceptance](wasabi.md) passed; broader conformance pending |
 | Linux filesystem mount | Implemented read-only FUSE; see [mount contract](linux-mount.md) and native evidence in handoff |

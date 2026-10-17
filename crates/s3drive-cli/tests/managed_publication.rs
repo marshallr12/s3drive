@@ -2,6 +2,8 @@
 //! confined to the owned loopback fixture with dummy credentials.
 #[path = "support/fixture.rs"]
 pub mod fixture;
+#[path = "support/owned_disposition.rs"]
+mod owned_disposition;
 #[path = "support/writes.rs"]
 #[allow(dead_code)]
 mod writes;
@@ -292,6 +294,27 @@ async fn proxy(
                     ..
                 },
         } => 3,
+        Request::Apply {
+            request:
+                Apply {
+                    mutation: Mutation::ArmRemoval { .. },
+                    ..
+                },
+        } => 4,
+        Request::Apply {
+            request:
+                Apply {
+                    mutation: Mutation::CancelRemoval { .. },
+                    ..
+                },
+        } => 5,
+        Request::Apply {
+            request:
+                Apply {
+                    mutation: Mutation::CommitRemoval { .. },
+                    ..
+                },
+        } => 6,
         _ => 0,
     };
     if kind != 0
@@ -337,7 +360,10 @@ async fn managed_child() {
         &std::fs::read_to_string(std::env::var("S3DRIVE_MANAGED_CONFIG").unwrap()).unwrap(),
     )
     .unwrap();
-    let authority = if mode.starts_with("detached_") || mode.starts_with("pending_") {
+    let authority = if mode.starts_with("detached_")
+        || mode.starts_with("pending_")
+        || mode.starts_with("owned_")
+    {
         Authority::open_with_policy(root.join("authority"), "portable-collision-v1".into())
             .await
             .unwrap()
@@ -346,6 +372,16 @@ async fn managed_child() {
     };
     let (wire, stop, server) = serve(authority.client()).await;
     let volume = info(&wire).await.id;
+    if mode.starts_with("owned_") {
+        Box::pin(owned_disposition::run_mode(
+            &mode, &config, &root, &wire, &volume,
+        ))
+        .await;
+        stop.send(()).unwrap();
+        server.await.unwrap();
+        authority.shutdown().await.unwrap();
+        return;
+    }
     if mode.starts_with("pending_") {
         Box::pin(pending_retry_mode(&mode, &config, &root, &wire, &volume)).await;
         stop.send(()).unwrap();

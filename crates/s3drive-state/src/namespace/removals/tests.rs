@@ -477,10 +477,13 @@ fn schema_twelve_migration_preserves_old_serialized_nodes_and_guards() {
     let volume = w.state.namespace_volume().unwrap();
     w.state
         .connection
-        .execute_batch("DROP TABLE namespace_removals; PRAGMA user_version=12")
+        .execute_batch("DROP TABLE retained_client_identity; DROP TABLE client_identity; DROP TABLE namespace_removals; PRAGMA user_version=12")
         .unwrap();
     w.reopen();
-    assert_eq!(w.state.info().unwrap().schema_version, 13);
+    assert_eq!(
+        w.state.info().unwrap().schema_version,
+        crate::SCHEMA_VERSION
+    );
     assert_eq!(w.state.namespace_volume().unwrap(), volume);
     assert_eq!(
         serde_json::to_vec(&w.state.namespace_node(&w.volume, &n.id).unwrap()).unwrap(),
@@ -566,7 +569,7 @@ fn real_full_disk_preserves_arm_uncertainty_and_exact_retry() {
 fn failed_schema_thirteen_migration_preserves_version_and_original_database() {
     let mut w = World::new();
     let n = w.file("preserved migration data");
-    w.state.connection.execute_batch("DROP TABLE namespace_removals; CREATE TABLE namespace_removals(keep TEXT); INSERT INTO namespace_removals VALUES('untouched'); PRAGMA user_version=12").unwrap();
+    w.state.connection.execute_batch("DROP TABLE retained_client_identity; DROP TABLE client_identity; DROP TABLE namespace_removals; CREATE TABLE namespace_removals(keep TEXT); INSERT INTO namespace_removals VALUES('untouched'); PRAGMA user_version=12").unwrap();
     let path = w.tmp.path().join("authority");
     let placeholder = State::open_managed(&w.tmp.path().join("placeholder")).unwrap();
     drop(std::mem::replace(&mut w.state, placeholder));
@@ -586,7 +589,10 @@ fn failed_schema_thirteen_migration_preserves_version_and_original_database() {
     db.execute_batch("DROP TABLE namespace_removals").unwrap();
     drop(db);
     w.state = State::open_managed(&path).unwrap();
-    assert_eq!(w.state.info().unwrap().schema_version, 13);
+    assert_eq!(
+        w.state.info().unwrap().schema_version,
+        crate::SCHEMA_VERSION
+    );
     assert_eq!(w.state.namespace_node(&w.volume, &n.id), Ok(n));
 }
 #[test]

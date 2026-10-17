@@ -83,9 +83,16 @@ pub(super) fn validate(input: &Input) -> Result<()> {
     match &input.request.mutation {
         Mutation::CreateEntry { .. } if input.entries.is_empty() => Ok(()),
         Mutation::RemoveEntry { node, parent }
+        | Mutation::ArmRemoval { node, parent, .. }
+        | Mutation::CommitRemoval { node, parent, .. }
             if input.entries.len() == 1
                 && input.entries[0].guard_matches(node)
                 && input.entries[0].parent == parent.id =>
+        {
+            Ok(())
+        }
+        Mutation::CancelRemoval { node, .. }
+            if input.entries.len() == 1 && input.entries[0].id == *node =>
         {
             Ok(())
         }
@@ -126,7 +133,8 @@ pub(super) fn effects(input: &Input, r: &Receipt) -> Result<Vec<Node>> {
     let mut expected = input.entries[0].clone();
     expected.revision = r.sequence;
     let (deleted, displaced) = match &input.request.mutation {
-        Mutation::RemoveEntry { .. } => (true, None),
+        Mutation::RemoveEntry { .. } | Mutation::CommitRemoval { .. } => (true, None),
+        Mutation::ArmRemoval { .. } | Mutation::CancelRemoval { .. } => (false, None),
         Mutation::MoveEntry { parent, name, .. } => {
             expected.parent = parent.id.clone();
             expected.name = name.clone();
@@ -144,6 +152,12 @@ pub(super) fn effects(input: &Input, r: &Receipt) -> Result<Vec<Node>> {
         })
     {
         return Err("namespace source receipt does not match frozen input".into());
+    }
+    if let Some(fence) = super::removals::fence(input) {
+        if r.artifact != Some(Artifact::Removal(fence)) {
+            return Err("removal receipt changed ownership fence".into());
+        }
+        return Ok(vec![r.node.clone()]);
     }
     let Some(Artifact::Namespace { displaced: actual }) = &r.artifact else {
         return Err("namespace receipt lacks entry artifact".into());
