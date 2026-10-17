@@ -1,8 +1,9 @@
 # Managed namespace and application saves
 
-Implementation plan/proposal, **2026-10-17**. P6m3b2 existing-file editing is
+Implementation status and remaining plan, **2026-10-17**. P6m3b2 existing-file editing is
 published at `683ec51a405198bfedc64f3a3b1c5eed7e7ed218`, with terminal
 [Linux/Windows/book CI](https://github.com/marshallr12/s3drive/actions/runs/39010367651).
+Creation passed both native steps at the [recorded checkpoint](development.md#creation-native-checkpoint); terminal exact-tip CI is required for publication.
 The remaining namespace/save work is required before calling this an ordinary
 editable desktop drive.
 
@@ -10,7 +11,7 @@ editable desktop drive.
 
 ## Delivery and acceptance
 
-1. **P6m3b3a: creation and directories — implemented, native acceptance pending.** New, explicitly selected portable
+1. **P6m3b3a: creation and directories — native acceptance passed.** New, explicitly selected portable
    volumes; version-5 managed mount configuration; authority entry CAS; durable
    client namespace intents and exact-request recovery; real FUSE/WinFsp file
    and directory creation. Existing volumes/configurations retain their policy.

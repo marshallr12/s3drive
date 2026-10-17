@@ -8,7 +8,10 @@ The new SQLite namespace authority prototype supports atomic metadata operations
 and durable operation recovery. The [managed publisher library](docs/src/managed-publication.md)
 now verifies immutable S3 blobs before metadata CAS and local acknowledgment;
 [managed read-only native integration](docs/src/managed-native.md) passed real FUSE/WinFsp acceptance,
-with writable callbacks and remote deployment still pending.
+and [managed existing-file editing](docs/src/managed-write-plan.md) is accepted.
+[Managed creation and directories](docs/src/managed-namespace-plan.md) also passed
+both native drivers. Rename/removal, complete application saves and remote
+deployment remain unfinished.
 Existing direct mounts are retained without automatic migration.
 
 **Status: native read-only drives work on Linux and Windows.** Optional
@@ -17,8 +20,9 @@ new opens still authorize online. A separate version-2 configuration now connect
 [existing-file writes](docs/src/native-writes.md) to both adapters, with native
 Linux/Windows acceptance. It requires explicit source/prefix policies and full provider evidence.
 No real writable user configuration is installed. [Guarded file creation](docs/src/native-creation.md)
-also passed native Linux/Windows acceptance. Directory creation, rename/delete,
-multipart and staging reclamation remain subsequent work; this is not yet a
+also passed native Linux/Windows acceptance. Managed version-5 volumes now
+support directory creation as well. Rename/delete, multipart and staging
+reclamation remain subsequent work; this is not yet a
 complete editable desktop drive.
 
 The shared Rust engine uses immutable local generations, conditional PUT and

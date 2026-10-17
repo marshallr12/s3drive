@@ -15,7 +15,7 @@ chosen by the user on 2026-10-16. A shared authority owns the namespace; immutab
 S3 objects hold file generations. Existing direct mounts stay available without
 automatic conversion. The SQLite authority and [immutable publication library](managed-publication.md)
 are implemented. [Managed read-only integration](managed-native.md) now connects
-the native adapters and passed Linux/Windows native acceptance; [managed existing-file editing](managed-write-plan.md) has a verified Linux/Windows native checkpoint, with exact-tip publication gates recorded separately. [Managed creation/directories](managed-namespace-plan.md) are implemented pending native acceptance; rename/removal, full saves and remote deployment remain work.
+the native adapters and passed Linux/Windows native acceptance; [managed existing-file editing](managed-write-plan.md) has a verified Linux/Windows native checkpoint, with exact-tip publication gates recorded separately. [Managed creation/directories](managed-namespace-plan.md) passed real FUSE/WinFsp acceptance; rename/removal, full saves and remote deployment remain work.
 
 ## Recommendation
 
@@ -53,7 +53,7 @@ namespace edits; direct-key behavior below describes the existing compatibility 
 | Rust workspace and CLI | Implemented |
 | TOML parsing and source/namespace validation | Implemented; no network checks |
 | Alias + prefix + file-path resolution | Implemented as a planning utility |
-| Local SQLite state | Schema 10; logical managed edits, publication journal and namespace authority tables plus bindings, clean BLOBs, staged generations, remote attempts, flush receipts and private process ownership |
+| Local SQLite state | Schema 12; logical managed edits, namespace intents, portable collision keys, authoritative empty-file placement and publication/authority tables plus bindings, clean BLOBs, staged generations, remote attempts, flush receipts and private process ownership |
 | mdBook research, design and acceptance plan | Implemented |
 | S3 transport and credentials | Implemented; [Wasabi read acceptance](wasabi.md) passed; broader conformance pending |
 | Linux filesystem mount | Implemented read-only FUSE; see [mount contract](linux-mount.md) and native evidence in handoff |
@@ -61,7 +61,7 @@ namespace edits; direct-key behavior below describes the existing compatibility 
 | Linux sign-in startup, including MX without systemd | [Detached launcher implemented](startup-and-sessions.md); native desktop/login-hook/terminal-loss checks passed |
 | Windows startup across login sessions | [Scheduled task and shared NTFS folder implemented](startup-and-sessions.md); native cross-logon reads/removal passed; workstation reboot/SSH authentication pending |
 | Managed local edits | [Durable logical heads and settlement](managed-edits.md); storage/SDK library; [native integration](managed-write-plan.md) adds version-4 existing-file edits |
-| Managed file publication | [Real SDK/HTTP/SQLite library](managed-publication.md); native writable/deployment/live-provider acceptance pending |
+| Managed file publication | [Real SDK/HTTP/SQLite library](managed-publication.md); existing-file edits and creation passed native acceptance; remote deployment/live managed-provider acceptance pending |
 | Managed namespace authority | [SQLite and authenticated loopback development service](managed-layout.md); private token CLI and explicit version-3 read-only mounts |
 | Managed native reads | [Authority namespace and verified immutable payloads](managed-native.md); real FUSE/WinFsp acceptance passed |
 | Cross-machine coordination with Turso | [Research and design proposal](turso-coordination.md); no dependency or cloud service enabled |
@@ -74,7 +74,8 @@ namespace edits; direct-key behavior below describes the existing compatibility 
 | Generation-specific remote flush | [Library receipt and atomic acknowledgment](flush-receipts.md); retain newer heads and all snapshots |
 | Existing-file write mounts | [Version-2 opt-in implementation](native-writes.md), native Linux/Windows acceptance passed; no real writable configuration installed |
 | Regular-file creation in existing writable directories | [Guarded creation and durable rediscovery](native-creation.md); native Linux/Windows acceptance passed |
-| Directory creation, rename/delete, new offline opens, tray UI | Planned |
+| Managed file/directory creation | [Version-5 portable volumes](managed-namespace-plan.md); native Linux/Windows creation and recovery passed |
+| Rename/delete, complete save replacement, new offline opens, tray UI | Planned |
 
 The initial research/scaffold delivery is complete. Work has advanced to the
 [read-only provider adapter](provider-contract.md). The overall product goal

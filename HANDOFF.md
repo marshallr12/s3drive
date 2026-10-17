@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b3a managed file/directory creation** on `codex/managed-namespace`; implementation and portable recovery tests pass; native acceptance/publication remain required.
+Updated: 2026-10-17. Current phase: **P6m3b3a managed file/directory creation** on `codex/managed-namespace`; implementation, portable recovery and both native acceptance steps pass; final exact-tip publication remains required.
 Goal active. Linux/Windows read-only drives and startup foundations work;
 library writes/flush are progressing toward safe writable native filesystems.
 Do not call the broader editable-drive goal complete before its documented
@@ -17,7 +17,7 @@ safe-write contract and real OS acceptance pass.
   Wasabi is the first live provider; other endpoints need separate conformance.
 - Linux FUSE and Windows WinFsp adapters have stable read-only acceptance.
   Existing opt-in editing and guarded file creation passed native acceptance.
-  Version-3 managed read-only integration is accepted. Version-4 managed existing-file callbacks are natively accepted. Version-5 creation/directories are implemented pending their native gates; rename/removal/save-replace remains unfinished.
+  Version-3 managed read-only integration is accepted. Version-4 managed existing-file callbacks are natively accepted. Version-5 creation/directories passed their native gates; rename/removal/save-replace remains unfinished.
   New online opens authorize through S3; pinned old handles preserve revisions.
   No ordinary CLI upload command, delete/rename,
   multipart, payload reclamation, new offline opens or desktop packaging yet.
@@ -64,6 +64,8 @@ Native acceptance adds a sixth case per OS, including exclusive creation,
 normal remount, a new file's dirty restart, another default store, and killing a
 mount after create commits but before its reply. Windows audits every BMP native
 upcase alias before enabling the portable policy; mismatch fails closed.
+
+Native steps both passed at `d89e6f372c23498e423c2017bbfa03426fdd61cb`, run `39013347425`: Linux `117340308252`, Windows `117340308235`, book `117340308119`. Linux/book were terminal green; Windows was saving its cache at the recorded snapshot. Six native cases per OS, including creation/recovery, passed. See `docs/src/evidence/managed-namespace-2026-10-17.json`. Final publication still requires terminal exact-tip CI.
 
 The full local gate passed at `/tmp/s3drive-namespace-gate-final.log` (116 Linux state tests, 50 S3, 13 FS, four authority TCP tests and four managed engine/helper cases). The new diagram was rendered and visually inspected.
 
@@ -270,7 +272,7 @@ were already removed. Do not infer remaining cleanup from old plans/logs.
 
 ## Next implementation and durable decisions
 
-P6m3b2 is published. Finish P6m3b3a creation/directory native acceptance/publication, then implement guarded rename/replacement/removal and open-unlinked publication, followed by real application save workflows as laid out in the namespace plan. Stable storage/file identities,
+P6m3b2 is published. Finish P6m3b3a evidence/publication at the exact documented tip, then implement guarded rename/replacement/removal and open-unlinked publication, followed by real application save workflows as laid out in the namespace plan. Stable storage/file identities,
 create-only unique blob keys and metadata CAS are now separate from the direct
 writer's mutable-key ETag lineage; preserve that distinction during integration. Keep uncertain bytes and new physical blob
 references distinct; an S3 upload alone does not acknowledge filesystem flush.

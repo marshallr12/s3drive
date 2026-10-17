@@ -393,3 +393,20 @@ normalization crate, 0.1.26, has Unicode-18 tables; it is intentionally not used
 for the versioned Unicode-17 namespace policy. Windows runtime and unit checks
 audit every BMP upcase alias before enabling namespace creation. Table drift
 requires explicit policy review, not an automatic namespace-key rewrite.
+
+
+### Creation native checkpoint
+
+Both native steps passed at `d89e6f372c23498e423c2017bbfa03426fdd61cb`,
+[run 39013347425](https://github.com/marshallr12/s3drive/actions/runs/39013347425).
+The [metadata snapshot](evidence/managed-namespace-2026-10-17.json) records six
+cases on each driver, including the new creation/recovery case. Linux's complete
+job and no-systemd startup check passed. Windows also passed its portable tests,
+including the BMP native upcase audit; its job was saving its cache when the
+snapshot was captured. This records native-step acceptance, not a premature
+claim that the overall workflow had finished.
+
+The final documentation candidate still requires terminal Linux/Windows/book CI
+at its own exact tip before publication. Consult the
+[branch CI history](https://github.com/marshallr12/s3drive/actions?query=branch%3Acodex%2Fmanaged-namespace)
+for that result. No native case, assertion, recovery check or deadline was removed.

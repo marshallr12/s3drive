@@ -308,7 +308,7 @@ steps before claiming full managed filesystem/save support:
    the same uncertain operation IDs; retain and report conflicts. Acceptance:
    actual FUSE/WinFsp editing, simultaneous readers/writers, external competing
    publication, restart and failed/uncertain flush without a repeated PUT.
-3. **P6m3b3: managed namespace and application saves.** Follow [the creation/replacement/save phases](managed-namespace-plan.md); creation/directories are implemented pending native acceptance, while rename/removal and full saves remain next. Add create/mkdir,
+3. **P6m3b3: managed namespace and application saves.** Follow [the creation/replacement/save phases](managed-namespace-plan.md); creation/directories passed native Linux/Windows acceptance, while rename/removal and full saves remain next. Add create/mkdir,
    rename-overwrite/replace-save and unlink callbacks with stable open-handle
    identity and a versioned portable naming/collision policy. Keep metadata
    transactions independent of uploads and reference-aware reclamation disabled.
