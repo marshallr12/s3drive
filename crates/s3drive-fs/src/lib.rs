@@ -1,5 +1,6 @@
 //! Shared read-only namespace and optional revision-bound clean cache.
 pub mod edits;
+mod writable;
 use s3drive_core::Config;
 use s3drive_s3::{ListPage, MAX_READ_BYTES, ObjectMetadata, ReadHandle, S3Reader};
 use s3drive_state::cache::{Cache, Key, Options, Pinned};
@@ -50,6 +51,11 @@ pub enum Error {
     Timeout,
     Internal,
     Cache(String),
+    ReadOnly,
+    Conflict,
+    TooLarge,
+    Busy,
+    Write(Box<dyn std::error::Error + Send + Sync>),
 }
 pub type Result<T> = std::result::Result<T, Error>;
 impl From<s3drive_s3::Error> for Error {
@@ -62,6 +68,7 @@ impl fmt::Display for Error {
         match self {
             Self::Storage(e) => e.fmt(f),
             Self::Cache(e) => write!(f, "local cache: {e}"),
+            Self::Write(e) => write!(f, "file mutation failed; local data retained: {e}"),
             _ => write!(f, "filesystem: {self:?}"),
         }
     }
@@ -80,6 +87,7 @@ pub struct ReadOnlyFs {
     nodes: Mutex<Nodes>,
     aliases: Vec<Arc<Node>>,
     cache: Option<Arc<CacheBackend>>,
+    writes: Option<Arc<writable::Writes>>,
 }
 
 struct CacheBackend {
@@ -95,12 +103,49 @@ pub struct OpenFile {
     cache: Option<(Arc<CacheBackend>, Key)>,
     snapshot: OnceCell<Pinned>,
     bypass: AtomicBool,
+    writes: Option<(Arc<writable::Writes>, Arc<writable::File>)>,
+    writable_open: bool,
 }
 impl OpenFile {
+    pub fn current_metadata(&self) -> Result<ObjectMetadata> {
+        match &self.writes {
+            Some((_, file)) => file.metadata(),
+            None => Ok(self.handle.metadata().clone()),
+        }
+    }
+    pub async fn write(
+        &self,
+        offset: u64,
+        bytes: Arc<[u8]>,
+        append: bool,
+        constrained: bool,
+    ) -> Result<usize> {
+        if !self.writable_open {
+            return Err(Error::ReadOnly);
+        }
+        let (writer, file) = self.writes.as_ref().ok_or(Error::ReadOnly)?;
+        Box::pin(writer.write(file, offset, bytes, append, constrained)).await
+    }
+    pub async fn truncate(&self, size: u64) -> Result<()> {
+        if !self.writable_open {
+            return Err(Error::ReadOnly);
+        }
+        let (writer, file) = self.writes.as_ref().ok_or(Error::ReadOnly)?;
+        Box::pin(writer.truncate(file, size)).await
+    }
+    pub async fn flush(&self) -> Result<()> {
+        if let Some((writer, file)) = &self.writes {
+            Box::pin(writer.flush(file)).await?;
+        }
+        Ok(())
+    }
     pub fn metadata(&self) -> &ObjectMetadata {
         self.handle.metadata()
     }
     pub async fn read(&self, offset: u64, length: usize) -> Result<Vec<u8>> {
+        if let Some((_, file)) = &self.writes {
+            return file.read(offset, length).await;
+        }
         // Keep the transport's validation/EOF behavior on cached reads too.
         if length > MAX_READ_BYTES {
             return Err(s3drive_s3::Error {
@@ -190,8 +235,69 @@ impl ReadOnlyFs {
         };
         let mut aliases = Vec::new();
         let mut readers = Vec::new();
+        let options = config
+            .cache
+            .as_ref()
+            .map(|c| Options {
+                max_bytes: c.max_bytes,
+                max_file_bytes: c.max_file_bytes,
+                max_entries: c.max_entries,
+            })
+            .unwrap_or_default();
+        let storage = if let Some(writes) = &config.writes {
+            Some(
+                s3drive_state::worker::Storage::open(
+                    &writes.directory,
+                    options,
+                    s3drive_state::journal::Options::default(),
+                )
+                .await
+                .map_err(cache_error)?,
+            )
+        } else {
+            None
+        };
+        let mut executors = Vec::new();
         for (source_index, source) in config.sources.iter().enumerate() {
-            readers.push(S3Reader::from_source(source).await?);
+            let mut reader = S3Reader::from_source(source).await?;
+            let executor = if let Some(settings) = config
+                .writes
+                .as_ref()
+                .and_then(|w| w.sources.iter().find(|s| s.alias == source.alias))
+            {
+                fn text(path: &std::path::Path) -> Result<String> {
+                    use std::io::Read;
+                    let file = std::fs::File::open(path).map_err(|_| Error::Configuration)?;
+                    if !file.metadata().map_err(|_| Error::Configuration)?.is_file() {
+                        return Err(Error::Configuration);
+                    }
+                    let mut text = String::new();
+                    file.take(32769)
+                        .read_to_string(&mut text)
+                        .map_err(|_| Error::Configuration)?;
+                    Ok(text)
+                }
+                let policy = s3drive_s3::uploads::WritePolicy::from_toml(
+                    source,
+                    &text(&settings.policy)?,
+                    &text(&settings.plan)?,
+                    &text(&settings.report)?,
+                )
+                .map_err(|_| Error::Configuration)?;
+                let executor = s3drive_s3::uploads::Executor::open(
+                    reader.clone(),
+                    storage.clone().ok_or(Error::Internal)?,
+                    policy,
+                )
+                .await
+                .map_err(|_| Error::Configuration)?;
+                reader = executor.reader();
+                Some(executor)
+            } else {
+                None
+            };
+            executors.push(executor);
+            readers.push(reader);
             let node = nodes.insert(
                 source_index,
                 "".into(),
@@ -204,16 +310,19 @@ impl ReadOnlyFs {
         aliases.sort_by(|a, b| a.name.cmp(&b.name));
         let cache = if let Some(settings) = &config.cache {
             Some(Arc::new(CacheBackend {
-                worker: Cache::open(
-                    &settings.directory,
-                    Options {
-                        max_bytes: settings.max_bytes,
-                        max_file_bytes: settings.max_file_bytes,
-                        max_entries: settings.max_entries,
-                    },
-                )
-                .await
-                .map_err(cache_error)?,
+                worker: match &storage {
+                    Some(storage) => storage.cache(),
+                    None => Cache::open(
+                        &settings.directory,
+                        Options {
+                            max_bytes: settings.max_bytes,
+                            max_file_bytes: settings.max_file_bytes,
+                            max_entries: settings.max_entries,
+                        },
+                    )
+                    .await
+                    .map_err(cache_error)?,
+                },
                 stripes: std::array::from_fn(|_| AsyncMutex::new(())),
                 slots: Semaphore::new(4),
             }))
@@ -225,12 +334,41 @@ impl ReadOnlyFs {
             nodes: Mutex::new(nodes),
             aliases,
             cache,
+            writes: storage.map(|storage| Arc::new(writable::Writes::new(storage, executors))),
         })
     }
 
     /// Adapters close this worker only after native callbacks and handles stop.
     pub fn cache_control(&self) -> Option<Cache> {
-        self.cache.as_ref().map(|cache| cache.worker.clone())
+        self.cache
+            .as_ref()
+            .map(|cache| cache.worker.clone())
+            .or_else(|| self.writes.as_ref().map(|w| w.storage.cache()))
+    }
+    pub fn is_read_only(&self) -> bool {
+        self.writes.is_none()
+    }
+    pub async fn capacity(&self) -> Result<Option<s3drive_state::journal::Capacity>> {
+        match &self.writes {
+            Some(w) => Ok(Some(
+                w.storage.staging().capacity().await.map_err(cache_error)?,
+            )),
+            None => Ok(None),
+        }
+    }
+    pub fn writable(&self, node: &Node) -> bool {
+        node.kind == Kind::File
+            && node.source.is_some_and(|source| {
+                self.writes
+                    .as_ref()
+                    .is_some_and(|w| w.permits(source, &node.key))
+            })
+    }
+    pub async fn flush_all(&self) -> Result<()> {
+        if let Some(writes) = &self.writes {
+            writes.flush_all().await?;
+        }
+        Ok(())
     }
 
     pub fn node(&self, id: u64) -> Result<Arc<Node>> {
@@ -310,6 +448,9 @@ impl ReadOnlyFs {
 
     pub async fn metadata(&self, id: u64) -> Result<Option<ObjectMetadata>> {
         let node = self.node(id)?;
+        if self.writes.is_some() && node.kind == Kind::File {
+            return Ok(Some(Box::pin(self.open(id)).await?.current_metadata()?));
+        }
         match node.kind {
             Kind::Directory => Ok(None),
             Kind::File => Ok(Some(
@@ -321,12 +462,32 @@ impl ReadOnlyFs {
     }
 
     pub async fn open(&self, id: u64) -> Result<OpenFile> {
+        Box::pin(self.open_mode(id, false)).await
+    }
+    pub async fn open_write(&self, id: u64) -> Result<OpenFile> {
+        Box::pin(self.open_mode(id, true)).await
+    }
+    async fn open_mode(&self, id: u64, writing: bool) -> Result<OpenFile> {
         let node = self.node(id)?;
         if node.kind != Kind::File {
             return Err(Error::IsDirectory);
         }
         let reader = &self.readers[node.source.ok_or(Error::Internal)?];
-        let handle = reader.open(&node.key).await?;
+        let mut handle = reader.open(&node.key).await?;
+        let writes = if let Some(writes) = &self.writes {
+            let (fresh, file) =
+                Box::pin(writes.open(node.source.ok_or(Error::Internal)?, &handle, writing))
+                    .await?;
+            if let Some(fresh) = fresh {
+                handle = fresh;
+            }
+            file.map(|file| (writes.clone(), file))
+        } else {
+            if writing {
+                return Err(Error::ReadOnly);
+            }
+            None
+        };
         // Authorization above always precedes cache-key construction/acquisition.
         let cache = match &self.cache {
             Some(cache) if cache.worker.accepts(handle.metadata().size) => {
@@ -350,6 +511,8 @@ impl ReadOnlyFs {
             cache,
             snapshot: OnceCell::new(),
             bypass: AtomicBool::new(false),
+            writes,
+            writable_open: writing,
         })
     }
 }

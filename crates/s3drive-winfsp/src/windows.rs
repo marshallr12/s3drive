@@ -63,6 +63,10 @@ fn storage_error(error: Error) -> FspError {
         Error::ResourceLimit => STATUS_INSUFFICIENT_RESOURCES,
         Error::NoSpace => STATUS_DISK_FULL,
         Error::Timeout => STATUS_IO_TIMEOUT,
+        Error::ReadOnly => STATUS_MEDIA_WRITE_PROTECTED,
+        Error::Conflict => STATUS_FILE_INVALID,
+        Error::TooLarge => STATUS_FILE_TOO_LARGE,
+        Error::Busy => STATUS_DEVICE_BUSY,
         _ => STATUS_UNEXPECTED_IO_ERROR,
     }
     .into()
@@ -93,6 +97,25 @@ fn info(node: &Node, metadata: Option<&ObjectMetadata>) -> FileInfo {
     }
 }
 impl Adapter {
+    fn file_info(&self, node: &Node, metadata: Option<&ObjectMetadata>) -> FileInfo {
+        let mut result = info(node, metadata);
+        if self.fs.writable(node) {
+            result.file_attributes &= !FILE_ATTRIBUTE_READONLY.0;
+            if result.file_attributes == 0 {
+                result.file_attributes = FILE_ATTRIBUTE_NORMAL.0;
+            }
+        }
+        result
+    }
+    fn current_info(&self, context: &FileContext) -> Result<FileInfo> {
+        match &context.file {
+            Some(file) => Ok(self.file_info(
+                &context.node,
+                Some(&file.current_metadata().map_err(storage_error)?),
+            )),
+            None => Ok(context.info.clone()),
+        }
+    }
     fn wait<T>(&self, future: impl Future<Output = Result<T>>) -> Result<T> {
         let mut cancelled = self.cancelled.clone();
         self.runtime.block_on(async {
@@ -151,19 +174,19 @@ impl Adapter {
         if node.id != ROOT {
             entries.push(Entry {
                 name: vec![46],
-                info: info(node, None),
+                info: self.file_info(node, None),
             });
             let parent = self.fs.node(node.parent).map_err(storage_error)?;
             entries.push(Entry {
                 name: vec![46, 46],
-                info: info(&parent, None),
+                info: self.file_info(&parent, None),
             });
         }
         for child in children.into_values() {
             let metadata = self.fs.metadata(child.id).await.map_err(storage_error)?;
             entries.push(Entry {
                 name: child.name.encode_utf16().collect(),
-                info: info(&child, metadata.as_ref()),
+                info: self.file_info(&child, metadata.as_ref()),
             });
         }
         Ok(Snapshot {
@@ -183,7 +206,7 @@ impl FileSystemContext for Adapter {
         let (node, _) = self.wait(self.resolve(name))?;
         Ok(FileSecurity {
             reparse: false,
-            attributes: info(&node, None).file_attributes,
+            attributes: self.file_info(&node, None).file_attributes,
             sz_security_descriptor: native::copy_descriptor(&self.descriptor, output)?,
         })
     }
@@ -197,16 +220,19 @@ impl FileSystemContext for Adapter {
         access: u32,
         output: &mut OpenFileInfo,
     ) -> Result<FileContext> {
-        let writes = FILE_WRITE_DATA.0
-            | FILE_APPEND_DATA.0
-            | FILE_WRITE_EA.0
-            | FILE_WRITE_ATTRIBUTES.0
-            | DELETE.0
-            | WRITE_DAC.0
-            | WRITE_OWNER.0;
+        let writes = DELETE.0 | WRITE_DAC.0 | WRITE_OWNER.0;
         // FILE_DELETE_ON_CLOSE = 0x1000, FILE_DIRECTORY_FILE = 1,
         // FILE_NON_DIRECTORY_FILE = 0x40 (NT create options).
-        if access & writes != 0 || options & 0x1000 != 0 {
+        if access & writes != 0
+            || options & 0x1000 != 0
+            || (self.fs.is_read_only()
+                && access
+                    & (FILE_WRITE_DATA.0
+                        | FILE_APPEND_DATA.0
+                        | FILE_WRITE_EA.0
+                        | FILE_WRITE_ATTRIBUTES.0)
+                    != 0)
+        {
             return Err(STATUS_MEDIA_WRITE_PROTECTED.into());
         }
         let permit = self
@@ -224,12 +250,21 @@ impl FileSystemContext for Adapter {
             }
             let file = if node.kind == Kind::File {
                 Some(Box::new(
-                    self.fs.open(node.id).await.map_err(storage_error)?,
+                    if access & (FILE_WRITE_DATA.0 | FILE_APPEND_DATA.0) != 0 {
+                        self.fs.open_write(node.id).await.map_err(storage_error)?
+                    } else {
+                        self.fs.open(node.id).await.map_err(storage_error)?
+                    },
                 ))
             } else {
                 None
             };
-            let info = info(&node, file.as_ref().map(|f| f.metadata()));
+            let metadata = file
+                .as_ref()
+                .map(|file| file.current_metadata())
+                .transpose()
+                .map_err(storage_error)?;
+            let info = self.file_info(&node, metadata.as_ref());
             // The wrapper copies to a caller-sized buffer. Check the real size,
             // not only its much larger transaction-size upper bound.
             if normalized.len() * 2 > usize::from(output.normalized_name_size()) {
@@ -250,12 +285,20 @@ impl FileSystemContext for Adapter {
         drop(context);
     }
     fn get_file_info(&self, context: &FileContext, output: &mut FileInfo) -> Result<()> {
-        *output = context.info.clone();
+        *output = self.current_info(context)?;
         Ok(())
     }
     fn flush(&self, context: Option<&FileContext>, output: &mut FileInfo) -> Result<()> {
         if let Some(context) = context {
-            *output = context.info.clone();
+            self.wait(async {
+                if let Some(file) = &context.file {
+                    file.flush().await.map_err(storage_error)?;
+                }
+                Ok(())
+            })?;
+            *output = self.current_info(context)?;
+        } else {
+            self.wait(async { self.fs.flush_all().await.map_err(storage_error) })?;
         }
         Ok(())
     }
@@ -264,7 +307,7 @@ impl FileSystemContext for Adapter {
         if output.is_empty() {
             return Ok(0);
         }
-        if offset >= file.metadata().size {
+        if offset >= file.current_metadata().map_err(storage_error)?.size {
             return Err(STATUS_END_OF_FILE.into());
         }
         self.wait(async {
@@ -275,6 +318,58 @@ impl FileSystemContext for Adapter {
             output[..bytes.len()].copy_from_slice(&bytes);
             Ok(bytes.len() as u32)
         })
+    }
+    fn write(
+        &self,
+        context: &FileContext,
+        buffer: &[u8],
+        offset: u64,
+        write_to_eof: bool,
+        constrained_io: bool,
+        output: &mut FileInfo,
+    ) -> Result<u32> {
+        let file = context.file.as_ref().ok_or(STATUS_FILE_IS_A_DIRECTORY)?;
+        let count = self.wait(async {
+            file.write(offset, Arc::from(buffer), write_to_eof, constrained_io)
+                .await
+                .map_err(storage_error)
+        })?;
+        *output = self.current_info(context)?;
+        Ok(count as u32)
+    }
+    fn set_file_size(
+        &self,
+        context: &FileContext,
+        size: u64,
+        allocation: bool,
+        output: &mut FileInfo,
+    ) -> Result<()> {
+        let file = context.file.as_ref().ok_or(STATUS_FILE_IS_A_DIRECTORY)?;
+        if !allocation || size < file.current_metadata().map_err(storage_error)?.size {
+            self.wait(async { file.truncate(size).await.map_err(storage_error) })?;
+        }
+        *output = self.current_info(context)?;
+        Ok(())
+    }
+    fn overwrite(
+        &self,
+        context: &FileContext,
+        attributes: u32,
+        replace_attributes: bool,
+        _allocation: u64,
+        extra: Option<&[u8]>,
+        output: &mut FileInfo,
+    ) -> Result<()> {
+        if extra.is_some_and(|b| !b.is_empty())
+            || (replace_attributes
+                && attributes & !(FILE_ATTRIBUTE_ARCHIVE.0 | FILE_ATTRIBUTE_NORMAL.0) != 0)
+        {
+            return Err(STATUS_NOT_SUPPORTED.into());
+        }
+        let file = context.file.as_ref().ok_or(STATUS_FILE_IS_A_DIRECTORY)?;
+        self.wait(async { file.truncate(0).await.map_err(storage_error) })?;
+        *output = self.current_info(context)?;
+        Ok(())
     }
     fn read_directory(
         &self,
@@ -316,9 +411,10 @@ impl FileSystemContext for Adapter {
         Ok(cursor)
     }
     fn get_volume_info(&self, output: &mut VolumeInfo) -> Result<()> {
-        // Object storage has no meaningful filesystem free-space quota here.
-        output.total_size = 0;
-        output.free_size = 0;
+        // Report only the local logical staging budget, never a remote quota.
+        let capacity = self.wait(async { self.fs.capacity().await.map_err(storage_error) })?;
+        output.total_size = capacity.as_ref().map_or(0, |c| c.total);
+        output.free_size = capacity.as_ref().map_or(0, |c| c.free);
         output.set_volume_label("S3Drive");
         Ok(())
     }
@@ -384,6 +480,7 @@ pub async fn run(
     mountpoint: &Path,
     unmount_on_stdin_close: bool,
 ) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let writable = !fs.is_read_only();
     let cache = fs.cache_control();
     let point = mount_point(mountpoint)?;
     let mut ctrl_c = tokio::signal::windows::ctrl_c()?;
@@ -391,13 +488,14 @@ pub async fn run(
     let runtime = tokio::runtime::Handle::current();
     let mounted = tokio::task::spawn_blocking(move || -> Result<Mounted> {
         let _init = winfsp::winfsp_init()?;
-        let descriptor = native::owner_descriptor()?;
+        let read_only=fs.is_read_only();
+        let descriptor = native::owner_descriptor(!read_only)?;
         let (cancel, cancelled) = watch::channel(false);
         let adapter = Adapter { fs, runtime, cancelled, descriptor, handles: Arc::new(Semaphore::new(256)), entries: Arc::new(Semaphore::new(100_000)) };
         let mut params = VolumeParams::new();
         params.filesystem_name("S3Drive").sector_size(512).sectors_per_allocation_unit(8).max_component_length(255)
             .case_sensitive_search(false).case_preserved_names(true).unicode_on_disk(true)
-            .persistent_acls(true).read_only_volume(true).file_info_timeout(0).dir_info_timeout(0)
+            .persistent_acls(true).read_only_volume(read_only).file_info_timeout(0).dir_info_timeout(0)
             .flush_and_purge_on_cleanup(true).irp_timeout(120_000);
         let mut host: FileSystemHost<Adapter> = FileSystemHost::new(params, adapter)?;
         host.mount(&point)?;
@@ -416,7 +514,10 @@ pub async fn run(
             let _ = stdin_closed.send(());
         });
     }
-    eprintln!("Mounted read-only WinFsp drive; Ctrl+C to unmount.");
+    eprintln!(
+        "Mounted {} WinFsp drive; Ctrl+C to unmount.",
+        if writable { "read-write" } else { "read-only" }
+    );
     tokio::select! {
         _ = ctrl_c.recv() => {},
         _ = ctrl_break.recv() => {},

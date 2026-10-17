@@ -262,6 +262,9 @@ pub struct Staging {
     options: journal::Options,
 }
 impl Staging {
+    pub async fn capacity(&self) -> Result<journal::Capacity> {
+        self.call(|j| j.capacity()).await
+    }
     async fn call<T: Send + 'static>(
         &self,
         work: impl FnOnce(&mut Journal<'_>) -> Result<T> + Send + 'static,

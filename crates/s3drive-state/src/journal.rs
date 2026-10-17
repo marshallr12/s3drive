@@ -7,6 +7,12 @@ use std::fmt;
 
 pub const CHUNK_BYTES: usize = 1024 * 1024;
 pub const MAX_READ_BYTES: usize = 8 * 1024 * 1024;
+/// Logical staging budget; excludes SQLite/WAL/index overhead and remote space.
+#[derive(Clone, Copy, Debug)]
+pub struct Capacity {
+    pub total: u64,
+    pub free: u64,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Failure {
@@ -175,6 +181,19 @@ pub struct Journal<'a> {
     options: Options,
 }
 impl<'a> Journal<'a> {
+    pub fn capacity(&self) -> Result<Capacity> {
+        let (used,generations):(i64,i64)=self.state.connection.query_row("SELECT (SELECT coalesce(sum(length(data)),0) FROM staged_chunks),(SELECT count(*) FROM staged_generations)",[],|r|Ok((r.get(0)?,r.get(1)?)))?;
+        let used = u64::try_from(used)?;
+        let generations = u64::try_from(generations)?;
+        Ok(Capacity {
+            total: self.options.max_bytes,
+            free: if generations >= u64::from(self.options.max_generations) {
+                0
+            } else {
+                self.options.max_bytes.saturating_sub(used)
+            },
+        })
+    }
     pub fn new(state: &'a mut State, options: Options) -> Result<Self> {
         Ok(Self {
             state,

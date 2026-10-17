@@ -67,7 +67,7 @@ pub fn name_key(name: &str) -> Vec<u16> {
         .collect()
 }
 
-pub fn owner_descriptor() -> Result<Vec<u8>> {
+pub fn owner_descriptor(writable: bool) -> Result<Vec<u8>> {
     let mut handle = HANDLE::default();
     // SAFETY: output is initialized, process pseudo-handle is valid.
     unsafe {
@@ -103,9 +103,10 @@ pub fn owner_descriptor() -> Result<Vec<u8>> {
     let _sid_allocation = LocalAllocation(sid.0.cast());
     // SAFETY: conversion returns an allocated null-terminated UTF-16 string.
     let sid = unsafe { sid.to_string() }.map_err(|_| STATUS_INTERNAL_ERROR)?;
-    // Owner and protected DACL are fixed to the mounting account. Read/traverse
-    // only; the volume independently forbids mutation and ACL changes.
-    let sddl = HSTRING::from(format!("O:{sid}G:{sid}D:P(A;;FRFX;;;{sid})"));
+    // Owner and protected DACL are fixed to the mounting account. Optional
+    // write rights add no other SID; callbacks still enforce per-source policy.
+    let rights = if writable { "FRFWFX" } else { "FRFX" };
+    let sddl = HSTRING::from(format!("O:{sid}G:{sid}D:P(A;;{rights};;;{sid})"));
     let mut descriptor = PSECURITY_DESCRIPTOR::default();
     let mut length = 0;
     // SAFETY: stable NUL-terminated input and valid out parameters. Revision 1

@@ -13,6 +13,7 @@ use tokio::{
 };
 
 type Objects = BTreeMap<String, (Vec<u8>, String)>;
+type Metadata = BTreeMap<String, (String, String)>;
 pub struct Fixture {
     pub endpoint: String,
     pub objects: Arc<Mutex<Objects>>,
@@ -22,6 +23,8 @@ pub struct Fixture {
     pub deny_head: Arc<AtomicBool>,
     pub deny_get: Arc<AtomicBool>,
     pub offline: Arc<AtomicBool>,
+    pub writable: Arc<AtomicBool>,
+    metadata: Arc<Mutex<Metadata>>,
 }
 impl Drop for Fixture {
     fn drop(&mut self) {
@@ -42,6 +45,10 @@ impl Fixture {
         let head_policy = deny_head.clone();
         let get_policy = deny_get.clone();
         let availability = offline.clone();
+        let writable = Arc::new(AtomicBool::new(false));
+        let writes = writable.clone();
+        let metadata = Arc::new(Mutex::new(Metadata::new()));
+        let metas = metadata.clone();
         let data = objects.clone();
         let seen = requests.clone();
         let server = tokio::spawn(async move {
@@ -55,6 +62,7 @@ impl Fixture {
                         let deny_head = head_policy.clone();
                         let deny_get = get_policy.clone();
                         let offline = availability.clone();
+                        let writable=writes.clone();let metadata=metas.clone();
                         workers.spawn(async move {
                             tokio::time::timeout(Duration::from_secs(20), async move {
                                 let mut bytes = Vec::new();
@@ -66,6 +74,38 @@ impl Fixture {
                                 let first = request.lines().next().unwrap();
                                 requests.lock().unwrap().push(first.to_owned());
                                 assert!(request.contains("Credential=TESTPROFILE/"));
+                                if offline.load(Ordering::SeqCst) {return;}
+                                let method=first.split_whitespace().next().unwrap();
+                                let headers=request.lines().skip(1).filter_map(|l|l.split_once(':')).map(|(k,v)|(k.to_ascii_lowercase(),v.trim().to_owned())).collect::<BTreeMap<_,_>>();
+                                let url=url::Url::parse(&format!("http://fixture{}",first.split_whitespace().nth(1).unwrap())).unwrap();
+                                let key=percent_encoding::percent_decode_str(url.path()).decode_utf8().unwrap().into_owned();
+                                if writable.load(Ordering::SeqCst) && method=="GET" && url.query_pairs().any(|(k,_)|k=="versioning") {
+                                    let body=b"<VersioningConfiguration/>";socket.write_all(&response("200 OK","Content-Type: application/xml\r\n",body,body.len())).await.unwrap();return;
+                                }
+                                if method=="PUT" || method=="DELETE" {
+                                    assert!(writable.load(Ordering::SeqCst),"unexpected mutation");
+                                    if method=="DELETE" {
+                                        assert!(key.contains("/s3drive-conformance/"),"application delete unsupported");
+                                        objects.lock().unwrap().remove(&key);metadata.lock().unwrap().remove(&key);
+                                        socket.write_all(&response("204 No Content","",b"",0)).await.unwrap();return;
+                                    }
+                                    let length=headers["content-length"].parse::<usize>().unwrap();assert!(length<=8*1024*1024);assert!(!headers.contains_key("transfer-encoding"));
+                                    if headers.get("expect").is_some_and(|h|h.eq_ignore_ascii_case("100-continue")){socket.write_all(b"HTTP/1.1 100 Continue\r\n\r\n").await.unwrap();}
+                                    let mut body=vec![0;length];socket.read_exact(&mut body).await.unwrap();
+                                    let result={
+                                        let mut data=objects.lock().unwrap();
+                                        let allowed=if headers.get("if-none-match").is_some_and(|h|h=="*"){!data.contains_key(&key)}else{headers.get("if-match").is_some_and(|tag|data.get(&key).is_some_and(|(_,old)|old==tag))};
+                                        if !allowed{response("412 Precondition Failed","",b"",0)}else{
+                                            use sha2::{Digest,Sha256};let hash=Sha256::digest(&body).iter().map(|b|format!("{b:02x}")).collect::<String>();
+                                            assert_eq!(headers["x-amz-meta-s3drive-sha256"],hash);
+                                            let operation=headers["x-amz-meta-s3drive-operation"].clone();assert_eq!(operation.len(),64);
+                                            let tag=format!("\"write-{}\"",requests.lock().unwrap().len());
+                                            data.insert(key.clone(),(body,tag.clone()));metadata.lock().unwrap().insert(key,(operation,hash));
+                                            response("200 OK",&format!("ETag: {tag}\r\n"),b"",0)
+                                        }
+                                    };
+                                    socket.write_all(&result).await.unwrap();return;
+                                }
                                 if offline.load(Ordering::SeqCst) { return; }
                                 if (first.starts_with("HEAD ") && deny_head.load(Ordering::SeqCst)) ||
                                     (first.starts_with("GET ") && !first.contains("list-type=2") && deny_get.load(Ordering::SeqCst)) {
@@ -78,7 +118,7 @@ impl Fixture {
                                     let _ = socket.read(&mut byte).await;
                                     return;
                                 }
-                                let response = respond(&request, &objects.lock().unwrap());
+                                let response = respond(&request, &objects.lock().unwrap(), &metadata.lock().unwrap());
                                 let _ = socket.write_all(&response).await;
                             }).await.unwrap();
                         });
@@ -96,6 +136,8 @@ impl Fixture {
             deny_head,
             deny_get,
             offline,
+            writable,
+            metadata,
         }
     }
     pub fn put(&self, path: &str, bytes: &[u8], etag: &str) {
@@ -103,6 +145,7 @@ impl Fixture {
             .lock()
             .unwrap()
             .insert(path.into(), (bytes.to_vec(), format!("\"{etag}\"")));
+        self.metadata.lock().unwrap().remove(path);
     }
 }
 fn response(status: &str, headers: &str, body: &[u8], length: usize) -> Vec<u8> {
@@ -116,7 +159,7 @@ fn response(status: &str, headers: &str, body: &[u8], length: usize) -> Vec<u8> 
 fn encoded(key: &str) -> String {
     percent_encoding::utf8_percent_encode(key, percent_encoding::NON_ALPHANUMERIC).to_string()
 }
-fn respond(request: &str, objects: &Objects) -> Vec<u8> {
+fn respond(request: &str, objects: &Objects, metadata: &Metadata) -> Vec<u8> {
     let mut words = request.split_whitespace();
     let method = words.next().unwrap();
     let target = words.next().unwrap();
@@ -193,11 +236,36 @@ fn respond(request: &str, objects: &Objects) -> Vec<u8> {
         .filter_map(|s| s.split_once(':'))
         .map(|(k, v)| (k.to_lowercase(), v.trim()))
         .collect();
+    let extra = metadata
+        .get(path.as_ref())
+        .map(|(operation, hash)| {
+            format!(
+                "x-amz-meta-s3drive-operation: {operation}\r\nx-amz-meta-s3drive-sha256: {hash}\r\n"
+            )
+        })
+        .unwrap_or_default();
     if method == "HEAD" {
-        return response("200 OK", &format!("ETag: {etag}\r\n"), b"", bytes.len());
+        return response(
+            "200 OK",
+            &format!("ETag: {etag}\r\n{extra}"),
+            b"",
+            bytes.len(),
+        );
     }
     if headers.get("if-match") != Some(&etag.as_str()) {
         return response("412 Precondition Failed", "", b"", 0);
+    }
+    if !headers.contains_key("range") {
+        assert!(
+            metadata.contains_key(path.as_ref()),
+            "unexpected full GET outside write verification"
+        );
+        return response(
+            "200 OK",
+            &format!("ETag: {etag}\r\n{extra}"),
+            bytes,
+            bytes.len(),
+        );
     }
     let (start, end) = headers["range"]
         .strip_prefix("bytes=")
@@ -212,7 +280,7 @@ fn respond(request: &str, objects: &Objects) -> Vec<u8> {
     response(
         "206 Partial Content",
         &format!(
-            "ETag: {etag}\r\nContent-Range: bytes {start}-{end}/{}\r\n",
+            "ETag: {etag}\r\n{extra}Content-Range: bytes {start}-{end}/{}\r\n",
             bytes.len()
         ),
         &bytes[start..=end],

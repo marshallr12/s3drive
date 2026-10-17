@@ -12,6 +12,7 @@ use url::Url;
 #[serde(rename_all = "kebab-case")]
 pub enum Mode {
     ReadOnly,
+    ReadWrite,
 }
 
 #[derive(Debug, Deserialize)]
@@ -21,6 +22,27 @@ pub struct Config {
     pub mode: Mode,
     pub sources: Vec<Source>,
     pub cache: Option<CacheConfig>,
+    pub writes: Option<WritesConfig>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WritesConfig {
+    pub directory: PathBuf,
+    pub sources: Vec<WriteSource>,
+}
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WriteSource {
+    pub alias: String,
+    pub policy: PathBuf,
+    pub plan: PathBuf,
+    pub report: PathBuf,
+}
+fn absolute_local(path: &std::path::Path) -> bool {
+    path.is_absolute()
+        && !path.components().any(|c| matches!(c, Component::ParentDir))
+        && !path.as_os_str().as_encoded_bytes().contains(&0)
 }
 
 #[derive(Debug, Deserialize)]
@@ -118,8 +140,34 @@ impl Config {
     }
 
     pub fn validate(&self) -> Result<(), String> {
-        if self.version != 1 {
-            return Err("only configuration version 1 is supported".into());
+        match (&self.mode, self.version, &self.writes) {
+            (Mode::ReadOnly, 1, None) => {}
+            (Mode::ReadWrite, 2, Some(writes)) => {
+                if !absolute_local(&writes.directory)
+                    || writes.sources.is_empty()
+                    || self
+                        .cache
+                        .as_ref()
+                        .is_some_and(|cache| cache.directory != writes.directory)
+                {
+                    return Err("read-write configuration requires one absolute private state directory, explicit source policies, and the same directory for optional cache".into());
+                }
+                let mut selected = HashSet::new();
+                for source in &writes.sources {
+                    if !selected.insert(&source.alias)
+                        || !self.sources.iter().any(|s| s.alias == source.alias)
+                        || [&source.policy, &source.plan, &source.report]
+                            .iter()
+                            .any(|p| !absolute_local(p))
+                    {
+                        return Err("write sources require unique configured aliases and absolute policy/plan/report paths".into());
+                    }
+                }
+            }
+            _ => return Err(
+                "version 1 is read-only; version 2 read-write requires an explicit writes table"
+                    .into(),
+            ),
         }
         if self.sources.is_empty() {
             return Err("at least one source is required".into());
@@ -260,6 +308,41 @@ fn validate_relative(path: &str) -> Result<(), String> {
 mod tests {
     use super::*;
     const EXAMPLE: &str = include_str!("../../../examples/s3drive.toml");
+
+    #[test]
+    fn writable_mode_requires_explicit_version_bound_sources_and_shared_local_state() {
+        let root = std::env::temp_dir().join("s3drive-write-config");
+        let base = EXAMPLE
+            .replace("version = 1", "version = 2")
+            .replace("mode = \"read-only\"", "mode = \"read-write\"");
+        let input = format!(
+            "{base}\n[writes]\ndirectory={:?}\n[[writes.sources]]\nalias='documents'\npolicy={:?}\nplan={:?}\nreport={:?}\n",
+            root.to_str().unwrap(),
+            root.join("policy").to_str().unwrap(),
+            root.join("plan").to_str().unwrap(),
+            root.join("report").to_str().unwrap()
+        );
+        let config = Config::parse(&input).unwrap();
+        assert_eq!(config.mode, Mode::ReadWrite);
+        assert!(Config::parse(&input.replace("version = 2", "version = 1")).is_err());
+        assert!(Config::parse(&input.replace("alias='documents'", "alias='missing'")).is_err());
+        assert!(Config::parse(&format!("{input}\n[[writes.sources]]\nalias='documents'\npolicy='/tmp/policy'\nplan='/tmp/plan'\nreport='/tmp/report'\n")).is_err());
+        let separate = root.join("other");
+        assert!(
+            Config::parse(&format!(
+                "{input}\n[cache]\ndirectory={:?}\n",
+                separate.to_str().unwrap()
+            ))
+            .is_err()
+        );
+        assert!(
+            Config::parse(&format!(
+                "{EXAMPLE}\n[writes]\ndirectory={:?}\nsources=[]\n",
+                root.to_str().unwrap()
+            ))
+            .is_err()
+        );
+    }
 
     #[test]
     fn optional_cache_has_bounded_defaults_and_requires_absolute_local_path() {

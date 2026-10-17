@@ -6,7 +6,7 @@ use std::{error::Error, fs, io::Write, path::PathBuf};
 #[derive(Parser)]
 #[command(
     version,
-    about = "S3Drive read-only mounts, S3 tools and opt-in conformance probes"
+    about = "S3Drive mounts, S3 tools and explicit write policies"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -64,7 +64,7 @@ enum Command {
         #[arg(long, default_value_t = 65536)]
         length: usize,
     },
-    /// Mount a read-only drive in the foreground (Linux FUSE or Windows WinFsp).
+    /// Mount a drive in the foreground (version 1 read-only; explicit version 2 writes).
     Mount {
         config: PathBuf,
         mountpoint: PathBuf,
@@ -128,13 +128,18 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
                 &read_evidence(report)?,
             )?;
             println!(
-                "Valid source-bound policy and local evidence. No credentials resolved or provider connection attempted. New claims still require fresh evidence and matching runtime credentials; mounts remain read-only."
+                "Valid source-bound policy and local evidence. No credentials resolved or provider connection attempted. New claims still require fresh evidence and matching runtime credentials and a separate version-2 mount configuration."
             );
         }
         Command::ConfigCheck { config } => {
             let config = Config::parse(&fs::read_to_string(config)?)?;
             println!(
-                "Valid read-only configuration: {} source(s). No provider connection attempted.",
+                "Valid {} configuration: {} source(s). No provider connection attempted.",
+                if config.mode == s3drive_core::Mode::ReadOnly {
+                    "read-only"
+                } else {
+                    "read-write"
+                },
                 config.sources.len()
             );
         }
@@ -382,9 +387,6 @@ fn check_cache_location(
     config: &Config,
     mountpoint: &std::path::Path,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
-    let Some(cache) = &config.cache else {
-        return Ok(());
-    };
     fn projected(path: &std::path::Path) -> std::io::Result<PathBuf> {
         let absolute = std::path::absolute(path)?;
         let mut current = absolute.as_path();
@@ -418,10 +420,18 @@ fn check_cache_location(
             .map(|part| part.as_os_str().to_string_lossy().into_owned())
             .collect()
     }
-    let local = parts(&projected(&cache.directory)?);
     let mount = parts(&projected(mountpoint)?);
-    if local.starts_with(&mount) || mount.starts_with(&local) {
-        return Err("cache directory and mountpoint must be separate local trees".into());
+    for directory in config
+        .cache
+        .as_ref()
+        .map(|c| &c.directory)
+        .into_iter()
+        .chain(config.writes.as_ref().map(|w| &w.directory))
+    {
+        let local = parts(&projected(directory)?);
+        if local.starts_with(&mount) || mount.starts_with(&local) {
+            return Err("cache/state directory and mountpoint must be separate local trees".into());
+        }
     }
     Ok(())
 }

@@ -1,7 +1,7 @@
 use fuser::{
-    Errno, FileAttr, FileHandle, FileType, Filesystem, FopenFlags, Generation, INodeNo, LockOwner,
-    MountOption, OpenAccMode, OpenFlags, ReplyAttr, ReplyData, ReplyDirectory, ReplyEmpty,
-    ReplyEntry, ReplyOpen, Request,
+    BsdFileFlags, Errno, FileAttr, FileHandle, FileType, Filesystem, FopenFlags, Generation,
+    INodeNo, LockOwner, MountOption, OpenAccMode, OpenFlags, ReplyAttr, ReplyData, ReplyDirectory,
+    ReplyEmpty, ReplyEntry, ReplyOpen, ReplyStatfs, ReplyWrite, Request, TimeOrNow, WriteFlags,
 };
 use s3drive_fs::{Error, Kind, Node, OpenFile, ReadOnlyFs};
 use s3drive_s3::{ErrorKind, ObjectMetadata};
@@ -114,7 +114,7 @@ impl Adapter {
             perm: if node.kind == Kind::Directory {
                 0o500
             } else {
-                0o400
+                if self.fs.writable(node) { 0o600 } else { 0o400 }
             },
             nlink: if node.kind == Kind::Directory { 2 } else { 1 },
             uid: self.uid,
@@ -131,7 +131,7 @@ impl Adapter {
                 if file.node.id != ino.0 {
                     return Err(Errno::EBADF);
                 }
-                return Ok(self.attr(&file.node, Some(file.metadata())));
+                return Ok(self.attr(&file.node, Some(&file.current_metadata().map_err(errno)?)));
             }
         }
         let node = self.fs.node(ino.0).map_err(errno)?;
@@ -140,6 +140,22 @@ impl Adapter {
     }
 }
 impl Filesystem for Adapter {
+    fn statfs(&self, _req: &Request, _ino: INodeNo, reply: ReplyStatfs) {
+        match self.wait(self.fs.capacity()) {
+            Ok(Some(capacity)) => reply.statfs(
+                capacity.total.div_ceil(4096),
+                capacity.free / 4096,
+                capacity.free / 4096,
+                0,
+                0,
+                4096,
+                255,
+                4096,
+            ),
+            Ok(None) => reply.statfs(0, 0, 0, 0, 0, 4096, 255, 4096),
+            Err(error) => reply.error(error),
+        }
+    }
     fn lookup(&self, _req: &Request, parent: INodeNo, name: &OsStr, reply: ReplyEntry) {
         let result = name
             .to_str()
@@ -158,12 +174,18 @@ impl Filesystem for Adapter {
         }
     }
     fn open(&self, _req: &Request, ino: INodeNo, flags: OpenFlags, reply: ReplyOpen) {
-        if flags.acc_mode() != OpenAccMode::O_RDONLY {
-            reply.error(Errno::EROFS);
-            return;
-        }
         let result = self
-            .wait(self.fs.open(ino.0))
+            .wait(async {
+                let file = if flags.acc_mode() == OpenAccMode::O_RDONLY {
+                    self.fs.open(ino.0).await?
+                } else {
+                    self.fs.open_write(ino.0).await?
+                };
+                if flags.0 & nix::libc::O_TRUNC != 0 {
+                    file.truncate(0).await?;
+                }
+                Ok(file)
+            })
             .and_then(|file| self.add_handle(OpenHandle::File(Box::new(file))));
         match result {
             Ok(fh) => reply.opened(FileHandle(fh), FopenFlags::FOPEN_DIRECT_IO),
@@ -192,6 +214,87 @@ impl Filesystem for Adapter {
             Err(e) => reply.error(e),
         }
     }
+    fn write(
+        &self,
+        _req: &Request,
+        ino: INodeNo,
+        fh: FileHandle,
+        offset: u64,
+        data: &[u8],
+        _write_flags: WriteFlags,
+        flags: OpenFlags,
+        _owner: Option<LockOwner>,
+        reply: ReplyWrite,
+    ) {
+        let result = self.handle(fh).and_then(|handle| match &*handle {
+            OpenHandle::File(file) if file.node.id == ino.0 => self.wait(file.write(
+                offset,
+                Arc::from(data),
+                flags.0 & nix::libc::O_APPEND != 0,
+                false,
+            )),
+            _ => Err(Errno::EBADF),
+        });
+        match result {
+            Ok(count) => reply.written(count as u32),
+            Err(error) => reply.error(error),
+        }
+    }
+    fn setattr(
+        &self,
+        _req: &Request,
+        ino: INodeNo,
+        mode: Option<u32>,
+        uid: Option<u32>,
+        gid: Option<u32>,
+        size: Option<u64>,
+        atime: Option<TimeOrNow>,
+        mtime: Option<TimeOrNow>,
+        ctime: Option<SystemTime>,
+        fh: Option<FileHandle>,
+        crtime: Option<SystemTime>,
+        chgtime: Option<SystemTime>,
+        bkuptime: Option<SystemTime>,
+        flags: Option<BsdFileFlags>,
+        reply: ReplyAttr,
+    ) {
+        if mode.is_some()
+            || uid.is_some()
+            || gid.is_some()
+            || atime.is_some()
+            || (mtime.is_some() && !(size.is_some() && matches!(mtime, Some(TimeOrNow::Now))))
+            || (ctime.is_some() && size.is_none())
+            || crtime.is_some()
+            || chgtime.is_some()
+            || bkuptime.is_some()
+            || flags.is_some()
+        {
+            reply.error(Errno::EOPNOTSUPP);
+            return;
+        }
+        let result = (|| {
+            let size = size.ok_or(Errno::EOPNOTSUPP)?;
+            if let Some(fh) = fh {
+                let handle = self.handle(fh)?;
+                match &*handle {
+                    OpenHandle::File(file) if file.node.id == ino.0 => {
+                        self.wait(file.truncate(size))?
+                    }
+                    _ => return Err(Errno::EBADF),
+                }
+            } else {
+                self.wait(async {
+                    let file = self.fs.open_write(ino.0).await?;
+                    file.truncate(size).await
+                })?;
+            }
+            self.attributes(ino, fh)
+        })();
+        match result {
+            Ok(attr) => reply.attr(&TTL, &attr),
+            Err(error) => reply.error(error),
+        }
+    }
     fn flush(
         &self,
         _req: &Request,
@@ -200,7 +303,7 @@ impl Filesystem for Adapter {
         _lock_owner: LockOwner,
         reply: ReplyEmpty,
     ) {
-        self.check_file_handle(ino, fh, reply);
+        self.flush_handle(ino, fh, reply);
     }
     fn fsync(
         &self,
@@ -210,7 +313,7 @@ impl Filesystem for Adapter {
         _datasync: bool,
         reply: ReplyEmpty,
     ) {
-        self.check_file_handle(ino, fh, reply);
+        self.flush_handle(ino, fh, reply);
     }
     fn release(
         &self,
@@ -319,10 +422,17 @@ impl Adapter {
             Err(_) => reply.error(Errno::EIO),
         }
     }
-    fn check_file_handle(&self, ino: INodeNo, fh: FileHandle, reply: ReplyEmpty) {
+    fn flush_handle(&self, ino: INodeNo, fh: FileHandle, reply: ReplyEmpty) {
         match self.handle(fh) {
             Ok(handle) if matches!(&*handle, OpenHandle::File(file) if file.node.id == ino.0) => {
-                reply.ok()
+                let result = match &*handle {
+                    OpenHandle::File(file) => self.wait(file.flush()),
+                    _ => Err(Errno::EBADF),
+                };
+                match result {
+                    Ok(()) => reply.ok(),
+                    Err(error) => reply.error(error),
+                }
             }
             _ => reply.error(Errno::EBADF),
         }
@@ -344,6 +454,10 @@ fn errno(error: Error) -> Errno {
         Error::ResourceLimit => Errno::ENOSPC,
         Error::NoSpace => Errno::ENOSPC,
         Error::Timeout => Errno::ETIMEDOUT,
+        Error::ReadOnly => Errno::EROFS,
+        Error::Conflict => Errno::ESTALE,
+        Error::TooLarge => Errno::EFBIG,
+        Error::Busy => Errno::EAGAIN,
         Error::Storage(error) => match error.kind {
             ErrorKind::PermissionDenied => Errno::EACCES,
             ErrorKind::NotFound => Errno::ENOENT,
@@ -376,6 +490,7 @@ impl Drop for UnmountGuard {
 /// Serve until normal external unmount, Ctrl-C or SIGTERM. All callbacks run on
 /// four FUSE threads; network futures use the caller's long-lived Tokio runtime.
 pub async fn run(fs: ReadOnlyFs, mountpoint: &Path) -> io::Result<()> {
+    let writable = !fs.is_read_only();
     let cache = fs.cache_control();
     // Install signals before mounting so termination cannot leave a live mount.
     let mut interrupt = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
@@ -394,6 +509,7 @@ pub async fn run(fs: ReadOnlyFs, mountpoint: &Path) -> io::Result<()> {
                 "mountpoint must be an existing empty directory owned by this user, not a symlink",
             ));
         }
+        let read_only = fs.is_read_only();
         let adapter = Adapter {
             fs,
             runtime,
@@ -409,7 +525,11 @@ pub async fn run(fs: ReadOnlyFs, mountpoint: &Path) -> io::Result<()> {
         // No allow_other, executable bits, device nodes, suid, or writeback cache.
         let mut options = fuser::Config::default();
         options.mount_options = vec![
-            MountOption::RO,
+            if read_only {
+                MountOption::RO
+            } else {
+                MountOption::RW
+            },
             MountOption::NoDev,
             MountOption::NoSuid,
             MountOption::NoExec,
@@ -426,7 +546,10 @@ pub async fn run(fs: ReadOnlyFs, mountpoint: &Path) -> io::Result<()> {
     .map_err(io::Error::other)??;
     let mut guard = UnmountGuard { unmounter, cancel };
     let mut running = tokio::task::spawn_blocking(move || session.run());
-    eprintln!("Mounted read-only S3Drive. Use Ctrl-C or fusermount3 -u to unmount.");
+    eprintln!(
+        "Mounted {} S3Drive. Use Ctrl-C or fusermount3 -u to unmount.",
+        if writable { "read-write" } else { "read-only" }
+    );
     tokio::select! {
         result = &mut running => { result.map_err(io::Error::other)??; }
         _ = interrupt.recv() => { guard.unmount()?; running.await.map_err(io::Error::other)??; }

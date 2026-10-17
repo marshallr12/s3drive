@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated: 2026-10-16. Current phase: **P5b2d generation-specific remote flush**.
+Updated: 2026-10-16. Current phase: **P5c1a native existing-file writes**, under acceptance.
 Goal active. Linux/Windows read-only drives and startup foundations work;
 library writes/flush are progressing toward safe writable native filesystems.
 Do not call the broader editable-drive goal complete before its documented
@@ -12,9 +12,11 @@ safe-write contract and real OS acceptance pass.
   GitHub repository `marshallr12/s3drive`; these artifacts already exist.
 - One or more S3-compatible buckets/prefixes exposed through source aliases.
   Wasabi is the first live provider; other endpoints need separate conformance.
-- Linux FUSE and Windows WinFsp adapters currently expose read-only files.
+- Linux FUSE and Windows WinFsp adapters have stable read-only acceptance.
+  The current branch adds opt-in existing-file editing; native writable
+  acceptance is pending.
   New online opens authorize through S3; pinned old handles preserve revisions.
-  No ordinary CLI upload command, writable mount/configuration, delete/rename,
+  No ordinary CLI upload command, file creation, delete/rename,
   multipart, payload reclamation, new offline opens or desktop packaging yet.
 - Startup at sign-in after reboot; same-user incoming SSH sessions and surviving
   tmux/Codex/Claude processes must share the mount. The user's “SSL sessions”
@@ -29,15 +31,15 @@ safe-write contract and real OS acceptance pass.
 ## Authoritative publication baseline
 
 Published private main at phase start:
-`78e649a4ce0089fb07bfc996e3df335443fabb3f` (source-write-policy).
-It passed terminal all-green [run 38984535403](https://github.com/marshallr12/s3drive/actions/runs/38984535403):
-Linux 117252802625, Windows 117252802659 and book 117252802552.
+`4a0f04cb071cefa6a5b894308863e03ef74226f0` (remote-flush-receipts).
+It passed terminal all-green [run 38986527921](https://github.com/marshallr12/s3drive/actions/runs/38986527921):
+Linux 117259186073, Windows 117259186221 and book 117259186256.
 Remote main SHA and PRIVATE visibility were verified after publication.
 
-That exact baseline passed 47 S3 tests on each OS, 70 Linux / 68 Windows state
+That exact baseline passed 49 S3 tests on each OS, 78 Linux / 76 Windows state
 and 12 FS tests, offline CLI guards, 341 FUSE and 749 WinFsp requests, caching,
-no-systemd startup and Windows cross-logon acceptance. Logs:
-`/tmp/s3drive-write-policy-{linux,windows,book}-ci.log`.
+no-systemd startup and Windows cross-logon acceptance, with schema 7. Logs:
+`/tmp/s3drive-flush-{linux,windows,book}-ci.log`.
 
 Windows testing runs remotely on GitHub's **Windows Server 2025 VM**, not this
 Linux workstation. Native folder/drive/security/UTF-16 tests and distinct
@@ -52,7 +54,8 @@ Seven crates: core, s3, state, fs, fuse, winfsp and cli. Rust 1.99.1, edition
 upgrade in the current phase. OS dependencies remain target-specific.
 
 - `s3drive-core/src/lib.rs`: strict source config and alias/key resolution;
-  only `mode = "read-only"` is accepted. Multiple sources use `[[sources]]`.
+  version 1 is read-only; version 2 requires explicit source policies and local
+  state for read-write. Multiple sources use `[[sources]]`.
 - `s3drive-s3/src/reader.rs`: bounded LIST/HEAD/revision-pinned GET, explicit
   profile/endpoint/region, sanitized failures, credential-bound immutable handles.
 - `s3drive-state`: managed ownership, migration, bounded clean-cache BLOBs,
@@ -77,52 +80,39 @@ upgrade in the current phase. OS dependencies remain target-specific.
   least-privilege password-backed scheduled task with shared NTFS folder.
   Do not change machine policy or install a real user startup entry implicitly.
 
-## P5b2d changes on remote-flush-receipts
+## Current branch: native-writable-files
 
-`uploads::Executor::flush(generation)` requires exact remote verification and
-committed local acknowledgment before returning an opaque `remote::FlushReceipt`.
-This is a receipt for the selected immutable generation, not future edits or a
-promise that another authorized writer cannot later replace the remote object.
+P5b2d flush receipts and schema 7 are published. Current P5c1a connects existing
+file writes/truncation/append and remote fsync to both OS adapters. See
+[the native-write contract](docs/src/native-writes.md) for configuration and
+limits. One SQLite owner serves edits, cache and uploads. Four mutation slots
+and a per-file lock bound execution. Immutable snapshots survive failures;
+new opens authorize online. Reconciliation only observes claimed attempts;
+no silent replay, unconditional overwrite or automatic clean-base rebase.
+File creation, delete/rename, multipart, timestamp/ACL editing and payload GC
+remain unsupported. Default staging limits remain 1 GiB / 4,096 generations.
+The existing real user configuration and credential files remain unchanged.
 
-Migration 7 adds `remote_flushes` and `write_settlements`. One transaction
-records the verified operation's receipt and missing ancestor settlements.
-It keeps previously settled markers, all payloads/manifests, retained intent
-rows and remote history. A newer local head stays pending. Existing schema-6
-verified operations are not automatically acknowledged during migration.
-
-`pending()` validates the whole settlement forest before excluding settled
-work. Startup and new claims also reject corrupt acknowledgment records.
-Validation uses bounded fixed-size projections and compact ID/hash maps,
-checksums and iterative ancestry intervals rather than recursive/quadratic
-per-receipt ancestor scans. Hard limit: 65,536 roots/settled generations.
-This detects corruption, not a malicious local DB owner rewriting all hashes.
-
-Async facade: `uploads().acknowledge`, `flush_receipt`, `settlement`.
-Repeated acknowledgment is local-only/idempotent. A superseded local ancestor
-can have a settlement without a direct remote receipt. Pending markers cannot
-simply be deleted: sealed-manifest validation depends on retaining them.
-Acknowledgment releases no payload quota. Snapshot pins/reference-aware GC,
-uncertain/conflict resolution and credential rebinding are still required.
-
-Final local gate passed: `/tmp/s3drive-flush-gate.log` (exit 0), with 49 S3,
-78 state and 12 FS tests, existing CLI checks, clippy, build and book checks.
-Native FUSE passed 341 read-only requests and the no-systemd startup/session
-cache gate passed at schema 7. Logs: `/tmp/s3drive-flush-linux.log` and
-`/tmp/s3drive-flush-session.log`, both exit 0. Focused tests are in
-`/tmp/s3drive-flush-tests.log`. The new flush PNG and updated journal diagram
-were regenerated and visually inspected. No live provider request occurred.
+Local gate passed, including SDK/SQLite shared-engine write/restart/conflict
+integration: `/tmp/s3drive-native-write-gate.log`. Local native tests could not
+mount: this executor has NoNewPrivs=1, preventing setuid fusermount3. A private
+user/mount namespace mounts RO FUSE but its unmapped ancestor ownership is
+refused by the existing private-state checks. Do not weaken ownership checks,
+clear NoNewPrivs or use an external privileged launcher to bypass this.
+Logs: `/tmp/s3drive-native-write-linux.log` and
+`/tmp/s3drive-native-write-linux-namespace.log`. Neither is native RW acceptance.
+Native CI and normal desktop/login-session acceptance are still required.
 
 ## Required publication gate
 
-Push `remote-flush-receipts`, wait for terminal exact-tip Linux/Windows/book CI,
-inspect native counts/logs, then fast-forward/push main and verify its remote
-SHA/private visibility. Locate the exact run with
-`gh run list --branch remote-flush-receipts`; never infer terminal success from
-passed test steps while a job is still saving cache. Windows cache saving has
-taken several minutes after native tests. Preserve all unrelated user files.
-The full local gate command remains `bash scripts/gate.sh`; native checks:
+Push `native-writable-files`, wait for terminal exact-tip Linux/Windows/book CI,
+inspect both new native writable tests and all read-only/session regressions,
+then fast-forward/push main and verify remote SHA/private visibility. Do not
+infer terminal success while a job is still saving its cache. Preserve unrelated
+user files. Run `bash scripts/gate.sh` locally; separate native commands are:
 `cargo test -p s3drive-cli --test linux_mount --locked -- --ignored --nocapture`
-and `python3 scripts/test-linux-session.py`.
+and `python3 scripts/test-linux-session.py`. Windows native tests run on the
+GitHub VM, not locally. No new live cloud mutation is authorized.
 
 ## Completed live Wasabi approval: consumed, do not rerun
 
@@ -153,9 +143,9 @@ were already removed. Do not infer remaining cleanup from old plans/logs.
 
 ## Next implementation and durable decisions
 
-Complete remote flush acknowledgment, then implement reference/pin-aware staging
-reclamation and the minimum shared writable-file engine with actual FUSE/WinFsp
-acceptance. Preserve explicit conflict/uncertain states and metadata limits.
+Finish native existing-file write acceptance, then implement creation and
+namespace workflows, reference/pin-aware staging reclamation and explicit
+conflict recovery. Preserve explicit conflict/uncertain states and metadata limits.
 Do not keep adding isolated wrappers while deferring integration indefinitely.
 Multipart, explicit uncertain-intent recovery/forking and credential rebinding
 need independently testable contracts; follow `docs/src/implementation-plan.md`.
@@ -182,6 +172,6 @@ opens. Physical power-cut and target-workstation reboot tests remain unverified.
 
 The complete prior handoff is preserved unchanged in
 [the repository archive](docs/archive/HANDOFF-before-flush-receipts.md).
-This refresh reduces the living handoff from 724 to 187 living lines.
+The archive retains the original 724-line handoff.
 Archive bytes match the original published handoff; no durable decision or old
 evidence was discarded.

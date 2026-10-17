@@ -19,6 +19,8 @@ mod cache;
 mod fixture;
 #[path = "support/unicode.rs"]
 mod unicode;
+#[path = "support/writes.rs"]
+mod writes;
 use fixture::Fixture;
 
 struct MountCleanup(PathBuf);
@@ -225,6 +227,93 @@ async fn actual_kernel_mount_reads_pagination_revisions_and_teardown() {
     // Abort and await the fixture task; its JoinSet aborts all connection workers.
     let _ = (&mut fixture.server).await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "native write acceptance: requires /dev/fuse and fusermount3"]
+async fn actual_kernel_mount_existing_file_writes_and_restart() {
+    let mut fixture = Fixture::start().await;
+    let temp = tempfile::tempdir().unwrap();
+    let setup = writes::setup(&fixture, temp.path()).await;
+    let mount = temp.path().join("mount");
+    std::fs::create_dir(&mount).unwrap();
+    let _cleanup = MountCleanup(mount.clone());
+    let mut command = setup.command(&mount);
+    command
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    let mut child = command.spawn().unwrap();
+    wait_ready(&mut child).await;
+    let path = mount.clone();
+    let server = fixture.objects.clone();
+    let checks = tokio::task::spawn_blocking(move || {
+        let path = path.join("docs/writable").join(writes::NAME);
+        let mut file = std::fs::OpenOptions::new().write(true).open(&path).unwrap();
+        std::io::Write::write_all(&mut file, b"FIRST").unwrap();
+        file.sync_all().unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), b"FIRSTfghij");
+        assert_eq!(server.lock().unwrap()[writes::KEY].0, b"FIRSTfghij");
+    });
+    tokio::time::timeout(Duration::from_secs(60), checks)
+        .await
+        .unwrap()
+        .unwrap();
+    std::process::Command::new("kill")
+        .args(["-INT", &child.id().unwrap().to_string()])
+        .status()
+        .unwrap();
+    assert!(
+        tokio::time::timeout(Duration::from_secs(15), child.wait())
+            .await
+            .unwrap()
+            .unwrap()
+            .success()
+    );
+    let mut command = setup.command(&mount);
+    command
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    let mut child = command.spawn().unwrap();
+    wait_ready(&mut child).await;
+    let path = mount.clone();
+    let checks = tokio::task::spawn_blocking(move || {
+        assert_eq!(
+            std::fs::read(path.join("docs/writable").join(writes::NAME)).unwrap(),
+            b"FIRSTfghij"
+        );
+    });
+    tokio::time::timeout(Duration::from_secs(60), checks)
+        .await
+        .unwrap()
+        .unwrap();
+    // Run the common platform-independent syscall exercise while the async
+    // listener continues serving the real mounted process.
+    tokio::task::block_in_place(|| writes::exercise(&mount, &fixture));
+    std::process::Command::new("kill")
+        .args(["-INT", &child.id().unwrap().to_string()])
+        .status()
+        .unwrap();
+    assert!(
+        tokio::time::timeout(Duration::from_secs(15), child.wait())
+            .await
+            .unwrap()
+            .unwrap()
+            .success()
+    );
+    let state = s3drive_state::worker::Storage::open(
+        &setup.state,
+        s3drive_state::cache::Options::default(),
+        s3drive_state::journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    assert!(state.staging().pending(None, 100).await.unwrap().is_empty());
+    state.close().await.unwrap();
+    assert!(!fixture.server.is_finished());
+    fixture.server.abort();
+    let _ = (&mut fixture.server).await;
+}
 fn names(path: &Path) -> BTreeSet<String> {
     std::fs::read_dir(path)
         .unwrap()
@@ -237,7 +326,7 @@ async fn wait_ready(child: &mut tokio::process::Child) {
     let ready = tokio::time::timeout(Duration::from_secs(20), async {
         while let Some(line) = stderr.next_line().await.unwrap() {
             eprintln!("{line}");
-            if line.starts_with("Mounted read-only") {
+            if line.starts_with("Mounted ") {
                 return true;
             }
         }

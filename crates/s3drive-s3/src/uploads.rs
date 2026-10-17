@@ -97,6 +97,18 @@ struct Shared {
 #[derive(Clone)]
 pub struct Executor(Arc<Shared>);
 impl Executor {
+    /// Reader with this executor's frozen credentials; new opens still perform
+    /// online authorization. Does not expose credential material.
+    pub fn reader(&self) -> crate::S3Reader {
+        self.0.session.reader.clone()
+    }
+    /// Admission before editing an existing file; no local mutation or network.
+    pub fn check_replace(&self, key: &str, size: u64) -> std::result::Result<(), Failure> {
+        self.0.policy.admission(&self.0.session.reader, key, size)?;
+        self.0
+            .policy
+            .guard(&Guard::Match("\"policy-check\"".into()))
+    }
     /// Flush one selected immutable generation. A receipt requires both exact
     /// remote verification and committed local acknowledgment. Repetition can
     /// reconcile lost results but never reissue a claimed PUT. It does not

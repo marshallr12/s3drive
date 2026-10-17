@@ -75,6 +75,7 @@ impl fmt::Debug for CacheIdentity {
 
 /// A handle binds the reader, credentials, key, size and revision together.
 /// Callers cannot substitute metadata or credentials after opening.
+#[derive(Clone)]
 pub struct ReadHandle {
     reader: S3Reader,
     cache_identity: CacheIdentity,

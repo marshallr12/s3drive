@@ -6,6 +6,8 @@ mod cache;
 mod fixture;
 #[path = "support/unicode.rs"]
 mod unicode;
+#[path = "support/writes.rs"]
+mod writes;
 use fixture::Fixture;
 use std::{
     collections::BTreeSet,
@@ -26,7 +28,7 @@ async fn ready(child: &mut Child) {
         tokio::time::timeout(Duration::from_secs(30), async {
             while let Some(line) = lines.next_line().await.unwrap() {
                 eprintln!("{line}");
-                if line.starts_with("Mounted read-only") {
+                if line.starts_with("Mounted ") {
                     return true;
                 }
             }
@@ -50,6 +52,57 @@ fn names(path: &Path) -> BTreeSet<String> {
         .unwrap()
         .map(|entry| entry.unwrap().file_name().into_string().unwrap())
         .collect()
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "native write acceptance: Windows with WinFsp 2.1"]
+async fn actual_windows_existing_file_writes_and_restart() {
+    let mut fixture = Fixture::start().await;
+    let temp = tempfile::tempdir().unwrap();
+    let setup = writes::setup(&fixture, temp.path()).await;
+    let mount = temp.path().join("write-mount");
+    let mut command = setup.command(&mount);
+    command
+        .arg("--unmount-on-stdin-close")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    let mut child = command.spawn().unwrap();
+    ready(&mut child).await;
+    tokio::task::block_in_place(|| writes::exercise(&mount, &fixture));
+    let expected = fixture.objects.lock().unwrap()[writes::KEY].0.clone();
+    stop(&mut child).await;
+    let mut command = setup.command(&mount);
+    command
+        .arg("--unmount-on-stdin-close")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    let mut child = command.spawn().unwrap();
+    ready(&mut child).await;
+    let path = mount.join("docs/writable").join(writes::NAME);
+    assert_eq!(
+        tokio::task::spawn_blocking(move || std::fs::read(path).unwrap())
+            .await
+            .unwrap(),
+        expected
+    );
+    stop(&mut child).await;
+    let state = s3drive_state::worker::Storage::open(
+        &setup.state,
+        s3drive_state::cache::Options::default(),
+        s3drive_state::journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    assert!(state.staging().pending(None, 100).await.unwrap().is_empty());
+    state.close().await.unwrap();
+    assert!(!fixture.server.is_finished());
+    assert!(!fixture.server.is_finished());
+    fixture.server.abort();
+    let _ = (&mut fixture.server).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

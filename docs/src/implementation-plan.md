@@ -34,6 +34,8 @@ and writable OS callbacks remain subsequent phases.
 | P5b2b — journal-driven SDK executor | Single-PUT permit consumption, pinned binding, full-byte observation, four execution slots; production construction gated | Real SDK/TCP lost-response/timeout/cancellation tests, independent-journal create/replace races, process death after server commit and recovery without a second PUT; live provider acceptance/write policy still required |
 | P5b2c — explicit library write policy | Source/report-bound factory, exact prefix and byte limits, credential-generation matching and evidence expiry | Strict local evidence parsing, denied targets before send claims, full SDK/TCP tests through the public factory, observation-only recovery after expiry; no live mutations or mount configuration changes |
 | P5b2d — generation-specific remote flush | Verified remote receipt plus atomic local acknowledgment/supersession records; retain immutable snapshots and newer pending heads | Lost local replies, restart/process-kill and disk-full rollback, corruption/migration refusal, exact ancestor coverage and SDK/TCP flush without replay; no payload reclamation or writable callbacks |
+| P5c1a — native existing-file writes | Explicit version-2 policy-bound mounts, shared SQLite/edit/upload owner, truncate/append/read-your-writes and remote flush for existing files | Real FUSE and WinFsp SDK/TCP workflows, restart recovery, conflicts/uncertainty, exact Unicode bytes and read-only regression gates; no real bucket policy is installed implicitly |
+| P5c1b — creation and namespace mutations | Create files/directories, followed by separately specified rename/delete and safe conflict resolution | Native create/reopen/restart and desktop save workflows; provider mutation acceptance and journal recovery for each new operation |
 | P5a — staged writes | In-memory storage test double plus immutable local generations and durable journal | Fault injection at every local boundary; acknowledged local state survives restart; network mutation remains disabled |
 | P5b — conditional remote commits | Create/replace and multipart recovery; explicit flush contract | Provider preconditions verified; two-writer conflict tests; crash/timeout replay never overwrites unseen edits |
 | P5c — desktop mutations | Safe delete, documented rename behavior, open-handle semantics, real application workflows | Delete races, save/replace, concurrent open, unmount failures and data-loss tests on both OSes |
@@ -223,8 +225,9 @@ claims, uncertain outcomes and verified-parent ETag guards. P5b2b adds the
 [journal-driven executor](upload-executor.md). P5b2c adds its explicit
 [source/evidence-bound library policy and factory](write-policy.md). P5b2d adds
 [generation-specific remote flush and atomic acknowledgment](flush-receipts.md),
-preserving newer pending heads and all snapshots. No ordinary upload command,
-writable mount or dirty-byte reclamation is enabled.
+preserving newer pending heads and all snapshots. P5c1a now connects [opt-in existing-file writes](native-writes.md) to both adapters,
+under native acceptance. No ordinary upload command or dirty-byte reclamation
+is enabled. The existing real configuration remains read-only.
 The scoped Wasabi single-PUT probe passed with cleanup; no real application
 write policy has been installed. Multipart is a separate capability;
 the [current research and protocol plan](multipart-plan.md) records provider

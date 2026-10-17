@@ -47,7 +47,7 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Rust workspace and CLI | Implemented |
 | TOML parsing and source/namespace validation | Implemented; no network checks |
 | Alias + prefix + file-path resolution | Implemented as a planning utility |
-| Local SQLite state | Schema 6; bindings, clean BLOBs, staged generations, edit keys, remote-attempt records and private process ownership |
+| Local SQLite state | Schema 7; bindings, clean BLOBs, staged generations, remote attempts, flush receipts and private process ownership |
 | mdBook research, design and acceptance plan | Implemented |
 | S3 transport and credentials | Implemented; [Wasabi read acceptance](wasabi.md) passed; broader conformance pending |
 | Linux filesystem mount | Implemented read-only FUSE; see [mount contract](linux-mount.md) and native evidence in handoff |
@@ -60,9 +60,10 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Local staging/journal foundation | Immutable chunked generations and pending intent; [retained snapshots and local edits](staged-writes.md) |
 | Conditional write probe | [Scoped Wasabi single-PUT acceptance passed](wasabi.md#conditional-put-acceptance--2026-10-16); all six fixtures removed |
 | Durable remote-attempt journal | [Local single-use claims and uncertain-result recovery](remote-journal.md); executor described below |
-| Journal-driven SDK executor | [Implemented and tested on Linux/Windows](upload-executor.md); explicit source/evidence-bound library factory; CLI/mount writes remain disabled |
+| Journal-driven SDK executor | [Implemented and tested on Linux/Windows](upload-executor.md); explicit source/evidence-bound factory; native integration below |
 | Generation-specific remote flush | [Library receipt and atomic acknowledgment](flush-receipts.md); retain newer heads and all snapshots |
-| Writable mounts, new offline opens, tray UI | Planned |
+| Existing-file write mounts | [Version-2 opt-in implementation](native-writes.md), under native acceptance; no real writable configuration installed |
+| Creation, rename/delete, new offline opens, tray UI | Planned |
 
 The initial research/scaffold delivery is complete. Work has advanced to the
 [read-only provider adapter](provider-contract.md). The overall product goal
