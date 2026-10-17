@@ -166,3 +166,35 @@ async fn explicit_source_endpoint_region_and_profile_override_ambient_settings()
     assert!(!headers.contains("TESTENV"));
     assert!(String::from_utf8_lossy(&result.stdout).contains("size: 3"));
 }
+
+#[test]
+fn authority_refuses_remote_bind_before_reading_token_or_creating_state() {
+    let root = tempfile::tempdir().unwrap();
+    let state = root.path().join("authority");
+    let result = cli()
+        .arg("authority-serve")
+        .arg("--directory")
+        .arg(&state)
+        .arg("--token-file")
+        .arg(root.path().join("missing-secret"))
+        .args(["--listen", "0.0.0.0:43128"])
+        .output()
+        .unwrap();
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr).contains("loopback"));
+    assert!(!state.exists());
+}
+
+#[test]
+fn managed_token_mount_overlap_is_rejected_before_secret_access() {
+    let root = tempfile::tempdir().unwrap();
+    let mount = root.path().join("mount");
+    std::fs::create_dir(&mount).unwrap();
+    let config = root.path().join("managed.toml");
+    let token = mount.join("authority.token");
+    std::fs::write(&config,format!("version=3\nmode='read-only'\n[managed]\nauthority='http://127.0.0.1:43128/v1/namespace'\nvolume='00000000000000000000000000000001'\ntoken_file={:?}\n[[managed.stores]]\nid='00000000000000000000000000000002'\nsource='docs'\n[[sources]]\nalias='docs'\nbucket='test-bucket'\nregion='us-east-1'\n",token.to_str().unwrap())).unwrap();
+    let result = cli().arg("mount").arg(config).arg(&mount).output().unwrap();
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr).contains("separate local trees"));
+    assert!(!token.exists());
+}

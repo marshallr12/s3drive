@@ -6,6 +6,7 @@
 - [Persistent mounts and remote sessions](startup-and-sessions.md)
 - [Managed layout and namespace authority](managed-layout.md)
 - [Managed immutable-file publication](managed-publication.md)
+- [Managed native read-only drives](managed-native.md)
 - [Turso and cross-machine coordination](turso-coordination.md)
 - [Filesystem behavior contract](filesystem-contract.md)
 - [Implemented read-only provider contract](provider-contract.md)

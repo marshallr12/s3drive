@@ -1,5 +1,8 @@
 //! Managed immutable-file publication through the real S3 executor, private
-//! local journal and authority HTTP API. No native managed mount is enabled.
+//! local journal and authority HTTP API, plus a bounded reader used by native
+//! managed read-only mounts. Native managed writes remain a later phase.
+mod reader;
+pub use reader::Reader;
 use s3drive_authority::{Apply, Artifact, Kind, Node, Receipt, Reply, Request, Store, WireClient};
 use s3drive_s3::uploads::Executor;
 use s3drive_state::{
@@ -39,7 +42,7 @@ struct Shared {
     volume: String,
     store: Store,
     slots: Semaphore,
-    read_slots: Arc<Semaphore>,
+    reader: Reader,
 }
 #[derive(Clone)]
 pub struct Publisher(Arc<Shared>);
@@ -105,6 +108,11 @@ impl Publisher {
             return Err(Failure::Binding.into());
         }
         let storage = executor.storage();
+        let reader = Reader::verified(
+            authority.clone(),
+            volume.clone(),
+            vec![(store.clone(), executor.reader())],
+        );
         Ok(Self(Arc::new(Shared {
             executor,
             storage,
@@ -112,7 +120,7 @@ impl Publisher {
             volume,
             store,
             slots: Semaphore::new(4),
-            read_slots: Arc::new(Semaphore::new(4)),
+            reader,
         })))
     }
     /// Persist the complete immutable reservation request BEFORE network or
@@ -264,70 +272,7 @@ impl Publisher {
     /// revision and full hash, then return owned bytes. Existing snapshots pin
     /// those bytes independently of subsequent rename, publication or unlink.
     pub async fn read(&self, node_id: &str) -> Result<FileSnapshot> {
-        let permit = self
-            .0
-            .read_slots
-            .clone()
-            .try_acquire_owned()
-            .map_err(|_| Failure::Busy)?;
-        let Reply::Node(node) = reply(
-            self.0
-                .authority
-                .request(&Request::Node {
-                    volume: self.0.volume.clone(),
-                    node: node_id.into(),
-                })
-                .await?,
-        )?
-        else {
-            return Err(Failure::Protocol.into());
-        };
-        if node.id != node_id {
-            return Err(Failure::Binding.into());
-        }
-        if node.deleted {
-            return Err(Failure::NotFound.into());
-        }
-        if node.kind == Kind::Directory {
-            return Err(Failure::IsDirectory.into());
-        }
-        let bytes = if let Some(payload) = &node.payload {
-            let r = &payload.reservation;
-            if node.kind != Kind::File
-                || !payload.valid()
-                || r.volume != self.0.volume
-                || r.node != node.id
-                || r.store != self.0.store
-            {
-                return Err(Failure::Binding.into());
-            }
-            let handle = Box::pin(self.0.executor.reader().open(&r.key)).await?;
-            let m = handle.metadata();
-            if m.size != r.size
-                || m.revision.etag.as_deref() != Some(&payload.etag)
-                || payload
-                    .version
-                    .as_ref()
-                    .is_some_and(|v| m.revision.version_id.as_ref() != Some(v))
-            {
-                return Err(Failure::Integrity.into());
-            }
-            let bytes = Box::pin(handle.read_range(0, r.size as usize)).await?;
-            if bytes.len() as u64 != r.size || hex(&Sha256::digest(&bytes)) != r.sha256 {
-                return Err(Failure::Integrity.into());
-            }
-            Arc::from(bytes)
-        } else {
-            if node.kind != Kind::EmptyFile {
-                return Err(Failure::Integrity.into());
-            }
-            Arc::from([])
-        };
-        Ok(FileSnapshot(Arc::new(Snapshot {
-            metadata: node,
-            bytes,
-            _permit: permit,
-        })))
+        self.0.reader.read(node_id).await
     }
     pub fn storage(&self) -> Storage {
         self.0.storage.clone()

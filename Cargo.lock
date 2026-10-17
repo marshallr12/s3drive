@@ -2085,6 +2085,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "clap",
+ "getrandom 0.4.3",
  "percent-encoding",
  "rusqlite",
  "s3drive-authority",
@@ -2095,6 +2096,7 @@ dependencies = [
  "s3drive-s3",
  "s3drive-state",
  "s3drive-winfsp",
+ "serde_json",
  "sha2",
  "tempfile",
  "tokio",
@@ -2116,7 +2118,9 @@ dependencies = [
 name = "s3drive-fs"
 version = "0.1.0"
 dependencies = [
+ "s3drive-authority",
  "s3drive-core",
+ "s3drive-managed",
  "s3drive-s3",
  "s3drive-state",
  "sha2",

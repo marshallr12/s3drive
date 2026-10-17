@@ -13,6 +13,11 @@ running programs, tmux processes or open file descriptors across power loss.
 Persistent mount registration also does not provide offline file contents;
 the disk cache is a separate phase.
 
+Managed read-only configurations can use the same mount launcher. The current
+launchers do not supervise or provision the metadata authority; managed
+authority startup/recovery and full sign-in acceptance remain subsequent work.
+See [managed native reads](managed-native.md).
+
 ## Linux, including MX without systemd
 
 `scripts/linux-session.py` provides a per-user launcher using Python's standard

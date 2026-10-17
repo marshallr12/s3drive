@@ -499,3 +499,16 @@ async fn actual_windows_file_creation_restart_and_races() {
     fixture.server.abort();
     let _ = (&mut fixture.server).await;
 }
+
+#[path = "support/managed.rs"]
+#[allow(dead_code)]
+mod managed;
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn managed_native_child() {
+    managed::child().await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "native managed acceptance: requires the real OS filesystem driver"]
+async fn actual_managed_namespace_and_immutable_reads() {
+    managed::native().await;
+}

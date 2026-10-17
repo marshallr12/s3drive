@@ -8,8 +8,8 @@ payloads and each machine's private SQLite cache/journal. See the executable
 ![The target has local Rust drives and SQLite on two computers, a shared metadata authority, and immutable payloads in S3.](images/managed-architecture.png)
 
 The authority and [managed publication library](managed-publication.md) now join
-SQLite, the loopback HTTP API and the real S3 SDK. Remote deployment and native
-managed adapter integration are still planned. No bucket migration or Turso service is enabled.
+SQLite, the loopback HTTP API and the real S3 SDK. [Managed read-only native integration](managed-native.md) uses the same engine
+and adapters. Remote deployment and managed native writes remain planned. No bucket migration or Turso service is enabled.
 
 The existing direct-layout implementation below has native read/cache, explicit
 existing-file writes and [guarded file creation](native-creation.md). It remains
@@ -23,7 +23,7 @@ Linux without systemd and account-owned Windows mounts.
 
 `s3drive-authority` owns the bounded development HTTP/worker service and calls
 `s3drive-state::namespace` for persistent metadata transactions. It is separate
-from local client state and not yet called by mounted adapters. `s3drive-managed`
+from local client state; version-3 read-only mounts call its loopback API. `s3drive-managed`
 joins it with the SDK executor and schema-9 local logical publication journal. Its loopback
 protocol is the first contract for an optional remote/Turso implementation.
 

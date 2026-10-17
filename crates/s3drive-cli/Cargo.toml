@@ -10,6 +10,9 @@ name = "s3drive"
 path = "src/main.rs"
 
 [dependencies]
+s3drive-authority.workspace = true
+getrandom.workspace = true
+serde_json.workspace = true
 clap.workspace = true
 s3drive-core.workspace = true
 s3drive-fs.workspace = true
@@ -21,7 +24,6 @@ tokio = { workspace = true, features = ["signal"] }
 
 [dev-dependencies]
 s3drive-managed.workspace = true
-s3drive-authority.workspace = true
 axum.workspace = true
 sha2.workspace = true
 toml.workspace = true

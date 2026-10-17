@@ -40,7 +40,8 @@ The user selected managed layout on 2026-10-16; P6m phases now define the target
 | P5c1c — direct directories | Archived experiment on `codex/persistent-directories`; superseded by managed choice | Local engine passed; native run 38995625850 failed, helper corrected without claiming acceptance; not merged |
 | P6m1 — managed namespace authority | Private SQLite authority, stable IDs, sequence CAS, atomic create/move/remove, operation-result recovery and loopback HTTP | Independent TCP clients, concurrent cycles/creates, lost reply/restart, process death, full disk, migration and limits |
 | P6m2 — immutable payload publication | Implemented library: store IDs, reservations, create-only verified blobs, metadata CAS and separate logical acknowledgment | Two-writer SDK/authority races, unknown upload/commit outcomes, retained conflicts; separate approved provider acceptance |
-| P6m3 — managed native drives | Shared engine and FUSE/WinFsp use authoritative namespace and pinned blobs; portable names, save/replace, open-unlinked handles | Both real native suites plus cross-machine invalidation, failure/recovery and approved provider checks |
+| P6m3a — managed native reads | Explicit version-3 read-only mounts, shared namespace, multi-store pinned payloads and private-token foreground authority CLI | SDK/HTTP/SQLite integration plus real FUSE/WinFsp gates; see [contract](managed-native.md) |
+| P6m3b — managed native writes | Shared engine and FUSE/WinFsp use authoritative namespace and pinned blobs; portable names, save/replace, open-unlinked handles | Both real native suites plus cross-machine invalidation, failure/recovery and approved provider checks |
 | P6m4 — authority deployment/Turso | Authenticated TLS service, migrations, backup/failover; optional pinned Turso backend | Real multi-host/partition/commit-uncertainty/authorization tests; no offline replica ownership decisions |
 | P5a — staged writes | In-memory storage test double plus immutable local generations and durable journal | Fault injection at every local boundary; acknowledged local state survives restart; network mutation remains disabled |
 | P5b — conditional remote commits | Create/replace and multipart recovery; explicit flush contract | Provider preconditions verified; two-writer conflict tests; crash/timeout replay never overwrites unseen edits |
@@ -261,3 +262,20 @@ local logical acknowledgment. It does not enable native managed mounts or a
 Turso backend. P6m3 must integrate logical heads/edit plans and portable names
 rather than reusing direct-key namespace logic. No new cloud
 mutation is authorized by the layout selection.
+
+
+## P6m3a managed native reader checkpoint
+
+Implemented 2026-10-17: the shared filesystem calls the managed Reader for live
+namespace lookups and complete, verified immutable payload snapshots. It maps
+global stores to local source profiles across buckets. Version 3 requires
+read-only mode; writes/cache and direct-key resolution are refused. The local
+authority CLI creates private tokens and serves its separate SQLite database.
+See [the contract and acceptance commands](managed-native.md).
+
+Next, P6m3b must combine durable logical edit heads with native mutations and
+flush/recovery; do not reuse a mutable S3 key as a logical file's identity. Add
+portable naming, concurrent save/replace conflicts and retained open-unlinked
+snapshots. P6m4 separately deploys/supervises the authority and tests real
+multi-host/Turso coordination. Sign-in supervision must include authority
+availability and retain MX/no-systemd and Windows cross-logon requirements.

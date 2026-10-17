@@ -1,5 +1,6 @@
 //! Managed namespace authority prototype. Loopback-only transport; no S3 writes,
-//! mounted integration, remote deployment or Turso backend is enabled.
+//! remote deployment or Turso backend is enabled. Managed read-only mounts use
+//! this development transport; native writes remain a later phase.
 mod wire;
 use axum::{
     Json, Router,
@@ -178,6 +179,11 @@ impl Authority {
 #[derive(Clone)]
 pub struct Token(String);
 impl Token {
+    pub fn from_private_file(path: &std::path::Path) -> namespace::Result<Self> {
+        let bytes = s3drive_state::read_private_secret(path, 66).map_err(|_| Error::Invalid)?;
+        let text = std::str::from_utf8(&bytes).map_err(|_| Error::Invalid)?;
+        Self::new(text.trim_end_matches(['\r', '\n']).into())
+    }
     pub fn new(value: String) -> namespace::Result<Self> {
         if value.len() != 64
             || !value

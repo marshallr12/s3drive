@@ -29,8 +29,21 @@ impl Setup {
     }
 }
 pub async fn setup(fixture: &Fixture, root: &Path) -> Setup {
+    setup_source(fixture, root, "test-bucket", "docs", "fixture").await
+}
+pub async fn setup_source(
+    fixture: &Fixture,
+    root: &Path,
+    bucket: &str,
+    alias: &str,
+    profile: &str,
+) -> Setup {
     fixture.writable.store(true, Ordering::SeqCst);
-    fixture.put(KEY, b"abcdefghij", "initial");
+    fixture.put(
+        &format!("/{bucket}/desktop/writable/{NAME}"),
+        b"abcdefghij",
+        "initial",
+    );
     fixture.put(
         "/test-bucket/desktop/readonly.txt",
         b"read only",
@@ -41,12 +54,14 @@ pub async fn setup(fixture: &Fixture, root: &Path) -> Setup {
     let aws_config = root.join("aws-config");
     std::fs::write(
         &credentials,
-        "[fixture]\naws_access_key_id=TESTPROFILE\naws_secret_access_key=TESTPROFILESECRET\n",
+        format!(
+            "[{profile}]\naws_access_key_id=TESTPROFILE\naws_secret_access_key=TESTPROFILESECRET\n"
+        ),
     )
     .unwrap();
     std::fs::write(&aws_config, "").unwrap();
     let source = format!(
-        "[[sources]]\nalias='docs'\nbucket='test-bucket'\nregion='us-east-1'\nprefix='desktop/'\nendpoint='{}'\nprofile='fixture'\npath_style=true\nallow_http_loopback=true\n",
+        "[[sources]]\nalias={alias:?}\nbucket={bucket:?}\nregion='us-east-1'\nprefix='desktop/'\nendpoint='{}'\nprofile={profile:?}\npath_style=true\nallow_http_loopback=true\n",
         fixture.endpoint
     );
     std::fs::write(&config, format!("version=1\nmode='read-only'\n{source}")).unwrap();
@@ -55,7 +70,7 @@ pub async fn setup(fixture: &Fixture, root: &Path) -> Setup {
     let result = Command::new(env!("CARGO_BIN_EXE_s3drive"))
         .args(["probe-writes", "plan"])
         .arg(&config)
-        .arg("docs")
+        .arg(alias)
         .arg("--output")
         .arg(&plan)
         .output()
@@ -73,7 +88,7 @@ pub async fn setup(fixture: &Fixture, root: &Path) -> Setup {
     let result = Command::new(env!("CARGO_BIN_EXE_s3drive"))
         .args(["probe-writes", "run"])
         .arg(&config)
-        .arg("docs")
+        .arg(alias)
         .arg("--plan")
         .arg(&plan)
         .arg("--confirm")
@@ -103,7 +118,7 @@ pub async fn setup(fixture: &Fixture, root: &Path) -> Setup {
     let policy = root.join("policy.toml");
     std::fs::write(&policy,format!("version=1\nsource_fingerprint='{}'\nreport_sha256='{hash}'\nwritable_prefix='writable/'\nmax_object_bytes=8388608\noperations='create-and-replace'\nobject_metadata='s3drive-markers-only'\nevidence_max_age_seconds=86400\n",value["source_fingerprint"].as_str().unwrap())).unwrap();
     let state = root.join("state");
-    std::fs::write(&config,format!("version=2\nmode='read-write'\n{source}\n[writes]\ndirectory={:?}\n[[writes.sources]]\nalias='docs'\npolicy={:?}\nplan={:?}\nreport={:?}\n",state.to_str().unwrap(),policy.to_str().unwrap(),plan.to_str().unwrap(),report.to_str().unwrap())).unwrap();
+    std::fs::write(&config,format!("version=2\nmode='read-write'\n{source}\n[writes]\ndirectory={:?}\n[[writes.sources]]\nalias={alias:?}\npolicy={:?}\nplan={:?}\nreport={:?}\n",state.to_str().unwrap(),policy.to_str().unwrap(),plan.to_str().unwrap(),report.to_str().unwrap())).unwrap();
     Setup {
         config,
         credentials,

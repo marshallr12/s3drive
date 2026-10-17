@@ -111,7 +111,7 @@ native OS mounts and live provider acceptance.
 ## P6m2 publication library and next native integration
 
 [Managed immutable-file publication](managed-publication.md) implements steps
-1–5 below with real SDK/HTTP tests and a separate local logical receipt. Native
+1–5 below with real SDK/HTTP tests and a separate local logical receipt. [Native read-only integration](managed-native.md) is implemented; writable
 integration, deployment and reclamation remain planned.
 
 
@@ -140,3 +140,10 @@ The [Turso evaluation](turso-coordination.md) remains separate: offline Sync is
 not publication authority, and no SQL database makes S3 plus metadata one atomic
 transaction. No Turso account, token, deployment, bucket migration or new Wasabi
 mutation was created for this phase.
+
+## P6m3a native read integration
+
+Implemented 2026-10-17: [managed read-only drives](managed-native.md), explicit
+version-3 config, multi-store routing and private-token authority CLI. The
+authority still uses a local SQLite database and numeric loopback transport.
+Native writable callbacks and remote/Turso deployment remain later phases.

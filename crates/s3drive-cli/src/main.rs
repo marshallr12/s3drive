@@ -15,6 +15,22 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Create a new owner-private metadata token; never print or overwrite it.
+    AuthorityToken {
+        #[arg(long)]
+        directory: PathBuf,
+    },
+    /// Run the loopback metadata authority in the foreground (development).
+    AuthorityServe {
+        #[arg(long)]
+        directory: PathBuf,
+        #[arg(long)]
+        token_file: PathBuf,
+        #[arg(long, default_value = "127.0.0.1:0")]
+        listen: std::net::SocketAddr,
+        #[arg(long)]
+        stop_on_stdin_close: bool,
+    },
     /// Plan/run an explicit disposable-key conditional-write capability probe.
     ProbeWrites {
         #[command(subcommand)]
@@ -111,6 +127,21 @@ enum ProbeCommand {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     match Cli::parse().command {
+        Command::AuthorityToken { directory } => {
+            let mut random = [0u8; 32];
+            getrandom::fill(&mut random)?;
+            let token: String = random.iter().map(|b| format!("{b:02x}")).collect();
+            s3drive_state::create_private_secret(&directory, token.as_bytes())?;
+            println!("Created owner-private authority.token; its contents were not printed.");
+        }
+        Command::AuthorityServe {
+            directory,
+            token_file,
+            listen,
+            stop_on_stdin_close,
+        } => {
+            run_authority(directory, token_file, listen, stop_on_stdin_close).await?;
+        }
         // Keep SDK mutation futures out of the existing mount startup envelope.
         Command::ProbeWrites { command } => Box::pin(run_probe(command)).await?,
         Command::UploadPolicyCheck {
@@ -427,11 +458,81 @@ fn check_cache_location(
         .map(|c| &c.directory)
         .into_iter()
         .chain(config.writes.as_ref().map(|w| &w.directory))
+        .chain(config.managed.as_ref().map(|m| &m.token_file))
     {
         let local = parts(&projected(directory)?);
         if local.starts_with(&mount) || mount.starts_with(&local) {
             return Err("cache/state directory and mountpoint must be separate local trees".into());
         }
     }
+    Ok(())
+}
+
+async fn run_authority(
+    directory: PathBuf,
+    token_file: PathBuf,
+    listen: std::net::SocketAddr,
+    stdin_close: bool,
+) -> Result<(), Box<dyn Error + Send + Sync>> {
+    use s3drive_authority::{Authority, Reply, Request, Token};
+    if !listen.ip().is_loopback() {
+        return Err("authority development server requires a numeric loopback listener".into());
+    }
+    let token=Token::from_private_file(&token_file).map_err(|_|"authority token must be an owner-private local file containing 64 hexadecimal characters")?;
+    let authority = Authority::open(directory)
+        .await
+        .map_err(|_| "private authority initialization failed")?;
+    let listener = tokio::net::TcpListener::bind(listen).await?;
+    let Reply::Info(volume) = authority.client().request(Request::Info {}).await else {
+        return Err("authority initialization failed".into());
+    };
+    println!(
+        "{}",
+        serde_json::json!({"endpoint":format!("http://{}/v1/namespace",listener.local_addr()?),"volume":volume.id,"name_policy":volume.name_policy})
+    );
+    std::io::stdout().flush()?;
+    let (closed, receive) = tokio::sync::oneshot::channel();
+    if stdin_close {
+        // A detached std thread avoids Tokio's uncancellable blocking-stdin task
+        // keeping runtime shutdown alive after a signal.
+        std::thread::spawn(move || {
+            let _ = std::io::copy(&mut std::io::stdin(), &mut std::io::sink());
+            let _ = closed.send(());
+        });
+    }
+    let shutdown = async move {
+        let stdin = async move {
+            if stdin_close {
+                let _ = receive.await;
+            } else {
+                std::future::pending::<()>().await;
+            }
+        };
+        #[cfg(unix)]
+        let terminate = async {
+            if let Ok(mut signal) =
+                tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            {
+                signal.recv().await;
+            } else {
+                std::future::pending::<()>().await;
+            }
+        };
+        #[cfg(not(unix))]
+        let terminate = std::future::pending::<()>();
+        let interrupt = async {
+            if tokio::signal::ctrl_c().await.is_err() {
+                std::future::pending::<()>().await;
+            }
+        };
+        tokio::select! {_ = interrupt=>{},_ = terminate=>{},_ = stdin=>{}}
+    };
+    let result =
+        s3drive_authority::serve_loopback(listener, authority.client(), token, shutdown).await;
+    authority
+        .shutdown()
+        .await
+        .map_err(|_| "authority owner shutdown failed")?;
+    result?;
     Ok(())
 }

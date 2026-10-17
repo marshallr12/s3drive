@@ -239,8 +239,8 @@ See [managed layout](managed-layout.md) for the exact protocol and boundaries.
 These tests create private temporary authority directories and dummy tokens;
 they do not read Wasabi credentials, mutate buckets or install a service. The
 existing native suites remain necessary to detect regressions from the schema
-change, but they exercise **direct** mounts. They cannot certify managed mounts
-or a Turso backend, neither of which is integrated yet.
+change, and their original cases exercise **direct** mounts. P6m3a adds a separate
+managed native case; neither suite certifies a remotely deployed/Turso backend.
 
 
 ## Managed publication integration
@@ -251,3 +251,21 @@ unknown upload and metadata-publication boundaries. It requires no mount privile
 or live credentials and is part of Linux/Windows workspace CI. Schema 9 also adds
 five local managed-journal recovery/migration/acknowledgment tests. These do not
 replace managed native or live provider acceptance; see [the contract](managed-publication.md).
+
+
+## Managed native read integration
+
+`cargo test -p s3drive-cli --test managed_native --locked` uses actual authority
+CLI child processes, private SQLite/token directories, two S3 buckets and two
+dummy profile names. It verifies store-route mismatch refusal, read-only
+behavior, Unicode bytes, old/new snapshots, stable identity during rename and
+old-handle reads after unlink. It is included in the portable gate.
+
+Both ignored native suites now include
+`actual_managed_namespace_and_immutable_reads`, using the same fixture and real
+FUSE/WinFsp mounts. They additionally check S3 authorization denial, directory
+name projection, metadata-service loss, authority restart and remount. Run the
+existing native commands above; the Windows gate runs on GitHub's Windows VM.
+This workstation's NoNewPrivs restriction still prevents native FUSE acceptance
+here. No live Wasabi mutation, user service installation or Turso account setup
+is part of these tests. See [managed native contract](managed-native.md).

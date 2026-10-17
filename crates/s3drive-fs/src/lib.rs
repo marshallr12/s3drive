@@ -1,5 +1,6 @@
 //! Shared S3 namespace, journal-backed file I/O and revision-bound clean cache.
 pub mod edits;
+mod managed;
 mod writable;
 use s3drive_core::Config;
 use s3drive_s3::{ListPage, MAX_READ_BYTES, ObjectMetadata, ReadHandle, S3Reader};
@@ -57,6 +58,7 @@ pub enum Error {
     TooLarge,
     Busy,
     Write(Box<dyn std::error::Error + Send + Sync>),
+    Managed(Box<dyn std::error::Error + Send + Sync>),
 }
 pub type Result<T> = std::result::Result<T, Error>;
 impl From<s3drive_s3::Error> for Error {
@@ -69,6 +71,7 @@ impl fmt::Display for Error {
         match self {
             Self::Storage(e) => e.fmt(f),
             Self::Cache(e) => write!(f, "local cache: {e}"),
+            Self::Managed(e) => write!(f, "managed filesystem: {e}"),
             Self::Write(e) => write!(f, "file mutation failed; local data retained: {e}"),
             _ => write!(f, "filesystem: {self:?}"),
         }
@@ -89,6 +92,7 @@ pub struct ReadOnlyFs {
     aliases: Vec<Arc<Node>>,
     cache: Option<Arc<CacheBackend>>,
     writes: Option<Arc<writable::Writes>>,
+    managed: Option<Arc<managed::Backend>>,
 }
 
 struct CacheBackend {
@@ -100,7 +104,9 @@ struct CacheBackend {
 
 pub struct OpenFile {
     pub node: Arc<Node>,
-    handle: ReadHandle,
+    handle: Option<ReadHandle>,
+    initial_metadata: ObjectMetadata,
+    managed: Option<s3drive_managed::FileSnapshot>,
     cache: Option<(Arc<CacheBackend>, Key)>,
     snapshot: OnceCell<Pinned>,
     bypass: AtomicBool,
@@ -111,7 +117,7 @@ impl OpenFile {
     pub fn current_metadata(&self) -> Result<ObjectMetadata> {
         match &self.writes {
             Some((_, file)) => file.metadata(),
-            None => Ok(self.handle.metadata().clone()),
+            None => Ok(self.initial_metadata.clone()),
         }
     }
     pub async fn write(
@@ -141,7 +147,7 @@ impl OpenFile {
         Ok(())
     }
     pub fn metadata(&self) -> &ObjectMetadata {
-        self.handle.metadata()
+        &self.initial_metadata
     }
     pub async fn read(&self, offset: u64, length: usize) -> Result<Vec<u8>> {
         if let Some((_, file)) = &self.writes {
@@ -159,14 +165,29 @@ impl OpenFile {
         if length == 0 || offset >= self.metadata().size {
             return Ok(Vec::new());
         }
+        if let Some(snapshot) = &self.managed {
+            return Ok(slice(snapshot.bytes(), offset, length));
+        }
         if let Some(snapshot) = self.snapshot.get() {
             return Ok(slice(snapshot.bytes(), offset, length));
         }
         let Some((cache, key)) = &self.cache else {
-            return Ok(Box::pin(self.handle.read_range(offset, length)).await?);
+            return Ok(Box::pin(
+                self.handle
+                    .as_ref()
+                    .ok_or(Error::Internal)?
+                    .read_range(offset, length),
+            )
+            .await?);
         };
         if self.bypass.load(Ordering::Relaxed) {
-            return Ok(Box::pin(self.handle.read_range(offset, length)).await?);
+            return Ok(Box::pin(
+                self.handle
+                    .as_ref()
+                    .ok_or(Error::Internal)?
+                    .read_range(offset, length),
+            )
+            .await?);
         }
         let _stripe = cache.stripes[key.stripe()].lock().await;
         let _slot = cache.slots.acquire().await.map_err(|_| Error::Internal)?;
@@ -174,7 +195,13 @@ impl OpenFile {
             return Ok(slice(snapshot.bytes(), offset, length));
         }
         if self.bypass.load(Ordering::Relaxed) {
-            return Ok(Box::pin(self.handle.read_range(offset, length)).await?);
+            return Ok(Box::pin(
+                self.handle
+                    .as_ref()
+                    .ok_or(Error::Internal)?
+                    .read_range(offset, length),
+            )
+            .await?);
         }
         if let Some(snapshot) = cache.worker.get(key.clone()).await.map_err(cache_error)? {
             let bytes = slice(snapshot.bytes(), offset, length);
@@ -183,9 +210,14 @@ impl OpenFile {
         }
         // No SQL transaction spans this request. At most four complete small
         // files are being downloaded/processed per mount at once.
-        let bytes: Arc<[u8]> = Box::pin(self.handle.read_range(0, self.metadata().size as usize))
-            .await?
-            .into();
+        let bytes: Arc<[u8]> = Box::pin(
+            self.handle
+                .as_ref()
+                .ok_or(Error::Internal)?
+                .read_range(0, self.metadata().size as usize),
+        )
+        .await?
+        .into();
         let result = slice(&bytes, offset, length);
         match cache
             .worker
@@ -218,6 +250,9 @@ fn cache_error(error: Box<dyn std::error::Error + Send + Sync>) -> Error {
 impl ReadOnlyFs {
     pub async fn new(config: &Config) -> Result<Self> {
         config.validate().map_err(|_| Error::Configuration)?;
+        if config.managed.is_some() {
+            return managed::filesystem(config).await;
+        }
         if config.sources.len() >= MAX_NODES {
             return Err(Error::ResourceLimit);
         }
@@ -336,6 +371,7 @@ impl ReadOnlyFs {
             aliases,
             cache,
             writes: storage.map(|storage| Arc::new(writable::Writes::new(storage, executors))),
+            managed: None,
         })
     }
 
@@ -441,6 +477,19 @@ impl ReadOnlyFs {
         if parent.kind != Kind::Directory {
             return Err(Error::NotDirectory);
         }
+        if let Some(backend) = &self.managed {
+            let listing = backend
+                .reader
+                .list(&parent.key)
+                .await
+                .map_err(managed::error)?;
+            let mut nodes = self.nodes.lock().map_err(|_| Error::Internal)?;
+            return listing
+                .children
+                .into_iter()
+                .map(|n| nodes.insert_managed(&n, parent.id))
+                .collect();
+        }
         let Some(source) = parent.source else {
             return Ok(self.aliases.clone());
         };
@@ -507,6 +556,18 @@ impl ReadOnlyFs {
 
     pub async fn metadata(&self, id: u64) -> Result<Option<ObjectMetadata>> {
         let node = self.node(id)?;
+        if let Some(backend) = &self.managed {
+            let live = backend
+                .reader
+                .node(&node.key)
+                .await
+                .map_err(managed::error)?;
+            return Ok(if live.kind == s3drive_authority::Kind::Directory {
+                None
+            } else {
+                Some(managed::metadata(&live))
+            });
+        }
         if self.writes.is_some() && node.kind == Kind::File {
             return Ok(Some(Box::pin(self.open(id)).await?.current_metadata()?));
         }
@@ -530,6 +591,25 @@ impl ReadOnlyFs {
         let node = self.node(id)?;
         if node.kind != Kind::File {
             return Err(Error::IsDirectory);
+        }
+        if let Some(backend) = &self.managed {
+            if writing {
+                return Err(Error::ReadOnly);
+            }
+            let snapshot = Box::pin(backend.reader.read(&node.key))
+                .await
+                .map_err(managed::error)?;
+            return Ok(OpenFile {
+                initial_metadata: managed::metadata(snapshot.metadata()),
+                node,
+                handle: None,
+                managed: Some(snapshot),
+                cache: None,
+                snapshot: OnceCell::new(),
+                bypass: AtomicBool::new(false),
+                writes: None,
+                writable_open: false,
+            });
         }
         let reader = &self.readers[node.source.ok_or(Error::Internal)?];
         let mut handle = reader.open(&node.key).await?;
@@ -566,7 +646,9 @@ impl ReadOnlyFs {
         };
         Ok(OpenFile {
             node,
-            handle,
+            initial_metadata: handle.metadata().clone(),
+            handle: Some(handle),
+            managed: None,
             cache,
             snapshot: OnceCell::new(),
             bypass: AtomicBool::new(false),

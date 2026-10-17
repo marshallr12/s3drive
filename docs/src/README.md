@@ -14,7 +14,8 @@ not promises made by the cited projects.
 chosen by the user on 2026-10-16. A shared authority owns the namespace; immutable
 S3 objects hold file generations. Existing direct mounts stay available without
 automatic conversion. The SQLite authority and [immutable publication library](managed-publication.md)
-are implemented; managed native integration remains subsequent work.
+are implemented. [Managed read-only integration](managed-native.md) now connects
+the native adapters; writable managed callbacks and remote deployment remain work.
 
 ## Recommendation
 
@@ -60,7 +61,8 @@ namespace edits; direct-key behavior below describes the existing compatibility 
 | Linux sign-in startup, including MX without systemd | [Detached launcher implemented](startup-and-sessions.md); native desktop/login-hook/terminal-loss checks passed |
 | Windows startup across login sessions | [Scheduled task and shared NTFS folder implemented](startup-and-sessions.md); native cross-logon reads/removal passed; workstation reboot/SSH authentication pending |
 | Managed file publication | [Real SDK/HTTP/SQLite library](managed-publication.md); native/deployment/live-provider acceptance pending |
-| Managed namespace authority | [SQLite and authenticated loopback prototype](managed-layout.md); native integration pending |
+| Managed namespace authority | [SQLite and authenticated loopback development service](managed-layout.md); private token CLI and explicit version-3 read-only mounts |
+| Managed native reads | [Authority namespace and verified immutable payloads](managed-native.md); separate native acceptance required |
 | Cross-machine coordination with Turso | [Research and design proposal](turso-coordination.md); no dependency or cloud service enabled |
 | Clean-cache storage library | Bounded worker, checksums, LRU/pins and recovery tests |
 | Mounted caching | Opt-in; online HEAD on new opens, revision snapshots, restart and integrity checks |

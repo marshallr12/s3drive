@@ -7,7 +7,8 @@ as a local filesystem on Linux and Windows.
 The new SQLite namespace authority prototype supports atomic metadata operations
 and durable operation recovery. The [managed publisher library](docs/src/managed-publication.md)
 now verifies immutable S3 blobs before metadata CAS and local acknowledgment;
-managed native integration is pending.
+[managed read-only native integration](docs/src/managed-native.md) is added,
+with writable callbacks and remote deployment still pending.
 Existing direct mounts are retained without automatic migration.
 
 **Status: native read-only drives work on Linux and Windows.** Optional

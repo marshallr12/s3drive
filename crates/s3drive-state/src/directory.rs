@@ -143,3 +143,124 @@ impl OwnedDirectory {
 
 #[cfg(test)]
 mod tests;
+
+/// Read a bounded owner-private file without following links. This never creates
+/// or repairs it. Contents must not appear in caller errors or diagnostics.
+#[cfg(any(target_os = "linux", windows))]
+pub fn read_private_secret(path: &Path, limit: usize) -> crate::Result<Vec<u8>> {
+    use std::io::Read;
+    if !path.is_absolute()
+        || path.components().any(|c| matches!(c, Component::ParentDir))
+        || path.as_os_str().as_encoded_bytes().contains(&0)
+    {
+        return Err("private secret requires an absolute local path".into());
+    }
+    if !(1..=4096).contains(&limit) {
+        return Err("invalid private secret size limit".into());
+    }
+    let parent = path.parent().ok_or("missing secret parent")?;
+    let _parents = platform::hold_parents(parent)?;
+    let mut file = platform::open_file(path, false)?;
+    platform::verify_private(&file, false)?;
+    #[cfg(target_os = "linux")]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if file.metadata()?.mode() & 0o077 != 0 {
+            return Err("private secret permits access by another account".into());
+        }
+    }
+    let mut bytes = Vec::new();
+    Read::by_ref(&mut file)
+        .take((limit + 1) as u64)
+        .read_to_end(&mut bytes)?;
+    if bytes.len() > limit {
+        return Err("private secret exceeds its size limit".into());
+    }
+    Ok(bytes)
+}
+/// Create one new token in a private directory. Never overwrite or tighten an
+/// existing secret. The directory is private before any token bytes are written.
+#[cfg(any(target_os = "linux", windows))]
+pub fn create_private_secret(directory: &Path, bytes: &[u8]) -> crate::Result<PathBuf> {
+    use std::io::Write;
+    if !directory.is_absolute()
+        || directory
+            .components()
+            .any(|c| matches!(c, Component::ParentDir))
+        || directory.as_os_str().as_encoded_bytes().contains(&0)
+        || bytes.len() > 66
+    {
+        return Err("invalid private secret destination or length".into());
+    }
+    let _parents = platform::hold_parents(directory.parent().ok_or("missing secret parent")?)?;
+    platform::create_directory(directory)?;
+    let held = platform::open_directory(directory)?;
+    platform::verify_private(&held, true)?;
+    platform::verify_local(&held, directory)?;
+    let path = directory.join("authority.token");
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true).write(true).create_new(true);
+    #[cfg(target_os = "linux")]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600).custom_flags(nix::libc::O_NOFOLLOW);
+    }
+    let mut file = options.open(&path)?;
+    platform::verify_private(&file, false)?;
+    file.write_all(bytes)?;
+    file.sync_all()?;
+    #[cfg(target_os = "linux")]
+    {
+        held.sync_all()?;
+        if let Some(parent) = _parents.last() {
+            parent.sync_all()?;
+        }
+    }
+    Ok(path)
+}
+
+#[cfg(not(any(target_os = "linux", windows)))]
+pub fn read_private_secret(_: &Path, _: usize) -> crate::Result<Vec<u8>> {
+    Err("private secrets require Linux or Windows".into())
+}
+#[cfg(not(any(target_os = "linux", windows)))]
+pub fn create_private_secret(_: &Path, _: &[u8]) -> crate::Result<PathBuf> {
+    Err("private secrets require Linux or Windows".into())
+}
+
+#[cfg(test)]
+mod secret_tests {
+    use super::*;
+    #[test]
+    fn private_secret_round_trip_does_not_overwrite_or_print_contents() {
+        let dir = tempfile::tempdir().unwrap();
+        let path =
+            create_private_secret(&dir.path().join("secrets"), b"private fixture bytes").unwrap();
+        assert_eq!(
+            read_private_secret(&path, 66).unwrap(),
+            b"private fixture bytes"
+        );
+        assert!(create_private_secret(path.parent().unwrap(), b"replacement").is_err());
+        assert_eq!(
+            read_private_secret(&path, 66).unwrap(),
+            b"private fixture bytes"
+        );
+        assert!(read_private_secret(&path, 3).is_err());
+    }
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn private_secret_refuses_permissions_symlinks_and_hard_links() {
+        use std::os::unix::fs::{PermissionsExt, symlink};
+        let dir = tempfile::tempdir().unwrap();
+        let path = create_private_secret(&dir.path().join("secrets"), b"private").unwrap();
+        let link = dir.path().join("link");
+        symlink(&path, &link).unwrap();
+        assert!(read_private_secret(&link, 66).is_err());
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(read_private_secret(&path, 66).is_err());
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+        let hard = dir.path().join("hard");
+        std::fs::hard_link(&path, hard).unwrap();
+        assert!(read_private_secret(&path, 66).is_err());
+    }
+}

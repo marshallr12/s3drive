@@ -23,6 +23,62 @@ pub struct Config {
     pub sources: Vec<Source>,
     pub cache: Option<CacheConfig>,
     pub writes: Option<WritesConfig>,
+    pub managed: Option<ManagedConfig>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ManagedConfig {
+    pub authority: String,
+    pub volume: String,
+    pub token_file: PathBuf,
+    pub stores: Vec<ManagedStore>,
+}
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ManagedStore {
+    pub id: String,
+    pub source: String,
+}
+impl ManagedConfig {
+    fn validate(&self, sources: &[Source]) -> Result<(), String> {
+        let id = |v: &str| {
+            v.len() == 32
+                && v.bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+                && v != "00000000000000000000000000000000"
+        };
+        let url = Url::parse(&self.authority).map_err(|_| "invalid managed authority URL")?;
+        let ip = url
+            .host_str()
+            .and_then(|s| s.trim_matches(['[', ']']).parse::<std::net::IpAddr>().ok());
+        if url.scheme() != "http"
+            || !ip.is_some_and(|a| a.is_loopback())
+            || url.path() != "/v1/namespace"
+            || !url.username().is_empty()
+            || url.password().is_some()
+            || url.query().is_some()
+            || url.fragment().is_some()
+            || !id(&self.volume)
+            || !absolute_local(&self.token_file)
+            || self.stores.is_empty()
+            || self.stores.len() > 16
+        {
+            return Err("managed read-only mode requires a numeric loopback authority, volume ID, absolute private token file and 1..16 store mappings".into());
+        }
+        let mut ids = HashSet::new();
+        for s in &self.stores {
+            if !id(&s.id)
+                || !ids.insert(&s.id)
+                || !sources.iter().any(|source| source.alias == s.source)
+            {
+                return Err(
+                    "managed stores require unique IDs and configured source aliases".into(),
+                );
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -140,9 +196,20 @@ impl Config {
     }
 
     pub fn validate(&self) -> Result<(), String> {
+        if let Some(managed) = &self.managed {
+            if self.version != 3
+                || self.mode != Mode::ReadOnly
+                || self.writes.is_some()
+                || self.cache.is_some()
+            {
+                return Err("version 3 currently supports managed read-only mode without local writes/cache".into());
+            }
+            managed.validate(&self.sources)?;
+        }
         match (&self.mode, self.version, &self.writes) {
-            (Mode::ReadOnly, 1, None) => {}
-            (Mode::ReadWrite, 2, Some(writes)) => {
+            (Mode::ReadOnly, 3, None) if self.managed.is_some() => {}
+            (Mode::ReadOnly, 1, None) if self.managed.is_none() => {}
+            (Mode::ReadWrite, 2, Some(writes)) if self.managed.is_none() => {
                 if !absolute_local(&writes.directory)
                     || writes.sources.is_empty()
                     || self
@@ -165,7 +232,7 @@ impl Config {
                 }
             }
             _ => return Err(
-                "version 1 is read-only; version 2 read-write requires an explicit writes table"
+                "version 1 is read-only; version 2 requires writes; version 3 requires read-only managed settings"
                     .into(),
             ),
         }
@@ -191,6 +258,9 @@ impl Config {
     /// This is a planning utility, not OS filename projection or URL decoding.
     pub fn resolve(&self, path: &str) -> Result<ObjectLocation<'_>, String> {
         self.validate()?;
+        if self.managed.is_some() {
+            return Err("managed names resolve through the authority, not direct S3 keys".into());
+        }
         validate_relative(path)?;
         let (alias, suffix) = path.split_once('/').ok_or("expected alias/file-path")?;
         let source = self
@@ -341,6 +411,55 @@ mod tests {
                 root.to_str().unwrap()
             ))
             .is_err()
+        );
+    }
+
+    #[test]
+    fn managed_configuration_requires_explicit_read_only_authority_and_store_bindings() {
+        let token = std::env::temp_dir().join("authority.token");
+        let text = format!(
+            "{}\n[managed]\nauthority='http://127.0.0.1:43128/v1/namespace'\nvolume='00000000000000000000000000000001'\ntoken_file={:?}\n[[managed.stores]]\nid='00000000000000000000000000000002'\nsource='documents'\n",
+            EXAMPLE.replace("version = 1", "version = 3"),
+            token.to_str().unwrap()
+        );
+        let config = Config::parse(&text).unwrap();
+        assert!(config.resolve("documents/a.txt").is_err());
+        for (from, to) in [
+            ("read-only", "read-write"),
+            (
+                "http://127.0.0.1:43128/v1/namespace",
+                "http://localhost:43128/v1/namespace",
+            ),
+            (
+                "http://127.0.0.1:43128/v1/namespace",
+                "https://example.com/v1/namespace",
+            ),
+            (
+                "http://127.0.0.1:43128/v1/namespace",
+                "http://secret@127.0.0.1/v1/namespace",
+            ),
+            ("source='documents'", "source='absent'"),
+            (
+                "volume='00000000000000000000000000000001'",
+                "volume='00000000000000000000000000000000'",
+            ),
+            ("version = 3", "version = 1"),
+        ] {
+            let error = Config::parse(&text.replace(from, to)).unwrap_err();
+            assert!(!error.contains("secret"));
+        }
+        assert!(Config::parse(&format!("{text}\n[[managed.stores]]\nid='00000000000000000000000000000002'\nsource='photos'\n")).is_err());
+        assert!(
+            Config::parse(&format!(
+                "{text}\n[cache]\ndirectory={:?}\n",
+                token.parent().unwrap().to_str().unwrap()
+            ))
+            .is_err()
+        );
+        assert!(
+            Config::parse(&text.replace("[managed]", "[managed]\nsecret='never-print-me'"))
+                .unwrap_err()
+                .contains("invalid configuration")
         );
     }
 

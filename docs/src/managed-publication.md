@@ -156,3 +156,6 @@ coalesce local edits before explicit remote flush and measure generation churn;
 it must not weaken the durability promised by flush. Delayed GC alone does not
 eliminate a minimum-duration charge. No price estimate, account-plan change or
 billing API action is part of this implementation.
+
+P6m3a now reuses the verified reader in [explicit managed read-only mounts](managed-native.md).
+The publication fixture alone still does not certify native adapters or deployment.

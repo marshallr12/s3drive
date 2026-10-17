@@ -3,6 +3,7 @@
 
 pub mod cache;
 mod directory;
+pub use directory::{create_private_secret, read_private_secret};
 #[cfg(windows)]
 #[allow(unsafe_code)]
 #[path = "directory/windows.rs"]
