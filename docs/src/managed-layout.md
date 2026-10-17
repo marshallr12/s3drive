@@ -86,7 +86,8 @@ supplied **loopback** listener, with a caller-supplied 256-bit bearer token,
 SQLite runs on one dedicated thread. Domain results use a versioned JSON
 envelope. Unknown fields and unauthorized requests are rejected without echoing
 request contents. Shutdown stops admission, drains accepted work and releases
-the database lock. It has no deployment CLI, default token or cloud account.
+the database lock. The development CLI now creates private tokens and runs a
+foreground local authority; it does not deploy a remote service or cloud account.
 
 This is a development/contract-test server, not a deployable remote service.
 Cross-machine deployment still needs TLS, device identity and volume ACLs,
@@ -129,9 +130,10 @@ integration, deployment and reclamation remain planned.
 5. Bind local staged logical file identity separately from physical blob keys;
    the existing direct executor inherits mutable-key ETags and cannot simply
    be repurposed by changing a path string. Add a distinct managed protocol.
-6. Integrate shared engine and both adapters, including rename-overwrite saves,
-   open-unlinked/pinned readers and cross-machine invalidation. Then require
-   real FUSE/WinFsp, approved provider and recovery acceptance.
+6. Extend the shared engine and both adapters to managed writes, including
+   rename-overwrite saves and cross-machine conflict handling. Preserve the
+   read-only reader's pinned/open-unlinked snapshots. Require separate writable
+   FUSE/WinFsp, approved provider and recovery acceptance.
 7. Add reference/pin-aware orphan and payload collection only after uncertain
    publication and open-reader lifetimes are protected. No collector is enabled.
 

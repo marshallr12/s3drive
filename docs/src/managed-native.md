@@ -33,7 +33,8 @@ promised to survive a daemon restart. Listing refreshes names and parent relatio
 while retaining the native identity of already-seen nodes. Namespace operations
 use live authority requests; there is no offline metadata replica or push
 invalidation subscription. Native metadata/directory cache timeouts are zero. Listings are limited to
-1,000 children and the local native node table to 32,768 entries.
+1,000 children and the local native node table to 32,768 entries. The authority
+has a lower prototype limit of 4,096 total retained nodes, including tombstones.
 
 A published file opens through live metadata lookup, credential-bound S3 HEAD,
 a pinned complete GET, and SHA-256 verification against its authority reservation.

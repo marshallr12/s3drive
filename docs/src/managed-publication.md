@@ -31,8 +31,9 @@ Display names such as `café 日本語 🦀.bin` exist only in metadata. A renam
 not move bytes. A separate reservation allocates each immutable generation key;
 local generation IDs never identify files globally. Store roots are canonical
 ASCII component prefixes, at most 128 bytes. Provider key/policy limits are
-checked before staging. The library currently supports one selected store per
-publisher; native multi-store routing remains planned.
+checked before staging. Each publisher selects one store. The native read-only
+reader maps up to sixteen stores to local S3 sources; native writable routing
+remains a subsequent phase.
 
 ## Publication protocol
 
@@ -105,8 +106,9 @@ The new `WireClient` accepts only numeric-loopback HTTP URLs at
 `/v1/namespace`, with explicit bearer token, no redirects/proxy/automatic retry,
 10-second request deadline, 4 KiB requests and 8 MiB bounded replies. It is not a
 remote deployment client. Production TLS, identity/volume ACLs, failover and Turso
-remain separate. A managed mount must also select a portable versioned name
-comparison policy; the authority still uses `exact-utf8-v1`.
+remain separate. Managed writable integration must select a portable versioned
+name comparison policy; the current read-only adapter uses `exact-utf8-v1`
+and rejects unsupported Windows name projections.
 
 ## Acceptance evidence and remaining work
 
@@ -135,13 +137,13 @@ refusal to acknowledge an ignored database update.
 Routing tests prove local aliases/profiles can differ without changing the
 storage route, while different bucket/prefix/endpoint scopes differ.
 
-These tests do not prove native managed mounts, actual multi-machine network
-partitions, Turso behavior, physical power-cut recovery or a live managed Wasabi
-workflow. Existing FUSE/WinFsp regression suites still exercise direct mounts.
-Next: integrate logical-file heads/edit plans and multi-store resolution into
-the shared engine, add portable name policy and atomic replace-save semantics,
-then run separate native/provider/recovery acceptance. Keep unsupported native
-paths until those criteria pass. No bucket import or deletion/GC is enabled.
+These publication tests alone do not certify native adapters, actual multi-host
+network partitions, Turso, physical power-cut recovery or a live managed Wasabi
+workflow. Separate [native read-only acceptance](managed-native.md) now covers
+FUSE/WinFsp reads and multi-store routing. Managed writable integration still
+needs logical-file heads/edit plans, portable naming and atomic replace-save
+semantics, then its own native/provider/recovery acceptance. Keep unsupported
+writable paths until those criteria pass. No bucket import or deletion/GC is enabled.
 
 ## Wasabi generation churn
 
