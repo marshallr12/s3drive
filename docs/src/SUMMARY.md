@@ -17,6 +17,7 @@
   - [Deferred create, rename and handle reference](windows-deferred-reference.md)
   - [Deferred removal authority](deferred-removal.md)
   - [Unknown mode cancellation recovery](mode-cancellation-recovery.md)
+  - [Atomic deferred creation](atomic-deferred-create.md)
   - [Publication while deletion is pending](pending-owner-publication.md)
 - [Turso and cross-machine coordination](turso-coordination.md)
 - [Filesystem behavior contract](filesystem-contract.md)

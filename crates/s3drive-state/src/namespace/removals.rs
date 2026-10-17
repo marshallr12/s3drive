@@ -101,6 +101,22 @@ fn origin(db: &Connection, id: &str, fence: &RemovalFence) -> Result<(Receipt, R
     let input: Apply = serde_json::from_slice(&input).map_err(|_| Error::Internal)?;
     let outcome: Result<Receipt> = serde_json::from_slice(&outcome).map_err(|_| Error::Internal)?;
     let receipt = outcome.map_err(|_| Error::Internal)?;
+    if let Mutation::CreateDeferredEntry { store, owner, .. } = &input.mutation {
+        let placement = store
+            .as_ref()
+            .map(|id| publication::store(db, id))
+            .transpose()?;
+        if input.volume != volume(db)?.id
+            || input.operation != fence.intent
+            || input.operation != id
+            || owner != &fence.owner
+            || receipt.node != creation::expected(&input, placement, receipt.sequence)?
+            || receipt.artifact != creation::artifact(&input)
+        {
+            return Err(Error::Internal);
+        }
+        return Ok((receipt, RemovalMode::Deferred));
+    }
     let (before, parent, owner, mode) = match &input.mutation {
         Mutation::ArmRemoval {
             node,
@@ -289,6 +305,30 @@ fn revision(db: &Connection, n: &Node, sequence: i64, deleted: bool) -> Result<(
         return Err(Error::Internal);
     }
     Ok(())
+}
+pub(super) fn created(db: &Connection, r: &Apply, sequence: i64) -> Result<()> {
+    let Mutation::CreateDeferredEntry { owner, .. } = &r.mutation else {
+        return Err(Error::Internal);
+    };
+    let fence = RemovalFence {
+        intent: r.operation.clone(),
+        owner: owner.clone(),
+    };
+    let rows = sql(db.execute(
+        "INSERT INTO namespace_removals VALUES(?1,?1,?2,'deferred',?1)",
+        params![r.operation, owner],
+    ))?;
+    if rows != 1
+        || raw_pending(db, &r.operation)?
+            != Some(Tag {
+                fence: fence.clone(),
+                mode: RemovalMode::Deferred,
+                event: r.operation.clone(),
+            })
+    {
+        return Err(Error::Internal);
+    }
+    events::insert(db, r, &r.operation, &fence, "deferred", sequence as u64)
 }
 pub(super) fn mutate(db: &Connection, r: &Apply, sequence: i64) -> Result<(String, RemovalFence)> {
     if volume(db)?.name_policy != names::PORTABLE {

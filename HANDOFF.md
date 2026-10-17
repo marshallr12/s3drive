@@ -1,8 +1,35 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b3b4b3r2 additional Windows reference**
-on `codex/windows-deferred-reference`. Goal ACTIVE. Read
-`docs/src/windows-deferred-reference.md` and the implementation plan.
+Updated: 2026-10-17. Current phase: **P6m3b3b4b3b1 atomic deferred create**
+on `codex/atomic-deferred-create`. Goal ACTIVE. Read
+`docs/src/atomic-deferred-create.md` and the implementation plan.
+
+Baseline verified live: private clean local/remote main
+`cc23aa4b1b868ef1be632dab7bbcef0b4806fb97`, terminal all-green
+[run 39042534931](https://github.com/marshallr12/s3drive/actions/runs/39042534931).
+Linux `117424735132`, Windows `117424735098`, book `117424734930`;
+173/169 state, seven HTTP, 11 SDK, seven native cases per OS, fourteen frozen
+NTFS traces, four selected upstream legacy cases and nine checker rejections.
+Native/startup gates passed. Proof `/tmp/s3drive-extra-reference-publication.json`.
+
+Current scope: atomic guarded CreateDeferredEntry, exact origin/node/fence proof,
+client ownership with no fabricated before-node, predicted-ID unknown barriers,
+closing headroom and SDK recovery. Keep schema16/config6 and unsupported native
+Windows deletion unchanged. No live Wasabi mutation or NNP bypass.
+
+Implementation and local full gate passed, exit 0:
+`/tmp/s3drive-create-gate3.log`. 183 state, eight authority HTTP and twelve managed
+SDK tests, strict lint/build/book. Killed authority and four SDK client stages
+recover exact creation IDs/fences, preserve children/dirty bytes and newer
+epochs, and perform exactly three fixture PUTs without replay. Initial gate
+failures were an unused-unit lint and its formatting correction; neither was
+suppressed. Require terminal exact-tip all-three hosted CI, including existing
+native/reference/startup acceptance, before guarded publication from baseline
+`cc23aa4`. Next same-fence owner rename/move, then persistent Windows per-open
+lifecycle. Deferred target replacement still requires explicit reference/native
+proof that old target cleanup cannot remove its replacement. Goal remains ACTIVE.
+
+## Previous expanded reference phase
 
 Published baseline verified live: private clean local/remote main
 `0c8f6c71a48b1e4368e4408c74be8e804b035c06`, terminal all-green

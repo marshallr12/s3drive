@@ -13,12 +13,12 @@ pub struct OwnedRemoval {
 }
 pub(super) fn fence(input: &Input) -> Option<RemovalFence> {
     match &input.request.mutation {
-        Mutation::ArmRemoval { owner, .. } | Mutation::PrepareRemoval { owner, .. } => {
-            Some(RemovalFence {
-                intent: input.request.operation.clone(),
-                owner: owner.clone(),
-            })
-        }
+        Mutation::ArmRemoval { owner, .. }
+        | Mutation::PrepareRemoval { owner, .. }
+        | Mutation::CreateDeferredEntry { owner, .. } => Some(RemovalFence {
+            intent: input.request.operation.clone(),
+            owner: owner.clone(),
+        }),
         Mutation::CancelRemoval { fence, .. }
         | Mutation::CommitRemoval { fence, .. }
         | Mutation::TransitionRemoval { fence, .. } => Some(fence.clone()),
@@ -78,7 +78,9 @@ fn history(records: &[Record]) -> Result<History<'_>> {
         let f = fence(&r.input).ok_or("missing removal fence")?;
         if matches!(
             r.input.request.mutation,
-            Mutation::ArmRemoval { .. } | Mutation::PrepareRemoval { .. }
+            Mutation::ArmRemoval { .. }
+                | Mutation::PrepareRemoval { .. }
+                | Mutation::CreateDeferredEntry { .. }
         ) {
             if active
                 .insert(
@@ -87,8 +89,10 @@ fn history(records: &[Record]) -> Result<History<'_>> {
                         input: r.input.clone(),
                         receipt: receipt.clone(),
                         fence: f,
-                        mode: if matches!(r.input.request.mutation, Mutation::PrepareRemoval { .. })
-                        {
+                        mode: if matches!(
+                            r.input.request.mutation,
+                            Mutation::PrepareRemoval { .. } | Mutation::CreateDeferredEntry { .. }
+                        ) {
                             RemovalMode::Deferred
                         } else {
                             RemovalMode::Pending
@@ -216,7 +220,7 @@ pub(super) fn blocks_for_node(
     for r in &rows {
         if r.outcome.is_none()
             && r.input.request.volume == volume
-            && r.input.entries.iter().any(|e| e.id == node)
+            && protected(&r.input).contains(&node)
             && h.cancellation(&r.input)?.is_none()
             && !cancellation.is_some_and(|c| cancels_transition(c, &r.input))
         {
@@ -232,7 +236,7 @@ fn required_slots(records: &[Record]) -> Result<usize> {
         .filter(|r| r.outcome.is_none())
         .map(|r| match r.input.request.mutation {
             Mutation::ArmRemoval { .. } => 1,
-            Mutation::PrepareRemoval { .. } => 2,
+            Mutation::PrepareRemoval { .. } | Mutation::CreateDeferredEntry { .. } => 2,
             _ => 0,
         })
         .sum::<usize>();
@@ -255,10 +259,18 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
     let h = history(&records)?;
     let owned = &h.active;
     if let Some(f) = fence(input) {
-        let e = &input.entries[0];
-        let old = owned.get(&(input.request.volume.clone(), e.id.clone()));
+        let created = matches!(input.request.mutation, Mutation::CreateDeferredEntry { .. });
+        let id = if created {
+            &input.request.operation
+        } else {
+            &input.entries[0].id
+        };
+        let old = owned.get(&(input.request.volume.clone(), id.clone()));
         match &input.request.mutation {
-            Mutation::ArmRemoval { .. } | Mutation::PrepareRemoval { .. } if old.is_none() => (),
+            Mutation::ArmRemoval { .. }
+            | Mutation::PrepareRemoval { .. }
+            | Mutation::CreateDeferredEntry { .. }
+                if old.is_none() => {}
             Mutation::CancelRemoval { .. }
             | Mutation::CommitRemoval { .. }
             | Mutation::TransitionRemoval { .. } => {
@@ -273,6 +285,7 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
                 {
                     return Err("removal transition mode mismatch".into());
                 }
+                let e = &input.entries[0];
                 let n = &old.receipt.node;
                 if old.fence != f
                     || !same_control(&old.input, input)
@@ -313,10 +326,7 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
             && !cancels_transition(input, &r.input)
             && r.input.request.volume == input.request.volume
             && fence(&r.input).is_some()
-            && r.input
-                .entries
-                .iter()
-                .any(|e| touched.contains(&e.id.as_str()))
+            && protected(&r.input).iter().any(|id| touched.contains(id))
         {
             return Err("recover exact removal outcome before another namespace effect".into());
         }
@@ -350,10 +360,19 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
     }
     Ok(())
 }
-fn touched(input: &Input) -> Vec<&str> {
+fn protected(input: &Input) -> Vec<&str> {
     let mut ids: Vec<_> = input.entries.iter().map(|e| e.id.as_str()).collect();
+    if matches!(input.request.mutation, Mutation::CreateDeferredEntry { .. }) {
+        ids.push(&input.request.operation);
+    }
+    ids
+}
+fn touched(input: &Input) -> Vec<&str> {
+    let mut ids = protected(input);
     match &input.request.mutation {
-        Mutation::CreateEntry { parent, .. } => ids.push(parent),
+        Mutation::CreateEntry { parent, .. } | Mutation::CreateDeferredEntry { parent, .. } => {
+            ids.push(parent)
+        }
         Mutation::RemoveEntry { parent, .. }
         | Mutation::ArmRemoval { parent, .. }
         | Mutation::PrepareRemoval { parent, .. }

@@ -468,3 +468,21 @@ reference data. Require final terminal exact-tip native/reference/startup CI
 before publishing. Next atomic create/reserve and owner-fenced move; deferred
 target replacement needs its own proof that old cleanup cannot remove the
 new name before the full Windows lifecycle is enabled.
+
+
+### P6m3b3b4b3b1 — atomic deferred create (2026-10-17)
+
+Reference contract accepted at `cc23aa4`, terminal CI 39042534931. Implement the
+[atomic deferred create contract](atomic-deferred-create.md): guarded creation,
+reservation, immutable origin event and exact result in one authority transaction;
+unknown predicted-node barriers and exact acknowledged local ownership. Preserve
+closing headroom and old bytes/hashes. Require corruption/full disk/quota/kill,
+TCP races and actual SDK binary/empty/Unicode recovery plus all existing native
+gates before publication. Then same-fence owner move and the native lifecycle.
+
+Local implementation and full gate passed: 183 Linux state tests, eight HTTP
+tests and twelve SDK cases. Creation and deferred ownership are atomic, client
+recovery uses the original frozen input, and unknown predicted IDs block further
+effects. Native callbacks remain unsupported; require terminal exact-tip hosted
+mount/reference/startup CI before publication. The next implementation phase is
+same-fence owner rename/move, followed by the persistent per-open lifecycle.

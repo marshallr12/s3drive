@@ -74,6 +74,19 @@ pub(super) fn proof(db: &Connection, event: &Event) -> Result<Receipt> {
     let outcome: Result<Receipt> = serde_json::from_slice(&outcome).map_err(|_| Error::Internal)?;
     let receipt = outcome.map_err(|_| Error::Internal)?;
     let (id, parent, fence, mode, guard) = match &request.mutation {
+        Mutation::CreateDeferredEntry { parent, owner, .. } => {
+            origin(db, &event.node, &event.fence)?;
+            (
+                &request.operation,
+                Some(parent),
+                RemovalFence {
+                    intent: request.operation.clone(),
+                    owner: owner.clone(),
+                },
+                "deferred",
+                None,
+            )
+        }
         Mutation::ArmRemoval {
             node,
             parent,

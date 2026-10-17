@@ -1,5 +1,6 @@
 //! Authoritative managed namespace prototype, separate from local source binding.
 //! No S3 publication or platform name-comparison semantics are implemented here.
+pub(crate) mod creation;
 mod entries;
 mod removals;
 pub use removals::{PendingRemoval, RemovalFence, RemovalMode};
@@ -165,6 +166,14 @@ pub enum Mutation {
         name: String,
         node_kind: Kind,
     },
+    CreateDeferredEntry {
+        parent: String,
+        parent_revision: u64,
+        store: Option<String>,
+        name: String,
+        node_kind: Kind,
+        owner: String,
+    },
     Create {
         parent: String,
         name: String,
@@ -308,10 +317,19 @@ impl Apply {
                 name,
                 node_kind,
                 store,
+            }
+            | Mutation::CreateDeferredEntry {
+                parent,
+                parent_revision,
+                name,
+                node_kind,
+                store,
+                ..
             } => {
-                (*node_kind == Kind::Directory && store.is_none()
-                    || *node_kind == Kind::EmptyFile
-                        && store.as_ref().is_some_and(|s| valid_id(s) && s != ROOT))
+                (!matches!(&self.mutation, Mutation::CreateDeferredEntry { owner, .. } if !valid_id(owner) || owner == ROOT))
+                    && (*node_kind == Kind::Directory && store.is_none()
+                        || *node_kind == Kind::EmptyFile
+                            && store.as_ref().is_some_and(|s| valid_id(s) && s != ROOT))
                     && *parent_revision <= self.expected_sequence
                     && *node_kind != Kind::File
                     && valid_id(parent)
@@ -677,6 +695,7 @@ impl State {
             || matches!(
                 request.mutation,
                 Mutation::CreateEntry { .. }
+                    | Mutation::CreateDeferredEntry { .. }
                     | Mutation::MoveEntry { .. }
                     | Mutation::RemoveEntry { .. }
                     | Mutation::ArmRemoval { .. }
@@ -788,6 +807,14 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
             name,
             node_kind,
             store,
+        }
+        | Mutation::CreateDeferredEntry {
+            parent,
+            parent_revision,
+            name,
+            node_kind,
+            store,
+            ..
         } => {
             if volume(db)?.name_policy != names::PORTABLE {
                 return Err(Error::Invalid);
@@ -805,9 +832,24 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
                 parent,
                 name,
                 *node_kind,
-                placement,
+                placement.clone(),
                 sql_sequence,
             )?;
+            if matches!(request.mutation, Mutation::CreateDeferredEntry { .. }) {
+                if node(db, &request.operation).map_err(|_| Error::Internal)?
+                    != creation::expected(request, placement, sequence)?
+                {
+                    return Err(Error::Internal);
+                }
+                removals::created(db, request, sql_sequence)?;
+                return finish(
+                    db,
+                    request,
+                    sequence,
+                    &request.operation,
+                    creation::artifact(request),
+                );
+            }
             request.operation.as_str()
         }
         Mutation::Create {

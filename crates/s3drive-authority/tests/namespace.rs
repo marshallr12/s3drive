@@ -1128,3 +1128,117 @@ async fn deferred_mode_clients_race_and_recover_exact_dropped_transition_after_r
     );
     close(stop, task, authority).await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn atomic_deferred_creators_race_and_recover_lost_exact_receipt_after_restart() {
+    use s3drive_authority::{Artifact, RemovalMode};
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("authority");
+    let authority = Authority::open_with_policy(path.clone(), "portable-collision-v1".into())
+        .await
+        .unwrap();
+    let (url, stop, task) = start(authority.client()).await;
+    let a = http();
+    let b = http();
+    let Reply::Features(features) = ask(&a, &url, &Request::Features {}).await else {
+        panic!()
+    };
+    assert!(features.iter().any(|s| s == "deferred-create-v1"));
+    let v = info(&a, &url).await;
+    let first = change(
+        &v,
+        6000,
+        Mutation::CreateDeferredEntry {
+            parent: ROOT.into(),
+            parent_revision: 0,
+            store: None,
+            name: "directory café 🦀".into(),
+            node_kind: Kind::Directory,
+            owner: format!("{:032x}", 9000),
+        },
+    );
+    let second = change(
+        &v,
+        6001,
+        Mutation::CreateDeferredEntry {
+            parent: ROOT.into(),
+            parent_revision: 0,
+            store: None,
+            name: "directory cafe\u{301} 🦀".into(),
+            node_kind: Kind::Directory,
+            owner: format!("{:032x}", 9001),
+        },
+    );
+    let (left, right) = tokio::join!(ask(&a, &url, &first), ask(&b, &url, &second));
+    let (winner, original) = match (left, right) {
+        (Reply::Applied(r), Reply::Error(Error::AlreadyExists)) => (r, first),
+        (Reply::Error(Error::AlreadyExists), Reply::Applied(r)) => (r, second),
+        other => panic!("one atomic create winner: {other:?}"),
+    };
+    let Some(Artifact::Removal(fence)) = winner.artifact.clone() else {
+        panic!()
+    };
+    let Reply::PendingRemoval(Some(p)) = ask(
+        &b,
+        &url,
+        &Request::PendingRemoval {
+            volume: v.id.clone(),
+            node: winner.node.id.clone(),
+        },
+    )
+    .await
+    else {
+        panic!()
+    };
+    assert_eq!(p.node, winner.node);
+    assert_eq!(p.fence, fence);
+    assert_eq!(p.mode, RemovalMode::Deferred);
+    assert_eq!(
+        listing(&a, &url, &v.id, ROOT).await.children,
+        vec![winner.node.clone()]
+    );
+    let response = a
+        .post(&url)
+        .bearer_auth(SECRET)
+        .json(&original)
+        .send()
+        .await
+        .unwrap();
+    assert!(response.status().is_success());
+    drop(response);
+    close(stop, task, authority).await;
+    let authority = Authority::open_with_policy(path, "portable-collision-v1".into())
+        .await
+        .unwrap();
+    let (url, stop, task) = start(authority.client()).await;
+    let before = info(&b, &url).await.sequence;
+    assert_eq!(
+        ask(&b, &url, &original).await,
+        Reply::Applied(winner.clone())
+    );
+    assert_eq!(info(&b, &url).await.sequence, before);
+    let cancel = change(
+        &info(&a, &url).await,
+        6002,
+        Mutation::CancelRemoval {
+            node: winner.node.id.clone(),
+            fence,
+        },
+    );
+    let restored = applied(ask(&a, &url, &cancel).await);
+    assert!(!restored.node.deleted);
+    assert_eq!(ask(&b, &url, &original).await, Reply::Applied(winner));
+    assert_eq!(
+        ask(
+            &a,
+            &url,
+            &Request::PendingRemoval {
+                volume: v.id,
+                node: restored.node.id
+            }
+        )
+        .await,
+        Reply::PendingRemoval(None)
+    );
+    close(stop, task, authority).await;
+}

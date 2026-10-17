@@ -35,6 +35,7 @@ impl Input {
         if !matches!(
             self.request.mutation,
             Mutation::CreateEntry { .. }
+                | Mutation::CreateDeferredEntry { .. }
                 | Mutation::MoveEntry { .. }
                 | Mutation::RemoveEntry { .. }
                 | Mutation::ArmRemoval { .. }
@@ -48,6 +49,9 @@ impl Input {
             return Err("invalid namespace intent binding".into());
         }
         if let Mutation::CreateEntry {
+            store: Some(store), ..
+        }
+        | Mutation::CreateDeferredEntry {
             store: Some(store), ..
         } = &self.request.mutation
             && *store != self.store.id
@@ -83,42 +87,31 @@ fn checked_outcome(input: &Input, outcome: &namespace::Result<Receipt>) -> Resul
         Err(_) => return Ok(()),
         Ok(r) => r,
     };
-    if !matches!(input.request.mutation, Mutation::CreateEntry { .. }) {
+    if !matches!(
+        input.request.mutation,
+        Mutation::CreateEntry { .. } | Mutation::CreateDeferredEntry { .. }
+    ) {
         changes::effects(input, receipt)?;
         return Ok(());
     }
-    let Mutation::CreateEntry {
-        parent,
-        name,
-        node_kind,
-        store,
-        ..
-    } = &input.request.mutation
-    else {
-        return Err("invalid namespace intent kind".into());
+    let placement = match &input.request.mutation {
+        Mutation::CreateEntry { node_kind, .. }
+        | Mutation::CreateDeferredEntry { node_kind, .. }
+            if *node_kind == namespace::Kind::EmptyFile =>
+        {
+            Some(input.store.clone())
+        }
+        _ => None,
     };
-    let n = &receipt.node;
-    let placement = if *node_kind == namespace::Kind::EmptyFile {
-        Some(input.store.clone())
-    } else {
-        None
-    };
-    if receipt.sequence <= input.request.expected_sequence
-        || n.revision != receipt.sequence
-        || n.id != input.request.operation
-        || n.parent.as_ref() != Some(parent)
-        || &n.name != name
-        || &n.kind != node_kind
-        || n.deleted
-        || n.payload.is_some()
-        || n.placement != placement
-        || store.as_ref() != placement.as_ref().map(|p| &p.id)
-        || receipt.artifact.is_some()
+    let expected = namespace::creation::expected(&input.request, placement, receipt.sequence)
+        .map_err(|_| "invalid initial namespace receipt")?;
+    if receipt.node != expected || receipt.artifact != namespace::creation::artifact(&input.request)
     {
         return Err("namespace receipt does not match frozen intent".into());
     }
     Ok(())
 }
+
 pub(crate) fn check_schema(db: &Connection) -> Result<()> {
     db.prepare("SELECT operation_id,input,outcome,state_hash FROM namespace_intents LIMIT 0")?;
     db.prepare("SELECT singleton,owner_id,state_hash FROM client_identity LIMIT 0")?;

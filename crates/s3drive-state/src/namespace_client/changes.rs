@@ -81,7 +81,11 @@ pub(super) fn validate(input: &Input) -> Result<()> {
         entry.validate()?;
     }
     match &input.request.mutation {
-        Mutation::CreateEntry { .. } if input.entries.is_empty() => Ok(()),
+        Mutation::CreateEntry { .. } | Mutation::CreateDeferredEntry { .. }
+            if input.entries.is_empty() =>
+        {
+            Ok(())
+        }
         Mutation::RemoveEntry { node, parent }
         | Mutation::ArmRemoval { node, parent, .. }
         | Mutation::PrepareRemoval { node, parent, .. }
