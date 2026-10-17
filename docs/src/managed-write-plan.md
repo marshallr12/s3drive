@@ -99,8 +99,8 @@ cover independent content CAS, exact request replay, legacy guards, base observa
 and schema-10 migration. Existing process-kill and full-disk tests remain required.
 
 Each native suite has an explicit `actual_managed_existing_file_writes_and_recovery`
-case for the real driver: Unicode and two stores, all edit forms, read-only close,
-metadata rename, killing a dirty mount, a committed PUT with lost response and
+case for the real driver, with a producer process started before native handles exist (avoiding fork/exec close-induced FUSE flushes; [source and rationale](development.md)): Unicode and two stores, all edit forms, read-only close,
+metadata rename, clean teardown, killing a dirty mount, a committed PUT with lost response and
 blocked observation, restart without a duplicate PUT, and a competing publication
 whose local loser survives. Passing portable tests cannot substitute for these cases.
 

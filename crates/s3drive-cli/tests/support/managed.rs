@@ -12,7 +12,7 @@ use std::{
     time::Duration,
 };
 use tokio::{
-    io::{AsyncBufReadExt, BufReader},
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     process::{Child, Command},
 };
 const DIR: &str = "資料 café 🦀";
@@ -258,6 +258,61 @@ impl Harness {
         m
     }
 }
+// Start before native file handles exist: Unix fork/exec closes inherited
+// CLOEXEC descriptors, and those closes legitimately cause FUSE flush callbacks.
+struct Producer {
+    child: Child,
+    lines: tokio::io::Lines<BufReader<tokio::process::ChildStdout>>,
+}
+impl Producer {
+    async fn start(h: &Harness) -> Self {
+        let mut c = Command::new(std::env::current_exe().unwrap());
+        c.args(["--exact", "managed_native_child", "--nocapture"])
+            .env("S3DRIVE_NATIVE_MANAGED_MODE", "producer")
+            .env("S3DRIVE_NATIVE_MANAGED_ROOT", &h.root)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .kill_on_drop(true);
+        h.environment(&mut c);
+        let mut child = c.spawn().unwrap();
+        let lines = BufReader::new(child.stdout.take().unwrap()).lines();
+        let mut actor = Self { child, lines };
+        actor.until("PRODUCER_READY").await;
+        actor
+    }
+    async fn until(&mut self, expected: &str) {
+        tokio::time::timeout(Duration::from_secs(100), async {
+            while let Some(line) = self.lines.next_line().await.unwrap() {
+                if line == expected {
+                    return;
+                }
+            }
+            panic!("producer exited before acknowledgment")
+        })
+        .await
+        .unwrap();
+    }
+    async fn send(&mut self, command: &str) {
+        let input = self.child.stdin.as_mut().unwrap();
+        input
+            .write_all(format!("{command}\n").as_bytes())
+            .await
+            .unwrap();
+        input.flush().await.unwrap();
+        self.until("PRODUCER_DONE").await;
+    }
+    async fn stop(mut self) {
+        drop(self.child.stdin.take());
+        assert!(
+            tokio::time::timeout(Duration::from_secs(20), self.child.wait())
+                .await
+                .unwrap()
+                .unwrap()
+                .success()
+        );
+    }
+}
 struct Mount {
     diagnostics: Option<tokio::task::JoinHandle<()>>,
     child: Child,
@@ -413,6 +468,31 @@ pub async fn child() {
     let c = cfg(&root.join("managed.toml"));
     let w = wire(&c);
     match mode.as_str() {
+        "producer" => {
+            use std::io::BufRead;
+            println!("PRODUCER_READY");
+            std::io::stdout().flush().unwrap();
+            for command in std::io::stdin().lock().lines() {
+                match command.unwrap().as_str() {
+                    "rename" => {
+                        change(
+                            &w,
+                            3041,
+                            Mutation::Move {
+                                node: id(11),
+                                parent: id(10),
+                                name: MOVED.into(),
+                            },
+                        )
+                        .await
+                    }
+                    "update" => publish(&root, &w, "first", 200, 11, 1040, &data(1)).await,
+                    _ => panic!("unknown producer command"),
+                }
+                println!("PRODUCER_DONE");
+                std::io::stdout().flush().unwrap();
+            }
+        }
         "seed" => {
             for (n, which) in [(200, "first"), (201, "second")] {
                 let c = cfg(&root.join(which).join("drive.toml"));
@@ -823,6 +903,7 @@ pub async fn native_writes() {
     let tmp = tempfile::tempdir().unwrap();
     let (h, s) = Harness::new(tmp.path(), &f).await;
     h.configure_writable();
+    let mut producer = Producer::start(&h).await;
     let seed_puts = puts(&f);
     let m = h.mount().await;
     let empty = h.mount.join("empty 🦀");
@@ -872,7 +953,7 @@ pub async fn native_writes() {
     second.write_all(b"second-local").unwrap();
     second.sync_all().unwrap();
     drop(second);
-    h.child("rename").await;
+    producer.send("rename").await;
     file.sync_all().unwrap();
     assert_eq!(puts(&f), before + 4);
     let moved = h.mount.join(DIR).join(MOVED);
@@ -903,7 +984,7 @@ pub async fn native_writes() {
     drop(file);
     writes::restore_observation(&f);
     let m = h.mount().await;
-    let mut file = std::fs::OpenOptions::new()
+    let file = std::fs::OpenOptions::new()
         .read(true)
         .write(true)
         .open(&moved)
@@ -911,10 +992,28 @@ pub async fn native_writes() {
     file.sync_all().unwrap();
     assert_eq!(puts(&f), before + 6, "uncertain PUT replayed after restart");
     assert_eq!(&std::fs::read(&moved).unwrap()[..4], b"lost");
+    drop(file);
+    m.stop().await;
+    let m = h.mount().await;
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&moved)
+        .unwrap();
     // Another machine wins while local edits remain dirty. Its object survives.
     file.seek(SeekFrom::Start(4)).unwrap();
     file.write_all(b"conflict").unwrap();
-    h.child("update").await;
+    assert_eq!(
+        puts(&f),
+        before + 6,
+        "dirty local write published before external producer"
+    );
+    producer.send("update").await;
+    assert_eq!(
+        puts(&f),
+        before + 7,
+        "external producer must publish exactly once"
+    );
     assert!(file.sync_all().is_err());
     let mut local = Vec::new();
     file.seek(SeekFrom::Start(0)).unwrap();
@@ -927,6 +1026,7 @@ pub async fn native_writes() {
     drop(file);
     h.child("rw-conflict-reopen").await;
     assert_eq!(puts(&f), before + 7);
+    producer.stop().await;
     s.stop().await;
     eprintln!(
         "managed native writes: Unicode, two stores, patch/truncate/append/sparse, rename, dirty restart, uncertain PUT recovery and retained conflict passed"

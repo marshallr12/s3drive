@@ -331,3 +331,13 @@ which passed Linux/Windows/book with the four prior native cases per OS.
 That checkpoint certifies the local-edit library, not the new native writer.
 No new live Wasabi upload, startup registration or Turso deployment is authorized
 or performed by the fixture gates.
+
+Linux native producer commands use a process started before native handles exist.
+Fork/exec can close inherited CLOEXEC writable handles and trigger a valid FUSE
+flush, so spawning a competitor only after dirtying a native file does not isolate
+the intended competing-publication ordering. The harness keeps the flush/conflict
+assertions and sends rename/update commands to the prestarted producer instead.
+It also retains sanitized managed error diagnostics after mount readiness.
+Research checked 2026-10-17: the [libfuse flush contract](https://github.com/libfuse/libfuse/blob/master/include/fuse.h)
+describes per-descriptor close callbacks, and the [Linux exec change](https://kernel.googlesource.com/pub/scm/linux/kernel/git/netdev/net/%2B/e780259b54e618ceb4763fbc21314acf3565e813%5E!/)
+explicitly identifies close-on-exec waiting on filesystem flush handlers, including FUSE.
