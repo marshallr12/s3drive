@@ -296,7 +296,7 @@ steps before claiming full managed filesystem/save support:
    acknowledge it; settlement of an older generation must retain a newer head.
    Acceptance: process death/lost replies at each durable boundary, full-disk
    rollback, corruption/refusal, concurrent local edits and retained conflicts.
-2. **P6m3b2: existing-file native editing — implemented, separate native acceptance.** See [the phase contract](managed-write-plan.md). Add explicit policy-bound managed
+2. **P6m3b2: existing-file native editing — native checkpoint accepted.** See [the phase contract](managed-write-plan.md). Add explicit policy-bound managed
    write configuration and a shared local file view, patch/truncate/append,
    local read-your-writes and generation-specific remote fsync. Coalesce local
    writes before publication rather than uploading each patch. An external

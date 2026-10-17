@@ -1,0 +1,35 @@
+{
+  "checked_at": "2026-10-17T06:33:18Z",
+  "source_sha": "9a0185680f397070d31172f880c0fcc37eb71b82",
+  "run_url": "https://github.com/marshallr12/s3drive/actions/runs/39009806732",
+  "scope": "native acceptance steps; overall publication requires terminal exact-tip CI",
+  "run_status_at_capture": "in_progress",
+  "run_conclusion_at_capture": "",
+  "platforms": [
+    {
+      "job": "rust (ubuntu-latest)",
+      "job_id": 117329725284,
+      "job_conclusion_at_capture": "success",
+      "native_step": "Verify real Linux mount and teardown",
+      "native_step_conclusion": "success",
+      "native_step_completed_at": "2026-10-17T06:27:35Z",
+      "expected_native_cases": 5
+    },
+    {
+      "job": "rust (windows-latest)",
+      "job_id": 117329725178,
+      "job_conclusion_at_capture": "",
+      "native_step": "Verify real Windows drive and teardown",
+      "native_step_conclusion": "success",
+      "native_step_completed_at": "2026-10-17T06:31:55Z",
+      "expected_native_cases": 5
+    }
+  ],
+  "excluded": [
+    "live Wasabi mutations",
+    "real MX reboot or SSH/PAM acceptance",
+    "Windows 10/11 desktop",
+    "remote authority or Turso deployment",
+    "managed create/rename/unlink/save-replace"
+  ]
+}

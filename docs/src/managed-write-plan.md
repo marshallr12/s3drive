@@ -4,7 +4,7 @@
 connects [durable logical edits](managed-edits.md) to the existing Linux FUSE and
 Windows WinFsp callbacks. Version 3 stays read-only. This phase adds existing-file
 editing, including unpublished empty files, with explicit per-store write policies.
-Native acceptance is a separate gate; consult the exact-source CI evidence in
+Both native steps passed at the [verified checkpoint](development.md#verified-native-checkpoint). Full publication remains a separate gate; consult the exact-source CI evidence in
 [development](development.md) before treating a platform as accepted.
 
 ![Applications edit a durable local head; fsync publishes immutable S3 bytes and commits the content reference at the authority.](images/managed-writes.png)

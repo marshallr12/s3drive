@@ -349,3 +349,21 @@ resources; five parallel cases exposed a PowerShell/Explorer deadline failure.
 Serializing cases isolates their fixtures without increasing deadlines, retrying
 failures, or removing their concurrent-handle/client checks. Native job limits
 remain ten minutes. Portable tests remain parallel.
+
+
+### Verified native checkpoint
+
+Both native acceptance steps completed successfully at
+`9a0185680f397070d31172f880c0fcc37eb71b82`,
+[run 39009806732](https://github.com/marshallr12/s3drive/actions/runs/39009806732).
+The [metadata snapshot](evidence/managed-native-writes-2026-10-17.json) records
+the exact source, job IDs, step outcomes and exclusions. Linux's full job and
+no-systemd startup regression also passed. Windows completed its native step;
+its overall job was saving its build cache when this snapshot was captured.
+A successful native step is not a claim that an in-progress overall run is green.
+
+The final candidate serializes native cases on each OS and must pass the full
+Linux/Windows/book jobs at its own exact tip before main publication. Its
+[branch CI history](https://github.com/marshallr12/s3drive/actions?query=branch%3Acodex%2Fmanaged-native-writes)
+provides that terminal publication evidence. All five native cases remain enabled;
+no deadline, assertion or recovery check was removed.

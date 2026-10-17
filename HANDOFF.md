@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b2 native managed existing-file edits**; implemented on `codex/managed-native-writes`. Run local and exact-source CI gates before publication.
+Updated: 2026-10-17. Current phase: **P6m3b2 native managed existing-file edits**; native checkpoint accepted on `codex/managed-native-writes`; exact-tip publication checks remain mandatory.
 Goal active. Linux/Windows read-only drives and startup foundations work;
 library writes/flush are progressing toward safe writable native filesystems.
 Do not call the broader editable-drive goal complete before its documented
@@ -50,6 +50,21 @@ publication are serialized conservatively; reads keep owned snapshots. No native
 namespace mutation/save-replace is enabled. See `docs/src/managed-write-plan.md`.
 Local gate log: `/tmp/s3drive-managed-writer-gate-producer.log`. Before publication require
 terminal exact-tip Linux/Windows/book CI including the fifth native case per OS. Native cases now run serially (`--test-threads=1`) to isolate process-wide FUSE descriptors and Windows driver/Shell resources.
+
+Native checkpoint `9a0185680f397070d31172f880c0fcc37eb71b82` passed both real
+native steps in [run 39009806732](https://github.com/marshallr12/s3drive/actions/runs/39009806732).
+Linux full job `117329725284` passed with 109 state tests and no-systemd startup.
+Windows native step `117329725178` passed all five cases; its cache-save/overall
+job was still pending when the evidence snapshot was captured. This is not an
+in-progress full-run acceptance claim. Durable snapshot:
+`docs/src/evidence/managed-native-writes-2026-10-17.json`.
+The final candidate adds serial native gating to isolate process-wide descriptors
+and Windows driver/Shell resources. Require terminal exact-tip CI before main.
+Earlier candidates `6969f85`/run39009012508 and `89c044c`/run39009408181 failed:
+Linux fixture ordering was affected by fork/exec close flushes; the latter also
+hit an existing Windows PowerShell/Explorer deadline under five parallel native
+cases. No assertions/timeouts were weakened; the prestarted producer and serial
+suite isolation address those test interactions.
 
 Windows testing runs remotely on GitHub's **Windows Server 2025 VM**, not this
 Linux workstation. Native folder/drive/security/UTF-16 tests and distinct
