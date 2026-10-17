@@ -342,7 +342,7 @@ fn migration_six_preserves_verified_intents_and_rolls_back_conflicts() {
         state
             .connection
             .execute_batch(
-                "DROP TABLE managed_publications; DROP TABLE namespace_uploads; DROP TABLE namespace_stores; DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; DROP TABLE write_settlements; DROP TABLE remote_flushes; PRAGMA user_version=6",
+                "DROP TABLE logical_publication_links; DROP TABLE logical_edits; DROP TABLE logical_files; DROP TABLE managed_publications; DROP TABLE namespace_uploads; DROP TABLE namespace_stores; DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; DROP TABLE write_settlements; DROP TABLE remote_flushes; PRAGMA user_version=6",
             )
             .unwrap();
         if conflict {
@@ -350,7 +350,16 @@ fn migration_six_preserves_verified_intents_and_rolls_back_conflicts() {
         }
         drop(state);
         let reopened = State::open_managed(&path);
-        assert_eq!(reopened.is_err(), conflict);
+        assert_eq!(
+            reopened.is_err(),
+            conflict,
+            "unexpected migration open result: {}",
+            reopened
+                .as_ref()
+                .err()
+                .map(ToString::to_string)
+                .unwrap_or_default()
+        );
         if let Ok(mut state) = reopened {
             assert_eq!(pending(&mut state), [id]);
             assert_eq!(read(&mut state, id), b"old bytes");
@@ -471,5 +480,34 @@ fn process_death_before_and_after_ack_commit_recovers_without_another_claim() {
         assert!(pending(&mut state).is_empty());
         assert_eq!(read(&mut state, a), b"old");
         assert_eq!(read(&mut state, b), b"new");
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn migration_reopen_survives_concurrent_process_spawning() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    };
+    struct Spawner(Arc<AtomicBool>, Option<std::thread::JoinHandle<()>>);
+    impl Drop for Spawner {
+        fn drop(&mut self) {
+            self.0.store(false, Ordering::SeqCst);
+            self.1.take().unwrap().join().unwrap();
+        }
+    }
+    let running = Arc::new(AtomicBool::new(true));
+    let flag = running.clone();
+    let _spawner = Spawner(
+        running,
+        Some(std::thread::spawn(move || {
+            while flag.load(Ordering::SeqCst) {
+                std::process::Command::new("/bin/true").status().unwrap();
+            }
+        })),
+    );
+    for _ in 0..100 {
+        migration_six_preserves_verified_intents_and_rolls_back_conflicts();
     }
 }

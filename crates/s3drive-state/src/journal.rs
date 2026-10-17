@@ -129,7 +129,10 @@ impl Base {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
+#[serde(try_from = "i64", into = "i64")]
 pub struct GenerationId(i64);
 impl GenerationId {
     pub(crate) fn from_database(value: i64) -> Result<Self> {
@@ -140,6 +143,20 @@ impl GenerationId {
     }
     pub fn value(self) -> i64 {
         self.0
+    }
+}
+impl TryFrom<i64> for GenerationId {
+    type Error = String;
+    fn try_from(value: i64) -> std::result::Result<Self, Self::Error> {
+        if value <= 0 {
+            return Err("invalid generation ID".into());
+        }
+        Ok(Self(value))
+    }
+}
+impl From<GenerationId> for i64 {
+    fn from(value: GenerationId) -> Self {
+        value.0
     }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -540,7 +557,22 @@ impl<'a> Journal<'a> {
     fn seal_inner(
         &mut self,
         id: GenerationId,
+        hook: impl FnMut(SealPoint) -> Result<()>,
+    ) -> Result<Receipt> {
+        self.seal_with_link(id, hook, |_, _| Ok(()))
+    }
+    pub(crate) fn seal_linked(
+        &mut self,
+        id: GenerationId,
+        link: impl FnMut(&Connection, &Generation) -> Result<()>,
+    ) -> Result<Receipt> {
+        self.seal_with_link(id, |_| Ok(()), link)
+    }
+    fn seal_with_link(
+        &mut self,
+        id: GenerationId,
         mut hook: impl FnMut(SealPoint) -> Result<()>,
+        mut link: impl FnMut(&Connection, &Generation) -> Result<()>,
     ) -> Result<Receipt> {
         self.state.verify_staging_storage()?;
         let tx = self
@@ -556,6 +588,8 @@ impl<'a> Journal<'a> {
         if generation.phase == Phase::Sealed {
             current_head(&tx, &generation.target)?
                 .ok_or("missing staged head; data was preserved")?;
+            link(&tx, &generation)?;
+            tx.commit()?;
             return Ok(receipt);
         }
         if generation.filled != generation.size {
@@ -575,6 +609,7 @@ impl<'a> Journal<'a> {
         hook(SealPoint::Journaled)?;
         tx.execute("INSERT INTO staged_heads VALUES (?1,?2,?3) ON CONFLICT(source_id,object_key) DO UPDATE SET generation_id=excluded.generation_id",params![generation.target.source.as_slice(),generation.target.key,id.0])?;
         hook(SealPoint::HeadUpdated)?;
+        link(&tx, &load(&tx, id)?)?;
         tx.commit()?;
         hook(SealPoint::Committed)?;
         Ok(receipt)
@@ -594,44 +629,7 @@ impl<'a> Journal<'a> {
         length: usize,
         draft: bool,
     ) -> Result<Vec<u8>> {
-        if length > MAX_READ_BYTES {
-            return Err("staged read exceeds bounded range".into());
-        }
-        let connection = &self.state.connection;
-        let generation = load(connection, id)?;
-        if (generation.phase == Phase::Building) != draft {
-            return Err("staged generation is not in the requested phase".into());
-        }
-        validate_manifest(connection, &generation, false)?;
-        if offset >= generation.filled || length == 0 {
-            return Ok(Vec::new());
-        }
-        let end = offset + ((length as u64).min(generation.filled - offset));
-        let mut result = Vec::with_capacity((end - offset) as usize);
-        let mut statement=connection.prepare("SELECT offset_bytes,length_bytes,chunk_hash FROM staged_extents WHERE generation_id=?1 AND offset_bytes<?2 AND offset_bytes+length_bytes>?3 ORDER BY offset_bytes")?;
-        let mut rows = statement.query(params![id.0, end as i64, offset as i64])?;
-        while let Some(row) = rows.next()? {
-            let start: u64 = number(row.get(0)?)?;
-            let len: u64 = number(row.get(1)?)?;
-            let from = offset.saturating_sub(start);
-            let to = (end - start).min(len);
-            let digest: Option<Vec<u8>> = row.get(2)?;
-            if let Some(digest) = digest {
-                let digest = digest32(digest)?;
-                let bytes = read_chunk(connection, &digest)?;
-                result.extend_from_slice(
-                    bytes
-                        .get(from as usize..to as usize)
-                        .ok_or("corrupt staged extent range")?,
-                );
-            } else {
-                result.resize(result.len() + (to - from) as usize, 0);
-            }
-        }
-        if result.len() as u64 != end - offset {
-            return Err("missing staged bytes; data was preserved".into());
-        }
-        Ok(result)
+        read_data(&self.state.connection, id, offset, length, draft)
     }
 
     pub fn pending(&self, after: Option<GenerationId>, limit: u16) -> Result<Vec<Generation>> {
@@ -905,3 +903,50 @@ fn read_chunk(connection: &Connection, digest: &[u8; 32]) -> Result<Vec<u8>> {
 
 #[cfg(test)]
 mod tests;
+
+/// Bounded integrity-checked access inside another local SQLite transaction.
+pub(crate) fn read_data(
+    connection: &Connection,
+    id: GenerationId,
+    offset: u64,
+    length: usize,
+    draft: bool,
+) -> Result<Vec<u8>> {
+    if length > MAX_READ_BYTES {
+        return Err("staged read exceeds bounded range".into());
+    }
+    let generation = load(connection, id)?;
+    if (generation.phase == Phase::Building) != draft {
+        return Err("staged generation is not in the requested phase".into());
+    }
+    validate_manifest(connection, &generation, false)?;
+    if offset >= generation.filled || length == 0 {
+        return Ok(Vec::new());
+    }
+    let end = offset + ((length as u64).min(generation.filled - offset));
+    let mut result = Vec::with_capacity((end - offset) as usize);
+    let mut statement=connection.prepare("SELECT offset_bytes,length_bytes,chunk_hash FROM staged_extents WHERE generation_id=?1 AND offset_bytes<?2 AND offset_bytes+length_bytes>?3 ORDER BY offset_bytes")?;
+    let mut rows = statement.query(params![id.0, end as i64, offset as i64])?;
+    while let Some(row) = rows.next()? {
+        let start: u64 = number(row.get(0)?)?;
+        let len: u64 = number(row.get(1)?)?;
+        let from = offset.saturating_sub(start);
+        let to = (end - start).min(len);
+        let digest: Option<Vec<u8>> = row.get(2)?;
+        if let Some(digest) = digest {
+            let digest = digest32(digest)?;
+            let bytes = read_chunk(connection, &digest)?;
+            result.extend_from_slice(
+                bytes
+                    .get(from as usize..to as usize)
+                    .ok_or("corrupt staged extent range")?,
+            );
+        } else {
+            result.resize(result.len() + (to - from) as usize, 0);
+        }
+    }
+    if result.len() as u64 != end - offset {
+        return Err("missing staged bytes; data was preserved".into());
+    }
+    Ok(result)
+}

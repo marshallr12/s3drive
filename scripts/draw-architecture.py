@@ -293,3 +293,16 @@ d.box(40, 625, 570, 155, "Separate producer library", ["Client-local SQLite pres
 d.box(665, 625, 570, 155, "Read handle lifetime", ["Each open pins one verified generation in memory", "New open observes newer authority references", "Old handle survives update / rename / unlink", "No persistent reader cache or payload GC"])
 d.box(40, 850, 1195, 125, "Deployment boundary", ["Authority and reader are currently on one machine using numeric loopback HTTP.", "Remote TLS / multi-host acceptance / Turso backend and managed sign-in supervision remain planned.", "SQLite authority, local producer journal and S3 payloads are three distinct durability boundaries."], color=AMBER, fill="#fff4de")
 d.save("managed-native.png")
+
+
+d = Diagram("Managed edits: local head and remote publication", "P6m3b1 library • SQLite schema 10 • Native managed writes remain a later phase", 1040)
+d.box(40, 145, 550, 175, "1. Durable logical edit", ["Volume + node ID, frozen SDK binding", "Expected local parent + size + SHA-256", "Immutable chunks; exact intent replay", "Local sealing and head change are atomic"])
+d.box(690, 145, 550, 175, "2. Freeze publication input", ["Select one sealed logical generation", "Bind exact reservation + publication IDs", "Unique ownership of both operation IDs", "Persist before physical staging or network"])
+d.arrow([(590, 215), (690, 215)])
+d.box(690, 380, 550, 155, "3. Independent physical generation", ["Create-only S3 key; no mutable-path overwrite", "One PUT claim + complete verification", "Authority file revision / volume CAS", "Physical and metadata receipts stay retained"], color=GREEN, fill="#dff1e9")
+d.arrow([(965, 320), (965, 380)])
+d.box(40, 380, 550, 155, "4. Atomic local logical settlement", ["Require matching S3 + metadata receipts", "Commit edit receipt + settled-file pointer", "A newer local head remains dirty", "Retry historical receipts without another PUT"], color=GREEN, fill="#dff1e9")
+d.arrow([(690, 455), (590, 455)], color=GREEN)
+d.box(40, 625, 1200, 150, "A flush of A must preserve a newer head B", ["Local generations: A → B. Uploading A never replaces B's local identity or bytes.", "After A settles: base = A's verified authority revision; head = B; B remains pending.", "An external revision causes a conflict. Preserve losing blobs and local data; never silently rebase.", "Logical targets are private local identities, separate from every generated S3 object key."])
+d.box(40, 850, 1200, 135, "Acceptance boundary", ["Nine process-kill boundaries, SQLite-full rollback, quotas, corruption, migration and ID ownership.", "SDK/authority process death recovers local settlement without reupload; real user storage is untouched.", "Native patch/truncate/fsync, application saves, remote service/Turso and reboot acceptance remain next."], color=AMBER, fill="#fff4de")
+d.save("managed-edits.png")

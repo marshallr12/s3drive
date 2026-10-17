@@ -27,9 +27,20 @@ const FILES: &[&str] = &[
 
 pub(crate) struct OwnedDirectory {
     path: PathBuf,
-    _lock: File,
+    _lock: DirectoryLock,
     // Windows handles deny delete sharing, keeping all path components stable.
     _directories: Vec<File>,
+}
+
+struct DirectoryLock(File);
+impl Drop for DirectoryLock {
+    fn drop(&mut self) {
+        // State closes SQLite before dropping OwnedDirectory. Also cover
+        // errors after acquisition: inherited descriptors must not prolong an
+        // owner that has closed or failed initialization. File close remains
+        // the fail-closed fallback if explicit unlock fails.
+        let _ = self.0.unlock();
+    }
 }
 
 impl OwnedDirectory {
@@ -86,6 +97,7 @@ impl OwnedDirectory {
             Err(TryLockError::WouldBlock) => return Err("state directory is already in use".into()),
             Err(TryLockError::Error(error)) => return Err(error.into()),
         }
+        let lock = DirectoryLock(lock);
         // Acquire ownership before touching SQLite files. Check sidecars too;
         // SQLite may create/open them without going through Rust's file APIs.
         for name in &FILES[1..] {

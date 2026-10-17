@@ -9,6 +9,7 @@ pub use directory::{create_private_secret, read_private_secret};
 #[path = "directory/windows.rs"]
 mod directory_windows;
 pub mod journal;
+pub mod logical;
 pub mod managed;
 pub mod namespace;
 pub mod remote;
@@ -18,7 +19,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 9;
+pub const SCHEMA_VERSION: i32 = 10;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub struct State {
@@ -124,7 +125,12 @@ impl State {
             }
             if version == 8 {
                 tx.execute_batch(include_str!("../migrations/009.sql"))?;
+                version = 9;
             }
+            if version == 9 {
+                tx.execute_batch(include_str!("../migrations/010.sql"))?;
+            }
+            logical::check_schema(&tx)?;
             managed::check_schema(&tx)?;
             namespace::check_schema(&tx)?;
             // Catch a damaged/current-version database before returning success.

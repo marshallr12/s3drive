@@ -40,6 +40,7 @@ to the user.
 | D032 | Implemented P6m1 prototype | Persistent SQLite namespace authority with stable IDs, global sequence CAS and transactional operation/request/result deduplication. Loopback service and exact-byte Unicode policy are development boundaries; payload publication is now covered by D033; native writes remain disabled; P6m3a read-only integration is explicit |
 | D033 | Implemented P6m2 library | New immutable create-only blob roots per logical file revision, with exact reservation request persisted before HTTP, verified SDK bytes, authority file/volume CAS and separate local logical acknowledgment. Retain every uncertain/conflicting generation. Store routing digests exclude machine-local profiles and do not prove a provider-global principal |
 | D034 | Implemented P6m3a, 2026-10-17 | Version-3 managed mounts are read-only, with authority-defined paths, store-to-local-source routing and bounded verified in-memory snapshots. Separate private-token authority CLI; no implicit migration, remote deployment or managed writable callbacks |
+| D035 | Implemented P6m3b1 library, 2026-10-17 | Keep volume/node local heads separate from S3 generation targets. Persist exact logical edit/publication inputs, bind operation IDs exclusively, verify whole bytes during atomic seal, and require physical plus metadata receipts before atomic logical settlement. Preserve newer heads and all conflicts; no native managed writes yet |
 
 ## Questions to resolve at the relevant phase
 

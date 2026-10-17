@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3a managed native reads**; implemented; local gate and native Linux/Windows acceptance passed at `653c804`.
+Updated: 2026-10-17. Current phase: **P6m3b1 durable managed local edits**; library implemented. Run local and exact-source CI gates before publication.
 Goal active. Linux/Windows read-only drives and startup foundations work;
 library writes/flush are progressing toward safe writable native filesystems.
 Do not call the broader editable-drive goal complete before its documented
@@ -24,7 +24,9 @@ safe-write contract and real OS acceptance pass.
   multipart, payload reclamation, new offline opens or desktop packaging yet.
 - Startup at sign-in after reboot; same-user incoming SSH sessions and surviving
   tmux/Codex/Claude processes must share the mount. The user's “SSL sessions”
-  means SSH. MX Linux without systemd is required and tested locally.
+  means SSH. MX Linux without systemd is required. Launcher logic was tested locally;
+  native session regression runs in CI. Actual MX mount/reboot acceptance remains
+  unverified under this executor's NoNewPrivs restriction.
 - Prefer SQLite: state/cache/staged payloads live outside the mounted tree,
   on private local disk under one process lock and bounded owner thread.
 - Existing `s3drive.local.toml` remains read-only. No real application write
@@ -35,16 +37,18 @@ safe-write contract and real OS acceptance pass.
 ## Authoritative publication baseline
 
 Published private main at phase start:
-`77db279d6c12208d4cc6e0d2bfff0aa405230a01` (managed immutable publication).
-Terminal all-green [run 39000302465](https://github.com/marshallr12/s3drive/actions/runs/39000302465):
-Linux 117301627842, Windows 117301627813 and book 117301627531.
-Remote main SHA and PRIVATE visibility were verified after publication.
+`eceecf2ae96d6967a0a1e6219fca46ecb540272e` (managed native read-only drives).
+Terminal all-green [run 39003888047](https://github.com/marshallr12/s3drive/actions/runs/39003888047):
+Linux `117312272102`, Windows `117312271979`, book `117312272097`.
+The automatic same-SHA main run `39004701691` also completed successfully.
+Remote main SHA/private visibility and clean local main were verified before
+this branch. Topic branch: `codex/managed-logical-edits`.
 
-Baseline: four authority TCP tests, 91 Linux / 89 Windows state tests, 50 S3
-and 12 FS tests; managed SDK race/recovery tests; three direct native cases per
-OS (RO/cache/session, existing writes, creation), 341 RO FUSE / 749 RO WinFsp
-requests. No-systemd and Windows non-admin cross-logon acceptance passed.
-Exact baseline logs: `/tmp/s3drive-managed-publication-{linux,windows,book}-ci.log`.
+Baseline: schema 9; 93 Linux / 90 Windows state tests, 50 S3, 12 FS and four
+authority TCP tests. Four native cases per OS include managed read-only,
+direct RO/cache/session, existing-file writes and creation. No-systemd and
+Windows non-admin cross-logon checks passed. Exact baseline logs:
+`/tmp/s3drive-managed-native-final-{linux,windows,book}-ci.log`.
 
 Windows testing runs remotely on GitHub's **Windows Server 2025 VM**, not this
 Linux workstation. Native folder/drive/security/UTF-16 tests and distinct
@@ -85,54 +89,64 @@ serde_json 1.0.151 and reqwest 0.13.5 (now also the loopback authority client), 
   least-privilege password-backed scheduled task with shared NTFS folder.
   Do not change machine policy or install a real user startup entry implicitly.
 
-## P6m3a: native acceptance and publication candidate
+## P6m3b1: durable logical edits and publication bridge
 
-Based on published main `77db279d6c12208d4cc6e0d2bfff0aa405230a01`, whose terminal
-exact-source Linux/Windows/book run `39000302465` passed. P6m3a connects the
-existing native adapters to an explicit managed read-only configuration.
-See [managed native contract](docs/src/managed-native.md).
+See [the contract](docs/src/managed-edits.md). Schema 10 adds private client-local
+file bindings, logical edit records and exclusive reservation/publication ID
+ownership. They use the same bounded owner and staged chunks as existing work.
+Global volume/node identity stays separate from both the frozen local journal
+target and each physical S3 blob key. Authority/client DB roles remain separate.
 
-- New `s3drive-managed::Reader`: authority namespace, 1..16 store/source routes,
-  online S3 HEAD + complete pinned GET/SHA-256; four in-memory snapshots/32 MiB.
-  Publisher delegates reads to this same reader. No managed reader write policy,
-  persistent clean cache, client state directory or local DB is required.
-- Shared FS projects stable global node IDs into native IDs and uses authority
-  names directly, with files from multiple buckets in the same tree. Existing
-  version-1/2 direct behavior remains. Version 3 requires read-only mode and
-  rejects writes/cache. Windows rejects ambiguous name projections.
-- CLI `authority-token --directory ...` creates a new owner-private token without
-  printing/overwriting it. `authority-serve --directory ... --token-file ...`
-  serves separate private SQLite over numeric loopback only and prints readiness
-  JSON with endpoint/volume. No S3 credentials on authority. Optional stdin-close
-  shutdown is for a supervising process. No authority import/setup CLI yet.
-- Actual CLI/SDK/HTTP/SQLite portable fixture uses two buckets and two dummy
-  profiles, new local aliases, Unicode/binary/empty reads, route mismatch
-  rejection, native-ID retention through rename, old snapshots after unlink,
-  and authority restart with the same volume identity.
-- New ignored native test `actual_managed_namespace_and_immutable_reads` in both
-  OS suites adds actual read-only mounts, concurrent producer updates, rename/
-  unlink, S3 HEAD denial, authority loss, retained old handles and remount.
-  Exactly three immutable payload PUTs come from the producer; mounted reads
-  must issue no mutations. All fixtures are owned loopback objects, not Wasabi.
+`Publisher::bind_edit_file`, `stage_local`, `stage_edit` and `flush_edit` now
+connect this journal to the real SDK/authority publication protocol. Stage local
+whole-file generations without network; persist exact publication input before
+physical work; require verified physical and metadata receipts before atomically
+committing logical edit receipt + settled-file pointer. An older acknowledgment
+must leave a newer local head dirty. No silent external revision/credential
+adoption; reopening at this client's already-verified base reuses original local
+identity. A generic staged pending record is not a logical flush acknowledgment.
 
-Local integration logs: `/tmp/s3drive-managed-native-{portable,regression,token-tests,cli-tests}.log`.
-Local full gate passed at `/tmp/s3drive-managed-native-gate-final.log`; final-tip
-confirmation is `/tmp/s3drive-managed-native-gate-tip.log` (check its terminal
-status). Native acceptance passed at exact source `653c80499cd1c5bf892eebeb45e81d1499fe023b`
-in terminal all-green run `39002521132`: Linux `117308259596`, Windows
-`117308259773`, book `117308259813`. Four native cases passed per OS,
-including the managed reader; Linux no-systemd and Windows cross-logon
-regressions passed. Linux has 93 state tests, Windows 90; both have 50 S3,
-12 FS and four authority TCP tests. Native logs:
-`/tmp/s3drive-managed-native-{linux,windows}-ci.log`. Documentation-only
-follow-up must still meet exact-tip CI before main publication.
-New/updated diagrams are generated from `scripts/draw-architecture.py`.
+Storage tests cover nine killed-owner boundaries, disk full after metadata
+success, ignored SQL updates, stale parents/concurrent builders, quota, corrupted
+retained rows, exclusive operation IDs and schema-9 migration/role preservation.
+The actual SDK/TCP test coalesces a predecessor without upload, then kills a
+client after S3+metadata commit while a newer
+local head exists; it must recover local settlement without another PUT, publish
+the newer bytes, and retain a later losing blob/local conflict after an external
+rename. Its three immutable PUTs are confined to owned loopback fixtures.
 
-Next P6m3b: durable logical edit heads, managed create/save/replace/rename/delete,
-portable names and remote-flush/conflict/recovery integration. P6m4 separately
+Local evidence: `/tmp/s3drive-logical-{state-final,recovery-tests-final,sdk-tests,clippy-final}.log`.
+Local full gate passed at `/tmp/s3drive-logical-gate-complete.log`: 106 Linux
+state tests, 50 S3, 12 FS, four authority TCP and the SDK publication/recovery
+tests. The new diagram was generated and visually inspected.
+Native FUSE/WinFsp/startup regressions are separate; publication requires terminal
+Linux/Windows/book CI for the exact tip. A controlled Linux process-spawn diagnostic reproduced inherited-directory-lock
+retention after State drop. The owner now explicitly unlocks after SQLite closes;
+strict reopen assertions remain immediate, and live-owner exclusion is unchanged.
+The regression performs 100 migration rounds during process spawning. Evidence:
+`/tmp/s3drive-logical-migration-spawn-regression.log`. The topic workflow is the
+current CI evidence; do not infer completion while cache saving remains active.
+
+Version-3 managed native mounts remain read-only. Native managed local edit
+views, patch/truncate/fsync and recovery integration are **P6m3b2**. Include
+verified clean external refresh, dirty conflict retention and per-file publication
+serialization; address unrelated-volume-guard conflicts before native writers.
+This is now the next
+required work. P6m3b3 adds portable names and create/rename/replace/unlink; P6m4
 supervises/deploys authority/Turso and proves multi-host/sign-in behavior.
-No real config, credential, startup registration, machine policy, cloud service
-or Wasabi object is changed. Do not claim the broader goal complete.
+No real Wasabi mutation, credential/config change or startup entry is authorized
+or performed here. Preserve unsupported callbacks until their native criteria pass.
+
+## P6m3a retained native reader boundary
+
+Explicit version-3 read-only mounts use authority-defined names and 1..16 global
+store-to-local-source mappings. Four verified whole-file snapshots bound retained
+payload buffers to 32 MiB (8 MiB/file). No persistent managed reader cache or
+client-local DB is required. Windows rejects ambiguous exact-UTF-8 projections.
+`authority-token` creates one private token without printing/overwriting it;
+`authority-serve` runs a private SQLite development service on numeric loopback.
+There is no remote deployment/import CLI or real startup registration.
+See [managed native reads](docs/src/managed-native.md) for acceptance and examples.
 
 ## P6m2 implementation branch: codex/managed-publication
 
@@ -235,8 +249,9 @@ were already removed. Do not infer remaining cleanup from old plans/logs.
 
 ## Next implementation and durable decisions
 
-P6m3a native acceptance passed. Implement P6m3b managed writable integration in
-the b1/b2/b3 steps documented in the implementation plan. Stable storage/file identities,
+P6m3a native acceptance passed; P6m3b1 now supplies the durable logical-edit
+bridge. Complete P6m3b2 native existing-file editing, then P6m3b3 namespace/save
+workflows, following the implementation plan. Stable storage/file identities,
 create-only unique blob keys and metadata CAS are now separate from the direct
 writer's mutable-key ETag lineage; preserve that distinction during integration. Keep uncertain bytes and new physical blob
 references distinct; an S3 upload alone does not acknowledge filesystem flush.

@@ -22,7 +22,7 @@ fn migration_preserves_local_rows_and_refuses_role_mixing() {
     let path = dir.path().join("state");
     let mut s = State::open_managed(&path).unwrap();
     s.register_source(&[1; 32], &"a".repeat(64)).unwrap();
-    s.connection.execute_batch("DROP TABLE managed_publications; DROP TABLE namespace_uploads; DROP TABLE namespace_stores; DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; PRAGMA user_version=7;").unwrap();
+    s.connection.execute_batch("DROP TABLE logical_publication_links; DROP TABLE logical_edits; DROP TABLE logical_files; DROP TABLE managed_publications; DROP TABLE namespace_uploads; DROP TABLE namespace_stores; DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; PRAGMA user_version=7;").unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
     assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
@@ -45,7 +45,7 @@ fn migration_failure_keeps_schema_seven_and_original_data() {
     let path = dir.path().join("state");
     let mut s = State::open_managed(&path).unwrap();
     s.register_source(&[1; 32], &"a".repeat(64)).unwrap();
-    s.connection.execute_batch("DROP TABLE managed_publications; DROP TABLE namespace_uploads; DROP TABLE namespace_stores; DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; CREATE TABLE namespace_nodes(keep TEXT); INSERT INTO namespace_nodes(keep) VALUES('untouched'); PRAGMA user_version=7;").unwrap();
+    s.connection.execute_batch("DROP TABLE logical_publication_links; DROP TABLE logical_edits; DROP TABLE logical_files; DROP TABLE managed_publications; DROP TABLE namespace_uploads; DROP TABLE namespace_stores; DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; CREATE TABLE namespace_nodes(keep TEXT); INSERT INTO namespace_nodes(keep) VALUES('untouched'); PRAGMA user_version=7;").unwrap();
     drop(s);
     assert!(State::open_managed(&path).is_err());
     let db = Connection::open(path.join("metadata.sqlite3")).unwrap();

@@ -105,6 +105,12 @@ impl Storage {
             options: self.cache_options,
         }
     }
+    pub fn logical(&self) -> Logical {
+        Logical {
+            owner: self.owner.clone(),
+            options: self.staging_options,
+        }
+    }
     pub fn managed(&self) -> Managed {
         Managed {
             owner: self.owner.clone(),
@@ -531,6 +537,61 @@ impl Managed {
         after: Option<String>,
         limit: u16,
     ) -> Result<Vec<crate::managed::Record>> {
+        self.call(move |j| j.pending(after.as_deref(), limit)).await
+    }
+}
+
+/// Local logical-file edits on the same bounded owner as payloads and receipts.
+#[derive(Clone)]
+pub struct Logical {
+    owner: Owner,
+    options: journal::Options,
+}
+impl Logical {
+    async fn call<T: Send + 'static>(
+        &self,
+        work: impl FnOnce(&mut crate::logical::Journal<'_>) -> Result<T> + Send + 'static,
+    ) -> Result<T> {
+        let options = self.options;
+        self.owner
+            .call(move |store| {
+                work(&mut crate::logical::Journal::new(
+                    &mut store.state,
+                    options,
+                )?)
+            })
+            .await
+    }
+    pub async fn bind(&self, binding: crate::logical::Binding) -> Result<crate::logical::File> {
+        self.call(move |j| j.bind(binding)).await
+    }
+    pub async fn file(&self, volume: String, node: String) -> Result<crate::logical::File> {
+        self.call(move |j| j.file(&volume, &node)).await
+    }
+    pub async fn begin(&self, input: crate::logical::Input) -> Result<crate::logical::Record> {
+        self.call(move |j| j.begin(input)).await
+    }
+    pub async fn get(&self, id: String) -> Result<crate::logical::Record> {
+        self.call(move |j| j.get(&id)).await
+    }
+    pub async fn seal(&self, id: String) -> Result<crate::logical::Record> {
+        self.call(move |j| j.seal(&id)).await
+    }
+    pub async fn prepare(
+        &self,
+        id: String,
+        input: crate::managed::Input,
+    ) -> Result<crate::logical::Record> {
+        self.call(move |j| j.prepare(&id, input)).await
+    }
+    pub async fn acknowledge(&self, id: String) -> Result<crate::logical::Record> {
+        self.call(move |j| j.acknowledge(&id)).await
+    }
+    pub async fn pending(
+        &self,
+        after: Option<String>,
+        limit: u16,
+    ) -> Result<Vec<crate::logical::Record>> {
         self.call(move |j| j.pending(after.as_deref(), limit)).await
     }
 }

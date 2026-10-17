@@ -144,9 +144,10 @@ only PUTs are three exact publications by a separate producer; mounted reads
 must never issue PUT or DELETE. CI uses real drivers on Linux and a remote
 Windows Server 2025 VM, not this Linux workstation or Windows desktop emulation.
 
-P6m3b must integrate logical edit heads with local durable recovery, managed
-create/save/replace/rename/delete callbacks, explicit remote-flush acknowledgment,
-conflict handling and portable names. Native writable acceptance, service
+[P6m3b1](managed-edits.md) adds durable local logical heads and publication settlement.
+P6m3b2 must connect local edit views, patch/truncate, remote fsync and recovery
+to existing-file callbacks. P6m3b3 adds portable names and managed
+create/save/replace/rename/delete. Native writable acceptance, service
 supervision, multi-host/Turso deployment, large files, garbage collection and
 live-provider managed acceptance remain unfinished. Existing direct writable
 mount evidence does not certify those behaviors.

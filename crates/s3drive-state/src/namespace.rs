@@ -301,7 +301,10 @@ impl State {
                         (SELECT count(*) FROM legacy_cached_objects_v1) +
                         (SELECT count(*) FROM staged_generations) +
                         (SELECT count(*) FROM clean_blobs) +
-                        (SELECT count(*) FROM managed_publications)",
+                        (SELECT count(*) FROM managed_publications) +
+                        (SELECT count(*) FROM logical_files) +
+                        (SELECT count(*) FROM logical_edits) +
+                        (SELECT count(*) FROM logical_publication_links)",
                 [],
                 |r| r.get(0),
             ))?;

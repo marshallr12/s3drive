@@ -330,6 +330,13 @@ async fn managed_child() {
     let authority = Authority::open(root.join("authority")).await.unwrap();
     let (wire, stop, server) = serve(authority.client()).await;
     let volume = info(&wire).await.id;
+    if mode.starts_with("edits_") {
+        logical_edits_mode(&mode, &config, &root, &wire, &volume).await;
+        stop.send(()).unwrap();
+        server.await.unwrap();
+        authority.shutdown().await.unwrap();
+        return;
+    }
     if mode == "initial" {
         let reader = s3drive_s3::S3Reader::from_source(&config.sources[0])
             .await
@@ -569,4 +576,300 @@ async fn managed_child() {
     stop.send(()).unwrap();
     server.await.unwrap();
     authority.shutdown().await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn managed_logical_edits_recover_settlement_and_retain_conflicting_newer_heads() {
+    let f = fixture::Fixture::start().await;
+    let tmp = tempfile::tempdir().unwrap();
+    let setup = writes::setup(&f, tmp.path()).await;
+    for mode in ["edits_stage", "edits_resume"] {
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "managed_child", "--nocapture"])
+            .env("S3DRIVE_MANAGED_MODE", mode)
+            .env("S3DRIVE_MANAGED_CONFIG", &setup.config)
+            .env("S3DRIVE_MANAGED_ROOT", tmp.path())
+            .env("AWS_SHARED_CREDENTIALS_FILE", &setup.credentials)
+            .env("AWS_CONFIG_FILE", &setup.aws_config)
+            .env("AWS_EC2_METADATA_DISABLED", "true")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+        let mut lines = BufReader::new(child.stdout.take().unwrap()).lines();
+        let mut errors = child.stderr.take().unwrap();
+        let error_task = tokio::spawn(async move {
+            let mut s = String::new();
+            errors.read_to_string(&mut s).await.unwrap();
+            s
+        });
+        let protocol = tokio::time::timeout(Duration::from_secs(100), async {
+            while let Some(line) = lines.next_line().await.unwrap() {
+                if line == "CRASH_LOGICAL" {
+                    return true;
+                }
+                if line == "LOGICAL_ACK_RECOVERED" {
+                    assert_eq!(puts(&f), 1, "logical settlement recovery reissued a PUT");
+                    signal(tmp.path(), "settlement-observed");
+                }
+            }
+            false
+        })
+        .await;
+        if mode == "edits_stage" || protocol.is_err() {
+            child.kill().await.unwrap();
+        }
+        let status = tokio::time::timeout(Duration::from_secs(15), child.wait())
+            .await
+            .unwrap()
+            .unwrap();
+        let errors = error_task.await.unwrap();
+        assert!(
+            protocol.is_ok()
+                && if mode == "edits_stage" {
+                    protocol.unwrap()
+                } else {
+                    status.success()
+                },
+            "{mode}: {status}: {errors}"
+        );
+    }
+    assert_eq!(
+        puts(&f),
+        3,
+        "two successful revisions and one retained losing blob"
+    );
+    assert_eq!(
+        f.objects
+            .lock()
+            .unwrap()
+            .keys()
+            .filter(|k| k.contains("/writable/.s3drive/"))
+            .count(),
+        3
+    );
+    assert!(!f.server.is_finished());
+}
+async fn reserve_edit(p: &Publisher, w: &WireClient, edit: u64, operation: u64) {
+    let local = p.storage().logical();
+    let record = local.get(id(edit)).await.unwrap();
+    let file = local
+        .file(record.input.volume.clone(), record.input.node.clone())
+        .await
+        .unwrap();
+    let v = info(w).await;
+    p.stage_edit(
+        &id(edit),
+        Apply {
+            volume: v.id,
+            operation: id(operation),
+            expected_sequence: v.sequence,
+            mutation: Mutation::Reserve {
+                node: file.binding.node.id,
+                expected_revision: file.base.revision,
+                store: p.store().id.clone(),
+                size: record.input.size,
+                sha256: record.input.sha256,
+            },
+        },
+        id(operation + 1000),
+    )
+    .await
+    .unwrap();
+}
+async fn logical_edits_mode(
+    mode: &str,
+    config: &s3drive_core::Config,
+    root: &Path,
+    w: &WireClient,
+    volume: &str,
+) {
+    if mode == "edits_stage" {
+        let r = s3drive_s3::S3Reader::from_source(&config.sources[0])
+            .await
+            .unwrap();
+        change(
+            w,
+            200,
+            Mutation::RegisterStore {
+                route: r.storage_fingerprint(),
+                root: "writable/.s3drive/".into(),
+            },
+        )
+        .await;
+        change(
+            w,
+            10,
+            Mutation::Create {
+                parent: s3drive_authority::ROOT.into(),
+                name: "編集 café 日本語 🦀.bin".into(),
+                node_kind: Kind::EmptyFile,
+            },
+        )
+        .await;
+    }
+    let p = publisher(config, root, "logical-client", w.clone(), volume.into()).await;
+    let local = p.storage().logical();
+    let first = b"original local edit\0\xff";
+    let second = b"newer local generation stays dirty";
+    if mode == "edits_stage" {
+        let file = p.bind_edit_file(&id(10)).await.unwrap();
+        let warmup = p
+            .stage_local(
+                s3drive_state::logical::Input::from_bytes(
+                    id(900),
+                    &file.binding,
+                    None,
+                    b"coalesced predecessor",
+                ),
+                Arc::from(b"coalesced predecessor".as_slice()),
+            )
+            .await
+            .unwrap();
+        let a = p
+            .stage_local(
+                s3drive_state::logical::Input::from_bytes(
+                    id(901),
+                    &file.binding,
+                    warmup.generation,
+                    first,
+                ),
+                Arc::from(first.as_slice()),
+            )
+            .await
+            .unwrap();
+        reserve_edit(&p, w, 901, 1901).await;
+        p.stage_local(
+            s3drive_state::logical::Input::from_bytes(id(902), &file.binding, a.generation, second),
+            Arc::from(second.as_slice()),
+        )
+        .await
+        .unwrap();
+        // Stop after S3 + authority + physical logical-publication receipt,
+        // before this local file's settlement. The newer local head exists.
+        p.flush(&id(1901)).await.unwrap();
+        assert!(local.get(id(901)).await.unwrap().receipt.is_none());
+        checkpoint("CRASH_LOGICAL");
+        std::future::pending::<()>().await;
+    } else {
+        let a = local.get(id(901)).await.unwrap();
+        let b = local.get(id(902)).await.unwrap();
+        assert!(
+            local
+                .file(volume.into(), id(10))
+                .await
+                .unwrap()
+                .settled
+                .is_none()
+        );
+        p.flush_edit(&id(901)).await.unwrap();
+        checkpoint("LOGICAL_ACK_RECOVERED");
+        wait(root, "settlement-observed").await;
+        let file = local.file(volume.into(), id(10)).await.unwrap();
+        assert_eq!(file.head, b.generation);
+        assert_eq!(file.settled, a.generation);
+        assert_eq!(local.pending(None, 10).await.unwrap().len(), 1);
+        assert_eq!(p.read(&id(10)).await.unwrap().bytes(), first);
+        reserve_edit(&p, w, 902, 1902).await;
+        p.flush_edit(&id(902)).await.unwrap();
+        assert!(local.pending(None, 10).await.unwrap().is_empty());
+        let reopened = p.bind_edit_file(&id(10)).await.unwrap();
+        assert_eq!(reopened.head, b.generation);
+        assert_eq!(reopened.binding, file.binding);
+        let old = p
+            .storage()
+            .staging()
+            .snapshot(a.generation.unwrap())
+            .await
+            .unwrap();
+        assert_eq!(old.read(0, first.len()).await.unwrap(), first);
+        p.stage_local(a.input.clone(), Arc::from(first.as_slice()))
+            .await
+            .unwrap();
+        assert_eq!(
+            local.file(volume.into(), id(10)).await.unwrap().head,
+            b.generation
+        );
+        let bytes = b"losing local bytes are retained";
+        let c = p
+            .stage_local(
+                s3drive_state::logical::Input::from_bytes(
+                    id(903),
+                    &file.binding,
+                    b.generation,
+                    bytes,
+                ),
+                Arc::from(bytes.as_slice()),
+            )
+            .await
+            .unwrap();
+        reserve_edit(&p, w, 903, 1903).await;
+        p.reserve(&id(1903)).await.unwrap();
+        change(
+            w,
+            9000,
+            Mutation::Move {
+                node: id(10),
+                parent: s3drive_authority::ROOT.into(),
+                name: "外部 rename".into(),
+            },
+        )
+        .await;
+        assert!(p.flush_edit(&id(903)).await.is_err());
+        assert!(p.bind_edit_file(&id(10)).await.is_err());
+        let mut changed = local
+            .get(id(903))
+            .await
+            .unwrap()
+            .publication
+            .unwrap()
+            .reserve;
+        changed.expected_sequence = info(w).await.sequence;
+        if let Mutation::Reserve {
+            expected_revision, ..
+        } = &mut changed.mutation
+        {
+            *expected_revision = node(w, volume, 10).await.revision;
+        }
+        assert!(p.stage_edit(&id(903), changed, id(2903)).await.is_err());
+        let empty = p
+            .stage_local(
+                s3drive_state::logical::Input::from_bytes(
+                    id(904),
+                    &file.binding,
+                    c.generation,
+                    b"",
+                ),
+                Arc::from([]),
+            )
+            .await
+            .unwrap();
+        assert!(
+            p.storage()
+                .staging()
+                .snapshot(empty.generation.unwrap())
+                .await
+                .unwrap()
+                .read(0, 1)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(local.pending(None, 10).await.unwrap().len(), 2);
+        assert!(local.get(id(903)).await.unwrap().receipt.is_none());
+        assert_eq!(p.read(&id(10)).await.unwrap().bytes(), second);
+        assert_eq!(
+            p.storage()
+                .staging()
+                .snapshot(c.generation.unwrap())
+                .await
+                .unwrap()
+                .read(0, bytes.len())
+                .await
+                .unwrap(),
+            bytes
+        );
+        p.storage().close().await.unwrap();
+    }
 }

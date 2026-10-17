@@ -269,3 +269,34 @@ existing native commands above; the Windows gate runs on GitHub's Windows VM.
 This workstation's NoNewPrivs restriction still prevents native FUSE acceptance
 here. No live Wasabi mutation, user service installation or Turso account setup
 is part of these tests. See [managed native contract](managed-native.md).
+
+
+## Managed local edit recovery
+
+The [logical-edit storage/publisher contract](managed-edits.md) is schema 10.
+State tests force nine owner-process deaths plus real SQLITE_FULL at logical
+settlement, corruption and schema-9 migration failures. The managed publication
+CLI test also kills a real SDK/authority client after metadata commit but before
+local settlement. Its restart must settle without another PUT, retain a newer
+head and preserve a later conflicting blob. No new Wasabi approval is consumed.
+Native suites still exercise managed read-only and direct-write regressions;
+writable managed callbacks require their own subsequent acceptance.
+
+### Linux ownership release during process creation
+
+Investigated 2026-10-17. Concurrent child-process creation exposed a migration
+fixture seeing `state directory is already in use` after its State was dropped.
+The controlled reproduction showed inherited-descriptor lock retention: Linux
+flock ownership is associated with the open file description, so closing only
+the parent's descriptor need not release it.
+[Linux flock manual](https://man7.org/linux/man-pages/man2/flock.2.html)
+
+The owner now calls `File::unlock` explicitly on drop, after the SQLite
+connection closes, and releases acquired locks on initialization errors. A still-open State continues to reject competing owners;
+an inherited descriptor does not become a new State owner. The pinned Rust
+1.99.1 Unix/Windows implementations were inspected before using this API.
+[Rust File unlock contract](https://doc.rust-lang.org/std/fs/struct.File.html#method.unlock)
+
+Strict migration reopen checks remain immediate, without retries. A Linux
+regression runs one hundred migration rounds while another thread creates
+processes, alongside the existing live-owner and process-death exclusion tests.

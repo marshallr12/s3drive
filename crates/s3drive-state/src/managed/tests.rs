@@ -297,10 +297,10 @@ fn schema_eight_upgrade_keeps_namespace_receipts_and_client_manifests() {
         } else {
             None
         };
-        s.connection.execute_batch("DROP TABLE managed_publications;DROP TABLE namespace_uploads;DROP TABLE namespace_stores;ALTER TABLE namespace_nodes DROP COLUMN payload;PRAGMA user_version=8").unwrap();
+        s.connection.execute_batch("DROP TABLE logical_publication_links; DROP TABLE logical_edits; DROP TABLE logical_files; DROP TABLE managed_publications;DROP TABLE namespace_uploads;DROP TABLE namespace_stores;ALTER TABLE namespace_nodes DROP COLUMN payload;PRAGMA user_version=8").unwrap();
         drop(s);
         let mut s = State::open_managed(&path).unwrap();
-        assert_eq!(s.info().unwrap().schema_version, 9);
+        assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
         if let Some(original) = original {
             let v = s.namespace_initialize().unwrap();
             assert_eq!(

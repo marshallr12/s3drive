@@ -258,8 +258,8 @@ real Wasabi write configuration or new cloud probe is installed or executed.
 first persistent authority protocol, with local/TCP acceptance recorded in the
 handoff. The [P6m2 publisher library](managed-publication.md) now separates logical IDs
 from physical create-only keys and joins SDK verification, metadata CAS and
-local logical acknowledgment. It does not enable native managed mounts or a
-Turso backend. P6m3 must integrate logical heads/edit plans and portable names
+local logical acknowledgment. Native managed reads are implemented; managed writes and a
+Turso backend remain subsequent phases. P6m3b must integrate logical heads/edit plans and portable names
 rather than reusing direct-key namespace logic. No new cloud
 mutation is authorized by the layout selection.
 
@@ -281,12 +281,13 @@ multi-host/Turso coordination. Sign-in supervision must include authority
 availability and retain MX/no-systemd and Windows cross-logon requirements.
 
 
-## P6m3b managed writable steps (proposed, 2026-10-17)
+## P6m3b managed writable steps (updated 2026-10-17)
 
 P6m3a now has real native read acceptance. Complete these independently green
 steps before enabling managed writes in configuration:
 
-1. **P6m3b1: durable logical edit heads.** Persist volume/node/store identity,
+1. **P6m3b1: durable logical edit heads — library implemented.** See the
+   [contract and recovery acceptance](managed-edits.md). Persist volume/node/store identity,
    the base authority file revision and payload reference separately from each
    physical blob key. Store bounded immutable local edits and intent-key replay
    on the existing SQLite owner. Link an exact sealed logical generation to
@@ -299,7 +300,11 @@ steps before enabling managed writes in configuration:
    write configuration and a shared local file view, patch/truncate/append,
    local read-your-writes and generation-specific remote fsync. Coalesce local
    writes before publication rather than uploading each patch. An external
-   change must not silently replace the stored base file revision. Reconcile
+   change must not silently replace a dirty base. Add an explicit verified
+   refresh path for a clean externally changed file without losing old snapshots.
+   Serialize publication per logical file; independent-file writes must avoid
+   spurious conflicts from unrelated global sequence changes while hierarchy
+   mutations retain their invariant guards. Reconcile
    the same uncertain operation IDs; retain and report conflicts. Acceptance:
    actual FUSE/WinFsp editing, simultaneous readers/writers, external competing
    publication, restart and failed/uncertain flush without a repeated PUT.

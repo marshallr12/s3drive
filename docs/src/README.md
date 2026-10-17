@@ -53,13 +53,14 @@ namespace edits; direct-key behavior below describes the existing compatibility 
 | Rust workspace and CLI | Implemented |
 | TOML parsing and source/namespace validation | Implemented; no network checks |
 | Alias + prefix + file-path resolution | Implemented as a planning utility |
-| Local SQLite state | Schema 9; managed publication journal and namespace authority tables plus bindings, clean BLOBs, staged generations, remote attempts, flush receipts and private process ownership |
+| Local SQLite state | Schema 10; logical managed edits, publication journal and namespace authority tables plus bindings, clean BLOBs, staged generations, remote attempts, flush receipts and private process ownership |
 | mdBook research, design and acceptance plan | Implemented |
 | S3 transport and credentials | Implemented; [Wasabi read acceptance](wasabi.md) passed; broader conformance pending |
 | Linux filesystem mount | Implemented read-only FUSE; see [mount contract](linux-mount.md) and native evidence in handoff |
 | Windows drive mount | Implemented WinFsp adapter; [native read-only acceptance passed](windows-mount.md) |
 | Linux sign-in startup, including MX without systemd | [Detached launcher implemented](startup-and-sessions.md); native desktop/login-hook/terminal-loss checks passed |
 | Windows startup across login sessions | [Scheduled task and shared NTFS folder implemented](startup-and-sessions.md); native cross-logon reads/removal passed; workstation reboot/SSH authentication pending |
+| Managed local edits | [Durable logical heads and settlement](managed-edits.md); storage/SDK library, native writable integration remains next |
 | Managed file publication | [Real SDK/HTTP/SQLite library](managed-publication.md); native writable/deployment/live-provider acceptance pending |
 | Managed namespace authority | [SQLite and authenticated loopback development service](managed-layout.md); private token CLI and explicit version-3 read-only mounts |
 | Managed native reads | [Authority namespace and verified immutable payloads](managed-native.md); real FUSE/WinFsp acceptance passed |

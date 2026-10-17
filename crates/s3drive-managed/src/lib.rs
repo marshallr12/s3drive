@@ -133,6 +133,14 @@ impl Publisher {
         bytes: Arc<[u8]>,
     ) -> Result<Record> {
         let _slot = self.0.slots.try_acquire().map_err(|_| Failure::Busy)?;
+        self.stage_inner(reserve, publish_operation, bytes).await
+    }
+    async fn stage_inner(
+        &self,
+        reserve: Apply,
+        publish_operation: String,
+        bytes: Arc<[u8]>,
+    ) -> Result<Record> {
         let target_reservation = Input {
             reserve,
             publish_operation,
@@ -182,6 +190,122 @@ impl Publisher {
         staging.seal(generation).await?;
         journal.link(input.id().into(), generation).await
     }
+    /// Bind the current authoritative file revision to this frozen local owner.
+    /// Existing dirty/base bindings cannot be silently replaced after rotation
+    /// or an external edit. This does not download or authorize a base read.
+    pub async fn bind_edit_file(&self, node_id: &str) -> Result<s3drive_state::logical::File> {
+        let node = self.0.reader.node(node_id).await?;
+        let target = self
+            .0
+            .executor
+            .recovery_target(&format!("{}binding", self.0.store.root))?;
+        self.0
+            .storage
+            .logical()
+            .bind(s3drive_state::logical::Binding {
+                volume: self.0.volume.clone(),
+                node,
+                store: self.0.store.clone(),
+                source: *target.source(),
+                fingerprint: target.fingerprint().into(),
+            })
+            .await
+    }
+    /// Coalesce a complete local edit without reserving or sending any object.
+    /// An exact durable intent key recovers the same immutable generation.
+    pub async fn stage_local(
+        &self,
+        input: s3drive_state::logical::Input,
+        bytes: Arc<[u8]>,
+    ) -> Result<s3drive_state::logical::Record> {
+        let _slot = self.0.slots.try_acquire().map_err(|_| Failure::Busy)?;
+        if input.size != bytes.len() as u64
+            || input.size > 8 * 1024 * 1024
+            || input.sha256 != hex(&Sha256::digest(&bytes))
+        {
+            return Err(Failure::Integrity.into());
+        }
+        let local = self.0.storage.logical();
+        let file = local.file(input.volume.clone(), input.node.clone()).await?;
+        let target = self
+            .0
+            .executor
+            .recovery_target(&format!("{}binding", self.0.store.root))?;
+        if file.binding.volume != self.0.volume
+            || file.binding.store != self.0.store
+            || file.binding.source != *target.source()
+            || file.binding.fingerprint != target.fingerprint()
+        {
+            return Err(Failure::Binding.into());
+        }
+        let r = local.begin(input.clone()).await?;
+        let g = r.generation.ok_or(Failure::Incomplete)?;
+        let staging = self.0.storage.staging();
+        if staging.info(g).await?.phase == journal::Phase::Building {
+            for (i, chunk) in bytes.chunks(journal::CHUNK_BYTES).enumerate() {
+                staging
+                    .append_at(g, (i * journal::CHUNK_BYTES) as u64, Arc::from(chunk))
+                    .await?;
+            }
+        }
+        local.seal(input.id).await
+    }
+    /// Freeze logical-generation/publication IDs before physical staging or
+    /// any network request. The metadata file revision is never silently rebased.
+    pub async fn stage_edit(
+        &self,
+        edit_id: &str,
+        reserve: Apply,
+        publish_operation: String,
+    ) -> Result<Record> {
+        let _slot = self.0.slots.try_acquire().map_err(|_| Failure::Busy)?;
+        let mut input = Input {
+            reserve,
+            publish_operation,
+            store: self.0.store.clone(),
+            source: [0; 32],
+            fingerprint: "0".repeat(64),
+        };
+        let expected = input.reservation()?;
+        let target = self.0.executor.recovery_target(&expected.key)?;
+        input.source = *target.source();
+        input.fingerprint = target.fingerprint().into();
+        let edit = self
+            .0
+            .storage
+            .logical()
+            .prepare(edit_id.into(), input.clone())
+            .await?;
+        let g = edit.generation.ok_or(Failure::Incomplete)?;
+        let bytes = self
+            .0
+            .storage
+            .staging()
+            .snapshot(g)
+            .await?
+            .read(0, edit.input.size as usize)
+            .await?;
+        self.stage_inner(input.reserve, input.publish_operation, Arc::from(bytes))
+            .await
+    }
+    /// A managed file fsync requires both the physical/metadata receipt and
+    /// atomic local logical settlement. Historical retries preserve newer heads.
+    pub async fn flush_edit(&self, edit_id: &str) -> Result<s3drive_state::logical::Record> {
+        let local = self.0.storage.logical();
+        let edit = local.get(edit_id.into()).await?;
+        let input = edit.publication.as_ref().ok_or(Failure::Incomplete)?;
+        let expected = input.reservation()?;
+        if expected.volume != self.0.volume
+            || expected.store != self.0.store
+            || self.0.executor.recovery_target(&expected.key)? != input.target()?
+        {
+            return Err(Failure::Binding.into());
+        }
+        if edit.receipt.is_none() {
+            self.flush(input.id()).await?;
+        }
+        local.acknowledge(edit_id.into()).await
+    }
     async fn bound(&self, id: &str) -> Result<Record> {
         let r = self.0.storage.managed().recover_stage(id.into()).await?;
         let expected = r.input.reservation()?;
@@ -219,6 +343,8 @@ impl Publisher {
     /// S3 verification + committed metadata CAS + durable local acknowledgment.
     /// An uncertain PUT is only observed. Unknown metadata results are resolved
     /// by resubmitting the SAME request; conflicts never get a new CAS guard.
+    /// This publication receipt does not settle a local logical edit. Use
+    /// `flush_edit` for generations linked through the logical edit journal.
     pub async fn flush(&self, id: &str) -> Result<FlushReceipt> {
         let _slot = self.0.slots.try_acquire().map_err(|_| Failure::Busy)?;
         let mut r = self.reserve_inner(id).await?;
