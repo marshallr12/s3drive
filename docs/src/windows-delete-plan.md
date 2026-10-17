@@ -4,7 +4,7 @@
 unsupported in the native adapter. This plan extends the managed layout's strong
 coordination; it does not replace remote acknowledgment with a local-only queue.
 
-![Authority reservation transitions preserve file identity while the client and WinFsp lifecycle remain planned.](images/windows-delete.png)
+![Authority reservations preserve file identity; native WinFsp lifecycle integration remains planned.](images/windows-delete.png)
 
 ## Verified platform lifecycle
 
@@ -45,6 +45,8 @@ The native delete-on-close path still needs separate sharing/open-lifetime
 acceptance. If its required behavior needs an earlier reservation that permits
 read opens, add that explicit protocol state before enabling it; do not silently
 apply ordinary pending-open denial to every delete-on-close handle.
+The [reference contract and native probes](windows-disposition-reference.md)
+now make that prerequisite explicit, including nonempty deferred directories.
 
 ## Chosen protocol
 

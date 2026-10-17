@@ -18,6 +18,10 @@ windows.workspace = true
 [target.'cfg(windows)'.build-dependencies]
 winfsp.workspace = true
 
+[target.'cfg(windows)'.dev-dependencies]
+tempfile.workspace = true
+serde_json.workspace = true
+
 [lints.rust]
 # Only native.rs may contain audited Windows FFI. All other modules forbid it.
 unsafe_code = "deny"

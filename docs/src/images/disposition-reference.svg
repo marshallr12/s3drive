@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="450" viewBox="0 0 1080 450">
+ <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#516477"/></marker></defs>
+ <rect width="1080" height="450" rx="18" fill="#f5f8fb"/>
+ <g font-family="sans-serif" fill="#172d42">
+  <text x="35" y="43" font-size="25" font-weight="bold">Windows callbacks and authority reservations are separate</text>
+  <text x="35" y="72" font-size="15">Reference research, 2026-10-17 · Native S3Drive deletion bridge remains planned</text>
+  <text x="35" y="109" font-size="16" font-weight="bold">Native lifetime</text>
+  <g fill="#e4edf7" stroke="#728da7" stroke-width="1.5">
+   <rect x="35" y="125" width="210" height="85" rx="10"/><rect x="290" y="125" width="230" height="85" rx="10"/>
+   <rect x="565" y="125" width="235" height="85" rx="10"/><rect x="845" y="125" width="200" height="85" rx="10"/>
+  </g>
+  <g font-size="17" text-anchor="middle"><text x="140" y="156">Open descriptor</text><text x="405" y="156">Disposition / DoC flag</text><text x="682" y="156">Cleanup</text><text x="945" y="156">Close</text></g>
+  <g font-size="14" text-anchor="middle"><text x="140" y="186">Own handle identity</text><text x="405" y="186">May change or be cancelled</text><text x="682" y="186">Void; may request deletion</text><text x="945" y="186">Release context</text></g>
+  <g stroke="#516477" stroke-width="2" marker-end="url(#arrow)"><path d="M245 167 H285"/><path d="M520 167 H560"/><path d="M800 167 H840"/></g>
+  <text x="35" y="250" font-size="16" font-weight="bold">Authority protocol foundations</text>
+  <g stroke-width="1.5"><rect x="35" y="268" width="290" height="92" rx="10" fill="#fff1d6" stroke="#ad8537"/><rect x="390" y="268" width="290" height="92" rx="10" fill="#e3f1e9" stroke="#538269"/><rect x="745" y="268" width="300" height="92" rx="10" fill="#e3f1e9" stroke="#538269"/></g>
+  <g font-size="18" text-anchor="middle"><text x="180" y="299">Deferred reservation</text><text x="535" y="299">Pending reservation</text><text x="895" y="299">Guarded tombstone</text></g>
+  <g font-size="14" text-anchor="middle"><text x="180" y="326">PROPOSED · open sharing to verify</text><text x="535" y="326">IMPLEMENTED · owner-fenced writes</text><text x="895" y="326">IMPLEMENTED · preserve payload</text><text x="180" y="346">Do not equate this with pending</text><text x="535" y="346">New opens and name changes refused</text><text x="895" y="346">No S3 deletion or reclamation</text></g>
+  <g stroke="#516477" stroke-width="2" marker-end="url(#arrow)"><path d="M325 310 H385" stroke-dasharray="5 4"/><path d="M680 310 H740"/></g>
+  <text x="35" y="397" font-size="15">The bridge must persist handle and transition evidence in local SQLite before issuing remote effects.</text>
+  <text x="35" y="424" font-size="15">Missing cleanup or an uncertain cancellation retains protected work; it does not authorize a fresh deletion.</text>
+ </g>
+</svg>

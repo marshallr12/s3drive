@@ -1,69 +1,75 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b3b4b2 pending-owner publication**
-on `codex/pending-owner-publication`. Goal ACTIVE. Implementation and focused
-state/SDK tests and full local gate pass; terminal native CI remains required.
-Per-open lifecycle and native Windows deletion remain unsupported. Read
-`docs/src/pending-owner-publication.md` and `docs/src/windows-delete-plan.md`.
+Updated: 2026-10-17. Current phase: **P6m3b3b4b3r Windows reference contract**
+on `codex/windows-disposition-reference`. Goal ACTIVE. This prerequisite adds
+native reference evidence before defining deferred reservation semantics; it
+does not enable S3Drive deletion. Read `docs/src/windows-disposition-reference.md`.
 
 ## Verified publication baseline
 
-Private main at phase start: **188e03c4437eb90928aca87def967eafb3263a2d**,
-terminal all-green [run 39028253459](https://github.com/marshallr12/s3drive/actions/runs/39028253459).
-Linux `117383422161`, Windows `117383422216`, book `117383422029`.
-150 Linux / 146 Windows state tests, six authority TCP, six managed-publication
-cases (including child helper), seven real native cases per OS. Linux no-systemd
-startup and Windows Server 2025 non-admin independent-logon acceptance passed.
-Strict Windows schema-14 startup assertion passed. Local/remote main, repository
-privacy and clean tree were verified after guarded fast-forward publication.
-Logs: `/tmp/s3drive-client-disposition-{linux,windows,book}.log`;
-proof: `/tmp/s3drive-client-disposition-publication.json`.
+Private main at phase start: **fd526929b9c6555bf85594842e6fb20b7db763fb**,
+terminal all-green [run 39030411026](https://github.com/marshallr12/s3drive/actions/runs/39030411026).
+Linux `117389554286`, Windows `117389554264`, book `117389554175`.
+156 Linux / 152 Windows state tests, six authority TCP, eight managed-publication
+cases including child helper, seven real native cases per OS; Linux no-systemd
+and Windows Server 2025 non-admin independent-logon startup passed. Schema 15
+startup assertion passed strictly. Local/remote main, clean tree and privacy
+were verified. Logs: `/tmp/s3drive-pending-owner-{linux,windows,book}.log`;
+proof: `/tmp/s3drive-pending-owner-publication.json`.
 
-Version 6 enables guarded native rename/replacement both OSes and Linux
-unlink/rmdir/fsyncdir. Normal-stack boxed SDK futures and four owned operation
-slots remain; stop/drain before SQLite close is mandatory. Schema 14 persists
-an operational client identity and exact owned arm/cancel/commit history;
-namespace receipts and logical observations commit together. Old replay cannot
-release a newer arm. Preserve the private state directory, never clone one
-identity into two active clients. Retained closing quota is not physical space.
+Schema 14 persists stable client ownership and atomic namespace observations.
+Schema 15 adds owner-fenced pending publication and explicit retained confirmed
+conflicts without changing old hashes. Only matching local arm/frozen bindings
+and logical edit ownership admit pending physical work. SDK paths retain exact
+metadata Conflict or physical 409/412; explicit retain_edit_conflict releases
+closing admission without settling/discarding bytes. Unknown outcomes still
+block closing. Lost reserve/upload/metadata/local results and killed owners,
+empty/binary/Unicode data, retained rival/orphan bytes and new guarded successor
+are verified in actual SDK/TCP fixtures. No S3 DELETE or real provider mutation.
+Normal-stack boxed futures, four owned operation slots and drain-before-close
+remain mandatory. Version 6 supplies rename/replacement both OSes and Linux
+unlink/rmdir/fsyncdir; native Windows deletion is still refused.
 
-## Current pending-owner phase
+## Current reference phase
 
-Schema 15 adds separate managed rejection and explicit logical conflict records,
-without changing old managed/logical hashes. `ReservePendingContent` requires
-this client's acknowledged fence and frozen source/store/fingerprint before new
-physical/logical work. The physical journal also requires the already frozen
-logical edit link; raw staging cannot bypass closing admission. Existing inputs
-remain loadable after fence expiry for exact recovery; no guard refresh occurs.
-Successful owner publication uses the existing one-shot SDK + complete
-observation + metadata CAS + logical settlement; cancel/commit preserve bytes.
+Primary WinFsp 2.1 create_test explicitly allows a nonempty directory DoC open
+and cleanup, preserves its child, then removes the empty directory on a later
+DoC cleanup. Current ArmRemoval's emptiness/open-denial contract cannot be the
+whole deferred handle lifecycle. The cited sources and proposed state split are
+in the new book chapter. Reference acceptance precedes authority implementation
+because cross-context cancellation and child creation must not be invented.
 
-Only exact metadata Conflict or a local rejected remote attempt with matching
-operation/target/bytes and HTTP 409/412 can become a managed rejection. SDK paths
-persist these received outcomes; timeout/unobserved/in-flight/policy/temporary
-refusals remain unknown. Explicit `retain_edit_conflict` then binds that failure
-to the immutable logical edit before namespace closing admission releases its
-prepared-publication barrier. No bytes/IDs/heads are discarded or marked settled.
-A new generation may use an explicit current guard; the old failed operation
-remains immutable and retained. Native errors map retained conflicts explicitly.
+Eight explicit ignored Rust NTFS probes live under the audited native FFI test
+boundary in s3drive-winfsp/src/native/disposition_reference.rs. JSON observations
+cover repeated cancellation, final nonarming cleanup, retained I/O, deferred
+opens, nonempty/empty directory cleanup and ordinary nonempty refusal. Three
+probes collect unresolved cross-context/legacy-DoC-cancel/child-create traces;
+review observed outcomes before pinning their authority rules. Test-only
+serde_json/tempfile dependencies stay Windows-specific; lock only adds the two
+existing workspace dependencies to that package, no version upgrades.
 
-Focused state tests cover admission and raw bypass, old hash migration/refusal,
-confirmed/unknown proof, atomic ignored/deleted INSERT readback, corruption and
-actual full disk at both retention boundaries. SDK tests kill client+authority
-after lost reserve, uncertain committed PUT, lost metadata receipt and final
-local acknowledgment; binary Unicode-name and empty-file data upload once each.
-A second scenario kills after ignored rejection INSERT, recovers without another
-PUT, preserves an S3 rival and verified orphan, retains both conflicts and then
-cancels/commits with dirty bytes intact. Future Info sequence is intentionally
-injected to obtain an actual metadata publication Conflict. No new S3 DELETE.
-Logs: `/tmp/s3drive-pending-publication-focused3.log`,
-`/tmp/s3drive-pending-owner-sdk3.log`; clippy passed
-`/tmp/s3drive-pending-owner-clippy1.log`. Full local gate passed, exit 0:
-`/tmp/s3drive-pending-owner-gate1.log` (156 state, eight managed-publication
-cases including helper, six authority TCP, 50 S3, 13 FS, build/lint/book).
-Terminal exact-tip Linux/Windows/book and native/startup acceptance are next. Windows
-startup now strictly requires schema 15; older-schema fixtures drop both new
-tables. No CREATE TABLE IF NOT EXISTS migration fallback.
+scripts/test-windows-disposition-reference.ps1 runs those probes, then already
+pinned upstream create_test with legacy-unlink-rename on its own WinFsp disk/net
+memfs backends. A dedicated Windows CI step requires both; selected test missing,
+nonzero exit or timeout fails. These reference cases are separate from the seven
+S3Drive native cases per OS. No production callback, schema or configuration
+version changes. No real credentials, startup entry or Wasabi objects changed.
+
+New SVG lifecycle illustration is browser-rendered and its text rectangles fit
+within the image. Browser screenshot capture timed out; do not claim pixel
+screenshot review. CairoSVG/rsvg-convert are unavailable locally; no system
+packages were installed. Full local gate passed, exit 0:
+`/tmp/s3drive-disposition-reference-gate1.log` (156 state, eight managed-publication
+cases, six authority TCP, 50 S3, 13 FS, build/lint/book). The new Windows-only
+probes are not executed here. Terminal exact-tip Linux/Windows/book CI, reference
+JSON review and original native/startup regressions are required before publication.
+
+Next: use reference evidence to define deferred name reservation, guarded
+promotion with immutable transition proof (not a weakened corruption check),
+nonempty cleanup behavior, then persistent per-descriptor/node-wide lifecycle,
+operator diagnostics and recovery. Do not replace full Windows support with
+SetDelete-only or early-open denial. Missing cleanup and uncertain cancellation
+must retain protected work; never silently re-arm/delete with fresh guards.
 
 The mdBook server can recreate removed chapters during old-main checkout. For
 publication verify clean tested tree, guarded fast-forward main's ref, then

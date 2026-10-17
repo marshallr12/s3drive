@@ -2196,6 +2196,8 @@ dependencies = [
  "s3drive-core",
  "s3drive-fs",
  "s3drive-s3",
+ "serde_json",
+ "tempfile",
  "tokio",
  "windows",
  "winfsp",

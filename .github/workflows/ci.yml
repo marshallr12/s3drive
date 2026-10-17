@@ -45,6 +45,10 @@ jobs:
           test -c /dev/fuse
       # Native cases share process-wide descriptors and driver/Shell state.
       # A fork in another case can close a live FUSE descriptor and flush it.
+      - name: Verify Windows deletion reference contract
+        if: runner.os == 'Windows'
+        timeout-minutes: 5
+        run: ./scripts/test-windows-disposition-reference.ps1
       - name: Verify real Linux mount and teardown
         if: runner.os == 'Linux'
         timeout-minutes: 10

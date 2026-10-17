@@ -364,3 +364,22 @@ gate and terminal exact-tip Linux/Windows/book CI, preserving seven native cases
 per OS and startup acceptance. Windows startup strictly requires schema 15.
 Native Windows deletion waits for b4b3 lifecycle + b4c acceptance. No live Wasabi
 mutation, workstation startup/credential change or Turso deployment is included.
+
+
+### P6m3b3b4b3r — Windows reference prerequisite (2026-10-17)
+
+The owner-publication/conflict checkpoint is accepted at `fd52692`, terminal
+[run 39030411026](https://github.com/marshallr12/s3drive/actions/runs/39030411026).
+Before implementing deferred authority and per-open lifecycle, follow the
+[reference contract](windows-disposition-reference.md): execute eight Rust NTFS
+probes and pinned upstream WinFsp legacy create_test on the disposable Windows
+VM. Verify open sharing, nonempty deferred directory cleanup, final nonarming
+handle and retain observed cross-context cancellation/child-creation results.
+These are native reference experiments, not S3Drive deletion acceptance.
+
+Require the repository gate, terminal exact-tip Linux/Windows/book CI, the new
+reference step and unchanged seven native cases per OS/startup gates. Review
+structured JSON before fixing protocol semantics. Next add deferred authority
+state with immutable promotion evidence, then durable client lifecycle and full
+native deletion acceptance. Keep schema 15, version 6 and unsupported Windows
+delete callbacks unchanged throughout this reference phase.
