@@ -109,6 +109,28 @@ impl Executor {
             .policy
             .guard(&Guard::Match("\"policy-check\"".into()))
     }
+    pub fn check_create(&self, key: &str, size: u64) -> std::result::Result<(), Failure> {
+        self.0.policy.admission(&self.0.session.reader, key, size)?;
+        self.0.policy.guard(&Guard::Missing)
+    }
+    /// Local metadata only, bound to this executor's frozen credentials/config.
+    /// Callers must authorize through S3 before projecting a catalog entry.
+    pub async fn local_heads(
+        &self,
+        after: Option<GenerationId>,
+        limit: u16,
+    ) -> s3drive_state::Result<Vec<s3drive_state::journal::Generation>> {
+        self.0
+            .storage
+            .staging()
+            .heads(
+                self.0.session.binding_id,
+                self.0.session.reader.configuration_fingerprint().into(),
+                after,
+                limit,
+            )
+            .await
+    }
     /// Flush one selected immutable generation. A receipt requires both exact
     /// remote verification and committed local acknowledgment. Repetition can
     /// reconcile lost results but never reissue a claimed PUT. It does not

@@ -41,6 +41,7 @@ pub enum Error {
     Storage(s3drive_s3::Error),
     Configuration,
     NotFound,
+    AlreadyExists,
     NotDirectory,
     IsDirectory,
     InvalidName,
@@ -364,6 +365,58 @@ impl ReadOnlyFs {
                     .is_some_and(|w| w.permits(source, &node.key))
             })
     }
+    pub fn writable_directory(&self, node: &Node) -> bool {
+        node.kind == Kind::Directory
+            && node.source.is_some_and(|source| {
+                self.writes
+                    .as_ref()
+                    .is_some_and(|w| w.permits_directory(source, &node.key))
+            })
+    }
+    /// The adapter supplies its native comparison, under the shared create lock.
+    pub async fn create_file(
+        &self,
+        parent: u64,
+        name: &str,
+        same_name: fn(&str, &str) -> bool,
+        writing: bool,
+    ) -> Result<OpenFile> {
+        validate_name(name)?;
+        let parent = self.node(parent)?;
+        if parent.kind != Kind::Directory {
+            return Err(Error::NotDirectory);
+        }
+        if !self.writable_directory(&parent) {
+            return Err(Error::ReadOnly);
+        }
+        let writer = self.writes.as_ref().ok_or(Error::ReadOnly)?;
+        let _serial = writer.create_serial.lock().await;
+        let source = parent.source.ok_or(Error::ReadOnly)?;
+        let children = Box::pin(self.list(parent.id)).await?;
+        if children.iter().any(|child| same_name(&child.name, name)) {
+            return Err(Error::AlreadyExists);
+        }
+        if children.len() >= MAX_DIRECTORY_ENTRIES
+            || self.nodes.lock().map_err(|_| Error::Internal)?.by_id.len() >= MAX_NODES
+        {
+            return Err(Error::ResourceLimit);
+        }
+        let key = format!("{}{name}", parent.key);
+        match self.readers[source].head(&key).await {
+            Ok(_) => return Err(Error::AlreadyExists),
+            Err(error) if error.kind == s3drive_s3::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.into()),
+        }
+        Box::pin(writer.create(source, &key)).await?;
+        let node = self.nodes.lock().map_err(|_| Error::Internal)?.insert(
+            source,
+            key,
+            Kind::File,
+            parent.id,
+            name.into(),
+        )?;
+        Box::pin(self.open_mode(node.id, writing)).await
+    }
     pub async fn flush_all(&self) -> Result<()> {
         if let Some(writes) = &self.writes {
             writes.flush_all().await?;
@@ -405,7 +458,13 @@ impl ReadOnlyFs {
                     return Err(Error::ResourceLimit);
                 }
                 match next {
-                    None => return Ok(entries),
+                    None => {
+                        if let Some(writes) = &self.writes {
+                            Box::pin(writes.merge_directory(source, &parent.key, &mut entries))
+                                .await?;
+                        }
+                        return Ok(entries);
+                    }
                     Some(next) => {
                         if !seen.insert(next.clone()) {
                             return Err(Error::InvalidListing);

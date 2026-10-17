@@ -218,6 +218,49 @@ impl<'a> Journal<'a> {
         Ok(generation)
     }
 
+    /// Bounded current-head catalog for one credential/configuration binding.
+    /// This is recovery metadata, never authorization to serve local bytes.
+    pub fn heads(
+        &self,
+        source: [u8; 32],
+        fingerprint: &str,
+        after: Option<GenerationId>,
+        limit: u16,
+    ) -> Result<Vec<Generation>> {
+        if !(1..=1000).contains(&limit)
+            || fingerprint.len() != 64
+            || !fingerprint
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        {
+            return Err("invalid staged head catalog request".into());
+        }
+        let mut statement = self.state.connection.prepare("SELECT max(generation_id) AS selected FROM staged_generations WHERE source_id=?1 AND phase='sealed' GROUP BY object_key HAVING selected>?2 ORDER BY selected LIMIT ?3")?;
+        let ids = statement
+            .query_map(
+                params![
+                    source.as_slice(),
+                    after.map_or(0, |id| id.0),
+                    i64::from(limit)
+                ],
+                |row| row.get::<_, i64>(0),
+            )?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        ids.into_iter()
+            .map(|id| {
+                let generation = load(&self.state.connection, GenerationId(id))?;
+                if generation.target.source != source
+                    || generation.target.fingerprint != fingerprint
+                    || self.head(&generation.target)?.as_ref().map(|head| head.id)
+                        != Some(generation.id)
+                {
+                    return Err("inconsistent staged head catalog; data was preserved".into());
+                }
+                Ok(generation)
+            })
+            .collect()
+    }
+
     /// Create an unpublished builder. expected_parent is a local compare-and-
     /// swap guard; all descendants retain the original remote base condition.
     pub fn begin(

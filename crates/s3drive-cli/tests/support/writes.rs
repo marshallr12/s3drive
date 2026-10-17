@@ -157,7 +157,7 @@ pub fn exercise(mount: &Path, fixture: &Fixture) {
         std::fs::OpenOptions::new()
             .create_new(true)
             .write(true)
-            .open(mount.join("docs/writable/new-file"))
+            .open(mount.join("docs/new-file"))
             .is_err()
     );
     let puts = fixture

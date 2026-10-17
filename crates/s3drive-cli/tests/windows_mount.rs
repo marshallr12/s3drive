@@ -2,6 +2,8 @@
 #![cfg(windows)]
 #[path = "support/cache.rs"]
 mod cache;
+#[path = "support/creation.rs"]
+mod creation;
 #[path = "support/fixture.rs"]
 mod fixture;
 #[path = "support/unicode.rs"]
@@ -457,6 +459,43 @@ async fn actual_windows_drive_names_reads_security_and_teardown() {
             requests.len()
         );
     }
+    fixture.server.abort();
+    let _ = (&mut fixture.server).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "native creation acceptance: requires the installed OS filesystem driver"]
+async fn actual_windows_file_creation_restart_and_races() {
+    let mut fixture = Fixture::start().await;
+    let temp = tempfile::tempdir().unwrap();
+    let setup = writes::setup(&fixture, temp.path()).await;
+    creation::prepare(&fixture);
+    let mount = temp.path().join("creation-mount");
+    let mut puts = 0;
+    for pass in 0..2 {
+        let mut child = setup
+            .command(&mount)
+            .arg("--unmount-on-stdin-close")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+        ready(&mut child).await;
+        if pass == 0 {
+            tokio::task::block_in_place(|| creation::exercise(&mount, &fixture));
+            tokio::task::block_in_place(|| creation::uncertain(&mount, &fixture));
+            puts = writes::put_count(&fixture);
+        } else {
+            tokio::task::block_in_place(|| creation::recovered(&mount, &fixture, puts));
+            tokio::task::block_in_place(|| creation::rival_and_denied(&mount, &fixture));
+        }
+        stop(&mut child).await;
+        writes::restore_observation(&fixture);
+    }
+    creation::inspect(&setup.state).await;
+    assert!(!fixture.server.is_finished());
     fixture.server.abort();
     let _ = (&mut fixture.server).await;
 }

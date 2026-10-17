@@ -56,6 +56,7 @@ fn storage_error(error: Error) -> FspError {
             _ => STATUS_UNEXPECTED_IO_ERROR,
         },
         Error::NotFound => STATUS_OBJECT_NAME_NOT_FOUND,
+        Error::AlreadyExists => STATUS_OBJECT_NAME_COLLISION,
         Error::NotDirectory => STATUS_NOT_A_DIRECTORY,
         Error::IsDirectory => STATUS_FILE_IS_A_DIRECTORY,
         Error::InvalidName => STATUS_OBJECT_NAME_INVALID,
@@ -99,7 +100,7 @@ fn info(node: &Node, metadata: Option<&ObjectMetadata>) -> FileInfo {
 impl Adapter {
     fn file_info(&self, node: &Node, metadata: Option<&ObjectMetadata>) -> FileInfo {
         let mut result = info(node, metadata);
-        if self.fs.writable(node) {
+        if self.fs.writable(node) || self.fs.writable_directory(node) {
             result.file_attributes &= !FILE_ATTRIBUTE_READONLY.0;
             if result.file_attributes == 0 {
                 result.file_attributes = FILE_ATTRIBUTE_NORMAL.0;
@@ -141,6 +142,9 @@ impl Adapter {
     }
     async fn resolve(&self, path: &U16CStr) -> Result<(Arc<Node>, Vec<u16>)> {
         let path = path.to_string().map_err(|_| STATUS_OBJECT_NAME_INVALID)?;
+        self.resolve_text(&path).await
+    }
+    async fn resolve_text(&self, path: &str) -> Result<(Arc<Node>, Vec<u16>)> {
         let suffix = path.strip_prefix('\\').ok_or(STATUS_OBJECT_NAME_INVALID)?;
         let mut node = self.fs.node(ROOT).map_err(storage_error)?;
         let mut normalized = String::new();
@@ -275,6 +279,81 @@ impl FileSystemContext for Adapter {
             Ok(FileContext {
                 node,
                 file,
+                info,
+                directory: Mutex::new(None),
+                _permit: permit,
+            })
+        })
+    }
+    fn create(
+        &self,
+        name: &U16CStr,
+        options: u32,
+        access: u32,
+        attributes: u32,
+        _security: Option<&[c_void]>,
+        _allocation: u64,
+        extra: Option<&[u8]>,
+        reparse: bool,
+        output: &mut OpenFileInfo,
+    ) -> Result<FileContext> {
+        if self.fs.is_read_only()
+            || options & 0x1000 != 0
+            || access & (DELETE.0 | WRITE_DAC.0 | WRITE_OWNER.0) != 0
+        {
+            return Err(STATUS_MEDIA_WRITE_PROTECTED.into());
+        }
+        if options & 1 != 0
+            || reparse
+            || extra.is_some_and(|b| !b.is_empty())
+            || attributes & !(FILE_ATTRIBUTE_NORMAL.0 | FILE_ATTRIBUTE_ARCHIVE.0) != 0
+        {
+            return Err(STATUS_NOT_SUPPORTED.into());
+        }
+        // New files use the mount's fixed owner-only security descriptor.
+        // Per-file ACLs, alternate streams and mutable attributes are unsupported.
+        let permit = self
+            .handles
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| STATUS_TOO_MANY_OPENED_FILES)?;
+        self.wait(async {
+            let path = name.to_string().map_err(|_| STATUS_OBJECT_NAME_INVALID)?;
+            let (parent, leaf) = path.rsplit_once('\\').ok_or(STATUS_OBJECT_NAME_INVALID)?;
+            if !valid_component(leaf) {
+                return Err(STATUS_OBJECT_NAME_INVALID.into());
+            }
+            let (parent, mut normalized) = self
+                .resolve_text(if parent.is_empty() { "\\" } else { parent })
+                .await?;
+            if normalized.last() != Some(&92) {
+                normalized.push(92);
+            }
+            normalized.extend(leaf.encode_utf16());
+            if normalized.len() * 2 > usize::from(output.normalized_name_size()) {
+                return Err(STATUS_NAME_TOO_LONG.into());
+            }
+            let writing = access & (FILE_WRITE_DATA.0 | FILE_APPEND_DATA.0) != 0;
+            let file = Box::new(
+                Box::pin(self.fs.create_file(
+                    parent.id,
+                    leaf,
+                    |a, b| native::name_key(a) == native::name_key(b),
+                    writing,
+                ))
+                .await
+                .map_err(storage_error)?,
+            );
+            let node = file.node.clone();
+            let info = self.file_info(
+                &node,
+                Some(&file.current_metadata().map_err(storage_error)?),
+            );
+            output.set_normalized_name(&normalized, None);
+            *output.as_mut() = info.clone();
+            Ok(FileContext {
+                node,
+                file: Some(file),
                 info,
                 directory: Mutex::new(None),
                 _permit: permit,

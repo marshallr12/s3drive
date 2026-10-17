@@ -343,6 +343,24 @@ impl Staging {
     pub async fn head(&self, target: Target) -> Result<Option<Generation>> {
         self.call(move |journal| journal.head(&target)).await
     }
+    pub async fn heads(
+        &self,
+        source: [u8; 32],
+        fingerprint: String,
+        after: Option<GenerationId>,
+        limit: u16,
+    ) -> Result<Vec<Generation>> {
+        if !(1..=1000).contains(&limit)
+            || fingerprint.len() != 64
+            || !fingerprint
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        {
+            return Err("invalid staged head catalog request".into());
+        }
+        self.call(move |journal| journal.heads(source, &fingerprint, after, limit))
+            .await
+    }
     pub async fn read(&self, id: GenerationId, offset: u64, length: usize) -> Result<Vec<u8>> {
         self.read_range(id, offset, length, false).await
     }

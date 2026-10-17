@@ -1,6 +1,8 @@
 //! Shared mutable-file state. Native adapters never implement their own upload
-//! policy or journal. Existing files only in this phase; no implicit rebase.
-use super::{Error, MAX_NODES, Result, cache_error, edits};
+//! policy or journal. No implicit rebase or overwrite fallback.
+use super::{
+    Entry, Error, Kind, MAX_DIRECTORY_ENTRIES, MAX_NODES, Result, cache_error, edits, validate_name,
+};
 use s3drive_s3::{ObjectMetadata, ObjectRevision, ReadHandle, uploads::Executor};
 use s3drive_state::{
     journal::{Base, GenerationId, Target},
@@ -8,7 +10,7 @@ use s3drive_state::{
     worker::{Snapshot, Storage},
 };
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     sync::{Arc, Mutex},
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -20,6 +22,7 @@ pub(super) struct Writes {
     coordinator: edits::Coordinator,
     entries: Mutex<HashMap<(usize, String), Arc<File>>>,
     slots: Semaphore,
+    pub create_serial: AsyncMutex<()>,
 }
 pub(super) struct File {
     source: usize,
@@ -58,6 +61,7 @@ impl Writes {
             sources,
             entries: Mutex::new(HashMap::new()),
             slots: Semaphore::new(4),
+            create_serial: AsyncMutex::new(()),
         }
     }
     pub fn permits(&self, source: usize, key: &str) -> bool {
@@ -65,6 +69,132 @@ impl Writes {
             .get(source)
             .and_then(Option::as_ref)
             .is_some_and(|e| e.check_replace(key, 0).is_ok())
+    }
+    pub fn permits_directory(&self, source: usize, prefix: &str) -> bool {
+        let key = format!("{prefix}.s3drive-permission-check");
+        self.sources
+            .get(source)
+            .and_then(Option::as_ref)
+            .is_some_and(|e| e.check_create(&key, 0).is_ok() && e.check_replace(&key, 0).is_ok())
+    }
+    /// Caller holds create_serial across the namespace check and this method.
+    pub async fn create(&self, source: usize, key: &str) -> Result<()> {
+        let _slot = self.slots.try_acquire().map_err(|_| Error::Busy)?;
+        let executor = self
+            .sources
+            .get(source)
+            .and_then(Option::as_ref)
+            .ok_or(Error::ReadOnly)?;
+        executor.check_create(key, 0).map_err(policy_error)?;
+        executor.check_replace(key, 0).map_err(policy_error)?;
+        let target = executor.target(key).map_err(|_| Error::ReadOnly)?;
+        let known = self
+            .entries
+            .lock()
+            .map_err(|_| Error::Internal)?
+            .contains_key(&(source, key.into()));
+        if known
+            || self
+                .storage
+                .staging()
+                .head(target.clone())
+                .await
+                .map_err(cache_error)?
+                .is_some()
+        {
+            return Err(Error::Conflict);
+        }
+        let snapshot = self
+            .coordinator
+            .new_file(target)
+            .truncate(0)
+            .map_err(write_error)?
+            .execute()
+            .await
+            .map_err(write_error)?;
+        let id = snapshot.metadata().id;
+        match executor.flush(id).await {
+            Ok(_) => Ok(()),
+            Err(error) => {
+                if let Some(info) = self
+                    .storage
+                    .uploads()
+                    .for_generation(id)
+                    .await
+                    .map_err(cache_error)?
+                    .filter(|info| info.phase == Phase::Rejected)
+                {
+                    return Err(if info.rejection_status == Some(412) {
+                        Error::AlreadyExists
+                    } else {
+                        Error::Conflict
+                    });
+                }
+                Err(write_error(error))
+            }
+        }
+    }
+    /// Merge only remotely authorized creation candidates, including settled
+    /// heads. Never turn historical SQLite metadata into an offline namespace.
+    pub async fn merge_directory(
+        &self,
+        source: usize,
+        prefix: &str,
+        entries: &mut BTreeMap<String, Entry>,
+    ) -> Result<()> {
+        let Some(executor) = self.sources.get(source).and_then(Option::as_ref) else {
+            return Ok(());
+        };
+        let mut after = None;
+        for _ in 0..64 {
+            let heads = executor
+                .local_heads(after, 1000)
+                .await
+                .map_err(cache_error)?;
+            if heads.is_empty() {
+                return Ok(());
+            }
+            for head in &heads {
+                if !matches!(head.base, Base::Missing) {
+                    continue;
+                }
+                let key = head.target.object_key();
+                let Some(relative) = key.strip_prefix(prefix).filter(|s| !s.is_empty()) else {
+                    continue;
+                };
+                let (name, projected, kind) = match relative.split_once('/') {
+                    Some((name, _)) => (name, format!("{prefix}{name}/"), Kind::Directory),
+                    None => (relative, key.to_owned(), Kind::File),
+                };
+                validate_name(name)?;
+                if entries
+                    .get(name)
+                    .is_some_and(|entry| entry.key == projected && entry.kind == kind)
+                {
+                    continue;
+                }
+                match executor.reader().head(key).await {
+                    Ok(_) => {}
+                    Err(error) if error.kind == s3drive_s3::ErrorKind::NotFound => continue,
+                    Err(error) => return Err(error.into()),
+                }
+                if entries.contains_key(name) {
+                    return Err(Error::AmbiguousName);
+                }
+                if entries.len() >= MAX_DIRECTORY_ENTRIES {
+                    return Err(Error::ResourceLimit);
+                }
+                entries.insert(
+                    name.into(),
+                    Entry {
+                        key: projected,
+                        kind,
+                    },
+                );
+            }
+            after = heads.last().map(|head| head.id);
+        }
+        Err(Error::ResourceLimit)
     }
     // Online HEAD authorization is performed by the caller for EVERY new open.
     // A clean tracked head can be read through a fresh remote handle. Editing

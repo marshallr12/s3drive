@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated: 2026-10-16. Current phase: **P5c1a native existing-file writes**; native acceptance passed.
+Updated: 2026-10-16. Current phase: **P5c1b guarded native file creation**, under acceptance.
 Goal active. Linux/Windows read-only drives and startup foundations work;
 library writes/flush are progressing toward safe writable native filesystems.
 Do not call the broader editable-drive goal complete before its documented
@@ -16,7 +16,7 @@ safe-write contract and real OS acceptance pass.
   The current branch adds opt-in existing-file editing with native writable
   acceptance. Full desktop editing remains unfinished.
   New online opens authorize through S3; pinned old handles preserve revisions.
-  No ordinary CLI upload command, file creation, delete/rename,
+  No ordinary CLI upload command, directory creation, delete/rename,
   multipart, payload reclamation, new offline opens or desktop packaging yet.
 - Startup at sign-in after reboot; same-user incoming SSH sessions and surviving
   tmux/Codex/Claude processes must share the mount. The user's “SSL sessions”
@@ -31,15 +31,16 @@ safe-write contract and real OS acceptance pass.
 ## Authoritative publication baseline
 
 Published private main at phase start:
-`4a0f04cb071cefa6a5b894308863e03ef74226f0` (remote-flush-receipts).
-It passed terminal all-green [run 38986527921](https://github.com/marshallr12/s3drive/actions/runs/38986527921):
-Linux 117259186073, Windows 117259186221 and book 117259186256.
+`76e2652948af33ba5078c8b82ca7bb36a5a6aa28` (native existing-file writes).
+It passed terminal all-green [run 38991012874](https://github.com/marshallr12/s3drive/actions/runs/38991012874):
+Linux 117273204000, Windows 117273203827 and book 117273204029.
 Remote main SHA and PRIVATE visibility were verified after publication.
 
-That exact baseline passed 49 S3 tests on each OS, 78 Linux / 76 Windows state
-and 12 FS tests, offline CLI guards, 341 FUSE and 749 WinFsp requests, caching,
-no-systemd startup and Windows cross-logon acceptance, with schema 7. Logs:
-`/tmp/s3drive-flush-{linux,windows,book}-ci.log`.
+That exact baseline passed 49 S3 tests on each OS, 78 Linux / 76 Windows state,
+12 FS tests, 341 read-only FUSE / 749 read-only WinFsp requests, and native
+existing-file writes, lost replies, uncertain restart without replay and 412
+conflict retention. No-systemd and Windows cross-logon regressions passed.
+Logs: `/tmp/s3drive-native-write-{linux,windows,book}-ci.log`.
 
 Windows testing runs remotely on GitHub's **Windows Server 2025 VM**, not this
 Linux workstation. Native folder/drive/security/UTF-16 tests and distinct
@@ -80,46 +81,44 @@ upgrade in the current phase. OS dependencies remain target-specific.
   least-privilege password-backed scheduled task with shared NTFS folder.
   Do not change machine policy or install a real user startup entry implicitly.
 
-## Current branch: native-writable-files
+## Current branch: codex/native-file-creation
 
-P5b2d flush receipts and schema 7 are published. Current P5c1a connects existing
-file writes/truncation/append and remote fsync to both OS adapters. See
-[the native-write contract](docs/src/native-writes.md) for configuration and
-limits. One SQLite owner serves edits, cache and uploads. Four mutation slots
-and a per-file lock bound execution. Immutable snapshots survive failures;
-new opens authorize online. Reconciliation only observes claimed attempts;
-no silent replay, unconditional overwrite or automatic clean-base rebase.
-File creation, delete/rename, multipart, timestamp/ACL editing and payload GC
-remain unsupported. Default staging limits remain 1 GiB / 4,096 generations.
-The existing real user configuration and credential files remain unchanged.
+P5c1a is published. P5c1b now connects guarded empty-file creation to FUSE and
+WinFsp, followed by the existing conditional replacement path. See the
+[creation contract](docs/src/native-creation.md). Native acceptance is pending.
+No real bucket policy, configuration, credentials or startup entry changed.
 
-Local gate passed, including SDK/SQLite shared-engine write/restart/conflict
-integration: `/tmp/s3drive-native-write-gate.log`. Local native tests could not
-mount: this executor has NoNewPrivs=1, preventing setuid fusermount3. A private
-user/mount namespace mounts RO FUSE but its unmapped ancestor ownership is
-refused by the existing private-state checks. Do not weaken ownership checks,
-clear NoNewPrivs or use an external privileged launcher to bypass this.
-Logs: `/tmp/s3drive-native-write-linux.log` and
-`/tmp/s3drive-native-write-linux-namespace.log`. Neither is native RW acceptance.
-Implementation `cf5e456` passed the expanded native suites in
-[run 38990445390](https://github.com/marshallr12/s3drive/actions/runs/38990445390):
-Linux job 117271446300, Windows job 117271446336, book 117271446202.
-Both OSes exercised lost replies, uncertain restart without another PUT and
-412 conflict preservation, alongside read-only/cache/session regressions.
-Linux terminal success and 341 RO requests are recorded in
-`/tmp/s3drive-native-write-linux-ci-expanded.log`. At this handoff refresh,
-Windows native steps passed and its job was finishing cache upload; verify the
-terminal result, then record the exact-tip final run after this refresh.
-Initial `5fc39c4` also passed all three jobs in run 38990194704, including
-749 read-only WinFsp requests and native writable restart. Logs:
-`/tmp/s3drive-native-write-{linux,windows}-ci-initial.log`.
+One creation lock covers namespace checks and a conditional create. Linux
+compares exact names; Windows supplies its native comparison. Online LIST and
+HEAD must authorize creation; HEAD 403 is never treated as absence. A 412 maps
+to collision, 409 to Conflict, with no replacement fallback. Local empty
+rejected generations remain in SQLite. Recreating retained/deleted lineages
+requires explicit resolution, rather than silently reusing an old head.
 
-The final shared error mapping turns journal-rejected flushes into Conflict
-(Linux ESTALE / Windows STATUS_FILE_INVALID). Portable engine assertions cover
-that distinction. `/tmp/s3drive-native-write-gate-final.log` is a successful
-full local gate; documentation and diagram refresh follow it. Both generated
-architecture images were visually inspected. Normal desktop/login-session,
-physical power-cut and actual workstation reboot remain separate acceptance.
+A bounded source/configuration-bound head catalog uses existing schema 7;
+no migration or dependency upgrade. It checks authoritative head pointers.
+Pending and settled Base::Missing lineages supply missing LIST candidates,
+but every missing candidate needs online HEAD. Missing keys are omitted;
+permission/network failures propagate. It is not an offline namespace.
+
+Local gate passed before the final 409 error distinction and handoff refresh:
+`/tmp/s3drive-create-gate.log`. The shared SDK/SQLite child-process tests cover
+Unicode create/write, exclusive/concurrent collisions, LIST omissions, HEAD
+failure, a remote creator racing after the 404 check, uncertain restart with
+no extra PUT, deleted remote keys and retained local lineage refusal. The
+catalog test covers binding, pagination and corrupt head-pointer refusal.
+Native test cases are prepared on both OSes; do not claim they pass yet.
+
+Current executor still has NoNewPrivs=1, preventing setuid fusermount3. Previous
+namespace attempts were refused by the unchanged private-state ownership
+checks. Do not clear NoNewPrivs, weaken ownership or use a privileged launcher.
+Native Linux CI and the remote Windows VM are required for this phase.
+
+Remaining: actual native acceptance and exact-tip publication, then persistent
+directories, separate rename/delete protocols, reference/pin-aware reclamation,
+explicit conflict recovery and multipart. Default local retention remains
+1 GiB / 4,096 generations and single-PUT writes are limited to 8 MiB. These are
+prototype limits; the broader editable-drive goal remains unfinished.
 
 ## Publication protocol
 
@@ -161,8 +160,8 @@ were already removed. Do not infer remaining cleanup from old plans/logs.
 
 ## Next implementation and durable decisions
 
-Next implement guarded native file creation in existing directories (P5c1b),
-then persistent directories and namespace workflows (P5c1c), reference/pin-aware
+Finish P5c1b native acceptance, then persistent directories and namespace
+workflows (P5c1c), reference/pin-aware
 staging reclamation and explicit conflict recovery. Do not expose delete/rename
 based on fixture cleanup: that is not provider-verified application deletion. Preserve explicit conflict/uncertain states and metadata limits.
 Do not keep adding isolated wrappers while deferring integration indefinitely.

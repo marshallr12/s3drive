@@ -1,7 +1,8 @@
 use fuser::{
     BsdFileFlags, Errno, FileAttr, FileHandle, FileType, Filesystem, FopenFlags, Generation,
-    INodeNo, LockOwner, MountOption, OpenAccMode, OpenFlags, ReplyAttr, ReplyData, ReplyDirectory,
-    ReplyEmpty, ReplyEntry, ReplyOpen, ReplyStatfs, ReplyWrite, Request, TimeOrNow, WriteFlags,
+    INodeNo, LockOwner, MountOption, OpenAccMode, OpenFlags, ReplyAttr, ReplyCreate, ReplyData,
+    ReplyDirectory, ReplyEmpty, ReplyEntry, ReplyOpen, ReplyStatfs, ReplyWrite, Request, TimeOrNow,
+    WriteFlags,
 };
 use s3drive_fs::{Error, Kind, Node, OpenFile, ReadOnlyFs};
 use s3drive_s3::{ErrorKind, ObjectMetadata};
@@ -112,7 +113,11 @@ impl Adapter {
             crtime: time,
             kind: file_type(node.kind),
             perm: if node.kind == Kind::Directory {
-                0o500
+                if self.fs.writable_directory(node) {
+                    0o700
+                } else {
+                    0o500
+                }
             } else {
                 if self.fs.writable(node) { 0o600 } else { 0o400 }
             },
@@ -190,6 +195,43 @@ impl Filesystem for Adapter {
         match result {
             Ok(fh) => reply.opened(FileHandle(fh), FopenFlags::FOPEN_DIRECT_IO),
             Err(e) => reply.error(e),
+        }
+    }
+    fn create(
+        &self,
+        _req: &Request,
+        parent: INodeNo,
+        name: &OsStr,
+        _mode: u32,
+        _umask: u32,
+        flags: i32,
+        reply: ReplyCreate,
+    ) {
+        let result = name
+            .to_str()
+            .ok_or(Errno::EINVAL)
+            .and_then(|name| {
+                self.wait(Box::pin(self.fs.create_file(
+                    parent.0,
+                    name,
+                    |a, b| a == b,
+                    flags & nix::libc::O_ACCMODE != nix::libc::O_RDONLY,
+                )))
+            })
+            .and_then(|file| {
+                let attr = self.attr(&file.node, Some(&file.current_metadata().map_err(errno)?));
+                self.add_handle(OpenHandle::File(Box::new(file)))
+                    .map(|fh| (attr, fh))
+            });
+        match result {
+            Ok((attr, fh)) => reply.created(
+                &TTL,
+                &attr,
+                Generation(0),
+                FileHandle(fh),
+                FopenFlags::FOPEN_DIRECT_IO,
+            ),
+            Err(error) => reply.error(error),
         }
     }
     fn read(
@@ -447,6 +489,7 @@ fn file_type(kind: Kind) -> FileType {
 fn errno(error: Error) -> Errno {
     match error {
         Error::NotFound => Errno::ENOENT,
+        Error::AlreadyExists => Errno::EEXIST,
         Error::NotDirectory => Errno::ENOTDIR,
         Error::IsDirectory => Errno::EISDIR,
         Error::InvalidName => Errno::EILSEQ,

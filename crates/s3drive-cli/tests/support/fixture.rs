@@ -24,6 +24,8 @@ pub struct Fixture {
     pub deny_get: Arc<AtomicBool>,
     pub offline: Arc<AtomicBool>,
     pub writable: Arc<AtomicBool>,
+    pub hide_created_listing: Arc<AtomicBool>,
+    pub race_create: Arc<AtomicBool>,
     pub lose_put_reply: Arc<AtomicBool>,
     pub hide_committed: Arc<AtomicBool>,
     metadata: Arc<Mutex<Metadata>>,
@@ -49,6 +51,10 @@ impl Fixture {
         let availability = offline.clone();
         let writable = Arc::new(AtomicBool::new(false));
         let writes = writable.clone();
+        let hide_created_listing = Arc::new(AtomicBool::new(false));
+        let hidden_listing = hide_created_listing.clone();
+        let race_create = Arc::new(AtomicBool::new(false));
+        let competing_create = race_create.clone();
         let lose_put_reply = Arc::new(AtomicBool::new(false));
         let lost = lose_put_reply.clone();
         let hide_committed = Arc::new(AtomicBool::new(false));
@@ -69,6 +75,7 @@ impl Fixture {
                         let deny_get = get_policy.clone();
                         let offline = availability.clone();
                         let writable=writes.clone();let metadata=metas.clone();
+                        let hide_created_listing=hidden_listing.clone();let race_create=competing_create.clone();
                         let lose_put_reply=lost.clone(); let hide_committed=hidden.clone();
                         workers.spawn(async move {
                             tokio::time::timeout(Duration::from_secs(20), async move {
@@ -101,6 +108,11 @@ impl Fixture {
                                     let mut body=vec![0;length];socket.read_exact(&mut body).await.unwrap();
                                     let result={
                                         let mut data=objects.lock().unwrap();
+                                        if headers.get("if-none-match").is_some_and(|h|h=="*") && race_create.swap(false,Ordering::SeqCst) {
+                                            assert!(!data.contains_key(&key));
+                                            data.insert(key.clone(),(b"external creator".to_vec(),"\"external-create\"".into()));
+                                            metadata.lock().unwrap().remove(&key);
+                                        }
                                         let allowed=if headers.get("if-none-match").is_some_and(|h|h=="*"){!data.contains_key(&key)}else{headers.get("if-match").is_some_and(|tag|data.get(&key).is_some_and(|(_,old)|old==tag))};
                                         if !allowed{response("412 Precondition Failed","",b"",0)}else{
                                             use sha2::{Digest,Sha256};let hash=Sha256::digest(&body).iter().map(|b|format!("{b:02x}")).collect::<String>();
@@ -132,7 +144,7 @@ impl Fixture {
                                     let _ = socket.read(&mut byte).await;
                                     return;
                                 }
-                                let response = respond(&request, &objects.lock().unwrap(), &metadata.lock().unwrap());
+                                let response = respond(&request, &objects.lock().unwrap(), &metadata.lock().unwrap(), hide_created_listing.load(Ordering::SeqCst));
                                 let _ = socket.write_all(&response).await;
                             }).await.unwrap();
                         });
@@ -151,10 +163,18 @@ impl Fixture {
             deny_get,
             offline,
             writable,
+            hide_created_listing,
+            race_create,
             lose_put_reply,
             hide_committed,
             metadata,
         }
+    }
+    pub fn remove(&self, path: &str) {
+        let mut objects = self.objects.lock().unwrap();
+        let mut metadata = self.metadata.lock().unwrap();
+        objects.remove(path);
+        metadata.remove(path);
     }
     pub fn put(&self, path: &str, bytes: &[u8], etag: &str) {
         self.objects
@@ -175,7 +195,12 @@ fn response(status: &str, headers: &str, body: &[u8], length: usize) -> Vec<u8> 
 fn encoded(key: &str) -> String {
     percent_encoding::utf8_percent_encode(key, percent_encoding::NON_ALPHANUMERIC).to_string()
 }
-fn respond(request: &str, objects: &Objects, metadata: &Metadata) -> Vec<u8> {
+fn respond(
+    request: &str,
+    objects: &Objects,
+    metadata: &Metadata,
+    hide_created_listing: bool,
+) -> Vec<u8> {
     let mut words = request.split_whitespace();
     let method = words.next().unwrap();
     let target = words.next().unwrap();
@@ -194,6 +219,9 @@ fn respond(request: &str, objects: &Objects, metadata: &Metadata) -> Vec<u8> {
         let base = format!("/{bucket}/");
         let mut entries = BTreeMap::new();
         for (key, (bytes, etag)) in objects {
+            if hide_created_listing && key.contains("/desktop/writable/created-") {
+                continue;
+            }
             if let Some(relative) = key.strip_prefix(&base).and_then(|s| s.strip_prefix(prefix)) {
                 if let Some((directory, _)) = relative.split_once('/') {
                     entries

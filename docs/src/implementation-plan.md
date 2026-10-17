@@ -235,3 +235,11 @@ the [current research and protocol plan](multipart-plan.md) records provider
 limit differences and the remaining durability boundaries.
 Credential-generation rebinding and unresolved-attempt/supersession resolution
 still need explicit policies; a pending local record is not permission to upload.
+
+
+## P5c1b acceptance in progress
+
+[Native regular-file creation](native-creation.md) is implemented for existing
+policy-writable directories. Local SDK/SQLite integration and the bound head
+catalog test pass. Actual FUSE/WinFsp tests must pass before publication. No
+real Wasabi write configuration or new cloud probe is installed or executed.

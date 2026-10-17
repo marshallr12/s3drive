@@ -18,6 +18,7 @@
 - [Explicit application write policy](write-policy.md)
 - [Generation-specific remote flush](flush-receipts.md)
 - [Native existing-file writes](native-writes.md)
+- [Native file creation](native-creation.md)
 - [Multipart uploads: research and plan](multipart-plan.md)
 - [Linux and Windows integration](platform-integration.md)
 - [Security and operations](security-and-operations.md)

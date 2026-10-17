@@ -805,3 +805,50 @@ fn process_death_at_local_transaction_boundaries_preserves_receipts() {
         }
     }
 }
+
+#[test]
+fn current_head_catalog_is_bound_paginated_and_checks_the_pointer() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut state = State::open_managed(&temp.path().join("state")).unwrap();
+    let mut j = Journal::new(&mut state, opts(100)).unwrap();
+    let original = j.begin(&target(), Base::Missing, None, 0).unwrap();
+    j.seal(original).unwrap();
+    let newest = j
+        .begin(&target(), Base::Missing, Some(original), 0)
+        .unwrap();
+    j.seal(newest).unwrap();
+    let other = Target::new([1; 32], &"a".repeat(64), "dir/second").unwrap();
+    let second = j.begin(&other, Base::Missing, None, 0).unwrap();
+    j.seal(second).unwrap();
+    let foreign = Target::new([2; 32], &"b".repeat(64), "dir/foreign").unwrap();
+    let id = j.begin(&foreign, Base::Missing, None, 0).unwrap();
+    j.seal(id).unwrap();
+    assert_eq!(
+        j.heads([1; 32], &"a".repeat(64), None, 1).unwrap()[0].id,
+        newest
+    );
+    assert_eq!(
+        j.heads([1; 32], &"a".repeat(64), Some(newest), 1).unwrap()[0].id,
+        second
+    );
+    assert!(
+        j.heads([1; 32], &"a".repeat(64), Some(second), 1)
+            .unwrap()
+            .is_empty()
+    );
+    assert!(j.heads([1; 32], &"b".repeat(64), None, 100).is_err());
+    assert!(j.heads([1; 32], &"a".repeat(64), None, 0).is_err());
+    state
+        .connection
+        .execute(
+            "UPDATE staged_heads SET generation_id=?1 WHERE source_id=?2 AND object_key=?3",
+            params![original.0, [1_u8; 32].as_slice(), target().key],
+        )
+        .unwrap();
+    assert!(
+        Journal::new(&mut state, opts(100))
+            .unwrap()
+            .heads([1; 32], &"a".repeat(64), None, 100)
+            .is_err()
+    );
+}
