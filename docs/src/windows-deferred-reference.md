@@ -50,3 +50,53 @@ Linux/Windows/book CI with the existing seven actual S3Drive native cases per
 OS and startup gates unchanged. No NTFS trace or upstream memfs result enables
 S3Drive deletion. Then implement atomic deferred create/owner-fenced move and
 the persistent per-open/node-wide lifecycle, followed by native deletion tests.
+
+## Measured NTFS results, 2026-10-17
+
+The reference step at `53f09b1a832cbdebc54d9e0c3d9e318e8f5b8004`,
+[run 39041403340](https://github.com/marshallr12/s3drive/actions/runs/39041403340),
+produced a source-bound artifact on **Microsoft Windows Server 2025 Datacenter**
+at 14:41:31 UTC. All eight previous records matched. The
+[frozen fourteen-case fixture](evidence/windows-disposition-reference-20261017.json)
+contains every observed scalar and preserves the original eight-case provenance.
+The four upstream legacy cases also passed before the artifact was written.
+These are reference-step results; publication additionally requires the final
+exact-commit workflow and unchanged native/startup acceptance.
+
+| Case | Observed result |
+| --- | --- |
+| Deferred file rename | Rename succeeded before cleanup. Old name disappeared and the destination existed. Cleanup made the retained handle pending and new opens failed with error 5; retained I/O worked, and the destination disappeared after the final close. |
+| Deferred nonempty directory rename | Rename succeeded without pending state. The child data survived cleanup at the destination; the old name remained absent. |
+| Exclusive new file with delete-on-close | Create succeeded and another open was initially allowed. Cleanup made that reader pending and denied new opens with error 5. Existing data stayed readable; the file disappeared after all closes. |
+| Multiple delete-on-close opens | First cleanup set pending. Ordinary cancellation through the second open cleared pending and allowed reopening. Its later cleanup reasserted pending and denied reopening; retained I/O worked and the final close removed the file. |
+| Extended on-close cancellation | The NTFS call succeeded. Cleanup did not set pending; reopening succeeded and the file remained after all closes. This does not override WinFsp's documented ON_CLOSE rejection in the selected mode. |
+| Duplicate handle | Closing the first alias did not set pending and reopening worked. Closing the duplicated alias triggered pending and denied reopening with error 5. The independent reader retained its bytes until its final close removed the file. |
+
+Implementation consequences are **inferences and next requirements**. Deferred
+rename must retain stable node/fence identity while changing namespace placement;
+cleanup must follow the node instead of deleting its old pathname. Create and
+deferred reservation must be atomic. A nonempty renamed directory must preserve
+its child. Track an open file object separately from node-wide disposition and
+duplicated aliases; ordinary cancellation cannot erase another live DoC
+obligation. No observed NTFS result establishes WinFsp deferred parity.
+
+The final checker requires fourteen unique cases, the measured OS profile and
+every exact observation field. Its portable PowerShell test rejects nine
+malformed observations, including missing/duplicate/unknown cases, wrong
+backend/OS, extra/renamed fields and changed null/boolean values. The temporary
+eight-golden/six-measured allowance is removed. Final hosted CI must repeat all
+fourteen observations before this checkpoint can be published.
+
+Next prioritize atomic deferred create and same-fence owner rename/move, then
+the native bridge. Before enabling replacement of a deferred target, also prove
+that its old cleanup cannot delete the replacement's name, including both
+source and target being deferred. This is additional acceptance work, not
+permission to leave ordinary native rename or DoC permanently unsupported.
+
+
+Local final gate passed (exit 0) with 173 state tests, seven authority HTTP
+tests and 11 SDK cases plus formatting, lint, build and book checks. PowerShell
+syntax passed for all three scripts. The checker accepted the actual measured
+artifact and rejected all nine malformed observations. The first measurement
+run completed all-green; final publication requires exact-tip CI repeating the
+now-frozen fourteen-case check, four upstream cases and native/startup gates.

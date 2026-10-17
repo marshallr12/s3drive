@@ -11,21 +11,38 @@ Linux `117416151491`, Windows `117416151413`, book `117416151454`;
 173/169 state, seven TCP, 11 SDK cases, seven native cases per OS and unchanged
 startup/eight-reference acceptance. Proof `/tmp/s3drive-cancel-publication.json`.
 
-Current scope: six additional NTFS observations (deferred file/directory rename,
-exclusive create+DoC, multiple DoC/cancellation, extended on-close cancellation,
-duplicated-handle lifetime). Extend pinned upstream legacy create test with
-rename, rename_open and delete_pending. First measure with eight old golden
-records; review source-bound artifact and freeze all fourteen before final CI
-and publication. Production callbacks/schema16/config6 stay unchanged. No live
-Wasabi mutation, workstation startup/credential changes or NNP bypass.
+Current reference: source `53f09b1a832cbdebc54d9e0c3d9e318e8f5b8004`,
+[run 39041403340](https://github.com/marshallr12/s3drive/actions/runs/39041403340),
+source-bound artifact 12104790407, Windows Server 2025 Datacenter,
+2026-10-17 14:41:31 UTC. All fourteen probes and four pinned legacy upstream
+create/delete_pending/rename/rename_open disk/network cases passed before upload.
+The original eight records matched exactly. Artifact downloaded to
+`/tmp/s3drive-extra-reference-measured/windows-disposition-reference.json`.
+Final frozen fixture now contains all fourteen records, actual OS and original
+provenance. No guessed values or eight-plus-six allowance remain.
 
-Local gate passed, exit 0 (`/tmp/s3drive-extra-reference-gate1.log`), with
-173 state tests, seven authority HTTP and 11 managed SDK cases, lint/build/book.
-PowerShell AST parsing passed on this workstation. The six new probes are
-Windows-only and have not been executed locally. The measurement candidate
-must run on hosted Windows; review the private source-bound artifact, then
-freeze all fourteen scalar records before final native/reference/startup CI.
-Do not publish the temporary eight-golden/six-measured allowance to main.
+Key observed results: deferred file/directory rename succeeds; renamed file
+cleanup follows its destination while a nonempty renamed directory/child stays.
+New create+DoC permits initial sharing, later denies opens when pending.
+Multiple DoC opens can clear then reassert pending between cleanups. Duplicate
+aliases delay cleanup until the final alias closes. NTFS extended on-close clear
+works; it is not supported by the selected WinFsp mode, so not a workaround.
+These are NTFS observations, not deferred WinFsp parity or S3Drive deletion.
+
+Local final gate passed, exit 0 (`/tmp/s3drive-extra-reference-gate2.log`),
+173 state, seven HTTP, 11 SDK cases, lint/build/book. All three PowerShell files
+passed AST syntax checks; positive measured artifact and nine malformed-data
+rejections passed. The measurement run also completed terminal all-green.
+Final exact-tip hosted native/reference/startup CI is required
+before guarded publication. Keep schema16/config6, native callbacks and real
+provider/workstation state unchanged. Do not bypass NoNewPrivs.
+
+Next implement atomic deferred create and same-fence owner rename/move, then
+persistent per-open/node-wide native lifecycle. Before deferred replacement,
+probe both source/target dispositions and guarantee old target cleanup cannot
+delete the replacement. Do not substitute permanently refused rename/DoC or
+SetDelete-only behavior. Goal remains ACTIVE; native Windows deletion is still
+unsupported until the full lifecycle acceptance gate passes.
 
 ## Previous cancellation recovery phase
 

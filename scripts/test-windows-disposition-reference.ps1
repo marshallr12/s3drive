@@ -15,28 +15,10 @@ if ($referenceExit -ne 0 -or $referenceText -notmatch '14 passed; 0 failed' -or 
     throw "NTFS disposition reference failed or omitted cases: $referenceExit"
 }
 $fixture = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot '..\docs\src\evidence\windows-disposition-reference-20261017.json') | ConvertFrom-Json
-if (@($fixture.records).Count -ne 8 -or @($fixture.records.case | Sort-Object -Unique).Count -ne 8) { throw 'Invalid reference fixture cases' }
-foreach ($expected in $fixture.records) {
-    $matchingRecords = @($records | Where-Object { $_.case -ceq $expected.case })
-    if ($matchingRecords.Count -ne 1 -or $matchingRecords[0].backend -cne $expected.backend) { throw "Reference case missing or changed: $($expected.case)" }
-    $actual = $matchingRecords[0].observations
-    $keys = @($expected.observations.PSObject.Properties.Name)
-    if (@($actual.PSObject.Properties).Count -ne $keys.Count) { throw "Reference fields changed: $($expected.case)" }
-    foreach ($key in $keys) {
-        $actualValue = ConvertTo-Json -InputObject $actual.$key -Compress
-        $expectedValue = ConvertTo-Json -InputObject $expected.observations.$key -Compress
-        if ($actualValue -cne $expectedValue) { throw "Reference observation changed: $($expected.case).$key" }
-    }
-}
-Write-Output 'PASS: all eight previously recorded NTFS traces match'
-# Measurement phase only: new values are deliberately not guessed. The final
-# acceptance revision must freeze all fourteen records and remove this allowance.
-$measuredCases = @('deferred-file-rename', 'deferred-directory-rename', 'created-deferred-file', 'multiple-deferred-cancel', 'extended-on-close-cancel', 'duplicated-deferred-handle')
-$caseNames = @($fixture.records.case) + $measuredCases
-foreach ($caseName in $caseNames) {
-    if (@($records | Where-Object { $_.case -ceq $caseName -and $_.backend -ceq 'ntfs' }).Count -ne 1) { throw "Missing measured case: $caseName" }
-}
-Write-Output 'MEASURED: six additional NTFS traces require review and a frozen fixture before publication'
+. (Join-Path $PSScriptRoot 'windows-reference-fixture.ps1')
+$observations = [pscustomobject]@{ operating_system = (Get-CimInstance Win32_OperatingSystem).Caption; records = $records }
+Assert-WindowsDispositionReference -Fixture $fixture -Observation $observations
+Write-Output 'PASS: all fourteen NTFS traces match the recorded Windows Server 2025 reference'
 $root = Join-Path $env:RUNNER_TEMP ('s3drive-disposition-reference-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $root | Out-Null
 $passed = $false
@@ -65,7 +47,7 @@ try {
     if ($LASTEXITCODE -ne 0 -or $referenceSha -notmatch '^[0-9a-f]{40}$' -or $referenceSha -cne $env:GITHUB_SHA) { throw 'Reference evidence source does not match this CI commit' }
     $evidence = [ordered]@{
         source_commit = $referenceSha
-        operating_system = (Get-CimInstance Win32_OperatingSystem).Caption
+        operating_system = $observations.operating_system
         observed_at_utc = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
         records = $records
         upstream_legacy_cases = $upstreamCases

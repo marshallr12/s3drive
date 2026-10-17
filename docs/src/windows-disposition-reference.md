@@ -32,12 +32,12 @@ open-time delete-on-close flag.
 lines 1342–1393; checked 2026-10-17. S3Drive currently does not advertise POSIX
 unlink/rename, so an extended-flags workaround is not the chosen solution.
 
-## Explicit native reference gate
+## Initial eight-case reference gate
 
-`scripts/test-windows-disposition-reference.ps1` runs on the prepared disposable
-Windows CI VM, using the already digest-pinned WinFsp 2.1 test archive. It first
-runs eight Rust NTFS reference probes from the audited native test boundary,
-then the upstream `create_test` on its own WinFsp disk/network memfs backends in
+The initial `scripts/test-windows-disposition-reference.ps1` gate ran on the
+prepared disposable Windows CI VM, using the digest-pinned WinFsp 2.1 test
+archive. It ran eight Rust NTFS reference probes from the audited native test
+boundary, then the upstream `create_test` on its own WinFsp disk/network memfs backends in
 legacy unlink/rename mode. The CLI flag is mapped into memfs configuration by
 [the pinned test harness](https://raw.githubusercontent.com/winfsp/winfsp/v2.1/tst/winfsp-tests/memfs-test.c),
 lines 29–53; [default modes and argument handling](https://raw.githubusercontent.com/winfsp/winfsp/v2.1/tst/winfsp-tests/winfsp-tests.c),
@@ -57,26 +57,23 @@ but does not execute these Windows probes. A missing runtime, missing selected
 upstream test, failure, or timeout fails acceptance. The eight reference probes
 are separate from S3Drive's seven real native cases on each OS.
 
-## Deferred protocol plan, not implemented
+## Protocol consequences and remaining native work
 
-After native observations are reviewed, specify an operational reservation
-which protects stable identity/name while allowing the required open sharing.
-Determine child-creation and nonempty final-cleanup behavior from evidence.
-Keep pending-open denial as an explicit later transition. Preserve the accepted
-owner-fenced content publication and retained-conflict paths.
+These observations motivated the implemented [deferred authority](deferred-removal.md)
+and [cancellation recovery](mode-cancellation-recovery.md). Deferred ownership
+allows reads and child operations, while pending-open denial is a later exact
+same-fence transition. Schema 16 binds immutable transition evidence instead
+of weakening payload/identity corruption checks. Unknown cancellation cannot
+trigger automatic re-arming; dirty data and uncertain work remain inspectable.
 
-Promotion must preserve the fence and bind immutable transition evidence.
-Current pending-row verification treats revision advancement without payload
-change as corruption; add a proper transition proof rather than weaken that
-check. Cancellation and commit must use exact owner, node, parent and payload
-guards. Unknown cancellation cannot trigger automatic re-arming. Missing
-cleanup during volume teardown must remain inspectable retained uncertainty.
-
-Next add the authority protocol, then persistent per-descriptor and node-wide
-client lifecycle state, diagnostics and recovery. Native callbacks wait for
-normal/deferred opens, cancellation, multiple contexts, late I/O, volume loss,
-Unicode and concurrent-client acceptance. Windows Server CI is not Windows
-10/11 desktop reboot acceptance; actual workstation startup remains separate.
+The [additional reference phase](windows-deferred-reference.md) extends the
+gate to fourteen frozen NTFS cases and four selected upstream legacy cases.
+Next implement atomic deferred create and owner-fenced rename/move, then the
+persistent per-open and node-wide native lifecycle, diagnostics and recovery.
+Native callbacks still wait for normal/deferred opens, cancellation, multiple
+contexts, late I/O, volume loss, Unicode and concurrent-client acceptance.
+Windows Server CI is not Windows 10/11 desktop reboot acceptance; actual
+workstation startup remains separate.
 
 
 ## Observed NTFS results (2026-10-17)
@@ -84,7 +81,8 @@ Unicode and concurrent-client acceptance. Windows Server CI is not Windows
 The first reference run `6e5fef7`,
 [CI 39032499844](https://github.com/marshallr12/s3drive/actions/runs/39032499844),
 passed on Windows Server 2025. Its [structured trace](evidence/windows-disposition-reference-20261017.json)
-is now the native reference fixture; the gate compares every field before
+is retained with the six later cases in the expanded reference fixture; the
+gate compares every field before
 accepting a later run. These are measured NTFS results, not a claim that WinFsp
 matches every cross-context detail.
 
@@ -102,7 +100,8 @@ matches every cross-context detail.
 The pinned WinFsp legacy disk/network create_test also passed, confirming the
 nonempty deferred-directory behavior on those reference backends. The driver
 sources distinguish shared pending state and per-file-object flags; do not
-extrapolate NTFS query results to every WinFsp handle. Still probe deferred
-rename/replacement, new-file DoC and multiple DoC descriptors before the full
-native bridge is enabled. The deferred authority design must account for these
-remaining operations rather than permanently freeze names as a shortcut.
+extrapolate NTFS query results to every WinFsp handle. The [additional NTFS results](windows-deferred-reference.md#measured-ntfs-results-2026-10-17)
+now cover deferred rename, new-file DoC, multiple DoC opens and duplicate aliases.
+Deferred replacement and WinFsp parity still require acceptance before the full
+native bridge. The authority must support these operations rather than
+permanently freeze names as a shortcut.

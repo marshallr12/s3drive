@@ -1,7 +1,13 @@
 {
-  "sha": "6e5fef73f0f262c35f0f0b9b83741ab3bb4855d8",
-  "run": 39032499844,
+  "sha": "53f09b1a832cbdebc54d9e0c3d9e318e8f5b8004",
+  "run": 39041403340,
   "platform": "Windows Server 2025",
+  "operating_system": "Microsoft Windows Server 2025 Datacenter",
+  "observed_at_utc": "2026-10-17T14:41:31Z",
+  "previous_reference": {
+    "sha": "6e5fef73f0f262c35f0f0b9b83741ab3bb4855d8",
+    "run": 39032499844
+  },
   "records": [
     {
       "backend": "ntfs",
@@ -53,12 +59,97 @@
     },
     {
       "backend": "ntfs",
+      "case": "duplicated-deferred-handle",
+      "observations": {
+        "bytes_preserved": true,
+        "duplicate_reopen_error": 5,
+        "exists_after_all_close": false,
+        "first_reopen_error": null,
+        "pending_after_duplicate_close": true,
+        "pending_after_first_close": false,
+        "reopened_after_duplicate": false,
+        "reopened_after_first": true
+      }
+    },
+    {
+      "backend": "ntfs",
+      "case": "created-deferred-file",
+      "observations": {
+        "bytes_preserved": true,
+        "exclusive_create": true,
+        "exists_after_all_close": false,
+        "pending_after_cleanup": true,
+        "pending_before_cleanup": false,
+        "reopen_error": 5,
+        "reopened_after_cleanup": false
+      }
+    },
+    {
+      "backend": "ntfs",
+      "case": "extended-on-close-cancel",
+      "observations": {
+        "cancel_hresult": null,
+        "exists_after_all_close": true,
+        "pending_after_cleanup": false,
+        "pending_before_cleanup": false,
+        "reopen_error": null,
+        "reopened_after_cleanup": true
+      }
+    },
+    {
+      "backend": "ntfs",
       "case": "legacy-cancel-delete-on-close",
       "observations": {
         "exists_after_all_close": false,
         "pending_after_cleanup": true,
         "pending_before": false,
         "reopened_after_cleanup": false
+      }
+    },
+    {
+      "backend": "ntfs",
+      "case": "multiple-deferred-cancel",
+      "observations": {
+        "b_reopen_error": 5,
+        "cancel_hresult": null,
+        "cancel_reopen_error": null,
+        "exists_after_all_close": false,
+        "late_io": true,
+        "pending_after_a": true,
+        "pending_after_b": true,
+        "pending_after_cancel": false,
+        "pending_before": false,
+        "reopened_after_b": false,
+        "reopened_after_cancel": true
+      }
+    },
+    {
+      "backend": "ntfs",
+      "case": "deferred-file-rename",
+      "observations": {
+        "destination_exists_after_all_close": false,
+        "destination_exists_after_rename": true,
+        "late_io": true,
+        "pending_after_cleanup": true,
+        "pending_before_cleanup": false,
+        "rename_error": null,
+        "renamed": true,
+        "reopen_error": 5,
+        "reopened_after_cleanup": false,
+        "source_exists_after_all_close": false,
+        "source_exists_after_rename": false
+      }
+    },
+    {
+      "backend": "ntfs",
+      "case": "deferred-directory-rename",
+      "observations": {
+        "child_preserved": true,
+        "destination_exists_after_cleanup": true,
+        "pending_before_cleanup": false,
+        "rename_error": null,
+        "renamed": true,
+        "source_exists_after_cleanup": false
       }
     },
     {
@@ -77,6 +168,12 @@
       }
     }
   ],
-  "source_url": "https://github.com/marshallr12/s3drive/actions/runs/39032499844",
-  "scope": "NTFS observations only; WinFsp cross-context equivalence remains unverified"
+  "upstream_legacy_cases": [
+    "create_test",
+    "delete_pending_test",
+    "rename_test",
+    "rename_open_test"
+  ],
+  "source_url": "https://github.com/marshallr12/s3drive/actions/runs/39041403340",
+  "scope": "NTFS observations only; four selected upstream WinFsp legacy disk/network cases are separate evidence, not deferred semantic parity or S3Drive deletion acceptance"
 }

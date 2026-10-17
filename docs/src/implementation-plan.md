@@ -455,3 +455,16 @@ Then freeze all fourteen records and require exact field comparison plus
 terminal native/reference/startup CI before publication. Keep native S3Drive
 delete callbacks unsupported. Next atomic deferred create and owner-fenced
 rename/move must reflect the measured behavior before per-open integration.
+
+
+The reference step at `53f09b1` / CI 39041403340 measured all fourteen NTFS
+cases and passed four pinned upstream legacy cases. See the cited
+[results and implications](windows-deferred-reference.md#measured-ntfs-results-2026-10-17).
+Deferred file/directory rename succeeds, create+DoC initially shares, multiple
+DoC cleanups can reassert pending and duplicates share one cleanup lifetime.
+NTFS extended cancellation is distinct from unsupported WinFsp ON_CLOSE.
+Freeze all fourteen scalar observations and actual OS profile; reject malformed
+reference data. Require final terminal exact-tip native/reference/startup CI
+before publishing. Next atomic create/reserve and owner-fenced move; deferred
+target replacement needs its own proof that old cleanup cannot remove the
+new name before the full Windows lifecycle is enabled.
