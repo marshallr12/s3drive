@@ -8,6 +8,7 @@ mod directory;
 #[path = "directory/windows.rs"]
 mod directory_windows;
 pub mod journal;
+pub mod namespace;
 pub mod remote;
 pub mod worker;
 
@@ -15,7 +16,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 7;
+pub const SCHEMA_VERSION: i32 = 8;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub struct State {
@@ -33,11 +34,22 @@ pub struct StateInfo {
 
 impl State {
     fn verify_staging_storage(&self) -> Result<()> {
+        self.verify_client_state()?;
         self._directory
             .as_ref()
             .ok_or("staging requires managed local state")?
             .verify_staging_storage()
     }
+    fn verify_client_state(&self) -> Result<()> {
+        let count: i64 =
+            self.connection
+                .query_row("SELECT count(*) FROM namespace_volume", [], |r| r.get(0))?;
+        if count != 0 {
+            return Err("authority state cannot be used for local cache or staging".into());
+        }
+        Ok(())
+    }
+
     /// Open a private local state directory, creating its last component when
     /// needed. The parent must exist. Ownership is held until this State drops.
     pub fn open_managed(directory: &Path) -> Result<Self> {
@@ -102,7 +114,12 @@ impl State {
             }
             if version == 6 {
                 tx.execute_batch(include_str!("../migrations/007.sql"))?;
+                version = 7;
             }
+            if version == 7 {
+                tx.execute_batch(include_str!("../migrations/008.sql"))?;
+            }
+            namespace::check_schema(&tx)?;
             // Catch a damaged/current-version database before returning success.
             tx.prepare("SELECT source_alias, object_key, etag, version_id, size_bytes FROM legacy_cached_objects_v1 LIMIT 0")?;
             tx.prepare("SELECT source_id, config_fingerprint FROM source_bindings LIMIT 0")?;
@@ -146,6 +163,7 @@ impl State {
         source_id: &[u8; 32],
         config_fingerprint: &str,
     ) -> Result<()> {
+        self.verify_client_state()?;
         if config_fingerprint.len() != 64
             || !config_fingerprint
                 .bytes()

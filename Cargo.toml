@@ -10,6 +10,9 @@ publish = false
 repository = "https://github.com/marshallr12/s3drive"
 
 [workspace.dependencies]
+axum = { version = "=0.8.9", default-features = false, features = ["http1", "json", "tokio"] }
+reqwest = { version = "=0.13.5", default-features = false, features = ["json"] }
+serde_json = "=1.0.151"
 aws-config = "1.12.0"
 aws-sdk-s3 = { version = "1.152.0", default-features = false, features = ["default-https-client", "rt-tokio", "rustls"] }
 aws-credential-types = "1.3.0"

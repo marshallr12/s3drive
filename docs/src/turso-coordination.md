@@ -6,6 +6,11 @@ SQLite for each computer's cache and recovery. Do not use asynchronous database
 sync as the authority for exclusive ownership. This is a design proposal, not
 an enabled dependency or a verified Turso integration.
 
+The user selected [managed layout](managed-layout.md) on 2026-10-16. The local
+SQLite namespace authority prototype now supplies the first executable contract;
+Turso remains an optional backend requiring its own acceptance. This update
+rechecked the current transaction, Sync, Cloud limitation and SQL-over-HTTP pages.
+
 ![Two computers keep separate local SQLite databases, send coordination operations to an API backed by Turso Cloud, and store file generations in S3.](images/turso-coordination.png)
 
 ## Current capabilities versus announcements
@@ -97,6 +102,22 @@ transaction with Wasabi, even if Turso itself uses S3 internally.
 During a partition, a machine may stage changes locally, but cannot announce
 exclusive ownership or global publication. Preserve staged data and report
 pending/conflict state. An independent S3 client remains outside this protocol.
+
+## Remote transport implications for the managed authority
+
+The [SQL-over-HTTP reference](https://docs.turso.tech/sdk/http/reference) supports
+bound parameters, interactive connections through batons and explicit commit.
+It documents a five-second transaction window and ten-second idle-connection
+expiry. Therefore upload/verification cannot occur inside a metadata transaction.
+A future backend must inspect every statement/commit result, bound and validate
+routing/baton behavior, and resolve lost commit replies by the operation table.
+Do not equate an HTTP success with a committed filesystem mutation. This is a
+candidate backend design, not an implemented HTTP SQL adapter.
+
+The local prototype uses the existing bundled rusqlite, avoiding a second SQLite
+FFI dependency. Its schema-8 local pragmas are not Cloud migration code:
+[Cloud limitations](https://docs.turso.tech/cloud/limitations) require table-based
+schema/application identification and differ on journaling/busy timeout.
 
 ## Proposed evaluation, before selecting a dependency
 

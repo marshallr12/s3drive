@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated: 2026-10-16. Current phase: **P5c1b guarded native file creation**; native cases passed.
+Updated: 2026-10-16. Current phase: **P6m1 managed namespace authority**; implemented, local tests passed.
 Goal active. Linux/Windows read-only drives and startup foundations work;
 library writes/flush are progressing toward safe writable native filesystems.
 Do not call the broader editable-drive goal complete before its documented
@@ -10,11 +10,14 @@ safe-write contract and real OS acceptance pass.
 
 - Rust implementation in `~/src/s3drive`, mdBook findings/plans/images, private
   GitHub repository `marshallr12/s3drive`; these artifacts already exist.
-- One or more S3-compatible buckets/prefixes exposed through source aliases.
+- User selected **managed layout with stronger coordination**, 2026-10-16.
+  Target: shared authoritative namespace plus immutable S3 generations; ordinary
+  S3 tools see internal keys. No implicit conversion of existing configurations.
+- Existing direct layout exposes buckets/prefixes through source aliases.
   Wasabi is the first live provider; other endpoints need separate conformance.
 - Linux FUSE and Windows WinFsp adapters have stable read-only acceptance.
-  The current branch adds opt-in existing-file editing with native writable
-  acceptance. Full desktop editing remains unfinished.
+  Existing opt-in editing and guarded file creation passed native acceptance.
+  Managed mounts and full desktop editing remain unfinished.
   New online opens authorize through S3; pinned old handles preserve revisions.
   No ordinary CLI upload command, directory creation, delete/rename,
   multipart, payload reclamation, new offline opens or desktop packaging yet.
@@ -31,16 +34,16 @@ safe-write contract and real OS acceptance pass.
 ## Authoritative publication baseline
 
 Published private main at phase start:
-`76e2652948af33ba5078c8b82ca7bb36a5a6aa28` (native existing-file writes).
-It passed terminal all-green [run 38991012874](https://github.com/marshallr12/s3drive/actions/runs/38991012874):
-Linux 117273204000, Windows 117273203827 and book 117273204029.
+`640a37ecf99d2d1e1c1874aeba3013a1e99d117d` (guarded file creation).
+Terminal all-green [run 38993215272](https://github.com/marshallr12/s3drive/actions/runs/38993215272):
+Linux 117279903466, Windows 117279903627 and book 117279903624.
 Remote main SHA and PRIVATE visibility were verified after publication.
 
-That exact baseline passed 49 S3 tests on each OS, 78 Linux / 76 Windows state,
-12 FS tests, 341 read-only FUSE / 749 read-only WinFsp requests, and native
-existing-file writes, lost replies, uncertain restart without replay and 412
-conflict retention. No-systemd and Windows cross-logon regressions passed.
-Logs: `/tmp/s3drive-native-write-{linux,windows,book}-ci.log`.
+Baseline: 49 S3 tests per OS, 79 Linux / 77 Windows state and 12 FS tests;
+three native cases per OS (RO/cache/session, existing writes, creation), with
+341 RO FUSE / 749 RO WinFsp requests. No-systemd and Windows cross-logon gates,
+Unicode creation, 1,024-byte SDK key boundary, lost replies, restart without
+replay and rival preservation passed. Logs: `/tmp/s3drive-create-{linux,windows,book}-ci.log`.
 
 Windows testing runs remotely on GitHub's **Windows Server 2025 VM**, not this
 Linux workstation. Native folder/drive/security/UTF-16 tests and distinct
@@ -50,9 +53,9 @@ remain target-host acceptance. Linux local PID 1 is `init`, not systemd.
 
 ## Current implementation and sources
 
-Seven crates: core, s3, state, fs, fuse, winfsp and cli. Rust 1.99.1, edition
-2024, AWS S3 SDK 1.152.0, rusqlite 0.40.2 with bundled SQLite. No version
-upgrade in the current phase. OS dependencies remain target-specific.
+Eight crates: core, s3, state, fs, fuse, winfsp, cli and authority. Rust 1.99.1, edition
+2024, AWS S3 SDK 1.152.0, rusqlite 0.40.2 with bundled SQLite. P6m1 adds pinned axum 0.8.9,
+serde_json 1.0.151 and test-only reqwest 0.13.5, with resolved sources inspected. OS dependencies remain target-specific.
 
 - `s3drive-core/src/lib.rs`: strict source config and alias/key resolution;
   version 1 is read-only; version 2 requires explicit source policies and local
@@ -81,55 +84,46 @@ upgrade in the current phase. OS dependencies remain target-specific.
   least-privilege password-backed scheduled task with shared NTFS folder.
   Do not change machine policy or install a real user startup entry implicitly.
 
-## Current branch: codex/native-file-creation
+## P6m1 implementation branch: codex/managed-authority
 
-P5c1a is published. P5c1b now connects guarded empty-file creation to FUSE and
-WinFsp, followed by the existing conditional replacement path. See the
-[creation contract](docs/src/native-creation.md). Native creation cases passed on both OSes.
-No real bucket policy, configuration, credentials or startup entry changed.
+P6m1 implements persistent namespace transactions in `s3drive-state::namespace`
+and a bounded, authenticated loopback HTTP service in `s3drive-authority`.
+See [the managed contract](docs/src/managed-layout.md). Schema 8 preserves client
+state and adds isolated namespace volume/nodes/operation tables. Authority IDs
+are independent of local AWS profiles. Initialization refuses populated client
+state; source registration/staging refuse an initialized authority database.
 
-One creation lock covers namespace checks and a conditional create. Linux
-compares exact names; Windows supplies its native comparison. Online LIST and
-HEAD must authorize creation; HEAD 403 is never treated as absence. A 412 maps
-to collision, 409 to Conflict, with no replacement fallback. Local empty
-rejected generations remain in SQLite. Recreating retained/deleted lineages
-requires explicit resolution, rather than silently reusing an old head.
+Implemented: directory/empty-file metadata create, subtree move without overwrite,
+empty removal/tombstones, sequence CAS and durable exact-request operation-result
+replay. One owner thread/8-command queue; loopback only, 4 KiB JSON, explicit
+256-bit token, 8 HTTP operation slots. No deployment CLI or token persisted.
+`exact-utf8-v1` is a prototype byte-exact policy, NOT Windows case equivalence.
+No managed payload upload/reference, native mount or real remote deployment yet.
 
-A bounded source/configuration-bound head catalog uses existing schema 7;
-no migration or dependency upgrade. It checks authoritative head pointers.
-Pending and settled Base::Missing lineages supply missing LIST candidates,
-but every missing candidate needs online HEAD. Missing keys are omitted;
-permission/network failures propagate. It is not an offline namespace.
+Four independent real-TCP tests passed locally, including concurrent create,
+opposing directory moves, subtree identity, Unicode, lost HTTP reply/restart,
+authentication and strict decoding. Seven namespace state tests (one child
+helper) passed, including process death, real SQLite full, injected rollback,
+migration, role separation and retained bounds. Workspace lint/tests passed:
+86 Linux state, 49 S3 and 12 FS tests, plus the four new TCP tests. Existing
+migration fixtures now remove schema-8 namespace tables when emulating schemas
+2–6; their original preservation/conflicting-schema assertions remain intact.
+The first gate exposed those outdated fixtures; the corrected gate log is
+`/tmp/s3drive-managed-gate-final.log`. Also see `/tmp/s3drive-managed-tests.log`
+and `/tmp/s3drive-managed-state-tests.log`. Exact-tip CI is required below;
+retrieve it with `gh run list --branch codex/managed-authority --limit 3`.
+ The new managed architecture PNG was generated
+and visually inspected. No real user configuration or cloud state changed.
 
-Local gate passed before the final 409 error distinction and handoff refresh:
-`/tmp/s3drive-create-gate.log`. The shared SDK/SQLite child-process tests cover
-Unicode create/write, exclusive/concurrent collisions, LIST omissions, HEAD
-failure, a remote creator racing after the 404 check, uncertain restart with
-no extra PUT, deleted remote keys and retained local lineage refusal. The
-catalog test covers binding, pagination and corrupt head-pointer refusal.
-Implementation `f3546ce` passed the real Linux and Windows creation suites in
-[run 38992535965](https://github.com/marshallr12/s3drive/actions/runs/38992535965):
-Linux 117277841348, Windows 117277841110, book 117277841282. All three jobs
-finished successfully. Logs: `/tmp/s3drive-create-{linux,windows,book}-ci-initial.log`.
-Require terminal exact-tip final CI before publication. Three native cases cover
-read-only/cache/session regression, existing editing and guarded creation.
+The direct-directory experiment is archived on `codex/persistent-directories`
+at `281bfd1` and is NOT merged. Its initial run 38995625850 failed both native
+jobs. A double-slash test helper was fixed, without rerunning or claiming native
+acceptance. It is superseded by the user's accepted managed-layout decision.
+Do not resume/publish it as the target writable architecture.
 
-Final refinement: use a one-byte policy permission probe so valid deep source
-keys near the 1,024-byte limit are not denied. The SDK child test accepts exactly
-1,024 full key bytes, rejects 1,025, and bounds the callback future below 16 KiB.
-The final full local gate passed: `/tmp/s3drive-create-gate-final.log`.
-The creation PNG was generated and visually inspected. No new live requests.
-
-Current executor still has NoNewPrivs=1, preventing setuid fusermount3. Previous
-namespace attempts were refused by the unchanged private-state ownership
-checks. Do not clear NoNewPrivs, weaken ownership or use a privileged launcher.
-Native Linux CI and the remote Windows VM are required for this phase.
-
-Remaining: exact-tip final CI/publication, then persistent
-directories, separate rename/delete protocols, reference/pin-aware reclamation,
-explicit conflict recovery and multipart. Default local retention remains
-1 GiB / 4,096 generations and single-PUT writes are limited to 8 MiB. These are
-prototype limits; the broader editable-drive goal remains unfinished.
+Current executor has NoNewPrivs=1. Do not clear it, weaken ownership checks or
+launch a helper outside that constraint. Native Linux evidence comes from CI;
+Windows uses the remote GitHub Server 2025 VM. No startup registration installed.
 
 ## Publication protocol
 
@@ -171,9 +165,12 @@ were already removed. Do not infer remaining cleanup from old plans/logs.
 
 ## Next implementation and durable decisions
 
-After P5c1b publication, implement persistent directories and namespace
-workflows (P5c1c), reference/pin-aware
-staging reclamation and explicit conflict recovery. Do not expose delete/rename
+After P6m1 acceptance/publication, implement P6m2 immutable payload publication
+and P6m3 shared-engine/native integration. Stable storage/file identities,
+create-only unique blob keys and metadata CAS must be separate from the direct
+writer's mutable-key ETag lineage. Keep uncertain bytes and new physical blob
+references distinct; an S3 upload alone does not acknowledge filesystem flush.
+Reference/pin-aware reclamation and explicit conflict recovery remain necessary. Do not expose delete/rename
 based on fixture cleanup: that is not provider-verified application deletion. Preserve explicit conflict/uncertain states and metadata limits.
 Do not keep adding isolated wrappers while deferring integration indefinitely.
 Multipart, explicit uncertain-intent recovery/forking and credential rebinding
@@ -188,8 +185,10 @@ and observe uncertainty; never automatically rebase/replay after conflict.
 `docs/src/turso-coordination.md`: optional Turso Cloud behind an authoritative
 coordination API, local SQLite retained. Do not use last-push-wins offline sync
 for ownership; S3 overwrites don't consult a SQL lease. No Turso dependency,
-account, token or service has been created. Direct objects and managed immutable
-generations have different compatibility tradeoffs; D018 remains proposed.
+account, token or service has been created. Managed layout is user-selected
+(D031); the Turso backend itself remains proposed (D018). Refreshed official
+SQL-over-HTTP docs describe interactive batons and short transaction expiry;
+never span an upload with a SQL transaction or assume HTTP 200 proves commit.
 
 The book's `decisions.md` holds durable decisions including WinFsp GPL-3.0
 prototype/distribution deferral, exact-name collision failures and ETags as

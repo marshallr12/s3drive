@@ -3,6 +3,11 @@
 Research and Rust workspace for making one or more S3-compatible buckets appear
 as a local filesystem on Linux and Windows.
 
+**Target selected: [managed layout with stronger coordination](docs/src/managed-layout.md).**
+The new SQLite namespace authority prototype supports atomic metadata operations
+and durable operation recovery; managed S3 publication/native integration is pending.
+Existing direct mounts are retained without automatic migration.
+
 **Status: native read-only drives work on Linux and Windows.** Optional
 [mounted caching](docs/src/storage-and-recovery.md) uses bounded SQLite snapshots;
 new opens still authorize online. A separate version-2 configuration now connects

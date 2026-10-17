@@ -195,6 +195,7 @@ impl<'a> Journal<'a> {
         })
     }
     pub fn new(state: &'a mut State, options: Options) -> Result<Self> {
+        state.verify_client_state()?;
         Ok(Self {
             state,
             options: options.validate()?,

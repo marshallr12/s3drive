@@ -225,3 +225,19 @@ the same receipt. Snapshot bytes remain readable. Corrupted/missing/unrelated
 markers cannot suppress pending work or grant a send claim. SDK/TCP fixtures
 flush binary, empty and Unicode bodies, retain uncertain/rejected bytes and
 recover a killed uploader without another PUT. No live Wasabi mutation occurs.
+
+
+## Managed namespace authority prototype
+
+P6m1 adds `s3drive-authority` (axum loopback service, dedicated SQLite owner) and
+`s3drive-state::namespace` (schema 8 transactions). Run
+`cargo test -p s3drive-authority --locked` for independent real-TCP clients and
+`cargo test -p s3drive-state namespace --locked` for migration, failure/recovery
+and retained bounds. They are part of the normal workspace gate on both OSes.
+See [managed layout](managed-layout.md) for the exact protocol and boundaries.
+
+These tests create private temporary authority directories and dummy tokens;
+they do not read Wasabi credentials, mutate buckets or install a service. The
+existing native suites remain necessary to detect regressions from the schema
+change, but they exercise **direct** mounts. They cannot certify managed mounts
+or a Turso backend, neither of which is integrated yet.

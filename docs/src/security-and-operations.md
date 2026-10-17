@@ -30,6 +30,17 @@ object keys and profile names can be sensitive even when they are not passwords.
 Redact authorization headers, session tokens, signed URLs and request bodies.
 An SDK debug dump is not a suitable production log record.
 
+## Managed authority boundary
+
+The [namespace prototype](managed-layout.md) is loopback-only and accepts an
+explicit high-entropy bearer token. It has no default credential or remote
+service deployment. Do not send S3 credentials to the metadata service. The
+future remote authority must authenticate devices and enforce volume access
+on every operation, use TLS and durable backups, and protect failover against
+two active authorities. A Turso database token belongs to that service, not to
+ordinary drive applications. Offline replicas must not authorize publication.
+This is a planned deployment boundary, not an installed service.
+
 ## Access boundaries
 
 Start read-only credentials with listing limited to the configured prefix and

@@ -6,8 +6,10 @@ working release should expose a conservative read-only filesystem. Writable
 operation support must be advertised individually, with unsupported operations
 returning the appropriate OS error rather than succeeding silently. The narrower
 [version-2 existing-file write contract](native-writes.md) records the current
-integration and remaining native acceptance. Creation and rename/delete remain
-unsupported.
+integration. [Regular-file creation](native-creation.md) also passed native
+acceptance. Mounted directory creation and rename/delete remain unsupported.
+The user selected [managed layout](managed-layout.md); its namespace prototype
+is implemented separately and not yet connected to native callbacks.
 
 ## What S3 guarantees, and what it does not
 
@@ -28,28 +30,34 @@ S3-compatible primitive.
 
 ## Operation matrix
 
-| Operation | Read-only milestone | Later direct writable mode |
+| Operation | Existing direct implementation | Selected managed target |
 | --- | --- | --- |
-| Lookup, stat, directory listing | Synthetic directories; bounded cache TTL and paginated listing | Same, with local pending changes merged consistently |
-| Open/read/seek | Range GETs pinned to an object revision | Read own staged changes; never mix remote revisions |
-| Create/write/truncate | Read-only error | Local staging plus conditional full-object publication |
-| `fsync` / `FlushFileBuffers` | No dirty writes to commit | Default proposal waits for remote commit; failures are returned |
-| Close/release | Release handle/cache references | Queue work as needed; close alone is not the remote durability promise |
-| Unlink | Read-only error | Capability-gated conflict-safe deletion; retain open-handle bytes |
-| File rename | Read-only error | Unsupported initially; later opt-in copy/delete or native verified capability |
-| Directory rename | Read-only error | Unsupported until an explicit non-atomic recursive policy or managed mode |
-| Cross-source rename | Cross-device error | Cross-device error; explicit copy is a different operation |
-| Empty directories | Existing folder markers interpreted by policy | Marker convention requires its own interoperability tests |
-| chmod/chown, ACLs, xattrs, links, streams | Synthetic access policy; mutation unsupported | Explicitly specified subset only |
-| Byte-range locks and shared writers | Local handle bookkeeping only | No distributed locking promise |
-| mmap, executable files, databases | Not an initial compatibility claim | Separate workload tests; never advertise general POSIX/NTFS equivalence |
+| Lookup/stat/list | Synthetic S3-key hierarchy; online checks and bounded listing | Authority namespace, stable volume/node IDs and revision-aware listing |
+| Read/seek | Revision-pinned GET or authorized cached snapshot | Immutable published payload reference; pinned readers |
+| File create/write/truncate | Opt-in guarded file creation and conditional full-object writes | Stage/upload/verify a new immutable blob, then metadata CAS; publication pending |
+| Remote flush | Verified S3 operation plus local acknowledgment | Verified blob plus committed reference and local acknowledgment; pending |
+| Directory create | Unsupported on main; marker spike archived | One metadata transaction; prototype implemented, native integration pending |
+| File/subtree rename | Unsupported | Atomic namespace move; prototype supports no replacement; desktop replace-save pending |
+| Unlink | Unsupported | Atomic metadata tombstone; prototype empty removal only, open-reader retention pending |
+| Cross-volume rename | Cross-device error | Cross-device error; separate copy operation |
+| Close/release | Release handle/cache references; not a remote durability promise | Same; preserve outstanding staged work |
+| chmod/chown, ACLs, xattrs, links, streams | Fixed owner policy; mutation unsupported | Explicit subset needs specification/acceptance |
+| Distributed byte-range locks / writable databases | Unsupported | Deferred; atomic namespace does not establish these semantics |
+| mmap/executables/general POSIX/NTFS equivalence | Not advertised | Separate workload/platform acceptance required |
 
 Office-style applications often save a temporary file and rename it over the
 original. Consequently, writable bytes alone are insufficient for a general
-desktop-drive claim. Test real save/replace workflows during P5; document
+desktop-drive claim. Test real save/replace workflows during managed native acceptance; document
 unsupported applications until their required semantics exist.
 
 ## Names and directories
+
+The managed prototype stores byte-exact Unicode names and rejects structural
+path traversal, without deriving physical S3 keys from them. Before managed
+native mounts, freeze a portable comparison policy and verify Windows collisions.
+Directory nodes are real authority records; no S3 folder marker is needed.
+The following key-projection rules describe the existing **direct** mode.
+
 
 S3 object keys are case-sensitive UTF-8 strings, limited by AWS to 1,024 bytes,
 and prefixes only suggest a directory hierarchy. Both `a` and `a/b` can exist
@@ -78,6 +86,14 @@ P0 only validates portable ASCII aliases and conservative configured prefixes;
 the `resolve` command is not the final cross-platform name projection. The current adapters reject ambiguous remote listing projections.
 
 ## Coherence, conflicts and errors
+
+Managed publication needs two independent durable outcomes: immutable object
+verification and a committed metadata-reference CAS. SQL and S3 do not form one
+transaction. A stale metadata writer cannot overwrite the published reference;
+its uploaded blob and local edit stay recoverable. Namespace operation IDs
+resolve unknown commits. Leases alone never authorize replay or overwrite.
+The next paragraphs describe existing direct-object reads and writes.
+
 
 For an open reader, prefer version-ID GETs when available. Otherwise send a
 revision precondition on each range request. If the object changes or a pinned

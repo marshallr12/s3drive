@@ -9,7 +9,7 @@ to the user.
 | D001 | Adopted for scaffold | Rust Cargo workspace with shared core and separate OS adapters; mdBook holds research and plans |
 | D002 | Adopted for scaffold | Local SQLite via rusqlite; bundled SQLite avoids relying on a host-installed library |
 | D003 | Implemented; native acceptance recorded separately | FUSE/fuser on Linux and WinFsp on Windows for genuine filesystem mounts and drive letters |
-| D004 | Adopted for reads | Direct object layout first, preserving existing S3 interoperability |
+| D004 | Historical read/compatibility prototype; target superseded by D031 | Direct objects preserved existing S3 interoperability; retain existing configurations without implicit migration |
 | D005 | Adopted for scaffold/first milestone | Read-only mode; no implicit write or deletion support |
 | D006 | Adopted for P2 | One alias per bucket/prefix under a virtual root; no union, sharding or replication |
 | D007 | Adopted for P1 reads | AWS SDK implements list/head/range reads; mutation/recovery requirements still need evaluation |
@@ -36,6 +36,8 @@ to the user.
 | D028 | Proposed multipart extension | Use provider-specific limits and immutable part plans; journal upload-ID and completion uncertainty separately. Guard completion once and reconcile the operation before any new publication. Unknown or expired upload IDs cannot prove publication did not occur; multipart needs separate live acceptance and authorization |
 | D029 | Implemented P5b2c library opt-in | Construct the executor only from separate explicit source/prefix/byte/operation/metadata policy and complete plan-bound local evidence. Pin matching credentials; bound new claims by evidence age. Expired/narrowed policy still permits observation-only recovery. Local files are trusted owner input, not signed authorization; existing mount configuration remains read-only |
 | D030 | Implemented P5b2d generation-specific flush | Require exact remote verification and atomic local receipt/ancestor settlement before flush succeeds. Keep retained sealed-intent rows, payloads, immutable manifests and remote identities. Never clear a newer head or acknowledge an unresolved result. Pending enumeration validates settlement coverage before suppressing work; payload reclamation and writable callbacks remain separate acceptance phases |
+| D031 | User selected, 2026-10-16 | Managed layout with stronger cross-machine coordination: authoritative namespace and immutable S3 generations. Ordinary S3 tools see internal keys; no implicit migration. Turso remains an optional backend subject to acceptance |
+| D032 | Implemented P6m1 prototype | Persistent SQLite namespace authority with stable IDs, global sequence CAS and transactional operation/request/result deduplication. Loopback service and exact-byte Unicode policy are development boundaries; managed payloads and native mounts remain disabled |
 
 ## Questions to resolve at the relevant phase
 
@@ -45,9 +47,9 @@ to the user.
 - **Before Windows packaging:** Is a drive letter essential, or is an Explorer
   sync folder sufficient? Is the eventual app private/personal, open source,
   internally distributed, or commercially distributed?
-- **Before writes:** Must objects remain directly usable by other S3 tools?
-  Can other computers or tools modify the same objects concurrently? Which
-  desktop applications and rename behavior must be supported?
+- **Before managed native acceptance:** Which desktop applications and save/replace
+  workflows must be supported? Managed storage is selected; independent S3 edits
+  to internal generation objects are outside its coordination protocol.
 - **Before offline write-back:** Is local-only durability acceptable while
   disconnected? How should conflicts be named/presented and manually resolved?
 

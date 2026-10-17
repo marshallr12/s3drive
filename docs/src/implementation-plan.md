@@ -12,7 +12,8 @@ P4a now adds credential-bound read handles and a SQLite binding registry with
 migration. Optional mounted clean caching is implemented and natively tested.
 P5a1 adds local staged-generation storage, and P5a2a shares the async cache/journal
 owner. P5a2b implements local file-edit plans and pinned-base hydration; remote commit
-and writable OS callbacks remain subsequent phases.
+and opt-in writable OS callbacks have subsequently passed native acceptance.
+The user selected managed layout on 2026-10-16; P6m phases now define the target.
 
 | Phase | Deliverable | Completion evidence |
 | --- | --- | --- |
@@ -36,7 +37,11 @@ and writable OS callbacks remain subsequent phases.
 | P5b2d — generation-specific remote flush | Verified remote receipt plus atomic local acknowledgment/supersession records; retain immutable snapshots and newer pending heads | Lost local replies, restart/process-kill and disk-full rollback, corruption/migration refusal, exact ancestor coverage and SDK/TCP flush without replay; no payload reclamation or writable callbacks |
 | P5c1a — native existing-file writes | Explicit version-2 policy-bound mounts, shared SQLite/edit/upload owner, truncate/append/read-your-writes and remote flush for existing files | Real FUSE and WinFsp SDK/TCP workflows, restart recovery, conflicts/uncertainty, exact Unicode bytes and read-only regression gates; no real bucket policy is installed implicitly |
 | P5c1b — native file creation | Guarded empty-file creation in existing directories, writable-parent projection and durable namespace merge | FUSE/WinFsp create/exclusive/reopen/restart and competing-create tests; no overwrite fallback |
-| P5c1c — directories and namespace mutations | Persistent empty directories, followed by separately specified rename/delete and safe conflict resolution | Native directory workflows and desktop temporary-file saves; provider mutation acceptance and journal recovery for each new operation |
+| P5c1c — direct directories | Archived experiment on `codex/persistent-directories`; superseded by managed choice | Local engine passed; native run 38995625850 failed, helper corrected without claiming acceptance; not merged |
+| P6m1 — managed namespace authority | Private SQLite authority, stable IDs, sequence CAS, atomic create/move/remove, operation-result recovery and loopback HTTP | Independent TCP clients, concurrent cycles/creates, lost reply/restart, process death, full disk, migration and limits |
+| P6m2 — immutable payload publication | Stable storage IDs, upload reservations, create-only verified blobs and metadata-reference CAS | Two-writer SDK/authority races, unknown upload/commit outcomes, retained conflicts; separate approved provider acceptance |
+| P6m3 — managed native drives | Shared engine and FUSE/WinFsp use authoritative namespace and pinned blobs; portable names, save/replace, open-unlinked handles | Both real native suites plus cross-machine invalidation, failure/recovery and approved provider checks |
+| P6m4 — authority deployment/Turso | Authenticated TLS service, migrations, backup/failover; optional pinned Turso backend | Real multi-host/partition/commit-uncertainty/authorization tests; no offline replica ownership decisions |
 | P5a — staged writes | In-memory storage test double plus immutable local generations and durable journal | Fault injection at every local boundary; acknowledged local state survives restart; network mutation remains disabled |
 | P5b — conditional remote commits | Create/replace and multipart recovery; explicit flush contract | Provider preconditions verified; two-writer conflict tests; crash/timeout replay never overwrites unseen edits |
 | P5c — desktop mutations | Safe delete, documented rename behavior, open-handle semantics, real application workflows | Delete races, save/replace, concurrent open, unmount failures and data-loss tests on both OSes |
@@ -166,9 +171,9 @@ The explicit P5b1 provider probe is a separate disposable-key tool.
 
 [Turso research](turso-coordination.md) evaluates currently documented remote
 transactions, concurrent writes, embedded replicas and newer Sync separately.
-Before P5b, decide whether to evaluate a managed object layout with a shared
-metadata authority. Keep SQLite local and direct object mode unchanged while
-that decision is open. Offline last-push-wins sync cannot decide exclusive
+The user selected managed layout with a shared
+metadata authority on 2026-10-16. Keep local SQLite and existing direct
+configurations; implement P6m without implicit conversion. Offline last-push-wins sync cannot decide exclusive
 ownership; SQL metadata and S3 uploads need explicit reconciliation.
 
 ## Test matrix
@@ -244,3 +249,13 @@ policy-writable directories. Local SDK/SQLite integration, the bound head
 catalog test and actual FUSE/WinFsp workflows pass. Exact-tip CI is required
 for final publication. No
 real Wasabi write configuration or new cloud probe is installed or executed.
+
+
+## Managed target after the layout decision
+
+[Managed layout](managed-layout.md) is the accepted target. P6m1 implements the
+first persistent authority protocol, with local/TCP acceptance recorded in the
+handoff. This does not enable managed native mounts, immutable S3 publication
+or a Turso backend. P6m2 must separate logical file IDs from physical S3 keys
+rather than reusing the direct writer's mutable-key lineage. No new cloud
+mutation is authorized by the layout selection.

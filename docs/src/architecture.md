@@ -1,26 +1,31 @@
-# Proposed architecture
+# Architecture and selected managed target
 
-The diagram describes the target system. P0 added configuration, evidence
-types, SQLite initialization and explicit adapter stubs. P1 adds the read-only
-S3 transport. P2 adds the shared read-only namespace/handle engine and Linux
-adapter; P3 adds Windows WinFsp. Optional clean caching and the local staging
-library, local file-edit plans, guarded remote commit and flush receipts are
-implemented. P5c1a connects opt-in existing-file edits to both native adapters,
-with native acceptance on both OSes. P5c1b adds [guarded regular-file creation](native-creation.md).
-See [the detailed write path](native-writes.md).
+The user selected managed layout with stronger cross-machine coordination on
+2026-10-16. The target separates authoritative namespace metadata, immutable S3
+payloads and each machine's private SQLite cache/journal. See the executable
+[managed authority contract](managed-layout.md) and [Turso research](turso-coordination.md).
 
-![Local applications reach the Rust filesystem engine through FUSE or WinFsp; its S3 client reads remote bucket data. Local SQLite and cache have separate roles.](images/architecture.png)
+![The target has local Rust drives and SQLite on two computers, a shared metadata authority, and immutable payloads in S3.](images/managed-architecture.png)
 
-The blue read/cache path is implemented. New opens authorize with S3 before
-SQLite cache access; a hit avoids the data GET. Amber external bulk files and coordination components remain planned. Existing
-configurations stay read-only; explicit version-2 editing requires separate
-source-bound policies and evidence.
-[Startup and remote sessions](startup-and-sessions.md)
-include MX Linux without systemd. [Turso coordination](turso-coordination.md)
-evaluates an optional shared metadata authority, separate from each host's local database.
+The namespace authority is implemented as a SQLite/loopback prototype. Managed
+payload publication, remote deployment and native adapter integration are still
+planned. No bucket migration or Turso service is enabled.
 
+The existing direct-layout implementation below has native read/cache, explicit
+existing-file writes and [guarded file creation](native-creation.md). It remains
+available for existing configurations; its physical keys are not the target
+managed namespace. [Startup and sessions](startup-and-sessions.md) support MX
+Linux without systemd and account-owned Windows mounts.
+
+![Existing direct-layout components: Rust adapters, S3 client, local SQLite and startup supervisors.](images/architecture.png)
 
 ## Crate ownership and process model
+
+`s3drive-authority` owns the bounded development HTTP/worker service and calls
+`s3drive-state::namespace` for persistent metadata transactions. It is separate
+from local client state and not yet called by mounted adapters. Its loopback
+protocol is the first contract for an optional remote/Turso implementation.
+
 
 `s3drive-core` owns configuration validation and path resolution.
 `s3drive-fs` owns the shared namespace, inode identities and open
@@ -57,7 +62,7 @@ Both launchers provide start/status/stop/remove. A future local control endpoint
 can carry status, unmount, pin, retry and conflict actions.
 A tray UI should consume that same API rather than implementing storage logic.
 
-## Multiple buckets
+## Multiple buckets in the existing direct implementation
 
 Each source has a stable alias, endpoint, bucket, region and optional prefix.
 The initial root is a virtual directory of aliases. Resolving
@@ -77,7 +82,7 @@ resolve credentials again. Version 2 pins the policy-matching credential
 generation at mount startup. It does not implicitly rebind pending writes when
 a profile changes. Both modes require online authorization for every new open.
 Changed configuration or credentials select a different binding namespace. SQLite
-schema 7 retains the binding registry, unbound legacy rows, clean snapshots,
+schema 8 retains the binding registry, unbound legacy rows, clean snapshots,
 staged generations/local intent and edit operation keys. It adds the
 [remote-attempt journal](remote-journal.md) with single-use send claims and
 uncertain-result recovery, plus generation-specific flush acknowledgment. The [SDK executor](upload-executor.md) is tested with
@@ -86,18 +91,17 @@ The engine enforces online authorization before cache lookup.
 This is not a provider-global account identifier. See the implemented
 [provider contract](provider-contract.md) and [migration](storage-and-recovery.md).
 
-## Direct objects versus managed filesystem layout
+## Layout decision
 
 | Model | Benefit | Cost |
 | --- | --- | --- |
-| Direct objects, selected initially | Existing keys remain readable by independent S3 tools | Rename, file metadata and multi-client behavior are constrained |
-| Managed layout with immutable file/chunk IDs and manifests | Namespace edits can be separated from data movement | Requires a durable metadata protocol, garbage collection, recovery and interoperability tooling |
+| Direct objects, existing compatibility prototype | Existing keys remain readable by independent S3 tools | Rename, file metadata and multi-client behavior are constrained |
+| Managed layout, selected target | Namespace edits can be separated from data movement | Requires a durable metadata protocol, garbage collection, recovery and interoperability tooling |
 | Gateway with authoritative shared metadata | Can serialize namespace operations across clients | Adds an always-available service and deployment responsibility |
 
-A local SQLite file is not a cross-machine coordinator. A hosted transactional
-service such as Turso could supply shared authority; see the separate
-[Turso evaluation](turso-coordination.md) for the proposed protocol and evidence limits. Uploading that file to
-S3 after each change does not produce a safe distributed database. If managed
-mode is chosen, design either a single-writer service with explicit failover or
-a thoroughly specified conditional-manifest protocol. Do not introduce either
-as an incidental optimization to direct mode.
+A SQLite database on one authority service host can coordinate remote clients
+through that service; independent per-machine SQLite files cannot. Turso is an
+optional hosted authority backend, subject to the [separate evaluation](turso-coordination.md).
+Uploading a SQLite file to S3 does not coordinate clients. The accepted managed
+layout uses immutable blobs plus transactional namespace references, not S3
+copy/delete rename. Existing direct mounts are not converted implicitly.
