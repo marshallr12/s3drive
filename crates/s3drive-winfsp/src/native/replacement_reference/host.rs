@@ -236,7 +236,7 @@ impl Mounted {
             .file_info_timeout(0)
             .dir_info_timeout(0)
             .flush_and_purge_on_cleanup(true);
-        let mut host = FileSystemHost::new(
+        let mut host: FileSystemHost<Host> = FileSystemHost::new(
             p,
             Host {
                 state: state.clone(),
