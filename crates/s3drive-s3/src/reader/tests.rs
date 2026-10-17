@@ -723,3 +723,48 @@ async fn explicit_form_listing_dialect_preserves_spaces_pluses_and_percent_seque
         server.finish().await;
     }
 }
+
+#[test]
+fn shared_storage_routes_exclude_machine_local_names_and_include_physical_scope() {
+    let original = source("http://127.0.0.1:9000");
+    let make = |s: Source| {
+        S3Reader::with_credentials(
+            s,
+            SharedCredentialsProvider::new(Credentials::new(
+                "test",
+                "secret",
+                None,
+                None,
+                "route-only",
+            )),
+            Duration::from_secs(1),
+            1,
+        )
+        .unwrap()
+    };
+    let a = make(original.clone());
+    let mut other = original.clone();
+    other.alias = "different".into();
+    other.profile = Some("other-local-profile".into());
+    other.path_style = false;
+    other.allow_http_loopback = false;
+    other.endpoint = Some("https://example.com".into());
+    // HTTP test endpoints require path-style; use an HTTPS scope for this pure
+    // configuration check. No credential resolution or network is involved.
+    let mut original = original;
+    original.endpoint = Some("https://example.com/".into());
+    original.allow_http_loopback = false;
+    let x = make(original.clone());
+    let b = make(other.clone());
+    assert_eq!(x.storage_fingerprint(), b.storage_fingerprint());
+    assert_ne!(x.configuration_fingerprint(), b.configuration_fingerprint());
+    other.bucket = "different-bucket".into();
+    assert_ne!(
+        x.storage_fingerprint(),
+        make(other.clone()).storage_fingerprint()
+    );
+    other = original;
+    other.prefix = "other/".into();
+    assert_ne!(x.storage_fingerprint(), make(other).storage_fingerprint());
+    assert_ne!(a.storage_fingerprint(), x.storage_fingerprint());
+}

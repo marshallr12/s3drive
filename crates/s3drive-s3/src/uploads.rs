@@ -99,6 +99,11 @@ pub struct Executor(Arc<Shared>);
 impl Executor {
     /// Reader with this executor's frozen credentials; new opens still perform
     /// online authorization. Does not expose credential material.
+    /// Reuse the exact owner associated with this executor; never pair its
+    /// generation IDs with another SQLite database.
+    pub fn storage(&self) -> Storage {
+        self.0.storage.clone()
+    }
     pub fn reader(&self) -> crate::S3Reader {
         self.0.session.reader.clone()
     }
@@ -182,6 +187,16 @@ impl Executor {
         if !self.0.policy.permits_key(&self.0.session.reader, key) {
             return Err(SetupError::Target);
         }
+        self.recovery_target(key)
+    }
+    /// Validate a frozen runtime binding without granting new write authority.
+    /// Enables observation of claimed attempts after policy scope is narrowed.
+    pub fn recovery_target(&self, key: &str) -> std::result::Result<Target, SetupError> {
+        self.0
+            .session
+            .reader
+            .full_key(key)
+            .map_err(|_| SetupError::Target)?;
         Target::new(
             self.0.session.binding_id,
             self.0.session.reader.configuration_fingerprint(),

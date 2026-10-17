@@ -22,10 +22,10 @@ fn migration_preserves_local_rows_and_refuses_role_mixing() {
     let path = dir.path().join("state");
     let mut s = State::open_managed(&path).unwrap();
     s.register_source(&[1; 32], &"a".repeat(64)).unwrap();
-    s.connection.execute_batch("DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; PRAGMA user_version=7;").unwrap();
+    s.connection.execute_batch("DROP TABLE managed_publications; DROP TABLE namespace_uploads; DROP TABLE namespace_stores; DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; PRAGMA user_version=7;").unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
-    assert_eq!(s.info().unwrap().schema_version, 8);
+    assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
     assert_eq!(s.namespace_initialize(), Err(Error::Invalid));
     let count: i64 = s
         .connection
@@ -45,7 +45,7 @@ fn migration_failure_keeps_schema_seven_and_original_data() {
     let path = dir.path().join("state");
     let mut s = State::open_managed(&path).unwrap();
     s.register_source(&[1; 32], &"a".repeat(64)).unwrap();
-    s.connection.execute_batch("DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; CREATE TABLE namespace_nodes(keep TEXT); INSERT INTO namespace_nodes VALUES('untouched'); PRAGMA user_version=7;").unwrap();
+    s.connection.execute_batch("DROP TABLE managed_publications; DROP TABLE namespace_uploads; DROP TABLE namespace_stores; DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; CREATE TABLE namespace_nodes(keep TEXT); INSERT INTO namespace_nodes(keep) VALUES('untouched'); PRAGMA user_version=7;").unwrap();
     drop(s);
     assert!(State::open_managed(&path).is_err());
     let db = Connection::open(path.join("metadata.sqlite3")).unwrap();
@@ -158,7 +158,7 @@ fn retained_limits_and_listing_are_explicit() {
         let tx = s.connection.transaction().unwrap();
         for id in 1..MAX_NODES {
             tx.execute(
-                "INSERT INTO namespace_nodes VALUES(?1,?2,?3,'empty-file',0,0)",
+                "INSERT INTO namespace_nodes(node_id,parent_id,name,kind,revision,deleted) VALUES(?1,?2,?3,'empty-file',0,0)",
                 params![format!("{id:032x}"), ROOT, format!("name{id}")],
             )
             .unwrap();

@@ -14,8 +14,8 @@ The target design separates three kinds of state:
 | State | Owner and purpose | Current implementation |
 | --- | --- | --- |
 | Local SQLite on each computer | Cache, staged bytes, unknown attempts, recovery; outside the mounted tree | Existing implementation; managed logical-file binding still needs integration |
-| One authoritative metadata database | Volume/node identities, directory entries, revisions, operation outcomes, immutable payload references | SQLite namespace prototype below; payload references and Turso backend pending |
-| One or more S3-compatible buckets | Immutable file-generation bytes; never derive these keys from directory names | Existing S3 transport reusable; managed publisher pending |
+| One authoritative metadata database | Volume/node identities, directory entries, revisions, operation outcomes, immutable payload references | SQLite namespace and payload references implemented; Turso backend pending |
+| One or more S3-compatible buckets | Immutable file-generation bytes; never derive these keys from directory names | [Managed publisher library](managed-publication.md) joins SDK and metadata; native integration pending |
 
 The namespace is authoritative at the service, rather than assembled from S3
 LIST results. A directory move changes its parent/name in one metadata
@@ -41,8 +41,8 @@ Once initialized, client source registration and staging refuse that database.
 The existing private-directory ownership and exclusive process lock apply.
 
 Implemented operations are create-directory, create-**empty-file metadata**,
-move without replacement, remove-file and remove-empty-directory. There is no
-file payload API yet. Removal retains a tombstone; nothing in S3 is deleted.
+move without replacement, remove-file and remove-empty-directory. The [managed publisher](managed-publication.md) now adds reservations and
+immutable payload-reference publication. Removal retains a tombstone; nothing in S3 is deleted.
 Root mutation, cycles, missing/non-directory parents, existing destination
 names and nonempty removal fail explicitly. Moving a subtree changes one node.
 
@@ -108,7 +108,12 @@ failure after namespace effects/before result persistence, schema-7 migration
 and rollback, role separation and retained limits. These are separate from
 native OS mounts and live provider acceptance.
 
-## Next: publish immutable payloads, then mount
+## P6m2 publication library and next native integration
+
+[Managed immutable-file publication](managed-publication.md) implements steps
+1–5 below with real SDK/HTTP tests and a separate local logical receipt. Native
+integration, deployment and reclamation remain planned.
+
 
 1. Register stable storage identities and reserve an upload operation/new object
    key for a logical file ID and expected file revision. Credentials stay local.

@@ -241,3 +241,13 @@ they do not read Wasabi credentials, mutate buckets or install a service. The
 existing native suites remain necessary to detect regressions from the schema
 change, but they exercise **direct** mounts. They cannot certify managed mounts
 or a Turso backend, neither of which is integrated yet.
+
+
+## Managed publication integration
+
+`cargo test -p s3drive-cli --test managed_publication --locked` runs real SDK and
+authority HTTP traffic against an owned fixture, then kills/restarts clients at
+unknown upload and metadata-publication boundaries. It requires no mount privilege
+or live credentials and is part of Linux/Windows workspace CI. Schema 9 also adds
+five local managed-journal recovery/migration/acknowledgment tests. These do not
+replace managed native or live provider acceptance; see [the contract](managed-publication.md).

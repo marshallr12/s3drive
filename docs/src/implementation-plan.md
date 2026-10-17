@@ -39,7 +39,7 @@ The user selected managed layout on 2026-10-16; P6m phases now define the target
 | P5c1b — native file creation | Guarded empty-file creation in existing directories, writable-parent projection and durable namespace merge | FUSE/WinFsp create/exclusive/reopen/restart and competing-create tests; no overwrite fallback |
 | P5c1c — direct directories | Archived experiment on `codex/persistent-directories`; superseded by managed choice | Local engine passed; native run 38995625850 failed, helper corrected without claiming acceptance; not merged |
 | P6m1 — managed namespace authority | Private SQLite authority, stable IDs, sequence CAS, atomic create/move/remove, operation-result recovery and loopback HTTP | Independent TCP clients, concurrent cycles/creates, lost reply/restart, process death, full disk, migration and limits |
-| P6m2 — immutable payload publication | Stable storage IDs, upload reservations, create-only verified blobs and metadata-reference CAS | Two-writer SDK/authority races, unknown upload/commit outcomes, retained conflicts; separate approved provider acceptance |
+| P6m2 — immutable payload publication | Implemented library: store IDs, reservations, create-only verified blobs, metadata CAS and separate logical acknowledgment | Two-writer SDK/authority races, unknown upload/commit outcomes, retained conflicts; separate approved provider acceptance |
 | P6m3 — managed native drives | Shared engine and FUSE/WinFsp use authoritative namespace and pinned blobs; portable names, save/replace, open-unlinked handles | Both real native suites plus cross-machine invalidation, failure/recovery and approved provider checks |
 | P6m4 — authority deployment/Turso | Authenticated TLS service, migrations, backup/failover; optional pinned Turso backend | Real multi-host/partition/commit-uncertainty/authorization tests; no offline replica ownership decisions |
 | P5a — staged writes | In-memory storage test double plus immutable local generations and durable journal | Fault injection at every local boundary; acknowledged local state survives restart; network mutation remains disabled |
@@ -255,7 +255,9 @@ real Wasabi write configuration or new cloud probe is installed or executed.
 
 [Managed layout](managed-layout.md) is the accepted target. P6m1 implements the
 first persistent authority protocol, with local/TCP acceptance recorded in the
-handoff. This does not enable managed native mounts, immutable S3 publication
-or a Turso backend. P6m2 must separate logical file IDs from physical S3 keys
-rather than reusing the direct writer's mutable-key lineage. No new cloud
+handoff. The [P6m2 publisher library](managed-publication.md) now separates logical IDs
+from physical create-only keys and joins SDK verification, metadata CAS and
+local logical acknowledgment. It does not enable native managed mounts or a
+Turso backend. P6m3 must integrate logical heads/edit plans and portable names
+rather than reusing direct-key namespace logic. No new cloud
 mutation is authorized by the layout selection.

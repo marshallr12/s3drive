@@ -105,6 +105,12 @@ impl Storage {
             options: self.cache_options,
         }
     }
+    pub fn managed(&self) -> Managed {
+        Managed {
+            owner: self.owner.clone(),
+            options: self.staging_options,
+        }
+    }
     pub fn staging(&self) -> Staging {
         Staging {
             owner: self.owner.clone(),
@@ -466,3 +472,65 @@ impl Snapshot {
 
 #[cfg(test)]
 mod tests;
+
+#[derive(Clone)]
+pub struct Managed {
+    owner: Owner,
+    options: journal::Options,
+}
+impl Managed {
+    async fn call<T: Send + 'static>(
+        &self,
+        work: impl FnOnce(&mut crate::managed::Journal<'_>) -> Result<T> + Send + 'static,
+    ) -> Result<T> {
+        let options = self.options;
+        self.owner
+            .call(move |store| {
+                work(&mut crate::managed::Journal::new(
+                    &mut store.state,
+                    options,
+                )?)
+            })
+            .await
+    }
+    pub async fn begin(&self, input: crate::managed::Input) -> Result<crate::managed::Record> {
+        self.call(move |j| j.begin(input)).await
+    }
+    pub async fn get(&self, id: String) -> Result<crate::managed::Record> {
+        self.call(move |j| j.get(&id)).await
+    }
+    pub async fn link(
+        &self,
+        id: String,
+        generation: GenerationId,
+    ) -> Result<crate::managed::Record> {
+        self.call(move |j| j.link(&id, generation)).await
+    }
+    pub async fn recover_stage(&self, id: String) -> Result<crate::managed::Record> {
+        self.call(move |j| j.recover_stage(&id)).await
+    }
+    pub async fn reserved(
+        &self,
+        id: String,
+        r: crate::namespace::Reservation,
+    ) -> Result<crate::managed::Record> {
+        self.call(move |j| j.reserved(&id, r)).await
+    }
+    pub async fn prepare(&self, id: String, sequence: u64) -> Result<crate::managed::Record> {
+        self.call(move |j| j.prepare(&id, sequence)).await
+    }
+    pub async fn acknowledge(
+        &self,
+        id: String,
+        r: crate::namespace::Receipt,
+    ) -> Result<crate::managed::Record> {
+        self.call(move |j| j.acknowledge(&id, r)).await
+    }
+    pub async fn pending(
+        &self,
+        after: Option<String>,
+        limit: u16,
+    ) -> Result<Vec<crate::managed::Record>> {
+        self.call(move |j| j.pending(after.as_deref(), limit)).await
+    }
+}

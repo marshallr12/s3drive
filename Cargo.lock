@@ -2076,18 +2076,22 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
+ "url",
 ]
 
 [[package]]
 name = "s3drive-cli"
 version = "0.1.0"
 dependencies = [
+ "axum",
  "clap",
  "percent-encoding",
  "rusqlite",
+ "s3drive-authority",
  "s3drive-core",
  "s3drive-fs",
  "s3drive-fuse",
+ "s3drive-managed",
  "s3drive-s3",
  "s3drive-state",
  "s3drive-winfsp",
@@ -2128,6 +2132,17 @@ dependencies = [
  "nix",
  "s3drive-fs",
  "s3drive-s3",
+ "tokio",
+]
+
+[[package]]
+name = "s3drive-managed"
+version = "0.1.0"
+dependencies = [
+ "s3drive-authority",
+ "s3drive-s3",
+ "s3drive-state",
+ "sha2",
  "tokio",
 ]
 

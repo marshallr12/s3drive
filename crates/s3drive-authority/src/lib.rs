@@ -1,5 +1,6 @@
 //! Managed namespace authority prototype. Loopback-only transport; no S3 writes,
 //! mounted integration, remote deployment or Turso backend is enabled.
+mod wire;
 use axum::{
     Json, Router,
     body::Bytes,
@@ -12,8 +13,12 @@ use s3drive_state::{State, namespace};
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::Arc, thread};
 use tokio::sync::{Semaphore, mpsc, oneshot};
+pub use wire::{WireClient, WireError};
 
-pub use namespace::{Apply, Error, Kind, Listing, Mutation, Node, ROOT, Receipt, Volume};
+pub use namespace::{
+    Apply, Artifact, Error, Kind, Listing, Mutation, Node, Payload, ROOT, Receipt, Reservation,
+    Store, Volume,
+};
 const BODY_LIMIT: usize = 4096;
 const QUEUE: usize = 8;
 
@@ -21,6 +26,8 @@ const QUEUE: usize = 8;
 #[serde(tag = "action", rename_all = "kebab-case", deny_unknown_fields)]
 pub enum Request {
     Info {},
+    Store { volume: String, store: String },
+    Reservation { volume: String, reservation: String },
     Node { volume: String, node: String },
     List { volume: String, parent: String },
     Operation { volume: String, operation: String },
@@ -35,6 +42,8 @@ pub enum Request {
 )]
 pub enum Reply {
     Info(Volume),
+    Store(Store),
+    Reservation(Reservation),
     Node(Node),
     List(Listing),
     Operation(Option<std::result::Result<Receipt, Error>>),
@@ -55,6 +64,15 @@ impl Request {
     fn execute(self, state: &mut State) -> Reply {
         let reply = match self {
             Self::Info {} => state.namespace_volume().map(Reply::Info),
+            Self::Store { volume, store } => {
+                state.namespace_store(&volume, &store).map(Reply::Store)
+            }
+            Self::Reservation {
+                volume,
+                reservation,
+            } => state
+                .namespace_reservation(&volume, &reservation)
+                .map(Reply::Reservation),
             Self::Node { volume, node } => state.namespace_node(&volume, &node).map(Reply::Node),
             Self::List { volume, parent } => {
                 state.namespace_list(&volume, &parent).map(Reply::List)

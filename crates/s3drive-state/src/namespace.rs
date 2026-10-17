@@ -1,6 +1,8 @@
 //! Authoritative managed namespace prototype, separate from local source binding.
 //! No S3 publication or platform name-comparison semantics are implemented here.
+pub mod publication;
 use crate::State;
+pub use publication::{Artifact, Payload, Reservation, Store};
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 
@@ -33,12 +35,13 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Kind {
     Directory,
     EmptyFile,
+    File,
 }
 impl Kind {
     fn sql(self) -> &'static str {
         match self {
             Self::Directory => "directory",
-            Self::EmptyFile => "empty-file",
+            Self::EmptyFile | Self::File => "empty-file",
         }
     }
 }
@@ -58,10 +61,29 @@ pub struct Node {
     pub kind: Kind,
     pub revision: u64,
     pub deleted: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub payload: Option<Payload>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
 pub enum Mutation {
+    RegisterStore {
+        route: String,
+        root: String,
+    },
+    Reserve {
+        node: String,
+        expected_revision: u64,
+        store: String,
+        size: u64,
+        sha256: String,
+    },
+    Publish {
+        reservation: String,
+        upload_operation: String,
+        etag: String,
+        version: Option<String>,
+    },
     Create {
         parent: String,
         name: String,
@@ -89,6 +111,8 @@ pub struct Apply {
 pub struct Receipt {
     pub sequence: u64,
     pub node: Node,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub artifact: Option<Artifact>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -124,8 +148,22 @@ impl Apply {
         {
             return Err(Error::Invalid);
         }
+        if let Mutation::Reserve {
+            expected_revision, ..
+        } = &self.mutation
+            && *expected_revision > self.expected_sequence
+        {
+            return Err(Error::Invalid);
+        }
         let valid = match &self.mutation {
-            Mutation::Create { parent, name, .. } => valid_id(parent) && valid_name(name),
+            Mutation::RegisterStore { .. }
+            | Mutation::Reserve { .. }
+            | Mutation::Publish { .. } => publication::valid(&self.mutation),
+            Mutation::Create {
+                parent,
+                name,
+                node_kind,
+            } => *node_kind != Kind::File && valid_id(parent) && valid_name(name),
             Mutation::Move { node, parent, name } => {
                 valid_id(node) && valid_id(parent) && valid_name(name)
             }
@@ -138,9 +176,10 @@ impl Apply {
 pub(crate) fn check_schema(db: &Connection) -> crate::Result<()> {
     db.prepare("SELECT volume_id, sequence, name_policy FROM namespace_volume LIMIT 0")?;
     db.prepare(
-        "SELECT node_id, parent_id, name, kind, revision, deleted FROM namespace_nodes LIMIT 0",
+        "SELECT node_id, parent_id, name, kind, revision, deleted, payload FROM namespace_nodes LIMIT 0",
     )?;
     db.prepare("SELECT operation_id, request, outcome FROM namespace_operations LIMIT 0")?;
+    publication::check_schema(db)?;
     Ok(())
 }
 fn volume(db: &Connection) -> Result<Volume> {
@@ -171,8 +210,18 @@ fn nonnegative(r: &rusqlite::Row<'_>, index: usize) -> rusqlite::Result<u64> {
 }
 fn row_node(r: &rusqlite::Row<'_>) -> rusqlite::Result<Node> {
     let kind: String = r.get(3)?;
+    let payload: Option<Vec<u8>> = r.get(6)?;
+    let payload: Option<Payload> = payload
+        .map(|bytes| serde_json::from_slice(&bytes).map_err(|_| rusqlite::Error::InvalidQuery))
+        .transpose()?;
+    if payload.as_ref().is_some_and(|p| {
+        !p.valid() || r.get::<_, String>(0).ok().as_deref() != Some(&p.reservation.node)
+    }) {
+        return Err(rusqlite::Error::InvalidQuery);
+    }
     let kind = match kind.as_str() {
         "directory" => Kind::Directory,
+        "empty-file" if payload.is_some() => Kind::File,
         "empty-file" => Kind::EmptyFile,
         _ => return Err(rusqlite::Error::InvalidQuery),
     };
@@ -183,13 +232,14 @@ fn row_node(r: &rusqlite::Row<'_>) -> rusqlite::Result<Node> {
         kind,
         revision: nonnegative(r, 4)?,
         deleted: r.get(5)?,
+        payload,
     })
 }
 fn node(db: &Connection, id: &str) -> Result<Node> {
     if !valid_id(id) {
         return Err(Error::Invalid);
     }
-    sql(db.query_row("SELECT node_id, parent_id, name, kind, revision, deleted FROM namespace_nodes WHERE node_id=?", [id], row_node).optional())?
+    sql(db.query_row("SELECT node_id, parent_id, name, kind, revision, deleted, payload FROM namespace_nodes WHERE node_id=?", [id], row_node).optional())?
         .ok_or(Error::NotFound)
 }
 fn live_node(db: &Connection, id: &str) -> Result<Node> {
@@ -250,7 +300,8 @@ impl State {
                 "SELECT (SELECT count(*) FROM source_bindings) +
                         (SELECT count(*) FROM legacy_cached_objects_v1) +
                         (SELECT count(*) FROM staged_generations) +
-                        (SELECT count(*) FROM clean_blobs)",
+                        (SELECT count(*) FROM clean_blobs) +
+                        (SELECT count(*) FROM managed_publications)",
                 [],
                 |r| r.get(0),
             ))?;
@@ -268,7 +319,7 @@ impl State {
                 [&id],
             ))?;
             sql(tx.execute(
-                "INSERT INTO namespace_nodes VALUES(?1, NULL, '', 'directory', 0, 0)",
+                "INSERT INTO namespace_nodes(node_id,parent_id,name,kind,revision,deleted) VALUES(?1, NULL, '', 'directory', 0, 0)",
                 [ROOT],
             ))?;
         }
@@ -294,7 +345,7 @@ impl State {
         let v = check_volume(&tx, volume_id)?;
         directory(&tx, parent)?;
         let children = {
-            let mut stmt = sql(tx.prepare("SELECT node_id,parent_id,name,kind,revision,deleted FROM namespace_nodes WHERE parent_id=? AND deleted=0 ORDER BY name LIMIT 1001"))?;
+            let mut stmt = sql(tx.prepare("SELECT node_id,parent_id,name,kind,revision,deleted,payload FROM namespace_nodes WHERE parent_id=? AND deleted=0 ORDER BY name LIMIT 1001"))?;
             sql(sql(stmt.query_map([parent], row_node))?.collect::<rusqlite::Result<Vec<_>>>())?
         };
         if children.len() > MAX_CHILDREN {
@@ -369,8 +420,17 @@ impl State {
 }
 fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
     let sql_sequence = i64::try_from(sequence).map_err(|_| Error::Invalid)?;
-    let expected = i64::try_from(request.expected_sequence).map_err(|_| Error::Invalid)?;
+    if matches!(
+        &request.mutation,
+        Mutation::RegisterStore { .. } | Mutation::Reserve { .. } | Mutation::Publish { .. }
+    ) {
+        let (changed, artifact) = publication::mutate(db, request, sequence)?;
+        return finish(db, request, sequence, &changed, Some(artifact));
+    }
     let changed = match &request.mutation {
+        Mutation::RegisterStore { .. } | Mutation::Reserve { .. } | Mutation::Publish { .. } => {
+            return Err(Error::Invalid);
+        }
         Mutation::Create {
             parent,
             name,
@@ -384,7 +444,7 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
                 return Err(Error::Limit);
             }
             sql(db.execute(
-                "INSERT INTO namespace_nodes VALUES(?1,?2,?3,?4,?5,0)",
+                "INSERT INTO namespace_nodes(node_id,parent_id,name,kind,revision,deleted) VALUES(?1,?2,?3,?4,?5,0)",
                 params![
                     request.operation,
                     parent,
@@ -443,6 +503,17 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
             id.as_str()
         }
     };
+    finish(db, request, sequence, changed, None)
+}
+fn finish(
+    db: &Connection,
+    request: &Apply,
+    sequence: u64,
+    changed: &str,
+    artifact: Option<Artifact>,
+) -> Result<Receipt> {
+    let sql_sequence = i64::try_from(sequence).map_err(|_| Error::Invalid)?;
+    let expected = i64::try_from(request.expected_sequence).map_err(|_| Error::Invalid)?;
     let rows = sql(db.execute(
         "UPDATE namespace_volume SET sequence=?1 WHERE singleton=1 AND sequence=?2",
         params![sql_sequence, expected],
@@ -453,6 +524,7 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
     Ok(Receipt {
         sequence,
         node: node(db, changed)?,
+        artifact,
     })
 }
 

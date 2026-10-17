@@ -1,0 +1,572 @@
+//! Real S3 SDK + actual authority HTTP + private SQLite. All cloud traffic is
+//! confined to the owned loopback fixture with dummy credentials.
+#[path = "support/fixture.rs"]
+pub mod fixture;
+#[path = "support/writes.rs"]
+#[allow(dead_code)]
+mod writes;
+use s3drive_authority::{
+    Apply, Authority, Kind, Mutation, Node, Reply, Request, Token, WireClient, serve_loopback,
+};
+use s3drive_managed::Publisher;
+use s3drive_state::{cache, journal, worker::Storage};
+use sha2::{Digest, Sha256};
+use std::{
+    path::{Path, PathBuf},
+    process::Stdio,
+    sync::{
+        Arc,
+        atomic::{AtomicU8, Ordering},
+    },
+    time::Duration,
+};
+use tokio::{
+    io::{AsyncBufReadExt, AsyncReadExt, BufReader},
+    process::Command,
+    sync::oneshot,
+};
+const SECRET: &str = "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
+fn id(n: u64) -> String {
+    format!("{n:032x}")
+}
+fn sha(bytes: &[u8]) -> String {
+    Sha256::digest(bytes)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
+}
+fn puts(f: &fixture::Fixture) -> usize {
+    f.requests
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|r| r.starts_with("PUT ") && r.contains("/writable/.s3drive/"))
+        .count()
+}
+fn checkpoint(name: &str) {
+    println!("{name}");
+    std::io::Write::flush(&mut std::io::stdout()).unwrap();
+}
+fn signal(root: &Path, name: &str) {
+    std::fs::write(root.join(name), b"ready").unwrap();
+}
+async fn wait(root: &Path, name: &str) {
+    tokio::time::timeout(Duration::from_secs(15), async {
+        while !root.join(name).exists() {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn managed_sdk_authority_races_and_process_death_recovery() {
+    let f = fixture::Fixture::start().await;
+    let temp = tempfile::tempdir().unwrap();
+    let setup = writes::setup(&f, temp.path()).await;
+    let mut before_restart = 0;
+    let mut corrupted: Option<(String, Vec<u8>)> = None;
+    for mode in ["initial", "resume", "finish"] {
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "managed_child", "--nocapture"])
+            .env("S3DRIVE_MANAGED_MODE", mode)
+            .env("S3DRIVE_MANAGED_CONFIG", &setup.config)
+            .env("S3DRIVE_MANAGED_ROOT", temp.path())
+            .env("AWS_SHARED_CREDENTIALS_FILE", &setup.credentials)
+            .env("AWS_CONFIG_FILE", &setup.aws_config)
+            .env("AWS_EC2_METADATA_DISABLED", "true")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+        let mut lines = BufReader::new(child.stdout.take().unwrap()).lines();
+        let mut errors = child.stderr.take().unwrap();
+        let stderr = tokio::spawn(async move {
+            let mut s = String::new();
+            errors.read_to_string(&mut s).await.unwrap();
+            s
+        });
+        let protocol = tokio::time::timeout(Duration::from_secs(120), async {
+            while let Some(line) = lines.next_line().await.unwrap() {
+                match line.as_str() {
+                    "LOST_REPLY" => {
+                        f.lose_put_reply.store(true, Ordering::SeqCst);
+                        signal(temp.path(), "lose");
+                    }
+                    "HIDE" => {
+                        f.hide_committed.store(true, Ordering::SeqCst);
+                        signal(temp.path(), "hide");
+                    }
+                    "CORRUPT" => {
+                        let key = format!(
+                            "/test-bucket/desktop/{}",
+                            std::fs::read_to_string(temp.path().join("corrupt-key")).unwrap()
+                        );
+                        let mut objects = f.objects.lock().unwrap();
+                        let bytes = &mut objects.get_mut(&key).unwrap().0;
+                        corrupted = Some((key, bytes.clone()));
+                        bytes[0] ^= 0xff;
+                        drop(objects);
+                        signal(temp.path(), "corrupt");
+                    }
+                    "RESTORE" => {
+                        let (key, bytes) = corrupted.take().unwrap();
+                        f.objects.lock().unwrap().get_mut(&key).unwrap().0 = bytes;
+                        signal(temp.path(), "restored");
+                    }
+                    "CRASH_STAGE" | "CRASH_PUBLISH" => return true,
+                    "RECONCILED" => assert_eq!(puts(&f), before_restart, "recovery reissued a PUT"),
+                    _ => {}
+                }
+            }
+            false
+        })
+        .await;
+        let crash = protocol.as_ref().copied().unwrap_or(false);
+        if crash || protocol.is_err() {
+            child.kill().await.unwrap();
+        }
+        let status = tokio::time::timeout(Duration::from_secs(15), child.wait())
+            .await
+            .unwrap()
+            .unwrap();
+        let errors = stderr.await.unwrap();
+        assert!(
+            protocol.is_ok()
+                && if mode == "finish" {
+                    status.success() && !crash
+                } else {
+                    crash
+                },
+            "mode {mode}: {status}: {errors}"
+        );
+        before_restart = puts(&f);
+        writes::restore_observation(&f);
+    }
+    assert_eq!(
+        puts(&f),
+        5,
+        "each immutable generation must have exactly one PUT"
+    );
+    let objects = f.objects.lock().unwrap();
+    let blobs = objects
+        .iter()
+        .filter(|(key, _)| key.contains("/writable/.s3drive/"))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        blobs.len(),
+        5,
+        "no losing, old or unlinked payload may be reclaimed"
+    );
+    assert!(blobs.iter().any(|(_, (bytes, _))| bytes.is_empty()));
+    assert!(!f.server.is_finished());
+}
+async fn ask(w: &WireClient, r: Request) -> Reply {
+    w.request(&r).await.unwrap()
+}
+async fn info(w: &WireClient) -> s3drive_authority::Volume {
+    let Reply::Info(v) = ask(w, Request::Info {}).await else {
+        panic!("info")
+    };
+    v
+}
+async fn node(w: &WireClient, volume: &str, n: u64) -> Node {
+    let Reply::Node(n) = ask(
+        w,
+        Request::Node {
+            volume: volume.into(),
+            node: id(n),
+        },
+    )
+    .await
+    else {
+        panic!("node")
+    };
+    n
+}
+async fn change(w: &WireClient, op: u64, m: Mutation) -> s3drive_authority::Receipt {
+    let v = info(w).await;
+    let Reply::Applied(r) = ask(
+        w,
+        Request::Apply {
+            request: Apply {
+                volume: v.id,
+                operation: id(op),
+                expected_sequence: v.sequence,
+                mutation: m,
+            },
+        },
+    )
+    .await
+    else {
+        panic!("apply")
+    };
+    r
+}
+async fn stage(p: &Publisher, w: &WireClient, n: u64, op: u64, bytes: &[u8]) {
+    let v = info(w).await;
+    let n = node(w, &v.id, n).await;
+    let request = Apply {
+        volume: v.id,
+        operation: id(op),
+        expected_sequence: v.sequence,
+        mutation: Mutation::Reserve {
+            node: n.id,
+            expected_revision: n.revision,
+            store: p.store().id.clone(),
+            size: bytes.len() as u64,
+            sha256: sha(bytes),
+        },
+    };
+    p.stage(request, id(op + 1000), Arc::from(bytes))
+        .await
+        .unwrap();
+}
+async fn publisher(
+    config: &s3drive_core::Config,
+    root: &Path,
+    name: &str,
+    wire: WireClient,
+    volume: String,
+) -> Publisher {
+    let source = &config.sources[0];
+    let writes = config.writes.as_ref().unwrap();
+    let cfg = &writes.sources[0];
+    let policy = s3drive_s3::uploads::WritePolicy::from_toml(
+        source,
+        &std::fs::read_to_string(&cfg.policy).unwrap(),
+        &std::fs::read_to_string(&cfg.plan).unwrap(),
+        &std::fs::read_to_string(&cfg.report).unwrap(),
+    )
+    .unwrap();
+    let reader = s3drive_s3::S3Reader::from_source(source).await.unwrap();
+    let storage = Storage::open(
+        &root.join(name),
+        cache::Options::default(),
+        journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    let executor = s3drive_s3::uploads::Executor::open(reader, storage, policy)
+        .await
+        .unwrap();
+    Publisher::open(executor, wire, volume, id(200))
+        .await
+        .unwrap()
+}
+#[derive(Clone)]
+struct Proxy {
+    upstream: WireClient,
+    loss: Arc<AtomicU8>,
+}
+async fn proxy(
+    axum::extract::State(p): axum::extract::State<Proxy>,
+    axum::Json(request): axum::Json<Request>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let r = p.upstream.request(&request).await.unwrap();
+    let kind = match request {
+        Request::Apply {
+            request:
+                Apply {
+                    mutation: Mutation::Reserve { .. },
+                    ..
+                },
+        } => 1,
+        Request::Apply {
+            request:
+                Apply {
+                    mutation: Mutation::Publish { .. },
+                    ..
+                },
+        } => 2,
+        _ => 0,
+    };
+    if kind != 0
+        && p.loss
+            .compare_exchange(kind, 0, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+    {
+        return axum::http::StatusCode::SERVICE_UNAVAILABLE.into_response();
+    }
+    axum::Json(r).into_response()
+}
+async fn serve(
+    client: s3drive_authority::Client,
+) -> (WireClient, oneshot::Sender<()>, tokio::task::JoinHandle<()>) {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let endpoint = format!("http://{}/v1/namespace", listener.local_addr().unwrap());
+    let (stop, receive) = oneshot::channel();
+    let task = tokio::spawn(async move {
+        serve_loopback(
+            listener,
+            client,
+            Token::new(SECRET.into()).unwrap(),
+            async {
+                let _ = receive.await;
+            },
+        )
+        .await
+        .unwrap();
+    });
+    (
+        WireClient::loopback(&endpoint, Token::new(SECRET.into()).unwrap()).unwrap(),
+        stop,
+        task,
+    )
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn managed_child() {
+    let Ok(mode) = std::env::var("S3DRIVE_MANAGED_MODE") else {
+        return;
+    };
+    let root = PathBuf::from(std::env::var("S3DRIVE_MANAGED_ROOT").unwrap());
+    let config = s3drive_core::Config::parse(
+        &std::fs::read_to_string(std::env::var("S3DRIVE_MANAGED_CONFIG").unwrap()).unwrap(),
+    )
+    .unwrap();
+    let authority = Authority::open(root.join("authority")).await.unwrap();
+    let (wire, stop, server) = serve(authority.client()).await;
+    let volume = info(&wire).await.id;
+    if mode == "initial" {
+        let reader = s3drive_s3::S3Reader::from_source(&config.sources[0])
+            .await
+            .unwrap();
+        change(
+            &wire,
+            200,
+            Mutation::RegisterStore {
+                route: reader.storage_fingerprint(),
+                root: "writable/.s3drive/".into(),
+            },
+        )
+        .await;
+        change(
+            &wire,
+            10,
+            Mutation::Create {
+                parent: s3drive_authority::ROOT.into(),
+                name: "café 日本語 🦀.bin".into(),
+                node_kind: Kind::EmptyFile,
+            },
+        )
+        .await;
+        let a = publisher(&config, &root, "client-a", wire.clone(), volume.clone()).await;
+        let b = publisher(&config, &root, "client-b", wire.clone(), volume.clone()).await;
+        let one = (0..65000).map(|i| (i % 251) as u8).collect::<Vec<_>>();
+        let two = b"other machine\0\xff";
+        stage(&a, &wire, 10, 1000, &one).await;
+        a.reserve(&id(1000)).await.unwrap();
+        stage(&b, &wire, 10, 1001, two).await;
+        b.reserve(&id(1001)).await.unwrap();
+        let first = id(1000);
+        let second = id(1001);
+        let (x, y) = tokio::join!(a.flush(&first), b.flush(&second));
+        assert!(x.is_ok() ^ y.is_ok(), "exactly one writer must publish");
+        let old = a.read(&id(10)).await.unwrap();
+        let mut pins = Vec::new();
+        for _ in 0..3 {
+            pins.push(a.read(&id(10)).await.unwrap());
+        }
+        let busy = a
+            .read(&id(10))
+            .await
+            .err()
+            .expect("fifth snapshot must be refused");
+        assert!(matches!(
+            busy.downcast_ref::<s3drive_managed::Failure>(),
+            Some(s3drive_managed::Failure::Busy)
+        ));
+        pins.pop();
+        assert!(a.read(&id(10)).await.is_ok());
+        drop(pins);
+        assert!(old.bytes() == one || old.bytes() == two);
+        for (p, n) in [(&a, 1000), (&b, 1001)] {
+            let r = p.storage().managed().get(id(n)).await.unwrap();
+            let g = r.generation.unwrap();
+            assert!(matches!(
+                p.storage()
+                    .uploads()
+                    .for_generation(g)
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .guard,
+                s3drive_state::remote::Guard::Missing
+            ));
+            if r.receipt.is_none() {
+                // Even a fresh GLOBAL guard cannot publish a reservation made
+                // against the old file revision. This is an adversarial new
+                // metadata operation, not an automatic retry by Publisher.
+                let v = info(&wire).await;
+                let request = Apply {
+                    volume: v.id,
+                    operation: id(n + 6000),
+                    expected_sequence: v.sequence,
+                    mutation: r.publication.as_ref().unwrap().mutation.clone(),
+                };
+                assert_eq!(
+                    ask(&wire, Request::Apply { request }).await,
+                    Reply::Error(s3drive_authority::Error::Conflict)
+                );
+                assert!(
+                    p.storage()
+                        .managed()
+                        .pending(None, 100)
+                        .await
+                        .unwrap()
+                        .iter()
+                        .any(|x| x.input.id() == id(n))
+                );
+            }
+        }
+        change(
+            &wire,
+            30,
+            Mutation::Create {
+                parent: s3drive_authority::ROOT.into(),
+                name: "empty 🦀".into(),
+                node_kind: Kind::EmptyFile,
+            },
+        )
+        .await;
+        stage(&a, &wire, 30, 1030, b"").await;
+        checkpoint("LOST_REPLY");
+        wait(&root, "lose").await;
+        a.flush(&id(1030)).await.unwrap();
+        assert!(a.read(&id(30)).await.unwrap().bytes().is_empty());
+        stage(&a, &wire, 10, 1040, b"uncertain S3 commit\0\xff").await;
+        a.reserve(&id(1040)).await.unwrap();
+        checkpoint("HIDE");
+        wait(&root, "hide").await;
+        assert!(a.flush(&id(1040)).await.is_err());
+        assert!(
+            a.storage()
+                .managed()
+                .get(id(1040))
+                .await
+                .unwrap()
+                .publication
+                .is_none()
+        );
+        assert!(old.bytes() == one || old.bytes() == two);
+        checkpoint("CRASH_STAGE");
+        std::future::pending::<()>().await;
+    } else if mode == "resume" {
+        let a = publisher(&config, &root, "client-a", wire.clone(), volume.clone()).await;
+        a.flush(&id(1040)).await.unwrap();
+        assert_eq!(
+            a.read(&id(10)).await.unwrap().bytes(),
+            b"uncertain S3 commit\0\xff"
+        );
+        checkpoint("RECONCILED");
+        change(
+            &wire,
+            40,
+            Mutation::Create {
+                parent: s3drive_authority::ROOT.into(),
+                name: "metadata lost 日本語".into(),
+                node_kind: Kind::EmptyFile,
+            },
+        )
+        .await;
+        let loss = Arc::new(AtomicU8::new(0));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}/v1/namespace", listener.local_addr().unwrap());
+        let app = axum::Router::new()
+            .route("/v1/namespace", axum::routing::post(proxy))
+            .with_state(Proxy {
+                upstream: wire.clone(),
+                loss: loss.clone(),
+            });
+        let proxy_task = tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        // Replace only the transport; executor and local owner remain the same.
+        a.storage().close().await.unwrap();
+        drop(a);
+        let proxy_wire =
+            WireClient::loopback(&endpoint, Token::new(SECRET.into()).unwrap()).unwrap();
+        let a = publisher(&config, &root, "client-a", proxy_wire, volume.clone()).await;
+        stage(&a, &wire, 40, 1041, b"committed metadata reply lost").await;
+        let before = info(&wire).await.sequence;
+        loss.store(1, Ordering::SeqCst);
+        assert!(a.reserve(&id(1041)).await.is_err());
+        assert!(
+            a.storage()
+                .managed()
+                .get(id(1041))
+                .await
+                .unwrap()
+                .reservation
+                .is_none()
+        );
+        a.reserve(&id(1041)).await.unwrap();
+        assert_eq!(info(&wire).await.sequence, before + 1);
+        loss.store(2, Ordering::SeqCst);
+        assert!(a.flush(&id(1041)).await.is_err());
+        let r = a.storage().managed().get(id(1041)).await.unwrap();
+        assert!(r.publication.is_some() && r.receipt.is_none());
+        assert_eq!(
+            a.read(&id(40)).await.unwrap().bytes(),
+            b"committed metadata reply lost"
+        );
+        checkpoint("CRASH_PUBLISH");
+        std::future::pending::<()>().await;
+        proxy_task.abort();
+    } else {
+        let a = publisher(&config, &root, "client-a", wire.clone(), volume.clone()).await;
+        let r = a.flush(&id(1041)).await.unwrap();
+        a.flush(&id(1041)).await.unwrap();
+        checkpoint("RECONCILED");
+        let old = a.read(&id(40)).await.unwrap();
+        assert_eq!(old.bytes(), b"committed metadata reply lost");
+        std::fs::write(
+            root.join("corrupt-key"),
+            &old.metadata().payload.as_ref().unwrap().reservation.key,
+        )
+        .unwrap();
+        checkpoint("CORRUPT");
+        wait(&root, "corrupt").await;
+        assert!(
+            a.read(&id(40)).await.is_err(),
+            "a matching ETag cannot excuse corrupted bytes"
+        );
+        assert_eq!(old.bytes(), b"committed metadata reply lost");
+        checkpoint("RESTORE");
+        wait(&root, "restored").await;
+        assert_eq!(a.read(&id(40)).await.unwrap().bytes(), old.bytes());
+        let moved = change(
+            &wire,
+            3041,
+            Mutation::Move {
+                node: id(40),
+                parent: s3drive_authority::ROOT.into(),
+                name: "renamed café 🦀".into(),
+            },
+        )
+        .await;
+        assert_eq!(moved.node.payload, r.metadata().node.payload);
+        assert!(moved.artifact.is_none());
+        assert_eq!(a.read(&id(40)).await.unwrap().bytes(), old.bytes());
+        change(&wire, 3042, Mutation::Remove { node: id(40) }).await;
+        assert!(a.read(&id(40)).await.is_err());
+        assert_eq!(old.bytes(), b"committed metadata reply lost");
+        assert!(
+            !a.storage()
+                .managed()
+                .pending(None, 100)
+                .await
+                .unwrap()
+                .iter()
+                .any(|r| [id(1040), id(1041)].contains(&r.input.id().to_string()))
+        );
+        a.storage().close().await.unwrap();
+        drop(a);
+    }
+    stop.send(()).unwrap();
+    server.await.unwrap();
+    authority.shutdown().await.unwrap();
+}

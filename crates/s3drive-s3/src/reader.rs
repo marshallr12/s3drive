@@ -148,6 +148,28 @@ impl S3Reader {
     pub fn configuration_fingerprint(&self) -> &str {
         &self.fingerprint
     }
+    /// Stable routing scope only: excludes local aliases, profiles, credentials
+    /// and LIST/addressing dialect. Not an authorization or principal identity.
+    pub fn storage_fingerprint(&self) -> String {
+        let mut hash = Sha256::new();
+        hash.update(b"s3drive-storage-route-v1\0");
+        let endpoint = self
+            .source
+            .endpoint
+            .as_ref()
+            .map(|s| url::Url::parse(s).expect("validated endpoint").to_string());
+        hash.update([u8::from(endpoint.is_some())]);
+        for value in [
+            endpoint.as_deref().unwrap_or_default(),
+            &self.source.bucket,
+            &self.source.region,
+            &self.source.prefix,
+        ] {
+            hash.update((value.len() as u64).to_be_bytes());
+            hash.update(value.as_bytes());
+        }
+        hash.finalize().iter().map(|b| format!("{b:02x}")).collect()
+    }
 
     pub async fn list_page(
         &self,

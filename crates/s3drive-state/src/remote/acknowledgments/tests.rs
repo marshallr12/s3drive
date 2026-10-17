@@ -342,7 +342,7 @@ fn migration_six_preserves_verified_intents_and_rolls_back_conflicts() {
         state
             .connection
             .execute_batch(
-                "DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; DROP TABLE write_settlements; DROP TABLE remote_flushes; PRAGMA user_version=6",
+                "DROP TABLE managed_publications; DROP TABLE namespace_uploads; DROP TABLE namespace_stores; DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; DROP TABLE write_settlements; DROP TABLE remote_flushes; PRAGMA user_version=6",
             )
             .unwrap();
         if conflict {

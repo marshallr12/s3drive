@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated: 2026-10-16. Current phase: **P6m1 managed namespace authority**; implemented, local tests passed.
+Updated: 2026-10-16. Current phase: **P6m2 managed immutable publication**; implemented, local acceptance passed.
 Goal active. Linux/Windows read-only drives and startup foundations work;
 library writes/flush are progressing toward safe writable native filesystems.
 Do not call the broader editable-drive goal complete before its documented
@@ -34,16 +34,16 @@ safe-write contract and real OS acceptance pass.
 ## Authoritative publication baseline
 
 Published private main at phase start:
-`640a37ecf99d2d1e1c1874aeba3013a1e99d117d` (guarded file creation).
-Terminal all-green [run 38993215272](https://github.com/marshallr12/s3drive/actions/runs/38993215272):
-Linux 117279903466, Windows 117279903627 and book 117279903624.
+`51ad43f3667d48a9aef2efa043b126f3fcd1043e` (managed namespace authority).
+Terminal all-green [run 38997691740](https://github.com/marshallr12/s3drive/actions/runs/38997691740):
+Linux 117293751638, Windows 117293751535 and book 117293751703.
 Remote main SHA and PRIVATE visibility were verified after publication.
 
-Baseline: 49 S3 tests per OS, 79 Linux / 77 Windows state and 12 FS tests;
-three native cases per OS (RO/cache/session, existing writes, creation), with
-341 RO FUSE / 749 RO WinFsp requests. No-systemd and Windows cross-logon gates,
-Unicode creation, 1,024-byte SDK key boundary, lost replies, restart without
-replay and rival preservation passed. Logs: `/tmp/s3drive-create-{linux,windows,book}-ci.log`.
+Baseline: four authority TCP tests, 86 Linux / 84 Windows state tests, 49 S3
+and 12 FS tests; three native cases per OS (RO/cache/session, existing writes,
+creation), 341 RO FUSE / 749 RO WinFsp requests. No-systemd and Windows non-admin
+cross-logon acceptance passed. Exact baseline logs:
+`/tmp/s3drive-managed-{linux,windows,book}-ci-final.log`.
 
 Windows testing runs remotely on GitHub's **Windows Server 2025 VM**, not this
 Linux workstation. Native folder/drive/security/UTF-16 tests and distinct
@@ -53,9 +53,9 @@ remain target-host acceptance. Linux local PID 1 is `init`, not systemd.
 
 ## Current implementation and sources
 
-Eight crates: core, s3, state, fs, fuse, winfsp, cli and authority. Rust 1.99.1, edition
+Nine crates: core, s3, state, fs, fuse, winfsp, cli, authority and managed. Rust 1.99.1, edition
 2024, AWS S3 SDK 1.152.0, rusqlite 0.40.2 with bundled SQLite. P6m1 adds pinned axum 0.8.9,
-serde_json 1.0.151 and test-only reqwest 0.13.5, with resolved sources inspected. OS dependencies remain target-specific.
+serde_json 1.0.151 and reqwest 0.13.5 (now also the loopback authority client), with resolved sources inspected. OS dependencies remain target-specific.
 
 - `s3drive-core/src/lib.rs`: strict source config and alias/key resolution;
   version 1 is read-only; version 2 requires explicit source policies and local
@@ -84,44 +84,55 @@ serde_json 1.0.151 and test-only reqwest 0.13.5, with resolved sources inspected
   least-privilege password-backed scheduled task with shared NTFS folder.
   Do not change machine policy or install a real user startup entry implicitly.
 
-## P6m1 implementation branch: codex/managed-authority
+## P6m2 implementation branch: codex/managed-publication
 
-P6m1 implements persistent namespace transactions in `s3drive-state::namespace`
-and a bounded, authenticated loopback HTTP service in `s3drive-authority`.
-See [the managed contract](docs/src/managed-layout.md). Schema 8 preserves client
-state and adds isolated namespace volume/nodes/operation tables. Authority IDs
-are independent of local AWS profiles. Initialization refuses populated client
-state; source registration/staging refuse an initialized authority database.
+`s3drive-managed::Publisher` now joins the real SDK executor, actual authority
+HTTP and a separate client-local logical journal. See
+[the protocol](docs/src/managed-publication.md). Schema 9 preserves old state
+and adds immutable store descriptors, reservations, node payload references and
+hashed local publication records. Existing mounts/configuration stay direct.
+No managed native config, cloud service or live Wasabi mutation is enabled.
 
-Implemented: directory/empty-file metadata create, subtree move without overwrite,
-empty removal/tombstones, sequence CAS and durable exact-request operation-result
-replay. One owner thread/8-command queue; loopback only, 4 KiB JSON, explicit
-256-bit token, 8 HTTP operation slots. No deployment CLI or token persisted.
-`exact-utf8-v1` is a prototype byte-exact policy, NOT Windows case equivalence.
-No managed payload upload/reference, native mount or real remote deployment yet.
+Authority reservation binds file/revision/store/generated key/size/SHA-256.
+A new blob is an independent create-only physical root; no parent ETag guard
+is inherited from a different file generation. Persist local input before
+staging/network, seal and link exact bytes, reserve at the authority, upload once
+and verify, persist the exact publication request, metadata CAS, then local
+logical acknowledgment. A physical upload receipt never settles logical intent.
+Unknown metadata requests replay only their original operation/arguments/guard;
+conflicts do not rebase. Pending bytes/old/losing/unlinked blobs are all retained.
 
-Four independent real-TCP tests passed locally, including concurrent create,
-opposing directory moves, subtree identity, Unicode, lost HTTP reply/restart,
-authentication and strict decoding. Seven namespace state tests (one child
-helper) passed, including process death, real SQLite full, injected rollback,
-migration, role separation and retained bounds. Workspace lint/tests passed:
-86 Linux state, 49 S3 and 12 FS tests, plus the four new TCP tests. Existing
-migration fixtures now remove schema-8 namespace tables when emulating schemas
-2–6; their original preservation/conflicting-schema assertions remain intact.
-The first gate exposed those outdated fixtures; the corrected gate log is
-`/tmp/s3drive-managed-gate-final.log`. Also see `/tmp/s3drive-managed-tests.log`
-and `/tmp/s3drive-managed-state-tests.log`. Exact-tip CI is required below;
-retrieve it with `gh run list --branch codex/managed-authority --limit 3`.
-Initial implementation `ba7be22` passed Linux/book and Windows workspace tests
-(84 state plus four authority TCP tests), and both writable native cases, in
-run 38997028876. The Windows session fixture still asserted `schema=7` and
-failed after the schema-8 upgrade. Its assertion is corrected to schema 8;
-full native acceptance must pass on the corrected tip before publication.
-Initial logs: `/tmp/s3drive-managed-linux-ci.log` and
-`/tmp/s3drive-managed-windows-ci-initial.log`. The follow-up local gate log is
-`/tmp/s3drive-managed-gate-schema8.log`.
-The new managed architecture PNG was generated
-and visually inspected. No real user configuration or cloud state changed.
+The routing digest excludes machine-local profile/alias names but is NOT proof
+of a provider-global principal/tenant. Local source/credential bindings remain
+private and pinned. The authority trusts authenticated clients' SDK verification;
+it does not have S3 credentials or verify dishonest client attestations.
+`Executor::recovery_target` validates runtime binding without granting new write
+policy; final new-claim admission remains guarded. Narrowed/expired policy can
+still inspect claimed attempts. `Publisher` gets its local owner from Executor.
+
+New published reads authorize at the authority and S3, pin the recorded revision
+and verify all bytes. Four retained whole-file snapshots hold at most 32 MiB
+and survive rename/unlink; four mutations are separately admitted. The initial
+empty metadata prototype needs no S3 data. 8 MiB files, exact-UTF8 names and
+loopback-only metadata HTTP remain explicit prototype limits. Native logical
+heads/edit overlay, portable name comparison, multi-store routing, replace-save,
+large files, distributed deployment/Turso and pin/reference GC remain work.
+
+Local acceptance passed: actual SDK/HTTP/SQLite integration with two client DBs
+and three processes, five blobs/five PUTs across two forced kills; competing
+writers, stale file revision with fresh volume guard, lost S3/metadata replies,
+Unicode, empty data, snapshot bounds, unchanged-ETag corruption and rename/unlink.
+Five managed state tests add sealed/unlinked recovery, exact request/receipt and
+checksum refusal, pending enumeration beyond settled rows, schema-8 migration,
+real SQLITE_FULL during logical acknowledgment after blob verification, and
+ignored-update refusal before reporting a durable logical receipt.
+Current counts: 91 Linux state, 50 S3, 12 FS, four authority TCP tests, plus the
+managed SDK parent/child tests. Windows/native acceptance requires exact-tip CI.
+Logs: `/tmp/s3drive-managed-publish-{integration-final,integrity-test,state-all,route-test,clippy-final}.log`
+and `/tmp/s3drive-managed-publication-gate.log`; the final full local gate passed
+at `/tmp/s3drive-managed-publication-gate-tip.log`. New and updated PNG diagrams
+were generated and visually inspected. Wasabi generation-churn/minimum-duration
+research is cited in the book; the account's actual pricing plan is unverified.
 
 The direct-directory experiment is archived on `codex/persistent-directories`
 at `281bfd1` and is NOT merged. Its initial run 38995625850 failed both native
@@ -173,10 +184,9 @@ were already removed. Do not infer remaining cleanup from old plans/logs.
 
 ## Next implementation and durable decisions
 
-After P6m1 acceptance/publication, implement P6m2 immutable payload publication
-and P6m3 shared-engine/native integration. Stable storage/file identities,
-create-only unique blob keys and metadata CAS must be separate from the direct
-writer's mutable-key ETag lineage. Keep uncertain bytes and new physical blob
+After P6m2 acceptance/publication, implement P6m3 shared-engine/native integration. Stable storage/file identities,
+create-only unique blob keys and metadata CAS are now separate from the direct
+writer's mutable-key ETag lineage; preserve that distinction during integration. Keep uncertain bytes and new physical blob
 references distinct; an S3 upload alone does not acknowledge filesystem flush.
 Reference/pin-aware reclamation and explicit conflict recovery remain necessary. Do not expose delete/rename
 based on fixture cleanup: that is not provider-verified application deletion. Preserve explicit conflict/uncertain states and metadata limits.

@@ -526,7 +526,7 @@ fn migration_five_preserves_manifests_and_conflicting_schema_rolls_back() {
         let path = temp.path().join("state");
         let mut state = State::open_managed(&path).unwrap();
         let id = stage(&mut state, &target(), None, b"old");
-        state.connection.execute_batch("DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; DROP TABLE write_settlements; DROP TABLE remote_flushes; DROP TABLE retained_remote_intents; DROP TABLE remote_intents; PRAGMA user_version=5").unwrap();
+        state.connection.execute_batch("DROP TABLE managed_publications; DROP TABLE namespace_uploads; DROP TABLE namespace_stores; DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; DROP TABLE write_settlements; DROP TABLE remote_flushes; DROP TABLE retained_remote_intents; DROP TABLE remote_intents; PRAGMA user_version=5").unwrap();
         if conflict {
             state.connection.execute_batch("CREATE TABLE remote_intents (personal TEXT); INSERT INTO remote_intents VALUES ('preserve')").unwrap();
         }
