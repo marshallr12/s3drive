@@ -29,6 +29,14 @@ must freeze both original controls; no silent rebind or permanent refusal as a
 substitute. Use publication/edit/controller lock order. Require full local and
 exact-source hosted native/reference/startup gates before guarded publication.
 
+Candidate366828a run39071505814 Windows117509914273 reached the real native test:
+atomic file/directory DoC, duplicate handles and regular clear/reassert passed,
+then ON_CLOSE extended cancellation failed HRESULT0x80070032. Pinned upstream
+v2.1 `src/sys/fileinfo.c:1493` explicitly rejects ON_CLOSE in-kernel, before any
+Rust callback. Profile now documents this NTFS difference; test requires exact
+refusal, intact bytes and unchanged DoC effect rather than claiming cancellation.
+Log `/tmp/s3drive-lifecycle-windows3.log`. Remaining native cases still pending.
+
 Candidate43a45ce run39071127420 passed Windows type checking but failed Clippy
 on a collapsible nested `if` in Close, before native tests. Both void callbacks
 now use equivalent let chains. Book passed; Linux was still running at the check.

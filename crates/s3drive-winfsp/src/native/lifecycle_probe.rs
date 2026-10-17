@@ -37,7 +37,7 @@ pub fn set_delete(file: &File, delete: bool) -> std::io::Result<()> {
     }
     .map_err(|e| std::io::Error::other(e.to_string()))
 }
-pub fn clear_delete_on_close(file: &File) -> std::io::Result<()> {
+pub fn clear_delete_on_close(file: &File) -> windows::core::Result<()> {
     let info = FILE_DISPOSITION_INFO_EX {
         Flags: FILE_DISPOSITION_FLAG_ON_CLOSE,
     };
@@ -51,7 +51,6 @@ pub fn clear_delete_on_close(file: &File) -> std::io::Result<()> {
             size_of::<FILE_DISPOSITION_INFO_EX>() as u32,
         )
     }
-    .map_err(|e| std::io::Error::other(e.to_string()))
 }
 pub fn set_posix_delete(file: &File) -> std::io::Result<()> {
     use windows::Win32::Storage::FileSystem::{

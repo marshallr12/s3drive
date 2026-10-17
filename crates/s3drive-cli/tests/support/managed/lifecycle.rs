@@ -231,10 +231,17 @@ mod windows {
         assert!(!path.exists());
         let path = root.join("extended clear 🦀");
         std::fs::write(&path, b"extended").unwrap();
-        let f = open(&path, true, false, false);
-        clear_delete_on_close(&f).unwrap();
+        let mut f = open(&path, true, false, false);
+        // The pinned WinFsp kernel rejects ON_CLOSE before forwarding a
+        // callback. Verify that refusal preserves the existing DoC intent.
+        assert_eq!(
+            clear_delete_on_close(&f).unwrap_err().code().0,
+            0x80070032u32 as i32
+        );
+        assert_eq!(read(&mut f), b"extended");
+        assert!(path.exists());
         drop(f);
-        assert_eq!(std::fs::read(&path).unwrap(), b"extended");
+        assert!(!path.exists());
         let path = root.join("multiple DoC objects 🦀");
         std::fs::write(&path, b"multiple").unwrap();
         let mut retained = open(&path, false, false, false);
@@ -324,7 +331,7 @@ mod windows {
         drop(s);
         assert!(!target.exists());
         eprintln!(
-            "PASS: native DoC create/duplicates, SetDelete clear/reassert, extended on-close clear, four replacement modes, retained late I/O, cross-store ownership and directory lifecycle"
+            "PASS: native DoC create/duplicates, SetDelete clear/reassert, explicit extended on-close refusal, four replacement modes, retained late I/O, cross-store ownership and directory lifecycle"
         );
     }
 }

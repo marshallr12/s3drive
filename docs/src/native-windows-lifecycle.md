@@ -74,7 +74,7 @@ passes without diagnostic instrumentation or larger stack limits.
 
 The new Windows-only suite remains unverified here. It includes an actual NTFS
 directory-create control, atomic DoC creation, duplicates/multiple objects,
-regular/extended cancellation, explicit POSIX early cleanup, four replacement
+regular cancellation, explicit extended-cancellation refusal, POSIX early cleanup, four replacement
 modes, cross-store retained I/O and native lost-response/killed-owner recovery.
 It must compile and pass on the actual runner along with the frozen reference
 matrices and existing startup/mount gates before config7 is published to main.
@@ -94,3 +94,17 @@ The corrected local gate passed exit0 (`/tmp/s3drive-lifecycle-gate6.log`): 255
 state tests, ten HTTP, seventeen SDK, lifecycle/policy and original mutation
 regression, formatting, Clippy, builds and book. No stack limits changed. Native
 Windows compilation/runtime and exact-tip hosted acceptance remain required.
+
+## Observed kernel limit
+
+Research and native observation2026-10-17: candidate366828a reached the actual
+WinFsp mount. Atomic file/directory DoC, duplicate lifetime and ordinary
+SetDelete clear/reassert passed before extended ON_CLOSE cancellation returned
+HRESULT0x80070032 (not supported). The pinned
+[WinFsp2.1 disposition implementation](https://github.com/winfsp/winfsp/blob/v2.1/src/sys/fileinfo.c#L1493-L1495)
+rejects this flag in the kernel before posting a userspace callback. A Rust
+SetDelete implementation cannot implement that rejected request. The profile
+therefore explicitly excludes extended ON_CLOSE cancellation, unlike the frozen
+NTFS reference. Acceptance must assert the exact refusal, retained bytes and
+unchanged DoC effect at Close. Ordinary SetDelete cancellation remains required;
+no silent conversion of the rejected extended request is permitted.
