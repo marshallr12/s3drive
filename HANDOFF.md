@@ -1,64 +1,52 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **exclusive mount-session recovery** on
-`codex/windows-session-recovery`. Goal ACTIVE. Read the implementation plan,
-`docs/src/windows-session-recovery.md` and controller/session modules.
+Updated: 2026-10-17. Current phase: **deferred replacement reference and native
+Windows lifecycle integration** on `codex/windows-replacement-reference`.
+Goal ACTIVE. Read `docs/src/windows-replacement-reference.md` and the plan.
 
 Published baseline verified live: private clean local/remote main
-`50e7709e69117b56194512b443164b02f09933b2`, terminal all-green
-[run39056932966](https://github.com/marshallr12/s3drive/actions/runs/39056932966).
-Linux117466704318, Windows117466704535, book117466704549. 228/224 state,
-nine HTTP, fifteen SDK, seven native cases per OS, fourteen typed NTFS traces,
+`27697fd7c3974a5f3ed11e3000a7d5325a2340c8`, terminal all-green
+[run39059948714](https://github.com/marshallr12/s3drive/actions/runs/39059948714).
+Linux117475664757, Windows117475664609, book117475664551. 240/236 state,
+nine HTTP, sixteen SDK, seven native cases per OS, fourteen typed NTFS traces,
 four pinned upstream and nine malformed-fixture checks passed. Linux no-systemd
-and Windows non-admin independent-logon startup passed. Source-bound reference
-artifact12109299418 matched OS/typed records at2026-10-17T18:19:47Z.
-Proof `/tmp/s3drive-retirement-publication.json`; logs
-`/tmp/s3drive-retirement-{linux,windows,book}.log`. Schema19/config6 baseline.
-Repository privacy must be checked live; it was restored from public in the
-previous controller phase and confirmed private after retirement publication.
+and Windows non-admin independent-logon startup passed. Source-bound artifact
+12111735021 matched all typed records/OS at2026-10-17T19:01:08Z.
+Proof `/tmp/s3drive-mount-recovery-publication.json`; logs
+`/tmp/s3drive-session-{linux,windows,book}.log`. Schema20/config6 baseline.
+Privacy must be verified live; previously restored from public, confirmed private.
 
-The controller supports planned replies, exact same-fence compensation, repeated
-True/False, deleting cleanup/current IDs, nonempty-directory preservation and
-late detached writes through Close. Complete controlled opens retire from live
-256-open/4096-event budgets without deleting any input/event/namespace proof.
-Exact replay remains historical; identity reuse/new retired events are refused.
-CleanupDelete unlinks during cleanup, never invent deletion only at Close.
+Controller session recovery is now accepted: session bindings use a fresh runtime
+identity only after exclusive State directory acquisition. Same-owner supersede
+and replacement of a lost client identity are refused. Old admissions/callbacks
+replay exactly; separate abandonment proof keeps missing cleanup/close/activation
+missing. Freeze old open hashes and same-fence cancellation before RPC, then
+retain full evidence and retire completed/recovered records from live budgets.
+Five SDK processes retain four immutable PUTs with binary/empty/Unicode fixtures,
+unknown cancellation, failed proof, recorded removal and uncertain admission.
+Exact old link replay remains bookkeeping despite later unknown node effects.
+Planned replies still do not prove kernel receipt; do not enable callbacks yet.
 
-Current implementation: schema20 immutable mount sessions bind to a random
-incarnation created only after exclusive State directory acquisition. One session
-per volume/runtime; replacing Storage proves older registered owners obsolete.
-Controller::attach enforces session-bound opens/callbacks; unbound prototype
-records are not silently adopted. recover_previous replays exact admissions and
-recorded effects, flushes/retains logical work, freezes complete old open hashes
-and a same-fence cancellation, then records separate abandonment proof. Missing
-cleanup/close/activation stays missing. Full old bytes and proof rows remain;
-finished recovery can retire their live admission. Unknowns/conflicts remain
-quarantined; no fresh guard/ID fallback or automatic successor cancellation.
+Current reference harness: seven replacement cases on NTFS and a disposable
+in-memory host using the same pinned Rust wrapper/WinFsp legacy mode. The test
+host permits replacement if Rename reaches user mode and removes by identity;
+observations distinguish a kernel refusal from callback forwarding and preserve
+old-handle late I/O. It is not S3Drive or native deletion acceptance. Initial
+workflow explicitly measures before long workspace tests; no guessed fixture.
+Review exact-source artifacts, freeze typed platform/results and add malformed
+fixture rejection checks; remove -Measure from required CI before publication.
+Keep old14/four-upstream/seven-native/startup gates intact. Require final local
+gate and terminal exact-tip hosted checks before guarded private publication.
 
-The SDK recovery uncovered a real existing barrier bug: replaying an acknowledged
-promotion link was blocked by a later unknown Commit of that node. Exact link
-identity now replays as bookkeeping; new effects stay blocked. A state regression
-and the real promote+unknown-commit recovery exercise this. Sixteen SDK cases
-include five new session process stages with four immutable PUTs, binary/empty/
-Unicode names, cancellation loss, failed proof, recorded deletion and uncertain
-admission. Targeted SDK passed `/tmp/s3drive-session-sdk2.log`. Final local gate
-passed exit0 at `/tmp/s3drive-session-gate2.log`: 240 state, nine HTTP, sixteen
-SDK, lint/build/book. Twelve new state tests include full256-open quota and
-retained-session identity loss without any opens. Final guard prevents minting
-a replacement client identity while any session history remains. Prior gate1
-passed239 before that guard. Diagram PNG/SVG rendered and visually inspected.
-Require terminal exact-tip hosted native/reference/startup acceptance and typed
-source-bound reference artifact before guarded publication from50e7709. Then
-continue native reply/lifecycle integration; do not infer native deletion.
-
-Keep config6/native SetDelete/DoC unsupported until full acceptance. Session
-recovery is not proof the kernel consumed a planned reply. Next reconcile that
-uncertainty from the actual WinFsp lifecycle, measure deferred destination
-replacement, and integrate the complete native bridge with explicit new config.
-Do not enable SetDelete-only behavior or permanently refuse required operations.
-No new Wasabi mutation, NNP bypass or workstation startup change is authorized.
-Turso remains proposed, and target-workstation reboot/PAM/SSH acceptance remains
-unverified. Preserve namespace/disk caps and retained conflicts explicitly.
+Next implement the full native lifecycle bridge from measured behavior, including
+reply uncertainty, retained I/O, multiple file objects, stable-ID cleanup and
+rename/replacement. Do not permanently substitute refused operations or
+SetDelete-only support. Keep config6/native SetDelete/DoC unsupported until all
+new native acceptance passes. Local workstation NoNewPrivs=1 remains a hard
+restriction; never bypass it. No new Wasabi writes, credential/startup changes,
+Turso provisioning or target-workstation reboot/PAM/SSH success is authorized or
+verified. Research lives in mdBook with dates/citations, not inferred platform
+claims. Preserve dirty bytes and explicit conflicts; no fresh-ID fallback.
 
 ## Previous expanded reference phase
 

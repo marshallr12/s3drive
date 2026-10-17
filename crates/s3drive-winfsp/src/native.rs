@@ -1,6 +1,8 @@
 //! Audited Windows FFI boundary. No filesystem/network logic belongs here.
 #[cfg(test)]
 mod disposition_reference;
+#[cfg(test)]
+mod replacement_reference;
 use std::{ffi::c_void, mem::size_of};
 use windows::{
     Wdk::System::SystemServices::RtlUpcaseUnicodeChar,

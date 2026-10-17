@@ -23,6 +23,7 @@
   - [Windows disposition controller](windows-disposition-controller.md)
 - [Completed-open retirement](windows-open-retirement.md)
 - [Mount-session recovery](windows-session-recovery.md)
+- [Deferred replacement reference](windows-replacement-reference.md)
   - [Publication while deletion is pending](pending-owner-publication.md)
 - [Turso and cross-machine coordination](turso-coordination.md)
 - [Filesystem behavior contract](filesystem-contract.md)

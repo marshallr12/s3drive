@@ -587,3 +587,15 @@ historical proofs, successor refusal, migration and retained Unicode/empty/binar
 objects with four PUTs and no replay. Exact old link replay no longer deadlocks
 recovery of a later uncertain commit. Schema20/config6 stay explicit; require
 terminal exact-tip hosted native/reference/startup CI before publication.
+
+
+### Deferred replacement and native lifecycle integration (2026-10-17)
+
+Session recovery accepted at `27697fd`, terminal CI39059948714. Measure
+[replacement behavior](windows-replacement-reference.md) on NTFS and selected
+WinFsp legacy before implementing deferred destination policy. Record actual
+forwarding, pending flags and old-context I/O/cleanup; freeze observed results
+and require strict typed/malformed-data checks, not guessed parity. Keep all
+existing acceptance gates. Then integrate the complete native lifecycle with
+explicit config and native DoC/SetDelete/cancel/cleanup/close/late-I/O/rename/
+replacement/recovery tests; unsupported config6 remains until that gate passes.
