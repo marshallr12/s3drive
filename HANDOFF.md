@@ -58,7 +58,7 @@ contract, including real SQLITE_FULL rollback/retry and ignored writes.
 Focused evidence: `/tmp/s3drive-entry-guard-final-tests.log`,
 `/tmp/s3drive-entry-state-authority-tests.log` and
 `/tmp/s3drive-entry-clippy-final.log`.
-Full local gate: `/tmp/s3drive-entry-gate.log`, exit 0; 123 Linux state tests, five authority TCP tests, 50 S3 and 13 FS tests. Documentation links/build/tests also pass.
+Full local gate: `/tmp/s3drive-entry-gate-final.log`, exit 0; 123 Linux state tests, five authority TCP tests, 50 S3 and 13 FS tests. Documentation links/build/tests also pass.
 See `docs/src/managed-namespace-plan.md` for the contract and remaining bridge.
 This metadata phase does not enable native rename/removal or acknowledge
 unpublished dirty source bytes. Native creation and prior editing behavior stay

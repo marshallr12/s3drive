@@ -7,8 +7,9 @@ fn guard(n: &Node) -> NodeGuard {
     }
 }
 struct World {
-    tmp: tempfile::TempDir,
+    // Fields drop in declaration order: release SQLite/ownership before cleanup.
     state: State,
+    tmp: tempfile::TempDir,
     volume: String,
     next: u64,
     store: String,

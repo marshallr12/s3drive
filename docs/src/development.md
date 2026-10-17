@@ -429,7 +429,7 @@ rusqlite 0.40.2 immediate transaction, rollback-on-drop and affected-row `execut
 contracts were inspected before implementation.
 
 
-The full local gate passed at `/tmp/s3drive-entry-gate.log`: 123 Linux state
+The full local gate passed at `/tmp/s3drive-entry-gate-final.log`: 123 Linux state
 tests, five authority TCP tests, 50 S3 and 13 FS tests, plus build/lint/book.
 Exact-tip Linux/Windows/book CI and existing native/startup regressions remain
 publication requirements. Their results are available in the
