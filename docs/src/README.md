@@ -15,7 +15,7 @@ chosen by the user on 2026-10-16. A shared authority owns the namespace; immutab
 S3 objects hold file generations. Existing direct mounts stay available without
 automatic conversion. The SQLite authority and [immutable publication library](managed-publication.md)
 are implemented. [Managed read-only integration](managed-native.md) now connects
-the native adapters and passed Linux/Windows native acceptance; [managed existing-file editing](managed-write-plan.md) has a verified Linux/Windows native checkpoint, with exact-tip publication gates recorded separately. [Managed creation/directories](managed-namespace-plan.md) passed real FUSE/WinFsp acceptance; rename/removal, full saves and remote deployment remain work.
+the native adapters and passed Linux/Windows native acceptance; [managed existing-file editing](managed-write-plan.md) has a verified Linux/Windows native checkpoint, with exact-tip publication gates recorded separately. [Managed creation/directories](managed-namespace-plan.md) passed real FUSE/WinFsp acceptance; [version-6 rename/replacement and Linux removal](managed-native-mutations.md) now add retained-handle recovery. Windows deletion, full application compatibility and remote deployment remain work.
 
 ## Recommendation
 
@@ -64,6 +64,7 @@ namespace edits; direct-key behavior below describes the existing compatibility 
 | Managed file publication | [Real SDK/HTTP/SQLite library](managed-publication.md); existing-file edits and creation passed native acceptance; remote deployment/live managed-provider acceptance pending |
 | Managed namespace authority | [SQLite and authenticated loopback development service](managed-layout.md); private token CLI and explicit version-3 read-only mounts |
 | Managed native reads | [Authority namespace and verified immutable payloads](managed-native.md); real FUSE/WinFsp acceptance passed |
+| Managed rename/replacement and Linux removal | [Version-6 contract and acceptance](managed-native-mutations.md); retained handles and exact recovery; Windows deletion remains unsupported |
 | Cross-machine coordination with Turso | [Research and design proposal](turso-coordination.md); no dependency or cloud service enabled |
 | Clean-cache storage library | Bounded worker, checksums, LRU/pins and recovery tests |
 | Mounted caching | Opt-in; online HEAD on new opens, revision snapshots, restart and integrity checks |

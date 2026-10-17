@@ -163,5 +163,4 @@ page budget. A real TCP test races two independent clients against one target,
 restarts the authority, replays both outcomes, unlinks the winner, and checks
 that replay does not resurrect it.
 
-The [private namespace acknowledgment and detached publication bridge](managed-unlinked.md) now implements the local transaction and retained unlinked-generation contract. Remaining native integration is mandatory: publish pending source bytes before a replacement, retain open handles, wire FUSE rename/unlink/rmdir and WinFsp rename/delete cleanup, and pass real application save/replacement/recovery tests. Until then native
-rename/removal callbacks remain unsupported, and dirty data is retained.
+The [private namespace acknowledgment and detached publication bridge](managed-unlinked.md) implements the local transaction and retained unlinked-generation contract. The [version-6 native integration](managed-native-mutations.md) publishes pending source bytes before replacement, retains open handles, and wires FUSE rename/unlink/rmdir and WinFsp rename. Windows delete-intent/cleanup remains unsupported; full application compatibility, multi-host invalidation and managed-provider acceptance remain required. Dirty/conflicting data and immutable objects stay retained.

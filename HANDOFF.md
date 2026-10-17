@@ -1,10 +1,12 @@
 # S3Drive handoff
 
 Updated: 2026-10-17. Current phase: **P6m3b3b3 native namespace integration**
-on `codex/managed-native-namespace`. Candidate implements version-6
+on `codex/managed-native-namespace`. Native checkpoint implements version-6
 rename/replacement on both OSes and Linux unlink/rmdir with retained handles.
 Portable mutation/recovery/cancellation tests pass on the normal stack.
-The full local gate passed; terminal exact-tip Linux/Windows/book CI remains required.
+The full local gate and both native acceptance steps passed. Publication requires
+terminal exact-tip Linux/Windows/book CI, including the final doc-only candidate.
+Inspect the private remote main and latest branch workflow before resuming.
 Windows deferred deletion is explicitly unsupported. Goal ACTIVE.
 
 ## Requirements and authorization
@@ -32,7 +34,7 @@ Windows non-admin cross-logon regressions. Logs:
 `/tmp/s3drive-detached-final-{linux,windows,book}-ci.log`.
 Local/remote main, private visibility and clean state verified at publication.
 
-## Current candidate
+## Version-6 native checkpoint
 
 See `docs/src/managed-native-mutations.md` and `examples/managed-mutations.toml`.
 No schema/dependency change. Version 3/4/5 keep their previous capabilities.
@@ -50,7 +52,12 @@ Portable test passes at `/tmp/s3drive-native-namespace-faults2.log`: three exact
 PUTs, killed clients after committed rename/removal, and cancelled caller with
 shutdown waiting on a held reply. New native case per OS tests actual save/
 replace, Unicode directory moves, second bucket, cycles, remount and lost rename
-reply recovery; Linux also removal/retained handles. Native results pending.
+reply recovery; Linux also removal/retained handles. Both native steps passed at **72150874c3e0930c2936b40c12121a213f546b29**,
+[run 39022063662](https://github.com/marshallr12/s3drive/actions/runs/39022063662):
+Linux `117365682553` (terminal success), Windows `117365682687` (native success,
+saving cache at snapshot), book `117365682727` (terminal success). Seven native
+cases per OS; Linux no-systemd regression passed. See the checked-in evidence
+snapshot. Final doc-only candidate still needs terminal exact-tip CI before main.
 First native run 39021710073: six Linux regressions passed, new fstat failed
 ENOENT because the kernel omitted FUSE_GETATTR_FH. Fixed retained metadata lookup
 without weakening assertions. Additional portable clean-refresh/closed-newest/
@@ -67,7 +74,9 @@ acceptance pass. Never delete from SetDelete to fake DeleteFile success.
 Run `bash scripts/gate.sh`, then require terminal exact-tip Linux/Windows/book
 jobs including seven native cases per OS and existing startup regressions.
 Do not publish main early while a job is still saving cache. Preserve native
-serialization and all assertions/deadlines. Remaining goal work includes Windows
+serialization and all assertions/deadlines. Next implementation phase should design reversible durable Windows delete
+disposition/cleanup before enabling any removal callback. Do not equate
+SetDelete success with an irreversible unlink. Remaining goal work includes Windows
 delete, full application save acceptance, remote/Turso authority deployment,
 multi-host invalidation, live managed-provider acceptance and actual workstation
 startup tests. No immutable blob/local dirty generation reclamation exists.

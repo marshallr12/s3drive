@@ -1,8 +1,12 @@
 # Managed native rename, replacement and Linux removal
 
-**Implementation candidate, 2026-10-17 (P6m3b3b3).** Explicit managed
+**Native checkpoint, 2026-10-17 (P6m3b3b3).** Explicit managed
 `version = 6` adds shared rename/replacement and Linux unlink/rmdir callbacks.
-Portable SDK/authority/SQLite tests pass; native acceptance is a separate gate.
+Portable SDK/authority/SQLite tests and both real-driver acceptance steps passed
+at `7215087`, [run 39022063662](https://github.com/marshallr12/s3drive/actions/runs/39022063662).
+The [snapshot](evidence/managed-native-mutations-2026-10-17.json) records native-step
+acceptance; Windows was saving cache at capture. Publication additionally requires
+terminal exact-tip Linux/Windows/book CI.
 Windows deletion remains unsupported. Version 3 remains read-only, version 4
 edits existing files and version 5 creates files/directories. Existing configs
 are never upgraded automatically. The [version-6 template](../../examples/managed-mutations.toml)

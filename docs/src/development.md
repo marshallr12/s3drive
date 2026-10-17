@@ -465,7 +465,7 @@ for that source-specific result. Native unlink/rename acceptance is not implied.
 
 ## Managed native mutation gate (2026-10-17)
 
-The [version-6 candidate](managed-native-mutations.md) adds
+The [version-6 checkpoint](managed-native-mutations.md) adds
 `managed_namespace_moves_replacements_and_retained_unlinked_views` to the portable
 managed suite. Run it with `env -u RUST_MIN_STACK cargo test -p s3drive-cli --test
 managed_native --locked managed_namespace_moves -- --nocapture`. It includes
@@ -477,7 +477,7 @@ The new ignored native test
 `actual_managed_rename_replace_and_retained_handles` runs on both actual drivers
 alongside the existing six cases, with `--test-threads=1`. The full local gate `bash scripts/gate.sh` passed (exit 0,
 `/tmp/s3drive-native-namespace-gate2.log`); native Linux/Windows plus book CI must finish successfully
-for the exact final candidate before main publication. Results are pending in the
+for the exact final candidate before main publication. Final publication results are recorded in the
 [native mutation branch history](https://github.com/marshallr12/s3drive/actions?query=branch%3Acodex%2Fmanaged-native-namespace).
 Windows runs on a remote Windows Server 2025 VM. Local NoNewPrivs restrictions
 are not bypassed. No live Wasabi, user startup or credential changes are made.
@@ -490,4 +490,11 @@ retained tombstone metadata instead of looking up its removed name. The strict
 zero-link assertion remains. A further portable regression closes a newer clean
 view before unlink and checks the older pinned revision's identity/bytes; it
 passes at `/tmp/s3drive-native-namespace-retained.log` with the normal stack.
-The full revised local gate passed, exit 0. Revised native CI is still required.
+The full revised local gate passed, exit 0. Both revised native acceptance steps
+passed at `72150874c3e0930c2936b40c12121a213f546b29`,
+[run 39022063662](https://github.com/marshallr12/s3drive/actions/runs/39022063662).
+The [snapshot](evidence/managed-native-mutations-2026-10-17.json) captures both
+steps and seven expected cases per OS; Linux's complete job/no-systemd regression
+passed, and Windows was saving cache. This is native-step evidence, not a claim
+that a still-running job has finished. The final documentation candidate requires
+terminal exact-tip Linux/Windows/book success before main publication.

@@ -147,7 +147,9 @@ Windows Server 2025 VM, not this Linux workstation or Windows desktop emulation.
 [P6m3b1](managed-edits.md) adds durable local logical heads and publication settlement.
 [P6m3b2](managed-write-plan.md) adds version-4 local edit views, patch/truncate,
 remote fsync and recovery for existing-file callbacks, with its own native case.
-P6m3b3 still needs portable names and managed create/save/replace/rename/delete.
+P6m3b3 adds [portable names and creation](managed-namespace-plan.md), followed by
+[version-6 rename/replacement and Linux retained-handle removal](managed-native-mutations.md).
+Windows deferred deletion and full application compatibility remain required.
 Service supervision, multi-host/Turso deployment, large files, garbage collection
 and live-provider managed acceptance remain unfinished. Existing direct writable
 mount evidence does not certify those behaviors.

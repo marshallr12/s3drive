@@ -1,0 +1,36 @@
+{
+  "checked_at": "2026-10-17T09:50:24.595173+00:00",
+  "source_sha": "72150874c3e0930c2936b40c12121a213f546b29",
+  "run_url": "https://github.com/marshallr12/s3drive/actions/runs/39022063662",
+  "scope": "Native acceptance steps; terminal exact-tip Linux/Windows/book CI required for publication. Windows job saving cache at capture.",
+  "platforms": [
+    {
+      "job": "rust (ubuntu-latest)",
+      "job_id": 117365682553,
+      "job_status_at_capture": "completed",
+      "job_conclusion_at_capture": "success",
+      "native_step": "Verify real Linux mount and teardown",
+      "native_step_conclusion": "success",
+      "native_step_completed_at": "2026-10-17T09:44:05Z",
+      "expected_native_cases": 7
+    },
+    {
+      "job": "rust (windows-latest)",
+      "job_id": 117365682687,
+      "job_status_at_capture": "in_progress",
+      "job_conclusion_at_capture": "",
+      "native_step": "Verify real Windows drive and teardown",
+      "native_step_conclusion": "success",
+      "native_step_completed_at": "2026-10-17T09:49:22Z",
+      "expected_native_cases": 7
+    }
+  ],
+  "excluded": [
+    "Windows delete disposition, delete-on-close and open-unlinked semantics",
+    "full desktop application compatibility",
+    "live Wasabi mutations or managed-provider acceptance",
+    "actual MX reboot, SSH/PAM and Windows 10/11 desktop acceptance",
+    "remote authority or Turso deployment",
+    "multi-host invalidation and garbage collection"
+  ]
+}
