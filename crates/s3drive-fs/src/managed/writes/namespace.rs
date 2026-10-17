@@ -128,6 +128,12 @@ impl Writes {
             nodes.push(n);
         }
         for n in nodes {
+            if n.deleted {
+                self.removed
+                    .lock()
+                    .map_err(|_| Error::Internal)?
+                    .insert(n.id.clone());
+            }
             if let Some(file) = self.held(&n.id)? {
                 let mut view = file.view.lock().map_err(|_| Error::Internal)?;
                 // The durable bridge already verified that this effect keeps

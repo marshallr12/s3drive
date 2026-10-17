@@ -43,7 +43,9 @@ A replaced or removed node becomes a tombstone. Existing handles keep their
 shared local bytes and stable node identity, report zero links and can still
 write and fsync. Detached publication updates that old node while preserving
 its tombstone. Recreating the old path allocates a new identity, so a later flush
-through the old handle cannot overwrite the new file. Newly opened paths never
+through the old handle cannot overwrite the new file. The unlink observation also reaches older pinned read revisions after a clean
+refresh, even if the newest view has closed. Linux getattr without a handle flag
+uses retained metadata for these deleted inodes. Newly opened paths never
 resolve the tombstone. No immutable blob is reclaimed.
 
 Unlink refuses directories; rmdir refuses files and nonempty directories. A
@@ -84,7 +86,10 @@ refusal, cycle/type/emptiness checks, and directory fsync. It expects exactly
 three immutable PUTs. Two killed-client cases lose committed move/remove replies
 and require exact recovery without another namespace effect or PUT. A cancelled
 caller case holds the authority reply, verifies shutdown waits and new writes
-are refused, then releases it and reopens SQLite successfully.
+are refused, then releases it and reopens SQLite successfully. A separate retained-revision
+check publishes one external clean refresh, closes its newest view, unlinks the
+node and verifies that the older pinned view reports zero links while retaining
+its original bytes.
 
 A seventh real-driver case per OS exercises save/replace, Unicode directory
 moves, second-bucket identity, cycle refusal and remount. Both lose a committed

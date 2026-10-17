@@ -719,6 +719,9 @@ pub async fn child() {
         "namespace-move-recovered" => Box::pin(namespace_move_recovered_mode(&c)).await,
         "namespace-remove-uncertain" => Box::pin(namespace_remove_uncertain_mode(&c)).await,
         "namespace-remove-recovered" => Box::pin(namespace_remove_recovered_mode(&c)).await,
+        "namespace-retained-revisions" => {
+            Box::pin(namespace_retained_revisions_mode(&c, &root)).await
+        }
         "namespace-cancel" => Box::pin(namespace_cancel_mode(&c, &root)).await,
         "namespace-mutations" => Box::pin(namespace_mutations_mode(&c)).await,
         "namespace-engine" => {
@@ -1820,6 +1823,10 @@ pub async fn portable_mutations() {
         "cancelled caller repeated namespace effect"
     );
     assert_eq!(puts(&f), before + 3);
+    h.configure(&s, &f);
+    h.configure_mutations();
+    h.child("namespace-retained-revisions").await;
+    assert_eq!(puts(&f), before + 4, "exactly one external clean refresh");
     s.stop().await;
 }
 async fn wait_marker(root: &Path, name: &str) {
@@ -1866,6 +1873,27 @@ async fn namespace_remove_recovered_mode(c: &s3drive_core::Config) {
     assert!(fs.lookup(s3drive_fs::ROOT, "remove once 🦀").await.is_err());
     fs.cache_control().unwrap().close().await.unwrap();
 }
+async fn namespace_retained_revisions_mode(c: &s3drive_core::Config, root: &Path) {
+    let fs = s3drive_fs::ReadOnlyFs::new(c).await.unwrap();
+    let d = fs.lookup(s3drive_fs::ROOT, DIR).await.unwrap();
+    let n = fs.lookup(d.id, "cancelled caller completed").await.unwrap();
+    let original = fs.open(n.id).await.unwrap();
+    assert_eq!(original.read(0, 64).await.unwrap(), data(0)[..64]);
+    publish(root, &wire(c), "first", 200, 11, 8100, &data(1)).await;
+    let refreshed = fs.open(n.id).await.unwrap();
+    assert_eq!(refreshed.read(0, 64).await.unwrap(), data(1)[..64]);
+    drop(refreshed);
+    // The newest Weak<File> is now expired. The old revision still carries the
+    // same namespace identity and must learn its zero-link state.
+    fs.remove_entry(d.id, "cancelled caller completed", false)
+        .await
+        .unwrap();
+    assert!(original.is_unlinked().unwrap());
+    assert_eq!(original.read(0, 64).await.unwrap(), data(0)[..64]);
+    assert!(fs.lookup(d.id, "cancelled caller completed").await.is_err());
+    fs.cache_control().unwrap().close().await.unwrap();
+}
+
 async fn namespace_cancel_mode(c: &s3drive_core::Config, root: &Path) {
     let fs = Arc::new(s3drive_fs::ReadOnlyFs::new(c).await.unwrap());
     let d = fs.lookup(s3drive_fs::ROOT, DIR).await.unwrap();

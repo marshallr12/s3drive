@@ -476,8 +476,18 @@ before SQLite close. The focused result is
 The new ignored native test
 `actual_managed_rename_replace_and_retained_handles` runs on both actual drivers
 alongside the existing six cases, with `--test-threads=1`. The full local gate `bash scripts/gate.sh` passed (exit 0,
-`/tmp/s3drive-native-namespace-gate.log`); native Linux/Windows plus book CI must finish successfully
+`/tmp/s3drive-native-namespace-gate2.log`); native Linux/Windows plus book CI must finish successfully
 for the exact final candidate before main publication. Results are pending in the
 [native mutation branch history](https://github.com/marshallr12/s3drive/actions?query=branch%3Acodex%2Fmanaged-native-namespace).
 Windows runs on a remote Windows Server 2025 VM. Local NoNewPrivs restrictions
 are not bypassed. No live Wasabi, user startup or credential changes are made.
+
+
+The first native candidate (`2e8e4a3`, run 39021710073) passed six existing
+Linux cases and failed the new replaced-handle fstat assertion with ENOENT.
+Linux had requested getattr without FUSE_GETATTR_FH. The adapter now obtains
+retained tombstone metadata instead of looking up its removed name. The strict
+zero-link assertion remains. A further portable regression closes a newer clean
+view before unlink and checks the older pinned revision's identity/bytes; it
+passes at `/tmp/s3drive-native-namespace-retained.log` with the normal stack.
+The full revised local gate passed, exit 0. Revised native CI is still required.

@@ -119,7 +119,7 @@ pub struct OpenFile {
 impl OpenFile {
     pub fn is_unlinked(&self) -> Result<bool> {
         match &self.managed_write {
-            Some((_, f)) => f.is_unlinked(),
+            Some((w, f)) => w.is_unlinked(f),
             None => Ok(false),
         }
     }

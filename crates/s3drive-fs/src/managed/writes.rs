@@ -20,6 +20,9 @@ pub(crate) struct Writes {
     publishers: HashMap<String, Publisher>,
     stores: Mutex<HashMap<String, String>>,
     entries: Mutex<HashMap<String, Weak<File>>>,
+    // Tombstones never become live again. Keep identity independent of the
+    // latest payload view, which may close while an older snapshot stays open.
+    removed: Mutex<HashSet<String>>,
     open_serial: AsyncMutex<()>,
     edit_serial: AsyncMutex<()>,
     // Also serializes recovery of files whose last local handle was closed.
@@ -43,9 +46,6 @@ struct View {
     deleted: bool,
 }
 impl File {
-    pub fn is_unlinked(&self) -> Result<bool> {
-        Ok(self.view.lock().map_err(|_| Error::Internal)?.deleted)
-    }
     pub fn metadata(&self) -> Result<ObjectMetadata> {
         Ok(self
             .view
@@ -91,6 +91,7 @@ impl Writes {
             publishers,
             stores: Mutex::new(HashMap::new()),
             entries: Mutex::new(HashMap::new()),
+            removed: Mutex::new(HashSet::new()),
             open_serial: AsyncMutex::new(()),
             edit_serial: AsyncMutex::new(()),
             publish_serial: AsyncMutex::new(()),
@@ -123,6 +124,17 @@ impl Writes {
             .await
             .map_err(|_| Error::Internal)?;
         Ok(())
+    }
+    pub fn is_unlinked(&self, file: &File) -> Result<bool> {
+        if self
+            .removed
+            .lock()
+            .map_err(|_| Error::Internal)?
+            .contains(&file.id)
+        {
+            return Ok(true);
+        }
+        Ok(file.view.lock().map_err(|_| Error::Internal)?.deleted)
     }
     pub fn mutations_enabled(&self) -> bool {
         self.mutations

@@ -51,7 +51,12 @@ PUTs, killed clients after committed rename/removal, and cancelled caller with
 shutdown waiting on a held reply. New native case per OS tests actual save/
 replace, Unicode directory moves, second bucket, cycles, remount and lost rename
 reply recovery; Linux also removal/retained handles. Native results pending.
-Full local gate passed, exit 0: `/tmp/s3drive-native-namespace-gate.log`.
+First native run 39021710073: six Linux regressions passed, new fstat failed
+ENOENT because the kernel omitted FUSE_GETATTR_FH. Fixed retained metadata lookup
+without weakening assertions. Additional portable clean-refresh/closed-newest/
+unlink regression passes on normal stack (`/tmp/s3drive-native-namespace-retained.log`);
+tombstone identity is independent of the newest payload view.
+Full revised local gate passed, exit 0: `/tmp/s3drive-native-namespace-gate2.log`.
 
 Resolved fuser 0.18 rename flags/namespace callbacks, WinFsp 0.13.1 rename/delete/
 cleanup contracts, windows 0.61.3 access constants and Tokio owned permits/tasks

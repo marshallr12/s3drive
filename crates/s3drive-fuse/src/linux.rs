@@ -144,6 +144,25 @@ impl Adapter {
                 return Ok(attr);
             }
         }
+        // Linux may issue fstat/getattr without FUSE_GETATTR_FH even for an
+        // open, unlinked inode. The name is gone, but its retained handle still
+        // supplies metadata. Never reauthorize a deleted node through its path.
+        let retained = self
+            .handles
+            .lock()
+            .map_err(|_| Errno::EIO)?
+            .entries
+            .values()
+            .find(|handle| matches!(&***handle, OpenHandle::File(file) if file.node.id == ino.0))
+            .cloned();
+        if let Some(handle) = retained
+            && let OpenHandle::File(file) = &*handle
+            && file.is_unlinked().map_err(errno)?
+        {
+            let mut attr = self.attr(&file.node, Some(&file.current_metadata().map_err(errno)?));
+            attr.nlink = 0;
+            return Ok(attr);
+        }
         let node = self.fs.node(ino.0).map_err(errno)?;
         let metadata = self.wait(self.fs.metadata(ino.0))?;
         Ok(self.attr(&node, metadata.as_ref()))
