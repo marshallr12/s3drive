@@ -4,6 +4,8 @@
 pub mod fixture;
 #[path = "support/owned_disposition.rs"]
 mod owned_disposition;
+#[path = "support/pending_owner.rs"]
+mod pending_owner;
 #[path = "support/writes.rs"]
 #[allow(dead_code)]
 mod writes;
@@ -268,7 +270,17 @@ async fn proxy(
     axum::Json(request): axum::Json<Request>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let r = p.upstream.request(&request).await.unwrap();
+    let mut r = p.upstream.request(&request).await.unwrap();
+    if matches!(request, Request::Info {})
+        && p.loss
+            .compare_exchange(7, 0, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+    {
+        let Reply::Info(volume) = &mut r else {
+            panic!()
+        };
+        volume.sequence += 1000;
+    }
     let kind = match request {
         Request::Apply {
             request:
@@ -276,7 +288,8 @@ async fn proxy(
                     mutation:
                         Mutation::Reserve { .. }
                         | Mutation::ReserveContent { .. }
-                        | Mutation::ReserveDetachedContent { .. },
+                        | Mutation::ReserveDetachedContent { .. }
+                        | Mutation::ReservePendingContent { .. },
                     ..
                 },
         } => 1,
@@ -363,6 +376,7 @@ async fn managed_child() {
     let authority = if mode.starts_with("detached_")
         || mode.starts_with("pending_")
         || mode.starts_with("owned_")
+        || mode.starts_with("fenced_")
     {
         Authority::open_with_policy(root.join("authority"), "portable-collision-v1".into())
             .await
@@ -372,6 +386,16 @@ async fn managed_child() {
     };
     let (wire, stop, server) = serve(authority.client()).await;
     let volume = info(&wire).await.id;
+    if mode.starts_with("fenced_") {
+        Box::pin(pending_owner::run_mode(
+            &mode, &config, &root, &wire, &volume,
+        ))
+        .await;
+        stop.send(()).unwrap();
+        server.await.unwrap();
+        authority.shutdown().await.unwrap();
+        return;
+    }
     if mode.starts_with("owned_") {
         Box::pin(owned_disposition::run_mode(
             &mode, &config, &root, &wire, &volume,

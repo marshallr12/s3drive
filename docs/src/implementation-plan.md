@@ -328,7 +328,7 @@ not behaviors proved by the current local-loopback tests.
 The accepted authority checkpoint is `4bca4ad`, terminal Linux/Windows/book
 [run 39026528993](https://github.com/marshallr12/s3drive/actions/runs/39026528993),
 including seven native cases per OS and pending-directory cancellation/open.
-The next independently green checkpoint adds schema-14 client identity, exact
+Accepted at `188e03c`, [run 39028253459](https://github.com/marshallr12/s3drive/actions/runs/39028253459): schema-14 client identity, exact
 arm/cancel/commit journaling and atomic logical observation. It derives owned
 fences from immutable receipt history, blocks ordinary local admission against
 owned reservations, and preserves closure capacity and dirty bytes. See the
@@ -343,3 +343,24 @@ Next b4b2 adds pending-owner SDK publication; b4b3 adds durable per-open/node-wi
 lifecycle. Native Windows deletion remains refused until b4c acceptance. No live
 provider writes, installed startup changes or Turso deployment are part of this
 local checkpoint.
+
+
+### P6m3b3b4b2 — pending-owner publication and retained conflicts (2026-10-17)
+
+Follow [the implementation contract](pending-owner-publication.md). Schema 15
+accepts new pending-owner SDK work only with the acknowledged local fence,
+frozen bindings and logical operation ownership. Complete publication uses the
+existing one-shot physical verification, exact metadata CAS and logical receipt.
+Separate retained rejection/conflict records allow explicit resolution of
+confirmed failures before cancellation/commit without discarding dirty bytes.
+Unknown or temporary failures continue to block closing. Old hashes stay valid.
+
+Acceptance: state admission, integrity, ignored writes, full disk and schema-14
+migration/refusal; actual SDK/HTTP killed-client and authority recovery after
+lost reserve/upload/metadata/local results, exact PUT counts, binary/empty and
+Unicode data, physical and metadata conflicts, retained orphan/rival bytes,
+explicit closing admission and later fresh generations. Run the full repository
+gate and terminal exact-tip Linux/Windows/book CI, preserving seven native cases
+per OS and startup acceptance. Windows startup strictly requires schema 15.
+Native Windows deletion waits for b4b3 lifecycle + b4c acceptance. No live Wasabi
+mutation, workstation startup/credential change or Turso deployment is included.

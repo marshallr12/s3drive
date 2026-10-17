@@ -7,13 +7,13 @@ fn owner(f: &mut Fixture) -> String {
         .client_identity()
         .unwrap()
 }
-fn owned(f: &mut Fixture, n: &Node) -> Option<crate::namespace_client::OwnedRemoval> {
+pub(super) fn owned(f: &mut Fixture, n: &Node) -> Option<crate::namespace_client::OwnedRemoval> {
     Journal::new(&mut f.client)
         .unwrap()
         .owned_removal(&f.volume, &n.id)
         .unwrap()
 }
-fn arm(f: &mut Fixture, n: &Node) -> Input {
+pub(super) fn arm(f: &mut Fixture, n: &Node) -> Input {
     let owner = owner(f);
     f.input(
         Mutation::ArmRemoval {
@@ -27,7 +27,7 @@ fn arm(f: &mut Fixture, n: &Node) -> Input {
         std::slice::from_ref(n),
     )
 }
-fn close(f: &mut Fixture, n: &Node, fence: &RemovalFence, commit: bool) -> Input {
+pub(super) fn close(f: &mut Fixture, n: &Node, fence: &RemovalFence, commit: bool) -> Input {
     let mutation = if commit {
         Mutation::CommitRemoval {
             node: guard(n),
@@ -45,7 +45,7 @@ fn close(f: &mut Fixture, n: &Node, fence: &RemovalFence, commit: bool) -> Input
     };
     f.input(mutation, std::slice::from_ref(n))
 }
-fn apply(f: &mut Fixture, input: &Input) -> Receipt {
+pub(super) fn apply(f: &mut Fixture, input: &Input) -> Receipt {
     Journal::new(&mut f.client)
         .unwrap()
         .begin(input.clone())
@@ -431,7 +431,7 @@ fn schema_thirteen_migration_preserves_existing_journal_and_conflicts_roll_back(
                 r.get::<_, Vec<u8>>(0)
             })
             .unwrap();
-        f.client.connection.execute_batch("DROP TABLE retained_client_identity; DROP TABLE client_identity; PRAGMA user_version=13").unwrap();
+        f.client.connection.execute_batch("DROP TABLE logical_conflicts; DROP TABLE managed_rejections; DROP TABLE retained_client_identity; DROP TABLE client_identity; PRAGMA user_version=13").unwrap();
         if conflict {
             f.client.connection.execute_batch("CREATE TABLE client_identity(keep TEXT); INSERT INTO client_identity VALUES('preserved')").unwrap();
         }

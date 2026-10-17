@@ -1,5 +1,6 @@
 //! Durable local managed edits. Local targets cannot be mistaken for an S3
 //! generation binding; metadata publication and logical settlement are separate.
+mod conflicts;
 use crate::{
     Result, State,
     journal::{self, GenerationId, Target},
@@ -7,6 +8,7 @@ use crate::{
     namespace::{self, Kind, Node, Receipt, Store},
     remote,
 };
+pub use conflicts::RetainedConflict;
 use rusqlite::{Connection, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -269,6 +271,7 @@ fn load(db: &Connection, id: &str) -> Result<Record> {
     if r.receipt.is_some() && r.publication.is_none() {
         return Err("logical receipt lacks publication".into());
     }
+    conflicts::checked(db, &r)?;
     Ok(r)
 }
 fn verify_bytes(db: &Connection, r: &Record, g: &journal::Generation) -> Result<()> {
@@ -313,6 +316,7 @@ fn ancestor(
     Err("logical ancestry exceeds retained bounds".into())
 }
 pub(crate) fn check_schema(db: &Connection) -> Result<()> {
+    db.prepare("SELECT edit_id,publication_id,state_hash FROM logical_conflicts LIMIT 0")?;
     db.prepare("SELECT volume,node,input,settled_generation,settled_publication,state_hash,observed_base FROM logical_files LIMIT 0")?;
     db.prepare("SELECT operation_id,volume,node,input,generation_id,publication,receipt,state_hash FROM logical_edits LIMIT 0")?;
     db.prepare("SELECT operation_id,edit_id FROM logical_publication_links LIMIT 0")?;
@@ -638,22 +642,7 @@ impl<'a> Journal<'a> {
             }
             return Ok(r);
         }
-        if crate::namespace_client::pending_for_node(
-            &self.state.connection,
-            &r.input.volume,
-            &r.input.node,
-        )? {
-            return Err("recover namespace outcome before preparing publication".into());
-        }
-        if crate::namespace_client::removal_owned(
-            &self.state.connection,
-            &r.input.volume,
-            &r.input.node,
-        )? {
-            return Err(
-                "pending-owner SDK publication is not supported yet; retain dirty bytes".into(),
-            );
-        }
+        crate::namespace_client::authorize_publication(&self.state.connection, &input)?;
         let file = self.file(&r.input.volume, &r.input.node)?;
         let g = r.generation.ok_or("logical bytes not staged")?;
         let metadata = journal::load(&self.state.connection, g)?;
@@ -830,9 +819,48 @@ pub(crate) fn check_namespace_entry(
     if source_move && file.head != file.settled {
         return Err("publish the dirty source before exposing a namespace move".into());
     }
-    let prepared:bool=state.connection.query_row("SELECT EXISTS(SELECT 1 FROM logical_edits WHERE volume=?1 AND node=?2 AND publication IS NOT NULL AND receipt IS NULL)",params![volume,entry.id],|r|r.get(0))?;
-    if prepared {
-        return Err("resolve prepared publication before namespace mutation".into());
+    let ids=state.connection.prepare("SELECT operation_id FROM logical_edits WHERE volume=?1 AND node=?2 AND publication IS NOT NULL AND receipt IS NULL LIMIT 4097")?
+        .query_map(params![volume,entry.id],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+    if ids.len() > LIMIT {
+        return Err("logical publication quota integrity failure".into());
+    }
+    for id in ids {
+        let record = load(&state.connection, &id)?;
+        if conflicts::checked(&state.connection, &record)?.is_none() {
+            return Err("resolve or explicitly retain confirmed publication conflict before namespace mutation".into());
+        }
+    }
+    Ok(())
+}
+/// Pending-owner physical work must belong to the already frozen logical edit;
+/// a raw publication must not bypass the namespace closing barrier.
+pub(crate) fn require_pending_publication_link(
+    db: &Connection,
+    input: &managed::Input,
+) -> Result<()> {
+    use rusqlite::OptionalExtension;
+    if input
+        .reservation()?
+        .guard
+        .as_ref()
+        .and_then(|g| g.removal.as_ref())
+        .is_none()
+    {
+        return Ok(());
+    }
+    let id: Option<String> = db
+        .query_row(
+            "SELECT edit_id FROM logical_publication_links WHERE operation_id=?1",
+            [input.id()],
+            |r| r.get(0),
+        )
+        .optional()?;
+    let r = load(
+        db,
+        &id.ok_or("pending-owner publication requires a frozen logical edit")?,
+    )?;
+    if r.publication.as_ref() != Some(input) || r.receipt.is_some() || r.generation.is_none() {
+        return Err("pending-owner publication changed logical operation ownership".into());
     }
     Ok(())
 }

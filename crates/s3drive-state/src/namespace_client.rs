@@ -149,8 +149,28 @@ fn load(db: &Connection, id: &str) -> Result<Option<Record>> {
     }
     Ok(Some(r))
 }
-pub(crate) fn removal_owned(db: &Connection, volume: &str, node: &str) -> Result<bool> {
-    Ok(removals::owned(db, volume, node)?.is_some())
+pub(crate) fn authorize_publication(db: &Connection, input: &crate::managed::Input) -> Result<()> {
+    let reserve = input.reservation()?;
+    if pending_for_node(db, &reserve.volume, &reserve.node)? {
+        return Err("recover namespace outcome before preparing publication".into());
+    }
+    let owned = removals::owned(db, &reserve.volume, &reserve.node)?;
+    match (
+        owned,
+        reserve.guard.as_ref().and_then(|g| g.removal.as_ref()),
+    ) {
+        (None, None) => Ok(()),
+        (Some(owned), Some(fence))
+            if owned.fence == *fence
+                && owned.input.store == input.store
+                && owned.input.source == input.source
+                && owned.input.fingerprint == input.fingerprint
+                && reserve.expected_revision >= owned.receipt.sequence =>
+        {
+            Ok(())
+        }
+        _ => Err("publication requires this client's exact acknowledged removal fence".into()),
+    }
 }
 pub(crate) fn pending_for_node(db: &Connection, volume: &str, node: &str) -> Result<bool> {
     let ids = db

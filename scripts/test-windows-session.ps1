@@ -213,7 +213,7 @@ function Manage([string]$Action) {
 }
 function Initialize-LocalState([string]$Directory=$databaseState) {
     $output=& (Join-Path $root 's3drive.exe') init-state --directory $Directory | Out-String
-    if ($LASTEXITCODE -ne 0 -or $output -notmatch 'schema=14, journal=wal') {
+    if ($LASTEXITCODE -ne 0 -or $output -notmatch 'schema=15, journal=wal') {
         throw 'Private local state initialization/reopen failed'
     }
 }

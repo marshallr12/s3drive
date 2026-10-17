@@ -13,6 +13,7 @@
 - [Retained unlinked files and namespace acknowledgment](managed-unlinked.md)
 - [Managed native rename and Linux removal](managed-native-mutations.md)
 - [Windows deletion and durable disposition](windows-delete-plan.md)
+  - [Publication while deletion is pending](pending-owner-publication.md)
 - [Turso and cross-machine coordination](turso-coordination.md)
 - [Filesystem behavior contract](filesystem-contract.md)
 - [Implemented read-only provider contract](provider-contract.md)

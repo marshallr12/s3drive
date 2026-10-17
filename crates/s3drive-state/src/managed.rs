@@ -1,11 +1,13 @@
 //! Client-local managed publication intent. A physically verified blob is not a
 //! logical file flush until metadata publication and this receipt are committed.
+mod rejections;
 use crate::{
     Result, State,
     journal::{self, GenerationId, Target},
     namespace::{Apply, Artifact, Kind, Mutation, Payload, Receipt, Reservation, Store},
     remote,
 };
+pub use rejections::Rejection;
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -70,6 +72,26 @@ impl Input {
                     ),
                 }),
             ),
+            Mutation::ReservePendingContent {
+                node,
+                expected_revision,
+                store,
+                size,
+                sha256,
+                expected_payload,
+                fence,
+            } => (
+                node,
+                expected_revision,
+                store,
+                size,
+                sha256,
+                Some(crate::namespace::ContentGuard {
+                    expected: expected_payload.clone(),
+                    detached: false,
+                    removal: Some(fence.clone()),
+                }),
+            ),
             _ => return Err("managed input must reserve a blob".into()),
         };
         let r = Reservation {
@@ -121,6 +143,7 @@ pub struct Record {
     pub reservation: Option<Reservation>,
     pub publication: Option<Apply>,
     pub receipt: Option<Receipt>,
+    pub rejection: Option<Rejection>,
 }
 fn hash(record: &Record) -> Result<Vec<u8>> {
     let mut h = Sha256::new();
@@ -149,9 +172,10 @@ fn encoded<T: Serialize>(value: &Option<T>) -> Result<Option<Vec<u8>>> {
 }
 pub(crate) fn check_schema(db: &Connection) -> Result<()> {
     db.prepare("SELECT operation_id,input,generation_id,reservation,publication_request,receipt,state_hash FROM managed_publications LIMIT 0")?;
+    db.prepare("SELECT operation_id,rejection,state_hash FROM managed_rejections LIMIT 0")?;
     Ok(())
 }
-fn load(db: &Connection, id: &str) -> Result<Option<Record>> {
+pub(crate) fn load(db: &Connection, id: &str) -> Result<Option<Record>> {
     let mut stmt=db.prepare("SELECT input,generation_id,reservation,publication_request,receipt,state_hash FROM managed_publications WHERE operation_id=?")?;
     let row = stmt
         .query_row([id], |r| {
@@ -168,17 +192,19 @@ fn load(db: &Connection, id: &str) -> Result<Option<Record>> {
     let Some((input, generation, reservation, publication, receipt, checksum)) = row else {
         return Ok(None);
     };
-    let r = Record {
+    let mut r = Record {
         input: decode(input)?,
         generation: generation.map(GenerationId::from_database).transpose()?,
         reservation: reservation.map(decode).transpose()?,
         publication: publication.map(decode).transpose()?,
         receipt: receipt.map(decode).transpose()?,
+        rejection: None,
     };
     if r.input.id() != id || hash(&r)? != checksum {
         return Err("managed publication record integrity failure".into());
     }
     validate(&r)?;
+    r.rejection = rejections::load(db, &r)?;
     Ok(Some(r))
 }
 fn validate(r: &Record) -> Result<()> {
@@ -253,6 +279,9 @@ fn check_receipt(r: &Record, receipt: &Receipt) -> Result<()> {
 }
 fn save(db: &Connection, r: &Record) -> Result<()> {
     validate(r)?;
+    if r.rejection.is_some() || rejections::load(db, r)?.is_some() {
+        return Err("retained rejection cannot become a publication success".into());
+    }
     let changed = db.execute("UPDATE managed_publications SET generation_id=?1,reservation=?2,publication_request=?3,receipt=?4,state_hash=?5 WHERE operation_id=?6",
       params![r.generation.map(|g|g.value()),encoded(&r.reservation)?,encoded(&r.publication)?,encoded(&r.receipt)?,hash(r)?,r.input.id()])?;
     if changed != 1 {
@@ -286,6 +315,8 @@ impl<'a> Journal<'a> {
             }
             return Ok(r);
         }
+        crate::namespace_client::authorize_publication(&self.state.connection, &input)?;
+        crate::logical::require_pending_publication_link(&self.state.connection, &input)?;
         let tx = self
             .state
             .connection
@@ -302,6 +333,7 @@ impl<'a> Journal<'a> {
             reservation: None,
             publication: None,
             receipt: None,
+            rejection: None,
         };
         tx.execute(
             "INSERT INTO managed_publications VALUES(?1,?2,NULL,NULL,NULL,NULL,?3)",
@@ -312,6 +344,9 @@ impl<'a> Journal<'a> {
     }
     pub fn link(&mut self, id: &str, generation: GenerationId) -> Result<Record> {
         let mut r = self.get(id)?;
+        if r.rejection.is_some() {
+            return Err("publication has a retained rejection".into());
+        }
         if let Some(old) = r.generation {
             if old != generation {
                 return Err("managed generation changed".into());
@@ -371,6 +406,9 @@ impl<'a> Journal<'a> {
     }
     pub fn reserved(&mut self, id: &str, reservation: Reservation) -> Result<Record> {
         let mut r = self.get(id)?;
+        if r.rejection.is_some() {
+            return Err("publication has a retained rejection".into());
+        }
         if r.generation.is_none() || reservation != r.input.reservation()? {
             return Err("authority reservation differs from local immutable input".into());
         }
@@ -388,6 +426,9 @@ impl<'a> Journal<'a> {
     }
     pub fn prepare(&mut self, id: &str, sequence: u64) -> Result<Record> {
         let mut r = self.get(id)?;
+        if r.rejection.is_some() {
+            return Err("publication has a retained rejection".into());
+        }
         if r.publication.is_some() {
             return Ok(r);
         }
@@ -426,6 +467,9 @@ impl<'a> Journal<'a> {
     }
     pub fn acknowledge(&mut self, id: &str, receipt: Receipt) -> Result<Record> {
         let mut r = self.get(id)?;
+        if r.rejection.is_some() {
+            return Err("publication has a retained rejection".into());
+        }
         check_receipt(&r, &receipt)?;
         if r.receipt.as_ref().is_some_and(|old| old != &receipt) {
             return Err("managed receipt changed".into());

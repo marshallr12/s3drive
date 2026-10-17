@@ -534,7 +534,9 @@ impl State {
                         (SELECT count(*) FROM logical_publication_links) +
                         (SELECT count(*) FROM namespace_intents) +
                         (SELECT count(*) FROM client_identity) +
-                        (SELECT count(*) FROM retained_client_identity)",
+                        (SELECT count(*) FROM retained_client_identity) +
+                        (SELECT count(*) FROM managed_rejections) +
+                        (SELECT count(*) FROM logical_conflicts)",
                 [],
                 |r| r.get(0),
             ))?;

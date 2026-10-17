@@ -491,6 +491,13 @@ pub struct Managed {
     options: journal::Options,
 }
 impl Managed {
+    pub async fn reject(
+        &self,
+        id: String,
+        rejection: crate::managed::Rejection,
+    ) -> Result<crate::managed::Record> {
+        self.call(move |j| j.reject(&id, rejection)).await
+    }
     async fn call<T: Send + 'static>(
         &self,
         work: impl FnOnce(&mut crate::managed::Journal<'_>) -> Result<T> + Send + 'static,
@@ -557,6 +564,15 @@ pub struct Logical {
     options: journal::Options,
 }
 impl Logical {
+    pub async fn retain_conflict(&self, id: String) -> Result<crate::logical::RetainedConflict> {
+        self.call(move |j| j.retain_conflict(&id)).await
+    }
+    pub async fn retained_conflict(
+        &self,
+        id: String,
+    ) -> Result<Option<crate::logical::RetainedConflict>> {
+        self.call(move |j| j.retained_conflict(&id)).await
+    }
     pub async fn lookup(
         &self,
         volume: String,

@@ -20,7 +20,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 14;
+pub const SCHEMA_VERSION: i32 = 15;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub struct State {
@@ -146,6 +146,10 @@ impl State {
             }
             if version == 13 {
                 tx.execute_batch(include_str!("../migrations/014.sql"))?;
+                version = 14;
+            }
+            if version == 14 {
+                tx.execute_batch(include_str!("../migrations/015.sql"))?;
             }
             logical::check_schema(&tx)?;
             managed::check_schema(&tx)?;

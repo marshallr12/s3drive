@@ -23,6 +23,7 @@ pub enum Failure {
     IsDirectory,
     Integrity,
     Protocol,
+    RetainedConflict,
     Authority(s3drive_authority::Error),
 }
 impl fmt::Display for Failure {
@@ -165,7 +166,9 @@ impl Publisher {
             ..target_reservation
         };
         let journal = self.0.storage.managed();
-        journal.begin(input.clone()).await?;
+        if journal.begin(input.clone()).await?.rejection.is_some() {
+            return Err(Failure::RetainedConflict.into());
+        }
         let r = journal.recover_stage(input.id().into()).await?;
         if r.generation.is_some() {
             return Ok(r);
@@ -445,6 +448,19 @@ impl Publisher {
         self.stage_inner(input.reserve, input.publish_operation, Arc::from(bytes))
             .await
     }
+    /// Confirmed terminal evidence only. Keep all local bytes and operation IDs;
+    /// an unknown network result cannot release namespace closing admission.
+    pub async fn retain_edit_conflict(
+        &self,
+        edit_id: &str,
+    ) -> Result<s3drive_state::logical::RetainedConflict> {
+        let _slot = self.0.slots.try_acquire().map_err(|_| Failure::Busy)?;
+        let local = self.0.storage.logical();
+        let edit = local.get(edit_id.into()).await?;
+        let file = local.file(edit.input.volume, edit.input.node).await?;
+        self.check_edit_binding(&file.binding)?;
+        local.retain_conflict(edit_id.into()).await
+    }
     /// A managed file fsync requires both the physical/metadata receipt and
     /// atomic local logical settlement. Historical retries preserve newer heads.
     pub fn flush_edit<'a>(
@@ -472,6 +488,17 @@ impl Publisher {
         local.acknowledge(edit_id.into()).await
     }
     async fn bound(&self, id: &str) -> Result<Record> {
+        if self
+            .0
+            .storage
+            .managed()
+            .get(id.into())
+            .await?
+            .rejection
+            .is_some()
+        {
+            return Err(Failure::RetainedConflict.into());
+        }
         let r = self.0.storage.managed().recover_stage(id.into()).await?;
         let expected = r.input.reservation()?;
         if expected.volume != self.0.volume
@@ -495,7 +522,7 @@ impl Publisher {
         if r.reservation.is_some() {
             return Ok(r);
         }
-        let receipt = self.apply(&r.input.reserve).await?;
+        let receipt = self.apply_managed(id, &r.input.reserve).await?;
         let Some(Artifact::Reservation(reservation)) = receipt.artifact else {
             return Err(Failure::Protocol.into());
         };
@@ -522,7 +549,24 @@ impl Publisher {
         let mut r = self.reserve_inner(id).await?;
         if r.receipt.is_none() {
             let generation = r.generation.ok_or(Failure::Incomplete)?;
-            Box::pin(self.0.executor.flush(generation)).await?;
+            if let Err(error) = Box::pin(self.0.executor.flush(generation)).await {
+                if let Some(info) = self.0.storage.uploads().for_generation(generation).await?
+                    && info.phase == s3drive_state::remote::Phase::Rejected
+                {
+                    self.0
+                        .storage
+                        .managed()
+                        .reject(
+                            id.into(),
+                            s3drive_state::managed::Rejection::Physical {
+                                operation: *info.operation.as_bytes(),
+                                status: info.rejection_status.ok_or(Failure::Integrity)?,
+                            },
+                        )
+                        .await?;
+                }
+                return Err(error.into());
+            }
             let Reply::Info(volume) = reply(self.0.authority.request(&Request::Info {}).await?)?
             else {
                 return Err(Failure::Protocol.into());
@@ -537,7 +581,7 @@ impl Publisher {
                 .prepare(id.into(), volume.sequence)
                 .await?;
             let request = r.publication.as_ref().ok_or(Failure::Incomplete)?;
-            let receipt = self.apply(request).await?;
+            let receipt = self.apply_managed(id, request).await?;
             r = self
                 .0
                 .storage
@@ -565,6 +609,30 @@ impl Publisher {
             return Err(Failure::Protocol.into());
         };
         Ok(receipt)
+    }
+    async fn apply_managed(&self, id: &str, request: &Apply) -> Result<Receipt> {
+        match self.apply(request).await {
+            Ok(receipt) => Ok(receipt),
+            Err(error) => {
+                if matches!(
+                    error.downcast_ref::<Failure>(),
+                    Some(Failure::Authority(s3drive_authority::Error::Conflict))
+                ) {
+                    self.0
+                        .storage
+                        .managed()
+                        .reject(
+                            id.into(),
+                            s3drive_state::managed::Rejection::Authority {
+                                request: request.clone(),
+                                error: s3drive_authority::Error::Conflict,
+                            },
+                        )
+                        .await?;
+                }
+                Err(error)
+            }
+        }
     }
     /// New payload opens authorize online at both services, verify the immutable S3
     /// revision and full hash, then return owned bytes. Existing snapshots pin

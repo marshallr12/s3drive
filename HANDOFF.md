@@ -1,65 +1,73 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b3b4b1 client disposition ownership**
-on `codex/managed-client-disposition`. Goal ACTIVE. Durable local identity and
-arm/cancel/commit receipt observation pass the local gate; native CI is pending.
-Per-open lifecycle, pending-owner SDK publication and native Windows deletion
-remain unsupported. Read `docs/src/windows-delete-plan.md` before extending them.
+Updated: 2026-10-17. Current phase: **P6m3b3b4b2 pending-owner publication**
+on `codex/pending-owner-publication`. Goal ACTIVE. Implementation and focused
+state/SDK tests and full local gate pass; terminal native CI remains required.
+Per-open lifecycle and native Windows deletion remain unsupported. Read
+`docs/src/pending-owner-publication.md` and `docs/src/windows-delete-plan.md`.
 
 ## Verified publication baseline
 
-Private main at phase start: **4bca4add6ed7d88a96365e18fa5be7ffe0486e93**,
-terminal all-green [run 39026528993](https://github.com/marshallr12/s3drive/actions/runs/39026528993).
-Linux `117378488435`, Windows `117378488392`, book `117378488264`.
-141 Linux / 137 Windows state tests, six authority TCP, five managed SDK cases,
-seven real native cases per OS, Linux no-systemd startup and Windows non-admin
-independent-logon acceptance. Windows schema assertion was corrected strictly to
-13; pending-directory open/refuse/cancel/restore passed both OSes. Baseline local
-and remote main, clean tree and repository privacy were verified.
-Logs: `/tmp/s3drive-removal-corrected-{linux,windows,book}.log`.
+Private main at phase start: **188e03c4437eb90928aca87def967eafb3263a2d**,
+terminal all-green [run 39028253459](https://github.com/marshallr12/s3drive/actions/runs/39028253459).
+Linux `117383422161`, Windows `117383422216`, book `117383422029`.
+150 Linux / 146 Windows state tests, six authority TCP, six managed-publication
+cases (including child helper), seven real native cases per OS. Linux no-systemd
+startup and Windows Server 2025 non-admin independent-logon acceptance passed.
+Strict Windows schema-14 startup assertion passed. Local/remote main, repository
+privacy and clean tree were verified after guarded fast-forward publication.
+Logs: `/tmp/s3drive-client-disposition-{linux,windows,book}.log`;
+proof: `/tmp/s3drive-client-disposition-publication.json`.
+
 Version 6 enables guarded native rename/replacement both OSes and Linux
 unlink/rmdir/fsyncdir. Normal-stack boxed SDK futures and four owned operation
-slots remain; stop/drain before SQLite close is mandatory.
+slots remain; stop/drain before SQLite close is mandatory. Schema 14 persists
+an operational client identity and exact owned arm/cancel/commit history;
+namespace receipts and logical observations commit together. Old replay cannot
+release a newer arm. Preserve the private state directory, never clone one
+identity into two active clients. Retained closing quota is not physical space.
 
-## Current client phase
+## Current pending-owner phase
 
-Schema 14 adds an atomic random operational identity plus retained checksum
-anchor, never credentials. Identity creation uses the existing local owner and
-pins the client DB role. Missing/mismatched halves fail closed; disposition
-history prevents identity recreation if both rows disappear. Schema-13 journal
-bytes and ordinary request hashes remain unchanged. Windows session acceptance
-now strictly requires schema 14; older-schema fixtures drop the new tables too.
+Schema 15 adds separate managed rejection and explicit logical conflict records,
+without changing old managed/logical hashes. `ReservePendingContent` requires
+this client's acknowledged fence and frozen source/store/fingerprint before new
+physical/logical work. The physical journal also requires the already frozen
+logical edit link; raw staging cannot bypass closing admission. Existing inputs
+remain loadable after fence expiry for exact recovery; no guard refresh occurs.
+Successful owner publication uses the existing one-shot SDK + complete
+observation + metadata CAS + logical settlement; cancel/commit preserve bytes.
 
-Arm/cancel/commit extend the existing exact namespace journal. Ownership derives
-from acknowledged receipts ordered by authority sequence, avoiding another
-mutable lifecycle index. Every successful receipt and retained-file observation
-commit together. Old replay cannot release a later arm. Frozen source/store/
-fingerprint and this client's owner/fence are required; foreign reservations
-are not adopted. Reconcile prepared publications before transitions. Unprepared
-dirty bytes survive arm, cancel and commit; ordinary publication preparation is
-explicitly refused while locally owned. New pending-owner publication waits for
-P6m3b3b4b2. Local admission blocks pending source/target/parent mutations before
-journaling them and reserves a closing result slot per active/unknown arm.
-At exhausted quota, a failed closing receipt remains unacknowledged rather than
-consuming the successful closing slot; explicit quota/recovery maintenance is
-still future work. Physical full disk retains exact uncertainty.
+Only exact metadata Conflict or a local rejected remote attempt with matching
+operation/target/bytes and HTTP 409/412 can become a managed rejection. SDK paths
+persist these received outcomes; timeout/unobserved/in-flight/policy/temporary
+refusals remain unknown. Explicit `retain_edit_conflict` then binds that failure
+to the immutable logical edit before namespace closing admission releases its
+prepared-publication barrier. No bytes/IDs/heads are discarded or marked settled.
+A new generation may use an explicit current guard; the old failed operation
+remains immutable and retained. Native errors map retained conflicts explicitly.
 
-Focused state verification covers identity faults/role, schema-13 migration and
-refusal, atomic acknowledgments, replay, full disk, guarded local admission,
-foreign ownership and closing quota. Actual SDK/HTTP tests kill client+authority
-after lost arm/cancel/commit replies, recover exact IDs and owner, upload once
-after cancellation, preserve a later dirty head through commit, and perform no
-new S3 DELETE. Full local gate passed, exit 0: 150 state tests, six actual SDK
-managed-publication cases, six authority TCP, 50 S3, 13 FS, lint/build/book.
-Log: `/tmp/s3drive-client-disposition-gate1.log`. Terminal exact-tip Linux,
-Windows and book CI are still required. The initial SDK test reached all recovery
-boundaries but its deletion-count assertion included fixture setup cleanup; the
-passing test now compares against the setup baseline.
+Focused state tests cover admission and raw bypass, old hash migration/refusal,
+confirmed/unknown proof, atomic ignored/deleted INSERT readback, corruption and
+actual full disk at both retention boundaries. SDK tests kill client+authority
+after lost reserve, uncertain committed PUT, lost metadata receipt and final
+local acknowledgment; binary Unicode-name and empty-file data upload once each.
+A second scenario kills after ignored rejection INSERT, recovers without another
+PUT, preserves an S3 rival and verified orphan, retains both conflicts and then
+cancels/commits with dirty bytes intact. Future Info sequence is intentionally
+injected to obtain an actual metadata publication Conflict. No new S3 DELETE.
+Logs: `/tmp/s3drive-pending-publication-focused3.log`,
+`/tmp/s3drive-pending-owner-sdk3.log`; clippy passed
+`/tmp/s3drive-pending-owner-clippy1.log`. Full local gate passed, exit 0:
+`/tmp/s3drive-pending-owner-gate1.log` (156 state, eight managed-publication
+cases including helper, six authority TCP, 50 S3, 13 FS, build/lint/book).
+Terminal exact-tip Linux/Windows/book and native/startup acceptance are next. Windows
+startup now strictly requires schema 15; older-schema fixtures drop both new
+tables. No CREATE TABLE IF NOT EXISTS migration fallback.
 
-The mdBook server can recreate removed chapters during a branch switch. For
-publication, verify clean tested tree, guarded fast-forward main's ref, then
-switch to the identical tree; avoid briefly checking out the older main tree.
-Preserve unexpected untracked contents before any recovery.
+The mdBook server can recreate removed chapters during old-main checkout. For
+publication verify clean tested tree, guarded fast-forward main's ref, then
+switch to the identical tree. Preserve unexpected untracked contents.
 
 ## Requirements and authorization
 
@@ -114,8 +122,8 @@ versions. Never use CREATE TABLE IF NOT EXISTS to hide damaged migration shape.
 
 Run `bash scripts/gate.sh`, then require terminal exact-tip Linux/Windows/book CI
 and all seven native cases per OS before publication. Do not infer completion
-while a runner is saving cache. Next: pending-owner SDK publication (b4b2), then
-persist per-open and node-wide lifecycle/recovery before native callbacks.
+while a runner is saving cache. Next: durable per-open and node-wide
+lifecycle/recovery before native callbacks.
 Windows STATUS_DELETE_PENDING is inspected in resolved windows 0.61.3; WinFsp
 directory opens now authorize the node itself, and both adapters map pending
 state explicitly. The native mutation case also tests a real directory handle before arm, refusal
@@ -124,7 +132,7 @@ callback is enabled. The new PNG diagram was generated and visually inspected;
 the unlinked-file diagram now labels its accepted version-6 native scope.
 
 Remaining P6m3b3b4b work must persist per-open/node-wide lifecycle state before
-RPCs and add pending-owner SDK publication to the accepted local receipt bridge.
+RPCs and integrate the owner publication/conflict path into that lifecycle.
 Study the
 versioned WinFsp lifecycle: deleting cleanup need not use the arming context;
 cleanup cannot return errors; delete-on-close bypasses SetDelete. Never delete

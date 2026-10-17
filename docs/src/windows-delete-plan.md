@@ -184,7 +184,7 @@ bytes and immutable original bindings survive all three transitions. Locally
 owned or unknown dispositions block ordinary namespace admission for affected
 nodes/parents before a blocked request can enter the journal. Ordinary
 publication preparation refuses an owned pending reservation. Pending-owner
-SDK publication is explicitly deferred to **P6m3b3b4b2**; the existing native
+SDK publication is implemented in the next [P6m3b3b4b2 checkpoint](pending-owner-publication.md); the existing native
 Windows callbacks still refuse deletion. Per-open disposition and cleanup
 recovery are a later **P6m3b3b4b3** contract, with native acceptance in b4c.
 
@@ -208,4 +208,4 @@ These are loopback fixtures with dummy credentials, not Wasabi acceptance or
 WinFsp deletion tests. The full local gate passed (150 state tests, six actual
 managed SDK cases, six authority TCP, 50 S3 and 13 FS, plus lint/build/book).
 Terminal exact-tip Linux/Windows/book CI and existing native/startup acceptance
-remain required before publication.
+passed at `188e03c`, [run 39028253459](https://github.com/marshallr12/s3drive/actions/runs/39028253459).

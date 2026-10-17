@@ -342,7 +342,7 @@ fn migration_six_preserves_verified_intents_and_rolls_back_conflicts() {
         state
             .connection
             .execute_batch(
-                "DROP TABLE retained_client_identity; DROP TABLE client_identity; DROP TABLE namespace_removals; DROP TABLE namespace_intents; DROP INDEX namespace_portable_names; ALTER TABLE namespace_nodes DROP COLUMN name_key; ALTER TABLE namespace_nodes DROP COLUMN placement; DROP TABLE logical_publication_links; DROP TABLE logical_edits; DROP TABLE logical_files; DROP TABLE managed_publications; DROP TABLE namespace_uploads; DROP TABLE namespace_stores; DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; DROP TABLE write_settlements; DROP TABLE remote_flushes; PRAGMA user_version=6",
+                "DROP TABLE logical_conflicts; DROP TABLE managed_rejections; DROP TABLE retained_client_identity; DROP TABLE client_identity; DROP TABLE namespace_removals; DROP TABLE namespace_intents; DROP INDEX namespace_portable_names; ALTER TABLE namespace_nodes DROP COLUMN name_key; ALTER TABLE namespace_nodes DROP COLUMN placement; DROP TABLE logical_publication_links; DROP TABLE logical_edits; DROP TABLE logical_files; DROP TABLE managed_publications; DROP TABLE namespace_uploads; DROP TABLE namespace_stores; DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; DROP TABLE write_settlements; DROP TABLE remote_flushes; PRAGMA user_version=6",
             )
             .unwrap();
         if conflict {

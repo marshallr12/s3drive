@@ -667,7 +667,7 @@ fn load_operation(connection: &Connection, id: OperationId) -> Result<Info> {
     }
     Ok(info)
 }
-fn load(connection: &Connection, generation: GenerationId) -> Result<Info> {
+pub(crate) fn load(connection: &Connection, generation: GenerationId) -> Result<Info> {
     let info = raw_load(connection, generation)?;
     if let Some(anchor) = info.anchor {
         let id: i64 = connection.query_row(
