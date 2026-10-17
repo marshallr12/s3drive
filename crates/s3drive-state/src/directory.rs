@@ -194,13 +194,40 @@ pub fn read_private_secret(path: &Path, limit: usize) -> crate::Result<Vec<u8>> 
 /// existing secret. The directory is private before any token bytes are written.
 #[cfg(any(target_os = "linux", windows))]
 pub fn create_private_secret(directory: &Path, bytes: &[u8]) -> crate::Result<PathBuf> {
+    if bytes.len() > 66 {
+        return Err("invalid private secret length".into());
+    }
+    create_private_file(directory, "authority.token", bytes, false)
+}
+
+/// Write one new bounded owner-private document; never overwrite an existing
+/// file. The filename is one normal component and the parent must exist.
+#[cfg(any(target_os = "linux", windows))]
+pub fn create_private_document(
+    directory: &Path,
+    filename: &str,
+    bytes: &[u8],
+) -> crate::Result<PathBuf> {
+    create_private_file(directory, filename, bytes, true)
+}
+#[cfg(any(target_os = "linux", windows))]
+fn create_private_file(
+    directory: &Path,
+    filename: &str,
+    bytes: &[u8],
+    persistent: bool,
+) -> crate::Result<PathBuf> {
     use std::io::Write;
-    if !directory.is_absolute()
+    if filename.is_empty()
+        || filename.contains(['/', '\\', '\0', ':'])
+        || filename == "."
+        || filename == ".."
+        || !directory.is_absolute()
         || directory
             .components()
             .any(|c| matches!(c, Component::ParentDir))
         || directory.as_os_str().as_encoded_bytes().contains(&0)
-        || bytes.len() > 66
+        || bytes.len() > 65_536
     {
         return Err("invalid private secret destination or length".into());
     }
@@ -209,7 +236,13 @@ pub fn create_private_secret(directory: &Path, bytes: &[u8]) -> crate::Result<Pa
     let held = platform::open_directory(directory)?;
     platform::verify_private(&held, true)?;
     platform::verify_local(&held, directory)?;
-    let path = directory.join("authority.token");
+    #[cfg(target_os = "linux")]
+    if persistent {
+        platform::verify_persistent(&held)?;
+    }
+    #[cfg(windows)]
+    let _ = persistent; // verify_local already requires a local fixed NTFS volume.
+    let path = directory.join(filename);
     let mut options = std::fs::OpenOptions::new();
     options.read(true).write(true).create_new(true);
     #[cfg(target_os = "linux")]
@@ -240,9 +273,30 @@ pub fn create_private_secret(_: &Path, _: &[u8]) -> crate::Result<PathBuf> {
     Err("private secrets require Linux or Windows".into())
 }
 
+#[cfg(not(any(target_os = "linux", windows)))]
+pub fn create_private_document(_: &Path, _: &str, _: &[u8]) -> crate::Result<PathBuf> {
+    Err("private documents require Linux or Windows".into())
+}
+
 #[cfg(test)]
 mod secret_tests {
     use super::*;
+    #[test]
+    fn private_documents_are_bounded_create_new_and_refuse_traversal() {
+        let tmp = tempfile::tempdir().unwrap();
+        let directory = tmp.path().join("plans");
+        for name in ["", ".", "..", "../plan", "a/b", "a\\b", "a:b", "a\0b"] {
+            assert!(create_private_document(&directory, name, b"test").is_err());
+        }
+        assert!(!directory.exists());
+        assert!(create_private_document(&directory, "plan.toml", &vec![0; 65_537]).is_err());
+        let bytes = vec![b'x'; 65_536];
+        let path = create_private_document(&directory, "plan.toml", &bytes).unwrap();
+        assert_eq!(read_private_secret(&path, 65_536).unwrap(), bytes);
+        assert!(create_private_document(&directory, "plan.toml", b"replacement").is_err());
+        assert_eq!(read_private_secret(&path, 65_536).unwrap(), bytes);
+        assert!(create_private_secret(&directory, &[b'x'; 67]).is_err());
+    }
     #[test]
     fn private_secret_round_trip_does_not_overwrite_or_print_contents() {
         let dir = tempfile::tempdir().unwrap();

@@ -672,3 +672,25 @@ HTTPS and SDK tests plus native Linux/Windows acceptance. No host or Turso
 provisioning; the user chose to keep both hosting options open. Real multi-host
 deployment, startup supervision, backup/failover and optional Turso remain later
 requirements, not implied by successful local TLS tests.
+
+HTTPS accepted at `a87bd0b`, terminal CI39075749765, with native Linux/Windows
+HTTPS writers, five TLS cases, both startup gates and strict21/14 artifacts.
+
+### P6m4b — operator-managed volume bootstrap (2026-10-17)
+
+Implement the [setup contract](managed-bootstrap.md): prepare a flushed private
+immutable store-registration plan, apply/observe its exact operation, and
+generate per-machine read-only or explicit policy-bound writable configuration.
+No S3 credential resolution, provider mutation or account provisioning during
+setup. Preserve uncertain IDs, sequence guards and original files. Require real
+CLI/TCP/SQLite/TLS concurrency/lost-reply/killed-client tests, generated config
+use in shared/native filesystems, local gate and exact-tip hosted OS/reference/
+startup acceptance before publication. Deployment supervision, real multi-host
+partitions, backup/failover, provider acceptance and large files remain required.
+
+Local bootstrap gate passed:257 state/ten HTTP/five TLS/17 SDK/six CLI/six
+shared-engine cases, builds/lint/book. The existing portable lifecycle now uses
+CLI-generated config7, and save/mutation recovery uses CLI-generated config6
+and HTTPS. Explicit refusal checks preserve existing state and reject an
+out-of-policy default root. Require terminal exact-tip hosted native/reference/
+startup gates before guarded private publication. No real provider mutation.

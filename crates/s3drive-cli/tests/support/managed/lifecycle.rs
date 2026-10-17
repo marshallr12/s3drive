@@ -4,7 +4,7 @@ pub(super) async fn portable() {
     let f = Fixture::start().await;
     let tmp = tempfile::tempdir().unwrap();
     let (h, s) = Harness::new_policy(tmp.path(), &f, true).await;
-    h.configure_lifecycle();
+    h.configure_bootstrap(true, true).await;
     let before = f
         .requests
         .lock()
@@ -422,7 +422,7 @@ pub(super) async fn native() {
     let f = Fixture::start().await;
     let tmp = tempfile::tempdir().unwrap();
     let (h, s) = Harness::new_policy(tmp.path(), &f, true).await;
-    h.configure_lifecycle();
+    h.configure_bootstrap(true, true).await;
     let deletes = f
         .requests
         .lock()

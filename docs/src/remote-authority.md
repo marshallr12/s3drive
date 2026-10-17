@@ -1,10 +1,15 @@
 # Shared authority over HTTPS
 
-Design/research date: **2026-10-17**. Under implementation on
-`codex/remote-authority-tls`; no remote service has been provisioned. Accepted
-baseline0f6104c has native Linux/Windows managed mutations and the explicit
-Windows lifecycle profile. This phase connects that filesystem to authenticated
-HTTPS without changing metadata transactions, operation IDs or the S3 layout.
+Design/research date: **2026-10-17**. Accepted at
+`a87bd0bd3992bf0af838ac0f97c7a4e97687662e`, terminal all-green
+[CI39075749765](https://github.com/marshallr12/s3drive/actions/runs/39075749765).
+Both native OS writer suites used the real Rust HTTPS authority with a private
+CA. All five TLS and ten HTTP cases passed, along with256/252 Linux/Windows
+state tests,17 SDK cases, Linux7 and Windows1+7 native cases, both startup gates
+and exact-source typed21/14 reference artifacts. No remote host was provisioned;
+these are local/hosted-runner transport and native filesystem results, not real
+multi-host or physical reboot acceptance. Metadata transactions, operation IDs
+and the S3 layout are unchanged. See [operator setup](managed-bootstrap.md).
 
 ![Linux and Windows keep private local SQLite state and access one Rust metadata service over HTTPS; immutable file bytes travel directly between their S3 clients and Wasabi.](images/remote-authority.svg)
 

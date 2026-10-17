@@ -83,6 +83,34 @@ pub struct ReadHandle {
     full_key: String,
 }
 
+/// Physical storage routing identity, computed without resolving credentials or
+/// contacting a provider. This is not evidence of access or authorization.
+pub fn storage_fingerprint(source: &Source) -> Result<String> {
+    source
+        .validate()
+        .map_err(|_| Error::new("configure", ErrorKind::InvalidInput))?;
+    Ok(storage_route(source))
+}
+fn storage_route(source: &Source) -> String {
+    let mut hash = Sha256::new();
+    hash.update(b"s3drive-storage-route-v1\0");
+    let endpoint = source
+        .endpoint
+        .as_ref()
+        .map(|s| url::Url::parse(s).expect("validated endpoint").to_string());
+    hash.update([u8::from(endpoint.is_some())]);
+    for value in [
+        endpoint.as_deref().unwrap_or_default(),
+        &source.bucket,
+        &source.region,
+        &source.prefix,
+    ] {
+        hash.update((value.len() as u64).to_be_bytes());
+        hash.update(value.as_bytes());
+    }
+    hash.finalize().iter().map(|b| format!("{b:02x}")).collect()
+}
+
 impl S3Reader {
     pub async fn from_source(source: &Source) -> Result<Self> {
         source
@@ -151,24 +179,7 @@ impl S3Reader {
     /// Stable routing scope only: excludes local aliases, profiles, credentials
     /// and LIST/addressing dialect. Not an authorization or principal identity.
     pub fn storage_fingerprint(&self) -> String {
-        let mut hash = Sha256::new();
-        hash.update(b"s3drive-storage-route-v1\0");
-        let endpoint = self
-            .source
-            .endpoint
-            .as_ref()
-            .map(|s| url::Url::parse(s).expect("validated endpoint").to_string());
-        hash.update([u8::from(endpoint.is_some())]);
-        for value in [
-            endpoint.as_deref().unwrap_or_default(),
-            &self.source.bucket,
-            &self.source.region,
-            &self.source.prefix,
-        ] {
-            hash.update((value.len() as u64).to_be_bytes());
-            hash.update(value.as_bytes());
-        }
-        hash.finalize().iter().map(|b| format!("{b:02x}")).collect()
+        storage_route(&self.source)
     }
 
     pub async fn list_page(
@@ -356,13 +367,17 @@ impl S3Reader {
     }
 
     pub(crate) fn full_key(&self, key: &str) -> Result<String> {
-        validate_key(key)?;
-        let key = format!("{}{key}", self.source.prefix);
-        if key.len() > 1024 {
-            return Err(Error::new("key", ErrorKind::InvalidInput));
-        }
-        Ok(key)
+        scoped_key(&self.source, key)
     }
+}
+
+pub(crate) fn scoped_key(source: &Source, key: &str) -> Result<String> {
+    validate_key(key)?;
+    let key = format!("{}{key}", source.prefix);
+    if key.len() > 1024 {
+        return Err(Error::new("key", ErrorKind::InvalidInput));
+    }
+    Ok(key)
 }
 
 impl ReadHandle {

@@ -50,11 +50,13 @@ checks and fail when authorization or the authority is unavailable. Reads from
 an old handle do not grant permission to open another file offline. Unlinked
 and superseded S3 objects are retained; no garbage collector is enabled.
 
-The current authority policy is exact, case-sensitive UTF-8. Linux can expose
+The original P6m3a authority policy is exact, case-sensitive UTF-8. Linux can expose
 `Case` and `case` together. The Windows adapter rejects an ambiguous directory
 rather than merging or renaming entries; other unsupported Windows names also
-fail explicitly. A writable, portable name policy remains a later acceptance
-requirement. This is not a claim of general POSIX or NTFS compatibility.
+fail explicitly. Subsequent writable phases added portable-collision-v1; choose
+that policy for new writable Linux/Windows volumes using the
+[setup workflow](managed-bootstrap.md). This is not a claim of general POSIX or
+NTFS compatibility.
 
 ## Local development setup
 
@@ -62,10 +64,10 @@ The authority is a foreground development service with its own private SQLite
 directory, separate from mounted paths and all client cache/journal directories.
 It has no S3 credentials. The bearer token grants the trusted client namespace
 API access, including mutations; read-only is enforced by the mount, not by a
-separate server reader role. This phase supports numeric loopback HTTP only; a
-remotely deployed authenticated TLS service and optional Turso database are
-[P6m4 work](turso-coordination.md). A local listener alone is not cross-machine
-deployment acceptance.
+separate server reader role. The original phase used numeric loopback HTTP;
+[HTTPS transport](remote-authority.md) has since passed its native acceptance.
+Hosted deployment and optional Turso remain [P6m4 work](turso-coordination.md).
+A local listener alone is not cross-machine deployment acceptance.
 
 On Linux, after building the workspace, create the token in an existing private
 parent and start a stable local listener:
@@ -88,11 +90,11 @@ signals. Parent directories must already exist and satisfy local ownership rules
 On Windows use absolute paths on a local drive; the token inherits an account
 and SYSTEM-only ACL from its private directory.
 
-A populated authority and registered store IDs are prerequisites: there is no
-user-facing initialization/import or managed write command yet. The acceptance
-fixture creates stores and publishes payloads through the production library
-using isolated, dummy local credentials. It does not initialize a real bucket.
-The following example illustrates a previously initialized namespace; replace
+A registered store is a prerequisite. The [managed setup CLI](managed-bootstrap.md)
+now prepares/applies frozen registrations and generates per-machine read-only
+or explicit writable configurations. Existing bucket import remains unsupported.
+The acceptance fixture uses that CLI with dummy local credentials; it does not
+initialize a real bucket. The following example illustrates an initialized namespace; replace
 both IDs and the token path, and keep credentials in an external AWS profile:
 
 ```toml

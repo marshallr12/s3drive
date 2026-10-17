@@ -1,7 +1,7 @@
 //! Configuration and a bucket-alias namespace. No filesystem or network I/O.
 
 pub mod names;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashSet,
     path::{Component, PathBuf},
@@ -96,13 +96,13 @@ impl ManagedConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct WritesConfig {
     pub directory: PathBuf,
     pub sources: Vec<WriteSource>,
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct WriteSource {
     pub alias: String,
@@ -162,7 +162,7 @@ impl CacheConfig {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Source {
     pub alias: String,
@@ -183,7 +183,7 @@ pub struct Source {
     pub list_url_encoding: ListUrlEncoding,
 }
 
-#[derive(Debug, Clone, Copy, Default, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum ListUrlEncoding {
     /// Percent decoding only: an unescaped plus remains a literal plus.

@@ -29,6 +29,7 @@
   - [Publication while deletion is pending](pending-owner-publication.md)
 - [Turso and cross-machine coordination](turso-coordination.md)
 - [Shared authority over HTTPS](remote-authority.md)
+- [Set up a managed drive](managed-bootstrap.md)
 - [Filesystem behavior contract](filesystem-contract.md)
 - [Implemented read-only provider contract](provider-contract.md)
 - [Implemented Linux read-only mount](linux-mount.md)

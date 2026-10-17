@@ -10,6 +10,7 @@ pub mod uploads;
 pub use error::{Error, ErrorKind, Result};
 pub use reader::{
     CacheIdentity, ListPage, ListedObject, MAX_READ_BYTES, ObjectMetadata, ReadHandle, S3Reader,
+    storage_fingerprint,
 };
 
 /// Unknown is distinct from unsupported and must never enable a mutation.

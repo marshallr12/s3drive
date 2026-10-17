@@ -148,6 +148,13 @@ impl NamespaceProxy {
         let text = std::fs::read_to_string(&h.config)
             .unwrap()
             .replace(old, &self.endpoint);
+        // This owned fault-injection hop is numeric loopback HTTP; its upstream
+        // keeps the original HTTPS trust. Never attach a TLS CA to HTTP.
+        let text = text
+            .lines()
+            .filter(|line| !line.trim().starts_with("authority_ca_file"))
+            .collect::<Vec<_>>()
+            .join("\n");
         std::fs::write(&h.config, text).unwrap();
     }
     async fn committed(&self) {
@@ -250,6 +257,9 @@ impl Harness {
         Self::new_policy(root, f, false).await
     }
     async fn new_policy(root: &Path, f: &Fixture, portable: bool) -> (Self, Service) {
+        Self::new_options(root, f, portable, false).await
+    }
+    async fn new_options(root: &Path, f: &Fixture, portable: bool, tls: bool) -> (Self, Service) {
         for name in ["first", "second"] {
             std::fs::create_dir(root.join(name)).unwrap();
         }
@@ -294,18 +304,90 @@ impl Harness {
                 .status
                 .success()
         );
-        let server = Service::start_policy(
-            root,
-            if portable {
-                "portable-collision-v1"
-            } else {
-                "exact-utf8-v1"
-            },
-        )
-        .await;
+        let policy = if portable {
+            "portable-collision-v1"
+        } else {
+            "exact-utf8-v1"
+        };
+        let server = if tls {
+            Service::start_tls(root, policy).await
+        } else {
+            Service::start_policy(root, policy).await
+        };
         h.configure(&server, f);
         h.child("seed").await;
+        h.configure_bootstrap(false, false).await;
         (h, server)
+    }
+    async fn configure_bootstrap(&self, writable: bool, lifecycle: bool) {
+        if writable {
+            self.configure_writable();
+        }
+        let c = cfg(&self.config);
+        let managed = c.managed.as_ref().unwrap();
+        let name = if lifecycle {
+            "bootstrap-posix"
+        } else if writable {
+            "bootstrap-write"
+        } else {
+            "bootstrap-read"
+        };
+        let input = self.root.join(format!("{name}-input.toml"));
+        let mut value: toml::Value =
+            toml::from_str(&std::fs::read_to_string(&self.config).unwrap()).unwrap();
+        if writable {
+            // Input refers to the actual direct fixture journal. The generated
+            // managed journal must be separate, even before either exists.
+            let direct = cfg(&self.root.join("first/drive.toml"));
+            value["writes"]["directory"] =
+                direct.writes.unwrap().directory.to_str().unwrap().into();
+        }
+        std::fs::write(&input, toml::to_string(&value).unwrap()).unwrap();
+        let mut command = Command::new(env!("CARGO_BIN_EXE_s3drive"));
+        command
+            .args(["managed", "configure"])
+            .arg(&input)
+            .arg("--token-file")
+            .arg(&managed.token_file)
+            .arg("--directory")
+            .arg(self.root.join(name));
+        if let Some(ca) = &managed.authority_ca_file {
+            command.arg("--ca-file").arg(ca);
+        }
+        for (n, alias) in [(200, &c.sources[0].alias), (201, &c.sources[1].alias)] {
+            command
+                .arg("--plan")
+                .arg(self.root.join(format!("bootstrap-{n}/store-plan.toml")))
+                .arg("--map")
+                .arg(format!("{}={alias}", id(n)));
+        }
+        if writable {
+            command
+                .args(["--mode", "read-write", "--default-store", &id(200)])
+                .arg("--state-directory")
+                .arg(self.root.join("managed-write-state"));
+        }
+        if lifecycle {
+            command.args(["--windows-disposition", "posix-v1"]);
+        }
+        let out = command.output().await.unwrap();
+        assert!(
+            out.status.success(),
+            "bootstrap configure: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let out: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+        std::fs::copy(out["config"].as_str().unwrap(), &self.config).unwrap();
+        assert_eq!(
+            cfg(&self.config).version,
+            if lifecycle {
+                7
+            } else if writable {
+                6
+            } else {
+                3
+            }
+        );
     }
     fn configure(&self, s: &Service, f: &Fixture) {
         let mut text = format!(
@@ -331,52 +413,65 @@ impl Harness {
         }
         std::fs::write(&self.config, text).unwrap();
     }
+    fn edit_config(&self, edit: impl FnOnce(&mut toml::Value)) {
+        let mut value: toml::Value =
+            toml::from_str(&std::fs::read_to_string(&self.config).unwrap()).unwrap();
+        edit(&mut value);
+        let text = toml::to_string(&value).unwrap();
+        s3drive_core::Config::parse(&text).unwrap();
+        std::fs::write(&self.config, text).unwrap();
+    }
     fn configure_writable(&self) {
-        let old = std::fs::read_to_string(&self.config).unwrap();
-        let mut text = old
-            .replace("version=3", "version=4")
-            .replace("mode='read-only'", "mode='read-write'")
-            .replace(
-                "[managed]",
-                &format!("[managed]\ndefault_store={:?}", id(200)),
-            )
-            .replace("viewer-first", "docs")
-            .replace("viewer-second", "docs2");
-        text += &format!(
-            "\n[writes]\ndirectory={:?}\n",
+        let mut writes = format!(
+            "[writes]\ndirectory={:?}\n",
             self.root.join("managed-write-state").to_str().unwrap()
         );
         for (which, alias) in [("first", "docs"), ("second", "docs2")] {
-            text += &format!(
+            writes += &format!(
                 "[[writes.sources]]\nalias={alias:?}\npolicy={:?}\nplan={:?}\nreport={:?}\n",
                 self.root.join(which).join("policy.toml").to_str().unwrap(),
                 self.root.join(which).join("plan.toml").to_str().unwrap(),
                 self.root.join(which).join("report.toml").to_str().unwrap()
             );
         }
-        std::fs::write(&self.config, text).unwrap();
+        let value: toml::Value = toml::from_str(&writes).unwrap();
+        self.edit_config(|c| {
+            c["version"] = 4.into();
+            c["mode"] = "read-write".into();
+            c["managed"]
+                .as_table_mut()
+                .unwrap()
+                .insert("default_store".into(), id(200).into());
+            c["managed"]
+                .as_table_mut()
+                .unwrap()
+                .remove("windows-disposition");
+            for (i, alias) in ["docs", "docs2"].iter().enumerate() {
+                c["sources"][i]["alias"] = (*alias).into();
+                c["managed"]["stores"][i]["source"] = (*alias).into();
+            }
+            c.as_table_mut()
+                .unwrap()
+                .insert("writes".into(), value["writes"].clone());
+        });
     }
     fn configure_namespace(&self) {
         self.configure_writable();
-        let text = std::fs::read_to_string(&self.config)
-            .unwrap()
-            .replace("version=4", "version=5");
-        std::fs::write(&self.config, text).unwrap();
+        self.edit_config(|c| c["version"] = 5.into());
     }
     fn configure_mutations(&self) {
         self.configure_namespace();
-        let text = std::fs::read_to_string(&self.config)
-            .unwrap()
-            .replace("version=5", "version=6");
-        std::fs::write(&self.config, text).unwrap();
+        self.edit_config(|c| c["version"] = 6.into());
     }
     fn configure_lifecycle(&self) {
         self.configure_mutations();
-        let text = std::fs::read_to_string(&self.config)
-            .unwrap()
-            .replace("version=6", "version=7")
-            .replace("[managed]", "[managed]\nwindows-disposition='posix-v1'");
-        std::fs::write(&self.config, text).unwrap();
+        self.edit_config(|c| {
+            c["version"] = 7.into();
+            c["managed"]
+                .as_table_mut()
+                .unwrap()
+                .insert("windows-disposition".into(), "posix-v1".into());
+        });
     }
     fn environment(&self, c: &mut Command) {
         c.env("AWS_SHARED_CREDENTIALS_FILE", &self.credentials)
@@ -678,19 +773,59 @@ pub async fn child() {
         }
         "seed" => {
             for (n, which) in [(200, "first"), (201, "second")] {
-                let c = cfg(&root.join(which).join("drive.toml"));
-                let r = s3drive_s3::S3Reader::from_source(&c.sources[0])
-                    .await
-                    .unwrap();
-                change(
-                    &w,
-                    n,
-                    Mutation::RegisterStore {
-                        route: r.storage_fingerprint(),
-                        root: "writable/.s3drive/".into(),
-                    },
-                )
-                .await;
+                let input = root.join(which).join("drive.toml");
+                let local = cfg(&input);
+                let m = c.managed.as_ref().unwrap();
+                let mut command = Command::new(env!("CARGO_BIN_EXE_s3drive"));
+                command
+                    .args(["managed", "store-plan"])
+                    .arg(&input)
+                    .arg(&local.sources[0].alias)
+                    .args([
+                        "--authority",
+                        &m.authority,
+                        "--volume",
+                        &m.volume,
+                        "--root",
+                        "writable/.s3drive/",
+                        "--store-id",
+                        &id(n),
+                    ])
+                    .arg("--token-file")
+                    .arg(&m.token_file)
+                    .arg("--directory")
+                    .arg(root.join(format!("bootstrap-{n}")));
+                if let Some(ca) = &m.authority_ca_file {
+                    command.arg("--ca-file").arg(ca);
+                }
+                let out = command.output().await.unwrap();
+                assert!(
+                    out.status.success(),
+                    "{}",
+                    String::from_utf8_lossy(&out.stderr)
+                );
+                let plan: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+                let mut command = Command::new(env!("CARGO_BIN_EXE_s3drive"));
+                command
+                    .args(["managed", "store-apply"])
+                    .arg(&input)
+                    .arg(&local.sources[0].alias)
+                    .arg(plan["plan"].as_str().unwrap())
+                    .arg("--token-file")
+                    .arg(&m.token_file)
+                    .arg("--confirm")
+                    .arg(plan["plan_sha256"].as_str().unwrap());
+                if let Some(ca) = &m.authority_ca_file {
+                    command.arg("--ca-file").arg(ca);
+                }
+                let out = command.output().await.unwrap();
+                assert!(
+                    out.status.success(),
+                    "{}",
+                    String::from_utf8_lossy(&out.stderr)
+                );
+                let result: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+                assert_eq!(result["status"], "registered");
             }
             for (n, parent, name, kind) in [
                 (10, 0, DIR, Kind::Directory),
@@ -1240,6 +1375,76 @@ pub async fn portable_writes() {
     );
 }
 
+pub async fn bootstrap_write_refusals() {
+    let f = Fixture::start().await;
+    let tmp = tempfile::tempdir().unwrap();
+    let (h, s) = Harness::new_policy(tmp.path(), &f, true).await;
+    let source = h.root.join("first/drive.toml");
+    let input = cfg(&source);
+    let plan = h.root.join("bootstrap-200/store-plan.toml");
+    let output = h.root.join("must-not-generate");
+    let dirty = h.root.join("retained-dirty-state");
+    std::fs::create_dir(&dirty).unwrap();
+    std::fs::write(dirty.join("dirty-fixture"), b"preserve bytes\0\xff").unwrap();
+    let sequence = info(&wire(&cfg(&h.config))).await.sequence;
+    let mutations_before = mutations(&f);
+    for state in [&dirty, &input.writes.as_ref().unwrap().directory] {
+        let out = Command::new(env!("CARGO_BIN_EXE_s3drive"))
+            .args(["managed", "configure"])
+            .arg(&source)
+            .arg("--plan")
+            .arg(&plan)
+            .arg("--token-file")
+            .arg(h.root.join("secrets/authority.token"))
+            .args(["--mode", "read-write", "--default-store", &id(200)])
+            .arg("--state-directory")
+            .arg(state)
+            .arg("--directory")
+            .arg(&output)
+            .output()
+            .await
+            .unwrap();
+        assert!(!out.status.success());
+        assert!(!output.exists());
+    }
+    let policy = h.root.join("first/policy.toml");
+    let text = std::fs::read_to_string(&policy).unwrap();
+    std::fs::write(
+        &policy,
+        text.replace("writable_prefix='writable/'", "writable_prefix='denied/'"),
+    )
+    .unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_s3drive"))
+        .args(["managed", "configure"])
+        .arg(&source)
+        .arg("--plan")
+        .arg(&plan)
+        .arg("--token-file")
+        .arg(h.root.join("secrets/authority.token"))
+        .args(["--mode", "read-write", "--default-store", &id(200)])
+        .arg("--state-directory")
+        .arg(h.root.join("fresh-managed-state"))
+        .arg("--directory")
+        .arg(&output)
+        .output()
+        .await
+        .unwrap();
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("outside the current write policy"));
+    assert!(!output.exists());
+    assert_eq!(
+        std::fs::read(dirty.join("dirty-fixture")).unwrap(),
+        b"preserve bytes\0\xff"
+    );
+    assert_eq!(info(&wire(&cfg(&h.config))).await.sequence, sequence);
+    assert_eq!(
+        mutations(&f),
+        mutations_before,
+        "setup refusal performed a provider mutation"
+    );
+    s.stop().await;
+}
+
 pub async fn native_writes() {
     let f = Fixture::start().await;
     let tmp = tempfile::tempdir().unwrap();
@@ -1536,11 +1741,7 @@ pub async fn native_creation() {
     m.stop().await;
     // Existing files keep their placement when the mount's default changes;
     // new files below now choose the second bucket.
-    let text = std::fs::read_to_string(&h.config).unwrap().replace(
-        &format!("default_store={:?}", id(200)),
-        &format!("default_store={:?}", id(201)),
-    );
-    std::fs::write(&h.config, text).unwrap();
+    h.edit_config(|c| c["managed"]["default_store"] = id(201).into());
     let other_before = f
         .requests
         .lock()
@@ -1716,8 +1917,8 @@ async fn native_pending_directory(h: &Harness, fixture: &Fixture) {
 pub async fn native_mutations() {
     let f = Fixture::start().await;
     let tmp = tempfile::tempdir().unwrap();
-    let (h, s) = Harness::new_policy(tmp.path(), &f, true).await;
-    h.configure_mutations();
+    let (h, s) = Harness::new_options(tmp.path(), &f, true, true).await;
+    h.configure_bootstrap(true, false).await;
     let m = h.mount().await;
     Box::pin(native_pending_directory(&h, &f)).await;
     let directory = h.mount.join("save 資料 🦀");
@@ -1904,8 +2105,8 @@ pub async fn native_mutations() {
 pub async fn portable_mutations() {
     let f = Fixture::start().await;
     let tmp = tempfile::tempdir().unwrap();
-    let (h, s) = Harness::new_policy(tmp.path(), &f, true).await;
-    h.configure_mutations();
+    let (h, s) = Harness::new_options(tmp.path(), &f, true, true).await;
+    h.configure_bootstrap(true, false).await;
     let before = puts(&f);
     h.child("namespace-mutations").await;
     assert_eq!(

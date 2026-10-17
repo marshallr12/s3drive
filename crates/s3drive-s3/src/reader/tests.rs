@@ -756,6 +756,17 @@ fn shared_storage_routes_exclude_machine_local_names_and_include_physical_scope(
     original.allow_http_loopback = false;
     let x = make(original.clone());
     let b = make(other.clone());
+    assert_eq!(
+        storage_fingerprint(&original).unwrap(),
+        x.storage_fingerprint()
+    );
+    assert_eq!(
+        storage_fingerprint(&other).unwrap(),
+        x.storage_fingerprint()
+    );
+    let mut invalid = original.clone();
+    invalid.prefix = "../invalid/".into();
+    assert!(storage_fingerprint(&invalid).is_err());
     assert_eq!(x.storage_fingerprint(), b.storage_fingerprint());
     assert_ne!(x.configuration_fingerprint(), b.configuration_fingerprint());
     other.bucket = "different-bucket".into();

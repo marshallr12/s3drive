@@ -2435,6 +2435,7 @@ dependencies = [
  "s3drive-s3",
  "s3drive-state",
  "s3drive-winfsp",
+ "serde",
  "serde_json",
  "sha2",
  "tempfile",

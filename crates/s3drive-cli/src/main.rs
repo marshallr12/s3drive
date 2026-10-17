@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 use s3drive_core::Config;
 use s3drive_s3::S3Reader;
 use std::{error::Error, fs, io::Write, path::PathBuf};
+mod managed;
 
 #[derive(Parser)]
 #[command(
@@ -15,6 +16,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Inspect, register and configure managed storage (metadata only; no S3).
+    Managed {
+        #[command(subcommand)]
+        command: managed::Command,
+    },
     /// Create a new owner-private metadata token; never print or overwrite it.
     AuthorityToken {
         #[arg(long)]
@@ -135,6 +141,7 @@ enum ProbeCommand {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     match Cli::parse().command {
+        Command::Managed { command } => managed::run(command).await?,
         Command::AuthorityToken { directory } => {
             let mut random = [0u8; 32];
             getrandom::fill(&mut random)?;

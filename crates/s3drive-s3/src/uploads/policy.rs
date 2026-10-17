@@ -150,11 +150,33 @@ impl WritePolicy {
         let Ok(full_key) = reader.full_key(key) else {
             return false;
         };
+        self.permits_full_key(key, &full_key)
+    }
+    fn permits_full_key(&self, key: &str, full_key: &str) -> bool {
         // Disposable probe reservations must never become application targets.
         !key.starts_with("s3drive-conformance/")
             && !full_key.starts_with("s3drive-conformance/")
             && key.starts_with(&self.document.writable_prefix)
             && key.len() > self.document.writable_prefix.len()
+    }
+    /// Local configuration preview only. Does not resolve credentials, contact
+    /// S3, or grant an upload permit. Runtime credential binding still applies.
+    pub fn check_target_scope(
+        &self,
+        source: &Source,
+        key: &str,
+        size: u64,
+    ) -> std::result::Result<(), Failure> {
+        if source.validate().is_err()
+            || self.document.source_fingerprint != source_fingerprint(source)
+        {
+            return Err(Failure::BindingMismatch);
+        }
+        let full_key = crate::reader::scoped_key(source, key).map_err(|_| Failure::PolicyScope)?;
+        if !self.permits_full_key(key, &full_key) {
+            return Err(Failure::PolicyScope);
+        }
+        self.size_and_age(size)
     }
     pub(super) fn admission(
         &self,
@@ -165,6 +187,9 @@ impl WritePolicy {
         if !self.permits_key(reader, key) {
             return Err(Failure::PolicyScope);
         }
+        self.size_and_age(size)
+    }
+    fn size_and_age(&self, size: u64) -> std::result::Result<(), Failure> {
         if size > self.document.max_object_bytes as u64 {
             return Err(Failure::PolicySize);
         }

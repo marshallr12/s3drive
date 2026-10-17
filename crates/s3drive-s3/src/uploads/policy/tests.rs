@@ -45,6 +45,44 @@ fn failure(error: &crate::uploads::Error, expected: Failure) {
 }
 
 #[tokio::test]
+async fn local_target_preview_enforces_scope_size_age_and_source_without_s3() {
+    let server = Server::new(Mode::Normal).await;
+    let session = server.session().await;
+    let (policy, plan, report) = documents(&session);
+    let source = server.source();
+    let scoped = policy.replace("writable_prefix = ''", "writable_prefix = 'managed/'");
+    let evidence = WritePolicy::from_toml(&source, &scoped, &plan, &report).unwrap();
+    assert_eq!(
+        evidence.check_target_scope(&source, "managed/v1/object", 0),
+        Ok(())
+    );
+    assert_eq!(
+        evidence.check_target_scope(&source, "outside", 0),
+        Err(Failure::PolicyScope)
+    );
+    assert_eq!(
+        evidence.check_target_scope(&source, "managed/object", 8_388_609),
+        Err(Failure::PolicySize)
+    );
+    let mut changed = source.clone();
+    changed.profile = Some("another-profile".into());
+    assert_eq!(
+        evidence.check_target_scope(&changed, "managed/object", 0),
+        Err(Failure::BindingMismatch)
+    );
+    let mut expired = evidence;
+    expired.expires = 0;
+    assert_eq!(
+        expired.check_target_scope(&source, "managed/object", 0),
+        Err(Failure::PolicyExpired)
+    );
+    assert_eq!(
+        server.count("PUT") + server.count("GET") + server.count("HEAD") + server.count("DELETE"),
+        0
+    );
+}
+
+#[tokio::test]
 async fn strict_evidence_requires_every_exact_check_and_a_matching_complete_plan() {
     let server = Server::new(Mode::Normal).await;
     let session = server.session().await;

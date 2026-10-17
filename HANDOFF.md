@@ -1,55 +1,59 @@
 # S3Drive handoff
 
-Updated2026-10-17. Goal ACTIVE. Current phase **shared HTTPS authority** on
-`codex/remote-authority-tls`. Read `docs/src/implementation-plan.md` and
-`docs/src/remote-authority.md` before implementation.
+Updated2026-10-17. Goal ACTIVE. Current phase **managed operator bootstrap** on
+`codex/managed-bootstrap-cli`. Read `docs/src/implementation-plan.md` and
+`docs/src/managed-bootstrap.md` before implementation.
 
-Accepted private clean main0f6104c7cd5b7f0d921f16044c2131eff9962f42, terminal
-all-green CI39072688497: Linux117513381553, Windows117513381333,
-book117513381566. 255/251 state, ten HTTP, seventeen SDK, seven Linux and1+7
-Windows native cases; strict21/14 artifacts12116106272/12115719715 exactly
-matched source/platform/types. Both startup gates passed. Schema23/config7,
-explicit posix-v1 native lifecycle now accepted; configs1–6 remain unsupported
-for native Windows deletion. Proof `/tmp/s3drive-lifecycle-publication.json`,
-logs `/tmp/s3drive-lifecycle-{linux,windows,book}.log`, local gate7 exit0.
+Accepted private clean baseline/main a87bd0bd3992bf0af838ac0f97c7a4e97687662e,
+terminal all-green CI39075749765: Linux117522425233, Windows117522425371,
+book117522425341. 256/252 state, ten HTTP, five TLS, seventeen SDK, Linux7 and
+Windows1+7 native cases; both startup gates and typed21/14 source-bound artifacts
+12117256367/12117671321 passed. Real Rust HTTPS/private-CA native writers accepted.
+Proof `/tmp/s3drive-remote-publication.json`, logs `/tmp/s3drive-remote-{linux,windows,book}.log`,
+local gate2 exit0. Schema23/config7. WinFsp ON_CLOSE kernel refusal, retained
+fixture profile pending VM teardown and desktop/reboot/PAM/SSH limits remain.
 
-Pinned WinFsp rejects extended ON_CLOSE in-kernel before Rust; exact refusal,
-retained bytes and unchanged DoC effect tested. Physical workstation reboot,
-PAM/SSH and desktop Windows10/11 acceptance remain unverified. Windows locked
-fresh fixture profile remains for VM teardown; dummy credentials removed.
-Do not bypass NoNewPrivs, mutate Wasabi, install real startup entries or rotate
-credentials. Privacy drift occurred historically; current API confirmed private.
+Current CLI adds managed info/store-plan/store-apply/store-status/configure.
+Plans freeze exact RegisterStore ID (also store ID), sequence, route, volume,
+name policy and optional CA-byte hash in flushed create-new private documents.
+No setup S3 requests or credential resolution. Recovery observes exact receipts
+and store descriptors; never rebase or fresh-ID fallback. Root is source-relative,
+not prefixed twice. Configuration supports explicit local alias mapping and
+read-only or explicit policy/evidence-bound writes with fresh separate state.
+No overwrite, provider grant, startup install, host/Turso provisioning or existing
+bucket import. Shared/native fixtures now register via CLI and use generated
+configurations; writable save/mutation setup also uses HTTPS.
 
-The user keeps SQLite-host and optional Turso hosting choices open. Current
-transport only allows numeric loopback HTTP. New phase adds native Rust TLS,
-verified HTTPS clients, optional private CA roots, owner-private bounded PEM
-inputs and request/connection/shutdown bounds. No remote provisioning.
-Metadata/S3 mutation protocols and exact uncertain IDs stay unchanged. Shared
-SQLite remains authoritative; Turso, real multi-host, authority supervision and
-backup/failover require later acceptance. Pricing checked2026-10-17: Free$0,
-Developer$5.99 monthly/about$4.99 annual; see cited book discussion. Rust service
-hosting and Wasabi costs are separate.
+Final local gate passed exit0 (`/tmp/s3drive-bootstrap-gate2.log`): 257 Linux
+state, ten HTTP, five TLS, seventeen SDK, six bootstrap CLI and six shared-engine
+cases, formatting/Clippy/build and55-document link/mdBook checks. The local
+portable lifecycle uses a generated config7; save/mutation recovery uses CLI
+registration and generated config6 over HTTPS. Refusal checks retain existing
+dirty fixture bytes and reject reused direct state/out-of-scope roots without
+provider mutations. Native mounts remain separate, required hosted gates.
 
-TLS wire tests now include independent-client CAS and unread-reply recovery,
-bad trust/hostname/expiry/token/volume, slow handshake/header/body, plaintext
-refusal, no redirects/replay and sanitized errors. One initial plaintext-refusal
-assertion was corrected to allow TLS alerts. The same real CLI/SDK managed
-writer test is being switched to HTTPS on portable and native OS paths. No
-remote transport acceptance or publication claimed yet. Require local gate and
-exact-source Linux/Windows/book/native/reference/startup gates before guarded
-private main publication. Refresh this current section with evidence; preserve
-older durable checkpoints below.
+Earlier engine1/2 found old fixture string-spacing and missing-key assumptions;
+engine3 exposed intentional direct/managed state reuse refusal. Parsed-table
+helpers now use a distinct original direct journal. Final engine4 passed.
+Gate1 failed only a useless-vec lint in a new test; fixed before full gate2.
+No existing dependency versions changed; serde became a direct CLI dependency.
+The setup chapter returns HTTP200 in the local book preview.
 
-Local full gate passed exit0 (`/tmp/s3drive-remote-gate2.log`): 256 state, ten
-HTTP, five real TLS, seventeen SDK, CLI HTTPS shared-FS writes/recovery, lint,
-build and54-book-link checks. Focused TLS `/tmp/s3drive-remote-tls3.log` and
-CLI writer `/tmp/s3drive-remote-engine2.log` passed. Initial gate1 terminated143
-during test compilation; no test failure, ample resources, cause unverified.
-Only that terminal process was restarted; gate2 is complete. Diagram SVG was
-rendered with librsvg/Cairo and visually inspected. Existing dependency versions
-retained; new TLS/platform-verifier/test-cert graph additions only.
-Next push exact candidate and inspect terminal all-three CI, native HTTPS marker,
-full lifecycle1+7, Linux7, typed21/14 source artifacts and both startup gates.
+Next push candidate and inspect terminal exact-SHA Linux/Windows/book jobs,
+Linux7 and Windows1+7 native cases, both startup gates and source/platform-bound
+strict21/14 reference artifacts before guarded private main publication. Proof
+will be `/tmp/s3drive-bootstrap-publication.json`; refresh accepted source during
+the next substantive phase rather than start a documentation-only CI cycle.
+
+Do not bypass workstation NoNewPrivs=1, mutate Wasabi, install real startup,
+rotate credentials or provision accounts/hosting. Earlier disposable provider
+approvals were consumed/cleaned. Windows tests run natively on hosted Server2025,
+not this Linux workstation or an accepted Windows10/11 desktop. Physical reboot,
+PAM/SSH, real multi-host/partitions, authority supervision, backup/failover,
+provider managed acceptance and large-file work remain. User keeps SQLite-host
+and optional Turso options open; Turso pricing citations live in the book.
+Privacy drift happened historically; last live API confirmed private, recheck
+before/after publication. No forced publication or broad credential/config dumps.
 
 ## Prior owned-target replacement checkpoint
 

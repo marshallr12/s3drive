@@ -29,3 +29,8 @@ async fn managed_namespace_create_and_directory_reopen() {
 async fn managed_namespace_moves_replacements_and_retained_unlinked_views() {
     managed::portable_mutations().await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn bootstrap_preserves_existing_state_and_refuses_out_of_scope_default_store() {
+    managed::bootstrap_write_refusals().await;
+}
