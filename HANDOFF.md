@@ -32,14 +32,23 @@ Full local gate passed (exit 0): 167 state tests, seven authority TCP tests,
 nine managed-publication cases, 50 S3 and 13 FS tests, formatting/lint/build/book.
 Actual SQLite-full transition, mode/anchor corruption, migration/refusal, local
 atomic acknowledgments and quota, eight killed authority boundaries and SDK
-killed-owner recovery passed. Exact-tip remote native/reference/startup acceptance
-is pending at this edit; do not mark this phase published yet.
+killed-owner recovery passed. Implementation commit `43dbdea85ff2b76802d0d8a0072fdfe3e4441257`
+passed terminal all-green [run 39036011774](https://github.com/marshallr12/s3drive/actions/runs/39036011774).
+Linux `117405802944`, Windows `117405802717`, book `117405802942`.
+Remote state counts: 167 Linux / 163 Windows; seven real native S3Drive cases
+per OS; Linux no-systemd and Windows non-admin independent-logon startup passed.
+Eight NTFS probes matched every recorded scalar; pinned upstream WinFsp legacy
+disk/network create_test passed separately. Strict schema-16 startup passed.
+Logs `/tmp/s3drive-deferred-first-{linux,windows,book}.log`. The final
+documentation commit still requires exact-tip CI before guarded publication.
 Logs `/tmp/s3drive-deferred-{tests3,tcp1,sdk1,gate2}.log`.
 
-Next: complete local gate, review full diff, commit candidate, require terminal
-Linux/Windows/book CI and native/reference/startup results, then guarded
+Next: require terminal final-documentation Linux/Windows/book CI and all
+native/reference/startup results, then guarded
 fast-forward publication preserving the mdBook watcher tree. Before native
-Windows deletion, implement atomic deferred create, owner-fenced rename/move,
+Windows deletion, first implement explicit cancel-as-recovery for unknown
+same-fence mode transitions, including exhausted history capacity and late
+receipts without rewinding observations. Then add atomic deferred create, owner-fenced rename/move,
 per-descriptor/node-wide durable state and recovery; measure multiple DoC and
 deferred rename cases. Do not substitute permanent name fencing or SetDelete-only
 support for the full handle lifecycle. Workstation NNP restriction and real

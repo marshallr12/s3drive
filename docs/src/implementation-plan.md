@@ -410,3 +410,13 @@ Native Windows deletion stays unsupported, version 6 unchanged. Next implement
 atomic deferred create/owner-fenced move and durable per-open/node-wide lifecycle;
 then full Windows native deletion acceptance. Real provider mutation and
 workstation startup/credential changes remain outside this phase.
+
+
+The implementation passed at `43dbdea`, terminal all-green
+[run 39036011774](https://github.com/marshallr12/s3drive/actions/runs/39036011774):
+167/163 Linux/Windows state tests, seven TCP tests, nine managed-publication cases,
+seven actual native cases per OS and unchanged startup/reference gates. The final
+documentation tip still requires CI before publication. Next prioritize explicit
+same-fence cancel recovery for unresolved mode changes at local quota: prove both
+authority orderings and late receipt observation without discarding history or
+dirty bytes. Then add atomic deferred create/move and the per-open lifecycle.

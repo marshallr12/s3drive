@@ -87,3 +87,21 @@ boundaries, schema-15 migration/refusal and five killed SDK client stages withou
 duplicate PUTs. These fixtures are not live Wasabi or native Windows deletion
 evidence. Candidate publication additionally requires the unchanged hosted
 native/reference/startup suites described above.
+
+
+Implementation commit `43dbdea85ff2b76802d0d8a0072fdfe3e4441257` passed terminal
+[Linux/Windows/book CI 39036011774](https://github.com/marshallr12/s3drive/actions/runs/39036011774).
+Remote state counts were 167 Linux and 163 Windows. Seven actual S3Drive native
+cases per OS passed; Linux no-systemd startup and Windows Server 2025 non-admin
+independent-logon startup passed, including strict schema-16 bootstrap. Eight
+NTFS reference cases matched the recorded scalar fields; pinned upstream WinFsp
+legacy create_test passed on its separate disk/network backends. These reference
+results do not enable the S3Drive delete callbacks. This final documentation
+revision requires its own terminal exact-tip gate before publication.
+
+The next recovery slice must allow an explicitly fenced cancellation to resolve
+an unknown same-epoch transition, even at exhausted local history capacity. Test
+cancellation both before and after the in-flight authority transition, restart,
+late successful/rejected receipts, publication barriers and a successor fence.
+Historical receipts must be recorded without rewinding current file observations
+or adopting another epoch. This is a requirement, not implemented behavior.
