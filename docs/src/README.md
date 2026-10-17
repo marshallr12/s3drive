@@ -63,7 +63,8 @@ an authoritative metadata service rather than hiding weaknesses of copy/delete.
 | Journal-driven SDK executor | [Implemented and tested on Linux/Windows](upload-executor.md); explicit source/evidence-bound factory; native integration below |
 | Generation-specific remote flush | [Library receipt and atomic acknowledgment](flush-receipts.md); retain newer heads and all snapshots |
 | Existing-file write mounts | [Version-2 opt-in implementation](native-writes.md), native Linux/Windows acceptance passed; no real writable configuration installed |
-| Creation, rename/delete, new offline opens, tray UI | Planned |
+| Regular-file creation in existing writable directories | [Guarded creation and durable rediscovery](native-creation.md); native Linux/Windows acceptance passed |
+| Directory creation, rename/delete, new offline opens, tray UI | Planned |
 
 The initial research/scaffold delivery is complete. Work has advanced to the
 [read-only provider adapter](provider-contract.md). The overall product goal

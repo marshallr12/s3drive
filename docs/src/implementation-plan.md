@@ -237,9 +237,10 @@ Credential-generation rebinding and unresolved-attempt/supersession resolution
 still need explicit policies; a pending local record is not permission to upload.
 
 
-## P5c1b acceptance in progress
+## P5c1b native acceptance
 
 [Native regular-file creation](native-creation.md) is implemented for existing
-policy-writable directories. Local SDK/SQLite integration and the bound head
-catalog test pass. Actual FUSE/WinFsp tests must pass before publication. No
+policy-writable directories. Local SDK/SQLite integration, the bound head
+catalog test and actual FUSE/WinFsp workflows pass. Exact-tip CI is required
+for final publication. No
 real Wasabi write configuration or new cloud probe is installed or executed.

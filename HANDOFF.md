@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated: 2026-10-16. Current phase: **P5c1b guarded native file creation**, under acceptance.
+Updated: 2026-10-16. Current phase: **P5c1b guarded native file creation**; native cases passed.
 Goal active. Linux/Windows read-only drives and startup foundations work;
 library writes/flush are progressing toward safe writable native filesystems.
 Do not call the broader editable-drive goal complete before its documented
@@ -85,7 +85,7 @@ upgrade in the current phase. OS dependencies remain target-specific.
 
 P5c1a is published. P5c1b now connects guarded empty-file creation to FUSE and
 WinFsp, followed by the existing conditional replacement path. See the
-[creation contract](docs/src/native-creation.md). Native acceptance is pending.
+[creation contract](docs/src/native-creation.md). Native creation cases passed on both OSes.
 No real bucket policy, configuration, credentials or startup entry changed.
 
 One creation lock covers namespace checks and a conditional create. Linux
@@ -107,14 +107,25 @@ Unicode create/write, exclusive/concurrent collisions, LIST omissions, HEAD
 failure, a remote creator racing after the 404 check, uncertain restart with
 no extra PUT, deleted remote keys and retained local lineage refusal. The
 catalog test covers binding, pagination and corrupt head-pointer refusal.
-Native test cases are prepared on both OSes; do not claim they pass yet.
+Implementation `f3546ce` passed the real Linux and Windows creation suites in
+[run 38992535965](https://github.com/marshallr12/s3drive/actions/runs/38992535965):
+Linux 117277841348, Windows 117277841110, book 117277841282. All three jobs
+finished successfully. Logs: `/tmp/s3drive-create-{linux,windows,book}-ci-initial.log`.
+Require terminal exact-tip final CI before publication. Three native cases cover
+read-only/cache/session regression, existing editing and guarded creation.
+
+Final refinement: use a one-byte policy permission probe so valid deep source
+keys near the 1,024-byte limit are not denied. The SDK child test accepts exactly
+1,024 full key bytes, rejects 1,025, and bounds the callback future below 16 KiB.
+The final full local gate passed: `/tmp/s3drive-create-gate-final.log`.
+The creation PNG was generated and visually inspected. No new live requests.
 
 Current executor still has NoNewPrivs=1, preventing setuid fusermount3. Previous
 namespace attempts were refused by the unchanged private-state ownership
 checks. Do not clear NoNewPrivs, weaken ownership or use a privileged launcher.
 Native Linux CI and the remote Windows VM are required for this phase.
 
-Remaining: actual native acceptance and exact-tip publication, then persistent
+Remaining: exact-tip final CI/publication, then persistent
 directories, separate rename/delete protocols, reference/pin-aware reclamation,
 explicit conflict recovery and multipart. Default local retention remains
 1 GiB / 4,096 generations and single-PUT writes are limited to 8 MiB. These are
@@ -160,7 +171,7 @@ were already removed. Do not infer remaining cleanup from old plans/logs.
 
 ## Next implementation and durable decisions
 
-Finish P5c1b native acceptance, then persistent directories and namespace
+After P5c1b publication, implement persistent directories and namespace
 workflows (P5c1c), reference/pin-aware
 staging reclamation and explicit conflict recovery. Do not expose delete/rename
 based on fixture cleanup: that is not provider-verified application deletion. Preserve explicit conflict/uncertain states and metadata limits.

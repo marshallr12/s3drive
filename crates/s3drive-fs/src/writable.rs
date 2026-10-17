@@ -71,7 +71,7 @@ impl Writes {
             .is_some_and(|e| e.check_replace(key, 0).is_ok())
     }
     pub fn permits_directory(&self, source: usize, prefix: &str) -> bool {
-        let key = format!("{prefix}.s3drive-permission-check");
+        let key = format!("{prefix}_");
         self.sources
             .get(source)
             .and_then(Option::as_ref)

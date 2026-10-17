@@ -9,7 +9,7 @@ new opens still authorize online. A separate version-2 configuration now connect
 [existing-file writes](docs/src/native-writes.md) to both adapters, with native
 Linux/Windows acceptance. It requires explicit source/prefix policies and full provider evidence.
 No real writable user configuration is installed. [Guarded file creation](docs/src/native-creation.md)
-is under native acceptance. Directory creation, rename/delete,
+also passed native Linux/Windows acceptance. Directory creation, rename/delete,
 multipart and staging reclamation remain subsequent work; this is not yet a
 complete editable desktop drive.
 
@@ -94,7 +94,7 @@ On Windows with WinFsp installed, choose an unused letter:
 | `s3drive-core` | Validate TOML and resolve virtual paths to bucket/key pairs |
 | `s3drive-s3` | S3 reads, scoped probes and policy-bound single-PUT library executor |
 | `s3drive-state` | Private SQLite state, bounded clean cache and local staged-generation journal |
-| `s3drive-fs` | Shared namespace, revision-bound handles and optional cache orchestration |
+| `s3drive-fs` | Shared namespace, journal-backed file I/O and optional clean cache |
 | `s3drive-fuse` | Linux FUSE callbacks and signal-driven unmount |
 | `s3drive-winfsp` | Windows WinFsp callbacks, native naming/security and teardown |
 | `s3drive-cli` | Local commands, read-only S3 tools and foreground OS mounting |

@@ -134,6 +134,10 @@ async fn creation_child() {
     let config = s3drive_core::Config::parse(&std::fs::read_to_string(config).unwrap()).unwrap();
     let fs = s3drive_fs::ReadOnlyFs::new(&config).await.unwrap();
     let dir = directory(&fs).await;
+    let future = fs.create_file(dir, creation::NAME, |a, b| a == b, true);
+    let bytes = std::mem::size_of_val(&future);
+    assert!(bytes < 16 * 1024, "create callback future is {bytes} bytes");
+    drop(future);
     let file = Box::pin(fs.create_file(dir, creation::NAME, |a, b| a == b, true))
         .await
         .unwrap();
@@ -172,6 +176,24 @@ async fn creation_child() {
             .unwrap(),
         creation::BODY
     );
+    let mut deep = fs.lookup(s3drive_fs::ROOT, "docs").await.unwrap();
+    for name in creation::deep_directory().trim_end_matches('/').split('/') {
+        deep = fs.lookup(deep.id, name).await.unwrap();
+    }
+    let boundary = fs
+        .create_file(deep.id, "_", |a, b| a == b, true)
+        .await
+        .unwrap();
+    assert_eq!(
+        boundary.current_metadata().unwrap().key.len() + "desktop/".len(),
+        1024
+    );
+    assert!(
+        fs.create_file(deep.id, "__", |a, b| a == b, true)
+            .await
+            .is_err()
+    );
+    drop(boundary);
     let gone = fs
         .create_file(dir, "created-gone", |a, b| a == b, true)
         .await

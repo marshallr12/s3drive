@@ -1,9 +1,10 @@
 # Native file creation
 
-**P5c1b implementation and acceptance in progress, 2026-10-16.** Version 2 is
-being extended to create regular files inside existing, explicitly writable
+**P5c1b native acceptance passed, 2026-10-16.** Version 2 creates regular files inside existing, explicitly writable
 source directories. No real Wasabi configuration or policy changes, startup
 registration or cloud mutations are part of this phase.
+
+![A guarded create records its intent in SQLite, uploads through the S3 SDK, and uses online HEAD for catalog rediscovery](images/native-creation.png)
 
 A new file starts with a durable empty local generation, a single conditional
 create (`If-None-Match: *`), full remote verification and a local flush receipt.
@@ -39,3 +40,31 @@ create, exclusive collision, Unicode bytes, competing create, unobservable
 result, restart without replay, LIST omission and read-only regressions. Local
 native execution is still constrained by NoNewPrivs; native CI is required.
 No real provider mutation is authorized by the earlier consumed probe scope.
+
+
+## Acceptance evidence
+
+Implementation `f3546ce` passed real FUSE and WinFsp creation suites in
+[run 38992535965](https://github.com/marshallr12/s3drive/actions/runs/38992535965):
+Linux job 117277841348 and Windows job 117277841110. Each OS runs three native
+cases: read-only/cache/session regression, existing-file editing and creation.
+Windows runs on GitHub's Windows Server 2025 VM, not this Linux workstation.
+Native creation includes Unicode bytes, ordinary create/truncate saves,
+exclusive collision, omitted LIST entries, deleted-key omission, uncertainty
+across restart without a second PUT, denied HEAD and a competing creator.
+Linux also checks case-distinct names; Windows checks native case collisions.
+
+The portable SDK/SQLite test separately races two local creates and validates
+bound catalog pagination/corruption refusal. Final acceptance also checks a
+callback-future size budget and the 1,024-byte full-key boundary; its shortest
+permission probe must not reject valid deep directories. Keys beyond that bound
+fail before publication. The final source and documentation refresh requires
+exact-tip native CI before publishing main.
+
+Nonexclusive create/open works for an already observed existing file. If a
+remote creator wins after the absence check, the failed native create returns
+collision and keeps the rejected local lineage. It does not automatically
+adopt or overwrite the rival. General conflict resolution remains future work.
+The fixed Windows owner descriptor applies to creation; per-file ACLs and
+allocation-reservation guarantees are not implemented. Workstation reboot,
+Windows 10/11 desktop, and native writable Wasabi acceptance remain separate.

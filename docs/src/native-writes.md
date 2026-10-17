@@ -1,6 +1,6 @@
 # Native existing-file writes
 
-[Guarded regular-file creation](native-creation.md) extends this phase under separate acceptance.
+[Guarded regular-file creation](native-creation.md) extends this phase with separate native acceptance.
 
 **P5c1a, native acceptance passed, 2026-10-16.** A separate
 version-2 configuration opts selected sources into existing-file editing.

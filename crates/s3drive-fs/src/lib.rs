@@ -1,4 +1,4 @@
-//! Shared read-only namespace and optional revision-bound clean cache.
+//! Shared S3 namespace, journal-backed file I/O and revision-bound clean cache.
 pub mod edits;
 mod writable;
 use s3drive_core::Config;

@@ -6,7 +6,8 @@ S3 transport. P2 adds the shared read-only namespace/handle engine and Linux
 adapter; P3 adds Windows WinFsp. Optional clean caching and the local staging
 library, local file-edit plans, guarded remote commit and flush receipts are
 implemented. P5c1a connects opt-in existing-file edits to both native adapters,
-with native acceptance on both OSes. See [the detailed write path](native-writes.md).
+with native acceptance on both OSes. P5c1b adds [guarded regular-file creation](native-creation.md).
+See [the detailed write path](native-writes.md).
 
 ![Local applications reach the Rust filesystem engine through FUSE or WinFsp; its S3 client reads remote bucket data. Local SQLite and cache have separate roles.](images/architecture.png)
 

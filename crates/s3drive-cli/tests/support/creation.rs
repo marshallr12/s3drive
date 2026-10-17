@@ -5,11 +5,19 @@ pub const KEY: &str = "/test-bucket/desktop/writable/created-日本語 %2F + caf
 pub const UNKNOWN: &str = "created-unknown";
 pub const RACE: &str = "created-race";
 pub const BODY: &[u8] = b"new file\0\xff exact bytes";
+pub fn deep_directory() -> String {
+    format!("writable/{}x/", format!("{}/", "d".repeat(250)).repeat(4))
+}
 pub fn prepare(fixture: &Fixture) {
     fixture.put(
         "/test-bucket/desktop/writable/existing-dir/sentinel",
         b"sentinel",
         "sentinel",
+    );
+    fixture.put(
+        &format!("/test-bucket/desktop/{}", deep_directory()),
+        b"",
+        "deep-marker",
     );
     fixture.hide_created_listing.store(true, Ordering::SeqCst);
 }
