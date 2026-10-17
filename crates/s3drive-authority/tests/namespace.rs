@@ -5,6 +5,149 @@ use std::time::Duration;
 use tokio::{io::AsyncReadExt, sync::oneshot, task::JoinHandle};
 
 const SECRET: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn owned_target_replacements_race_and_recover_original_two_node_results_over_http() {
+    use s3drive_authority::{NodeGuard, RemovalClaim, RemovalMode};
+    for (index, mode) in [RemovalMode::Deferred, RemovalMode::Pending]
+        .into_iter()
+        .enumerate()
+    {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("authority");
+        let authority = Authority::open_with_policy(path.clone(), "portable-collision-v1".into())
+            .await
+            .unwrap();
+        let (url, stop, task) = start(authority.client()).await;
+        let a = http();
+        let b = http();
+        let Reply::Features(features) = ask(&a, &url, &Request::Features {}).await else {
+            panic!()
+        };
+        assert!(features.iter().any(|f| f == "owned-target-replace-v1"));
+        let mut nodes = Vec::new();
+        for n in 0..3 {
+            let r = change(
+                &info(&a, &url).await,
+                70000 + n,
+                Mutation::CreateEntry {
+                    parent: ROOT.into(),
+                    parent_revision: 0,
+                    store: None,
+                    name: format!("directory café 日本語 🦀 {n}"),
+                    node_kind: Kind::Directory,
+                },
+            );
+            nodes.push(applied(ask(&a, &url, &r).await).node);
+        }
+        let guard = |n: &s3drive_authority::Node| NodeGuard {
+            id: n.id.clone(),
+            revision: n.revision,
+        };
+        let parent = NodeGuard {
+            id: ROOT.into(),
+            revision: 0,
+        };
+        let owner = format!("{:032x}", 9000);
+        let arm = change(
+            &info(&a, &url).await,
+            71000,
+            if mode == RemovalMode::Deferred {
+                Mutation::PrepareRemoval {
+                    node: guard(&nodes[2]),
+                    parent: parent.clone(),
+                    owner,
+                }
+            } else {
+                Mutation::ArmRemoval {
+                    node: guard(&nodes[2]),
+                    parent: parent.clone(),
+                    owner,
+                }
+            },
+        );
+        let p = applied(ask(&a, &url, &arm).await);
+        let Some(s3drive_authority::Artifact::Removal(fence)) = p.artifact else {
+            panic!()
+        };
+        let v = info(&a, &url).await;
+        let movement = |n: usize| {
+            change(
+                &v,
+                72000 + n as u64,
+                Mutation::MoveEntry {
+                    node: guard(&nodes[n]),
+                    source_parent: parent.clone(),
+                    parent: parent.clone(),
+                    name: p.node.name.clone(),
+                    destination: Some(guard(&p.node)),
+                    destination_removal: Some(Box::new(RemovalClaim {
+                        fence: fence.clone(),
+                        previous: format!("{:032x}", 71000),
+                        mode,
+                    })),
+                },
+            )
+        };
+        let left = movement(0);
+        let right = movement(1);
+        let (x, y) = tokio::join!(ask(&a, &url, &left), ask(&b, &url, &right));
+        let (winner, original, loser) = match (x, y) {
+            (Reply::Applied(r), Reply::Error(Error::Conflict)) => (r, left, right),
+            (Reply::Error(Error::Conflict), Reply::Applied(r)) => (r, right, left),
+            other => panic!("one owned-target winner: {other:?}"),
+        };
+        let response = a
+            .post(&url)
+            .bearer_auth(SECRET)
+            .json(&original)
+            .send()
+            .await
+            .unwrap();
+        assert!(response.status().is_success());
+        drop(response);
+        close(stop, task, authority).await;
+        let authority = Authority::open_with_policy(path, "portable-collision-v1".into())
+            .await
+            .unwrap();
+        let (url, stop, task) = start(authority.client()).await;
+        let sequence = info(&a, &url).await.sequence;
+        assert_eq!(
+            ask(&a, &url, &original).await,
+            Reply::Applied(winner.clone())
+        );
+        assert_eq!(ask(&b, &url, &loser).await, Reply::Error(Error::Conflict));
+        assert_eq!(info(&a, &url).await.sequence, sequence);
+        assert_eq!(
+            ask(
+                &a,
+                &url,
+                &Request::PendingRemoval {
+                    volume: v.id.clone(),
+                    node: p.node.id.clone()
+                }
+            )
+            .await,
+            Reply::PendingRemoval(None)
+        );
+        let old_close = change(
+            &info(&a, &url).await,
+            73000 + index as u64,
+            Mutation::CancelRemoval {
+                node: p.node.id.clone(),
+                fence,
+            },
+        );
+        assert_eq!(
+            ask(&a, &url, &old_close).await,
+            Reply::Error(Error::Conflict)
+        );
+        let listed = listing(&a, &url, &v.id, ROOT).await;
+        assert!(listed.children.contains(&winner.node));
+        assert_eq!(listed.children.len(), 2);
+        close(stop, task, authority).await;
+    }
+}
 fn http() -> reqwest::Client {
     reqwest::Client::builder()
         .no_proxy()
@@ -573,6 +716,7 @@ async fn guarded_replacements_race_and_replay_after_authority_restart() {
         &v,
         10,
         Mutation::MoveEntry {
+            destination_removal: None,
             node: guard(&nodes[0]),
             source_parent: root.clone(),
             parent: root.clone(),
@@ -584,6 +728,7 @@ async fn guarded_replacements_race_and_replay_after_authority_restart() {
         &v,
         11,
         Mutation::MoveEntry {
+            destination_removal: None,
             node: guard(&nodes[1]),
             source_parent: root.clone(),
             parent: root.clone(),
@@ -1287,6 +1432,7 @@ async fn deferred_owner_moves_race_on_unicode_destination_and_recover_exact_repl
             v,
             op,
             Mutation::MoveDeferredEntry {
+                destination_removal: None,
                 node: NodeGuard {
                     id: node.id.clone(),
                     revision: node.revision,

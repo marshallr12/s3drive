@@ -185,7 +185,7 @@ fn only_explicit_retained_terminal_conflicts_release_closing_and_never_settle_by
                 Err(namespace::Error::Conflict)
             );
             managed::Rejection::Authority {
-                request: publication.reserve.clone(),
+                request: Box::new(publication.reserve.clone()),
                 error: namespace::Error::Conflict,
             }
         };
@@ -305,7 +305,7 @@ fn unknown_or_changed_evidence_never_becomes_a_retained_conflict() {
                 .reject(
                     publication.id(),
                     managed::Rejection::Authority {
-                        request: publication.reserve.clone(),
+                        request: Box::new(publication.reserve.clone()),
                         error
                     }
                 )
@@ -320,7 +320,7 @@ fn unknown_or_changed_evidence_never_becomes_a_retained_conflict() {
             .reject(
                 publication.id(),
                 managed::Rejection::Authority {
-                    request: changed,
+                    request: Box::new(changed),
                     error: namespace::Error::Conflict
                 }
             )

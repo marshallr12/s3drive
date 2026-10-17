@@ -75,6 +75,7 @@ pub(super) fn mutate(
             parent: p,
             name,
             destination,
+            ..
         }
         | Mutation::MoveDeferredEntry {
             node: guard,
@@ -110,7 +111,13 @@ pub(super) fn mutate(
                     }
                     Some(n.clone())
                 }
-                (Some(g), Some(id)) if id == g.id => Some(guarded(db, g)?),
+                (Some(g), Some(id)) if id == g.id => Some(
+                    if let Some((_, claim)) = request.mutation.owned_destination() {
+                        removals::replacement::guarded(db, g, claim)?
+                    } else {
+                        guarded(db, g)?
+                    },
+                ),
                 _ => return Err(Error::Conflict),
             };
             // Validate the destination chain before changing either entry.
@@ -142,7 +149,17 @@ pub(super) fn mutate(
                     if children(db, &t.id)? != 0 {
                         return Err(Error::NotEmpty);
                     }
-                    Some(tombstone(db, t, sequence)?)
+                    let displaced = tombstone(db, t, sequence)?;
+                    if let Some((_, claim)) = request.mutation.owned_destination() {
+                        removals::replacement::close(
+                            db,
+                            request,
+                            &displaced.id,
+                            claim,
+                            sequence as u64,
+                        )?;
+                    }
+                    Some(displaced)
                 }
                 _ => None,
             };

@@ -3,7 +3,7 @@
 pub(crate) mod creation;
 mod entries;
 mod removals;
-pub use removals::{PendingRemoval, RemovalFence, RemovalMode};
+pub use removals::{PendingRemoval, RemovalClaim, RemovalFence, RemovalMode};
 pub(crate) fn migrate_removals(db: &Connection) -> crate::Result<()> {
     removals::migrate(db).map_err(|_| "reserved namespace migration refused".into())
 }
@@ -185,6 +185,8 @@ pub enum Mutation {
         parent: NodeGuard,
         name: String,
         destination: Option<NodeGuard>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        destination_removal: Option<Box<RemovalClaim>>,
     },
     MoveDeferredEntry {
         node: NodeGuard,
@@ -194,6 +196,8 @@ pub enum Mutation {
         destination: Option<NodeGuard>,
         fence: Box<RemovalFence>,
         previous: Box<str>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        destination_removal: Option<Box<RemovalClaim>>,
     },
     RemoveEntry {
         node: NodeGuard,
@@ -355,6 +359,7 @@ impl Apply {
                 parent,
                 name,
                 destination,
+                destination_removal,
             }
             | Mutation::MoveDeferredEntry {
                 node,
@@ -362,9 +367,14 @@ impl Apply {
                 parent,
                 name,
                 destination,
+                destination_removal,
                 ..
             } => {
-                (!matches!(&self.mutation, Mutation::MoveDeferredEntry { fence, previous, .. } if !fence.valid() || !valid_id(previous) || previous.as_ref() == ROOT))
+                destination_removal.as_ref().is_none_or(|c| {
+                    c.fence.valid() && valid_id(&c.previous) && c.previous != ROOT
+                        && destination.as_ref().is_some_and(|d| d.id != node.id && d.id != ROOT)
+                        && !matches!(&self.mutation, Mutation::MoveDeferredEntry { fence, .. } if fence.owner != c.fence.owner)
+                }) && (!matches!(&self.mutation, Mutation::MoveDeferredEntry { fence, previous, .. } if !fence.valid() || !valid_id(previous) || previous.as_ref() == ROOT))
                     && node.valid(self.expected_sequence)
                     && source_parent.valid(self.expected_sequence)
                     && parent.valid(self.expected_sequence)
@@ -707,6 +717,15 @@ impl State {
         if count >= MAX_OPERATIONS {
             return Err(Error::Limit);
         }
+        // Replacing an owned destination is ordinary namespace work. It may
+        // close an epoch on success, but must not spend its protected closing
+        // credit before that outcome is known.
+        if request.mutation.owned_destination().is_some() {
+            let reserved: i64 = sql(tx.query_row("SELECT coalesce(sum(CASE mode WHEN 'deferred' THEN 2 ELSE 1 END),0) FROM namespace_removals", [], |r| r.get(0)))?;
+            if count + 1 + reserved > MAX_OPERATIONS {
+                return Err(Error::Limit);
+            }
+        }
         // A savepoint rolls back any partial mutation before retaining rejection.
         sql(tx.execute_batch("SAVEPOINT namespace_effect"))?;
         let content_guard = publication::uses_content_guard(&tx, &request.mutation)?
@@ -755,6 +774,9 @@ impl State {
         }
         if let Ok(receipt) = &outcome {
             removals::check_effect(&tx, &receipt.node.id)?;
+            if let Some((target, _)) = request.mutation.owned_destination() {
+                removals::check_effect(&tx, &target.id)?;
+            }
         }
         sql(tx.commit())?;
         outcome

@@ -10,6 +10,7 @@ fn movement(f: &mut Fixture, n: &Node, name: &str, target: Option<&Node>) -> Inp
     }
     f.input(
         Mutation::MoveDeferredEntry {
+            destination_removal: None,
             node: guard(n),
             source_parent: NodeGuard {
                 id: n.parent.clone().unwrap(),

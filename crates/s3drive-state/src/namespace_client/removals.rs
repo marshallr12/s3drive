@@ -33,6 +33,11 @@ pub(super) fn check_identity(db: &Connection, input: &Input) -> Result<()> {
     {
         return Err("namespace removal requires this client's retained identity".into());
     }
+    if let Some((_, claim)) = input.request.mutation.owned_destination()
+        && identity::read(db)?.as_ref() != Some(&claim.fence.owner)
+    {
+        return Err("replacement target requires this client's retained identity".into());
+    }
     Ok(())
 }
 pub(super) fn records(db: &Connection) -> Result<Vec<Record>> {
@@ -61,7 +66,7 @@ struct History<'a> {
 fn history(records: &[Record]) -> Result<History<'_>> {
     let mut ordered = BTreeMap::new();
     for r in records {
-        if fence(&r.input).is_some()
+        if (fence(&r.input).is_some() || r.input.request.mutation.owned_destination().is_some())
             && let Some(Ok(receipt)) = &r.outcome
             && ordered
                 .insert((r.input.request.volume.clone(), receipt.sequence), r)
@@ -76,74 +81,82 @@ fn history(records: &[Record]) -> Result<History<'_>> {
         let Some(Ok(receipt)) = &r.outcome else {
             unreachable!()
         };
-        let key = (r.input.request.volume.clone(), receipt.node.id.clone());
-        let f = fence(&r.input).ok_or("missing removal fence")?;
-        if matches!(
-            r.input.request.mutation,
-            Mutation::ArmRemoval { .. }
-                | Mutation::PrepareRemoval { .. }
-                | Mutation::CreateDeferredEntry { .. }
-        ) {
-            if active
-                .insert(
-                    key,
-                    OwnedRemoval {
-                        input: r.input.clone(),
-                        receipt: receipt.clone(),
-                        event: r.input.request.operation.clone(),
-                        fence: f,
-                        mode: if matches!(
-                            r.input.request.mutation,
-                            Mutation::PrepareRemoval { .. } | Mutation::CreateDeferredEntry { .. }
-                        ) {
-                            RemovalMode::Deferred
-                        } else {
-                            RemovalMode::Pending
+        if let Some(f) = fence(&r.input) {
+            let key = (r.input.request.volume.clone(), receipt.node.id.clone());
+            if matches!(
+                r.input.request.mutation,
+                Mutation::ArmRemoval { .. }
+                    | Mutation::PrepareRemoval { .. }
+                    | Mutation::CreateDeferredEntry { .. }
+            ) {
+                if active
+                    .insert(
+                        key,
+                        OwnedRemoval {
+                            input: r.input.clone(),
+                            receipt: receipt.clone(),
+                            event: r.input.request.operation.clone(),
+                            fence: f,
+                            mode: if matches!(
+                                r.input.request.mutation,
+                                Mutation::PrepareRemoval { .. }
+                                    | Mutation::CreateDeferredEntry { .. }
+                            ) {
+                                RemovalMode::Deferred
+                            } else {
+                                RemovalMode::Pending
+                            },
                         },
-                    },
-                )
-                .is_some()
-            {
-                return Err("overlapping owned removal history".into());
-            }
-        } else {
-            let mut old = active
-                .remove(&key)
-                .ok_or("closing removal lacks acknowledged arm")?;
-            if old.fence != f || !same_control(&old.input, &r.input) {
-                return Err("closing removal changed retained ownership".into());
-            }
-            if matches!(r.input.request.mutation, Mutation::CancelRemoval { .. })
-                && cancellations
-                    .insert((r.input.request.volume.clone(), f.intent.clone()), *r)
+                    )
                     .is_some()
-            {
-                return Err("duplicate cancellation epoch".into());
-            }
-            match &r.input.request.mutation {
-                Mutation::TransitionRemoval { expected, mode, .. } => {
-                    if old.mode != *expected {
-                        return Err("removal transition changed expected mode".into());
+                {
+                    return Err("overlapping owned removal history".into());
+                }
+            } else {
+                let mut old = active
+                    .remove(&key)
+                    .ok_or("closing removal lacks acknowledged arm")?;
+                if old.fence != f || !same_control(&old.input, &r.input) {
+                    return Err("closing removal changed retained ownership".into());
+                }
+                if matches!(r.input.request.mutation, Mutation::CancelRemoval { .. })
+                    && cancellations
+                        .insert((r.input.request.volume.clone(), f.intent.clone()), *r)
+                        .is_some()
+                {
+                    return Err("duplicate cancellation epoch".into());
+                }
+                match &r.input.request.mutation {
+                    Mutation::TransitionRemoval { expected, mode, .. } => {
+                        if old.mode != *expected {
+                            return Err("removal transition changed expected mode".into());
+                        }
+                        old.mode = *mode;
+                        old.receipt = receipt.clone();
+                        old.event = r.input.request.operation.clone();
+                        active.insert(key, old);
                     }
-                    old.mode = *mode;
-                    old.receipt = receipt.clone();
-                    old.event = r.input.request.operation.clone();
-                    active.insert(key, old);
-                }
-                Mutation::MoveDeferredEntry { previous, .. } => {
-                    if old.mode != RemovalMode::Deferred || previous.as_ref() != old.event {
-                        return Err("owner move changed previous event or deferred mode".into());
+                    Mutation::MoveDeferredEntry { previous, .. } => {
+                        if old.mode != RemovalMode::Deferred || previous.as_ref() != old.event {
+                            return Err("owner move changed previous event or deferred mode".into());
+                        }
+                        check_retained(&old, &r.input)?;
+                        old.receipt = receipt.clone();
+                        old.event = r.input.request.operation.clone();
+                        active.insert(key, old);
                     }
-                    check_retained(&old, &r.input)?;
-                    old.receipt = receipt.clone();
-                    old.event = r.input.request.operation.clone();
-                    active.insert(key, old);
+                    Mutation::CommitRemoval { .. } if old.mode != RemovalMode::Pending => {
+                        return Err("deferred removal cannot commit".into());
+                    }
+                    _ => (),
                 }
-                Mutation::CommitRemoval { .. } if old.mode != RemovalMode::Pending => {
-                    return Err("deferred removal cannot commit".into());
-                }
-                _ => (),
             }
+        }
+        if let Some((target, claim)) = r.input.request.mutation.owned_destination() {
+            let old = active
+                .remove(&(r.input.request.volume.clone(), target.id.clone()))
+                .ok_or("replacement lacks acknowledged target ownership")?;
+            check_target(&old, &r.input, claim)?;
         }
     }
     Ok(History {
@@ -309,6 +322,12 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
             _ => return Err("removal already owned; recover exact disposition first".into()),
         }
     }
+    if let Some((target, claim)) = input.request.mutation.owned_destination() {
+        let old = owned
+            .get(&(input.request.volume.clone(), target.id.clone()))
+            .ok_or("replacement requires acknowledged local target ownership")?;
+        check_target(old, input, claim)?;
+    }
     // Block source, target and parent use *before* persisting a doomed ordinary
     // intent. Otherwise its temporary server refusal could block cancellation.
     let touched = touched(input);
@@ -320,7 +339,12 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
                     | Mutation::CommitRemoval { .. }
                     | Mutation::TransitionRemoval { .. }
                     | Mutation::MoveDeferredEntry { .. }
-            ) && input.entries[0].id == *node;
+            ) && input.entries[0].id == *node
+                || input
+                    .request
+                    .mutation
+                    .owned_destination()
+                    .is_some_and(|(target, _)| target.id == *node);
             let child_only = reservation.mode == RemovalMode::Deferred
                 && !input.entries.iter().any(|e| e.id == *node);
             if !own_close && !child_only {
@@ -333,7 +357,7 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
             && h.cancellation(&r.input)?.is_none()
             && !cancels_transition(input, &r.input)
             && r.input.request.volume == input.request.volume
-            && fence(&r.input).is_some()
+            && (fence(&r.input).is_some() || r.input.request.mutation.owned_destination().is_some())
             && protected(&r.input).iter().any(|id| touched.contains(id))
         {
             return Err("recover exact removal outcome before another namespace effect".into());
@@ -405,9 +429,28 @@ fn touched(input: &Input) -> Vec<&str> {
 }
 
 fn check_retained(old: &OwnedRemoval, input: &Input) -> Result<()> {
-    let e = &input.entries[0];
+    let f = fence(input).ok_or("missing retained source fence")?;
+    check_entry(old, input, &input.entries[0], &f)
+}
+fn check_target(old: &OwnedRemoval, input: &Input, claim: &namespace::RemovalClaim) -> Result<()> {
+    if old.mode != claim.mode || old.event != claim.previous {
+        return Err("replacement target mode or latest event changed".into());
+    }
+    check_entry(
+        old,
+        input,
+        input.entries.get(1).ok_or("missing replacement target")?,
+        &claim.fence,
+    )
+}
+fn check_entry(
+    old: &OwnedRemoval,
+    input: &Input,
+    e: &super::Entry,
+    f: &RemovalFence,
+) -> Result<()> {
     let n = &old.receipt.node;
-    if fence(input).as_ref() != Some(&old.fence)
+    if f != &old.fence
         || !same_control(&old.input, input)
         || e.revision < n.revision
         || Some(&e.parent) != n.parent.as_ref()

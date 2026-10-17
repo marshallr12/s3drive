@@ -37,6 +37,7 @@ fn movement(
         .namespace_node(&w.volume, p.node.parent.as_ref().unwrap())
         .unwrap();
     w.request(Mutation::MoveDeferredEntry {
+        destination_removal: None,
         node: guard(&p.node),
         source_parent: guard(&source),
         parent: guard(parent),

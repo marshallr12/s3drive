@@ -65,6 +65,7 @@ async fn movement(
             w,
             op,
             Mutation::MoveDeferredEntry {
+                destination_removal: None,
                 node: guard(&before),
                 source_parent: guard(&source),
                 parent: guard(&parent),
@@ -168,7 +169,7 @@ pub(super) async fn run_mode(
     w: &WireClient,
     volume: &str,
 ) {
-    if mode == "owner_move_start" {
+    if mode == "owner_move_start" || mode == "owned_replace_start" {
         let reader = s3drive_s3::S3Reader::from_source(&config.sources[0])
             .await
             .unwrap();
@@ -208,7 +209,14 @@ pub(super) async fn run_mode(
         volume.into(),
     )
     .await;
-    Box::pin(step(mode, &p, w, root, volume, &loss)).await;
+    if mode.starts_with("owned_replace_") {
+        Box::pin(super::owned_replacement::step(
+            mode, &p, w, root, volume, &loss,
+        ))
+        .await;
+    } else {
+        Box::pin(step(mode, &p, w, root, volume, &loss)).await;
+    }
     p.storage().close().await.unwrap();
     stop.send(()).unwrap();
     server.await.unwrap();

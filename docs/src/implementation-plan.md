@@ -619,3 +619,26 @@ missing-cleanup Close facts. Required Windows CI strictly checks all21 measured
 replacement records and12 malformed variants alongside the existing14/four/nine
 reference checks, seven native cases per OS and startup. Require exact-tip
 terminal all-green before publication; profile/native enablement is still gated.
+
+
+### Atomic owned-target replacement (2026-10-17)
+
+Reference/schema21 accepted at `cc01752`, terminal CI39064052369. Implement the
+[owned destination contract](owned-target-replacement.md) with an exact optional
+claim on existing move requests, preserving old serialized hashes. The authority
+closes the target epoch and moves the source in one transaction. The client
+must prove ownership of both affected reservations, retain detached target I/O,
+block conflicting unknown work and replay original outcomes across process death.
+Require explicit stale/foreign/corrupt/full-disk/quota/migration tests, actual SDK
+late writes and killed-owner recovery, full gate and exact-tip hosted acceptance.
+Next connect the complete native lifecycle/profile with its native acceptance;
+this metadata phase does not enable native deletion or imply NTFS parity.
+
+
+Local full gate passed253 state/ten HTTP/seventeen SDK with schema22/config6.
+Twelve new state cases retain both ownership chains and dirty target data across
+quota/full disk/corruption/restart; HTTP racing replacement has one winner.
+Three SDK processes prove four source/target combinations, target late I/O and
+8/12/12 PUT counts without replay or DELETE. Require final exact-tip terminal
+native/reference/startup acceptance before publication. Full native callbacks,
+explicit profile/config selection and early POSIX cleanup remain the next work.

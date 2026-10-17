@@ -1,5 +1,5 @@
 use super::*;
-fn prepare(w: &mut World, n: &Node) -> PendingRemoval {
+pub(super) fn prepare(w: &mut World, n: &Node) -> PendingRemoval {
     let mut request = w.arm_request(n);
     let Mutation::ArmRemoval {
         node,
@@ -323,6 +323,7 @@ fn deferred_source_and_replacement_target_remain_fenced_in_legacy_and_guarded_ro
             name: "renamed".into(),
         },
         Mutation::MoveEntry {
+            destination_removal: None,
             node: guard(&p.node),
             source_parent: guard(&w.root()),
             parent: guard(&w.root()),
@@ -330,6 +331,7 @@ fn deferred_source_and_replacement_target_remain_fenced_in_legacy_and_guarded_ro
             destination: None,
         },
         Mutation::MoveEntry {
+            destination_removal: None,
             node: guard(&source),
             source_parent: guard(&w.root()),
             parent: guard(&w.root()),

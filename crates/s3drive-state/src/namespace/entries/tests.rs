@@ -101,6 +101,7 @@ impl World {
     }
     fn mv(&mut self, n: &Node, p: &Node, name: &str, target: Option<&Node>) -> Apply {
         self.request(Mutation::MoveEntry {
+            destination_removal: None,
             node: guard(n),
             source_parent: guard(&self.node(n.parent.as_ref().unwrap())),
             parent: guard(p),

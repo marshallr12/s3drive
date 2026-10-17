@@ -4,7 +4,7 @@ use super::*;
 #[serde(deny_unknown_fields)]
 pub enum Rejection {
     Authority {
-        request: Apply,
+        request: Box<Apply>,
         error: crate::namespace::Error,
     },
     Physical {
@@ -24,10 +24,11 @@ fn validate(db: &Connection, r: &Record, rejection: &Rejection) -> Result<()> {
     }
     match rejection {
         Rejection::Authority { request, error } => {
-            let reserve =
-                request == &r.input.reserve && r.reservation.is_none() && r.publication.is_none();
+            let reserve = request.as_ref() == &r.input.reserve
+                && r.reservation.is_none()
+                && r.publication.is_none();
             if *error != crate::namespace::Error::Conflict
-                || (!reserve && r.publication.as_ref() != Some(request))
+                || (!reserve && r.publication.as_ref() != Some(request.as_ref()))
             {
                 return Err("only an exact permanent metadata conflict may be retained".into());
             }

@@ -651,7 +651,7 @@ impl Publisher {
                         .reject(
                             id.into(),
                             s3drive_state::managed::Rejection::Authority {
-                                request: request.clone(),
+                                request: Box::new(request.clone()),
                                 error: s3drive_authority::Error::Conflict,
                             },
                         )

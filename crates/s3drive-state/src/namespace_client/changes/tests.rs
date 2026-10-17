@@ -205,6 +205,7 @@ fn replacement_observes_both_files_together_and_refuses_dirty_source() {
     f.bind(&a);
     let dirty = f.stage(&b, 500, b"open destination data");
     let make = |a: &Node, b: &Node| Mutation::MoveEntry {
+        destination_removal: None,
         node: guard(a),
         source_parent: NodeGuard {
             id: ROOT.into(),

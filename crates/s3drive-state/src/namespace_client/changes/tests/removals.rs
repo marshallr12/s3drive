@@ -4,6 +4,7 @@ mod cancellation;
 mod created;
 mod deferred;
 mod moved;
+mod replacement;
 
 fn owner(f: &mut Fixture) -> String {
     Journal::new(&mut f.client)

@@ -18,8 +18,8 @@ pub use wire::{WireClient, WireError};
 
 pub use namespace::{
     Apply, Artifact, ContentGuard, Error, Kind, Listing, Mutation, Node, NodeGuard, Payload,
-    PendingRemoval, ROOT, Receipt, RemovalFence, RemovalMode, Reservation, Store, Volume,
-    payload_reference,
+    PendingRemoval, ROOT, Receipt, RemovalClaim, RemovalFence, RemovalMode, Reservation, Store,
+    Volume, payload_reference,
 };
 const BODY_LIMIT: usize = 4096;
 const QUEUE: usize = 8;
@@ -78,6 +78,7 @@ impl Request {
                 "deferred-removal-v1".into(),
                 "deferred-create-v1".into(),
                 "deferred-owner-move-v1".into(),
+                "owned-target-replace-v1".into(),
             ])),
             Self::Info {} => state.namespace_volume().map(Reply::Info),
             Self::Store { volume, store } => {

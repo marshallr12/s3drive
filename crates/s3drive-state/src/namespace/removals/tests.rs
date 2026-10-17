@@ -2,6 +2,7 @@ use super::*;
 mod created;
 mod deferred;
 mod moved;
+mod replacement;
 fn id(n: u64) -> String {
     format!("{n:032x}")
 }
@@ -238,6 +239,7 @@ fn pending_nodes_block_legacy_and_guarded_namespace_bypasses() {
             parent: guard(&root),
         },
         Mutation::MoveEntry {
+            destination_removal: None,
             node: guard(&p.node),
             source_parent: guard(&root),
             parent: guard(&root),
@@ -245,6 +247,7 @@ fn pending_nodes_block_legacy_and_guarded_namespace_bypasses() {
             destination: None,
         },
         Mutation::MoveEntry {
+            destination_removal: None,
             node: guard(&other),
             source_parent: guard(&root),
             parent: guard(&root),
@@ -281,6 +284,7 @@ fn pending_nodes_block_legacy_and_guarded_namespace_bypasses() {
     );
     assert_eq!(
         w.apply(Mutation::MoveEntry {
+            destination_removal: None,
             node: guard(&other),
             source_parent: guard(&root),
             parent: guard(&reserved_dir.node),

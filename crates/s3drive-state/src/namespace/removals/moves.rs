@@ -157,38 +157,49 @@ pub(super) fn chain(db: &Connection, last: &events::Event) -> Result<Receipt> {
                 .map_err(|_| Error::Internal)?;
         let mut preimage = receipt.node.clone();
         preimage.deleted = false;
-        let guard = match &request.mutation {
-            Mutation::MoveDeferredEntry {
-                node,
-                source_parent,
-                previous: predecessor,
-                ..
-            } => {
-                if mode != RemovalMode::Deferred
-                    || predecessor.as_ref() != previous
-                    || before.node.parent.as_ref() != Some(&source_parent.id)
-                {
-                    return Err(Error::Internal);
-                }
-                preimage.parent = before.node.parent.clone();
-                preimage.name = before.node.name.clone();
-                Some(node)
+        let guard = if let Some((target, claim)) = request
+            .mutation
+            .owned_destination()
+            .filter(|(n, _)| n.id == event.node)
+        {
+            if claim.previous != previous || claim.mode != mode {
+                return Err(Error::Internal);
             }
-            Mutation::TransitionRemoval {
-                node,
-                expected,
-                mode: next,
-                ..
-            } => {
-                if mode != *expected {
-                    return Err(Error::Internal);
+            Some(target)
+        } else {
+            match &request.mutation {
+                Mutation::MoveDeferredEntry {
+                    node,
+                    source_parent,
+                    previous: predecessor,
+                    ..
+                } => {
+                    if mode != RemovalMode::Deferred
+                        || predecessor.as_ref() != previous
+                        || before.node.parent.as_ref() != Some(&source_parent.id)
+                    {
+                        return Err(Error::Internal);
+                    }
+                    preimage.parent = before.node.parent.clone();
+                    preimage.name = before.node.name.clone();
+                    Some(node)
                 }
-                mode = *next;
-                Some(node)
+                Mutation::TransitionRemoval {
+                    node,
+                    expected,
+                    mode: next,
+                    ..
+                } => {
+                    if mode != *expected {
+                        return Err(Error::Internal);
+                    }
+                    mode = *next;
+                    Some(node)
+                }
+                Mutation::CommitRemoval { node, .. } if mode == RemovalMode::Pending => Some(node),
+                Mutation::CancelRemoval { .. } => None,
+                _ => return Err(Error::Internal),
             }
-            Mutation::CommitRemoval { node, .. } if mode == RemovalMode::Pending => Some(node),
-            Mutation::CancelRemoval { .. } => None,
-            _ => return Err(Error::Internal),
         };
         if let Some(g) = guard {
             preimage.revision = g.revision;

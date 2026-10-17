@@ -264,6 +264,7 @@ impl Writes {
             operation: random_id()?,
             expected_sequence: sequence,
             mutation: Mutation::MoveEntry {
+                destination_removal: None,
                 node: guard(&source),
                 source_parent: guard(&source_parent),
                 parent: guard(&target_parent),

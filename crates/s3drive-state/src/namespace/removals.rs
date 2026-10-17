@@ -2,6 +2,7 @@
 use super::*;
 mod events;
 pub(super) mod moves;
+pub(super) mod replacement;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -50,6 +51,32 @@ pub struct PendingRemoval {
     pub fence: RemovalFence,
     #[serde(default, skip_serializing_if = "RemovalMode::is_pending")]
     pub mode: RemovalMode,
+}
+/// Exact owned destination epoch consumed by an atomic replacement. The source
+/// keeps its identity; the displaced node and every payload remain retained.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RemovalClaim {
+    pub fence: RemovalFence,
+    pub previous: String,
+    pub mode: RemovalMode,
+}
+impl Mutation {
+    pub fn owned_destination(&self) -> Option<(&NodeGuard, &RemovalClaim)> {
+        match self {
+            Self::MoveEntry {
+                destination: Some(node),
+                destination_removal: Some(claim),
+                ..
+            }
+            | Self::MoveDeferredEntry {
+                destination: Some(node),
+                destination_removal: Some(claim),
+                ..
+            } => Some((node, claim)),
+            _ => None,
+        }
+    }
 }
 pub(super) fn check_schema(db: &Connection) -> crate::Result<()> {
     db.prepare("SELECT node_id,intent_id,owner_id,mode,event_id FROM namespace_removals LIMIT 0")?;

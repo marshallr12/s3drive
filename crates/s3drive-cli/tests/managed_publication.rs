@@ -12,6 +12,8 @@ mod mode_cancellation;
 mod open_journal;
 #[path = "support/owned_disposition.rs"]
 mod owned_disposition;
+#[path = "support/owned_replacement.rs"]
+mod owned_replacement;
 #[path = "support/owner_move.rs"]
 mod owner_move;
 #[path = "support/pending_owner.rs"]
@@ -360,7 +362,7 @@ async fn proxy(
         Request::Apply {
             request:
                 Apply {
-                    mutation: Mutation::MoveDeferredEntry { .. },
+                    mutation: Mutation::MoveDeferredEntry { .. } | Mutation::MoveEntry { .. },
                     ..
                 },
         } => 9,
@@ -473,7 +475,7 @@ async fn managed_child() {
         authority.shutdown().await.unwrap();
         return;
     }
-    if mode.starts_with("owner_move_") {
+    if mode.starts_with("owner_move_") || mode.starts_with("owned_replace_") {
         Box::pin(owner_move::run_mode(&mode, &config, &root, &wire, &volume)).await;
         stop.send(()).unwrap();
         server.await.unwrap();

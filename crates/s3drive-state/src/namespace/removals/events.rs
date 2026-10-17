@@ -73,6 +73,13 @@ pub(super) fn proof(db: &Connection, event: &Event) -> Result<Receipt> {
     let request: Apply = serde_json::from_slice(&request).map_err(|_| Error::Internal)?;
     let outcome: Result<Receipt> = serde_json::from_slice(&outcome).map_err(|_| Error::Internal)?;
     let receipt = outcome.map_err(|_| Error::Internal)?;
+    if request
+        .mutation
+        .owned_destination()
+        .is_some_and(|(n, _)| n.id == event.node)
+    {
+        return replacement::proof(db, event, &request, &receipt);
+    }
     if matches!(request.mutation, Mutation::MoveDeferredEntry { .. }) {
         moves::proof(db, event, &request, &receipt)?;
         return Ok(receipt);

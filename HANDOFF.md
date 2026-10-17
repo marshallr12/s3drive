@@ -1,5 +1,54 @@
 # S3Drive handoff
 
+Updated: 2026-10-17. Current phase: **atomic owned-target replacement** on
+`codex/owned-target-replacement`. Goal ACTIVE.
+
+Accepted baseline: clean private local/remote main `cc01752669d7eb442d0baefbbaf9ba099f3bc81a`.
+Terminal all-green [CI39064052369](https://github.com/marshallr12/s3drive/actions/runs/39064052369):
+Linux117487843739, Windows117487843688, book117487843587; 241/237 state,
+nine HTTP, sixteen SDK and seven native cases per OS. Strict21 replacement
+artifact12112756329 and original14 artifact12112554123 matched every typed field
+and exact source. Windows Server2025/WinFsp2.1.25156.ddca7bd; no-systemd Linux
+and independent same-account Windows startup passed. Windows retained a locked
+fixture profile; dummy credentials removed, profile deletion deferred to fresh VM
+destruction under the explicit disposable-runner flag. Proof
+`/tmp/s3drive-replacement-publication.json`, logs
+`/tmp/s3drive-replacement-final-{linux,windows,book}.log`. Schema21/config6.
+No native deletion bridge enabled; no workstation reboot/PAM/SSH proof.
+
+Current work: [owned-target replacement contract](docs/src/owned-target-replacement.md).
+Extend existing exact MoveEntry/MoveDeferredEntry with an optional destination
+claim (owner fence, latest event, expected mode). Absent claims serialize exactly
+as before. Atomically tombstone the guarded target, consume only its owned epoch,
+move the source and retain source/target immutable payloads. Deferred source keeps
+its fence. Target cleanup follows stable ID and must never affect the replacement.
+Persist/recover both client identities, bindings and exact request before RPC;
+unknown/rejected effects cannot silently cancel, rebase or generate a new ID.
+Schema22 semantic extension, config6/native unsupported paths retained. Require
+migration/hash, authority/client failure and actual SDK killed-owner/late-I/O
+acceptance plus local and exact-tip hosted native/reference/startup gates.
+Local full gate passed exit0 (`/tmp/s3drive-target-gate2.log`): 253 state,
+ten HTTP, seventeen SDK, formatting, Clippy, builds and book checks. Twelve new
+state cases prove both target modes/source types, target transition lineage,
+full disk/ignored writes, quota, corruption, lost receipts and schema21 hash
+preservation. The HTTP race has one winner and exact restart replay. Three SDK
+processes retain twelve immutable PUTs (8/12/12), including four displaced-target
+late writes, one lost publication reply, dirty target heads and successor-source
+epoch replay. No S3 DELETE or PUT replay. Authority rejection requests are boxed
+only in memory to retain the linted enum size; their serde shape stays unchanged.
+Require terminal exact-tip all-three hosted jobs, both source-bound typed
+artifacts and native/startup log inspection before private publication. Native
+callbacks remain unsupported. NoNewPrivs=1 verified again locally.
+
+Then integrate native lifecycle/profile support, including early POSIX cleanup
+with other handles active; do not keep the legacy cleanup-count prerequisite.
+
+No new Wasabi mutations, credentials, real startup registration or Turso
+provisioning authorized. Workstation NoNewPrivs=1 must not be bypassed. Preserve
+dirty data and explicit conflicts. All platform claims require actual evidence.
+
+## Previous replacement reference checkpoint
+
 Updated: 2026-10-17. Current phase: **deferred replacement reference and native
 Windows lifecycle integration** on `codex/windows-replacement-reference`.
 Goal ACTIVE. Read `docs/src/windows-replacement-reference.md` and the plan.
