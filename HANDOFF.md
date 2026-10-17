@@ -49,7 +49,7 @@ native editing/coalescing and exact-ID recovery. Mutations/base adoption and
 publication are serialized conservatively; reads keep owned snapshots. No native
 namespace mutation/save-replace is enabled. See `docs/src/managed-write-plan.md`.
 Local gate log: `/tmp/s3drive-managed-writer-gate-producer.log`. Before publication require
-terminal exact-tip Linux/Windows/book CI including the fifth native case per OS.
+terminal exact-tip Linux/Windows/book CI including the fifth native case per OS. Native cases now run serially (`--test-threads=1`) to isolate process-wide FUSE descriptors and Windows driver/Shell resources.
 
 Windows testing runs remotely on GitHub's **Windows Server 2025 VM**, not this
 Linux workstation. Native folder/drive/security/UTF-16 tests and distinct
@@ -217,7 +217,7 @@ Linux/Windows/book CI and inspect native results. Then fast-forward/push main
 and verify remote SHA/private visibility. Do not infer terminal success while
 a job is still saving its cache. Preserve unrelated user files.
 `bash scripts/gate.sh` remains the local gate; separate native commands are
-`cargo test -p s3drive-cli --test linux_mount --locked -- --ignored --nocapture`
+`cargo test -p s3drive-cli --test linux_mount --locked -- --ignored --nocapture --test-threads=1`
 and `python3 scripts/test-linux-session.py`. Windows runs on the GitHub VM.
 No new live cloud mutation is authorized.
 

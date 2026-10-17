@@ -341,3 +341,11 @@ It also retains sanitized managed error diagnostics after mount readiness.
 Research checked 2026-10-17: the [libfuse flush contract](https://github.com/libfuse/libfuse/blob/master/include/fuse.h)
 describes per-descriptor close callbacks, and the [Linux exec change](https://kernel.googlesource.com/pub/scm/linux/kernel/git/netdev/net/%2B/e780259b54e618ceb4763fbc21314acf3565e813%5E!/)
 explicitly identifies close-on-exec waiting on filesystem flush handlers, including FUSE.
+
+Run the ignored native suites with `--test-threads=1` as CI does. Independent
+cases share one Rust test process, so a subprocess in a different case can also
+close inherited FUSE handles. Windows cases additionally share driver and Shell
+resources; five parallel cases exposed a PowerShell/Explorer deadline failure.
+Serializing cases isolates their fixtures without increasing deadlines, retrying
+failures, or removing their concurrent-handle/client checks. Native job limits
+remain ten minutes. Portable tests remain parallel.
