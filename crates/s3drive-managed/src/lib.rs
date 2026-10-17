@@ -240,6 +240,17 @@ impl Publisher {
         }
         Ok(owned)
     }
+    pub fn control(&self) -> Result<s3drive_state::namespace_client::Control> {
+        let target = self
+            .0
+            .executor
+            .recovery_target(&format!("{}binding", self.0.store.root))?;
+        Ok(s3drive_state::namespace_client::Control {
+            store: self.0.store.clone(),
+            source: *target.source(),
+            fingerprint: target.fingerprint().into(),
+        })
+    }
     pub fn namespace_input(
         &self,
         request: Apply,
@@ -257,6 +268,7 @@ impl Publisher {
             source: *target.source(),
             fingerprint: target.fingerprint().into(),
             entries: Vec::new(),
+            destination_control: None,
         })
     }
     pub fn namespace_change_input(
@@ -271,12 +283,27 @@ impl Publisher {
             .collect::<std::result::Result<_, _>>()?;
         Ok(input)
     }
+    /// Freeze both current physical controls for a same-owner replacement.
+    pub fn namespace_change_input_with_destination(
+        &self,
+        request: Apply,
+        before: &[Node],
+        destination: &Publisher,
+    ) -> Result<s3drive_state::namespace_client::Input> {
+        let target = destination.namespace_input(request.clone())?.control();
+        let mut input = self.namespace_change_input(request, before)?;
+        if target != input.control() {
+            input.destination_control = Some(Box::new(target));
+        }
+        Ok(input)
+    }
     pub fn check_namespace_input(
         &self,
         input: &s3drive_state::namespace_client::Input,
     ) -> Result<()> {
         let mut expected = self.namespace_input(input.request.clone())?;
         expected.entries = input.entries.clone();
+        expected.destination_control = input.destination_control.clone();
         if expected != *input {
             return Err(Failure::Binding.into());
         }

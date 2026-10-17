@@ -9,7 +9,7 @@ fn guard(n: &Node) -> NodeGuard {
     }
 }
 impl Writes {
-    fn publisher_for(&self, n: &Node) -> Result<&Publisher> {
+    pub(super) fn publisher_for(&self, n: &Node) -> Result<&Publisher> {
         let store = n
             .payload
             .as_ref()
@@ -22,7 +22,7 @@ impl Writes {
         }
         Ok(p)
     }
-    async fn align_metadata(&self, n: &Node) -> Result<()> {
+    pub(super) async fn align_metadata(&self, n: &Node) -> Result<()> {
         if n.kind == s3drive_authority::Kind::Directory {
             return Ok(());
         }
@@ -57,7 +57,7 @@ impl Writes {
         }
         Ok(())
     }
-    fn held(&self, node: &str) -> Result<Option<Arc<File>>> {
+    pub(super) fn held(&self, node: &str) -> Result<Option<Arc<File>>> {
         Ok(self
             .entries
             .lock()
@@ -66,7 +66,11 @@ impl Writes {
             .and_then(Weak::upgrade))
     }
     /// Caller holds publish_serial then edit_serial. Never reenter flush().
-    async fn prepare_namespace_file(&self, node: &str, flush_latest: bool) -> Result<()> {
+    pub(super) async fn prepare_namespace_file(
+        &self,
+        node: &str,
+        flush_latest: bool,
+    ) -> Result<()> {
         let Some(state) = self
             .storage
             .logical()
@@ -124,7 +128,13 @@ impl Writes {
     }
     fn observe_memory(&self, r: &Receipt) -> Result<()> {
         let mut nodes = vec![&r.node];
-        if let Some(Artifact::Namespace { displaced: Some(n) }) = &r.artifact {
+        if let Some(
+            Artifact::Namespace { displaced: Some(n) }
+            | Artifact::RemovalMove {
+                displaced: Some(n), ..
+            },
+        ) = &r.artifact
+        {
             nodes.push(n);
         }
         for n in nodes {
@@ -151,6 +161,15 @@ impl Writes {
             .publishers
             .get(&input.store.id)
             .ok_or(Error::ReadOnly)?;
+        if let Some(control) = &input.destination_control {
+            let target = self
+                .publishers
+                .get(&control.store.id)
+                .ok_or(Error::ReadOnly)?;
+            if target.control().map_err(error)? != **control {
+                return Err(Error::Conflict);
+            }
+        }
         let record = publisher.change_namespace(input).await.map_err(error)?;
         let receipt = record
             .outcome

@@ -20,7 +20,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 22;
+pub const SCHEMA_VERSION: i32 = 23;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub struct State {
@@ -177,8 +177,8 @@ impl State {
             if version <= 19 {
                 tx.execute_batch(include_str!("../migrations/020.sql"))?;
             }
-            // Versions21/22 strengthen callback policy and add exact owned-target
-            // replacement claims in the existing logs. Old hashes stay unchanged.
+            // Versions21–23 strengthen callback/profile policy and add paired owned-
+            // target controls in the existing logs. Old hashes stay unchanged.
             logical::check_schema(&tx)?;
             managed::check_schema(&tx)?;
             namespace::check_schema(&tx)?;

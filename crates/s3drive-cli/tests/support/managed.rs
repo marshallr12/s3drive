@@ -1,4 +1,6 @@
 //! Actual CLI authority, SDK fixture and native adapters; no live cloud writes.
+#[path = "managed/lifecycle.rs"]
+mod lifecycle;
 use super::{fixture::Fixture, writes};
 use s3drive_authority::{Apply, Kind, Mutation, Reply, Request, Token, WireClient};
 use s3drive_managed::Publisher;
@@ -66,14 +68,14 @@ async fn namespace_proxy(
         Request::Apply {
             request:
                 Apply {
-                    mutation: Mutation::CreateEntry { .. },
+                    mutation: Mutation::CreateEntry { .. } | Mutation::CreateDeferredEntry { .. },
                     ..
                 },
         } => 1,
         Request::Apply {
             request:
                 Apply {
-                    mutation: Mutation::MoveEntry { .. },
+                    mutation: Mutation::MoveEntry { .. } | Mutation::MoveDeferredEntry { .. },
                     ..
                 },
         } => 2,
@@ -84,6 +86,13 @@ async fn namespace_proxy(
                     ..
                 },
         } => 3,
+        Request::Apply {
+            request:
+                Apply {
+                    mutation: Mutation::ArmRemoval { .. } | Mutation::TransitionRemoval { .. },
+                    ..
+                },
+        } => 4,
         _ => 0,
     };
     let reply = p.upstream.request(&request).await.unwrap();
@@ -317,6 +326,14 @@ impl Harness {
         let text = std::fs::read_to_string(&self.config)
             .unwrap()
             .replace("version=5", "version=6");
+        std::fs::write(&self.config, text).unwrap();
+    }
+    fn configure_lifecycle(&self) {
+        self.configure_mutations();
+        let text = std::fs::read_to_string(&self.config)
+            .unwrap()
+            .replace("version=6", "version=7")
+            .replace("[managed]", "[managed]\nwindows-disposition='posix-v1'");
         std::fs::write(&self.config, text).unwrap();
     }
     fn environment(&self, c: &mut Command) {
@@ -593,6 +610,7 @@ pub async fn child() {
     let c = cfg(&root.join("managed.toml"));
     let w = wire(&c);
     match mode.as_str() {
+        "lifecycle-engine" => Box::pin(lifecycle::engine(&c)).await,
         "producer" => {
             use std::io::BufRead;
             println!("PRODUCER_READY");
@@ -2191,4 +2209,13 @@ async fn namespace_mutations_mode(c: &s3drive_core::Config) {
         .unwrap();
     fs.sync_namespace().await.unwrap();
     fs.cache_control().unwrap().close().await.unwrap();
+}
+
+pub async fn portable_lifecycle() {
+    lifecycle::portable().await;
+}
+
+#[cfg(windows)]
+pub async fn native_lifecycle() {
+    lifecycle::native().await;
 }

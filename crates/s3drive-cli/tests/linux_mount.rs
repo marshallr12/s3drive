@@ -407,3 +407,8 @@ async fn actual_managed_file_and_directory_creation() {
 async fn actual_managed_rename_replace_and_retained_handles() {
     managed::native_mutations().await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn managed_lifecycle_engine_contract() {
+    managed::portable_lifecycle().await;
+}

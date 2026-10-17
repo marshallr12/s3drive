@@ -530,3 +530,9 @@ async fn actual_managed_file_and_directory_creation() {
 async fn actual_managed_rename_replace_and_retained_handles() {
     managed::native_mutations().await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "native complete disposition lifecycle: Windows with WinFsp 2.1"]
+async fn actual_managed_windows_disposition_lifecycle() {
+    managed::native_lifecycle().await;
+}

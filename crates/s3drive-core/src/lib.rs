@@ -30,11 +30,18 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ManagedConfig {
+    #[serde(rename = "windows-disposition")]
+    pub windows_disposition: Option<WindowsDisposition>,
     pub default_store: Option<String>,
     pub authority: String,
     pub volume: String,
     pub token_file: PathBuf,
     pub stores: Vec<ManagedStore>,
+}
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum WindowsDisposition {
+    PosixV1,
 }
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -201,18 +208,21 @@ impl Config {
         if let Some(managed) = &self.managed {
             if !matches!(
                 (&self.mode, self.version, &self.writes),
-                (Mode::ReadOnly, 3, None) | (Mode::ReadWrite, 4..=6, Some(_))
+                (Mode::ReadOnly, 3, None) | (Mode::ReadWrite, 4..=7, Some(_))
             ) || self.cache.is_some()
             {
-                return Err("managed mode requires version 3/read-only or versions 4/5/6 read-write with policies, without a separate cache".into());
+                return Err("managed mode requires version 3/read-only or versions 4/5/6/7 read-write with policies, without a separate cache".into());
             }
             managed.validate(&self.sources)?;
+            if (self.version == 7) != managed.windows_disposition.is_some() {
+                return Err("managed version 7 requires windows-disposition = 'posix-v1'; older versions must omit it".into());
+            }
             if self.version == 3 && managed.default_store.is_some() {
                 return Err(
                     "read-only managed settings do not select a default write store".into(),
                 );
             }
-            if matches!(self.version, 4..=6)
+            if matches!(self.version, 4..=7)
                 && !managed.default_store.as_ref().is_some_and(|id| {
                     managed.stores.iter().any(|s| {
                         &s.id == id
@@ -232,7 +242,7 @@ impl Config {
         match (&self.mode, self.version, &self.writes) {
             (Mode::ReadOnly, 3, None) if self.managed.is_some() => {}
             (Mode::ReadOnly, 1, None) if self.managed.is_none() => {}
-            (Mode::ReadWrite, version, Some(writes)) if (version==2 && self.managed.is_none()) || (matches!(version,4..=6) && self.managed.is_some()) => {
+            (Mode::ReadWrite, version, Some(writes)) if (version==2 && self.managed.is_none()) || (matches!(version,4..=7) && self.managed.is_some()) => {
                 if !absolute_local(&writes.directory)
                     || writes.sources.is_empty()
                     || self
@@ -255,7 +265,7 @@ impl Config {
                 }
             }
             _ => return Err(
-                "version 1 is read-only; version 2 requires writes; versions 3/4/5/6 require managed read-only/read-write settings"
+                "version 1 is read-only; version 2 requires writes; versions 3/4/5/6/7 require managed read-only/read-write settings"
                     .into(),
             ),
         }
@@ -460,6 +470,12 @@ mod tests {
         );
         assert!(Config::parse(&writable).is_ok());
         assert!(Config::parse(&writable.replace("version = 4", "version = 6")).is_ok());
+        let lifecycle = writable.replace("version = 4", "version = 7");
+        assert!(Config::parse(&lifecycle).is_err());
+        let lifecycle = lifecycle.replace("[managed]", "[managed]\nwindows-disposition='posix-v1'");
+        assert!(Config::parse(&lifecycle).is_ok());
+        assert!(Config::parse(&lifecycle.replace("version = 7", "version = 6")).is_err());
+        assert!(Config::parse(&lifecycle.replace("posix-v1", "guessed-v1")).is_err());
         for (from, to) in [
             ("default_store='00000000000000000000000000000002'", ""),
             (

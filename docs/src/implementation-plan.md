@@ -642,3 +642,16 @@ Three SDK processes prove four source/target combinations, target late I/O and
 8/12/12 PUT counts without replay or DELETE. Require final exact-tip terminal
 native/reference/startup acceptance before publication. Full native callbacks,
 explicit profile/config selection and early POSIX cleanup remain the next work.
+
+
+### Complete native Windows lifecycle bridge (2026-10-17)
+
+Owned-target replacement accepted at `971c6fb`, terminal CI39066548525, schema22.
+Implement the [native bridge contract](native-windows-lifecycle.md) on the shared
+filesystem write path, with explicit config7/POSIX profile, durable per-file-object
+callbacks, paired store controls, early cleanup, stable-ID rename/replacement and
+retained I/O. Preserve raw callbacks before network and exact uncertain work;
+recover previous exclusive sessions without inventing kernel receipt. Require
+local gates and complete new native acceptance before publication; versions1–6
+keep unsupported deletion. This phase must connect the native callbacks, not stop
+at another disconnected metadata API.

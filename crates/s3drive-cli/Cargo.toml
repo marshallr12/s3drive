@@ -23,6 +23,7 @@ s3drive-winfsp.workspace = true
 tokio = { workspace = true, features = ["signal"] }
 
 [dev-dependencies]
+s3drive-winfsp = { workspace = true, features = ["native-tests"] }
 s3drive-managed.workspace = true
 axum.workspace = true
 sha2.workspace = true

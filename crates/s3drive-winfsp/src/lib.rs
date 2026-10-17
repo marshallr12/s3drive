@@ -6,6 +6,8 @@ mod names;
 mod native;
 #[cfg(windows)]
 mod windows;
+#[cfg(all(windows, feature = "native-tests"))]
+pub use native::lifecycle_probe as native_test_api;
 #[cfg(windows)]
 pub use windows::run;
 

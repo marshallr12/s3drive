@@ -25,6 +25,7 @@
 - [Mount-session recovery](windows-session-recovery.md)
 - [Deferred replacement reference](windows-replacement-reference.md)
   - [Atomic owned-target replacement](owned-target-replacement.md)
+  - [Native Windows lifecycle bridge](native-windows-lifecycle.md)
   - [Publication while deletion is pending](pending-owner-publication.md)
 - [Turso and cross-machine coordination](turso-coordination.md)
 - [Filesystem behavior contract](filesystem-contract.md)

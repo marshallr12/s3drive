@@ -1,6 +1,7 @@
 //! Shared S3 namespace, journal-backed file I/O and revision-bound clean cache.
 pub mod edits;
 mod managed;
+pub use managed::writes::lifecycle::NativeFileObject;
 mod writable;
 use s3drive_core::Config;
 use s3drive_s3::{ListPage, MAX_READ_BYTES, ObjectMetadata, ReadHandle, S3Reader};
@@ -467,6 +468,82 @@ impl ReadOnlyFs {
             .as_ref()
             .and_then(|m| m.writes.as_ref())
             .is_some_and(|w| w.mutations_enabled())
+    }
+    pub fn native_lifecycle_enabled(&self) -> bool {
+        self.managed
+            .as_ref()
+            .and_then(|m| m.writes.as_ref())
+            .is_some_and(|w| w.native_lifecycle_enabled())
+    }
+    pub async fn native_file_object(
+        &self,
+        node: u64,
+        doc: bool,
+    ) -> Result<Option<NativeFileObject>> {
+        let node = self.node(node)?;
+        match self.managed.as_ref().and_then(|m| m.writes.as_ref()) {
+            Some(w) => w.native_open(&node.key, doc).await,
+            None => {
+                if doc {
+                    Err(Error::ReadOnly)
+                } else {
+                    Ok(None)
+                }
+            }
+        }
+    }
+    pub async fn create_native_deferred(
+        &self,
+        parent: u64,
+        name: &str,
+        directory: bool,
+    ) -> Result<(Arc<Node>, NativeFileObject)> {
+        validate_name(name)?;
+        let parent = self.node(parent)?;
+        if parent.kind != Kind::Directory {
+            return Err(Error::NotDirectory);
+        }
+        let w = self
+            .managed
+            .as_ref()
+            .and_then(|m| m.writes.as_ref())
+            .ok_or(Error::ReadOnly)?;
+        let (created, object) = w
+            .native_create(
+                &parent.key,
+                name,
+                if directory {
+                    s3drive_authority::Kind::Directory
+                } else {
+                    s3drive_authority::Kind::EmptyFile
+                },
+            )
+            .await?;
+        let node = self
+            .nodes
+            .lock()
+            .map_err(|_| Error::Internal)?
+            .insert_managed(&created, parent.id)?;
+        Ok((node, object))
+    }
+    pub async fn rename_native_object(
+        &self,
+        object: &NativeFileObject,
+        parent: u64,
+        name: &str,
+        replace: bool,
+        same_name: fn(&str, &str) -> bool,
+    ) -> Result<Arc<Node>> {
+        validate_name(name)?;
+        let parent = self.node(parent)?;
+        if parent.kind != Kind::Directory {
+            return Err(Error::NotDirectory);
+        }
+        let changed = object.rename(&parent.key, name, replace, same_name).await?;
+        self.nodes
+            .lock()
+            .map_err(|_| Error::Internal)?
+            .insert_managed(&changed, parent.id)
     }
     pub fn namespace_creation(&self) -> bool {
         self.managed

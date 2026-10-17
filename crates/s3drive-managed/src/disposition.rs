@@ -715,7 +715,7 @@ impl Controller {
             }
             return self.complete(open, cb).await;
         }
-        if record.input.delete_on_close || flags & 1 != 0 {
+        if (record.input.delete_on_close && !record.input.posix) || flags & 1 != 0 {
             let p = pending.ok_or(Failure::RetainedConflict)?;
             if p.mode == RemovalMode::Deferred {
                 let parent = self.parent(&node).await?;
@@ -744,7 +744,7 @@ impl Controller {
         }
         if flags & 1 != 0 {
             for other in self.records(&record.input.node).await? {
-                if other.active() && other.cleanup().is_none() {
+                if !record.input.posix && other.active() && other.cleanup().is_none() {
                     return Err(Failure::RetainedConflict.into());
                 }
             }

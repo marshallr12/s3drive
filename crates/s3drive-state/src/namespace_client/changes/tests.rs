@@ -111,6 +111,7 @@ impl Fixture {
     }
     fn input(&mut self, m: Mutation, nodes: &[Node]) -> Input {
         Input {
+            destination_control: None,
             request: self.request(m),
             store: self.store.clone(),
             source: [1; 32],

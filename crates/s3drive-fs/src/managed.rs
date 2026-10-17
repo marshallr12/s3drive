@@ -25,6 +25,15 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
         if config.version >= 6 {
             required.extend(["namespace-entry-cas-v1", "detached-content-cas-v1"]);
         }
+        if config.version >= 7 {
+            required.extend([
+                "pending-removal-v1",
+                "deferred-removal-v1",
+                "deferred-create-v1",
+                "deferred-owner-move-v1",
+                "owned-target-replace-v1",
+            ]);
+        }
         if required
             .iter()
             .any(|needed| !features.iter().any(|f| f == needed))
@@ -119,7 +128,9 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
         ))
     });
     if let Some(w) = &writes {
+        w.start_native_lifecycle().await?;
         w.recover_namespace().await?;
+        w.recover_native_lifecycle().await?;
     }
     let root = Arc::new(Node {
         id: ROOT,

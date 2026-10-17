@@ -48,6 +48,7 @@ pub(super) async fn input(
     .await;
     let admission = p.namespace_change_input(req, &[]).unwrap();
     OpenInput {
+        posix: false,
         id: id(object),
         session: id(2000),
         volume: admission.request.volume.clone(),

@@ -430,7 +430,7 @@ fn touched(input: &Input) -> Vec<&str> {
 
 fn check_retained(old: &OwnedRemoval, input: &Input) -> Result<()> {
     let f = fence(input).ok_or("missing retained source fence")?;
-    check_entry(old, input, &input.entries[0], &f)
+    check_entry(old, input, &input.entries[0], &f, None)
 }
 fn check_target(old: &OwnedRemoval, input: &Input, claim: &namespace::RemovalClaim) -> Result<()> {
     if old.mode != claim.mode || old.event != claim.previous {
@@ -441,6 +441,7 @@ fn check_target(old: &OwnedRemoval, input: &Input, claim: &namespace::RemovalCla
         input,
         input.entries.get(1).ok_or("missing replacement target")?,
         &claim.fence,
+        input.destination_control.as_deref(),
     )
 }
 fn check_entry(
@@ -448,10 +449,12 @@ fn check_entry(
     input: &Input,
     e: &super::Entry,
     f: &RemovalFence,
+    destination: Option<&super::Control>,
 ) -> Result<()> {
     let n = &old.receipt.node;
     if f != &old.fence
-        || !same_control(&old.input, input)
+        || old.input.request.volume != input.request.volume
+        || old.input.control() != destination.cloned().unwrap_or_else(|| input.control())
         || e.revision < n.revision
         || Some(&e.parent) != n.parent.as_ref()
         || e.name != n.name

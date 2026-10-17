@@ -1,4 +1,5 @@
 //! One durable local head per global file; physical publication is explicit.
+pub(crate) mod lifecycle;
 mod namespace;
 use super::*;
 use s3drive_authority::{Apply, Mutation, Reply, Request, WireClient, payload_reference};
@@ -29,6 +30,8 @@ pub(crate) struct Writes {
     publish_serial: AsyncMutex<()>,
     slots: Arc<Semaphore>,
     closing: std::sync::atomic::AtomicBool,
+    lifecycle_enabled: bool,
+    lifecycle: tokio::sync::OnceCell<lifecycle::Mount>,
 }
 pub(crate) struct File {
     id: String,
@@ -97,6 +100,8 @@ impl Writes {
             publish_serial: AsyncMutex::new(()),
             slots: Arc::new(Semaphore::new(4)),
             closing: std::sync::atomic::AtomicBool::new(false),
+            lifecycle_enabled: version >= 7,
+            lifecycle: tokio::sync::OnceCell::new(),
         }
     }
     pub(super) fn admit(&self) -> Result<tokio::sync::OwnedSemaphorePermit> {
@@ -123,6 +128,7 @@ impl Writes {
             .acquire_many_owned(4)
             .await
             .map_err(|_| Error::Internal)?;
+        self.recover_native_lifecycle().await?;
         Ok(())
     }
     pub fn is_unlinked(&self, file: &File) -> Result<bool> {
@@ -733,7 +739,8 @@ impl Writes {
         let _slot = self.admit()?;
         let _publication = self.publish_serial.lock().await;
         let _mutation = self.edit_serial.lock().await;
-        self.recover_namespace().await
+        self.recover_namespace().await?;
+        self.recover_native_callbacks().await
     }
     pub async fn flush_all(self: &Arc<Self>) -> Result<()> {
         let slot = self.admit()?;
@@ -749,6 +756,7 @@ impl Writes {
         let _publication = self.publish_serial.lock().await;
         let _mutation = self.edit_serial.lock().await;
         self.recover_namespace().await?;
+        self.recover_native_callbacks().await?;
         let mut nodes = HashSet::new();
         for r in self.pending().await? {
             if r.input.volume != self.volume {

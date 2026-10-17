@@ -36,6 +36,41 @@ fn cancel(f: &mut Fixture) -> Input {
     })
 }
 #[test]
+fn native_posix_profile_is_session_bound_and_cannot_mix_with_legacy_file_objects() {
+    let mut f = Fixture::new();
+    start(&mut f, 2000);
+    let old = make(&mut f, 1000, false, true);
+    let mut candidate = f.open(1001, None);
+    candidate.controlled = true;
+    candidate.session = key(2000);
+    candidate.posix = true;
+    assert!(
+        Journal::new(&mut f.client)
+            .unwrap()
+            .prepare(candidate.clone())
+            .is_err()
+    );
+    candidate.session_bound = true;
+    assert!(
+        Journal::new(&mut f.client)
+            .unwrap()
+            .prepare(candidate)
+            .is_err()
+    );
+    let before = load(&f.client.connection, &old.id).unwrap().unwrap();
+    f.client
+        .connection
+        .pragma_update(None, "user_version", 22)
+        .unwrap();
+    f.reopen();
+    let after = load(&f.client.connection, &old.id).unwrap().unwrap();
+    assert!(before == after);
+    assert_eq!(
+        f.client.info().unwrap().schema_version,
+        crate::SCHEMA_VERSION
+    );
+}
+#[test]
 fn only_replacing_exclusive_state_owner_can_make_a_registered_session_obsolete() {
     let mut f = Fixture::new();
     start(&mut f, 2000);

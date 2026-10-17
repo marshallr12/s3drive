@@ -53,6 +53,86 @@ fn fixture(source_deferred: bool, mode: RemovalMode) -> (Fixture, Node, Node, In
     let input = f.input(mutation, &[source.clone(), target.clone()]);
     (f, source, target, input)
 }
+fn paired_fixture() -> (Fixture, Node, Input) {
+    let mut f = Fixture::new();
+    let source = f.create("paired source");
+    let request = f.request(Mutation::RegisterStore {
+        route: "c".repeat(64),
+        root: "other/".into(),
+    });
+    let receipt = f.authority.namespace_apply(&request).unwrap();
+    let Some(Artifact::Store(other)) = receipt.artifact else {
+        unreachable!()
+    };
+    let request = f.request(Mutation::CreateEntry {
+        parent: ROOT.into(),
+        parent_revision: 0,
+        store: Some(other.id.clone()),
+        name: "paired target".into(),
+        node_kind: Kind::EmptyFile,
+    });
+    let target = f.authority.namespace_apply(&request).unwrap().node;
+    let mut origin = deferred::prepare(&mut f, &target);
+    origin.store = other;
+    origin.source = [2; 32];
+    origin.fingerprint = "d".repeat(64);
+    let target = apply(&mut f, &origin).node;
+    let old = owned(&mut f, &target).unwrap();
+    let parent = NodeGuard {
+        id: ROOT.into(),
+        revision: 0,
+    };
+    let mut input = f.input(
+        Mutation::MoveEntry {
+            node: guard(&source),
+            source_parent: parent.clone(),
+            parent,
+            name: target.name.clone(),
+            destination: Some(guard(&target)),
+            destination_removal: Some(Box::new(RemovalClaim {
+                fence: old.fence,
+                previous: old.event,
+                mode: old.mode,
+            })),
+        },
+        &[source, target.clone()],
+    );
+    input.destination_control = Some(Box::new(origin.control()));
+    (f, target, input)
+}
+#[test]
+fn paired_replacement_requires_original_target_store_source_and_credential_control() {
+    for case in 0..5 {
+        let (mut f, target, mut input) = paired_fixture();
+        if case == 4 {
+            let result = apply(&mut f, &input);
+            assert!(!result.node.deleted);
+            assert!(owned(&mut f, &target).is_none());
+            f.reopen_client();
+            f.ack(&input, result).unwrap();
+            assert!(owned(&mut f, &target).is_none());
+            continue;
+        }
+        match case {
+            0 => input.destination_control = None,
+            1 => input.destination_control.as_mut().unwrap().fingerprint = "e".repeat(64),
+            2 => input.destination_control.as_mut().unwrap().source = [3; 32],
+            _ => input.destination_control.as_mut().unwrap().store.root = "forged/".into(),
+        }
+        assert!(
+            Journal::new(&mut f.client)
+                .unwrap()
+                .begin(input.clone())
+                .is_err()
+        );
+        assert!(
+            load(&f.client.connection, &input.request.operation)
+                .unwrap()
+                .is_none()
+        );
+        assert!(owned(&mut f, &target).is_some());
+    }
+}
 #[test]
 fn owned_replacement_recovers_both_modes_and_sources_and_retains_dirty_target_and_late_receipts() {
     for source_deferred in [false, true] {

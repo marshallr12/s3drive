@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 use crate::{names::valid_component, native};
-use s3drive_fs::{Error, Kind, Node, OpenFile, ROOT, ReadOnlyFs};
+use s3drive_fs::{Error, Kind, NativeFileObject, Node, OpenFile, ROOT, ReadOnlyFs};
 use s3drive_s3::{ErrorKind, MAX_READ_BYTES, ObjectMetadata};
 use std::{
     collections::BTreeMap,
@@ -33,6 +33,7 @@ struct Snapshot {
 struct FileContext {
     node: Arc<Node>,
     file: Option<Box<OpenFile>>,
+    native: Option<NativeFileObject>,
     info: FileInfo,
     directory: Mutex<Option<Snapshot>>,
     _permit: OwnedSemaphorePermit,
@@ -177,6 +178,8 @@ impl Adapter {
         Ok((node, normalized.encode_utf16().collect()))
     }
     async fn snapshot(&self, node: &Node) -> Result<Snapshot> {
+        let current = self.fs.node(node.id).map_err(storage_error)?;
+        let node = current.as_ref();
         let children = self.children(node.id).await?;
         let count = children.len() + if node.id == ROOT { 0 } else { 2 };
         let permit = self
@@ -244,7 +247,7 @@ impl FileSystemContext for Adapter {
         // FILE_DELETE_ON_CLOSE = 0x1000, FILE_DIRECTORY_FILE = 1,
         // FILE_NON_DIRECTORY_FILE = 0x40 (NT create options).
         if access & writes != 0
-            || options & 0x1000 != 0
+            || (options & 0x1000 != 0 && !self.fs.native_lifecycle_enabled())
             || (self.fs.is_read_only()
                 && access
                     & (FILE_WRITE_DATA.0
@@ -300,11 +303,26 @@ impl FileSystemContext for Adapter {
             if normalized.len() * 2 > usize::from(output.normalized_name_size()) {
                 return Err(STATUS_NAME_TOO_LONG.into());
             }
+            let native = self
+                .fs
+                .native_file_object(node.id, options & 0x1000 != 0)
+                .await
+                .map_err(storage_error)?;
+            let native = match object {
+                Some(object) => Some(object),
+                None => self
+                    .fs
+                    .native_file_object(node.id, false)
+                    .await
+                    .map_err(storage_error)?,
+            };
             output.set_normalized_name(&normalized, None);
             *output.as_mut() = info.clone();
             Ok(FileContext {
                 node,
                 file,
+                native,
+                native,
                 info,
                 directory: Mutex::new(None),
                 _permit: permit,
@@ -324,7 +342,7 @@ impl FileSystemContext for Adapter {
         output: &mut OpenFileInfo,
     ) -> Result<FileContext> {
         if self.fs.is_read_only()
-            || options & 0x1000 != 0
+            || (options & 0x1000 != 0 && !self.fs.native_lifecycle_enabled())
             || access
                 & (WRITE_DAC.0
                     | WRITE_OWNER.0
@@ -376,13 +394,31 @@ impl FileSystemContext for Adapter {
             if normalized.len() * 2 > usize::from(output.normalized_name_size()) {
                 return Err(STATUS_NAME_TOO_LONG.into());
             }
-            let (node, file) = if directory {
+            let doc = options & 0x1000 != 0;
+            let writing = access & (FILE_WRITE_DATA.0 | FILE_APPEND_DATA.0) != 0;
+            let (node, file, object) = if doc {
+                let (node, object) = self
+                    .fs
+                    .create_native_deferred(parent.id, leaf, directory)
+                    .await
+                    .map_err(storage_error)?;
+                let file = if directory {
+                    None
+                } else {
+                    Some(Box::new(if writing {
+                        self.fs.open_write(node.id).await.map_err(storage_error)?
+                    } else {
+                        self.fs.open(node.id).await.map_err(storage_error)?
+                    }))
+                };
+                (node, file, Some(object))
+            } else if directory {
                 let node = self
                     .fs
                     .create_directory(parent.id, leaf)
                     .await
                     .map_err(storage_error)?;
-                (node, None)
+                (node, None, None)
             } else {
                 let writing = access & (FILE_WRITE_DATA.0 | FILE_APPEND_DATA.0) != 0;
                 let file = Box::new(
@@ -395,7 +431,7 @@ impl FileSystemContext for Adapter {
                     .await
                     .map_err(storage_error)?,
                 );
-                (file.node.clone(), Some(file))
+                (file.node.clone(), Some(file), None)
             };
             let metadata = file
                 .as_ref()
@@ -425,6 +461,25 @@ impl FileSystemContext for Adapter {
             return Err(STATUS_NOT_SUPPORTED.into());
         }
         self.wait(async {
+            if let Some(object) = &context.native {
+                let new = new_file_name
+                    .to_string()
+                    .map_err(|_| STATUS_OBJECT_NAME_INVALID)?;
+                let (parent, leaf) = new.rsplit_once('\\').ok_or(STATUS_OBJECT_NAME_INVALID)?;
+                if !valid_component(leaf) {
+                    return Err(STATUS_OBJECT_NAME_INVALID.into());
+                }
+                let (parent, _) = self
+                    .resolve_text(if parent.is_empty() { "\\" } else { parent })
+                    .await?;
+                self.fs
+                    .rename_native_object(object, parent.id, leaf, replace, |a, b| {
+                        native::name_key(a) == native::name_key(b)
+                    })
+                    .await
+                    .map_err(storage_error)?;
+                return Ok(());
+            }
             let old = file_name
                 .to_string()
                 .map_err(|_| STATUS_OBJECT_NAME_INVALID)?;
@@ -468,12 +523,24 @@ impl FileSystemContext for Adapter {
             Ok(())
         })
     }
-    fn set_delete(&self, _context: &FileContext, _name: &U16CStr, _delete: bool) -> Result<()> {
-        // Cleanup cannot return errors. Do not enable deferred deletion before
-        // its reversible durable intent protocol and native acceptance exist.
-        Err(STATUS_NOT_SUPPORTED.into())
+    fn set_delete(&self, context: &FileContext, _name: &U16CStr, delete: bool) -> Result<()> {
+        let object = context.native.as_ref().ok_or(STATUS_NOT_SUPPORTED)?;
+        self.wait(async { object.set_delete(delete).await.map_err(storage_error) })
+    }
+    fn cleanup(&self, context: &FileContext, _name: Option<&U16CStr>, flags: u32) {
+        if let Some(object) = &context.native {
+            // Actual void observations are persisted even during cancellation.
+            if let Err(error) = self.runtime.block_on(object.cleanup(flags)) {
+                eprintln!("Native cleanup retained for recovery: {error}");
+            }
+        }
     }
     fn close(&self, context: FileContext) {
+        if let Some(object) = &context.native {
+            if let Err(error) = self.runtime.block_on(object.close()) {
+                eprintln!("Native close retained for recovery: {error}");
+            }
+        }
         drop(context);
     }
     fn get_file_info(&self, context: &FileContext, output: &mut FileInfo) -> Result<()> {
@@ -685,12 +752,13 @@ pub async fn run(
         let read_only=fs.is_read_only();
         let descriptor = native::owner_descriptor(!read_only,fs.namespace_mutation())?;
         let (cancel, cancelled) = watch::channel(false);
+        let posix=fs.native_lifecycle_enabled();
         let adapter = Adapter { fs, runtime, cancelled, descriptor, handles: Arc::new(Semaphore::new(256)), entries: Arc::new(Semaphore::new(100_000)) };
         let mut params = VolumeParams::new();
         params.filesystem_name("S3Drive").sector_size(512).sectors_per_allocation_unit(8).max_component_length(255)
             .case_sensitive_search(false).case_preserved_names(true).unicode_on_disk(true)
             .persistent_acls(true).read_only_volume(read_only).file_info_timeout(0).dir_info_timeout(0)
-            .flush_and_purge_on_cleanup(true).irp_timeout(120_000);
+            .flush_and_purge_on_cleanup(true).irp_timeout(120_000).supports_posix_unlink_rename(posix);
         let mut host: FileSystemHost<Adapter> = FileSystemHost::new(params, adapter)?;
         host.mount(&point)?;
         host.start_with_threads(4)?;

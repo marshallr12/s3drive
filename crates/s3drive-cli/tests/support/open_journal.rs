@@ -47,6 +47,7 @@ async fn frozen_open(p: &Publisher, w: &WireClient, n: u64) -> OpenInput {
         )
         .unwrap();
     OpenInput {
+        posix: false,
         id: id(1000 + n),
         session: id(2000),
         volume: admission.request.volume.clone(),

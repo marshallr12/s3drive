@@ -13,6 +13,13 @@ use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 const LIMIT: i64 = 4096;
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Control {
+    pub store: Store,
+    pub source: [u8; 32],
+    pub fingerprint: String,
+}
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Input {
@@ -22,6 +29,8 @@ pub struct Input {
     pub fingerprint: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub entries: Vec<Entry>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub destination_control: Option<Box<Control>>,
 }
 impl std::fmt::Debug for Input {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -29,6 +38,13 @@ impl std::fmt::Debug for Input {
     }
 }
 impl Input {
+    pub fn control(&self) -> Control {
+        Control {
+            store: self.store.clone(),
+            source: self.source,
+            fingerprint: self.fingerprint.clone(),
+        }
+    }
     fn validate(&self) -> Result<()> {
         self.request
             .validate()
@@ -61,6 +77,14 @@ impl Input {
             return Err("namespace placement changed".into());
         }
         changes::validate(self)?;
+        if let Some(control) = &self.destination_control
+            && (self.request.mutation.owned_destination().is_none()
+                || !control.store.valid()
+                || !namespace::publication::digest(&control.fingerprint)
+                || control.as_ref() == &self.control())
+        {
+            return Err("invalid distinct destination control".into());
+        }
         if serde_json::to_vec(self)?.len() > 8192 {
             return Err("namespace intent too large".into());
         }
@@ -350,6 +374,7 @@ mod tests {
     use super::*;
     fn input() -> Input {
         Input {
+            destination_control: None,
             request: Apply {
                 volume: format!("{:032x}", 1),
                 operation: format!("{:032x}", 10),

@@ -1,5 +1,53 @@
 # S3Drive handoff
 
+Updated2026-10-17. Current phase **complete native Windows lifecycle bridge** on
+`codex/native-windows-lifecycle`. Goal ACTIVE. Read the
+[bridge contract](docs/src/native-windows-lifecycle.md) and implementation plan.
+
+Accepted private clean main `971c6fb8410311a1ed3e0fc26cd832ed95d6d190`, terminal
+CI39066548525: Linux117495320843, Windows117495320680, book117495320856 all green.
+253/249 state, ten HTTP, seventeen SDK and seven native per OS; strict21 artifact
+12113965736 and strict14 artifact12113722321 matched exact source/platform/types.
+No-systemd Linux and independent Windows-logon startup passed. Windows retained
+a locked fixture profile, dummy credentials removed; directory deletion deferred
+to disposable VM teardown under its explicit flag. Proof
+`/tmp/s3drive-owned-target-publication.json`, logs
+`/tmp/s3drive-owned-target-{linux,windows,book}.log`. Schema22/config6. GitHub
+visibility unexpectedly public at final check; restored and repeatedly verified
+private before/after publication. Cause unverified. Recheck live visibility.
+
+Current work includes schema23 optional paired physical controls and per-open
+POSIX proof, config7 explicit native profile, full shared Writes/controller/native
+bridge and native acceptance. Keep config1–6 deletion unsupported. No claim of
+current native deletion or physical workstation reboot acceptance. Do not bypass
+NoNewPrivs=1, mutate Wasabi, install real startup entries or rotate credentials.
+
+Native integration must use stable node/open IDs, journal actual void facts before
+network, retain uncertain returnable work, support early deleting cleanup with
+other file objects and preserve old-target late I/O. Multi-store owned replacement
+must freeze both original controls; no silent rebind or permanent refusal as a
+substitute. Use publication/edit/controller lock order. Require full local and
+exact-source hosted native/reference/startup gates before guarded publication.
+
+Local portable gate `/tmp/s3drive-lifecycle-gate4.log` passed exit0: 255 state,
+ten HTTP, seventeen SDK, new shared-FS lifecycle engine, lint/build/book. The
+engine exercised early unlink with another object active, detached late writes,
+actual non-delete cleanup, two-store owned replacement, nonempty renamed DoC
+directory and root refusal through real SDK/HTTP. Two new state tests prove
+paired control rejection and schema22/profile retention. Old configs remain on
+the old native path. A new harness dispatch future caused a stack overflow in
+an existing test; boxing that branch fixed it, and the original test/gate passed.
+Windows-only acceptance added afterward is formatted but not yet compiled here:
+NTFS control + atomic directory/file DoC, duplicate/multiple objects, SetDelete
+clear/reassert, extended cancellation/POSIX early unlink, four replacement modes,
+retained I/O, cross-store replacement and lost native admission/SetDelete replies
+with killed mount owners. New tests run automatically in the Windows ignored
+native suite. Need actual hosted evidence before enabling/publishing config7.
+Unsafe test-only calls stay under audited native.rs and target-specific features.
+Next run exact candidate CI; do not call native acceptance from the Linux gate.
+
+## Prior owned-target replacement checkpoint
+
 Updated: 2026-10-17. Current phase: **atomic owned-target replacement** on
 `codex/owned-target-replacement`. Goal ACTIVE.
 

@@ -21,6 +21,8 @@ pub struct OpenInput {
     pub controlled: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     pub session_bound: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub posix: bool,
     pub admission: Option<Box<Input>>,
 }
 fn is_false(value: &bool) -> bool {
@@ -201,6 +203,7 @@ fn valid_input(input: &OpenInput, owner: &str) -> Result<()> {
         || !id(&input.node)
         || !id(owner)
         || (input.session_bound && !input.controlled)
+        || (input.posix && !input.session_bound)
         || !input.store.valid()
         || !namespace::publication::digest(&input.fingerprint)
     {
@@ -588,7 +591,9 @@ impl<'a> Journal<'a> {
             for (_, old) in all(&self.state.connection)? {
                 if old.input.volume == input.volume
                     && old.input.node == input.node
-                    && (!old.input.session_bound || old.input.session != input.session)
+                    && (!old.input.session_bound
+                        || old.input.session != input.session
+                        || old.input.posix != input.posix)
                 {
                     return Err("recover previous mount session before admitting this node".into());
                 }

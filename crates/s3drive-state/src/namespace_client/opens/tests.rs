@@ -82,6 +82,7 @@ impl Fixture {
     fn input(&mut self, m: Mutation) -> Input {
         self.op += 1;
         Input {
+            destination_control: None,
             request: Apply {
                 volume: self.volume.clone(),
                 operation: key(self.op),
@@ -96,6 +97,7 @@ impl Fixture {
     }
     fn open(&self, n: u64, admission: Option<Input>) -> OpenInput {
         OpenInput {
+            posix: false,
             id: key(n),
             session: key(2000),
             volume: self.volume.clone(),
