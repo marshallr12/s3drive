@@ -105,6 +105,11 @@ impl Storage {
             options: self.cache_options,
         }
     }
+    pub fn opens(&self) -> Opens {
+        Opens {
+            owner: self.owner.clone(),
+        }
+    }
     pub fn namespace(&self) -> Namespace {
         Namespace {
             owner: self.owner.clone(),
@@ -692,5 +697,79 @@ impl Namespace {
         limit: u16,
     ) -> Result<Vec<crate::namespace_client::Record>> {
         self.call(move |j| j.pending(after.as_deref(), limit)).await
+    }
+}
+
+/// Per-open callback facts share this Storage's existing private SQLite owner.
+#[derive(Clone)]
+pub struct Opens {
+    owner: Owner,
+}
+impl Opens {
+    async fn call<T: Send + 'static>(
+        &self,
+        work: impl FnOnce(&mut crate::namespace_client::opens::Journal<'_>) -> Result<T>
+        + Send
+        + 'static,
+    ) -> Result<T> {
+        self.owner
+            .call(move |store| {
+                work(&mut crate::namespace_client::opens::Journal::new(
+                    &mut store.state,
+                )?)
+            })
+            .await
+    }
+    pub async fn prepare(
+        &self,
+        input: crate::namespace_client::opens::OpenInput,
+    ) -> Result<crate::namespace_client::opens::OpenRecord> {
+        self.call(move |j| j.prepare(input)).await
+    }
+    pub async fn get(&self, id: String) -> Result<crate::namespace_client::opens::OpenRecord> {
+        self.call(move |j| j.get(&id)).await
+    }
+    pub async fn records(&self) -> Result<Vec<crate::namespace_client::opens::OpenRecord>> {
+        self.call(move |j| j.records()).await
+    }
+    pub async fn abandoned(
+        &self,
+        session: String,
+    ) -> Result<Vec<crate::namespace_client::opens::OpenRecord>> {
+        self.call(move |j| j.abandoned(&session)).await
+    }
+    pub async fn activate(
+        &self,
+        id: String,
+        event: String,
+    ) -> Result<crate::namespace_client::opens::OpenRecord> {
+        self.call(move |j| j.activate(&id, &event)).await
+    }
+    pub async fn callback(
+        &self,
+        id: String,
+        event: String,
+        kind: crate::namespace_client::opens::Callback,
+    ) -> Result<crate::namespace_client::opens::OpenRecord> {
+        self.call(move |j| j.callback(&id, &event, kind)).await
+    }
+    pub async fn link(
+        &self,
+        id: String,
+        event: String,
+        callback: String,
+        input: crate::namespace_client::Input,
+    ) -> Result<crate::namespace_client::opens::OpenRecord> {
+        self.call(move |j| j.link(&id, &event, &callback, input))
+            .await
+    }
+    pub async fn acknowledge(
+        &self,
+        id: String,
+        event: String,
+        operation: String,
+    ) -> Result<crate::namespace_client::opens::OpenRecord> {
+        self.call(move |j| j.acknowledge(&id, &event, &operation))
+            .await
     }
 }

@@ -1,6 +1,7 @@
 //! Client-local metadata intents. Persist exact admission and request before RPC.
 mod changes;
 mod identity;
+pub mod opens;
 mod removals;
 use crate::{
     Result, State,
@@ -114,6 +115,7 @@ fn checked_outcome(input: &Input, outcome: &namespace::Result<Receipt>) -> Resul
 }
 
 pub(crate) fn check_schema(db: &Connection) -> Result<()> {
+    opens::check_schema(db)?;
     db.prepare("SELECT operation_id,input,outcome,state_hash FROM namespace_intents LIMIT 0")?;
     db.prepare("SELECT singleton,owner_id,state_hash FROM client_identity LIMIT 0")?;
     db.prepare("SELECT singleton,state_hash FROM retained_client_identity LIMIT 0")?;

@@ -6,6 +6,8 @@ mod atomic_create;
 pub mod fixture;
 #[path = "support/mode_cancellation.rs"]
 mod mode_cancellation;
+#[path = "support/open_journal.rs"]
+mod open_journal;
 #[path = "support/owned_disposition.rs"]
 mod owned_disposition;
 #[path = "support/owner_move.rs"]
@@ -407,6 +409,7 @@ async fn managed_child() {
         || mode.starts_with("mode_cancel_")
         || mode.starts_with("atomic_create_")
         || mode.starts_with("owner_move_")
+        || mode.starts_with("open_journal_")
     {
         Authority::open_with_policy(root.join("authority"), "portable-collision-v1".into())
             .await
@@ -416,6 +419,16 @@ async fn managed_child() {
     };
     let (wire, stop, server) = serve(authority.client()).await;
     let volume = info(&wire).await.id;
+    if mode.starts_with("open_journal_") {
+        Box::pin(open_journal::run_mode(
+            &mode, &config, &root, &wire, &volume,
+        ))
+        .await;
+        stop.send(()).unwrap();
+        server.await.unwrap();
+        authority.shutdown().await.unwrap();
+        return;
+    }
     if mode.starts_with("owner_move_") {
         Box::pin(owner_move::run_mode(&mode, &config, &root, &wire, &volume)).await;
         stop.send(()).unwrap();

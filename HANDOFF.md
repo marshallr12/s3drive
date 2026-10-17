@@ -1,43 +1,50 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b3b4b3b2 deferred owner rename/move**
-on `codex/deferred-owner-move`. Goal ACTIVE. Read
-`docs/src/deferred-owner-move.md` and the implementation plan.
+Updated: 2026-10-17. Current phase: **P6m3b3b4b3b3a durable per-open callback journal**
+on `codex/windows-open-journal`. Goal ACTIVE. Read
+`docs/src/windows-open-journal.md` and the implementation plan.
 
 Baseline verified live: private clean local/remote main
-`317a047e1a96ba030d3623955dcbdc6415a67ff7`, terminal all-green
-[run 39045723902](https://github.com/marshallr12/s3drive/actions/runs/39045723902).
-Linux `117433927418`, Windows `117433927254`, book `117433927431`;
-183/179 state, eight HTTP, twelve SDK, seven native cases per OS, fourteen frozen
+`dda0464f06b65cf65f754fc43486dd71f29e0a54`, terminal all-green
+[run 39048160996](https://github.com/marshallr12/s3drive/actions/runs/39048160996).
+Linux `117440994003`, Windows `117440993908`, book `117440993624`;
+197/193 state, nine HTTP, thirteen SDK, seven native cases per OS, fourteen frozen
 NTFS traces, four selected upstream legacy cases and nine checker rejections.
-Native/startup gates passed. Proof `/tmp/s3drive-create-publication.json`.
+Proof `/tmp/s3drive-owner-move-publication.json`. Schema16/config6 baseline.
 
-Atomic CreateDeferredEntry commits node/reservation/origin/result together.
-Unknown predicted-node barriers, exact receipts, closing headroom, killed-owner
-recovery and binary/empty/Unicode SDK publication passed. Schema16/config6.
+Owner moves retain the original fence/binding with previous-event identity
+lineage. Four SDK stages preserve late dirty data, child/target bytes and exact
+replay with six PUTs and six retained immutable objects. Unknown moves block
+publication/cancellation until exact recovery. Native Windows deletion remains
+unsupported; no live Wasabi mutation or NNP bypass.
 
-Current scope: same-fence deferred owner moves with guarded ordinary replacement,
-immutable prior-event identity lineage, client acknowledgment/recovery and SDK
-recovery. Keep native Windows deletion unsupported. Reserved destination
-replacement still needs explicit reference/native proof that old target cleanup
-cannot remove its replacement. No live Wasabi mutation or NNP bypass.
-Next persistent full Windows per-open/node-wide lifecycle; do not substitute
-permanently refused rename/DoC or SetDelete-only behavior.
+Current scope: schema17 per-file-object admission and callback/effect journal,
+raw cleanup/close facts, original session/source/store/owner, hash anchors,
+existing Storage worker, exact namespace proof acknowledgment and SDK recovery.
+This is durable evidence, not the full disposition policy or native deletion.
+Next node-wide/per-open policy and WinFsp integration; resolve deferred target
+replacement proof, final closing-work admission and journal retention before
+callbacks are enabled. Do not OR handle flags or replace full DoC support with
+SetDelete-only behavior or permanently refused rename.
 
-Implementation and full local gate passed, exit 0:
-`/tmp/s3drive-owner-move-gate4.log`; 197 state, nine HTTP, thirteen SDK cases,
-strict lint/build/book. New source modules: namespace/removals/moves.rs and
-namespace_client/removals.rs. Previous-event chains prove identity changes;
-OwnedRemoval retains the original input while receipt/event advance. Unknown
-moves block publication/cancellation until exact recovery. SDK four-process
-case preserves late dirty bytes, children and replaced snapshots, keeps all six
-immutable objects and makes exactly six PUTs. Full disk/ignored SQL/quota/kill,
-corruption and normalized HTTP destination races passed. Schema16/config6.
-Initial gate diagnostics led to compact new-variant fields; existing rejection
-and Request serialization was not changed. An overstrict local-write test was
-corrected to prove retained dirty data plus blocked remote publication.
-Require terminal exact-tip all-three hosted CI before guarded publication from
-`317a047`. No new live Wasabi mutations; native Windows deletion stays disabled.
+Full local gate passed, exit0: `/tmp/s3drive-open-journal-gate2.log`;
+212 state, nine HTTP, fourteen SDK cases, strict lint/build/book. New modules:
+namespace_client/opens.rs + opens/tests.rs; worker Storage.opens() shares the
+existing owner. Migration017 and schema17/config6; legacy migration fixtures
+remove all new tables to represent real old schemas. Fifteen new state cases
+cover quota, corruption, full disk and migration. The five-stage SDK test in
+support/open_journal.rs forcibly kills owners across unknown create, promotion,
+publication and final commit; keeps binary/empty/Unicode data, three PUTs and all
+three immutable objects, no DELETE. Synthetic callbacks do not prove native
+ordering or full lifecycle acceptance.
+
+Review after the first green gate added exact activation proof retention;
+gate2 is the final source gate. Closed records may still contain unknown effects:
+startup must scan all records, not just the old-session unclosed helper. Native
+policy, accepted/rejected callback responses, unknown cancellation/cleanup
+ordering, full closing-work admission/retention and deferred replacement proof
+remain before enablement. Require terminal exact-tip all-three hosted CI before
+guarded private publication from `dda0464`. Goal ACTIVE, no NNP/provider changes.
 
 ## Previous expanded reference phase
 

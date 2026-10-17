@@ -507,3 +507,24 @@ Require terminal exact-tip hosted native/reference/startup CI before private
 publication. Next deferred destination replacement reference/native proof and
 persistent per-open/node-wide Windows integration, including duplicated handles,
 cleanup followed by I/O, multiple DoC opens, cancellation and recovery.
+
+
+### P6m3b3b4b3b3a — durable per-open callback journal (2026-10-17)
+
+Owner moves accepted at `dda0464`, terminal CI 39048160996 and private main.
+Implement the [per-open journal contract](windows-open-journal.md) on the existing
+SQLite worker with schema17/config6. Persist exact admission and callback/effect
+identities before RPC; verify settled namespace results, never infer deletion
+from local flags. Require corruption/full disk/quota/migration/kill and actual
+SDK recovery plus terminal native/reference/startup CI. Then integrate full
+node-wide/per-open policy and WinFsp callbacks, including deferred destination
+replacement proof and final closing-work/retention policy before enabling them.
+
+Local full gate passed: 212 state, nine HTTP and fourteen SDK cases. The new
+callback journal retains exact deferred activation proofs and linked namespace
+outcomes, detects missing/corrupt histories, protects callback/known-effect
+acknowledgment slots, and migrates schema16 to17 without changing existing
+namespace/content hashes. Five SDK stages recover killed owners and three PUTs
+without replay. Require terminal exact-tip hosted native/reference/startup CI
+before publication. Next integrate the full lifecycle controller and WinFsp;
+callback facts alone neither implement disposition policy nor prove deletion.
