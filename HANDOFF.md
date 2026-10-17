@@ -46,6 +46,12 @@ ordering, full closing-work admission/retention and deferred replacement proof
 remain before enablement. Require terminal exact-tip all-three hosted CI before
 guarded private publication from `dda0464`. Goal ACTIVE, no NNP/provider changes.
 
+First candidate `500b5e6`, CI39050701516: Linux/book green, Windows 208 state,
+SDK/reference passed but non-admin startup fixture still asserted schema16.
+Update the exact PowerShell expectation to17; do not weaken it or claim the
+failed run passed native/startup acceptance. Rust source remains gate2's source;
+validate PowerShell AST plus init/reopen locally, then require new exact-tip CI.
+
 ## Previous expanded reference phase
 
 Published baseline verified live: private clean local/remote main

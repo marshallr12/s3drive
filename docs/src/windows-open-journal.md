@@ -88,3 +88,8 @@ upstream/nine malformed-fixture checks. Then implement node-wide/per-open policy
 callback response/uncertainty handling, final closing-work capacity and retention,
 and the native WinFsp integration with deferred destination replacement proof.
 Keep native deletion disabled until its complete acceptance gate passes.
+
+The first hosted candidate passed 208 Windows state tests and the SDK/reference
+checks, but startup acceptance still expected `schema=16`. Its exact version
+assertion is now updated to 17; the failed run is not native/startup acceptance.
+Require a new terminal exact-commit all-green run before publication.
