@@ -80,4 +80,4 @@ Native integration must still quiesce mutations/publication, capture verified
 source/target states, recover pending namespace intents before serving paths,
 and retain open-unlinked views. Windows needs a reversible delete-intent and
 cleanup design, including failure recovery despite cleanup having no returned
-error. Full temporary-file/write/fsync/replace application saves remain required.
+error. [WinFsp's cleanup and delete contract](https://raw.githubusercontent.com/winfsp/winfsp/master/inc/winfsp/winfsp.h) (checked 2026-10-17). Full temporary-file/write/fsync/replace application saves remain required.
