@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b3a managed file/directory creation** on `codex/managed-namespace`; implementation, portable recovery and both native acceptance steps pass; final exact-tip publication remains required.
+Updated: 2026-10-17. Current phase: **P6m3b3b1 guarded authority entry transactions** on `codex/managed-entry-transactions`. Metadata implementation and the full local gate pass; terminal Linux/Windows/book CI, existing native regressions and publication remain required. Native rename/removal are still unsupported.
 Goal active. Linux/Windows read-only drives and startup foundations work;
 library writes/flush are progressing toward safe writable native filesystems.
 Do not call the broader editable-drive goal complete before its documented
@@ -36,38 +36,33 @@ safe-write contract and real OS acceptance pass.
 ## Authoritative publication baseline
 
 Published private main at phase start:
-`683ec51a405198bfedc64f3a3b1c5eed7e7ed218` (managed existing-file editing).
-Terminal all-green [run 39010367651](https://github.com/marshallr12/s3drive/actions/runs/39010367651):
-Linux `117331445504`, Windows `117331445221`, book `117331445339`.
-The duplicate main run `39011329487` also completed successfully. Baseline:
-schema 11, 109 Linux / 105 Windows state tests, 50 S3, 12 FS, four authority
-TCP tests and five native cases per OS, with no-systemd startup and Windows
-non-admin cross-logon acceptance. Local/remote main/private visibility were verified.
-Logs: `/tmp/s3drive-managed-writer-final-{linux,windows,book}-ci.log`.
+`ec0f4902c2572d37300dd4f4c7b262bce2faa40b` (managed creation/directories).
+Terminal all-green [run 39014033363](https://github.com/marshallr12/s3drive/actions/runs/39014033363):
+Linux `117342308172`, Windows `117342308295`, book `117342308235`.
+Schema 12, 116 Linux / 112 Windows state tests, 13 FS and six native cases per
+OS, with no-systemd startup and Windows non-admin cross-logon acceptance.
+Logs: `/tmp/s3drive-namespace-final-{linux,windows,book}-ci.log`.
+Local/remote main/private visibility and a clean worktree were verified.
 
-Current branch introduces schema 12, a Unicode-17 portable collision policy,
-explicit new-volume policy selection, guarded creation with authoritative empty-file
-store placement, a private namespace intent ledger and exact-ID recovery, and
-version-5 shared/native file and directory creation. Existing exact-name volumes
-are not converted; version 4 keeps its existing-file boundary. Rename/remove and
-full save-replacement remain unsupported until subsequent acceptance.
-See `docs/src/managed-namespace-plan.md` for the full remaining phases.
+Current branch adds `NodeGuard`, portable-volume `MoveEntry`/`RemoveEntry`,
+`namespace-entry-cas-v1` and a namespace artifact with the retained displaced
+node. Exact source/target/both-parent guards, collision-key admission, type,
+cycle, emptiness and child-count bounds commit with exact dedup outcomes.
+Tombstones preserve payloads and placements; no new schema or S3 operation.
+Ignored SQL result insertions now roll back the entire effect. Requests are
+boxed within the existing bounded authority queue after the larger guard
+variant exceeded the enum size lint.
 
-Portable proof: new nested Unicode entries, collision refusal, real SDK publication,
-a peer with another default following the recorded store, lost create reply after
-authority commit plus killed/restarted caller, unchanged sequence on replay, and
-authority-process restart. State tests cover source placement, corrupt keys,
-namespace row integrity, SQL-full/ignored ACK rollback and schema-11 migration.
-A larger integration future exposed stack overflow; `ReadOnlyFs::new` now boxes
-its large construction state and has a caller-frame size regression test.
-Native acceptance adds a sixth case per OS, including exclusive creation,
-normal remount, a new file's dirty restart, another default store, and killing a
-mount after create commits but before its reply. Windows audits every BMP native
-upcase alias before enabling the portable policy; mismatch fails closed.
-
-Native steps both passed at `d89e6f372c23498e423c2017bbfa03426fdd61cb`, run `39013347425`: Linux `117340308252`, Windows `117340308235`, book `117340308119`. Linux/book were terminal green; Windows was saving its cache at the recorded snapshot. Six native cases per OS, including creation/recovery, passed. See `docs/src/evidence/managed-namespace-2026-10-17.json`. Final publication still requires terminal exact-tip CI.
-
-The full local gate passed at `/tmp/s3drive-namespace-gate-final.log` (116 Linux state tests, 50 S3, 13 FS, four authority TCP tests and four managed engine/helper cases). The new diagram was rendered and visually inspected.
+Seven new state tests and an actual TCP race/restart/replay test cover this
+contract, including real SQLITE_FULL rollback/retry and ignored writes.
+Focused evidence: `/tmp/s3drive-entry-guard-final-tests.log`,
+`/tmp/s3drive-entry-state-authority-tests.log` and
+`/tmp/s3drive-entry-clippy-final.log`.
+Full local gate: `/tmp/s3drive-entry-gate.log`, exit 0; 123 Linux state tests, five authority TCP tests, 50 S3 and 13 FS tests. Documentation links/build/tests also pass.
+See `docs/src/managed-namespace-plan.md` for the contract and remaining bridge.
+This metadata phase does not enable native rename/removal or acknowledge
+unpublished dirty source bytes. Native creation and prior editing behavior stay
+at their accepted boundaries.
 
 Use `bash scripts/gate.sh` locally, then require terminal exact-tip Linux,
 Windows and book jobs before main publication. Native cases remain serialized
@@ -272,7 +267,7 @@ were already removed. Do not infer remaining cleanup from old plans/logs.
 
 ## Next implementation and durable decisions
 
-P6m3b2 is published. Finish P6m3b3a evidence/publication at the exact documented tip, then implement guarded rename/replacement/removal and open-unlinked publication, followed by real application save workflows as laid out in the namespace plan. Stable storage/file identities,
+P6m3b3a is published. Finish P6m3b3b1 verification/publication, then extend the private namespace intent/acknowledgment bridge, detached open-unlinked publication and real FUSE/WinFsp rename/removal, followed by application save workflows as laid out in the namespace plan. Stable storage/file identities,
 create-only unique blob keys and metadata CAS are now separate from the direct
 writer's mutable-key ETag lineage; preserve that distinction during integration. Keep uncertain bytes and new physical blob
 references distinct; an S3 upload alone does not acknowledge filesystem flush.

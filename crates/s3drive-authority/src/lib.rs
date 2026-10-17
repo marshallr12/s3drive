@@ -17,8 +17,8 @@ use tokio::sync::{Semaphore, mpsc, oneshot};
 pub use wire::{WireClient, WireError};
 
 pub use namespace::{
-    Apply, Artifact, ContentGuard, Error, Kind, Listing, Mutation, Node, Payload, ROOT, Receipt,
-    Reservation, Store, Volume, payload_reference,
+    Apply, Artifact, ContentGuard, Error, Kind, Listing, Mutation, Node, NodeGuard, Payload, ROOT,
+    Receipt, Reservation, Store, Volume, payload_reference,
 };
 const BODY_LIMIT: usize = 4096;
 const QUEUE: usize = 8;
@@ -69,6 +69,7 @@ impl Request {
             Self::Features {} => Ok(Reply::Features(vec![
                 "content-cas-v1".into(),
                 "namespace-create-v1".into(),
+                "namespace-entry-cas-v1".into(),
             ])),
             Self::Info {} => state.namespace_volume().map(Reply::Info),
             Self::Store { volume, store } => {
@@ -93,7 +94,7 @@ impl Request {
     }
 }
 enum Command {
-    Request(Request, oneshot::Sender<Reply>),
+    Request(Box<Request>, oneshot::Sender<Reply>),
     Stop,
 }
 /// Shared, bounded admission. A lost reply after acceptance means UNKNOWN;
@@ -110,7 +111,7 @@ impl Client {
         let (send, receive) = oneshot::channel();
         if self
             .sender
-            .try_send(Command::Request(request, send))
+            .try_send(Command::Request(Box::new(request), send))
             .is_err()
         {
             return Reply::Error(Error::Unavailable);
@@ -153,7 +154,7 @@ impl Authority {
                 while let Some(command) = receiver.blocking_recv() {
                     match command {
                         Command::Request(request, send) => {
-                            let _ = send.send(request.execute(&mut state));
+                            let _ = send.send((*request).execute(&mut state));
                         }
                         Command::Stop => receiver.close(),
                     }

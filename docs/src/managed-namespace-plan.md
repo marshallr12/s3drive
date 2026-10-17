@@ -3,7 +3,7 @@
 Implementation status and remaining plan, **2026-10-17**. P6m3b2 existing-file editing is
 published at `683ec51a405198bfedc64f3a3b1c5eed7e7ed218`, with terminal
 [Linux/Windows/book CI](https://github.com/marshallr12/s3drive/actions/runs/39010367651).
-Creation passed both native steps at the [recorded checkpoint](development.md#creation-native-checkpoint); terminal exact-tip CI is required for publication.
+Creation is published at `ec0f4902c2572d37300dd4f4c7b262bce2faa40b`, with terminal [Linux/Windows/book CI](https://github.com/marshallr12/s3drive/actions/runs/39014033363).
 The remaining namespace/save work is required before calling this an ordinary
 editable desktop drive.
 
@@ -18,7 +18,7 @@ editable desktop drive.
    Acceptance includes Unicode, two clients racing for a name, policy bounds,
    lost metadata replies/process death, no incidental S3 PUT/DELETE for empty
    metadata, nested file write/reopen, collisions, and both native drivers.
-2. **P6m3b3b: rename, replacement and removal.** Guard source and destination
+2. **P6m3b3b: rename, replacement and removal — authority entry CAS implemented; client/native integration remains required.** Guard source and destination
    node revisions/identities, parent revisions and expected target absence.
    Commit replacement plus target tombstone atomically. Flush pending source
    bytes before exposing a replacement. Retain displaced/removed objects and
@@ -117,3 +117,55 @@ policy because there is no object yet. Creation can commit before an open-handle
 allocation or subsequent read fails; retained intent IDs resolve that effect.
 No native rename/delete, symlinks, ACL mutation or desktop replacement-save
 acceptance is implied by creation alone.
+
+
+## Guarded authority entries (P6m3b3b1, 2026-10-17)
+
+The additive `namespace-entry-cas-v1` capability provides `MoveEntry` and
+`RemoveEntry` on portable volumes. This is a metadata contract, not a mounted
+rename/unlink acceptance claim. Existing global-sequence `Move`/`Remove` calls
+retain their original behavior; existing serialized receipts remain unchanged.
+No schema migration or S3 operation is required by the new transactions.
+
+| Guard | Required observation | Rejection |
+| --- | --- | --- |
+| Source | Stable node ID, live state and exact revision | Conflict if removed or changed |
+| Source parent | Stable parent ID and exact directory revision, matching the source's actual parent | Conflict if moved or stale |
+| Destination parent | Live directory ID and exact revision | Conflict if stale; non-directories refused |
+| Destination absent | No live entry with the requested portable collision key | Already-exists if another entry occupies it |
+| Destination present | Exact live node ID/revision at that collision key | Conflict if replaced, removed or changed |
+
+`None` is an explicit absence expectation, not permission to overwrite an entry
+that appears later. A case-only/normalization-spelling change supplies the source
+itself as the expected destination. The exact UTF-8 requested display name is
+preserved. Source and destination parent guards may identify the same directory.
+Unrelated volume changes do not reject an otherwise valid guarded request;
+a future sequence hint is refused. Directory moves check cycles and destination
+child limits; replacement requires matching directory/file categories and an
+empty directory target. Removal requires an empty directory, or a regular file.
+Root mutation is refused.
+
+Replacement tombstones the expected target and moves the source in one immediate
+SQLite transaction, with one volume sequence and exact request/result deduplication.
+The receipt includes the displaced tombstone, preserving its complete payload
+reference and store placement. Removal also preserves these fields. No payload
+is deleted, and replaying an old successful move after a later unlink cannot
+resurrect its node. The implementation checks affected rows and reads back the
+changed nodes; ignored writes or result insertion failures roll back both names.
+Internal/disk-full results remain unknown, with no fabricated terminal receipt.
+
+Seven state tests cover stale source/target/parent/absence guards, retained
+payloads/placement, case aliases, cycles, type mismatches, non-empty directories,
+child limits, corrupt collision keys, future hints and changed operation IDs.
+Trigger failures include ignored target/source/receipt/sequence writes. A real
+`SQLITE_FULL` test verifies rollback and exact-request retry after restoring the
+page budget. A real TCP test races two independent clients against one target,
+restarts the authority, replays both outcomes, unlinks the winner, and checks
+that replay does not resurrect it.
+
+Remaining integration is mandatory: extend the private namespace intent journal
+and atomic local acknowledgment bridge; publish pending source bytes before a
+replacement; support open-unlinked generations with publication confined to the
+tombstone; wire FUSE rename/unlink/rmdir and WinFsp rename/delete cleanup; and
+pass real application save/replacement/recovery tests. Until then native
+rename/removal callbacks remain unsupported, and dirty data is retained.

@@ -192,6 +192,7 @@ pub(super) fn error<E: Into<Box<dyn std::error::Error + Send + Sync>>>(e: E) -> 
             Failure::Authority(s3drive_authority::Error::Invalid) => Error::InvalidName,
             Failure::Authority(s3drive_authority::Error::Conflict) => Error::Conflict,
             Failure::Authority(s3drive_authority::Error::NotDirectory) => Error::NotDirectory,
+            Failure::Authority(s3drive_authority::Error::IsDirectory) => Error::IsDirectory,
             Failure::Authority(s3drive_authority::Error::Limit) => Error::ResourceLimit,
             Failure::Authority(s3drive_authority::Error::Unavailable) => Error::Busy,
             _ => Error::Managed(e),

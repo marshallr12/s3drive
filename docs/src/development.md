@@ -410,3 +410,28 @@ The final documentation candidate still requires terminal Linux/Windows/book CI
 at its own exact tip before publication. Consult the
 [branch CI history](https://github.com/marshallr12/s3drive/actions?query=branch%3Acodex%2Fmanaged-namespace)
 for that result. No native case, assertion, recovery check or deadline was removed.
+
+
+## Guarded entry transaction gate (2026-10-17)
+
+`cargo test -p s3drive-state --locked namespace::entries` exercises seven new
+metadata transaction/recovery tests. The authority TCP suite includes
+`guarded_replacements_race_and_replay_after_authority_restart`, using independent
+HTTP clients and an actual SQLite owner/service. These do not certify native
+rename/removal, which remain disabled pending the rest of the
+[namespace contract](managed-namespace-plan.md#guarded-authority-entries-p6m3b3b1-2026-10-17).
+The full repository gate and existing six native cases per OS remain required
+regressions. No live cloud mutation or new startup entry is involved.
+
+The larger guarded request is boxed inside the authority's existing eight-slot
+queue. Admission bounds and unknown-outcome behavior are unchanged. Resolved
+rusqlite 0.40.2 immediate transaction, rollback-on-drop and affected-row `execute`
+contracts were inspected before implementation.
+
+
+The full local gate passed at `/tmp/s3drive-entry-gate.log`: 123 Linux state
+tests, five authority TCP tests, 50 S3 and 13 FS tests, plus build/lint/book.
+Exact-tip Linux/Windows/book CI and existing native/startup regressions remain
+publication requirements. Their results are available in the
+[entry transaction branch history](https://github.com/marshallr12/s3drive/actions?query=branch%3Acodex%2Fmanaged-entry-transactions).
+These checks do not claim native rename/removal acceptance.

@@ -493,3 +493,156 @@ async fn authentication_strict_requests_wrong_volume_and_unicode_bytes() {
     assert_eq!(info(&c, &url).await.sequence, 6);
     close(stop, task, authority).await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn guarded_replacements_race_and_replay_after_authority_restart() {
+    use s3drive_authority::{Artifact, NodeGuard};
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("authority");
+    let authority = Authority::open_with_policy(path.clone(), "portable-collision-v1".into())
+        .await
+        .unwrap();
+    let (url, stop, task) = start(authority.client()).await;
+    let a = http();
+    let b = http();
+    let Reply::Features(features) = ask(&a, &url, &Request::Features {}).await else {
+        panic!()
+    };
+    assert!(features.iter().any(|s| s == "namespace-entry-cas-v1"));
+    let mut v = info(&a, &url).await;
+    let store = applied(
+        ask(
+            &a,
+            &url,
+            &change(
+                &v,
+                200,
+                Mutation::RegisterStore {
+                    route: "a".repeat(64),
+                    root: "internal/".into(),
+                },
+            ),
+        )
+        .await,
+    );
+    let Some(Artifact::Store(store)) = store.artifact else {
+        panic!()
+    };
+    let mut nodes = Vec::new();
+    for (op, name) in [
+        (1, "temporary A 🦀"),
+        (2, "temporary B 日本語"),
+        (3, "café"),
+    ] {
+        v = info(&a, &url).await;
+        nodes.push(
+            applied(
+                ask(
+                    &a,
+                    &url,
+                    &change(
+                        &v,
+                        op,
+                        Mutation::CreateEntry {
+                            parent: ROOT.into(),
+                            parent_revision: 0,
+                            store: Some(store.id.clone()),
+                            name: name.into(),
+                            node_kind: Kind::EmptyFile,
+                        },
+                    ),
+                )
+                .await,
+            )
+            .node,
+        );
+    }
+    v = info(&a, &url).await;
+    let guard = |n: &s3drive_authority::Node| NodeGuard {
+        id: n.id.clone(),
+        revision: n.revision,
+    };
+    let root = NodeGuard {
+        id: ROOT.into(),
+        revision: 0,
+    };
+    let first = change(
+        &v,
+        10,
+        Mutation::MoveEntry {
+            node: guard(&nodes[0]),
+            source_parent: root.clone(),
+            parent: root.clone(),
+            name: "cafe\u{301}".into(),
+            destination: Some(guard(&nodes[2])),
+        },
+    );
+    let second = change(
+        &v,
+        11,
+        Mutation::MoveEntry {
+            node: guard(&nodes[1]),
+            source_parent: root.clone(),
+            parent: root.clone(),
+            name: "CAFÉ".into(),
+            destination: Some(guard(&nodes[2])),
+        },
+    );
+    let (ra, rb) = tokio::join!(ask(&a, &url, &first), ask(&b, &url, &second));
+    let (winner, original, loser) = match (ra, rb) {
+        (Reply::Applied(r), Reply::Error(Error::Conflict)) => (r, first, second),
+        (Reply::Error(Error::Conflict), Reply::Applied(r)) => (r, second, first),
+        other => panic!("expected one guarded replacement winner: {other:?}"),
+    };
+    let Some(Artifact::Namespace { displaced: Some(t) }) = &winner.artifact else {
+        panic!()
+    };
+    assert_eq!(t.id, nodes[2].id);
+    assert!(t.deleted);
+    assert_eq!(listing(&a, &url, &v.id, ROOT).await.children.len(), 2);
+    close(stop, task, authority).await;
+    let authority = Authority::open_with_policy(path, "portable-collision-v1".into())
+        .await
+        .unwrap();
+    let (url, stop, task) = start(authority.client()).await;
+    let sequence = info(&a, &url).await.sequence;
+    assert_eq!(
+        ask(&a, &url, &original).await,
+        Reply::Applied(winner.clone())
+    );
+    assert_eq!(ask(&a, &url, &loser).await, Reply::Error(Error::Conflict));
+    let current = info(&a, &url).await;
+    assert_eq!(sequence, current.sequence);
+    let removed = applied(
+        ask(
+            &a,
+            &url,
+            &change(
+                &current,
+                12,
+                Mutation::RemoveEntry {
+                    node: guard(&winner.node),
+                    parent: root,
+                },
+            ),
+        )
+        .await,
+    );
+    assert!(removed.node.deleted);
+    assert_eq!(listing(&a, &url, &v.id, ROOT).await.children.len(), 1);
+    assert_eq!(ask(&a, &url, &original).await, Reply::Applied(winner));
+    let Reply::Node(still_deleted) = ask(
+        &a,
+        &url,
+        &Request::Node {
+            volume: v.id,
+            node: removed.node.id,
+        },
+    )
+    .await
+    else {
+        panic!()
+    };
+    assert!(still_deleted.deleted);
+    close(stop, task, authority).await;
+}

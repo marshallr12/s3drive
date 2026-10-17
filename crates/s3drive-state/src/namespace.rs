@@ -1,5 +1,6 @@
 //! Authoritative managed namespace prototype, separate from local source binding.
 //! No S3 publication or platform name-comparison semantics are implemented here.
+mod entries;
 pub mod publication;
 use crate::State;
 pub use publication::{Artifact, ContentGuard, Payload, Reservation, Store, payload_reference};
@@ -21,6 +22,7 @@ pub enum Error {
     NotFound,
     AlreadyExists,
     NotDirectory,
+    IsDirectory,
     NotEmpty,
     Cycle,
     Root,
@@ -67,6 +69,18 @@ pub struct Node {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub placement: Option<Store>,
 }
+/// Exact authority identity and revision, independent of path spelling.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NodeGuard {
+    pub id: String,
+    pub revision: u64,
+}
+impl NodeGuard {
+    fn valid(&self, sequence: u64) -> bool {
+        valid_id(&self.id) && self.revision <= sequence
+    }
+}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
 pub enum Mutation {
@@ -106,6 +120,17 @@ pub enum Mutation {
         parent: String,
         name: String,
         node_kind: Kind,
+    },
+    MoveEntry {
+        node: NodeGuard,
+        source_parent: NodeGuard,
+        parent: NodeGuard,
+        name: String,
+        destination: Option<NodeGuard>,
+    },
+    RemoveEntry {
+        node: NodeGuard,
+        parent: NodeGuard,
     },
     Move {
         node: String,
@@ -201,6 +226,24 @@ impl Apply {
                 name,
                 node_kind,
             } => *node_kind != Kind::File && valid_id(parent) && valid_name(name),
+            Mutation::MoveEntry {
+                node,
+                source_parent,
+                parent,
+                name,
+                destination,
+            } => {
+                node.valid(self.expected_sequence)
+                    && source_parent.valid(self.expected_sequence)
+                    && parent.valid(self.expected_sequence)
+                    && names::collision_key(name).is_some()
+                    && destination
+                        .as_ref()
+                        .is_none_or(|d| d.valid(self.expected_sequence))
+            }
+            Mutation::RemoveEntry { node, parent } => {
+                node.valid(self.expected_sequence) && parent.valid(self.expected_sequence)
+            }
             Mutation::Move { node, parent, name } => {
                 valid_id(node) && valid_id(parent) && valid_name(name)
             }
@@ -331,7 +374,7 @@ fn directory(db: &Connection, id: &str) -> Result<Node> {
     }
     Ok(n)
 }
-fn available(db: &Connection, parent: &str, name: &str, own_id: Option<&str>) -> Result<()> {
+fn named(db: &Connection, parent: &str, name: &str) -> Result<Option<String>> {
     let policy = volume(db)?.name_policy;
     let key = if policy == names::PORTABLE {
         Some(names::collision_key(name).ok_or(Error::Invalid)?)
@@ -373,6 +416,10 @@ fn available(db: &Connection, parent: &str, name: &str, own_id: Option<&str>) ->
             )
             .optional())?
     };
+    Ok(existing)
+}
+fn available(db: &Connection, parent: &str, name: &str, own_id: Option<&str>) -> Result<()> {
+    let existing = named(db, parent, name)?;
     if existing.is_some() && existing.as_deref() != own_id {
         Err(Error::AlreadyExists)
     } else {
@@ -519,7 +566,12 @@ impl State {
         // A savepoint rolls back any partial mutation before retaining rejection.
         sql(tx.execute_batch("SAVEPOINT namespace_effect"))?;
         let content_guard = publication::uses_content_guard(&tx, &request.mutation)?
-            || matches!(request.mutation, Mutation::CreateEntry { .. });
+            || matches!(
+                request.mutation,
+                Mutation::CreateEntry { .. }
+                    | Mutation::MoveEntry { .. }
+                    | Mutation::RemoveEntry { .. }
+            );
         let outcome = if request.expected_sequence > v.sequence
             || (!content_guard && request.expected_sequence != v.sequence)
         {
@@ -535,10 +587,13 @@ impl State {
             return outcome;
         }
         let output = serde_json::to_vec(&outcome).map_err(|_| Error::Internal)?;
-        sql(tx.execute(
+        let inserted = sql(tx.execute(
             "INSERT INTO namespace_operations VALUES (?1, ?2, ?3)",
             params![request.operation, encoded, output],
         ))?;
+        if inserted != 1 || stored(&tx, &request.operation)? != Some((encoded, output)) {
+            return Err(Error::Internal);
+        }
         sql(tx.commit())?;
         outcome
     }
@@ -555,11 +610,26 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
         let (changed, artifact) = publication::mutate(db, request, sequence)?;
         return finish(db, request, sequence, &changed, Some(artifact));
     }
+    if matches!(
+        &request.mutation,
+        Mutation::MoveEntry { .. } | Mutation::RemoveEntry { .. }
+    ) {
+        let (changed, displaced) = entries::mutate(db, request, sql_sequence)?;
+        return finish(
+            db,
+            request,
+            sequence,
+            &changed,
+            Some(Artifact::Namespace { displaced }),
+        );
+    }
     let changed = match &request.mutation {
         Mutation::RegisterStore { .. }
         | Mutation::Reserve { .. }
         | Mutation::ReserveContent { .. }
-        | Mutation::Publish { .. } => {
+        | Mutation::Publish { .. }
+        | Mutation::MoveEntry { .. }
+        | Mutation::RemoveEntry { .. } => {
             return Err(Error::Invalid);
         }
         Mutation::CreateEntry {
@@ -699,7 +769,7 @@ fn finish(
         params![sql_sequence, expected],
     ))?;
     if rows != 1 {
-        return Err(Error::Conflict);
+        return Err(Error::Internal);
     }
     Ok(Receipt {
         sequence,
