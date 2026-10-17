@@ -93,10 +93,14 @@ async fn namespace_proxy(
                     ..
                 },
         } => 4,
+        Request::Node { node, .. } if node != s3drive_authority::ROOT => 5,
         _ => 0,
     };
     let reply = p.upstream.request(&request).await.unwrap();
-    if kind == p.kind && matches!(reply, Reply::Applied(_)) && p.cut.swap(false, Ordering::SeqCst) {
+    if kind == p.kind
+        && matches!(reply, Reply::Applied(_) | Reply::Node(_))
+        && p.cut.swap(false, Ordering::SeqCst)
+    {
         p.committed.notify_one();
         p.release.notified().await;
     }
@@ -612,6 +616,7 @@ pub async fn child() {
     match mode.as_str() {
         "lifecycle-engine" => Box::pin(lifecycle::engine(&c)).await,
         "lifecycle-policy" => Box::pin(lifecycle::policy(&c)).await,
+        "lifecycle-open-race" => Box::pin(lifecycle::open_race(c)).await,
         "producer" => {
             use std::io::BufRead;
             println!("PRODUCER_READY");

@@ -886,17 +886,18 @@ impl ReadOnlyFs {
             if writing && backend.writes.is_none() {
                 return Err(Error::ReadOnly);
             }
-            let snapshot = Box::pin(backend.reader.read(&node.key))
-                .await
-                .map_err(managed::error)?;
-            let initial_metadata = managed::metadata(snapshot.metadata());
-            let managed_write = if let Some(w) = &backend.writes {
-                w.open(snapshot.clone(), writing)
-                    .await?
-                    .map(|file| (w.clone(), file))
+            let (snapshot, managed_write) = if let Some(w) = &backend.writes {
+                let (snapshot, file) = Box::pin(w.open(&node.key, writing)).await?;
+                (snapshot, file.map(|file| (w.clone(), file)))
             } else {
-                None
+                (
+                    Box::pin(backend.reader.read(&node.key))
+                        .await
+                        .map_err(managed::error)?,
+                    None,
+                )
             };
+            let initial_metadata = managed::metadata(snapshot.metadata());
             return Ok(OpenFile {
                 initial_metadata,
                 node,

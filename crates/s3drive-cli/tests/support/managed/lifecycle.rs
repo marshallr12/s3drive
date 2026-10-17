@@ -13,6 +13,7 @@ pub(super) async fn portable() {
         .filter(|r| r.starts_with("DELETE "))
         .count();
     h.child("lifecycle-engine").await;
+    h.child("lifecycle-open-race").await;
     // A valid but narrower write policy must reject even metadata-only DoC
     // creation before any namespace admission or provider transfer.
     let policy = h.root.join("first/policy.toml");
@@ -33,6 +34,83 @@ pub(super) async fn portable() {
         before
     );
     s.stop().await;
+}
+pub(super) async fn open_race(mut c: s3drive_core::Config) {
+    let fault = NamespaceFault {
+        upstream: wire(&c),
+        cut: Arc::new(AtomicBool::new(false)),
+        kind: 5,
+        committed: Arc::new(tokio::sync::Notify::new()),
+        release: Arc::new(tokio::sync::Notify::new()),
+    };
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    c.managed.as_mut().unwrap().authority =
+        format!("http://{}/v1/namespace", listener.local_addr().unwrap());
+    let app = axum::Router::new()
+        .route("/v1/namespace", axum::routing::post(namespace_proxy))
+        .with_state(fault.clone());
+    let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let fs = Arc::new(s3drive_fs::ReadOnlyFs::new(&c).await.unwrap());
+    let file = fs
+        .create_file(
+            s3drive_fs::ROOT,
+            "open cleanup race 日本語",
+            |a, b| a == b,
+            true,
+        )
+        .await
+        .unwrap();
+    file.write(0, Arc::from(&b"stable bytes"[..]), false, false)
+        .await
+        .unwrap();
+    file.flush().await.unwrap();
+    let node = file.node.id;
+    drop(file);
+    let object = fs.native_file_object(node, false).await.unwrap().unwrap();
+    for cleanup in [false, true] {
+        fault.cut.store(true, Ordering::SeqCst);
+        let opening = tokio::spawn({
+            let fs = fs.clone();
+            async move { fs.open(node).await }
+        });
+        tokio::time::timeout(Duration::from_secs(10), fault.committed.notified())
+            .await
+            .unwrap();
+        let changing = tokio::spawn({
+            let object = object.clone();
+            async move {
+                if cleanup {
+                    object.cleanup(0).await
+                } else {
+                    object.set_delete(true).await
+                }
+            }
+        });
+        // The authority has captured the read's metadata, but not returned it.
+        // A local disposition must not advance the journal past that snapshot.
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        assert!(
+            !changing.is_finished(),
+            "disposition overtook an authorizing open (cleanup={cleanup})"
+        );
+        fault.release.notify_one();
+        let opened = tokio::time::timeout(Duration::from_secs(10), opening)
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        changing.await.unwrap().unwrap();
+        assert_eq!(opened.read(0, 100).await.unwrap(), b"stable bytes");
+        drop(opened);
+        if !cleanup {
+            object.set_delete(false).await.unwrap();
+        }
+    }
+    object.close().await.unwrap();
+    assert!(fs.open(node).await.is_ok());
+    fs.shutdown_writes().await.unwrap();
+    fs.cache_control().unwrap().close().await.unwrap();
+    server.abort();
 }
 pub(super) async fn policy(c: &s3drive_core::Config) {
     let fs = s3drive_fs::ReadOnlyFs::new(c).await.unwrap();
@@ -184,7 +262,11 @@ mod windows {
                 (if doc { 0x04000000 } else { 0 }) | if directory { 0x02000000 } else { 0 },
             )
             .open(path)
-            .unwrap()
+            .unwrap_or_else(|e| {
+                panic!(
+                    "native open {path:?} (DoC={doc}, directory={directory}, create={create}): {e}"
+                )
+            })
     }
     fn read(file: &mut File) -> Vec<u8> {
         file.seek(SeekFrom::Start(0)).unwrap();

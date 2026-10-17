@@ -37,6 +37,18 @@ Rust callback. Profile now documents this NTFS difference; test requires exact
 refusal, intact bytes and unchanged DoC effect rather than claiming cancellation.
 Log `/tmp/s3drive-lifecycle-windows3.log`. Remaining native cases still pending.
 
+Candidate10899f2 run39071909778 Windows117511092054 failed native open with
+`logical observation regressed` (log `/tmp/s3drive-lifecycle-windows4.log`).
+Portable barrier regression reproduced a disposition overtaking a paused Node
+reply (`/tmp/s3drive-lifecycle-race-before.log`, exit101). Managed read/open now
+authorizes under publication/edit locks through adoption; same test passed
+(`/tmp/s3drive-lifecycle-race-after.log`, exit0). Test also covers actual Cleanup.
+Monotonic state guard unchanged. Next full gate and native candidate required.
+Full local gate7 passed exit0 (`/tmp/s3drive-lifecycle-gate7.log`), including both
+barrier cases, 255 state/ten HTTP/seventeen SDK, old mutation/reopen regressions,
+format/lint/build/book. No larger stack or relaxed state guard. Next run exact-tip
+hosted native/reference/startup acceptance before publishing main.
+
 Candidate43a45ce run39071127420 passed Windows type checking but failed Clippy
 on a collapsible nested `if` in Close, before native tests. Both void callbacks
 now use equivalent let chains. Book passed; Linux was still running at the check.

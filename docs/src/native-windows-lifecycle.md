@@ -108,3 +108,16 @@ therefore explicitly excludes extended ON_CLOSE cancellation, unlike the frozen
 NTFS reference. Acceptance must assert the exact refusal, retained bytes and
 unchanged DoC effect at Close. Ordinary SetDelete cancellation remains required;
 no silent conversion of the rejected extended request is permitted.
+
+Candidate10899f2 exposed a separate native open failure: an authorized snapshot
+could be older than a concurrent local disposition effect. A loopback regression
+pauses the authority's Node reply during a new open and races SetDelete and
+actual non-deleting Cleanup. It reproduced the missing serialization before the
+fix. Read authorization now acquires publication/edit locks before Node/HEAD/GET,
+and retains them through logical adoption. Callback facts are still captured
+before those locks; their effects wait for the authorized open. The monotonic
+observation guard remains unchanged. Bounded online reads now serialize with
+local mutations; remote deadlines still apply. Native reacceptance is required.
+The complete local gate passed after this change, including both barrier cases
+and the existing mutation/reopen regressions
+(`/tmp/s3drive-lifecycle-gate7.log`, exit0). No native acceptance is inferred.

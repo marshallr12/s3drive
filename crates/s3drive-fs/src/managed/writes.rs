@@ -367,8 +367,27 @@ impl Writes {
         value.size = info.size;
         Ok(Some(value))
     }
-    pub async fn open(&self, snapshot: FileSnapshot, writing: bool) -> Result<Option<Arc<File>>> {
+    pub async fn open(
+        &self,
+        node: &str,
+        writing: bool,
+    ) -> Result<(FileSnapshot, Option<Arc<File>>)> {
         let _slot = self.admit()?;
+        let _open = self.open_serial.lock().await;
+        let _publication = self.publish_serial.lock().await;
+        let _mutation = self.edit_serial.lock().await;
+        // Freeze the authorized snapshot inside the same serialization as
+        // callback effects. Otherwise Cleanup can advance the logical base
+        // while a Node/HEAD/GET response for the new open is in flight.
+        let snapshot = Box::pin(self.reader.read(node)).await.map_err(error)?;
+        let file = Box::pin(self.open_snapshot(snapshot.clone(), writing)).await?;
+        Ok((snapshot, file))
+    }
+    async fn open_snapshot(
+        &self,
+        snapshot: FileSnapshot,
+        writing: bool,
+    ) -> Result<Option<Arc<File>>> {
         self.remember(snapshot.metadata())?;
         let store = snapshot
             .metadata()
@@ -393,9 +412,6 @@ impl Writes {
         if writing && !publisher.can_edit(&snapshot.metadata().id, 0) {
             return Err(Error::ReadOnly);
         }
-        let _open = self.open_serial.lock().await;
-        let _publication = self.publish_serial.lock().await;
-        let _mutation = self.edit_serial.lock().await;
         let node = &snapshot.metadata().id;
         // A crash can follow metadata commit but precede logical acknowledgment.
         // Resolve only the exact known operation before comparing remote bases.
