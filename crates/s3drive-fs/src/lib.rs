@@ -46,6 +46,7 @@ pub enum Error {
     NotDirectory,
     IsDirectory,
     NotEmpty,
+    DeletePending,
     InvalidOperation,
     InvalidName,
     AmbiguousName,

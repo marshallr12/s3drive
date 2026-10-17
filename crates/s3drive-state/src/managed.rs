@@ -63,6 +63,7 @@ impl Input {
                 sha256,
                 Some(crate::namespace::ContentGuard {
                     expected: expected_payload.clone(),
+                    removal: None,
                     detached: matches!(
                         self.reserve.mutation,
                         Mutation::ReserveDetachedContent { .. }

@@ -9,6 +9,7 @@ fn guarded(db: &Connection, guard: &NodeGuard) -> Result<Node> {
     if n.deleted || n.revision != guard.revision {
         return Err(Error::Conflict);
     }
+    removals::require_clear(db, &n.id)?;
     Ok(n)
 }
 fn parent(db: &Connection, guard: &NodeGuard) -> Result<Node> {

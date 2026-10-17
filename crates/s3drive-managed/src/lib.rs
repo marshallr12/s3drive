@@ -277,6 +277,9 @@ impl Publisher {
             .await?
         {
             Reply::Applied(r) => Ok(r),
+            Reply::Error(e @ s3drive_authority::Error::DeletePending) => {
+                return Err(Failure::Authority(e).into());
+            }
             Reply::Error(e) => Err(e),
             _ => return Err(Failure::Protocol.into()),
         };

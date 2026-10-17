@@ -249,7 +249,8 @@ fn detached_content_guard_is_additive_and_never_resurrects_a_name() {
     assert_eq!(
         serde_json::to_string(&namespace::ContentGuard {
             expected: None,
-            detached: false
+            detached: false,
+            removal: None
         })
         .unwrap(),
         "{\"expected\":null}"

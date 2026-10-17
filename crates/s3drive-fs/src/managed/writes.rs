@@ -172,6 +172,9 @@ impl Writes {
                 .map_err(error)?;
             let outcome = match reply {
                 Reply::Applied(r) => Ok(r),
+                Reply::Error(s3drive_authority::Error::DeletePending) => {
+                    return Err(Error::DeletePending);
+                }
                 Reply::Error(e) => Err(e),
                 _ => return Err(Error::Conflict),
             };

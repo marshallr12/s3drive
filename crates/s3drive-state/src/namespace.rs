@@ -1,6 +1,8 @@
 //! Authoritative managed namespace prototype, separate from local source binding.
 //! No S3 publication or platform name-comparison semantics are implemented here.
 mod entries;
+mod removals;
+pub use removals::{PendingRemoval, RemovalFence};
 pub mod publication;
 use crate::State;
 pub use publication::{Artifact, ContentGuard, Payload, Reservation, Store, payload_reference};
@@ -24,6 +26,7 @@ pub enum Error {
     NotDirectory,
     IsDirectory,
     NotEmpty,
+    DeletePending,
     Cycle,
     Root,
     OperationMismatch,
@@ -117,6 +120,29 @@ pub enum Mutation {
         etag: String,
         version: Option<String>,
     },
+    ArmRemoval {
+        node: NodeGuard,
+        parent: NodeGuard,
+        owner: String,
+    },
+    CancelRemoval {
+        node: String,
+        fence: RemovalFence,
+    },
+    CommitRemoval {
+        node: NodeGuard,
+        parent: NodeGuard,
+        fence: RemovalFence,
+    },
+    ReservePendingContent {
+        node: String,
+        expected_revision: u64,
+        store: String,
+        size: u64,
+        sha256: String,
+        expected_payload: Option<String>,
+        fence: RemovalFence,
+    },
     CreateEntry {
         parent: String,
         parent_revision: u64,
@@ -207,6 +233,9 @@ impl Apply {
         }
         | Mutation::ReserveDetachedContent {
             expected_revision, ..
+        }
+        | Mutation::ReservePendingContent {
+            expected_revision, ..
         } = &self.mutation
             && *expected_revision > self.expected_sequence
         {
@@ -217,7 +246,30 @@ impl Apply {
             | Mutation::Reserve { .. }
             | Mutation::ReserveContent { .. }
             | Mutation::ReserveDetachedContent { .. }
+            | Mutation::ReservePendingContent { .. }
             | Mutation::Publish { .. } => publication::valid(&self.mutation),
+            Mutation::ArmRemoval {
+                node,
+                parent,
+                owner,
+            } => {
+                node.valid(self.expected_sequence)
+                    && parent.valid(self.expected_sequence)
+                    && valid_id(owner)
+                    && owner != ROOT
+            }
+            Mutation::CancelRemoval { node, fence } => {
+                valid_id(node) && node != ROOT && fence.valid()
+            }
+            Mutation::CommitRemoval {
+                node,
+                parent,
+                fence,
+            } => {
+                node.valid(self.expected_sequence)
+                    && parent.valid(self.expected_sequence)
+                    && fence.valid()
+            }
             Mutation::CreateEntry {
                 parent,
                 parent_revision,
@@ -273,6 +325,7 @@ pub(crate) fn check_schema(db: &Connection) -> crate::Result<()> {
     )?;
     db.prepare("SELECT operation_id, request, outcome FROM namespace_operations LIMIT 0")?;
     publication::check_schema(db)?;
+    removals::check_schema(db)?;
     Ok(())
 }
 fn volume(db: &Connection) -> Result<Volume> {
@@ -376,6 +429,7 @@ fn live_node(db: &Connection, id: &str) -> Result<Node> {
     if n.deleted {
         Err(Error::NotFound)
     } else {
+        removals::require_clear(db, id)?;
         Ok(n)
     }
 }
@@ -514,7 +568,9 @@ impl State {
     /// Return tombstones too; callers must not treat them as live paths.
     pub fn namespace_node(&self, volume_id: &str, id: &str) -> Result<Node> {
         check_volume(&self.connection, volume_id)?;
-        node(&self.connection, id)
+        let n = node(&self.connection, id)?;
+        removals::require_clear(&self.connection, id)?;
+        Ok(n)
     }
     /// Bounded, consistent listing; never silently truncate a directory.
     pub fn namespace_list(&mut self, volume_id: &str, parent: &str) -> Result<Listing> {
@@ -583,6 +639,9 @@ impl State {
                 Mutation::CreateEntry { .. }
                     | Mutation::MoveEntry { .. }
                     | Mutation::RemoveEntry { .. }
+                    | Mutation::ArmRemoval { .. }
+                    | Mutation::CancelRemoval { .. }
+                    | Mutation::CommitRemoval { .. }
             );
         let outcome = if request.expected_sequence > v.sequence
             || (!content_guard && request.expected_sequence != v.sequence)
@@ -595,8 +654,17 @@ impl State {
             sql(tx.execute_batch("ROLLBACK TO namespace_effect"))?;
         }
         sql(tx.execute_batch("RELEASE namespace_effect"))?;
-        if outcome == Err(Error::Internal) {
+        if matches!(outcome, Err(Error::Internal | Error::DeletePending)) {
             return outcome;
+        }
+        // Leave one exact-result slot for releasing each outstanding node
+        // reservation. Ordinary work (including failed requests) must not use
+        // the last capacity needed by a matching cancel/commit. The outer
+        // transaction rolls back a successful effect if admission is refused.
+        let pending: i64 =
+            sql(tx.query_row("SELECT count(*) FROM namespace_removals", [], |r| r.get(0)))?;
+        if count + 1 + pending > MAX_OPERATIONS {
+            return Err(Error::Limit);
         }
         let output = serde_json::to_vec(&outcome).map_err(|_| Error::Internal)?;
         let inserted = sql(tx.execute(
@@ -618,10 +686,26 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
             | Mutation::Reserve { .. }
             | Mutation::ReserveContent { .. }
             | Mutation::ReserveDetachedContent { .. }
+            | Mutation::ReservePendingContent { .. }
             | Mutation::Publish { .. }
     ) {
         let (changed, artifact) = publication::mutate(db, request, sequence)?;
         return finish(db, request, sequence, &changed, Some(artifact));
+    }
+    if matches!(
+        &request.mutation,
+        Mutation::ArmRemoval { .. }
+            | Mutation::CancelRemoval { .. }
+            | Mutation::CommitRemoval { .. }
+    ) {
+        let (changed, fence) = removals::mutate(db, request, sql_sequence)?;
+        return finish(
+            db,
+            request,
+            sequence,
+            &changed,
+            Some(Artifact::Removal(fence)),
+        );
     }
     if matches!(
         &request.mutation,
@@ -643,7 +727,11 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
         | Mutation::ReserveDetachedContent { .. }
         | Mutation::Publish { .. }
         | Mutation::MoveEntry { .. }
-        | Mutation::RemoveEntry { .. } => {
+        | Mutation::RemoveEntry { .. }
+        | Mutation::ReservePendingContent { .. }
+        | Mutation::ArmRemoval { .. }
+        | Mutation::CancelRemoval { .. }
+        | Mutation::CommitRemoval { .. } => {
             return Err(Error::Invalid);
         }
         Mutation::CreateEntry {

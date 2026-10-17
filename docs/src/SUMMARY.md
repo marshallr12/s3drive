@@ -12,6 +12,7 @@
 - [Managed namespace and application saves](managed-namespace-plan.md)
 - [Retained unlinked files and namespace acknowledgment](managed-unlinked.md)
 - [Managed native rename and Linux removal](managed-native-mutations.md)
+- [Windows deletion and durable disposition](windows-delete-plan.md)
 - [Turso and cross-machine coordination](turso-coordination.md)
 - [Filesystem behavior contract](filesystem-contract.md)
 - [Implemented read-only provider contract](provider-contract.md)

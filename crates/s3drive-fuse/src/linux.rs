@@ -627,6 +627,7 @@ fn errno(error: Error) -> Errno {
         Error::NotDirectory => Errno::ENOTDIR,
         Error::IsDirectory => Errno::EISDIR,
         Error::NotEmpty => Errno::ENOTEMPTY,
+        Error::DeletePending => Errno::EBUSY,
         Error::InvalidOperation => Errno::EINVAL,
         Error::InvalidName => Errno::EILSEQ,
         Error::AmbiguousName => Errno::EIO,

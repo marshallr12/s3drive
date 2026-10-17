@@ -498,3 +498,35 @@ steps and seven expected cases per OS; Linux's complete job/no-systemd regressio
 passed, and Windows was saving cache. This is native-step evidence, not a claim
 that a still-running job has finished. The final documentation candidate requires
 terminal exact-tip Linux/Windows/book success before main publication.
+
+
+## Pending-removal authority gate (2026-10-17)
+
+The [Windows disposition plan](windows-delete-plan.md) defines the authority,
+client and native phases. Schema 13 and the wire primitives are implemented;
+the client lifecycle and pending-owner SDK path are subsequent work. Twelve
+focused state cases (including a child helper) cover real full disk, ignored
+SQL writes, migration/refusal, malformed state, capacity reserved for closing,
+exact replay and four forced owner-death boundaries. The authority TCP suite
+adds an independent-client race and dropped-body/restart recovery.
+
+`pending_disposition_cancellation_resumes_exact_sdk_intent_after_client_death`
+uses the real S3 SDK with owned loopback fixtures: zero PUTs while pending,
+cancel, kill, then one exact resumed publication and logical settlement. It runs
+with the normal stack and proves ordinary-write interoperability, not the new
+pending-owner SDK path. Native Windows deletion stays refused.
+
+The full local gate passed (exit 0) at `/tmp/s3drive-removal-gate5.log`: 141 Linux
+state tests, six authority TCP, five managed publication cases, 50 S3 and 13 FS,
+plus lint/build/book. The seven-case native suites now also test an empty
+folder's real handle before arm, refusal while pending (including child
+creation), and restoration after cancel. This specifically covers WinFsp's
+new node authorization for directory opens. Runtime acceptance requires the
+[topic workflow](https://github.com/marshallr12/s3drive/actions?query=branch%3Acodex%2Fpending-removal-authority)
+and terminal exact-tip Linux/Windows/book jobs before main publication.
+
+The new disposition diagram and revised version-6 caption were rendered and
+visually inspected. Resolved rusqlite 0.40.2 immediate-transaction/rollback and
+affected-row contracts, WinFsp 0.13.1 descriptor contexts/callback signatures,
+and windows 0.61.3 pending status/backup-semantics constants were inspected.
+No live Wasabi write, credentials, real startup entry or remote service changed.

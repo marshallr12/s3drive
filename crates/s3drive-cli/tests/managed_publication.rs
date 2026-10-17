@@ -337,7 +337,7 @@ async fn managed_child() {
         &std::fs::read_to_string(std::env::var("S3DRIVE_MANAGED_CONFIG").unwrap()).unwrap(),
     )
     .unwrap();
-    let authority = if mode.starts_with("detached_") {
+    let authority = if mode.starts_with("detached_") || mode.starts_with("pending_") {
         Authority::open_with_policy(root.join("authority"), "portable-collision-v1".into())
             .await
             .unwrap()
@@ -346,6 +346,13 @@ async fn managed_child() {
     };
     let (wire, stop, server) = serve(authority.client()).await;
     let volume = info(&wire).await.id;
+    if mode.starts_with("pending_") {
+        Box::pin(pending_retry_mode(&mode, &config, &root, &wire, &volume)).await;
+        stop.send(()).unwrap();
+        server.await.unwrap();
+        authority.shutdown().await.unwrap();
+        return;
+    }
     if mode.starts_with("detached_") {
         detached_mode(&mode, &config, &root, &wire, &volume).await;
         stop.send(()).unwrap();
@@ -1263,4 +1270,207 @@ async fn detached_mode(
     }
     assert_eq!(info(w).await.sequence, sequence);
     p.storage().close().await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn pending_disposition_cancellation_resumes_exact_sdk_intent_after_client_death() {
+    let f = fixture::Fixture::start().await;
+    let tmp = tempfile::tempdir().unwrap();
+    let setup = writes::setup(&f, tmp.path()).await;
+    for mode in ["pending_stage", "pending_resume"] {
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "managed_child", "--nocapture"])
+            .env("S3DRIVE_MANAGED_MODE", mode)
+            .env("S3DRIVE_MANAGED_CONFIG", &setup.config)
+            .env("S3DRIVE_MANAGED_ROOT", tmp.path())
+            .env("AWS_SHARED_CREDENTIALS_FILE", &setup.credentials)
+            .env("AWS_CONFIG_FILE", &setup.aws_config)
+            .env("AWS_EC2_METADATA_DISABLED", "true")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+        let mut lines = BufReader::new(child.stdout.take().unwrap()).lines();
+        let mut errors = child.stderr.take().unwrap();
+        let errors = tokio::spawn(async move {
+            let mut s = String::new();
+            errors.read_to_string(&mut s).await.unwrap();
+            s
+        });
+        let protocol = tokio::time::timeout(Duration::from_secs(120), async {
+            while let Some(line) = lines.next_line().await.unwrap() {
+                if line == "CRASH_PENDING_RETRY" {
+                    assert_eq!(puts(&f), 0);
+                    return true;
+                }
+            }
+            false
+        })
+        .await;
+        if mode == "pending_stage" || protocol.is_err() {
+            child.kill().await.unwrap();
+        }
+        let status = tokio::time::timeout(Duration::from_secs(15), child.wait())
+            .await
+            .unwrap()
+            .unwrap();
+        let errors = errors.await.unwrap();
+        assert!(
+            protocol.is_ok()
+                && if mode == "pending_stage" {
+                    protocol.unwrap() && !status.success()
+                } else {
+                    status.success()
+                },
+            "{mode}: {errors}"
+        );
+    }
+    assert_eq!(
+        puts(&f),
+        1,
+        "only the resumed generation may upload, exactly once"
+    );
+}
+async fn pending_retry_mode(
+    mode: &str,
+    config: &s3drive_core::Config,
+    root: &Path,
+    w: &WireClient,
+    volume: &str,
+) {
+    let bytes: Arc<[u8]> = Arc::from(&b"retained while deletion pending\0\xff"[..]);
+    if mode == "pending_stage" {
+        let r = s3drive_s3::S3Reader::from_source(&config.sources[0])
+            .await
+            .unwrap();
+        change(
+            w,
+            200,
+            Mutation::RegisterStore {
+                route: r.storage_fingerprint(),
+                root: "writable/.s3drive/".into(),
+            },
+        )
+        .await;
+        change(
+            w,
+            10,
+            Mutation::CreateEntry {
+                parent: s3drive_authority::ROOT.into(),
+                parent_revision: 0,
+                store: Some(id(200)),
+                name: "pending café 日本語 🦀".into(),
+                node_kind: Kind::EmptyFile,
+            },
+        )
+        .await;
+    }
+    let p = publisher(config, root, "pending-client", w.clone(), volume.into()).await;
+    if mode == "pending_stage" {
+        let file = p.bind_edit_file(&id(10)).await.unwrap();
+        let edit = p
+            .stage_local(
+                s3drive_state::logical::Input::from_bytes(
+                    id(5010),
+                    &file.binding,
+                    file.head,
+                    &bytes,
+                ),
+                bytes.clone(),
+            )
+            .await
+            .unwrap();
+        p.stage_edit(
+            &edit.input.id,
+            Apply {
+                volume: volume.into(),
+                operation: id(6000),
+                expected_sequence: info(w).await.sequence,
+                mutation: Mutation::ReserveContent {
+                    node: id(10),
+                    expected_revision: file.base.revision,
+                    store: id(200),
+                    size: bytes.len() as u64,
+                    sha256: sha(&bytes),
+                    expected_payload: None,
+                },
+            },
+            id(7000),
+        )
+        .await
+        .unwrap();
+        let arm = change(
+            w,
+            8000,
+            Mutation::ArmRemoval {
+                node: s3drive_authority::NodeGuard {
+                    id: id(10),
+                    revision: file.base.revision,
+                },
+                parent: s3drive_authority::NodeGuard {
+                    id: s3drive_authority::ROOT.into(),
+                    revision: 0,
+                },
+                owner: id(9000),
+            },
+        )
+        .await;
+        let Some(s3drive_authority::Artifact::Removal(fence)) = arm.artifact else {
+            panic!()
+        };
+        let err = p.flush_edit(&id(5010)).await.unwrap_err();
+        assert!(matches!(
+            err.downcast_ref::<s3drive_managed::Failure>(),
+            Some(s3drive_managed::Failure::Authority(
+                s3drive_authority::Error::DeletePending
+            ))
+        ));
+        let retained = p.storage().managed().get(id(6000)).await.unwrap();
+        assert!(retained.reservation.is_none() && retained.receipt.is_none());
+        assert!(
+            p.storage()
+                .logical()
+                .get(id(5010))
+                .await
+                .unwrap()
+                .receipt
+                .is_none()
+        );
+        assert_eq!(
+            ask(
+                w,
+                Request::Operation {
+                    volume: volume.into(),
+                    operation: id(6000)
+                }
+            )
+            .await,
+            Reply::Operation(None)
+        );
+        change(
+            w,
+            8001,
+            Mutation::CancelRemoval {
+                node: id(10),
+                fence,
+            },
+        )
+        .await;
+        checkpoint("CRASH_PENDING_RETRY");
+        std::future::pending::<()>().await;
+    } else {
+        let receipt = p.flush_edit(&id(5010)).await.unwrap();
+        assert!(receipt.receipt.is_some());
+        assert_eq!(p.read(&id(10)).await.unwrap().bytes(), &*bytes);
+        p.flush_edit(&id(5010)).await.unwrap();
+        let settled = p
+            .storage()
+            .logical()
+            .file(volume.into(), id(10))
+            .await
+            .unwrap();
+        assert_eq!(settled.head, settled.settled);
+        p.storage().close().await.unwrap();
+    }
 }

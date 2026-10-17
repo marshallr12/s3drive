@@ -63,8 +63,8 @@ Rename and replacement have a native acceptance case. Windows kernel sharing
 rules can reject replacement while the destination is open. DeleteFile,
 directory removal, delete disposition and FILE_DELETE_ON_CLOSE remain refused.
 WinFsp cleanup cannot return an error, and SetDelete can arm or cancel a later
-removal without removing the node. A reversible durable intent/cleanup protocol
-and native recovery tests are still required before enabling deletion.
+removal without removing the node. The [reversible disposition protocol](windows-delete-plan.md) is progressing
+through authority, client and native phases before deletion is enabled.
 [WinFsp callback contract](https://raw.githubusercontent.com/winfsp/winfsp/master/inc/winfsp/winfsp.h),
 checked 2026-10-17. Passing rename does not certify full desktop application
 compatibility or Windows open-unlinked semantics.

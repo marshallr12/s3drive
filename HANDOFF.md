@@ -1,85 +1,91 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b3b3 native namespace integration**
-on `codex/managed-native-namespace`. Native checkpoint implements version-6
-rename/replacement on both OSes and Linux unlink/rmdir with retained handles.
-Portable mutation/recovery/cancellation tests pass on the normal stack.
-The full local gate and both native acceptance steps passed. Publication requires
-terminal exact-tip Linux/Windows/book CI, including the final doc-only candidate.
-Inspect the private remote main and latest branch workflow before resuming.
-Windows deferred deletion is explicitly unsupported. Goal ACTIVE.
+Updated: 2026-10-17. Current phase: **P6m3b3b4a pending-removal authority**
+on `codex/pending-removal-authority`. Goal ACTIVE. The state/wire foundation
+implements reversible arm/cancel/commit plus owner publication fencing. Windows
+delete callbacks and the pending-owner SDK publication path remain unsupported.
+Read `docs/src/windows-delete-plan.md` before extending the lifecycle.
+
+## Verified publication baseline
+
+Private main at phase start: **fae834e1464505fee5969ab5365eb0d86a5b9853**,
+terminal all-green [run 39022649588](https://github.com/marshallr12/s3drive/actions/runs/39022649588).
+Linux `117367361570`, Windows `117367361643`, book `117367361690`.
+Seven real native cases per OS, Linux no-systemd startup, Windows non-admin
+independent-logon acceptance; local/remote main/private/clean verified.
+Logs: `/tmp/s3drive-native-namespace-final-{linux,windows,book}.log`.
+Version 6 enables guarded native rename/replacement both OSes and Linux
+unlink/rmdir/fsyncdir with retained handles and exact killed-mount recovery.
+Normal-stack SDK futures use boxed Send boundaries and four owned operation
+slots; stop/drain before SQLite close remains mandatory.
 
 ## Requirements and authorization
 
 Rust workspace/mdBook/private `marshallr12/s3drive`; managed layout with stronger
 coordination selected 2026-10-16. Prefer SQLite outside the mount. Linux includes
-MX without systemd; sign-in startup must survive same-user SSH/tmux disconnect.
-Windows testing is remote Windows Server 2025 CI, never this Linux workstation.
-Actual desktop reboot/sign-out/SSH/PAM and remote managed service acceptance
-remain unverified. NoNewPrivs=1 prevents a new local FUSE mount: never bypass it.
+MX without systemd, sign-in startup and same-user SSH/tmux persistence.
+Windows tests run on remote Windows Server 2025 CI, not this Linux workstation.
+Actual desktop reboot/sign-out/SSH/PAM and remote service acceptance remain
+unverified. NoNewPrivs=1 prevents new local FUSE mounts; never bypass it.
+No new live Wasabi mutation is authorized. Earlier fixtures were fully cleaned.
+No real write policy, credential, user startup entry or remote/Turso service was
+changed. Name: Mira; no voice-context setter has been available.
 
-No new live Wasabi mutation is authorized. Earlier approved fixtures were fully
-cleaned. `s3drive.local.toml` stays read-only. Do not expose credentials/configs
-or change actual startup registration, provider policy or service deployment.
-Name: Mira; no voice-context setter is available, so no handoff was claimed.
+## Current authority phase and evidence
 
-## Verified publication baseline
+Schema 13 adds `namespace_removals`; old serialized nodes and ordinary content
+bindings/guards keep their hashes. `ArmRemoval` guards node/parent and reserves
+its live name. `CancelRemoval` matches intent+owner without reverting bytes.
+`CommitRemoval` matches current node/parent/fence and retains a tombstone.
+Every namespace route blocks pending sources/targets/parents. Normal Node RPC
+refuses pending nodes; explicit inspection returns the live node/fence. Pending
+rows are checked against the immutable arm operation and current identity.
 
-Private main at phase start: **5d8fe4f63d9aae5aaa6e0856be538bb93333ae2b**.
-Terminal all-green [run 39018485778](https://github.com/marshallr12/s3drive/actions/runs/39018485778):
-Linux `117355366505`, Windows `117355366503`, book `117355366299`.
-129 Linux / 125 Windows state tests, 50 S3, 13 FS, five authority TCP and four
-managed publication cases; six native cases per OS plus Linux no-systemd and
-Windows non-admin cross-logon regressions. Logs:
-`/tmp/s3drive-detached-final-{linux,windows,book}-ci.log`.
-Local/remote main, private visibility and clean state verified at publication.
+Ordinary or pre-arm publications are blocked while pending. Explicit
+`ReservePendingContent` plus matching fence and complete prior payload permits
+owner publication. Wrong/expired fences conflict; cancel/commit invalidate
+unfinished fenced publication. Delete-pending is temporary and NOT memoized or
+acknowledged as a terminal namespace outcome. Exact ordinary content retry after
+cancellation remains possible. Logical operation capacity reserves a terminal-result slot for each pending
+node; ordinary requests cannot consume closing headroom. Physical disk full
+remains an unknown result. No S3 deletion or ownership timeout exists.
 
-## Version-6 native checkpoint
+Focused state tests pass (12 including child helper): actual full disk,
+ignored mutations/receipts/sequence, migration/refusal, corruption, replay,
+stale guards, namespace bypass, content fences and forced owner death after
+arm/cancel/re-arm/commit. TCP race + dropped body/restart recovery passes.
+The actual SDK ordinary-publication test passes on the normal stack: zero PUTs
+while pending, cancel + forced client death, exact retry/settlement with one PUT.
+Logs: `/tmp/s3drive-removal-state-final.log`,
+`/tmp/s3drive-removal-tcp-final.log`, `/tmp/s3drive-removal-sdk2.log`.
+Full local gate passed, exit 0: `/tmp/s3drive-removal-gate5.log` (141 Linux
+state tests, six authority TCP, five managed publication cases, 50 S3, 13 FS,
+plus build/lint/book). New directory-handle prelude still needs native CI.
+Older-schema fixture builders now remove schema 13 before simulating older
+versions. Never use CREATE TABLE IF NOT EXISTS to hide damaged migration shape.
 
-See `docs/src/managed-native-mutations.md` and `examples/managed-mutations.toml`.
-No schema/dependency change. Version 3/4/5 keep their previous capabilities.
-Version 6 requires portable names plus entry/detached CAS features. Source dirty
-bytes publish before a move; prepared target publications reconcile first;
-unprepared displaced/unlinked dirty bytes stay retained. Namespace receipt
-acknowledgment updates affected observations atomically. Linux old handles can
-fsync to a tombstone without restoring its name or changing a reused path.
+## Next acceptance and lifecycle work
 
-Managed operations use four owned permits, publication/edit lock order, bounded
-owned namespace/publication tasks and explicit stop/drain before SQLite closes.
-Publisher flush futures are type-erased boxes to bound nested SDK poll frames.
-Do not accept RUST_MIN_STACK increases or weakened assertions as a fix.
-Portable test passes at `/tmp/s3drive-native-namespace-faults2.log`: three exact
-PUTs, killed clients after committed rename/removal, and cancelled caller with
-shutdown waiting on a held reply. New native case per OS tests actual save/
-replace, Unicode directory moves, second bucket, cycles, remount and lost rename
-reply recovery; Linux also removal/retained handles. Both native steps passed at **72150874c3e0930c2936b40c12121a213f546b29**,
-[run 39022063662](https://github.com/marshallr12/s3drive/actions/runs/39022063662):
-Linux `117365682553` (terminal success), Windows `117365682687` (native success,
-saving cache at snapshot), book `117365682727` (terminal success). Seven native
-cases per OS; Linux no-systemd regression passed. See the checked-in evidence
-snapshot. Final doc-only candidate still needs terminal exact-tip CI before main.
-First native run 39021710073: six Linux regressions passed, new fstat failed
-ENOENT because the kernel omitted FUSE_GETATTR_FH. Fixed retained metadata lookup
-without weakening assertions. Additional portable clean-refresh/closed-newest/
-unlink regression passes on normal stack (`/tmp/s3drive-native-namespace-retained.log`);
-tombstone identity is independent of the newest payload view.
-Full revised local gate passed, exit 0: `/tmp/s3drive-native-namespace-gate2.log`.
+Finish `bash scripts/gate.sh`, inspect the generated diagram, then require
+terminal exact-tip Linux/Windows/book CI and existing seven native cases per OS
+before main publication. Do not infer job completion while saving cache.
+Windows STATUS_DELETE_PENDING is inspected in resolved windows 0.61.3; WinFsp
+directory opens now authorize the node itself, and both adapters map pending
+state explicitly. The native mutation case also tests a real directory handle before arm, refusal
+while pending and successful open after cancellation, with zero PUTs. No deletion
+callback is enabled. The new PNG diagram was generated and visually inspected;
+the unlinked-file diagram now labels its accepted version-6 native scope.
 
-Resolved fuser 0.18 rename flags/namespace callbacks, WinFsp 0.13.1 rename/delete/
-cleanup contracts, windows 0.61.3 access constants and Tokio owned permits/tasks
-were inspected. Windows SetDelete is reversible and cleanup cannot report an
-error: keep deletion unsupported until its durable protocol and native recovery
-acceptance pass. Never delete from SetDelete to fake DeleteFile success.
-
-Run `bash scripts/gate.sh`, then require terminal exact-tip Linux/Windows/book
-jobs including seven native cases per OS and existing startup regressions.
-Do not publish main early while a job is still saving cache. Preserve native
-serialization and all assertions/deadlines. Next implementation phase should design reversible durable Windows delete
-disposition/cleanup before enabling any removal callback. Do not equate
-SetDelete success with an irreversible unlink. Remaining goal work includes Windows
-delete, full application save acceptance, remote/Turso authority deployment,
-multi-host invalidation, live managed-provider acceptance and actual workstation
-startup tests. No immutable blob/local dirty generation reclamation exists.
+Next phase P6m3b3b4b must persist client identity and per-open/node-wide lifecycle
+state before RPCs, reconcile prepared publications before arm/cancel/commit,
+and acknowledge exact receipts atomically with local observations. Study the
+versioned WinFsp lifecycle: deleting cleanup need not use the arming context;
+cleanup cannot return errors; delete-on-close bypasses SetDelete. Never delete
+inside SetDelete. Resolve uncertain cancellation versus later cleanup flags
+without silently re-arming fresh guards after external changes. Native callbacks
+wait for P6m3b3b4c real lifecycle/recovery acceptance. Broader remaining work:
+full application saves, remote/Turso deployment, multi-host invalidation, managed
+Wasabi acceptance with new approval, large files/reclamation and actual startup.
 
 ## Current implementation and sources
 

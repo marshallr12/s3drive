@@ -646,3 +646,315 @@ async fn guarded_replacements_race_and_replay_after_authority_restart() {
     assert!(still_deleted.deleted);
     close(stop, task, authority).await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn pending_disposition_races_fences_and_exact_recovery_after_http_reply_loss() {
+    use s3drive_authority::{Artifact, NodeGuard, RemovalFence};
+    let id = |n: u64| format!("{n:032x}");
+    let guard = |n: &s3drive_authority::Node| NodeGuard {
+        id: n.id.clone(),
+        revision: n.revision,
+    };
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("authority");
+    let authority = Authority::open_with_policy(path.clone(), "portable-collision-v1".into())
+        .await
+        .unwrap();
+    let (url, stop, task) = start(authority.client()).await;
+    let a = http();
+    let b = http();
+    let Reply::Features(features) = ask(&a, &url, &Request::Features {}).await else {
+        panic!()
+    };
+    assert!(features.iter().any(|s| s == "pending-removal-v1"));
+    let mut v = info(&a, &url).await;
+    let store = applied(
+        ask(
+            &a,
+            &url,
+            &change(
+                &v,
+                4000,
+                Mutation::RegisterStore {
+                    route: "a".repeat(64),
+                    root: "internal/".into(),
+                },
+            ),
+        )
+        .await,
+    );
+    v.sequence = store.sequence;
+    let file = applied(
+        ask(
+            &a,
+            &url,
+            &change(
+                &v,
+                4001,
+                Mutation::CreateEntry {
+                    parent: ROOT.into(),
+                    parent_revision: 0,
+                    store: Some(id(4000)),
+                    name: "deferred 日本語 🦀".into(),
+                    node_kind: Kind::EmptyFile,
+                },
+            ),
+        )
+        .await,
+    )
+    .node;
+    v = info(&a, &url).await;
+    let arm_a = change(
+        &v,
+        4002,
+        Mutation::ArmRemoval {
+            node: guard(&file),
+            parent: NodeGuard {
+                id: ROOT.into(),
+                revision: 0,
+            },
+            owner: id(9000),
+        },
+    );
+    let arm_b = change(
+        &v,
+        4003,
+        Mutation::ArmRemoval {
+            node: guard(&file),
+            parent: NodeGuard {
+                id: ROOT.into(),
+                revision: 0,
+            },
+            owner: id(9001),
+        },
+    );
+    let (left, right) = tokio::join!(ask(&a, &url, &arm_a), ask(&b, &url, &arm_b));
+    let (armed, winning_request) = match (left, right) {
+        (Reply::Applied(r), Reply::Error(Error::Conflict)) => (r, arm_a),
+        (Reply::Error(Error::Conflict), Reply::Applied(r)) => (r, arm_b),
+        replies => panic!("one reservation winner required: {replies:?}"),
+    };
+    let Some(Artifact::Removal(fence)) = armed.artifact.clone() else {
+        panic!()
+    };
+    assert_eq!(
+        ask(
+            &b,
+            &url,
+            &Request::Node {
+                volume: v.id.clone(),
+                node: file.id.clone()
+            }
+        )
+        .await,
+        Reply::Error(Error::DeletePending)
+    );
+    let Reply::PendingRemoval(Some(pending)) = ask(
+        &b,
+        &url,
+        &Request::PendingRemoval {
+            volume: v.id.clone(),
+            node: file.id.clone(),
+        },
+    )
+    .await
+    else {
+        panic!()
+    };
+    assert_eq!(pending.node, armed.node);
+    assert_eq!(pending.fence, fence);
+    assert_eq!(
+        listing(&a, &url, &v.id, ROOT).await.children,
+        vec![armed.node.clone()]
+    );
+    v = info(&a, &url).await;
+    let reserve = |op, fence: Option<RemovalFence>| {
+        change(
+            &v,
+            op,
+            match fence {
+                Some(fence) => Mutation::ReservePendingContent {
+                    node: file.id.clone(),
+                    expected_revision: armed.node.revision,
+                    store: id(4000),
+                    size: 1,
+                    sha256: "b".repeat(64),
+                    expected_payload: None,
+                    fence,
+                },
+                None => Mutation::ReserveContent {
+                    node: file.id.clone(),
+                    expected_revision: armed.node.revision,
+                    store: id(4000),
+                    size: 1,
+                    sha256: "b".repeat(64),
+                    expected_payload: None,
+                },
+            },
+        )
+    };
+    assert_eq!(
+        ask(&b, &url, &reserve(4004, None)).await,
+        Reply::Error(Error::DeletePending)
+    );
+    assert_eq!(
+        ask(
+            &b,
+            &url,
+            &reserve(
+                4005,
+                Some(RemovalFence {
+                    owner: id(99),
+                    ..fence.clone()
+                })
+            )
+        )
+        .await,
+        Reply::Error(Error::Conflict)
+    );
+    let reserved = applied(ask(&a, &url, &reserve(4006, Some(fence.clone()))).await);
+    let Some(Artifact::Reservation(reservation)) = reserved.artifact else {
+        panic!()
+    };
+    assert_eq!(
+        reservation.guard.as_ref().unwrap().removal.as_ref(),
+        Some(&fence)
+    );
+    // Metadata-only authority fixture: no S3 upload or physical receipt is claimed.
+    v = info(&a, &url).await;
+    let cancel = change(
+        &v,
+        4007,
+        Mutation::CancelRemoval {
+            node: file.id.clone(),
+            fence: fence.clone(),
+        },
+    );
+    let response = a
+        .post(&url)
+        .bearer_auth(SECRET)
+        .json(&cancel)
+        .send()
+        .await
+        .unwrap();
+    assert!(response.status().is_success());
+    drop(response); // discard the acknowledgment body
+    close(stop, task, authority).await;
+    let authority = Authority::open_with_policy(path.clone(), "portable-collision-v1".into())
+        .await
+        .unwrap();
+    let (url, stop, task) = start(authority.client()).await;
+    let cancelled = applied(ask(&b, &url, &cancel).await);
+    assert!(!cancelled.node.deleted);
+    assert_eq!(cancelled.node.payload, file.payload);
+    let sequence = info(&b, &url).await.sequence;
+    assert_eq!(
+        ask(&b, &url, &cancel).await,
+        Reply::Applied(cancelled.clone())
+    );
+    assert_eq!(info(&b, &url).await.sequence, sequence);
+    v = info(&a, &url).await;
+    let next = change(
+        &v,
+        4008,
+        Mutation::ArmRemoval {
+            node: guard(&cancelled.node),
+            parent: NodeGuard {
+                id: ROOT.into(),
+                revision: 0,
+            },
+            owner: id(9002),
+        },
+    );
+    let next = applied(ask(&b, &url, &next).await);
+    let Some(Artifact::Removal(next_fence)) = next.artifact else {
+        panic!()
+    };
+    assert_ne!(fence, next_fence);
+    assert_eq!(ask(&a, &url, &winning_request).await, Reply::Applied(armed));
+    assert_eq!(ask(&a, &url, &cancel).await, Reply::Applied(cancelled));
+    v = info(&a, &url).await;
+    let stale_publish = change(
+        &v,
+        4009,
+        Mutation::Publish {
+            reservation: reservation.id,
+            upload_operation: "d".repeat(64),
+            etag: "\"metadata-only\"".into(),
+            version: None,
+        },
+    );
+    assert_eq!(
+        ask(&a, &url, &stale_publish).await,
+        Reply::Error(Error::Conflict)
+    );
+    let commit = change(
+        &v,
+        4010,
+        Mutation::CommitRemoval {
+            node: guard(&next.node),
+            parent: NodeGuard {
+                id: ROOT.into(),
+                revision: 0,
+            },
+            fence: next_fence,
+        },
+    );
+    let response = b
+        .post(&url)
+        .bearer_auth(SECRET)
+        .json(&commit)
+        .send()
+        .await
+        .unwrap();
+    assert!(response.status().is_success());
+    drop(response);
+    close(stop, task, authority).await;
+    let authority = Authority::open_with_policy(path, "portable-collision-v1".into())
+        .await
+        .unwrap();
+    let (url, stop, task) = start(authority.client()).await;
+    let removed = applied(ask(&a, &url, &commit).await);
+    assert!(removed.node.deleted);
+    assert_eq!(
+        ask(
+            &a,
+            &url,
+            &Request::Operation {
+                volume: v.id.clone(),
+                operation: id(4010)
+            }
+        )
+        .await,
+        Reply::Operation(Some(Ok(removed.clone())))
+    );
+    assert!(listing(&a, &url, &v.id, ROOT).await.children.is_empty());
+    v = info(&a, &url).await;
+    let reused = applied(
+        ask(
+            &a,
+            &url,
+            &change(
+                &v,
+                4011,
+                Mutation::CreateEntry {
+                    parent: ROOT.into(),
+                    parent_revision: 0,
+                    store: Some(id(4000)),
+                    name: file.name,
+                    node_kind: Kind::EmptyFile,
+                },
+            ),
+        )
+        .await,
+    );
+    assert_ne!(reused.node.id, removed.node.id);
+    let sequence = info(&a, &url).await.sequence;
+    assert_eq!(ask(&b, &url, &commit).await, Reply::Applied(removed));
+    assert_eq!(
+        listing(&a, &url, &v.id, ROOT).await.children,
+        vec![reused.node]
+    );
+    assert_eq!(info(&a, &url).await.sequence, sequence);
+    close(stop, task, authority).await;
+}

@@ -17,8 +17,8 @@ use tokio::sync::{Semaphore, mpsc, oneshot};
 pub use wire::{WireClient, WireError};
 
 pub use namespace::{
-    Apply, Artifact, ContentGuard, Error, Kind, Listing, Mutation, Node, NodeGuard, Payload, ROOT,
-    Receipt, Reservation, Store, Volume, payload_reference,
+    Apply, Artifact, ContentGuard, Error, Kind, Listing, Mutation, Node, NodeGuard, Payload,
+    PendingRemoval, ROOT, Receipt, RemovalFence, Reservation, Store, Volume, payload_reference,
 };
 const BODY_LIMIT: usize = 4096;
 const QUEUE: usize = 8;
@@ -31,6 +31,7 @@ pub enum Request {
     Store { volume: String, store: String },
     Reservation { volume: String, reservation: String },
     Node { volume: String, node: String },
+    PendingRemoval { volume: String, node: String },
     List { volume: String, parent: String },
     Operation { volume: String, operation: String },
     Apply { request: Apply },
@@ -48,6 +49,7 @@ pub enum Reply {
     Store(Store),
     Reservation(Reservation),
     Node(Node),
+    PendingRemoval(Option<PendingRemoval>),
     List(Listing),
     Operation(Option<std::result::Result<Receipt, Error>>),
     Applied(Receipt),
@@ -71,6 +73,7 @@ impl Request {
                 "namespace-create-v1".into(),
                 "namespace-entry-cas-v1".into(),
                 "detached-content-cas-v1".into(),
+                "pending-removal-v1".into(),
             ])),
             Self::Info {} => state.namespace_volume().map(Reply::Info),
             Self::Store { volume, store } => {
@@ -82,6 +85,9 @@ impl Request {
             } => state
                 .namespace_reservation(&volume, &reservation)
                 .map(Reply::Reservation),
+            Self::PendingRemoval { volume, node } => state
+                .namespace_pending_removal(&volume, &node)
+                .map(Reply::PendingRemoval),
             Self::Node { volume, node } => state.namespace_node(&volume, &node).map(Reply::Node),
             Self::List { volume, parent } => {
                 state.namespace_list(&volume, &parent).map(Reply::List)

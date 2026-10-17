@@ -1558,12 +1558,105 @@ pub async fn native_creation() {
 
 // Each OS exercises its real driver. Run native cases serially: process-spawn
 // descriptor closes in another case can legitimately flush FUSE handles.
+fn open_directory_handle(path: &Path) -> std::io::Result<std::fs::File> {
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        // FILE_FLAG_BACKUP_SEMANTICS: open a real directory handle.
+        options.custom_flags(0x02000000);
+    }
+    options.open(path)
+}
+async fn native_pending_directory(h: &Harness, fixture: &Fixture) {
+    let path = h.mount.join("coordinated empty 🦀");
+    std::fs::create_dir(&path).unwrap();
+    drop(open_directory_handle(&path).unwrap());
+    let w = wire(&cfg(&h.config));
+    let v = info(&w).await;
+    let Reply::List(listing) = w
+        .request(&Request::List {
+            volume: v.id.clone(),
+            parent: id(0),
+        })
+        .await
+        .unwrap()
+    else {
+        panic!()
+    };
+    let node = listing
+        .children
+        .into_iter()
+        .find(|n| n.name == "coordinated empty 🦀")
+        .unwrap();
+    let before = puts(fixture);
+    let Reply::Applied(armed) = w
+        .request(&Request::Apply {
+            request: Apply {
+                volume: v.id.clone(),
+                operation: id(60_000),
+                expected_sequence: v.sequence,
+                mutation: Mutation::ArmRemoval {
+                    node: s3drive_authority::NodeGuard {
+                        id: node.id.clone(),
+                        revision: node.revision,
+                    },
+                    parent: s3drive_authority::NodeGuard {
+                        id: id(0),
+                        revision: 0,
+                    },
+                    owner: id(9000),
+                },
+            },
+        })
+        .await
+        .unwrap()
+    else {
+        panic!()
+    };
+    let Some(s3drive_authority::Artifact::Removal(fence)) = armed.artifact else {
+        panic!()
+    };
+    assert!(
+        open_directory_handle(&path).is_err(),
+        "a pending directory must refuse a new native handle"
+    );
+    assert!(std::fs::read_dir(&path).is_err());
+    assert!(std::fs::write(path.join("must refuse"), b"").is_err());
+    let v = info(&w).await;
+    assert!(matches!(
+        w.request(&Request::Apply {
+            request: Apply {
+                volume: v.id,
+                operation: id(60_001),
+                expected_sequence: v.sequence,
+                mutation: Mutation::CancelRemoval {
+                    node: node.id,
+                    fence
+                }
+            }
+        })
+        .await
+        .unwrap(),
+        Reply::Applied(_)
+    ));
+    drop(open_directory_handle(&path).unwrap());
+    assert_eq!(std::fs::read_dir(&path).unwrap().count(), 0);
+    assert_eq!(
+        puts(fixture),
+        before,
+        "pending metadata disposition must not upload bytes"
+    );
+}
+
 pub async fn native_mutations() {
     let f = Fixture::start().await;
     let tmp = tempfile::tempdir().unwrap();
     let (h, s) = Harness::new_policy(tmp.path(), &f, true).await;
     h.configure_mutations();
     let m = h.mount().await;
+    Box::pin(native_pending_directory(&h, &f)).await;
     let directory = h.mount.join("save 資料 🦀");
     std::fs::create_dir(&directory).unwrap();
     let source = directory.join("temporary café");

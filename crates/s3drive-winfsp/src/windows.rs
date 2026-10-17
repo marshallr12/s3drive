@@ -67,6 +67,7 @@ fn storage_error(error: Error) -> FspError {
         Error::NotDirectory => STATUS_NOT_A_DIRECTORY,
         Error::IsDirectory => STATUS_FILE_IS_A_DIRECTORY,
         Error::NotEmpty => STATUS_DIRECTORY_NOT_EMPTY,
+        Error::DeletePending => STATUS_DELETE_PENDING,
         Error::InvalidOperation => STATUS_INVALID_PARAMETER,
         Error::InvalidName => STATUS_OBJECT_NAME_INVALID,
         Error::AmbiguousName => STATUS_OBJECT_NAME_COLLISION,
@@ -271,6 +272,11 @@ impl FileSystemContext for Adapter {
             }
             if node.kind == Kind::File && options & 1 != 0 {
                 return Err(STATUS_NOT_A_DIRECTORY.into());
+            }
+            if node.kind == Kind::Directory {
+                // Resolution uses the parent's listing. Reauthorize the node
+                // itself so an authority-reserved empty directory cannot open.
+                self.fs.metadata(node.id).await.map_err(storage_error)?;
             }
             let file = if node.kind == Kind::File {
                 Some(Box::new(

@@ -15,6 +15,8 @@ pub struct ContentGuard {
     pub expected: Option<String>,
     #[serde(default, skip_serializing_if = "is_false")]
     pub detached: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub removal: Option<RemovalFence>,
 }
 fn is_false(value: &bool) -> bool {
     !*value
@@ -58,6 +60,7 @@ pub struct Payload {
 )]
 pub enum Artifact {
     Namespace { displaced: Option<Node> },
+    Removal(RemovalFence),
     Store(Store),
     Reservation(Reservation),
     Published(Payload),
@@ -96,10 +99,10 @@ impl Reservation {
             && self.expected_revision < i64::MAX as u64
             && self.size <= 8 * 1024 * 1024
             && digest(&self.sha256)
-            && self
-                .guard
-                .as_ref()
-                .is_none_or(|g| g.expected.as_ref().is_none_or(|s| digest(s)))
+            && self.guard.as_ref().is_none_or(|g| {
+                g.expected.as_ref().is_none_or(|s| digest(s))
+                    && g.removal.as_ref().is_none_or(|f| !g.detached && f.valid())
+            })
             && self.key
                 == format!(
                     "{}v1/{}/{}/{}",
@@ -121,7 +124,9 @@ fn valid_proof(operation: &str, etag: &str, version: Option<&str>) -> bool {
 }
 pub(super) fn uses_content_guard(db: &Connection, m: &Mutation) -> Result<bool> {
     match m {
-        Mutation::ReserveContent { .. } | Mutation::ReserveDetachedContent { .. } => Ok(true),
+        Mutation::ReserveContent { .. }
+        | Mutation::ReserveDetachedContent { .. }
+        | Mutation::ReservePendingContent { .. } => Ok(true),
         Mutation::Publish {
             reservation: id, ..
         } => match reservation(db, id) {
@@ -146,8 +151,16 @@ pub(super) fn valid(m: &Mutation) -> bool {
     }
     | Mutation::ReserveDetachedContent {
         expected_payload, ..
+    }
+    | Mutation::ReservePendingContent {
+        expected_payload, ..
     } = m
         && expected_payload.as_ref().is_some_and(|s| !digest(s))
+    {
+        return false;
+    }
+    if let Mutation::ReservePendingContent { fence, .. } = m
+        && !fence.valid()
     {
         return false;
     }
@@ -159,6 +172,14 @@ pub(super) fn valid(m: &Mutation) -> bool {
             store,
             size,
             sha256,
+        }
+        | Mutation::ReservePendingContent {
+            node,
+            expected_revision,
+            store,
+            size,
+            sha256,
+            ..
         }
         | Mutation::ReserveDetachedContent {
             node,
@@ -284,6 +305,14 @@ pub(super) fn mutate(
             size,
             sha256,
         }
+        | Mutation::ReservePendingContent {
+            node: id,
+            expected_revision,
+            store: store_id,
+            size,
+            sha256,
+            ..
+        }
         | Mutation::ReserveDetachedContent {
             node: id,
             expected_revision,
@@ -306,17 +335,24 @@ pub(super) fn mutate(
                 }
                 | Mutation::ReserveDetachedContent {
                     expected_payload, ..
+                }
+                | Mutation::ReservePendingContent {
+                    expected_payload, ..
                 } => Some(ContentGuard {
                     expected: expected_payload.clone(),
                     detached: matches!(request.mutation, Mutation::ReserveDetachedContent { .. }),
+                    removal: match &request.mutation {
+                        Mutation::ReservePendingContent { fence, .. } => Some(fence.clone()),
+                        _ => None,
+                    },
                 }),
                 _ => None,
             };
-            let n = if guard.as_ref().is_some_and(|g| g.detached) {
-                node(db, id)?
-            } else {
-                live_node(db, id)?
-            };
+            let n = node(db, id)?;
+            if n.deleted && !guard.as_ref().is_some_and(|g| g.detached) {
+                return Err(Error::NotFound);
+            }
+            removals::publication_gate(db, id, guard.as_ref())?;
             if n.placement.as_ref().is_some_and(|p| &p.id != store_id) {
                 return Err(Error::Conflict);
             }
@@ -359,11 +395,11 @@ pub(super) fn mutate(
             version,
         } => {
             let r = reservation(db, id)?;
-            let n = if r.guard.as_ref().is_some_and(|g| g.detached) {
-                node(db, &r.node)?
-            } else {
-                live_node(db, &r.node)?
-            };
+            let n = node(db, &r.node)?;
+            if n.deleted && !r.guard.as_ref().is_some_and(|g| g.detached) {
+                return Err(Error::NotFound);
+            }
+            removals::publication_gate(db, &r.node, r.guard.as_ref())?;
             if !base_matches(&n, r.expected_revision, r.guard.as_ref()) {
                 return Err(Error::Conflict);
             }

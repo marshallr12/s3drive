@@ -68,6 +68,7 @@ fn checked_outcome(input: &Input, outcome: &namespace::Result<Receipt>) -> Resul
     let receipt = match outcome {
         Err(
             namespace::Error::Internal
+            | namespace::Error::DeletePending
             | namespace::Error::Unavailable
             | namespace::Error::OperationMismatch,
         ) => return Err("namespace outcome remains unknown; intent retained".into()),
@@ -372,6 +373,11 @@ mod tests {
             j.acknowledge(&i.request.operation, Err(namespace::Error::Unavailable))
                 .is_err()
         );
+        assert!(
+            j.acknowledge(&i.request.operation, Err(namespace::Error::DeletePending))
+                .is_err()
+        );
+        assert!(j.pending(None, 10).unwrap()[0].outcome.is_none());
         drop(s);
         let mut s = State::open_managed(&path).unwrap();
         let mut j = Journal::new(&mut s).unwrap();
