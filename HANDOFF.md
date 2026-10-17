@@ -27,18 +27,46 @@ unknown cancellation, failed proof, recorded removal and uncertain admission.
 Exact old link replay remains bookkeeping despite later unknown node effects.
 Planned replies still do not prove kernel receipt; do not enable callbacks yet.
 
-Current reference harness: seven replacement cases on NTFS and a disposable
-in-memory host using the same pinned Rust wrapper/WinFsp legacy mode. The test
-host permits replacement if Rename reaches user mode and removes by identity;
-observations distinguish a kernel refusal from callback forwarding and preserve
-old-handle late I/O. It is not S3Drive or native deletion acceptance. Initial
-workflow explicitly measures before long workspace tests; no guessed fixture.
-Review exact-source artifacts, freeze typed platform/results and add malformed
-fixture rejection checks; remove -Measure from required CI before publication.
-Keep old14/four-upstream/seven-native/startup gates intact. Require final local
-gate and terminal exact-tip hosted checks before guarded private publication.
+Current reference: seven cases on NTFS, the selected WinFsp legacy profile and
+its POSIX-enabled profile. Initial b094d22 failed Windows type inference; fixed
+in8abc469. Artifact12112076587 at19:25:26UTC measured legacy refusing every open
+target before Rename, while NTFS replaced ordinary/deferred targets. That run
+later failed an unrelated five-second SQLite-owner shutdown wrapper. The test
+wrapper now uses bounded thirty-second joined drain with phase diagnostics;
+actual reopen/replay assertions remain. Nine authority HTTP cases passed locally.
 
-Next implement the full native lifecycle bridge from measured behavior, including
+Source0ba71c6, run39062561017, artifact12112350631 at19:30:42UTC measured all21
+records on Server2025/WinFsp2.1.25156.ddca7bd. Original14 typed records matched
+unchanged. POSIX capability forwards/replaces open targets, including a pending
+target that NTFS refuses; old-target cleanup preserves the replacement and old
+handle late I/O. Both-DoC source cleanup removes its new destination. Do not claim
+NTFS parity. Frozen21 fixture and original14 archive are in docs/src/evidence.
+Typed oracle passes positive data and rejects12 malformed variants locally.
+Required CI no longer uses -Measure. Need final exact-source strict replay.
+
+Local bridge-preparation work: schema21 semantic extension preserves old hashes.
+Cleanup/Close facts persist before network recovery. All observed non-deleting
+cleanups can release only the owned intent with a frozen Cancel after data flush;
+a queued deleting cleanup prevents that release. Missing-cleanup Close may use
+separate old-owner abandonment without fabricated callbacks/completion. The SDK
+scenario passed HTTP-unavailable void capture, planned-success/no-delete witness,
+queued-delete priority and later owner recovery with five intentional immutable
+PUTs, including late I/O after intent release. New state
+case checks missing-cleanup Close and schema20 upgrade without rewriting hashes.
+Current config6/native bridge remains unchanged and unsupported deletion intact.
+Final local source gate passed exit0 at
+`/tmp/s3drive-replacement-final-gate2.log`: 241 state/nine HTTP/sixteen SDK,
+lint/build/book, including late I/O and schema20-upgrade assertions. Pure PS
+checker passed21 records and12 malformed cases. Require terminal exact-tip
+hosted native/reference/startup checks and both source-bound typed artifacts
+before guarded private publication from27697fd; do not infer native deletion.
+
+Next implement the actual native lifecycle bridge from measured behavior,
+including atomic owned deferred/pending-target displacement, explicit profile
+binding, and authoritative early cleanup while other handles remain for POSIX
+support. Do not advertise POSIX capability while retaining the legacy-only
+cleanup-count rule. Share namespace/write serialization and use stable IDs,
+never old callback pathnames. Also include
 reply uncertainty, retained I/O, multiple file objects, stable-ID cleanup and
 rename/replacement. Do not permanently substitute refused operations or
 SetDelete-only support. Keep config6/native SetDelete/DoC unsupported until all

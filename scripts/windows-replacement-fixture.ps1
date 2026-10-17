@@ -6,6 +6,10 @@ function Assert-WindowsReplacementReference {
     }
     $actual=@($Observation.records);$expected=@($Fixture.records)
     if($actual.Count -ne 21 -or $expected.Count -ne 21) {throw 'Replacement reference requires twenty-one records'}
+    foreach($record in @($actual)+@($expected)) {
+        $names=@($record.PSObject.Properties.Name)
+        if($names.Count -ne 3 -or $names -cnotcontains 'backend' -or $names -cnotcontains 'case' -or $names -cnotcontains 'observations') {throw 'Replacement record shape changed'}
+    }
     foreach($backend in @('ntfs','winfsp-legacy','winfsp-posix')) {
         foreach($case in $cases) {
             $e=@($expected|Where-Object {$_.backend -ceq $backend -and $_.case -ceq $case})

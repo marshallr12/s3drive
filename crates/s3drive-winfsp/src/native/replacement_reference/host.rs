@@ -1,4 +1,4 @@
-//! Disposable in-memory reference host, explicitly using the pinned legacy mode.
+//! Disposable in-memory reference host, using the pinned legacy/POSIX profiles.
 //! It deliberately permits replacement in Rename; the trace distinguishes a
 //! kernel refusal before Rename from a user-mode result. Cleanup uses identity.
 #![forbid(unsafe_code)]

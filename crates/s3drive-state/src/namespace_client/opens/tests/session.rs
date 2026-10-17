@@ -219,6 +219,37 @@ fn abandonment_preserves_missing_cleanup_close_and_all_original_event_bytes() {
     );
 }
 #[test]
+fn observed_close_without_cleanup_can_be_abandoned_without_fabricating_either_completion() {
+    let mut f = Fixture::new();
+    start(&mut f, 2000);
+    let i = make(&mut f, 1000, false, true);
+    Journal::new(&mut f.client)
+        .unwrap()
+        .callback(&i.id, &key(3000), Callback::Close)
+        .unwrap();
+    let old = Journal::new(&mut f.client).unwrap().get(&i.id).unwrap();
+    let old_hash = load(&f.client.connection, &i.id).unwrap().unwrap().0;
+    f.client
+        .connection
+        .pragma_update(None, "user_version", 20)
+        .unwrap();
+    f.reopen();
+    assert_eq!(
+        f.client.info().unwrap().schema_version,
+        crate::SCHEMA_VERSION
+    );
+    assert!(load(&f.client.connection, &i.id).unwrap().unwrap().0 == old_hash);
+    start(&mut f, 2001);
+    let mut j = Journal::new(&mut f.client).unwrap();
+    let recovery = j
+        .prepare_recovery(&key(2001), &f.volume, &i.node, None)
+        .unwrap();
+    j.finish_recovery(&key(2001), &recovery.input.id).unwrap();
+    j.retire(&i.id).unwrap();
+    assert_eq!(j.get(&i.id).unwrap(), old);
+    assert!(old.cleanup().is_none() && !old.completed(&key(3000)));
+}
+#[test]
 fn cancellation_proof_is_exact_and_remains_historical_after_a_successor_epoch() {
     let mut f = Fixture::new();
     start(&mut f, 2000);
@@ -504,7 +535,10 @@ fn schema_nineteen_migration_preserves_hashes_and_session_table_conflict_is_non_
     let old = load(&f.client.connection, &i.id).unwrap().unwrap().0;
     f.client.connection.execute_batch("DROP TABLE recovered_windows_opens;DROP TABLE windows_session_recoveries;DROP TABLE windows_mount_sessions;PRAGMA user_version=19").unwrap();
     f.reopen();
-    assert_eq!(f.client.info().unwrap().schema_version, 20);
+    assert_eq!(
+        f.client.info().unwrap().schema_version,
+        crate::SCHEMA_VERSION
+    );
     assert!(load(&f.client.connection, &i.id).unwrap().unwrap().0 == old);
     assert!(!serde_json::to_string(&i).unwrap().contains("session_bound"));
     f.client.connection.execute_batch("DROP TABLE recovered_windows_opens;DROP TABLE windows_session_recoveries;DROP TABLE windows_mount_sessions;CREATE TABLE windows_mount_sessions(keep TEXT);INSERT INTO windows_mount_sessions VALUES('untouched');PRAGMA user_version=19").unwrap();

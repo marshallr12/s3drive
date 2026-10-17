@@ -658,7 +658,10 @@ fn schema_sixteen_migration_preserves_original_namespace_receipt_identity_and_so
     let owner = identity::read(&f.client.connection).unwrap();
     f.client.connection.execute_batch("DROP TABLE recovered_windows_opens; DROP TABLE windows_session_recoveries; DROP TABLE windows_mount_sessions; DROP TABLE retired_windows_opens; DROP TABLE windows_open_events;DROP TABLE retained_windows_opens;DROP TABLE windows_open_journal;PRAGMA user_version=16").unwrap();
     f.reopen();
-    assert_eq!(f.client.info().unwrap().schema_version, 20);
+    assert_eq!(
+        f.client.info().unwrap().schema_version,
+        crate::SCHEMA_VERSION
+    );
     assert_eq!(
         super::super::Journal::new(&mut f.client)
             .unwrap()

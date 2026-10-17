@@ -599,3 +599,23 @@ and require strict typed/malformed-data checks, not guessed parity. Keep all
 existing acceptance gates. Then integrate the complete native lifecycle with
 explicit config and native DoC/SetDelete/cancel/cleanup/close/late-I/O/rename/
 replacement/recovery tests; unsupported config6 remains until that gate passes.
+
+
+Replacement measurements now include the POSIX-capable profile. Frozen21 records
+preserve the original14 exactly and expose material NTFS/WinFsp differences;
+strict matrix/type checks and12 malformed-data cases precede final publication.
+Schema21 bridge preparation records void facts before RPC, preserves missing
+cleanup on abandonment, and releases only an owned intent after observed
+non-deleting cleanup. SDK simulations cover queued deleting cleanup and HTTP
+failure without extra PUTs. The old five-second test shutdown wrapper was hit
+on Windows; joined thirty-second bounds retain immediate reopen assertions.
+Require the full final gate/hosted run; this is not native bridge acceptance.
+
+
+Final local gate passed241 state/nine HTTP/sixteen SDK with schema21/config6.
+The SDK case now also proves late writes after intent release and five intended
+PUTs without replay. The semantic migration preserves schema20 hashes and raw
+missing-cleanup Close facts. Required Windows CI strictly checks all21 measured
+replacement records and12 malformed variants alongside the existing14/four/nine
+reference checks, seven native cases per OS and startup. Require exact-tip
+terminal all-green before publication; profile/native enablement is still gated.

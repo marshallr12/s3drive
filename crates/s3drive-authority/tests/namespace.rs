@@ -96,13 +96,16 @@ async fn listing(
 }
 async fn close(stop: oneshot::Sender<()>, task: JoinHandle<()>, authority: Authority) {
     stop.send(()).unwrap();
-    tokio::time::timeout(Duration::from_secs(5), task)
+    tokio::time::timeout(Duration::from_secs(30), task)
         .await
-        .unwrap()
+        .expect("authority HTTP server did not drain within thirty seconds")
         .unwrap();
-    tokio::time::timeout(Duration::from_secs(5), authority.shutdown())
+    // This joins the owner after SQLite closes/checkpoints and releases its
+    // private directory. A loaded Windows runner exceeded the old five-second
+    // wrapper; do not cancel that durable shutdown or skip the reopen checks.
+    tokio::time::timeout(Duration::from_secs(30), authority.shutdown())
         .await
-        .unwrap()
+        .expect("authority SQLite owner did not close within thirty seconds")
         .unwrap();
 }
 

@@ -5,6 +5,7 @@ use s3drive_managed::disposition::Controller;
 use s3drive_state::namespace_client::opens::OpenInput;
 const FIRST: &[u8] = b"session original binary\0\xff";
 const NEXT: &[u8] = b"session recovered binary\0\xfe";
+const LATE: &[u8] = b"native late no-delete\0\xfd";
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn replaced_mount_sessions_retain_missing_cleanup_replay_cancellation_and_complete_recorded_deletion()
  {
@@ -16,8 +17,8 @@ async fn replaced_mount_sessions_retain_missing_cleanup_replay_cancellation_and_
             "session_recovered",
             "session_cleanup_finish",
         ],
-        &[2, 3, 3, 4, 4],
-        &[FIRST, NEXT, b""],
+        &[2, 3, 3, 5, 5],
+        &[FIRST, NEXT, LATE, b""],
     )
     .await;
 }
@@ -175,6 +176,85 @@ async fn step(mode: &str, p: &Publisher, w: &WireClient, root: &Path, loss: &Ato
         c.open(next).await.unwrap();
         c.cleanup(&id(2010), &id(3110), 0).await.unwrap();
         c.close(&id(2010), &id(3210)).await.unwrap();
+        // A planned success is not proof that the driver consumed the reply.
+        // An observed final non-deleting cleanup releases only this fence.
+        change(
+            w,
+            60,
+            Mutation::CreateEntry {
+                parent: s3drive_authority::ROOT.into(),
+                parent_revision: 0,
+                store: Some(id(200)),
+                name: "native no-delete witness 🦀".into(),
+                node_kind: Kind::EmptyFile,
+            },
+        )
+        .await;
+        c.open(input(p, w, 60, 1060, n, false, false).await)
+            .await
+            .unwrap();
+        p.bind_edit_file(&id(60)).await.unwrap();
+        c.set_delete(&id(1060), &id(3060), true).await.unwrap();
+        c.cleanup(&id(1060), &id(3160), 0).await.unwrap();
+        assert!(p.owned_removal(&id(60)).await.unwrap().is_none());
+        assert!(p.read(&id(60)).await.unwrap().bytes().is_empty());
+        pending_owner::stage(p, w, 60, 5060, LATE).await;
+        pending_owner::prepare(p, w, 60, 5060, 6060, false).await;
+        p.flush_edit(&id(5060)).await.unwrap();
+        assert_eq!(p.read(&id(60)).await.unwrap().bytes(), LATE);
+        c.close(&id(1060), &id(3260)).await.unwrap();
+        // An earlier non-deleting cleanup must not cancel a queued deletion.
+        c.open(input(p, w, 70, 1070, n, true, true).await)
+            .await
+            .unwrap();
+        c.open(input(p, w, 70, 1071, n, false, false).await)
+            .await
+            .unwrap();
+        let ledger = p.storage().opens();
+        ledger
+            .callback(
+                id(1070),
+                id(3170),
+                s3drive_state::namespace_client::opens::Callback::Cleanup { flags: 0 },
+            )
+            .await
+            .unwrap();
+        ledger
+            .callback(
+                id(1071),
+                id(3171),
+                s3drive_state::namespace_client::opens::Callback::Cleanup { flags: 1 },
+            )
+            .await
+            .unwrap();
+        c.recover(&id(70)).await.unwrap();
+        assert!(p.read(&id(70)).await.is_err());
+        c.close(&id(1070), &id(3270)).await.unwrap();
+        c.close(&id(1071), &id(3271)).await.unwrap();
+        // Capture both void callbacks even when recovery cannot reach HTTP.
+        change(
+            w,
+            50,
+            Mutation::CreateEntry {
+                parent: s3drive_authority::ROOT.into(),
+                parent_revision: 0,
+                store: Some(id(200)),
+                name: "native unavailable callbacks 資料".into(),
+                node_kind: Kind::EmptyFile,
+            },
+        )
+        .await;
+        c.open(input(p, w, 50, 1050, n, false, false).await)
+            .await
+            .unwrap();
+        loss.store(4, Ordering::SeqCst);
+        assert!(c.set_delete(&id(1050), &id(3050), true).await.is_err());
+        loss.store(12, Ordering::SeqCst);
+        assert!(c.cleanup(&id(1050), &id(3150), 0).await.is_err());
+        assert!(c.close(&id(1050), &id(3250)).await.is_err());
+        let captured = ledger.get(id(1050)).await.unwrap();
+        assert!(captured.cleanup().is_some() && captured.close().is_some());
+        loss.store(0, Ordering::SeqCst);
         c.open(input(p, w, 30, 1030, n, true, true).await)
             .await
             .unwrap();
@@ -191,6 +271,10 @@ async fn step(mode: &str, p: &Publisher, w: &WireClient, root: &Path, loss: &Ato
         assert!(!p.storage().opens().get(id(1040)).await.unwrap().active());
     } else {
         assert_eq!(mode, "session_cleanup_finish");
+        assert_eq!(c.recover_previous(&id(50)).await.unwrap(), 1);
+        assert!(p.read(&id(50)).await.unwrap().bytes().is_empty());
+        let captured = p.storage().opens().get(id(1050)).await.unwrap();
+        assert!(captured.completed(&id(3150)) && captured.completed(&id(3250)));
         assert_eq!(c.recover_previous(&id(30)).await.unwrap(), 1);
         assert!(p.read(&id(30)).await.is_err());
         let old = p.storage().opens().get(id(1030)).await.unwrap();
@@ -202,7 +286,7 @@ async fn step(mode: &str, p: &Publisher, w: &WireClient, root: &Path, loss: &Ato
         assert!(p.storage().opens().recovered(id(1040)).await.unwrap());
         assert!(p.read(&id(40)).await.unwrap().bytes().is_empty());
         assert!(p.storage().opens().records().await.unwrap().is_empty());
-        for edit in [5000, 5001, 5020, 5030] {
+        for edit in [5000, 5001, 5020, 5030, 5060] {
             p.flush_edit(&id(edit)).await.unwrap();
         }
         return;

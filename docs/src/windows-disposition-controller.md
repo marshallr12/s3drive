@@ -58,3 +58,26 @@ This is controller acceptance, not native Windows deletion acceptance. Hosted
 Linux/Windows native, startup and reference gates must pass at the exact candidate
 commit before publication. Retention/pruning, abandoned mount sessions, native
 response acknowledgment uncertainty and deferred target replacement remain work.
+
+## Observation-driven void callbacks (under implementation, 2026-10-17)
+
+Schema21 changes controller policy without rewriting old log bytes/hashes.
+Persist cleanup and close facts before attempting network recovery: these void
+callbacks cannot report a failure to the kernel. Keep callback-delivery facts
+separate from whether their remote work completed. WinFsp permits I/O after
+cleanup until Close; the native bridge must retain those contexts. See the
+[versioned callback contract](https://raw.githubusercontent.com/winfsp/winfsp/v2.1/inc/winfsp/winfsp.h).
+
+If every surviving file object has an observed non-deleting cleanup, settle or
+explicitly retain its data and release only the owned fence with an exact Cancel
+request. A planned SetDelete success is not a kernel acknowledgment; raw cleanup
+flags provide separate evidence. Do not cancel when any queued cleanup requests
+deletion or lacks a known fact. This uses protected closing admission instead of
+an unnecessary pending/deferred mode cycle. Retained normal/detached I/O continues
+through Close. A missing-cleanup Close can be abandoned only after exclusive
+owner replacement, using separate proof; never manufacture cleanup or ordinary
+completion. SDK simulation verifies the policy, not kernel callback delivery.
+The targeted SDK case also publishes a new late-write generation after the intent
+is released and before Close, then retries its flush after owner replacement
+without another PUT. Full native integration/profile acceptance remains required
+before enablement.

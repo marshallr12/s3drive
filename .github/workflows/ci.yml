@@ -34,10 +34,13 @@ jobs:
         run: ./scripts/install-winfsp.ps1
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      - name: Measure Windows replacement reference
+      - name: Verify Windows replacement fixture rejection checks
+        if: runner.os == 'Windows'
+        run: ./scripts/test-windows-replacement-fixture.ps1
+      - name: Verify Windows replacement reference
         if: runner.os == 'Windows'
         timeout-minutes: 5
-        run: ./scripts/test-windows-replacement-reference.ps1 -Measure
+        run: ./scripts/test-windows-replacement-reference.ps1
       - name: Retain Windows replacement observations
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

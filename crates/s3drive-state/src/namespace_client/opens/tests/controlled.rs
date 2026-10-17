@@ -452,7 +452,10 @@ fn schema_seventeen_evidence_hashes_are_preserved_without_opting_into_controller
         .pragma_update(None, "user_version", 17)
         .unwrap();
     f.reopen();
-    assert_eq!(f.client.info().unwrap().schema_version, 20);
+    assert_eq!(
+        f.client.info().unwrap().schema_version,
+        crate::SCHEMA_VERSION
+    );
     assert_eq!(
         Journal::new(&mut f.client).unwrap().get(&i.id).unwrap(),
         old

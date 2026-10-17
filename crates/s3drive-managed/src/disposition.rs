@@ -652,12 +652,12 @@ impl Controller {
         let _serial = self.p().0.disposition.lock().await;
         let record = self.record(open).await?;
         self.live(&record.input).await?;
-        self.recover_node(&record.input.node, None).await?;
         self.p()
             .storage()
             .opens()
             .callback(open.into(), cb.into(), Callback::Cleanup { flags })
             .await?;
+        self.recover_node(&record.input.node, None).await?;
         Box::pin(self.recover_void(&record.input.node, Some((open, cb)))).await?;
         Box::pin(self.cleanup_inner(open, cb, flags)).await?;
         Box::pin(self.recover_void(&record.input.node, None)).await
@@ -679,8 +679,40 @@ impl Controller {
             Box::pin(self.effect(open, cb, "commit", None)).await?;
             return self.complete(open, cb).await;
         }
+        if Self::linked(&record, cb, "retain") {
+            Box::pin(self.effect(open, cb, "retain", None)).await?;
+            return self.complete(open, cb).await;
+        }
         let (node, pending) = self.inspect(&record.input.node).await?;
         if node.deleted {
+            return self.complete(open, cb).await;
+        }
+        // Raw cleanup flags are a kernel observation, unlike a planned reply.
+        // Clear an owned intent only when every surviving file object has an
+        // observed non-deleting cleanup. A queued deleting cleanup takes priority.
+        let all_clear = flags & 1 == 0 && self.records(&record.input.node).await?.iter().all(|r| {
+            !r.active() || r.cleanup().is_some_and(|e| matches!(e.action, Action::Callback(Callback::Cleanup{flags}) if flags & 1 == 0))
+        });
+        if all_clear {
+            if pending.is_some() {
+                Box::pin(self.flush_retained(&record.input.node)).await?;
+                let (node, pending) = self.inspect(&record.input.node).await?;
+                if let Some(pending) = pending {
+                    let input = self
+                        .request(
+                            &record,
+                            cb,
+                            "retain",
+                            Mutation::CancelRemoval {
+                                node: node.id.clone(),
+                                fence: pending.fence,
+                            },
+                            &node,
+                        )
+                        .await?;
+                    Box::pin(self.effect(open, cb, "retain", Some(input))).await?;
+                }
+            }
             return self.complete(open, cb).await;
         }
         if record.input.delete_on_close || flags & 1 != 0 {
@@ -747,12 +779,12 @@ impl Controller {
         let _serial = self.p().0.disposition.lock().await;
         let record = self.record(open).await?;
         self.live(&record.input).await?;
-        self.recover_node(&record.input.node, None).await?;
         self.p()
             .storage()
             .opens()
             .callback(open.into(), cb.into(), Callback::Close)
             .await?;
+        self.recover_node(&record.input.node, None).await?;
         Box::pin(self.recover_void(&record.input.node, Some((open, cb)))).await?;
         Box::pin(self.close_inner(open, cb)).await?;
         self.p().storage().opens().retire(open.into()).await

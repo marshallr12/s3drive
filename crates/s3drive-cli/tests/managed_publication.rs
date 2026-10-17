@@ -282,6 +282,9 @@ async fn proxy(
     axum::Json(request): axum::Json<Request>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
+    if p.loss.load(Ordering::SeqCst) == 12 {
+        return axum::http::StatusCode::SERVICE_UNAVAILABLE.into_response();
+    }
     let mut r = p.upstream.request(&request).await.unwrap();
     if matches!(request, Request::Info {})
         && p.loss

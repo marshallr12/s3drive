@@ -286,9 +286,12 @@ impl Journal<'_> {
                 || r.input.fingerprint != first.fingerprint
                 || !r.pending().is_empty()
                 || frozen(&tx, &r.input.id)?
-                || r.events
-                    .iter()
-                    .any(|e| matches!(e.action, Action::Callback(_)) && !r.completed(&e.id))
+                || r.events.iter().any(|e| {
+                    matches!(e.action, Action::Callback(_))
+                        && !r.completed(&e.id)
+                        && !(matches!(e.action, Action::Callback(Callback::Close))
+                            && r.cleanup().is_none())
+                })
             {
                 return Err("recover original obsolete session work before abandonment".into());
             }

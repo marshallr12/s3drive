@@ -223,7 +223,10 @@ fn schema_eighteen_migration_preserves_closed_history_and_refuses_conflicting_ta
         .execute_batch("DROP TABLE recovered_windows_opens; DROP TABLE windows_session_recoveries; DROP TABLE windows_mount_sessions; DROP TABLE retired_windows_opens; PRAGMA user_version=18")
         .unwrap();
     f.reopen();
-    assert_eq!(f.client.info().unwrap().schema_version, 20);
+    assert_eq!(
+        f.client.info().unwrap().schema_version,
+        crate::SCHEMA_VERSION
+    );
     assert!(load(&f.client.connection, &i.id).unwrap().unwrap().0 == old);
     assert_eq!(
         Journal::new(&mut f.client).unwrap().get(&i.id).unwrap(),

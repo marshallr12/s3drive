@@ -1,4 +1,4 @@
-//! Explicit NTFS and selected-WinFsp legacy reference. No S3Drive backend runs.
+//! Explicit NTFS and selected-WinFsp legacy/POSIX reference. No S3Drive backend runs.
 mod host;
 use std::{
     fs::{File, OpenOptions},
@@ -129,7 +129,7 @@ fn probe(root: &Path, backend: &str, state: Option<&host::State>, case: &str) {
 }
 #[test]
 #[ignore = "explicit disposable Windows reference; not S3Drive native acceptance"]
-fn measure_deferred_replacement_on_ntfs_and_selected_winfsp_legacy() {
+fn measure_deferred_replacement_on_ntfs_and_selected_winfsp_profiles() {
     let tmp = tempfile::tempdir().unwrap();
     let text = tmp.path().to_str().unwrap();
     assert!(super::is_ntfs(&text[..3]).unwrap());
