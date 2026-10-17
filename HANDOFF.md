@@ -60,7 +60,11 @@ Logs: `/tmp/s3drive-removal-state-final.log`,
 `/tmp/s3drive-removal-tcp-final.log`, `/tmp/s3drive-removal-sdk2.log`.
 Full local gate passed, exit 0: `/tmp/s3drive-removal-gate5.log` (141 Linux
 state tests, six authority TCP, five managed publication cases, 50 S3, 13 FS,
-plus build/lint/book). New directory-handle prelude still needs native CI.
+plus build/lint/book). First candidate ed2bcee / run 39025899757: Linux all seven native cases
+and no-systemd startup passed; the new pending-directory case also passed on
+Windows. The Windows job failed its existing non-admin startup regression:
+`scripts/test-windows-session.ps1` still required schema 12. Its strict expected
+version is now 13; no assertion was removed. Corrected full native CI required.
 Older-schema fixture builders now remove schema 13 before simulating older
 versions. Never use CREATE TABLE IF NOT EXISTS to hide damaged migration shape.
 

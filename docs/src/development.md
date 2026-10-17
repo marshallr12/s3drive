@@ -530,3 +530,12 @@ visually inspected. Resolved rusqlite 0.40.2 immediate-transaction/rollback and
 affected-row contracts, WinFsp 0.13.1 descriptor contexts/callback signatures,
 and windows 0.61.3 pending status/backup-semantics constants were inspected.
 No live Wasabi write, credentials, real startup entry or remote service changed.
+
+
+First candidate `ed2bcee`, run 39025899757: Linux passed seven native cases and
+no-systemd startup. Windows passed the expanded managed mutation case, including
+pending-directory handle refusal/restoration, but failed the existing startup
+helper's strict `schema=12` expectation. The binary correctly reports schema 13.
+The helper now expects exactly schema 13; its initialization/reopen and WAL
+assertions remain. Corrected terminal native/startup CI is required before
+publication. This failure is not classified as a flaky test or waived.

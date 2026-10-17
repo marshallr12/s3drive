@@ -23,6 +23,29 @@ parameters use descriptor contexts, and each open boxes a new context. The
 adapter does not advertise `supports_posix_unlink_rename`. These are inspected
 dependency-source facts; the following protocol is our design.
 
+## Kernel details the client phase must preserve
+
+The pinned driver maintains both node-wide disposition and descriptor flags;
+the local model must not assume that OR-ing per-handle booleans reproduces
+Windows behavior. Its disposition completion updates shared node state, while
+cleanup can reassert delete-on-close and decides deletion using remaining
+handles. Native traces must cover true/false requests through different
+contexts. [Disposition implementation](https://raw.githubusercontent.com/winfsp/winfsp/v2.1/src/sys/fileinfo.c),
+[node cleanup implementation](https://raw.githubusercontent.com/winfsp/winfsp/v2.1/src/sys/file.c),
+checked 2026-10-17.
+
+Cleanup delivery is best-effort when the volume is stopping; the driver can
+finish its own cleanup even if the user-mode callback never arrives. A durable
+journal cannot rely only on observing cleanup callbacks.
+[Driver cleanup dispatch](https://raw.githubusercontent.com/winfsp/winfsp/v2.1/src/sys/cleanup.c),
+checked 2026-10-17.
+
+The current ArmRemoval primitive represents the state that refuses new opens.
+The native delete-on-close path still needs separate sharing/open-lifetime
+acceptance. If its required behavior needs an earlier reservation that permits
+read opens, add that explicit protocol state before enabling it; do not silently
+apply ordinary pending-open denial to every delete-on-close handle.
+
 ## Chosen protocol
 
 A node-wide authority reservation protects the live name while local per-open
