@@ -4,7 +4,7 @@
 system behavior needed before designing deferred reservations. It does not
 enable S3Drive deletion or treat a reference filesystem as S3 acceptance.
 
-![Native callback lifetime is separate from the metadata reservation state. Deferred reservations and the native bridge are proposed; pending-owner publication and tombstones are implemented foundations.](images/disposition-reference.svg)
+![Native callback lifetime is separate from the metadata reservation state. Authority reservations, pending-owner publication and tombstones are implemented foundations; the native deletion bridge is proposed.](images/disposition-reference.svg)
 
 ## Evidence that changes the design
 

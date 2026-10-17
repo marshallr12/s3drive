@@ -443,3 +443,15 @@ retained. Publisher refuses a closed unknown transition before HTTP. Schema 16
 and configuration 6 remain unchanged. Require terminal exact-commit hosted CI
 before publication, then measure deferred rename/multiple DoC references and
 implement atomic deferred create/move before the native Windows lifecycle.
+
+
+### P6m3b3b4b3r2 — deferred create/rename/handle reference (2026-10-17)
+
+Cancellation recovery passed at `0c8f6c7`, terminal CI 39039582208, and was
+published privately. Follow the [additional reference plan](windows-deferred-reference.md):
+measure six new NTFS cases, preserve eight existing goldens, run four selected
+pinned WinFsp legacy disk/network tests and retain source-bound observations.
+Then freeze all fourteen records and require exact field comparison plus
+terminal native/reference/startup CI before publication. Keep native S3Drive
+delete callbacks unsupported. Next atomic deferred create and owner-fenced
+rename/move must reflect the measured behavior before per-open integration.

@@ -1,8 +1,33 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b3b4b3a2 mode cancellation recovery**
-on `codex/mode-cancellation-recovery`. Goal ACTIVE. Read
-`docs/src/mode-cancellation-recovery.md`. Native Windows deletion remains unsupported.
+Updated: 2026-10-17. Current phase: **P6m3b3b4b3r2 additional Windows reference**
+on `codex/windows-deferred-reference`. Goal ACTIVE. Read
+`docs/src/windows-deferred-reference.md` and the implementation plan.
+
+Published baseline verified live: private clean local/remote main
+`0c8f6c71a48b1e4368e4408c74be8e804b035c06`, terminal all-green
+[run 39039582208](https://github.com/marshallr12/s3drive/actions/runs/39039582208).
+Linux `117416151491`, Windows `117416151413`, book `117416151454`;
+173/169 state, seven TCP, 11 SDK cases, seven native cases per OS and unchanged
+startup/eight-reference acceptance. Proof `/tmp/s3drive-cancel-publication.json`.
+
+Current scope: six additional NTFS observations (deferred file/directory rename,
+exclusive create+DoC, multiple DoC/cancellation, extended on-close cancellation,
+duplicated-handle lifetime). Extend pinned upstream legacy create test with
+rename, rename_open and delete_pending. First measure with eight old golden
+records; review source-bound artifact and freeze all fourteen before final CI
+and publication. Production callbacks/schema16/config6 stay unchanged. No live
+Wasabi mutation, workstation startup/credential changes or NNP bypass.
+
+Local gate passed, exit 0 (`/tmp/s3drive-extra-reference-gate1.log`), with
+173 state tests, seven authority HTTP and 11 managed SDK cases, lint/build/book.
+PowerShell AST parsing passed on this workstation. The six new probes are
+Windows-only and have not been executed locally. The measurement candidate
+must run on hosted Windows; review the private source-bound artifact, then
+freeze all fourteen scalar records before final native/reference/startup CI.
+Do not publish the temporary eight-golden/six-measured allowance to main.
+
+## Previous cancellation recovery phase
 
 Current baseline verified live: private clean local/remote main
 `2d9d4799d09ab1c62c1fbcccb2b320da9333af10`, terminal all-green

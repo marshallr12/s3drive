@@ -49,6 +49,14 @@ jobs:
         if: runner.os == 'Windows'
         timeout-minutes: 5
         run: ./scripts/test-windows-disposition-reference.ps1
+      - name: Retain Windows reference observations
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: windows-disposition-reference-${{ github.sha }}
+          path: ${{ runner.temp }}/windows-disposition-reference.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Verify real Linux mount and teardown
         if: runner.os == 'Linux'
         timeout-minutes: 10
