@@ -524,3 +524,9 @@ async fn actual_managed_existing_file_writes_and_recovery() {
 async fn actual_managed_file_and_directory_creation() {
     managed::native_creation().await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "native managed mutation acceptance: requires the real OS filesystem driver"]
+async fn actual_managed_rename_replace_and_retained_handles() {
+    managed::native_mutations().await;
+}

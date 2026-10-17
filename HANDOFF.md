@@ -1,81 +1,71 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b3b2 atomic namespace acknowledgment / detached publication** on `codex/managed-detached-publication`. The full local gate passes; terminal Linux/Windows/book CI, existing native regressions and publication remain required. Native rename/removal remain unsupported until their next integration phase.
-Goal active. Linux/Windows read-only drives and startup foundations work;
-library writes/flush are progressing toward safe writable native filesystems.
-Do not call the broader editable-drive goal complete before its documented
-safe-write contract and real OS acceptance pass.
+Updated: 2026-10-17. Current phase: **P6m3b3b3 native namespace integration**
+on `codex/managed-native-namespace`. Candidate implements version-6
+rename/replacement on both OSes and Linux unlink/rmdir with retained handles.
+Portable mutation/recovery/cancellation tests pass on the normal stack.
+The full local gate passed; terminal exact-tip Linux/Windows/book CI remains required.
+Windows deferred deletion is explicitly unsupported. Goal ACTIVE.
 
-## Requirements and current boundary
+## Requirements and authorization
 
-- Rust implementation in `~/src/s3drive`, mdBook findings/plans/images, private
-  GitHub repository `marshallr12/s3drive`; these artifacts already exist.
-- User selected **managed layout with stronger coordination**, 2026-10-16.
-  Target: shared authoritative namespace plus immutable S3 generations; ordinary
-  S3 tools see internal keys. No implicit conversion of existing configurations.
-- Existing direct layout exposes buckets/prefixes through source aliases.
-  Wasabi is the first live provider; other endpoints need separate conformance.
-- Linux FUSE and Windows WinFsp adapters have stable read-only acceptance.
-  Existing opt-in editing and guarded file creation passed native acceptance.
-  Version-3 managed read-only integration is accepted. Version-4 managed existing-file callbacks are natively accepted. Version-5 creation/directories passed their native gates; rename/removal/save-replace remains unfinished.
-  New online opens authorize through S3; pinned old handles preserve revisions.
-  No ordinary CLI upload command, delete/rename,
-  multipart, payload reclamation, new offline opens or desktop packaging yet.
-- Startup at sign-in after reboot; same-user incoming SSH sessions and surviving
-  tmux/Codex/Claude processes must share the mount. The user's “SSL sessions”
-  means SSH. MX Linux without systemd is required. Launcher logic was tested locally;
-  native session regression runs in CI. Actual MX mount/reboot acceptance remains
-  unverified under this executor's NoNewPrivs restriction.
-- Prefer SQLite: state/cache/staged payloads live outside the mounted tree,
-  on private local disk under one process lock and bounded owner thread.
-- Existing `s3drive.local.toml` remains read-only. No real application write
-  policy, startup registration, cloud coordination service or credential changed.
-- Name: Mira. No voice-context handoff capability has been available; don't
-  claim one occurred.
+Rust workspace/mdBook/private `marshallr12/s3drive`; managed layout with stronger
+coordination selected 2026-10-16. Prefer SQLite outside the mount. Linux includes
+MX without systemd; sign-in startup must survive same-user SSH/tmux disconnect.
+Windows testing is remote Windows Server 2025 CI, never this Linux workstation.
+Actual desktop reboot/sign-out/SSH/PAM and remote managed service acceptance
+remain unverified. NoNewPrivs=1 prevents a new local FUSE mount: never bypass it.
 
-## Authoritative publication baseline
+No new live Wasabi mutation is authorized. Earlier approved fixtures were fully
+cleaned. `s3drive.local.toml` stays read-only. Do not expose credentials/configs
+or change actual startup registration, provider policy or service deployment.
+Name: Mira; no voice-context setter is available, so no handoff was claimed.
 
-Published private main at phase start:
-`9f3a2b11c5e65ab6280034d272415f278d3859b9` (guarded authority entry CAS).
-Terminal all-green [run 39015566494](https://github.com/marshallr12/s3drive/actions/runs/39015566494):
-Linux `117346870493`, Windows `117346870650`, book `117346870575`.
-Schema 12, 123 Linux / 119 Windows state tests, five authority TCP tests,
-13 FS and six existing native cases per OS, including no-systemd startup and
-Windows non-admin cross-logon acceptance. Local/remote main/private visibility
-and a clean worktree were verified. Logs: `/tmp/s3drive-entry-final-{linux,windows,book}-ci.log`.
+## Verified publication baseline
 
-Current branch adds compact complete-payload-digest namespace preconditions,
-atomic namespace outcome + affected logical-file observation acknowledgment,
-and a default-omitted detached content guard. Ignored/deleted intent insertions
-cannot admit an RPC; semantic SDK rejection and cached rejection both return errors. Original live bindings/target
-hashes and old serialized records stay unchanged. Explicit detached reservation
-and publication require `deleted=true`, preserve the tombstone and guard the
-complete prior payload. Live readers continue refusing new deleted-node opens.
-No schema change, S3 deletion, reclamation or native callback is enabled.
+Private main at phase start: **5d8fe4f63d9aae5aaa6e0856be538bb93333ae2b**.
+Terminal all-green [run 39018485778](https://github.com/marshallr12/s3drive/actions/runs/39018485778):
+Linux `117355366505`, Windows `117355366503`, book `117355366299`.
+129 Linux / 125 Windows state tests, 50 S3, 13 FS, five authority TCP and four
+managed publication cases; six native cases per OS plus Linux no-systemd and
+Windows non-admin cross-logon regressions. Logs:
+`/tmp/s3drive-detached-final-{linux,windows,book}-ci.log`.
+Local/remote main, private visibility and clean state verified at publication.
 
-Six state tests cover atomic two-file observations, ignored updates, actual
-SQLITE_FULL rollback/retry, retained dirty data/restart, pending-effect/publication
-ordering, input tampering, legacy serialization, content races and name reuse.
-The actual SDK/HTTP forwarding fixture loses a committed unlink reply, kills
-the client, recovers the exact operation, then loses an accepted S3 PUT and kills
-it again with a newer local head. Recovery settles without another PUT and
-publishes the newer head. Exactly two immutable blobs remain; a newly created
-file at the old name stays untouched. Focused logs:
-`/tmp/s3drive-detached-state-final.log`, `/tmp/s3drive-detached-sdk.log`,
-`/tmp/s3drive-detached-clippy.log`. Full gate log: `/tmp/s3drive-detached-gate-complete.log`.
-Full local gate passed: `/tmp/s3drive-detached-gate-complete.log`, exit 0; 129 Linux state tests, 50 S3, 13 FS, five authority TCP and four managed publication cases (including its child helper). Book links/build/tests pass. The new diagram was generated and visually inspected.
-See `docs/src/managed-unlinked.md` for the library contract and native boundary.
+## Current candidate
 
-Use `bash scripts/gate.sh` locally, then require terminal exact-tip Linux,
-Windows and book jobs before main publication. Native cases remain serialized
-(`--test-threads=1`); no assertions or deadlines are weakened. No new live Wasabi
-mutation, real startup registration or credential/config change is authorized.
+See `docs/src/managed-native-mutations.md` and `examples/managed-mutations.toml`.
+No schema/dependency change. Version 3/4/5 keep their previous capabilities.
+Version 6 requires portable names plus entry/detached CAS features. Source dirty
+bytes publish before a move; prepared target publications reconcile first;
+unprepared displaced/unlinked dirty bytes stay retained. Namespace receipt
+acknowledgment updates affected observations atomically. Linux old handles can
+fsync to a tombstone without restoring its name or changing a reused path.
 
-Windows testing runs remotely on GitHub's **Windows Server 2025 VM**, not this
-Linux workstation. Native folder/drive/security/UTF-16 tests and distinct
-same-account logon AuthenticationId checks passed. Actual Windows 10/11 desktop,
-full sign-out, workstation reboot and real incoming SSH authentication/PAM
-remain target-host acceptance. Linux local PID 1 is `init`, not systemd.
+Managed operations use four owned permits, publication/edit lock order, bounded
+owned namespace/publication tasks and explicit stop/drain before SQLite closes.
+Publisher flush futures are type-erased boxes to bound nested SDK poll frames.
+Do not accept RUST_MIN_STACK increases or weakened assertions as a fix.
+Portable test passes at `/tmp/s3drive-native-namespace-faults2.log`: three exact
+PUTs, killed clients after committed rename/removal, and cancelled caller with
+shutdown waiting on a held reply. New native case per OS tests actual save/
+replace, Unicode directory moves, second bucket, cycles, remount and lost rename
+reply recovery; Linux also removal/retained handles. Native results pending.
+Full local gate passed, exit 0: `/tmp/s3drive-native-namespace-gate.log`.
+
+Resolved fuser 0.18 rename flags/namespace callbacks, WinFsp 0.13.1 rename/delete/
+cleanup contracts, windows 0.61.3 access constants and Tokio owned permits/tasks
+were inspected. Windows SetDelete is reversible and cleanup cannot report an
+error: keep deletion unsupported until its durable protocol and native recovery
+acceptance pass. Never delete from SetDelete to fake DeleteFile success.
+
+Run `bash scripts/gate.sh`, then require terminal exact-tip Linux/Windows/book
+jobs including seven native cases per OS and existing startup regressions.
+Do not publish main early while a job is still saving cache. Preserve native
+serialization and all assertions/deadlines. Remaining goal work includes Windows
+delete, full application save acceptance, remote/Turso authority deployment,
+multi-host invalidation, live managed-provider acceptance and actual workstation
+startup tests. No immutable blob/local dirty generation reclamation exists.
 
 ## Current implementation and sources
 

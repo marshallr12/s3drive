@@ -15,7 +15,19 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
             .request(&s3drive_authority::Request::Features {})
             .await
             .map_err(error)?;
-        if !matches!(reply,s3drive_authority::Reply::Features(ref features) if features.iter().any(|f|f=="content-cas-v1") && (config.version!=5 || features.iter().any(|f|f=="namespace-create-v1")))
+        let s3drive_authority::Reply::Features(features) = reply else {
+            return Err(Error::Configuration);
+        };
+        let mut required = vec!["content-cas-v1"];
+        if config.version >= 5 {
+            required.push("namespace-create-v1");
+        }
+        if config.version >= 6 {
+            required.extend(["namespace-entry-cas-v1", "detached-content-cas-v1"]);
+        }
+        if required
+            .iter()
+            .any(|needed| !features.iter().any(|f| f == needed))
         {
             return Err(Error::Configuration);
         }
@@ -90,7 +102,7 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
         s3drive_managed::Reader::open(authority.clone(), settings.volume.clone(), bindings)
             .await
             .map_err(error)?;
-    if config.version == 5
+    if config.version >= 5
         && reader.volume().await.map_err(error)?.name_policy != s3drive_core::names::PORTABLE
     {
         return Err(Error::Configuration);
@@ -102,7 +114,8 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
             authority,
             publishers,
             settings.default_store.clone().unwrap_or_default(),
-            config.version == 5,
+            config.version,
+            reader.clone(),
         ))
     });
     if let Some(w) = &writes {
@@ -193,6 +206,10 @@ pub(super) fn error<E: Into<Box<dyn std::error::Error + Send + Sync>>>(e: E) -> 
             Failure::Authority(s3drive_authority::Error::Conflict) => Error::Conflict,
             Failure::Authority(s3drive_authority::Error::NotDirectory) => Error::NotDirectory,
             Failure::Authority(s3drive_authority::Error::IsDirectory) => Error::IsDirectory,
+            Failure::Authority(s3drive_authority::Error::NotEmpty) => Error::NotEmpty,
+            Failure::Authority(
+                s3drive_authority::Error::Cycle | s3drive_authority::Error::Root,
+            ) => Error::InvalidOperation,
             Failure::Authority(s3drive_authority::Error::Limit) => Error::ResourceLimit,
             Failure::Authority(s3drive_authority::Error::Unavailable) => Error::Busy,
             _ => Error::Managed(e),

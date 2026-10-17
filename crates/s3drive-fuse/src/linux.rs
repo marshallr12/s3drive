@@ -1,8 +1,8 @@
 use fuser::{
     BsdFileFlags, Errno, FileAttr, FileHandle, FileType, Filesystem, FopenFlags, Generation,
-    INodeNo, LockOwner, MountOption, OpenAccMode, OpenFlags, ReplyAttr, ReplyCreate, ReplyData,
-    ReplyDirectory, ReplyEmpty, ReplyEntry, ReplyOpen, ReplyStatfs, ReplyWrite, Request, TimeOrNow,
-    WriteFlags,
+    INodeNo, LockOwner, MountOption, OpenAccMode, OpenFlags, RenameFlags, ReplyAttr, ReplyCreate,
+    ReplyData, ReplyDirectory, ReplyEmpty, ReplyEntry, ReplyOpen, ReplyStatfs, ReplyWrite, Request,
+    TimeOrNow, WriteFlags,
 };
 use s3drive_fs::{Error, Kind, Node, OpenFile, ReadOnlyFs};
 use s3drive_s3::{ErrorKind, ObjectMetadata};
@@ -136,7 +136,12 @@ impl Adapter {
                 if file.node.id != ino.0 {
                     return Err(Errno::EBADF);
                 }
-                return Ok(self.attr(&file.node, Some(&file.current_metadata().map_err(errno)?)));
+                let mut attr =
+                    self.attr(&file.node, Some(&file.current_metadata().map_err(errno)?));
+                if file.is_unlinked().map_err(errno)? {
+                    attr.nlink = 0;
+                }
+                return Ok(attr);
             }
         }
         let node = self.fs.node(ino.0).map_err(errno)?;
@@ -213,6 +218,84 @@ impl Filesystem for Adapter {
             .and_then(|node| self.attributes(INodeNo(node.id), None));
         match result {
             Ok(attr) => reply.entry(&TTL, &attr, Generation(0)),
+            Err(e) => reply.error(e),
+        }
+    }
+    fn rename(
+        &self,
+        _req: &Request,
+        parent: INodeNo,
+        name: &OsStr,
+        new_parent: INodeNo,
+        new_name: &OsStr,
+        flags: RenameFlags,
+        reply: ReplyEmpty,
+    ) {
+        if !self.fs.namespace_mutation() || !(flags & !RenameFlags::RENAME_NOREPLACE).is_empty() {
+            reply.error(Errno::EOPNOTSUPP);
+            return;
+        }
+        let result = name
+            .to_str()
+            .zip(new_name.to_str())
+            .ok_or(Errno::EINVAL)
+            .and_then(|(name, new_name)| {
+                self.wait(self.fs.rename_entry(
+                    parent.0,
+                    name,
+                    new_parent.0,
+                    new_name,
+                    !flags.contains(RenameFlags::RENAME_NOREPLACE),
+                    |a, b| a == b,
+                ))
+            });
+        match result {
+            Ok(_) => reply.ok(),
+            Err(e) => reply.error(e),
+        }
+    }
+    fn unlink(&self, _req: &Request, parent: INodeNo, name: &OsStr, reply: ReplyEmpty) {
+        if !self.fs.namespace_mutation() {
+            reply.error(Errno::EOPNOTSUPP);
+            return;
+        }
+        match name
+            .to_str()
+            .ok_or(Errno::EINVAL)
+            .and_then(|n| self.wait(self.fs.remove_entry(parent.0, n, false)))
+        {
+            Ok(()) => reply.ok(),
+            Err(e) => reply.error(e),
+        }
+    }
+    fn rmdir(&self, _req: &Request, parent: INodeNo, name: &OsStr, reply: ReplyEmpty) {
+        if !self.fs.namespace_mutation() {
+            reply.error(Errno::EOPNOTSUPP);
+            return;
+        }
+        match name
+            .to_str()
+            .ok_or(Errno::EINVAL)
+            .and_then(|n| self.wait(self.fs.remove_entry(parent.0, n, true)))
+        {
+            Ok(()) => reply.ok(),
+            Err(e) => reply.error(e),
+        }
+    }
+    fn fsyncdir(
+        &self,
+        _req: &Request,
+        _ino: INodeNo,
+        _fh: FileHandle,
+        _datasync: bool,
+        reply: ReplyEmpty,
+    ) {
+        if !self.fs.namespace_mutation() {
+            reply.error(Errno::EOPNOTSUPP);
+            return;
+        }
+        match self.wait(self.fs.sync_namespace()) {
+            Ok(()) => reply.ok(),
             Err(e) => reply.error(e),
         }
     }
@@ -524,6 +607,8 @@ fn errno(error: Error) -> Errno {
         Error::AlreadyExists => Errno::EEXIST,
         Error::NotDirectory => Errno::ENOTDIR,
         Error::IsDirectory => Errno::EISDIR,
+        Error::NotEmpty => Errno::ENOTEMPTY,
+        Error::InvalidOperation => Errno::EINVAL,
         Error::InvalidName => Errno::EILSEQ,
         Error::AmbiguousName => Errno::EIO,
         Error::ResourceLimit => Errno::ENOSPC,
@@ -567,6 +652,7 @@ impl Drop for UnmountGuard {
 pub async fn run(fs: ReadOnlyFs, mountpoint: &Path) -> io::Result<()> {
     let writable = !fs.is_read_only();
     let cache = fs.cache_control();
+    let shutdown = fs.shutdown_writes();
     // Install signals before mounting so termination cannot leave a live mount.
     let mut interrupt = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
     let mut terminate = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
@@ -630,6 +716,7 @@ pub async fn run(fs: ReadOnlyFs, mountpoint: &Path) -> io::Result<()> {
         _ = interrupt.recv() => { guard.unmount()?; running.await.map_err(io::Error::other)??; }
         _ = terminate.recv() => { guard.unmount()?; running.await.map_err(io::Error::other)??; }
     }
+    shutdown.await.map_err(io::Error::other)?;
     if let Some(cache) = cache {
         cache.close().await.map_err(io::Error::other)?;
     }

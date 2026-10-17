@@ -461,3 +461,23 @@ Terminal exact-tip Linux/Windows/book CI and the existing native/startup cases
 remain required before main publication. See the
 [detached publication branch history](https://github.com/marshallr12/s3drive/actions?query=branch%3Acodex%2Fmanaged-detached-publication)
 for that source-specific result. Native unlink/rename acceptance is not implied.
+
+
+## Managed native mutation gate (2026-10-17)
+
+The [version-6 candidate](managed-native-mutations.md) adds
+`managed_namespace_moves_replacements_and_retained_unlinked_views` to the portable
+managed suite. Run it with `env -u RUST_MIN_STACK cargo test -p s3drive-cli --test
+managed_native --locked managed_namespace_moves -- --nocapture`. It includes
+process-kill recovery after committed rename/removal and cancellation/draining
+before SQLite close. The focused result is
+`/tmp/s3drive-native-namespace-faults2.log` (pass, normal stack).
+
+The new ignored native test
+`actual_managed_rename_replace_and_retained_handles` runs on both actual drivers
+alongside the existing six cases, with `--test-threads=1`. The full local gate `bash scripts/gate.sh` passed (exit 0,
+`/tmp/s3drive-native-namespace-gate.log`); native Linux/Windows plus book CI must finish successfully
+for the exact final candidate before main publication. Results are pending in the
+[native mutation branch history](https://github.com/marshallr12/s3drive/actions?query=branch%3Acodex%2Fmanaged-native-namespace).
+Windows runs on a remote Windows Server 2025 VM. Local NoNewPrivs restrictions
+are not bypassed. No live Wasabi, user startup or credential changes are made.

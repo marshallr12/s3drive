@@ -54,6 +54,7 @@ async fn change(w: &WireClient, op: u64, mutation: Mutation) {
 struct NamespaceFault {
     upstream: WireClient,
     cut: Arc<AtomicBool>,
+    kind: u8,
     committed: Arc<tokio::sync::Notify>,
     release: Arc<tokio::sync::Notify>,
 }
@@ -61,17 +62,32 @@ async fn namespace_proxy(
     axum::extract::State(p): axum::extract::State<NamespaceFault>,
     axum::Json(request): axum::Json<Request>,
 ) -> axum::Json<Reply> {
-    let is_create = matches!(
-        &request,
+    let kind = match &request {
         Request::Apply {
-            request: Apply {
-                mutation: Mutation::CreateEntry { .. },
-                ..
-            }
-        }
-    );
+            request:
+                Apply {
+                    mutation: Mutation::CreateEntry { .. },
+                    ..
+                },
+        } => 1,
+        Request::Apply {
+            request:
+                Apply {
+                    mutation: Mutation::MoveEntry { .. },
+                    ..
+                },
+        } => 2,
+        Request::Apply {
+            request:
+                Apply {
+                    mutation: Mutation::RemoveEntry { .. },
+                    ..
+                },
+        } => 3,
+        _ => 0,
+    };
     let reply = p.upstream.request(&request).await.unwrap();
-    if is_create && matches!(reply, Reply::Applied(_)) && p.cut.swap(false, Ordering::SeqCst) {
+    if kind == p.kind && matches!(reply, Reply::Applied(_)) && p.cut.swap(false, Ordering::SeqCst) {
         p.committed.notify_one();
         p.release.notified().await;
     }
@@ -89,9 +105,13 @@ impl Drop for NamespaceProxy {
 }
 impl NamespaceProxy {
     async fn start(h: &Harness) -> Self {
+        Self::start_kind(h, 1).await
+    }
+    async fn start_kind(h: &Harness, kind: u8) -> Self {
         let state = NamespaceFault {
             upstream: wire(&cfg(&h.config)),
             cut: Arc::new(AtomicBool::new(true)),
+            kind,
             committed: Arc::new(tokio::sync::Notify::new()),
             release: Arc::new(tokio::sync::Notify::new()),
         };
@@ -290,6 +310,13 @@ impl Harness {
         let text = std::fs::read_to_string(&self.config)
             .unwrap()
             .replace("version=4", "version=5");
+        std::fs::write(&self.config, text).unwrap();
+    }
+    fn configure_mutations(&self) {
+        self.configure_namespace();
+        let text = std::fs::read_to_string(&self.config)
+            .unwrap()
+            .replace("version=5", "version=6");
         std::fs::write(&self.config, text).unwrap();
     }
     fn environment(&self, c: &mut Command) {
@@ -688,6 +715,12 @@ pub async fn child() {
             assert!(fs.lookup(s3drive_fs::ROOT, "recovered 🦀").await.is_ok());
             fs.cache_control().unwrap().close().await.unwrap();
         }
+        "namespace-move-uncertain" => Box::pin(namespace_move_uncertain_mode(&c)).await,
+        "namespace-move-recovered" => Box::pin(namespace_move_recovered_mode(&c)).await,
+        "namespace-remove-uncertain" => Box::pin(namespace_remove_uncertain_mode(&c)).await,
+        "namespace-remove-recovered" => Box::pin(namespace_remove_recovered_mode(&c)).await,
+        "namespace-cancel" => Box::pin(namespace_cancel_mode(&c, &root)).await,
+        "namespace-mutations" => Box::pin(namespace_mutations_mode(&c)).await,
         "namespace-engine" => {
             let fs = s3drive_fs::ReadOnlyFs::new(&c).await.unwrap();
             assert!(fs.namespace_creation());
@@ -1518,4 +1551,523 @@ pub async fn native_creation() {
     eprintln!(
         "managed native creation: nested Unicode directories/files, empty metadata, exclusive/canonical collisions, orderly remount, dirty restart and lost create reply recovery passed"
     );
+}
+
+// Each OS exercises its real driver. Run native cases serially: process-spawn
+// descriptor closes in another case can legitimately flush FUSE handles.
+pub async fn native_mutations() {
+    let f = Fixture::start().await;
+    let tmp = tempfile::tempdir().unwrap();
+    let (h, s) = Harness::new_policy(tmp.path(), &f, true).await;
+    h.configure_mutations();
+    let m = h.mount().await;
+    let directory = h.mount.join("save 資料 🦀");
+    std::fs::create_dir(&directory).unwrap();
+    let source = directory.join("temporary café");
+    let target = directory.join("report 日本語.bin");
+    std::fs::write(&target, b"previous target").unwrap();
+    let mut file = std::fs::OpenOptions::new()
+        .create_new(true)
+        .read(true)
+        .write(true)
+        .open(&source)
+        .unwrap();
+    file.write_all(b"atomic replacement\0\xff").unwrap();
+    #[cfg(target_os = "linux")]
+    let mut displaced = {
+        let mut old = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&target)
+            .unwrap();
+        old.write_all(b"dirty displaced").unwrap();
+        old
+    };
+    let before = puts(&f);
+    std::fs::rename(&source, &target).unwrap();
+    assert_eq!(
+        puts(&f),
+        before + 1,
+        "rename must publish the dirty source exactly once"
+    );
+    assert!(!source.exists());
+    assert_eq!(std::fs::read(&target).unwrap(), b"atomic replacement\0\xff");
+    file.seek(SeekFrom::Start(0)).unwrap();
+    let mut same = Vec::new();
+    file.read_to_end(&mut same).unwrap();
+    assert_eq!(same, b"atomic replacement\0\xff");
+    #[cfg(target_os = "linux")]
+    {
+        use std::os::unix::fs::MetadataExt;
+        displaced.seek(SeekFrom::Start(0)).unwrap();
+        let mut old = Vec::new();
+        displaced.read_to_end(&mut old).unwrap();
+        assert_eq!(old, b"dirty displaced");
+        assert_eq!(displaced.metadata().unwrap().nlink(), 0);
+        displaced.seek(SeekFrom::End(0)).unwrap();
+        displaced.write_all(b"!").unwrap();
+        displaced.sync_all().unwrap();
+        assert_eq!(std::fs::read(&target).unwrap(), b"atomic replacement\0\xff");
+        drop(displaced);
+        file.seek(SeekFrom::Start(0)).unwrap();
+        file.write_all(b"retained").unwrap();
+        std::fs::remove_file(&target).unwrap();
+        assert!(!target.exists());
+        assert_eq!(file.metadata().unwrap().nlink(), 0);
+        std::fs::write(&target, b"new identity").unwrap();
+        file.sync_all().unwrap();
+        file.seek(SeekFrom::Start(0)).unwrap();
+        let mut old = Vec::new();
+        file.read_to_end(&mut old).unwrap();
+        assert!(old.starts_with(b"retained"));
+        assert_eq!(std::fs::read(&target).unwrap(), b"new identity");
+        assert!(std::fs::remove_dir(&directory).is_err());
+        assert!(std::fs::remove_file(&directory).is_err());
+        assert!(std::fs::remove_dir(&target).is_err());
+        std::fs::File::open(&directory).unwrap().sync_all().unwrap();
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        assert!(
+            std::fs::remove_file(&target).is_err(),
+            "deferred Windows deletion remains unsupported"
+        );
+        assert!(
+            std::fs::OpenOptions::new()
+                .read(true)
+                .custom_flags(0x04000000)
+                .open(&target)
+                .is_err(),
+            "FILE_FLAG_DELETE_ON_CLOSE must remain unsupported"
+        );
+        assert_eq!(std::fs::read(&target).unwrap(), b"atomic replacement\0\xff");
+    }
+    drop(file);
+    let renamed = h.mount.join("moved 資料 🦀");
+    std::fs::rename(&directory, &renamed).unwrap();
+    assert!(!directory.exists());
+    assert!(renamed.join("report 日本語.bin").exists());
+    // Rename changes metadata only, including files placed in the other bucket.
+    let before = puts(&f);
+    std::fs::rename(
+        h.mount.join("other bucket.txt"),
+        renamed.join("other bucket.txt"),
+    )
+    .unwrap();
+    assert_eq!(puts(&f), before);
+    assert_eq!(
+        std::fs::read(renamed.join("other bucket.txt")).unwrap(),
+        b"payload from the second bucket"
+    );
+    let sub = renamed.join("child");
+    std::fs::create_dir(&sub).unwrap();
+    assert!(std::fs::rename(&renamed, sub.join("cycle")).is_err());
+    #[cfg(target_os = "linux")]
+    {
+        std::fs::remove_dir(&sub).unwrap();
+        let empty = h.mount.join("empty directory");
+        std::fs::create_dir(&empty).unwrap();
+        std::fs::remove_dir(&empty).unwrap();
+        assert!(!empty.exists());
+    }
+    m.stop().await;
+    let m = h.mount().await;
+    assert!(renamed.join("report 日本語.bin").exists());
+    m.stop().await;
+    // Kill a real mount after a successful authority effect but before its
+    // reply; the blocked OS call fails, and remount replays the same ID.
+    for kind in [2, 3] {
+        if kind == 3 && cfg!(windows) {
+            continue;
+        }
+        let remove = h.mount.join("unknown remove 🦀");
+        if kind == 3 {
+            let m = h.mount().await;
+            std::fs::create_dir(&remove).unwrap();
+            m.stop().await;
+        }
+        let proxy = NamespaceProxy::start_kind(&h, kind).await;
+        proxy.route(&h);
+        let m = h.mount().await;
+        let moved = h.mount.join(DIR).join("unknown rename 🦀");
+        let from = h.mount.join(DIR).join(FILE);
+        let operation = tokio::task::spawn_blocking({
+            let moved = moved.clone();
+            let remove = remove.clone();
+            move || {
+                if kind == 2 {
+                    std::fs::rename(from, moved)
+                } else {
+                    std::fs::remove_dir(remove)
+                }
+            }
+        });
+        proxy.committed().await;
+        let sequence = info(&proxy.state.upstream).await.sequence;
+        let before = puts(&f);
+        m.kill().await;
+        proxy.state.release.notify_one();
+        assert!(
+            tokio::time::timeout(Duration::from_secs(20), operation)
+                .await
+                .unwrap()
+                .unwrap()
+                .is_err()
+        );
+        let m = h.mount().await;
+        if kind == 2 {
+            assert_eq!(std::fs::read(&moved).unwrap(), data(0));
+        } else {
+            assert!(!remove.exists());
+        }
+        assert_eq!(
+            info(&proxy.state.upstream).await.sequence,
+            sequence,
+            "native recovery repeated an effect"
+        );
+        assert_eq!(
+            puts(&f),
+            before,
+            "native recovery repeated content publication"
+        );
+        m.stop().await;
+        h.configure(&s, &f);
+        h.configure_mutations();
+        drop(proxy);
+    }
+    s.stop().await;
+    eprintln!(
+        "managed native mutations: dirty-source save/replace, Unicode directory moves, two stores, cycle refusal, remount and lost rename reply recovery passed; Linux additionally tests retained replaced/unlinked handles, name reuse, unlink/rmdir and lost removal reply; Windows deletion stays unsupported"
+    );
+}
+
+pub async fn portable_mutations() {
+    let f = Fixture::start().await;
+    let tmp = tempfile::tempdir().unwrap();
+    let (h, s) = Harness::new_policy(tmp.path(), &f, true).await;
+    h.configure_mutations();
+    let before = puts(&f);
+    h.child("namespace-mutations").await;
+    assert_eq!(
+        puts(&f),
+        before + 3,
+        "source flush plus two retained unlinked generations only"
+    );
+    for (kind, mode, recover) in [
+        (2, "namespace-move-uncertain", "namespace-move-recovered"),
+        (
+            3,
+            "namespace-remove-uncertain",
+            "namespace-remove-recovered",
+        ),
+    ] {
+        let proxy = NamespaceProxy::start_kind(&h, kind).await;
+        proxy.route(&h);
+        let mut command = Command::new(std::env::current_exe().unwrap());
+        command
+            .args(["--exact", "managed_native_child", "--nocapture"])
+            .env("S3DRIVE_NATIVE_MANAGED_MODE", mode)
+            .env("S3DRIVE_NATIVE_MANAGED_ROOT", &h.root)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::inherit())
+            .kill_on_drop(true);
+        h.environment(&mut command);
+        let mut child = command.spawn().unwrap();
+        proxy.committed().await;
+        let sequence = info(&proxy.state.upstream).await.sequence;
+        child.kill().await.unwrap();
+        proxy.state.release.notify_one();
+        h.child(recover).await;
+        assert_eq!(
+            info(&proxy.state.upstream).await.sequence,
+            sequence,
+            "namespace effect repeated"
+        );
+        assert_eq!(puts(&f), before + 3, "metadata recovery uploaded content");
+        h.configure(&s, &f);
+        h.configure_mutations();
+        drop(proxy);
+    }
+    let proxy = NamespaceProxy::start_kind(&h, 2).await;
+    proxy.route(&h);
+    let mut command = Command::new(std::env::current_exe().unwrap());
+    command
+        .args(["--exact", "managed_native_child", "--nocapture"])
+        .env("S3DRIVE_NATIVE_MANAGED_MODE", "namespace-cancel")
+        .env("S3DRIVE_NATIVE_MANAGED_ROOT", &h.root)
+        .stdout(Stdio::null())
+        .stderr(Stdio::inherit())
+        .kill_on_drop(true);
+    h.environment(&mut command);
+    let mut child = command.spawn().unwrap();
+    proxy.committed().await;
+    let sequence = info(&proxy.state.upstream).await.sequence;
+    std::fs::write(h.root.join("cancel-now"), b"ready").unwrap();
+    wait_marker(&h.root, "drain-waiting").await;
+    proxy.state.release.notify_one();
+    assert!(
+        tokio::time::timeout(Duration::from_secs(30), child.wait())
+            .await
+            .unwrap()
+            .unwrap()
+            .success()
+    );
+    assert_eq!(
+        info(&proxy.state.upstream).await.sequence,
+        sequence,
+        "cancelled caller repeated namespace effect"
+    );
+    assert_eq!(puts(&f), before + 3);
+    s.stop().await;
+}
+async fn wait_marker(root: &Path, name: &str) {
+    tokio::time::timeout(Duration::from_secs(15), async {
+        while !root.join(name).exists() {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+}
+async fn namespace_move_uncertain_mode(c: &s3drive_core::Config) {
+    let fs = s3drive_fs::ReadOnlyFs::new(c).await.unwrap();
+    let d = fs.lookup(s3drive_fs::ROOT, DIR).await.unwrap();
+    fs.rename_entry(d.id, FILE, d.id, "recovered move 🦀", false, |a, b| {
+        a == b
+    })
+    .await
+    .unwrap();
+    panic!("rename reply fault did not hold");
+}
+async fn namespace_move_recovered_mode(c: &s3drive_core::Config) {
+    let fs = s3drive_fs::ReadOnlyFs::new(c).await.unwrap();
+    let d = fs.lookup(s3drive_fs::ROOT, DIR).await.unwrap();
+    let n = fs.lookup(d.id, "recovered move 🦀").await.unwrap();
+    assert_eq!(
+        fs.open(n.id).await.unwrap().read(0, 64).await.unwrap(),
+        data(0)[..64]
+    );
+    fs.cache_control().unwrap().close().await.unwrap();
+}
+async fn namespace_remove_uncertain_mode(c: &s3drive_core::Config) {
+    let fs = s3drive_fs::ReadOnlyFs::new(c).await.unwrap();
+    fs.create_directory(s3drive_fs::ROOT, "remove once 🦀")
+        .await
+        .unwrap();
+    fs.remove_entry(s3drive_fs::ROOT, "remove once 🦀", true)
+        .await
+        .unwrap();
+    panic!("remove reply fault did not hold");
+}
+async fn namespace_remove_recovered_mode(c: &s3drive_core::Config) {
+    let fs = s3drive_fs::ReadOnlyFs::new(c).await.unwrap();
+    assert!(fs.lookup(s3drive_fs::ROOT, "remove once 🦀").await.is_err());
+    fs.cache_control().unwrap().close().await.unwrap();
+}
+async fn namespace_cancel_mode(c: &s3drive_core::Config, root: &Path) {
+    let fs = Arc::new(s3drive_fs::ReadOnlyFs::new(c).await.unwrap());
+    let d = fs.lookup(s3drive_fs::ROOT, DIR).await.unwrap();
+    let other = fs.clone();
+    let request = tokio::spawn(async move {
+        other
+            .rename_entry(
+                d.id,
+                "recovered move 🦀",
+                d.id,
+                "cancelled caller completed",
+                false,
+                |a, b| a == b,
+            )
+            .await
+    });
+    wait_marker(root, "cancel-now").await;
+    request.abort();
+    assert!(request.await.unwrap_err().is_cancelled());
+    let mut drain = tokio::spawn(fs.shutdown_writes());
+    assert!(
+        tokio::time::timeout(Duration::from_millis(50), &mut drain)
+            .await
+            .is_err(),
+        "shutdown forgot accepted I/O"
+    );
+    assert!(matches!(
+        fs.create_directory(s3drive_fs::ROOT, "must refuse").await,
+        Err(s3drive_fs::Error::Busy)
+    ));
+    std::fs::write(root.join("drain-waiting"), b"ready").unwrap();
+    drain.await.unwrap().unwrap();
+    fs.cache_control().unwrap().close().await.unwrap();
+    let reopened = s3drive_fs::ReadOnlyFs::new(c).await.unwrap();
+    let d = reopened.lookup(s3drive_fs::ROOT, DIR).await.unwrap();
+    assert!(
+        reopened
+            .lookup(d.id, "cancelled caller completed")
+            .await
+            .is_ok()
+    );
+    reopened.cache_control().unwrap().close().await.unwrap();
+}
+
+async fn namespace_mutations_mode(c: &s3drive_core::Config) {
+    let fs = s3drive_fs::ReadOnlyFs::new(c).await.unwrap();
+    assert!(fs.namespace_mutation());
+    let directory = fs
+        .create_directory(s3drive_fs::ROOT, "moves 🦀")
+        .await
+        .unwrap();
+    let source = fs
+        .create_file(directory.id, "temporary", |a, b| a == b, true)
+        .await
+        .unwrap();
+    let target = fs
+        .create_file(directory.id, "report.txt", |a, b| a == b, true)
+        .await
+        .unwrap();
+    source
+        .write(0, Arc::from(&b"saved source"[..]), false, false)
+        .await
+        .unwrap();
+    target
+        .write(0, Arc::from(&b"dirty displaced"[..]), false, false)
+        .await
+        .unwrap();
+    let moved = fs
+        .rename_entry(
+            directory.id,
+            "temporary",
+            directory.id,
+            "report.txt",
+            true,
+            |a, b| a == b,
+        )
+        .await
+        .unwrap();
+    assert_eq!(moved.id, source.node.id);
+    assert_eq!(
+        fs.lookup(directory.id, "report.txt").await.unwrap().id,
+        source.node.id
+    );
+    assert_eq!(source.read(0, 100).await.unwrap(), b"saved source");
+    assert_eq!(target.read(0, 100).await.unwrap(), b"dirty displaced");
+    assert!(target.is_unlinked().unwrap());
+    target
+        .write(15, Arc::from(&b"!"[..]), false, false)
+        .await
+        .unwrap();
+    target.flush().await.unwrap();
+    assert_eq!(
+        fs.open(moved.id).await.unwrap().read(0, 100).await.unwrap(),
+        b"saved source"
+    );
+    assert!(
+        fs.rename_entry(
+            directory.id,
+            "report.txt",
+            directory.id,
+            "report.txt",
+            false,
+            |a, b| a == b
+        )
+        .await
+        .is_ok()
+    );
+    let collision = fs
+        .create_file(directory.id, "occupied", |a, b| a == b, true)
+        .await
+        .unwrap();
+    drop(collision);
+    assert!(matches!(
+        fs.rename_entry(
+            directory.id,
+            "report.txt",
+            directory.id,
+            "occupied",
+            false,
+            |a, b| a == b
+        )
+        .await,
+        Err(s3drive_fs::Error::AlreadyExists)
+    ));
+    assert!(matches!(
+        fs.rename_entry(
+            directory.id,
+            "report.txt",
+            directory.id,
+            "OCCUPIED",
+            true,
+            |a, b| a == b
+        )
+        .await,
+        Err(s3drive_fs::Error::AlreadyExists)
+    ));
+    let sub = fs.create_directory(directory.id, "nested").await.unwrap();
+    assert!(matches!(
+        fs.remove_entry(s3drive_fs::ROOT, "moves 🦀", true).await,
+        Err(s3drive_fs::Error::NotEmpty)
+    ));
+    assert!(matches!(
+        fs.rename_entry(
+            s3drive_fs::ROOT,
+            "moves 🦀",
+            sub.id,
+            "cycle",
+            false,
+            |a, b| a == b
+        )
+        .await,
+        Err(s3drive_fs::Error::InvalidOperation)
+    ));
+    let other = fs
+        .lookup(s3drive_fs::ROOT, "other bucket.txt")
+        .await
+        .unwrap();
+    let moved_other = fs
+        .rename_entry(
+            s3drive_fs::ROOT,
+            "other bucket.txt",
+            sub.id,
+            "other bucket.txt",
+            false,
+            |a, b| a == b,
+        )
+        .await
+        .unwrap();
+    assert_eq!(moved_other.id, other.id);
+    assert_eq!(
+        fs.open(other.id).await.unwrap().read(0, 100).await.unwrap(),
+        b"payload from the second bucket"
+    );
+    source
+        .write(0, Arc::from(&b"after removal"[..]), false, false)
+        .await
+        .unwrap();
+    fs.remove_entry(directory.id, "report.txt", false)
+        .await
+        .unwrap();
+    assert!(source.is_unlinked().unwrap());
+    assert!(fs.lookup(directory.id, "report.txt").await.is_err());
+    let reused = fs
+        .create_file(directory.id, "report.txt", |a, b| a == b, true)
+        .await
+        .unwrap();
+    assert_ne!(reused.node.id, source.node.id);
+    source.flush().await.unwrap();
+    assert!(reused.read(0, 100).await.unwrap().is_empty());
+    fs.remove_entry(directory.id, "report.txt", false)
+        .await
+        .unwrap();
+    fs.remove_entry(directory.id, "occupied", false)
+        .await
+        .unwrap();
+    fs.remove_entry(sub.id, "other bucket.txt", false)
+        .await
+        .unwrap();
+    fs.remove_entry(directory.id, "nested", true).await.unwrap();
+    fs.remove_entry(s3drive_fs::ROOT, "moves 🦀", true)
+        .await
+        .unwrap();
+    fs.sync_namespace().await.unwrap();
+    fs.cache_control().unwrap().close().await.unwrap();
 }

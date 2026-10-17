@@ -24,3 +24,8 @@ async fn managed_engine_durable_existing_file_edits_and_content_cas() {
 async fn managed_namespace_create_and_directory_reopen() {
     managed::portable_creation().await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn managed_namespace_moves_replacements_and_retained_unlinked_views() {
+    managed::portable_mutations().await;
+}

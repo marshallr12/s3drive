@@ -1,4 +1,5 @@
 //! One durable local head per global file; physical publication is explicit.
+mod namespace;
 use super::*;
 use s3drive_authority::{Apply, Mutation, Reply, Request, WireClient, payload_reference};
 use s3drive_managed::{FileSnapshot, Publisher};
@@ -13,6 +14,8 @@ pub(crate) struct Writes {
     volume: String,
     default_store: String,
     namespace: bool,
+    mutations: bool,
+    reader: s3drive_managed::Reader,
     authority: WireClient,
     publishers: HashMap<String, Publisher>,
     stores: Mutex<HashMap<String, String>>,
@@ -21,7 +24,8 @@ pub(crate) struct Writes {
     edit_serial: AsyncMutex<()>,
     // Also serializes recovery of files whose last local handle was closed.
     publish_serial: AsyncMutex<()>,
-    slots: Semaphore,
+    slots: Arc<Semaphore>,
+    closing: std::sync::atomic::AtomicBool,
 }
 pub(crate) struct File {
     id: String,
@@ -36,8 +40,12 @@ struct View {
     local: Option<Snapshot>,
     metadata: ObjectMetadata,
     base: Option<String>,
+    deleted: bool,
 }
 impl File {
+    pub fn is_unlinked(&self) -> Result<bool> {
+        Ok(self.view.lock().map_err(|_| Error::Internal)?.deleted)
+    }
     pub fn metadata(&self) -> Result<ObjectMetadata> {
         Ok(self
             .view
@@ -69,13 +77,16 @@ impl Writes {
         authority: WireClient,
         publishers: HashMap<String, Publisher>,
         default_store: String,
-        namespace: bool,
+        version: u32,
+        reader: s3drive_managed::Reader,
     ) -> Self {
         Self {
             storage,
             volume,
             default_store,
-            namespace,
+            namespace: version >= 5,
+            mutations: version >= 6,
+            reader,
             authority,
             publishers,
             stores: Mutex::new(HashMap::new()),
@@ -83,8 +94,38 @@ impl Writes {
             open_serial: AsyncMutex::new(()),
             edit_serial: AsyncMutex::new(()),
             publish_serial: AsyncMutex::new(()),
-            slots: Semaphore::new(4),
+            slots: Arc::new(Semaphore::new(4)),
+            closing: std::sync::atomic::AtomicBool::new(false),
         }
+    }
+    pub(super) fn admit(&self) -> Result<tokio::sync::OwnedSemaphorePermit> {
+        use std::sync::atomic::Ordering;
+        if self.closing.load(Ordering::Acquire) {
+            return Err(Error::Busy);
+        }
+        let slot = self
+            .slots
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| Error::Busy)?;
+        if self.closing.load(Ordering::Acquire) {
+            return Err(Error::Busy);
+        }
+        Ok(slot)
+    }
+    pub async fn stop(&self) -> Result<()> {
+        self.closing
+            .store(true, std::sync::atomic::Ordering::Release);
+        let _all = self
+            .slots
+            .clone()
+            .acquire_many_owned(4)
+            .await
+            .map_err(|_| Error::Internal)?;
+        Ok(())
+    }
+    pub fn mutations_enabled(&self) -> bool {
+        self.mutations
     }
     pub fn namespace_enabled(&self) -> bool {
         self.namespace
@@ -145,12 +186,18 @@ impl Writes {
             if page.is_empty() {
                 return Ok(());
             }
-            if !self.namespace {
+            if !self.namespace
+                || (!self.mutations && page.iter().any(|r| !r.input.entries.is_empty()))
+            {
                 return Err(Error::Configuration);
             }
             after = page.last().map(|r| r.input.request.operation.clone());
             for r in page {
-                self.apply_namespace(r.input).await?;
+                if r.input.entries.is_empty() {
+                    self.apply_namespace(r.input).await?;
+                } else {
+                    self.apply_change(r.input).await?;
+                }
             }
         }
     }
@@ -160,6 +207,7 @@ impl Writes {
         name: &str,
         kind: s3drive_authority::Kind,
     ) -> Result<s3drive_authority::Node> {
+        let _slot = self.admit()?;
         if !self.permits_directory() {
             return Err(Error::ReadOnly);
         }
@@ -299,6 +347,7 @@ impl Writes {
         Ok(Some(value))
     }
     pub async fn open(&self, snapshot: FileSnapshot, writing: bool) -> Result<Option<Arc<File>>> {
+        let _slot = self.admit()?;
         self.remember(snapshot.metadata())?;
         let store = snapshot
             .metadata()
@@ -366,6 +415,7 @@ impl Writes {
             local: None,
             metadata: metadata(snapshot.metadata()),
             base: payload_reference(&state.base.payload),
+            deleted: state.base.deleted,
         };
         if state.head != state.settled {
             let g = state.head.ok_or(Error::Conflict)?;
@@ -394,6 +444,7 @@ impl Writes {
     }
     fn check_base(&self, file: &File, state: &logical::File) -> Result<()> {
         let mut view = file.view.lock().map_err(|_| Error::Internal)?;
+        view.deleted = state.base.deleted;
         let reference = payload_reference(&state.base.payload);
         if view.base != reference {
             // A lost local acknowledgment may already have settled this exact
@@ -433,7 +484,7 @@ impl Writes {
         append: bool,
         constrained: bool,
     ) -> Result<usize> {
-        let _slot = self.slots.try_acquire().map_err(|_| Error::Busy)?;
+        let _slot = self.admit()?;
         let _mutation = self.edit_serial.lock().await;
         let _serial = file.serial.lock().await;
         let state = self.state(&file.id).await?;
@@ -466,7 +517,7 @@ impl Writes {
         Ok(count)
     }
     pub async fn truncate(&self, file: &File, size: u64) -> Result<()> {
-        let _slot = self.slots.try_acquire().map_err(|_| Error::Busy)?;
+        let _slot = self.admit()?;
         let _mutation = self.edit_serial.lock().await;
         let _serial = file.serial.lock().await;
         let state = self.state(&file.id).await?;
@@ -551,13 +602,24 @@ impl Writes {
                 volume: self.volume.clone(),
                 operation: random_id()?,
                 expected_sequence: info.sequence,
-                mutation: Mutation::ReserveContent {
-                    node: r.input.node.clone(),
-                    expected_revision: state.base.revision,
-                    store: publisher.store().id.clone(),
-                    size: r.input.size,
-                    sha256: r.input.sha256.clone(),
-                    expected_payload: payload_reference(&state.base.payload),
+                mutation: if state.base.deleted {
+                    Mutation::ReserveDetachedContent {
+                        node: r.input.node.clone(),
+                        expected_revision: state.base.revision,
+                        store: publisher.store().id.clone(),
+                        size: r.input.size,
+                        sha256: r.input.sha256.clone(),
+                        expected_payload: payload_reference(&state.base.payload),
+                    }
+                } else {
+                    Mutation::ReserveContent {
+                        node: r.input.node.clone(),
+                        expected_revision: state.base.revision,
+                        store: publisher.store().id.clone(),
+                        size: r.input.size,
+                        sha256: r.input.sha256.clone(),
+                        expected_payload: payload_reference(&state.base.payload),
+                    }
                 },
             };
             publisher
@@ -597,7 +659,7 @@ impl Writes {
                 return Err(Error::Conflict);
             }
             if r.publication.is_some() {
-                self.finish(publisher, r.clone()).await?;
+                Box::pin(self.finish(publisher, r.clone())).await?;
             }
         }
         let state = self.state(node).await?;
@@ -608,26 +670,56 @@ impl Writes {
                 .for_generation(state.head.ok_or(Error::Conflict)?)
                 .await
                 .map_err(error)?;
-            self.finish(publisher, r).await?;
+            Box::pin(self.finish(publisher, r)).await?;
         }
         Ok(())
     }
-    pub async fn flush(&self, file: &File) -> Result<()> {
+    pub async fn flush(self: &Arc<Self>, file: &Arc<File>) -> Result<()> {
+        let slot = self.admit()?;
+        let writer = self.clone();
+        let file = file.clone();
+        tokio::spawn(async move {
+            let _slot = slot;
+            Box::pin(writer.flush_inner(&file)).await
+        })
+        .await
+        .map_err(|_| Error::Internal)?
+    }
+    async fn flush_inner(&self, file: &File) -> Result<()> {
         let _publication = self.publish_serial.lock().await;
         let _mutation = self.edit_serial.lock().await;
         let _edit = file.serial.lock().await;
+        self.recover_namespace().await?;
         let before = self.state(&file.id).await?;
         self.check_base(file, &before)?;
-        self.flush_node(&file.id).await?;
+        Box::pin(self.flush_node(&file.id)).await?;
         let state = self.state(&file.id).await?;
         // Publication may have settled an ancestor while a newer edit arrived.
         let mut view = file.view.lock().map_err(|_| Error::Internal)?;
         view.base = payload_reference(&state.base.payload);
+        view.deleted = state.base.deleted;
         Ok(())
     }
-    pub async fn flush_all(&self) -> Result<()> {
+    pub async fn sync_namespace(&self) -> Result<()> {
+        let _slot = self.admit()?;
         let _publication = self.publish_serial.lock().await;
         let _mutation = self.edit_serial.lock().await;
+        self.recover_namespace().await
+    }
+    pub async fn flush_all(self: &Arc<Self>) -> Result<()> {
+        let slot = self.admit()?;
+        let writer = self.clone();
+        tokio::spawn(async move {
+            let _slot = slot;
+            Box::pin(writer.flush_all_inner()).await
+        })
+        .await
+        .map_err(|_| Error::Internal)?
+    }
+    async fn flush_all_inner(&self) -> Result<()> {
+        let _publication = self.publish_serial.lock().await;
+        let _mutation = self.edit_serial.lock().await;
+        self.recover_namespace().await?;
         let mut nodes = HashSet::new();
         for r in self.pending().await? {
             if r.input.volume != self.volume {

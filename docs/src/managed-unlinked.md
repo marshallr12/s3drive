@@ -2,9 +2,9 @@
 
 **Library implementation, 2026-10-17 (P6m3b3b2).** This connects the
 [guarded namespace transactions](managed-namespace-plan.md#guarded-authority-entries-p6m3b3b1-2026-10-17)
-to local logical state and immutable S3 publication. It does not enable native
-rename/unlink/rmdir or WinFsp delete cleanup; those callbacks still need separate
-acceptance. Live Wasabi, remote authority/Turso and workstation startup settings
+to local logical state and immutable S3 publication. The next [version-6 native integration](managed-native-mutations.md) adds
+rename/replacement and Linux removal with separate acceptance; Windows delete
+cleanup remains unsupported. Live Wasabi, remote authority/Turso and workstation startup settings
 are unchanged.
 
 ![Exact namespace acknowledgment preserves dirty file identity; detached publication changes a tombstone's payload without restoring its name.](images/managed-unlinked.png)
@@ -76,8 +76,8 @@ and settles the original generation **without another PUT**, then publishes the
 newer generation. Exactly two immutable blobs remain; the new file reusing the
 name stays untouched. These are owned loopback fixtures, not live provider proof.
 
-Native integration must still quiesce mutations/publication, capture verified
-source/target states, recover pending namespace intents before serving paths,
-and retain open-unlinked views. Windows needs a reversible delete-intent and
+The version-6 native integration quiesces mutations/publication, captures
+verified source/target states, recovers pending namespace intents before serving
+paths and retains Linux open-unlinked views. Windows needs a reversible delete-intent and
 cleanup design, including failure recovery despite cleanup having no returned
 error. [WinFsp's cleanup and delete contract](https://raw.githubusercontent.com/winfsp/winfsp/master/inc/winfsp/winfsp.h) (checked 2026-10-17). Full temporary-file/write/fsync/replace application saves remain required.

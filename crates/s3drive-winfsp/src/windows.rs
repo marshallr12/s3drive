@@ -66,6 +66,8 @@ fn storage_error(error: Error) -> FspError {
         Error::AlreadyExists => STATUS_OBJECT_NAME_COLLISION,
         Error::NotDirectory => STATUS_NOT_A_DIRECTORY,
         Error::IsDirectory => STATUS_FILE_IS_A_DIRECTORY,
+        Error::NotEmpty => STATUS_DIRECTORY_NOT_EMPTY,
+        Error::InvalidOperation => STATUS_INVALID_PARAMETER,
         Error::InvalidName => STATUS_OBJECT_NAME_INVALID,
         Error::AmbiguousName => STATUS_OBJECT_NAME_COLLISION,
         Error::ResourceLimit => STATUS_INSUFFICIENT_RESOURCES,
@@ -231,7 +233,13 @@ impl FileSystemContext for Adapter {
         access: u32,
         output: &mut OpenFileInfo,
     ) -> Result<FileContext> {
-        let writes = DELETE.0 | WRITE_DAC.0 | WRITE_OWNER.0;
+        let writes = WRITE_DAC.0
+            | WRITE_OWNER.0
+            | if self.fs.namespace_mutation() {
+                0
+            } else {
+                DELETE.0
+            };
         // FILE_DELETE_ON_CLOSE = 0x1000, FILE_DIRECTORY_FILE = 1,
         // FILE_NON_DIRECTORY_FILE = 0x40 (NT create options).
         if access & writes != 0
@@ -253,6 +261,11 @@ impl FileSystemContext for Adapter {
             .map_err(|_| STATUS_TOO_MANY_OPENED_FILES)?;
         self.wait(async {
             let (node, normalized) = self.resolve(name).await?;
+            if access & DELETE.0 != 0
+                && !(self.fs.writable(&node) || self.fs.writable_directory(&node))
+            {
+                return Err(STATUS_MEDIA_WRITE_PROTECTED.into());
+            }
             if node.kind == Kind::Directory && options & 0x40 != 0 {
                 return Err(STATUS_FILE_IS_A_DIRECTORY.into());
             }
@@ -306,7 +319,15 @@ impl FileSystemContext for Adapter {
     ) -> Result<FileContext> {
         if self.fs.is_read_only()
             || options & 0x1000 != 0
-            || access & (DELETE.0 | WRITE_DAC.0 | WRITE_OWNER.0) != 0
+            || access
+                & (WRITE_DAC.0
+                    | WRITE_OWNER.0
+                    | if self.fs.namespace_mutation() {
+                        0
+                    } else {
+                        DELETE.0
+                    })
+                != 0
         {
             return Err(STATUS_MEDIA_WRITE_PROTECTED.into());
         }
@@ -386,6 +407,65 @@ impl FileSystemContext for Adapter {
                 _permit: permit,
             })
         })
+    }
+    fn rename(
+        &self,
+        context: &FileContext,
+        file_name: &U16CStr,
+        new_file_name: &U16CStr,
+        replace: bool,
+    ) -> Result<()> {
+        if !self.fs.namespace_mutation() {
+            return Err(STATUS_NOT_SUPPORTED.into());
+        }
+        self.wait(async {
+            let old = file_name
+                .to_string()
+                .map_err(|_| STATUS_OBJECT_NAME_INVALID)?;
+            let new = new_file_name
+                .to_string()
+                .map_err(|_| STATUS_OBJECT_NAME_INVALID)?;
+            let (old_parent, old_leaf) = old.rsplit_once('\\').ok_or(STATUS_OBJECT_NAME_INVALID)?;
+            let (new_parent, new_leaf) = new.rsplit_once('\\').ok_or(STATUS_OBJECT_NAME_INVALID)?;
+            if !valid_component(new_leaf) {
+                return Err(STATUS_OBJECT_NAME_INVALID.into());
+            }
+            let (source, _) = self.resolve_text(&old).await?;
+            if source.id != context.node.id {
+                return Err(STATUS_FILE_INVALID.into());
+            }
+            let (old_parent, _) = self
+                .resolve_text(if old_parent.is_empty() {
+                    "\\"
+                } else {
+                    old_parent
+                })
+                .await?;
+            let (new_parent, _) = self
+                .resolve_text(if new_parent.is_empty() {
+                    "\\"
+                } else {
+                    new_parent
+                })
+                .await?;
+            self.fs
+                .rename_entry(
+                    old_parent.id,
+                    old_leaf,
+                    new_parent.id,
+                    new_leaf,
+                    replace,
+                    |a, b| native::name_key(a) == native::name_key(b),
+                )
+                .await
+                .map_err(storage_error)?;
+            Ok(())
+        })
+    }
+    fn set_delete(&self, _context: &FileContext, _name: &U16CStr, _delete: bool) -> Result<()> {
+        // Cleanup cannot return errors. Do not enable deferred deletion before
+        // its reversible durable intent protocol and native acceptance exist.
+        Err(STATUS_NOT_SUPPORTED.into())
     }
     fn close(&self, context: FileContext) {
         drop(context);
@@ -588,6 +668,7 @@ pub async fn run(
 ) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let writable = !fs.is_read_only();
     let cache = fs.cache_control();
+    let shutdown = fs.shutdown_writes();
     let point = mount_point(mountpoint)?;
     let mut ctrl_c = tokio::signal::windows::ctrl_c()?;
     let mut ctrl_break = tokio::signal::windows::ctrl_break()?;
@@ -596,7 +677,7 @@ pub async fn run(
         let _init = winfsp::winfsp_init()?;
         if fs.namespace_creation() && !native::portable_mapping_compatible(){return Err(STATUS_NOT_SUPPORTED.into())}
         let read_only=fs.is_read_only();
-        let descriptor = native::owner_descriptor(!read_only)?;
+        let descriptor = native::owner_descriptor(!read_only,fs.namespace_mutation())?;
         let (cancel, cancelled) = watch::channel(false);
         let adapter = Adapter { fs, runtime, cancelled, descriptor, handles: Arc::new(Semaphore::new(256)), entries: Arc::new(Semaphore::new(100_000)) };
         let mut params = VolumeParams::new();
@@ -631,6 +712,7 @@ pub async fn run(
         _ = &mut stdin_shutdown, if unmount_on_stdin_close => {},
     }
     tokio::task::spawn_blocking(move || drop(mounted)).await?;
+    shutdown.await?;
     if let Some(cache) = cache {
         cache.close().await?;
     }

@@ -11,6 +11,7 @@
 - [Managed existing-file editing](managed-write-plan.md)
 - [Managed namespace and application saves](managed-namespace-plan.md)
 - [Retained unlinked files and namespace acknowledgment](managed-unlinked.md)
+- [Managed native rename and Linux removal](managed-native-mutations.md)
 - [Turso and cross-machine coordination](turso-coordination.md)
 - [Filesystem behavior contract](filesystem-contract.md)
 - [Implemented read-only provider contract](provider-contract.md)

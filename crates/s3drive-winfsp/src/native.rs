@@ -12,7 +12,10 @@ use windows::{
             },
             GetTokenInformation, PSECURITY_DESCRIPTOR, TOKEN_QUERY, TOKEN_USER, TokenUser,
         },
-        Storage::FileSystem::GetVolumeInformationW,
+        Storage::FileSystem::{
+            DELETE, FILE_GENERIC_EXECUTE, FILE_GENERIC_READ, FILE_GENERIC_WRITE,
+            GetVolumeInformationW,
+        },
         System::Threading::{GetCurrentProcess, OpenProcessToken},
     },
     core::{HSTRING, PWSTR},
@@ -100,7 +103,7 @@ pub fn portable_mapping_compatible() -> bool {
     portable_mapping_issue().is_none()
 }
 
-pub fn owner_descriptor(writable: bool) -> Result<Vec<u8>> {
+pub fn owner_descriptor(writable: bool, namespace: bool) -> Result<Vec<u8>> {
     let mut handle = HANDLE::default();
     // SAFETY: output is initialized, process pseudo-handle is valid.
     unsafe {
@@ -138,7 +141,16 @@ pub fn owner_descriptor(writable: bool) -> Result<Vec<u8>> {
     let sid = unsafe { sid.to_string() }.map_err(|_| STATUS_INTERNAL_ERROR)?;
     // Owner and protected DACL are fixed to the mounting account. Optional
     // write rights add no other SID; callbacks still enforce per-source policy.
-    let rights = if writable { "FRFWFX" } else { "FRFX" };
+    let rights = if writable && namespace {
+        format!(
+            "0x{:08x}",
+            FILE_GENERIC_READ.0 | FILE_GENERIC_WRITE.0 | FILE_GENERIC_EXECUTE.0 | DELETE.0
+        )
+    } else if writable {
+        "FRFWFX".into()
+    } else {
+        "FRFX".into()
+    };
     let sddl = HSTRING::from(format!("O:{sid}G:{sid}D:P(A;;{rights};;;{sid})"));
     let mut descriptor = PSECURITY_DESCRIPTOR::default();
     let mut length = 0;

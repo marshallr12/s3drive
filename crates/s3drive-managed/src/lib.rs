@@ -424,7 +424,15 @@ impl Publisher {
     }
     /// A managed file fsync requires both the physical/metadata receipt and
     /// atomic local logical settlement. Historical retries preserve newer heads.
-    pub async fn flush_edit(&self, edit_id: &str) -> Result<s3drive_state::logical::Record> {
+    pub fn flush_edit<'a>(
+        &'a self,
+        edit_id: &'a str,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<s3drive_state::logical::Record>> + Send + 'a>,
+    > {
+        Box::pin(self.flush_edit_inner(edit_id))
+    }
+    async fn flush_edit_inner(&self, edit_id: &str) -> Result<s3drive_state::logical::Record> {
         let local = self.0.storage.logical();
         let edit = local.get(edit_id.into()).await?;
         let input = edit.publication.as_ref().ok_or(Failure::Incomplete)?;
@@ -436,7 +444,7 @@ impl Publisher {
             return Err(Failure::Binding.into());
         }
         if edit.receipt.is_none() {
-            self.flush(input.id()).await?;
+            Box::pin(self.flush(input.id())).await?;
         }
         local.acknowledge(edit_id.into()).await
     }
@@ -479,7 +487,14 @@ impl Publisher {
     /// by resubmitting the SAME request; conflicts never get a new CAS guard.
     /// This publication receipt does not settle a local logical edit. Use
     /// `flush_edit` for generations linked through the logical edit journal.
-    pub async fn flush(&self, id: &str) -> Result<FlushReceipt> {
+    pub fn flush<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<FlushReceipt>> + Send + 'a>>
+    {
+        Box::pin(self.flush_inner(id))
+    }
+    async fn flush_inner(&self, id: &str) -> Result<FlushReceipt> {
         let _slot = self.0.slots.try_acquire().map_err(|_| Failure::Busy)?;
         let mut r = self.reserve_inner(id).await?;
         if r.receipt.is_none() {

@@ -45,6 +45,8 @@ pub enum Error {
     AlreadyExists,
     NotDirectory,
     IsDirectory,
+    NotEmpty,
+    InvalidOperation,
     InvalidName,
     AmbiguousName,
     InvalidListing,
@@ -115,6 +117,12 @@ pub struct OpenFile {
     writable_open: bool,
 }
 impl OpenFile {
+    pub fn is_unlinked(&self) -> Result<bool> {
+        match &self.managed_write {
+            Some((_, f)) => f.is_unlinked(),
+            None => Ok(false),
+        }
+    }
     pub fn current_metadata(&self) -> Result<ObjectMetadata> {
         if let Some((_, file)) = &self.managed_write {
             return file.metadata();
@@ -400,7 +408,20 @@ impl ReadOnlyFs {
         })
     }
 
-    /// Adapters close this worker only after native callbacks and handles stop.
+    /// Capture before moving the filesystem into a native adapter. Poll only
+    /// after callbacks stop; drain accepted I/O before closing the SQLite owner.
+    pub fn shutdown_writes(
+        &self,
+    ) -> impl std::future::Future<Output = Result<()>> + Send + 'static {
+        let writes = self.managed.as_ref().and_then(|m| m.writes.clone());
+        async move {
+            if let Some(w) = writes {
+                w.stop().await?;
+            }
+            Ok(())
+        }
+    }
+    /// Adapters close this worker only after callbacks stop and writes drain.
     pub fn cache_control(&self) -> Option<Cache> {
         self.cache
             .as_ref()
@@ -439,6 +460,12 @@ impl ReadOnlyFs {
                     .as_ref()
                     .is_some_and(|w| w.permits(source, &node.key))
             })
+    }
+    pub fn namespace_mutation(&self) -> bool {
+        self.managed
+            .as_ref()
+            .and_then(|m| m.writes.as_ref())
+            .is_some_and(|w| w.mutations_enabled())
     }
     pub fn namespace_creation(&self) -> bool {
         self.managed
@@ -530,6 +557,94 @@ impl ReadOnlyFs {
             .lock()
             .map_err(|_| Error::Internal)?
             .insert_managed(&created, parent.id)
+    }
+    pub async fn rename_entry(
+        &self,
+        parent: u64,
+        name: &str,
+        new_parent: u64,
+        new_name: &str,
+        replace: bool,
+        same_name: fn(&str, &str) -> bool,
+    ) -> Result<Arc<Node>> {
+        Box::pin(self.rename_entry_inner(parent, name, new_parent, new_name, replace, same_name))
+            .await
+    }
+    async fn rename_entry_inner(
+        &self,
+        parent: u64,
+        name: &str,
+        new_parent: u64,
+        new_name: &str,
+        replace: bool,
+        same_name: fn(&str, &str) -> bool,
+    ) -> Result<Arc<Node>> {
+        if !self.namespace_mutation() {
+            return Err(Error::ReadOnly);
+        }
+        validate_name(name)?;
+        validate_name(new_name)?;
+        let parent = self.node(parent)?;
+        let target_parent = self.node(new_parent)?;
+        if parent.kind != Kind::Directory || target_parent.kind != Kind::Directory {
+            return Err(Error::NotDirectory);
+        }
+        let source = self
+            .list(parent.id)
+            .await?
+            .into_iter()
+            .find(|n| same_name(&n.name, name))
+            .ok_or(Error::NotFound)?;
+        let writes = self
+            .managed
+            .as_ref()
+            .and_then(|m| m.writes.as_ref())
+            .ok_or(Error::ReadOnly)?;
+        let changed = writes
+            .rename(
+                &source.key,
+                &parent.key,
+                name,
+                (&target_parent.key, new_name),
+                replace,
+                same_name,
+            )
+            .await?;
+        self.nodes
+            .lock()
+            .map_err(|_| Error::Internal)?
+            .insert_managed(&changed, target_parent.id)
+    }
+    pub async fn remove_entry(&self, parent: u64, name: &str, directory: bool) -> Result<()> {
+        Box::pin(self.remove_entry_inner(parent, name, directory)).await
+    }
+    async fn remove_entry_inner(&self, parent: u64, name: &str, directory: bool) -> Result<()> {
+        if !self.namespace_mutation() {
+            return Err(Error::ReadOnly);
+        }
+        validate_name(name)?;
+        let p = self.node(parent)?;
+        if p.kind != Kind::Directory {
+            return Err(Error::NotDirectory);
+        }
+        let source = self.lookup(parent, name).await?;
+        self.managed
+            .as_ref()
+            .and_then(|m| m.writes.as_ref())
+            .ok_or(Error::ReadOnly)?
+            .remove(&source.key, &p.key, name, directory)
+            .await
+    }
+    pub async fn sync_namespace(&self) -> Result<()> {
+        if !self.namespace_mutation() {
+            return Err(Error::ReadOnly);
+        }
+        self.managed
+            .as_ref()
+            .and_then(|m| m.writes.as_ref())
+            .ok_or(Error::ReadOnly)?
+            .sync_namespace()
+            .await
     }
     pub async fn flush_all(&self) -> Result<()> {
         if let Some(w) = self.managed.as_ref().and_then(|m| m.writes.as_ref()) {
@@ -871,6 +986,23 @@ mod tests {
         let config =
             s3drive_core::Config::parse(include_str!("../../../examples/s3drive.toml")).unwrap();
         assert!(std::mem::size_of_val(&super::ReadOnlyFs::new(&config)) < 16 * 1024);
+        let fs = super::ReadOnlyFs {
+            readers: Vec::new(),
+            nodes: std::sync::Mutex::new(super::Nodes {
+                by_id: std::collections::HashMap::new(),
+                by_key: std::collections::HashMap::new(),
+                next_id: 2,
+            }),
+            aliases: Vec::new(),
+            cache: None,
+            writes: None,
+            managed: None,
+        };
+        assert!(
+            std::mem::size_of_val(&fs.rename_entry(1, "old", 1, "new", true, |a, b| a == b))
+                < 16 * 1024
+        );
+        assert!(std::mem::size_of_val(&fs.remove_entry(1, "old", false)) < 16 * 1024);
     }
 
     use super::*;
