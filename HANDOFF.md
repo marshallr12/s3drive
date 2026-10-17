@@ -1,11 +1,51 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b3b4b3r Windows reference contract**
-on `codex/windows-disposition-reference`. Goal ACTIVE. This prerequisite adds
-native reference evidence before defining deferred reservation semantics; it
-does not enable S3Drive deletion. Read `docs/src/windows-disposition-reference.md`.
+Updated: 2026-10-17. Current phase: **P6m3b3b4b3a deferred authority and client journal**
+on `codex/deferred-removal-authority`. Goal ACTIVE. Native Windows deletion
+remains unsupported. Read `docs/src/deferred-removal.md` before continuing.
 
-## Verified publication baseline
+## Current phase and verification
+
+Published baseline at phase start: **e091a3da82163891f50491be5580e02a602f79d9**,
+terminal all-green [run 39033496306](https://github.com/marshallr12/s3drive/actions/runs/39033496306).
+Linux `117398599481`, Windows `117398599626`, book `117398599670`.
+Seven native S3Drive cases per OS, eight NTFS reference probes, pinned upstream
+WinFsp disk/network create_test and startup gates passed. Reference fixtures
+compare every observed scalar. The older reference/publication notes below
+are retained history, not the current branch identity.
+
+Schema 16 adds PrepareRemoval (deferred) and same-fence TransitionRemoval.
+Deferred directories allow reads/child operations; pending promotion requires
+emptiness. Reserved source/target namespace effects stay fenced. Owner-fenced
+verified publication works in either mode. Append-only exact-result events
+validate current mode and origin; migration seeds old pending reservations
+without rewriting old Node/request/result bytes. Deferred/pending quotas
+reserve two/one closing slots in both authority and local journal.
+
+Client ownership remains derived from exact acknowledged history. Transitions
+retain original frozen source/store binding and update mode/latest receipt;
+unknown changes block work and prepared publications block mode changes.
+Atomic observations preserve staged generations. No config version change
+(version 6), new provider policy, S3 DELETE or real Wasabi mutation.
+
+Full local gate passed (exit 0): 167 state tests, seven authority TCP tests,
+nine managed-publication cases, 50 S3 and 13 FS tests, formatting/lint/build/book.
+Actual SQLite-full transition, mode/anchor corruption, migration/refusal, local
+atomic acknowledgments and quota, eight killed authority boundaries and SDK
+killed-owner recovery passed. Exact-tip remote native/reference/startup acceptance
+is pending at this edit; do not mark this phase published yet.
+Logs `/tmp/s3drive-deferred-{tests3,tcp1,sdk1,gate2}.log`.
+
+Next: complete local gate, review full diff, commit candidate, require terminal
+Linux/Windows/book CI and native/reference/startup results, then guarded
+fast-forward publication preserving the mdBook watcher tree. Before native
+Windows deletion, implement atomic deferred create, owner-fenced rename/move,
+per-descriptor/node-wide durable state and recovery; measure multiple DoC and
+deferred rename cases. Do not substitute permanent name fencing or SetDelete-only
+support for the full handle lifecycle. Workstation NNP restriction and real
+MX/desktop reboot/PAM/SSH acceptance remain unresolved; never bypass NNP.
+
+## Previous pending-owner publication baseline
 
 Private main at phase start: **fd526929b9c6555bf85594842e6fb20b7db763fb**,
 terminal all-green [run 39030411026](https://github.com/marshallr12/s3drive/actions/runs/39030411026).
@@ -30,7 +70,7 @@ Normal-stack boxed futures, four owned operation slots and drain-before-close
 remain mandatory. Version 6 supplies rename/replacement both OSes and Linux
 unlink/rmdir/fsyncdir; native Windows deletion is still refused.
 
-## Current reference phase
+## Accepted Windows reference phase
 
 Primary WinFsp 2.1 create_test explicitly allows a nonempty directory DoC open
 and cleanup, preserves its child, then removes the empty directory on a later

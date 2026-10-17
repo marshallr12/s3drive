@@ -388,3 +388,25 @@ The first reference run `6e5fef7` / CI 39032499844 passed. Its eight measured
 NTFS outcomes are in the book's JSON evidence fixture. The finalized script
 compares all fields and rejects missing/duplicate cases; its exact-tip native
 run is required. NTFS cross-context observations do not establish WinFsp parity.
+
+
+### P6m3b3b4b3a — deferred authority and persistent client modes (2026-10-17)
+
+The Windows reference prerequisite is accepted at `e091a3d`, terminal
+[run 39033496306](https://github.com/marshallr12/s3drive/actions/runs/39033496306).
+Implement the [deferred-removal contract](deferred-removal.md) as an independently
+verified protocol/client-journal phase. Schema 16 retains immutable mode events;
+PrepareRemoval permits nonempty directories and child operations. TransitionRemoval
+keeps the same fence and guarded identity; pending promotion requires emptiness.
+Both modes admit only the owner's fully guarded verified content publications.
+Local history preserves the original binding and atomic dirty-file observations.
+Reserve promotion/closure headroom; reject corruption and migration ambiguity.
+
+Require actual SQLite full/rollback, killed authority owner at each mode boundary,
+TCP independent-client race/dropped result/restart and actual SDK client-death
+recovery with Unicode/binary/empty files. Local gate plus terminal exact-tip
+Linux/Windows/book and unchanged native/reference/startup suites are mandatory.
+Native Windows deletion stays unsupported, version 6 unchanged. Next implement
+atomic deferred create/owner-fenced move and durable per-open/node-wide lifecycle;
+then full Windows native deletion acceptance. Real provider mutation and
+workstation startup/credential changes remain outside this phase.

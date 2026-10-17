@@ -958,3 +958,173 @@ async fn pending_disposition_races_fences_and_exact_recovery_after_http_reply_lo
     assert_eq!(info(&a, &url).await.sequence, sequence);
     close(stop, task, authority).await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn deferred_mode_clients_race_and_recover_exact_dropped_transition_after_restart() {
+    use s3drive_authority::{Artifact, NodeGuard, RemovalMode};
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("authority");
+    let authority = Authority::open_with_policy(path.clone(), "portable-collision-v1".into())
+        .await
+        .unwrap();
+    let (url, stop, task) = start(authority.client()).await;
+    let a = http();
+    let b = http();
+    let Reply::Features(features) = ask(&a, &url, &Request::Features {}).await else {
+        panic!()
+    };
+    assert!(features.iter().any(|s| s == "deferred-removal-v1"));
+    let v = info(&a, &url).await;
+    let dir = applied(
+        ask(
+            &a,
+            &url,
+            &change(&v, 5000, create(ROOT, "deferred café 🦀", Kind::Directory)),
+        )
+        .await,
+    )
+    .node;
+    let v = info(&a, &url).await;
+    let parent = NodeGuard {
+        id: ROOT.into(),
+        revision: 0,
+    };
+    let guard = |n: &s3drive_authority::Node| NodeGuard {
+        id: n.id.clone(),
+        revision: n.revision,
+    };
+    let prepared = applied(
+        ask(
+            &a,
+            &url,
+            &change(
+                &v,
+                5001,
+                Mutation::PrepareRemoval {
+                    node: guard(&dir),
+                    parent: parent.clone(),
+                    owner: format!("{:032x}", 9000),
+                },
+            ),
+        )
+        .await,
+    );
+    let Some(Artifact::Removal(fence)) = prepared.artifact.clone() else {
+        panic!()
+    };
+    assert_eq!(
+        ask(
+            &b,
+            &url,
+            &Request::Node {
+                volume: v.id.clone(),
+                node: dir.id.clone()
+            }
+        )
+        .await,
+        Reply::Node(prepared.node.clone())
+    );
+    let v = info(&a, &url).await;
+    let promote = |op| {
+        change(
+            &v,
+            op,
+            Mutation::TransitionRemoval {
+                node: guard(&prepared.node),
+                parent: parent.clone(),
+                fence: fence.clone(),
+                expected: RemovalMode::Deferred,
+                mode: RemovalMode::Pending,
+            },
+        )
+    };
+    let ra = promote(5002);
+    let rb = promote(5003);
+    let (left, right) = tokio::join!(ask(&a, &url, &ra), ask(&b, &url, &rb));
+    let (promoted, winner) = match (left, right) {
+        (Reply::Applied(r), Reply::Error(Error::Conflict)) => (r, ra),
+        (Reply::Error(Error::Conflict), Reply::Applied(r)) => (r, rb),
+        other => panic!("one exact mode winner required: {other:?}"),
+    };
+    assert_eq!(
+        ask(
+            &b,
+            &url,
+            &Request::Node {
+                volume: v.id.clone(),
+                node: dir.id.clone()
+            }
+        )
+        .await,
+        Reply::Error(Error::DeletePending)
+    );
+    let v = info(&a, &url).await;
+    let defer = change(
+        &v,
+        5004,
+        Mutation::TransitionRemoval {
+            node: guard(&promoted.node),
+            parent,
+            fence: fence.clone(),
+            expected: RemovalMode::Pending,
+            mode: RemovalMode::Deferred,
+        },
+    );
+    let response = a
+        .post(&url)
+        .bearer_auth(SECRET)
+        .json(&defer)
+        .send()
+        .await
+        .unwrap();
+    assert!(response.status().is_success());
+    drop(response);
+    close(stop, task, authority).await;
+    let authority = Authority::open_with_policy(path, "portable-collision-v1".into())
+        .await
+        .unwrap();
+    let (url, stop, task) = start(authority.client()).await;
+    let sequence = info(&a, &url).await.sequence;
+    let deferred = applied(ask(&b, &url, &defer).await);
+    assert_eq!(ask(&a, &url, &winner).await, Reply::Applied(promoted));
+    assert_eq!(info(&a, &url).await.sequence, sequence);
+    let Reply::PendingRemoval(Some(observed)) = ask(
+        &a,
+        &url,
+        &Request::PendingRemoval {
+            volume: v.id.clone(),
+            node: dir.id.clone(),
+        },
+    )
+    .await
+    else {
+        panic!()
+    };
+    assert_eq!(observed.fence, fence);
+    assert_eq!(observed.mode, RemovalMode::Deferred);
+    assert_eq!(observed.node, deferred.node);
+    let v = info(&a, &url).await;
+    let cancel = change(
+        &v,
+        5005,
+        Mutation::CancelRemoval {
+            node: dir.id.clone(),
+            fence,
+        },
+    );
+    let cancelled = applied(ask(&b, &url, &cancel).await);
+    assert_eq!(ask(&a, &url, &defer).await, Reply::Applied(deferred));
+    assert_eq!(
+        ask(
+            &a,
+            &url,
+            &Request::Node {
+                volume: v.id,
+                node: dir.id
+            }
+        )
+        .await,
+        Reply::Node(cancelled.node)
+    );
+    close(stop, task, authority).await;
+}

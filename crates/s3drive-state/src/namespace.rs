@@ -2,7 +2,10 @@
 //! No S3 publication or platform name-comparison semantics are implemented here.
 mod entries;
 mod removals;
-pub use removals::{PendingRemoval, RemovalFence};
+pub use removals::{PendingRemoval, RemovalFence, RemovalMode};
+pub(crate) fn migrate_removals(db: &Connection) -> crate::Result<()> {
+    removals::migrate(db).map_err(|_| "reserved namespace migration refused".into())
+}
 pub mod publication;
 use crate::State;
 pub use publication::{Artifact, ContentGuard, Payload, Reservation, Store, payload_reference};
@@ -124,6 +127,18 @@ pub enum Mutation {
         node: NodeGuard,
         parent: NodeGuard,
         owner: String,
+    },
+    PrepareRemoval {
+        node: NodeGuard,
+        parent: NodeGuard,
+        owner: String,
+    },
+    TransitionRemoval {
+        node: NodeGuard,
+        parent: NodeGuard,
+        fence: RemovalFence,
+        expected: RemovalMode,
+        mode: RemovalMode,
     },
     CancelRemoval {
         node: String,
@@ -252,6 +267,11 @@ impl Apply {
                 node,
                 parent,
                 owner,
+            }
+            | Mutation::PrepareRemoval {
+                node,
+                parent,
+                owner,
             } => {
                 node.valid(self.expected_sequence)
                     && parent.valid(self.expected_sequence)
@@ -269,6 +289,18 @@ impl Apply {
                 node.valid(self.expected_sequence)
                     && parent.valid(self.expected_sequence)
                     && fence.valid()
+            }
+            Mutation::TransitionRemoval {
+                node,
+                parent,
+                fence,
+                expected,
+                mode,
+            } => {
+                node.valid(self.expected_sequence)
+                    && parent.valid(self.expected_sequence)
+                    && fence.valid()
+                    && expected != mode
             }
             Mutation::CreateEntry {
                 parent,
@@ -434,7 +466,11 @@ fn live_node(db: &Connection, id: &str) -> Result<Node> {
     }
 }
 fn directory(db: &Connection, id: &str) -> Result<Node> {
-    let n = live_node(db, id)?;
+    let n = node(db, id)?;
+    if n.deleted {
+        return Err(Error::NotFound);
+    }
+    removals::require_read(db, id)?;
     if n.kind != Kind::Directory {
         return Err(Error::NotDirectory);
     }
@@ -573,7 +609,7 @@ impl State {
     pub fn namespace_node(&self, volume_id: &str, id: &str) -> Result<Node> {
         check_volume(&self.connection, volume_id)?;
         let n = node(&self.connection, id)?;
-        removals::require_clear(&self.connection, id)?;
+        removals::require_read(&self.connection, id)?;
         Ok(n)
     }
     /// Bounded, consistent listing; never silently truncate a directory.
@@ -644,6 +680,8 @@ impl State {
                     | Mutation::MoveEntry { .. }
                     | Mutation::RemoveEntry { .. }
                     | Mutation::ArmRemoval { .. }
+                    | Mutation::PrepareRemoval { .. }
+                    | Mutation::TransitionRemoval { .. }
                     | Mutation::CancelRemoval { .. }
                     | Mutation::CommitRemoval { .. }
             );
@@ -665,8 +703,7 @@ impl State {
         // reservation. Ordinary work (including failed requests) must not use
         // the last capacity needed by a matching cancel/commit. The outer
         // transaction rolls back a successful effect if admission is refused.
-        let pending: i64 =
-            sql(tx.query_row("SELECT count(*) FROM namespace_removals", [], |r| r.get(0)))?;
+        let pending: i64 = sql(tx.query_row("SELECT coalesce(sum(CASE mode WHEN 'deferred' THEN 2 ELSE 1 END),0) FROM namespace_removals", [], |r| r.get(0)))?;
         if count + 1 + pending > MAX_OPERATIONS {
             return Err(Error::Limit);
         }
@@ -677,6 +714,9 @@ impl State {
         ))?;
         if inserted != 1 || stored(&tx, &request.operation)? != Some((encoded, output)) {
             return Err(Error::Internal);
+        }
+        if let Ok(receipt) = &outcome {
+            removals::check_effect(&tx, &receipt.node.id)?;
         }
         sql(tx.commit())?;
         outcome
@@ -699,6 +739,8 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
     if matches!(
         &request.mutation,
         Mutation::ArmRemoval { .. }
+            | Mutation::PrepareRemoval { .. }
+            | Mutation::TransitionRemoval { .. }
             | Mutation::CancelRemoval { .. }
             | Mutation::CommitRemoval { .. }
     ) {
@@ -734,6 +776,8 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
         | Mutation::RemoveEntry { .. }
         | Mutation::ReservePendingContent { .. }
         | Mutation::ArmRemoval { .. }
+        | Mutation::PrepareRemoval { .. }
+        | Mutation::TransitionRemoval { .. }
         | Mutation::CancelRemoval { .. }
         | Mutation::CommitRemoval { .. } => {
             return Err(Error::Invalid);

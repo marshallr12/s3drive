@@ -13,7 +13,11 @@ fn guarded(db: &Connection, guard: &NodeGuard) -> Result<Node> {
     Ok(n)
 }
 fn parent(db: &Connection, guard: &NodeGuard) -> Result<Node> {
-    let n = guarded(db, guard)?;
+    let n = node(db, &guard.id)?;
+    if n.deleted || n.revision != guard.revision {
+        return Err(Error::Conflict);
+    }
+    removals::require_read(db, &n.id)?;
     if n.kind != Kind::Directory {
         return Err(Error::NotDirectory);
     }

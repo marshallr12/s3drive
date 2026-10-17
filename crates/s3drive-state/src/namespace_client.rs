@@ -38,6 +38,8 @@ impl Input {
                 | Mutation::MoveEntry { .. }
                 | Mutation::RemoveEntry { .. }
                 | Mutation::ArmRemoval { .. }
+                | Mutation::PrepareRemoval { .. }
+                | Mutation::TransitionRemoval { .. }
                 | Mutation::CancelRemoval { .. }
                 | Mutation::CommitRemoval { .. }
         ) || !self.store.valid()

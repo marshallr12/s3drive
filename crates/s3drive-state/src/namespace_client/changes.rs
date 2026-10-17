@@ -84,6 +84,8 @@ pub(super) fn validate(input: &Input) -> Result<()> {
         Mutation::CreateEntry { .. } if input.entries.is_empty() => Ok(()),
         Mutation::RemoveEntry { node, parent }
         | Mutation::ArmRemoval { node, parent, .. }
+        | Mutation::PrepareRemoval { node, parent, .. }
+        | Mutation::TransitionRemoval { node, parent, .. }
         | Mutation::CommitRemoval { node, parent, .. }
             if input.entries.len() == 1
                 && input.entries[0].guard_matches(node)
@@ -134,7 +136,10 @@ pub(super) fn effects(input: &Input, r: &Receipt) -> Result<Vec<Node>> {
     expected.revision = r.sequence;
     let (deleted, displaced) = match &input.request.mutation {
         Mutation::RemoveEntry { .. } | Mutation::CommitRemoval { .. } => (true, None),
-        Mutation::ArmRemoval { .. } | Mutation::CancelRemoval { .. } => (false, None),
+        Mutation::ArmRemoval { .. }
+        | Mutation::PrepareRemoval { .. }
+        | Mutation::TransitionRemoval { .. }
+        | Mutation::CancelRemoval { .. } => (false, None),
         Mutation::MoveEntry { parent, name, .. } => {
             expected.parent = parent.id.clone();
             expected.name = name.clone();

@@ -14,6 +14,7 @@
 - [Managed native rename and Linux removal](managed-native-mutations.md)
 - [Windows deletion and durable disposition](windows-delete-plan.md)
   - [Windows deletion reference contract](windows-disposition-reference.md)
+  - [Deferred removal authority](deferred-removal.md)
   - [Publication while deletion is pending](pending-owner-publication.md)
 - [Turso and cross-machine coordination](turso-coordination.md)
 - [Filesystem behavior contract](filesystem-contract.md)

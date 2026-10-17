@@ -1,7 +1,7 @@
 //! Ownership is derived from exact acknowledged operations, never from a
 //! replaceable in-memory owner or a second mutable lifecycle index.
 use super::*;
-use namespace::RemovalFence;
+use namespace::{RemovalFence, RemovalMode};
 use std::collections::{BTreeMap, HashMap};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -9,16 +9,19 @@ pub struct OwnedRemoval {
     pub input: Input,
     pub receipt: Receipt,
     pub fence: RemovalFence,
+    pub mode: RemovalMode,
 }
 pub(super) fn fence(input: &Input) -> Option<RemovalFence> {
     match &input.request.mutation {
-        Mutation::ArmRemoval { owner, .. } => Some(RemovalFence {
-            intent: input.request.operation.clone(),
-            owner: owner.clone(),
-        }),
-        Mutation::CancelRemoval { fence, .. } | Mutation::CommitRemoval { fence, .. } => {
-            Some(fence.clone())
+        Mutation::ArmRemoval { owner, .. } | Mutation::PrepareRemoval { owner, .. } => {
+            Some(RemovalFence {
+                intent: input.request.operation.clone(),
+                owner: owner.clone(),
+            })
         }
+        Mutation::CancelRemoval { fence, .. }
+        | Mutation::CommitRemoval { fence, .. }
+        | Mutation::TransitionRemoval { fence, .. } => Some(fence.clone()),
         _ => None,
     }
 }
@@ -68,7 +71,10 @@ fn active(records: &[Record]) -> Result<HashMap<Key, OwnedRemoval>> {
         };
         let key = (r.input.request.volume.clone(), receipt.node.id.clone());
         let f = fence(&r.input).ok_or("missing removal fence")?;
-        if matches!(r.input.request.mutation, Mutation::ArmRemoval { .. }) {
+        if matches!(
+            r.input.request.mutation,
+            Mutation::ArmRemoval { .. } | Mutation::PrepareRemoval { .. }
+        ) {
             if active
                 .insert(
                     key,
@@ -76,6 +82,12 @@ fn active(records: &[Record]) -> Result<HashMap<Key, OwnedRemoval>> {
                         input: r.input.clone(),
                         receipt: receipt.clone(),
                         fence: f,
+                        mode: if matches!(r.input.request.mutation, Mutation::PrepareRemoval { .. })
+                        {
+                            RemovalMode::Deferred
+                        } else {
+                            RemovalMode::Pending
+                        },
                     },
                 )
                 .is_some()
@@ -83,11 +95,25 @@ fn active(records: &[Record]) -> Result<HashMap<Key, OwnedRemoval>> {
                 return Err("overlapping owned removal history".into());
             }
         } else {
-            let old = active
+            let mut old = active
                 .remove(&key)
                 .ok_or("closing removal lacks acknowledged arm")?;
             if old.fence != f || !same_control(&old.input, &r.input) {
                 return Err("closing removal changed retained ownership".into());
+            }
+            match &r.input.request.mutation {
+                Mutation::TransitionRemoval { expected, mode, .. } => {
+                    if old.mode != *expected {
+                        return Err("removal transition changed expected mode".into());
+                    }
+                    old.mode = *mode;
+                    old.receipt = receipt.clone();
+                    active.insert(key, old);
+                }
+                Mutation::CommitRemoval { .. } if old.mode != RemovalMode::Pending => {
+                    return Err("deferred removal cannot commit".into());
+                }
+                _ => (),
             }
         }
     }
@@ -96,17 +122,22 @@ fn active(records: &[Record]) -> Result<HashMap<Key, OwnedRemoval>> {
 pub(crate) fn owned(db: &Connection, volume: &str, node: &str) -> Result<Option<OwnedRemoval>> {
     Ok(active(&records(db)?)?.remove(&(volume.into(), node.into())))
 }
-// Pending arms reserve their future closing slot too. A successful closing
-// acknowledgment releases that headroom atomically with its node observation.
+// Deferred ownership reserves promotion plus final closure; pending reserves closure.
 fn required_slots(records: &[Record]) -> Result<usize> {
-    let pending_arms = records
+    let unknown = records
         .iter()
-        .filter(|r| {
-            r.outcome.is_none() && matches!(r.input.request.mutation, Mutation::ArmRemoval { .. })
+        .filter(|r| r.outcome.is_none())
+        .map(|r| match r.input.request.mutation {
+            Mutation::ArmRemoval { .. } => 1,
+            Mutation::PrepareRemoval { .. } => 2,
+            _ => 0,
         })
-        .count();
-    let reserved = active(records)?.len() + pending_arms;
-    Ok(records.len() + reserved)
+        .sum::<usize>();
+    let reserved = active(records)?
+        .values()
+        .map(|o| o.mode.closing_slots())
+        .sum::<usize>();
+    Ok(records.len() + reserved + unknown)
 }
 pub(super) fn check_capacity(records: &[Record]) -> Result<()> {
     if required_slots(records)? > LIMIT as usize {
@@ -122,9 +153,21 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
         let e = &input.entries[0];
         let old = owned.get(&(input.request.volume.clone(), e.id.clone()));
         match &input.request.mutation {
-            Mutation::ArmRemoval { .. } if old.is_none() => (),
-            Mutation::CancelRemoval { .. } | Mutation::CommitRemoval { .. } => {
+            Mutation::ArmRemoval { .. } | Mutation::PrepareRemoval { .. } if old.is_none() => (),
+            Mutation::CancelRemoval { .. }
+            | Mutation::CommitRemoval { .. }
+            | Mutation::TransitionRemoval { .. } => {
                 let old = old.ok_or("removal closure requires acknowledged local arm")?;
+                if matches!(&input.request.mutation, Mutation::CommitRemoval { .. })
+                    && old.mode != RemovalMode::Pending
+                {
+                    return Err("deferred removal must promote before commit".into());
+                }
+                if let Mutation::TransitionRemoval { expected, .. } = &input.request.mutation
+                    && old.mode != *expected
+                {
+                    return Err("removal transition mode mismatch".into());
+                }
                 let n = &old.receipt.node;
                 if old.fence != f
                     || !same_control(&old.input, input)
@@ -144,13 +187,17 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
     // Block source, target and parent use *before* persisting a doomed ordinary
     // intent. Otherwise its temporary server refusal could block cancellation.
     let touched = touched(input);
-    for (volume, node) in owned.keys() {
+    for ((volume, node), reservation) in &owned {
         if volume == &input.request.volume && touched.contains(&node.as_str()) {
             let own_close = matches!(
                 input.request.mutation,
-                Mutation::CancelRemoval { .. } | Mutation::CommitRemoval { .. }
+                Mutation::CancelRemoval { .. }
+                    | Mutation::CommitRemoval { .. }
+                    | Mutation::TransitionRemoval { .. }
             ) && input.entries[0].id == *node;
-            if !own_close {
+            let child_only = reservation.mode == RemovalMode::Deferred
+                && !input.entries.iter().any(|e| e.id == *node);
+            if !own_close && !child_only {
                 return Err("namespace node is locally delete-pending".into());
             }
         }
@@ -167,23 +214,32 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
             return Err("recover exact removal outcome before another namespace effect".into());
         }
     }
-    // A closing request may use its reserved slot; its successful receipt must
-    // release it. Failed closing receipts cannot consume the final headroom.
-    let closing = matches!(
-        input.request.mutation,
-        Mutation::CancelRemoval { .. } | Mutation::CommitRemoval { .. }
-    );
+    // Project the successful mode change, allowing only its reserved credit.
+    // A rejected acknowledgment must still pass the ordinary capacity check.
+    let credit = if let Some(old) = input
+        .entries
+        .first()
+        .and_then(|e| owned.get(&(input.request.volume.clone(), e.id.clone())))
+    {
+        match input.request.mutation {
+            Mutation::CancelRemoval { .. } | Mutation::CommitRemoval { .. } => {
+                old.mode.closing_slots() as isize
+            }
+            Mutation::TransitionRemoval { mode, .. } => {
+                old.mode.closing_slots() as isize - mode.closing_slots() as isize
+            }
+            _ => 0,
+        }
+    } else {
+        0
+    };
     let mut projected = records;
     projected.push(Record {
         input: input.clone(),
         outcome: None,
     });
-    if closing {
-        if required_slots(&projected)? > LIMIT as usize + 1 {
-            return Err("namespace removal closing quota".into());
-        }
-    } else {
-        check_capacity(&projected)?;
+    if required_slots(&projected)? as isize - credit > LIMIT as isize {
+        return Err("namespace removal closing quota".into());
     }
     Ok(())
 }
@@ -193,6 +249,8 @@ fn touched(input: &Input) -> Vec<&str> {
         Mutation::CreateEntry { parent, .. } => ids.push(parent),
         Mutation::RemoveEntry { parent, .. }
         | Mutation::ArmRemoval { parent, .. }
+        | Mutation::PrepareRemoval { parent, .. }
+        | Mutation::TransitionRemoval { parent, .. }
         | Mutation::CommitRemoval { parent, .. } => ids.push(&parent.id),
         Mutation::MoveEntry {
             source_parent,

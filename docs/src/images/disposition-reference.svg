@@ -13,10 +13,10 @@
   <g font-size="14" text-anchor="middle"><text x="140" y="186">Own handle identity</text><text x="405" y="186">May change or be cancelled</text><text x="682" y="186">Void; may request deletion</text><text x="945" y="186">Release context</text></g>
   <g stroke="#516477" stroke-width="2" marker-end="url(#arrow)"><path d="M245 167 H285"/><path d="M520 167 H560"/><path d="M800 167 H840"/></g>
   <text x="35" y="250" font-size="16" font-weight="bold">Authority protocol foundations</text>
-  <g stroke-width="1.5"><rect x="35" y="268" width="290" height="92" rx="10" fill="#fff1d6" stroke="#ad8537"/><rect x="390" y="268" width="290" height="92" rx="10" fill="#e3f1e9" stroke="#538269"/><rect x="745" y="268" width="300" height="92" rx="10" fill="#e3f1e9" stroke="#538269"/></g>
+  <g stroke-width="1.5"><rect x="35" y="268" width="290" height="92" rx="10" fill="#e3f1e9" stroke="#538269"/><rect x="390" y="268" width="290" height="92" rx="10" fill="#e3f1e9" stroke="#538269"/><rect x="745" y="268" width="300" height="92" rx="10" fill="#e3f1e9" stroke="#538269"/></g>
   <g font-size="18" text-anchor="middle"><text x="180" y="299">Deferred reservation</text><text x="535" y="299">Pending reservation</text><text x="895" y="299">Guarded tombstone</text></g>
-  <g font-size="14" text-anchor="middle"><text x="180" y="326">PROPOSED · open sharing to verify</text><text x="535" y="326">IMPLEMENTED · owner-fenced writes</text><text x="895" y="326">IMPLEMENTED · preserve payload</text><text x="180" y="346">Do not equate this with pending</text><text x="535" y="346">New opens and name changes refused</text><text x="895" y="346">No S3 deletion or reclamation</text></g>
-  <g stroke="#516477" stroke-width="2" marker-end="url(#arrow)"><path d="M325 310 H385" stroke-dasharray="5 4"/><path d="M680 310 H740"/></g>
+  <g font-size="14" text-anchor="middle"><text x="180" y="326">AUTHORITY · reads/children allowed</text><text x="535" y="326">IMPLEMENTED · owner-fenced writes</text><text x="895" y="326">IMPLEMENTED · preserve payload</text><text x="180" y="346">Native handle bridge still planned</text><text x="535" y="346">New opens and name changes refused</text><text x="895" y="346">No S3 deletion or reclamation</text></g>
+  <g stroke="#516477" stroke-width="2" marker-end="url(#arrow)"><path d="M325 310 H385"/><path d="M680 310 H740"/></g>
   <text x="35" y="397" font-size="15">The bridge must persist handle and transition evidence in local SQLite before issuing remote effects.</text>
   <text x="35" y="424" font-size="15">Missing cleanup or an uncertain cancellation retains protected work; it does not authorize a fresh deletion.</text>
  </g>

@@ -1,5 +1,6 @@
 use super::*;
 use namespace::RemovalFence;
+mod deferred;
 
 fn owner(f: &mut Fixture) -> String {
     Journal::new(&mut f.client)
@@ -431,7 +432,7 @@ fn schema_thirteen_migration_preserves_existing_journal_and_conflicts_roll_back(
                 r.get::<_, Vec<u8>>(0)
             })
             .unwrap();
-        f.client.connection.execute_batch("DROP TABLE logical_conflicts; DROP TABLE managed_rejections; DROP TABLE retained_client_identity; DROP TABLE client_identity; PRAGMA user_version=13").unwrap();
+        f.client.connection.execute_batch("DROP TABLE namespace_removal_events; ALTER TABLE namespace_removals DROP COLUMN mode; ALTER TABLE namespace_removals DROP COLUMN event_id; DROP TABLE logical_conflicts; DROP TABLE managed_rejections; DROP TABLE retained_client_identity; DROP TABLE client_identity; PRAGMA user_version=13").unwrap();
         if conflict {
             f.client.connection.execute_batch("CREATE TABLE client_identity(keep TEXT); INSERT INTO client_identity VALUES('preserved')").unwrap();
         }

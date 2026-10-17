@@ -1,7 +1,22 @@
 //! One-shot SDK PUTs, actual authority HTTP and killed private SQLite owners.
 use super::*;
-use s3drive_authority::{NodeGuard, ROOT, RemovalFence, payload_reference};
+use s3drive_authority::{NodeGuard, ROOT, RemovalFence, RemovalMode, payload_reference};
 const BYTES: &[u8] = b"pending owner binary bytes\0\xff";
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn deferred_owner_sdk_recovery_preserves_fence_through_mode_changes_and_client_death() {
+    run_children(
+        &[
+            "fenced_deferred_stage",
+            "fenced_deferred_upload",
+            "fenced_deferred_metadata",
+            "fenced_deferred_cancel",
+            "fenced_deferred_finish",
+        ],
+        &[0, 1, 1, 2, 2],
+    )
+    .await;
+}
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn fenced_owner_writes_recover_each_lost_reply_then_cancel_or_commit_exact_payloads() {
@@ -44,7 +59,7 @@ async fn run_children(modes: &[&str], expected_puts: &[usize]) {
     };
     let baseline = deletes();
     for (index, mode) in modes.iter().enumerate() {
-        if *mode == "fenced_upload" {
+        if mode.ends_with("_upload") {
             f.hide_committed.store(true, Ordering::SeqCst);
         }
         let mut child = Command::new(std::env::current_exe().unwrap())
@@ -121,7 +136,7 @@ async fn run_children(modes: &[&str], expected_puts: &[usize]) {
         .count();
     assert_eq!(
         count,
-        if modes[0] == "fenced_stage" { 2 } else { 3 },
+        if modes[0].ends_with("_stage") { 2 } else { 3 },
         "conflicting/orphan objects stay retained"
     );
 }
@@ -158,7 +173,7 @@ async fn disposition(
         .unwrap();
     p.change_namespace(input).await.unwrap()
 }
-async fn arm(p: &Publisher, w: &WireClient, n: u64, op: u64) -> RemovalFence {
+async fn arm(p: &Publisher, w: &WireClient, n: u64, op: u64, deferred: bool) -> RemovalFence {
     let file = p
         .storage()
         .logical()
@@ -166,18 +181,20 @@ async fn arm(p: &Publisher, w: &WireClient, n: u64, op: u64) -> RemovalFence {
         .await
         .unwrap();
     let owner = p.client_identity().await.unwrap();
-    disposition(
-        p,
-        w,
-        op,
-        &file.base,
+    let mutation = if deferred {
+        Mutation::PrepareRemoval {
+            node: guard(&file.base),
+            parent: parent(),
+            owner,
+        }
+    } else {
         Mutation::ArmRemoval {
             node: guard(&file.base),
             parent: parent(),
             owner,
-        },
-    )
-    .await;
+        }
+    };
+    disposition(p, w, op, &file.base, mutation).await;
     p.owned_removal(&id(n)).await.unwrap().unwrap().fence
 }
 async fn close(p: &Publisher, w: &WireClient, n: u64, op: u64, commit: bool) {
@@ -289,6 +306,9 @@ pub(super) async fn run_mode(
     w: &WireClient,
     volume: &str,
 ) {
+    let deferred = mode.starts_with("fenced_deferred_");
+    let normalized = mode.replace("fenced_deferred_", "fenced_");
+    let mode = normalized.as_str();
     if mode == "fenced_stage" || mode == "fenced_conflict_detect" {
         let reader = s3drive_s3::S3Reader::from_source(&config.sources[0])
             .await
@@ -358,16 +378,23 @@ pub(super) async fn run_mode(
     if mode.starts_with("fenced_conflict_") {
         Box::pin(conflict_mode(mode, &p, w, volume, root, &loss)).await;
     } else {
-        Box::pin(success_mode(mode, &p, w, volume, &loss)).await;
+        Box::pin(success_mode(mode, &p, w, volume, &loss, deferred)).await;
     }
     p.storage().close().await.unwrap();
     stop.send(()).unwrap();
     server.await.unwrap();
 }
-async fn success_mode(mode: &str, p: &Publisher, w: &WireClient, volume: &str, loss: &AtomicU8) {
+async fn success_mode(
+    mode: &str,
+    p: &Publisher,
+    w: &WireClient,
+    volume: &str,
+    loss: &AtomicU8,
+    deferred: bool,
+) {
     if mode == "fenced_stage" {
         p.bind_edit_file(&id(10)).await.unwrap();
-        arm(p, w, 10, 8000).await;
+        arm(p, w, 10, 8000, deferred).await;
         stage(p, w, 10, 5000, BYTES).await;
         prepare(p, w, 10, 5000, 6000, true).await;
         loss.store(1, Ordering::SeqCst);
@@ -401,17 +428,75 @@ async fn success_mode(mode: &str, p: &Publisher, w: &WireClient, volume: &str, l
         let sequence = info(w).await.sequence;
         p.flush_edit(&id(5000)).await.unwrap();
         assert_eq!(info(w).await.sequence, sequence);
-        assert!(
-            p.read(&id(10)).await.is_err(),
-            "new opens stay denied while pending"
-        );
+        if deferred {
+            assert_eq!(p.read(&id(10)).await.unwrap().bytes(), BYTES);
+            for (op, mode) in [(8020, RemovalMode::Pending), (8021, RemovalMode::Deferred)] {
+                let old = p.owned_removal(&id(10)).await.unwrap().unwrap();
+                let file = p
+                    .storage()
+                    .logical()
+                    .file(volume.into(), id(10))
+                    .await
+                    .unwrap();
+                disposition(
+                    p,
+                    w,
+                    op,
+                    &file.base,
+                    Mutation::TransitionRemoval {
+                        node: guard(&file.base),
+                        parent: parent(),
+                        fence: old.fence.clone(),
+                        expected: old.mode,
+                        mode,
+                    },
+                )
+                .await;
+                let current = p.owned_removal(&id(10)).await.unwrap().unwrap();
+                assert_eq!(current.fence, old.fence);
+                assert_eq!(current.mode, mode);
+                if mode == RemovalMode::Pending {
+                    assert!(p.read(&id(10)).await.is_err());
+                } else {
+                    assert_eq!(p.read(&id(10)).await.unwrap().bytes(), BYTES);
+                }
+            }
+        } else {
+            assert!(
+                p.read(&id(10)).await.is_err(),
+                "new opens stay denied while pending"
+            );
+        }
         close(p, w, 10, 8001, false).await;
         assert_eq!(p.read(&id(10)).await.unwrap().bytes(), BYTES);
         p.bind_edit_file(&id(11)).await.unwrap();
-        arm(p, w, 11, 8011).await;
+        arm(p, w, 11, 8011, deferred).await;
         stage(p, w, 11, 5011, b"").await;
         prepare(p, w, 11, 5011, 6011, true).await;
         p.flush_edit(&id(5011)).await.unwrap();
+        if deferred {
+            let old = p.owned_removal(&id(11)).await.unwrap().unwrap();
+            let file = p
+                .storage()
+                .logical()
+                .file(volume.into(), id(11))
+                .await
+                .unwrap();
+            disposition(
+                p,
+                w,
+                8022,
+                &file.base,
+                Mutation::TransitionRemoval {
+                    node: guard(&file.base),
+                    parent: parent(),
+                    fence: old.fence,
+                    expected: RemovalMode::Deferred,
+                    mode: RemovalMode::Pending,
+                },
+            )
+            .await;
+        }
         close(p, w, 11, 8012, true).await;
     } else {
         assert_eq!(p.read(&id(10)).await.unwrap().bytes(), BYTES);
@@ -454,7 +539,7 @@ async fn conflict_mode(
     if mode == "fenced_conflict_detect" {
         for n in [10, 11] {
             p.bind_edit_file(&id(n)).await.unwrap();
-            arm(p, w, n, 8000 + n).await;
+            arm(p, w, n, 8000 + n, false).await;
             stage(p, w, n, 5000 + n, BYTES).await;
             prepare(p, w, n, 5000 + n, 6000 + n, true).await;
         }

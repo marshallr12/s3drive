@@ -1,4 +1,5 @@
 use super::*;
+mod deferred;
 fn id(n: u64) -> String {
     format!("{n:032x}")
 }
@@ -86,6 +87,7 @@ impl World {
             panic!()
         };
         PendingRemoval {
+            mode: RemovalMode::Pending,
             node: receipt.node,
             fence,
         }
@@ -477,7 +479,7 @@ fn schema_twelve_migration_preserves_old_serialized_nodes_and_guards() {
     let volume = w.state.namespace_volume().unwrap();
     w.state
         .connection
-        .execute_batch("DROP TABLE logical_conflicts; DROP TABLE managed_rejections; DROP TABLE retained_client_identity; DROP TABLE client_identity; DROP TABLE namespace_removals; PRAGMA user_version=12")
+        .execute_batch("DROP TABLE namespace_removal_events; ALTER TABLE namespace_removals DROP COLUMN mode; ALTER TABLE namespace_removals DROP COLUMN event_id; DROP TABLE logical_conflicts; DROP TABLE managed_rejections; DROP TABLE retained_client_identity; DROP TABLE client_identity; DROP TABLE namespace_removals; PRAGMA user_version=12")
         .unwrap();
     w.reopen();
     assert_eq!(
@@ -569,7 +571,7 @@ fn real_full_disk_preserves_arm_uncertainty_and_exact_retry() {
 fn failed_schema_thirteen_migration_preserves_version_and_original_database() {
     let mut w = World::new();
     let n = w.file("preserved migration data");
-    w.state.connection.execute_batch("DROP TABLE logical_conflicts; DROP TABLE managed_rejections; DROP TABLE retained_client_identity; DROP TABLE client_identity; DROP TABLE namespace_removals; CREATE TABLE namespace_removals(keep TEXT); INSERT INTO namespace_removals VALUES('untouched'); PRAGMA user_version=12").unwrap();
+    w.state.connection.execute_batch("DROP TABLE namespace_removal_events; ALTER TABLE namespace_removals DROP COLUMN mode; ALTER TABLE namespace_removals DROP COLUMN event_id; DROP TABLE logical_conflicts; DROP TABLE managed_rejections; DROP TABLE retained_client_identity; DROP TABLE client_identity; DROP TABLE namespace_removals; CREATE TABLE namespace_removals(keep TEXT); INSERT INTO namespace_removals VALUES('untouched'); PRAGMA user_version=12").unwrap();
     let path = w.tmp.path().join("authority");
     let placeholder = State::open_managed(&w.tmp.path().join("placeholder")).unwrap();
     drop(std::mem::replace(&mut w.state, placeholder));
@@ -632,13 +634,43 @@ fn killed_owner_preserves_every_committed_disposition_boundary_and_exact_result(
     let path = w.tmp.path().join("authority");
     let input = w.tmp.path().join("request.json");
     let mut history = Vec::new();
-    for step in 0..4 {
+    for step in 0..8 {
         let request = match step {
-            0 | 2 => {
+            0 | 4 => {
                 let live = w.state.namespace_node(&w.volume, &n.id).unwrap();
-                w.arm_request(&live)
+                let mut request = w.arm_request(&live);
+                if step == 0 {
+                    let Mutation::ArmRemoval {
+                        node,
+                        parent,
+                        owner,
+                    } = request.mutation
+                    else {
+                        unreachable!()
+                    };
+                    request.mutation = Mutation::PrepareRemoval {
+                        node,
+                        parent,
+                        owner,
+                    };
+                }
+                request
             }
-            1 => w.cancel(&w.inspect(&n)),
+            1 | 2 | 5 | 6 => {
+                let p = w.inspect(&n);
+                w.request(Mutation::TransitionRemoval {
+                    node: guard(&p.node),
+                    parent: guard(&w.root()),
+                    fence: p.fence,
+                    expected: p.mode,
+                    mode: if step == 1 || step == 6 {
+                        RemovalMode::Pending
+                    } else {
+                        RemovalMode::Deferred
+                    },
+                })
+            }
+            3 => w.cancel(&w.inspect(&n)),
             _ => w.commit(&w.inspect(&n)),
         };
         std::fs::write(&input, serde_json::to_vec(&request).unwrap()).unwrap();
