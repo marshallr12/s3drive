@@ -566,3 +566,24 @@ reuse live admission and recover failed retirement without PUT replay. Schema19
 and the strict Windows startup expectation agree; config6/native deletion paths
 stay unchanged. Require terminal exact-tip hosted native/reference/startup CI
 before private publication; then implement the remaining mount-session policy.
+
+
+### Exclusive mount-session recovery (2026-10-17)
+
+Retirement accepted at `50e7709`, terminal CI39056932966. Implement the
+[session contract](windows-session-recovery.md): exclusive runtime bindings,
+current-session callback admission, exact old work replay, retained-file
+cancellation and separate abandonment proof without invented native callbacks.
+Preserve raw hashes, dirty/conflict data, successor fences and original unknown
+requests. Require same-owner refusal, full disk/quota/corruption/migration and
+actual SDK killed-owner recovery, then local and exact-tip hosted acceptance.
+Next reconcile native reply uncertainty, prove deferred target replacement and
+integrate the complete WinFsp lifecycle with new config/native acceptance.
+
+Local final gate passed: 240 state, nine HTTP, sixteen SDK, lint/build/book.
+Twelve new state cases and five SDK processes cover original cancellation replay,
+separate abandonment, full open quota, identity loss, SQL-full/ignored writes,
+historical proofs, successor refusal, migration and retained Unicode/empty/binary
+objects with four PUTs and no replay. Exact old link replay no longer deadlocks
+recovery of a later uncertain commit. Schema20/config6 stay explicit; require
+terminal exact-tip hosted native/reference/startup CI before publication.

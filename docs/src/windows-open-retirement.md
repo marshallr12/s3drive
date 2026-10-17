@@ -5,6 +5,10 @@ at `28c527e`, [CI39055610947](https://github.com/marshallr12/s3drive/actions/run
 Its history currently consumes live admission after close. Retirement addresses
 that limit without destroying recovery evidence or enabling native deletion.
 
+[Mount-session recovery](windows-session-recovery.md) adds a separate proof path
+for obsolete registered sessions with missing callbacks. It preserves those
+missing facts rather than manufacturing normal cleanup/close completion.
+
 Schema 19 adds a sealed retirement index in the existing private SQLite database.
 Retirement requires a controlled, activated file object, completed cleanup and
 close, completed replies/effects for every recorded callback, and no unknown

@@ -2,6 +2,7 @@
 //! Namespace effects keep their exact existing journal and proof boundary.
 use super::*;
 mod retirement;
+pub mod session;
 use namespace::{ROOT, RemovalMode};
 const OPEN_LIMIT: usize = 256;
 const EVENT_LIMIT: usize = 4096;
@@ -18,6 +19,8 @@ pub struct OpenInput {
     pub delete_on_close: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     pub controlled: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub session_bound: bool,
     pub admission: Option<Box<Input>>,
 }
 fn is_false(value: &bool) -> bool {
@@ -197,6 +200,7 @@ fn valid_input(input: &OpenInput, owner: &str) -> Result<()> {
         || !id(&input.volume)
         || !id(&input.node)
         || !id(owner)
+        || (input.session_bound && !input.controlled)
         || !input.store.valid()
         || !namespace::publication::digest(&input.fingerprint)
     {
@@ -222,6 +226,7 @@ pub(super) fn check_schema(db: &Connection) -> Result<()> {
     db.prepare("SELECT open_id,input_hash FROM retained_windows_opens LIMIT 0")?;
     db.prepare("SELECT event_id,open_id,ordinal,action,previous_hash,state_hash FROM windows_open_events LIMIT 0")?;
     db.prepare("SELECT open_id,state_hash FROM retired_windows_opens LIMIT 0")?;
+    session::check_schema(db)?;
     Ok(())
 }
 fn outcome(db: &Connection, input: &Input) -> Result<Vec<u8>> {
@@ -444,6 +449,9 @@ fn load(db: &Connection, key: &str) -> Result<Option<(Row, OpenRecord)>> {
     };
     let input: OpenInput = serde_json::from_slice(&bytes)?;
     valid_input(&input, &owner)?;
+    if input.session_bound {
+        session::binding(db, &input.session, &input.volume)?;
+    }
     let row = Row {
         input: input.clone(),
         owner: owner.clone(),
@@ -490,6 +498,7 @@ fn load(db: &Connection, key: &str) -> Result<Option<(Row, OpenRecord)>> {
     Ok(Some((row, record)))
 }
 fn all(db: &Connection) -> Result<Vec<(Row, OpenRecord)>> {
+    session::check_index(db)?;
     retirement::check_index(db)?;
     let ids=db.prepare("SELECT open_id FROM windows_open_journal WHERE open_id NOT IN (SELECT open_id FROM retired_windows_opens) UNION SELECT open_id FROM retained_windows_opens WHERE open_id NOT IN (SELECT open_id FROM retired_windows_opens) LIMIT 257")?.query_map([],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
     if ids.len() > OPEN_LIMIT {
@@ -574,6 +583,17 @@ impl<'a> Journal<'a> {
     pub fn prepare(&mut self, input: OpenInput) -> Result<OpenRecord> {
         let owner = identity::ensure(self.state)?;
         valid_input(&input, &owner)?;
+        if input.session_bound {
+            self.current_session(&input.session, &input.volume)?;
+            for (_, old) in all(&self.state.connection)? {
+                if old.input.volume == input.volume
+                    && old.input.node == input.node
+                    && (!old.input.session_bound || old.input.session != input.session)
+                {
+                    return Err("recover previous mount session before admitting this node".into());
+                }
+            }
+        }
         if let Some((_, old)) = load(&self.state.connection, &input.id)? {
             if retirement::is_retired(&self.state.connection, &input.id)? {
                 return Err("retired open identity cannot be admitted again".into());
@@ -737,6 +757,18 @@ impl<'a> Journal<'a> {
         callback: &str,
         input: Input,
     ) -> Result<OpenRecord> {
+        let linked = Event {
+            id: event.into(),
+            action: Action::Link {
+                callback: callback.into(),
+                input: Box::new(input.clone()),
+            },
+        };
+        // Exact replay is bookkeeping even if a later effect is unknown.
+        // Do not let that barrier prevent recovering the later effect itself.
+        if self.get(key)?.events.iter().any(|old| old.id == event) {
+            return self.append(key, linked);
+        }
         for record in self.records()? {
             for old in record.pending() {
                 if old.request.volume == input.request.volume
@@ -749,16 +781,7 @@ impl<'a> Journal<'a> {
                 }
             }
         }
-        self.append(
-            key,
-            Event {
-                id: event.into(),
-                action: Action::Link {
-                    callback: callback.into(),
-                    input: Box::new(input),
-                },
-            },
-        )
+        self.append(key, linked)
     }
     pub fn acknowledge(&mut self, key: &str, event: &str, operation: &str) -> Result<OpenRecord> {
         let record = self.get(key)?;
@@ -854,6 +877,9 @@ impl<'a> Journal<'a> {
         }
         if retirement::is_retired(&tx, key)? {
             return Err("retired open history is immutable".into());
+        }
+        if session::frozen(&tx, key)? {
+            return Err("session recovery froze this exact callback history".into());
         }
         let old_hash = checksum(&row)?;
         let previous = row.head.clone();

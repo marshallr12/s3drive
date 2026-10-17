@@ -48,11 +48,11 @@ pub(super) fn ensure(state: &mut State) -> Result<String> {
     let opens: i64 =
         state
             .connection
-            .query_row("SELECT count(*) FROM retained_windows_opens", [], |r| {
+            .query_row("SELECT (SELECT count(*) FROM retained_windows_opens)+(SELECT count(*) FROM windows_mount_sessions)", [], |r| {
                 r.get(0)
             })?;
     if opens != 0 {
-        return Err("client identity missing while per-open history is retained".into());
+        return Err("client identity missing while per-open or session history is retained".into());
     }
     let mut bytes = [0u8; 16];
     getrandom::fill(&mut bytes).map_err(|_| "client identity generation failed")?;

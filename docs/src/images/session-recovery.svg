@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="640" viewBox="0 0 1120 640">
+ <title>Recovery after replacing a mount process</title>
+ <desc>A new exclusive state owner replays exact work, flushes retained bytes through the S3 client, cancels its own fence at the coordination API and records separate abandonment proof in local SQLite. No missing kernel cleanup is invented.</desc>
+ <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="#516477"/></marker></defs>
+ <rect width="1120" height="640" rx="18" fill="#f5f8fb"/>
+ <g font-family="DejaVu Sans, sans-serif" fill="#172d42">
+  <text x="30" y="40" font-size="25" font-weight="bold">Recovery after replacing a mount process</text>
+  <text x="30" y="69" font-size="15">Library implementation · 2026-10-17 · Native Windows bridge remains gated</text>
+  <rect x="25" y="95" width="720" height="405" rx="15" fill="#fff" stroke="#c6d4e1"/>
+  <text x="45" y="122" font-size="15" font-weight="bold">LOCAL CLIENT STATE</text>
+  <rect x="45" y="145" width="205" height="110" rx="10" fill="#edf0f4" stroke="#8895a3"/>
+  <text x="147" y="177" text-anchor="middle" font-size="18">Previous runtime</text>
+  <text x="147" y="205" text-anchor="middle" font-size="14">Old session and callbacks</text>
+  <text x="147" y="230" text-anchor="middle" font-size="14">remain in SQLite</text>
+  <rect x="290" y="145" width="430" height="110" rx="10" fill="#e4edf7" stroke="#728da7"/>
+  <text x="505" y="177" text-anchor="middle" font-size="19" font-weight="bold">New exclusive state owner</text>
+  <text x="505" y="204" text-anchor="middle" font-size="14">1 · Private lock + new runtime/session binding</text>
+  <text x="505" y="230" text-anchor="middle" font-size="14">Controller resumes original requests</text>
+  <rect x="45" y="330" width="465" height="145" rx="10" fill="#e3f1e9" stroke="#538269"/>
+  <text x="277" y="362" text-anchor="middle" font-size="20" font-weight="bold">Local SQLite + retained data</text>
+  <text x="277" y="391" text-anchor="middle" font-size="14">Full open/callback history · exact operation IDs</text>
+  <text x="277" y="418" text-anchor="middle" font-size="14">Dirty bytes · cancellation and namespace proofs</text>
+  <text x="277" y="449" text-anchor="middle" font-size="14">5 · Separate abandonment proof, then retire</text>
+  <rect x="550" y="330" width="170" height="145" rx="10" fill="#e4edf7" stroke="#728da7"/>
+  <text x="635" y="368" text-anchor="middle" font-size="20">S3 client</text>
+  <text x="635" y="401" text-anchor="middle" font-size="14">3 · Flush only</text>
+  <text x="635" y="424" text-anchor="middle" font-size="14">unsynced data</text>
+  <text x="635" y="450" text-anchor="middle" font-size="14">Rust SDK</text>
+  <rect x="800" y="145" width="290" height="140" rx="10" fill="#e3f1e9" stroke="#538269"/>
+  <text x="945" y="179" text-anchor="middle" font-size="20" font-weight="bold">Coordination API</text>
+  <text x="945" y="210" text-anchor="middle" font-size="14">2 · Replay recorded effects</text>
+  <text x="945" y="237" text-anchor="middle" font-size="14">4 · Cancel only the owned fence</text>
+  <text x="945" y="264" text-anchor="middle" font-size="14">Prototype: loopback / SQLite</text>
+  <rect x="800" y="350" width="290" height="125" rx="10" fill="#fff2dc" stroke="#b08a45"/>
+  <text x="945" y="384" text-anchor="middle" font-size="20" font-weight="bold">S3-compatible service</text>
+  <text x="945" y="415" text-anchor="middle" font-size="14">Buckets hold immutable file blobs</text>
+  <text x="945" y="447" text-anchor="middle" font-size="14">Existing blobs stay retained</text>
+  <g fill="none" stroke="#516477" stroke-width="2" marker-end="url(#arrow)">
+   <path d="M250 200 H284"/><path d="M720 200 H794"/>
+   <path d="M445 255 V295 H277 V324"/><path d="M635 255 V324"/>
+   <path d="M510 404 H544"/><path d="M720 404 H794"/>
+  </g>
+  <text x="30" y="540" font-size="18" font-weight="bold">Missing cleanup stays missing.</text>
+  <text x="30" y="573" font-size="15">Recorded deletion can finish; otherwise abandonment preserves the name and full evidence.</text>
+  <text x="30" y="602" font-size="15">Unknown outcomes, conflicts or changed ownership remain explicit. No S3 DELETE or silent overwrite.</text>
+ </g>
+</svg>

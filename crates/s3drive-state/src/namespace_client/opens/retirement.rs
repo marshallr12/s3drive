@@ -13,8 +13,8 @@ pub(super) fn is_retired(db: &Connection, key: &str) -> Result<bool> {
         |r| r.get(0),
     )?)
 }
-fn terminal(record: &OpenRecord) -> bool {
-    record.input.controlled
+fn terminal(db: &Connection, row: &Row, record: &OpenRecord) -> Result<bool> {
+    Ok((record.input.controlled
         && record.active()
         && record.cleanup().is_some_and(|e| record.completed(&e.id))
         && record.close().is_some_and(|e| record.completed(&e.id))
@@ -22,7 +22,8 @@ fn terminal(record: &OpenRecord) -> bool {
         && record
             .events
             .iter()
-            .all(|e| !matches!(e.action, Action::Callback(_)) || record.completed(&e.id))
+            .all(|e| !matches!(e.action, Action::Callback(_)) || record.completed(&e.id)))
+        || session::closed(db, row, record)?)
 }
 pub(super) fn check(db: &Connection, row: &Row, record: &OpenRecord) -> Result<()> {
     let seal: Option<Vec<u8>> = db
@@ -33,7 +34,7 @@ pub(super) fn check(db: &Connection, row: &Row, record: &OpenRecord) -> Result<(
         )
         .optional()?;
     if let Some(saved) = seal
-        && (saved != self::seal(&checksum(row)?) || !terminal(record))
+        && (saved != self::seal(&checksum(row)?) || !terminal(db, row, record)?)
     {
         return Err("retired open proof changed or is incomplete".into());
     }
@@ -64,7 +65,7 @@ impl Journal<'_> {
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let (row, record) = load(&tx, key)?.ok_or("per-open record not found")?;
-        if !terminal(&record) {
+        if !terminal(&tx, &row, &record)? {
             return Err("unfinished open cannot be retired".into());
         }
         if is_retired(&tx, key)? {

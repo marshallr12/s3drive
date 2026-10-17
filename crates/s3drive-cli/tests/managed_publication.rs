@@ -16,6 +16,8 @@ mod owned_disposition;
 mod owner_move;
 #[path = "support/pending_owner.rs"]
 mod pending_owner;
+#[path = "support/session_recovery.rs"]
+mod session_recovery;
 #[path = "support/writes.rs"]
 #[allow(dead_code)]
 mod writes;
@@ -428,6 +430,7 @@ async fn managed_child() {
         || mode.starts_with("owner_move_")
         || mode.starts_with("open_journal_")
         || mode.starts_with("controller_")
+        || mode.starts_with("session_")
     {
         Authority::open_with_policy(root.join("authority"), "portable-collision-v1".into())
             .await
@@ -437,6 +440,16 @@ async fn managed_child() {
     };
     let (wire, stop, server) = serve(authority.client()).await;
     let volume = info(&wire).await.id;
+    if mode.starts_with("session_") {
+        Box::pin(session_recovery::run_mode(
+            &mode, &config, &root, &wire, &volume,
+        ))
+        .await;
+        stop.send(()).unwrap();
+        server.await.unwrap();
+        authority.shutdown().await.unwrap();
+        return;
+    }
     if mode.starts_with("controller_") {
         Box::pin(disposition_controller::run_mode(
             &mode, &config, &root, &wire, &volume,

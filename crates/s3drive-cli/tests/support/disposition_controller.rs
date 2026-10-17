@@ -23,7 +23,7 @@ async fn disposition_controller_runs_mode_cleanup_late_io_and_recovers_rejected_
     )
     .await;
 }
-async fn input(
+pub(super) async fn input(
     p: &Publisher,
     w: &WireClient,
     n: u64,
@@ -57,6 +57,7 @@ async fn input(
         fingerprint: admission.fingerprint.clone(),
         delete_on_close: doc,
         controlled: true,
+        session_bound: false,
         admission: if create {
             Some(Box::new(admission))
         } else {

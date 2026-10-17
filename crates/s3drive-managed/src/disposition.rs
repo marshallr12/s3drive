@@ -15,6 +15,7 @@ pub struct CallbackReceipt {
 #[derive(Clone)]
 pub struct Controller {
     publisher: Publisher,
+    session: Option<String>,
 }
 fn identity(open: &str, callback: &str, role: &str) -> String {
     let mut h = Sha256::new();
@@ -38,7 +39,36 @@ fn reason(e: &(dyn std::error::Error + Send + Sync + 'static)) -> Error {
 }
 impl Controller {
     pub fn new(publisher: Publisher) -> Self {
-        Self { publisher }
+        Self {
+            publisher,
+            session: None,
+        }
+    }
+    /// Register a session in this exclusive Storage incarnation. Native bridges
+    /// must use this path; `new` retains the earlier unbound prototype contract.
+    pub async fn attach(publisher: Publisher, session: String) -> Result<Self> {
+        publisher
+            .storage()
+            .opens()
+            .start_session(session.clone(), publisher.0.volume.clone())
+            .await?;
+        Ok(Self {
+            publisher,
+            session: Some(session),
+        })
+    }
+    async fn live(&self, input: &OpenInput) -> Result<()> {
+        if let Some(session) = &self.session {
+            if &input.session != session {
+                return Err(Failure::Binding.into());
+            }
+            self.p()
+                .storage()
+                .opens()
+                .current_session(session.clone(), input.volume.clone())
+                .await?;
+        }
+        Ok(())
     }
     fn p(&self) -> &Publisher {
         &self.publisher
@@ -49,6 +79,7 @@ impl Controller {
             p.0.executor
                 .recovery_target(&format!("{}binding", p.0.store.root))?;
         if !input.controlled
+            || input.session_bound != self.session.is_some()
             || input.volume != p.0.volume
             || input.store != p.0.store
             || input.source != *target.source()
@@ -377,6 +408,10 @@ impl Controller {
     async fn open_impl(&self, input: OpenInput) -> Result<OpenRecord> {
         let _serial = self.p().0.disposition.lock().await;
         self.scope(&input)?;
+        self.live(&input).await?;
+        if self.session.is_some() {
+            Box::pin(self.recover_previous_inner(&input.node)).await?;
+        }
         if let Some(existing) = self
             .p()
             .storage()
@@ -430,6 +465,7 @@ impl Controller {
     async fn set_delete_impl(&self, open: &str, cb: &str, delete: bool) -> Result<CallbackReceipt> {
         let _serial = self.p().0.disposition.lock().await;
         let old = self.record(open).await?;
+        self.live(&old.input).await?;
         self.recover_node(&old.input.node, Some((open, cb))).await?;
         Box::pin(self.recover_void(&old.input.node, None)).await?;
         let exists = old.events.iter().any(|e| e.id == cb);
@@ -615,6 +651,7 @@ impl Controller {
     async fn cleanup_impl(&self, open: &str, cb: &str, flags: u32) -> Result<()> {
         let _serial = self.p().0.disposition.lock().await;
         let record = self.record(open).await?;
+        self.live(&record.input).await?;
         self.recover_node(&record.input.node, None).await?;
         self.p()
             .storage()
@@ -709,6 +746,7 @@ impl Controller {
     async fn close_impl(&self, open: &str, cb: &str) -> Result<()> {
         let _serial = self.p().0.disposition.lock().await;
         let record = self.record(open).await?;
+        self.live(&record.input).await?;
         self.recover_node(&record.input.node, None).await?;
         self.p()
             .storage()
@@ -765,7 +803,124 @@ impl Controller {
     }
     async fn recover_impl(&self, node: &str) -> Result<()> {
         let _serial = self.p().0.disposition.lock().await;
+        if self.session.is_some() {
+            Box::pin(self.recover_previous_inner(node)).await?;
+        }
         self.recover_node(node, None).await?;
         Box::pin(self.recover_void(node, None)).await
+    }
+    /// Recover an earlier exclusive owner without inventing native callbacks.
+    pub fn recover_previous<'a>(&'a self, node: &'a str) -> Task<'a, usize> {
+        Box::pin(async move {
+            let _serial = self.p().0.disposition.lock().await;
+            Box::pin(self.recover_previous_inner(node)).await
+        })
+    }
+    async fn finish_previous(
+        &self,
+        input: s3drive_state::namespace_client::opens::session::RecoveryInput,
+    ) -> Result<usize> {
+        if let Some(cancel) = &input.cancel {
+            self.p().change_namespace(cancel.as_ref().clone()).await?;
+        }
+        let ledger = self.p().storage().opens();
+        ledger
+            .finish_recovery(self.session.clone().ok_or(Failure::Binding)?, input.id)
+            .await?;
+        for old in &input.opens {
+            ledger.retire(old.id.clone()).await?;
+        }
+        Ok(input.opens.len())
+    }
+    async fn recover_previous_inner(&self, node: &str) -> Result<usize> {
+        let session = self.session.as_ref().ok_or(Failure::Binding)?;
+        let ledger = self.p().storage().opens();
+        ledger
+            .current_session(session.clone(), self.p().0.volume.clone())
+            .await?;
+        let records = self.records(node).await?;
+        let mut old = Vec::new();
+        for r in records {
+            if ledger.recovered(r.input.id.clone()).await? {
+                ledger.retire(r.input.id).await?;
+            } else if ledger
+                .obsolete_session(r.input.session.clone(), r.input.volume.clone())
+                .await?
+            {
+                old.push(r);
+            } else if !old.is_empty() {
+                return Err(Failure::RetainedConflict.into());
+            }
+        }
+        if let Some(pending) = ledger
+            .pending_recovery(self.p().0.volume.clone(), node.into())
+            .await?
+        {
+            return Box::pin(self.finish_previous(pending.input)).await;
+        }
+        if old.is_empty() {
+            return Ok(0);
+        }
+        // A live current object and obsolete objects may not share a recovery.
+        for r in self.records(node).await? {
+            if !ledger
+                .obsolete_session(r.input.session.clone(), r.input.volume.clone())
+                .await?
+            {
+                return Err(Failure::RetainedConflict.into());
+            }
+        }
+        for r in &old {
+            if !r.active()
+                && let Some(admission) = &r.input.admission
+            {
+                let result = self.p().change_namespace(admission.as_ref().clone()).await;
+                let saved = self
+                    .p()
+                    .storage()
+                    .namespace()
+                    .get(admission.request.operation.clone())
+                    .await?;
+                if saved.input != **admission || saved.outcome.is_none() {
+                    result?;
+                    return Err(Failure::Incomplete.into());
+                }
+            }
+        }
+        self.recover_node(node, None).await?;
+        Box::pin(self.recover_void(node, None)).await?;
+        let remaining = self.records(node).await?;
+        if remaining.is_empty() {
+            return Ok(old.len());
+        }
+        Box::pin(self.flush_retained(node)).await?;
+        let unadmitted = remaining.iter().all(|r| !r.active());
+        let cancel = match self.inspect(node).await {
+            Ok((before, Some(pending))) => Some(
+                self.request(
+                    &remaining[0],
+                    node,
+                    "abandon-cancel",
+                    Mutation::CancelRemoval {
+                        node: node.into(),
+                        fence: pending.fence,
+                    },
+                    &before,
+                )
+                .await?,
+            ),
+            Ok((_, None)) => None,
+            Err(e) if unadmitted && reason(e.as_ref()) == Error::NotFound => None,
+            Err(e) => return Err(e),
+        };
+        let prepared = ledger
+            .prepare_recovery(
+                session.clone(),
+                self.p().0.volume.clone(),
+                node.into(),
+                cancel,
+            )
+            .await?;
+        Box::pin(self.finish_previous(prepared.input)).await
     }
 }

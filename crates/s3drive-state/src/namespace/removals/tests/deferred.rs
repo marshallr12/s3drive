@@ -219,7 +219,7 @@ fn schema_fifteen_preserves_exact_old_pending_receipts_and_payloads() {
                 |r| r.get(0),
             )
             .unwrap();
-        w.state.connection.execute_batch("DROP TABLE retired_windows_opens; DROP TABLE windows_open_events; DROP TABLE retained_windows_opens; DROP TABLE windows_open_journal; DROP TABLE namespace_removal_events; ALTER TABLE namespace_removals DROP COLUMN mode; ALTER TABLE namespace_removals DROP COLUMN event_id; PRAGMA user_version=15").unwrap();
+        w.state.connection.execute_batch("DROP TABLE recovered_windows_opens; DROP TABLE windows_session_recoveries; DROP TABLE windows_mount_sessions; DROP TABLE retired_windows_opens; DROP TABLE windows_open_events; DROP TABLE retained_windows_opens; DROP TABLE windows_open_journal; DROP TABLE namespace_removal_events; ALTER TABLE namespace_removals DROP COLUMN mode; ALTER TABLE namespace_removals DROP COLUMN event_id; PRAGMA user_version=15").unwrap();
         if corrupt {
             w.state
                 .connection

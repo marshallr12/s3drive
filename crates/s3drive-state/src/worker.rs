@@ -710,6 +710,44 @@ pub struct Opens {
     owner: Owner,
 }
 impl Opens {
+    pub async fn start_session(&self, session: String, volume: String) -> Result<()> {
+        self.call(move |j| j.start_session(&session, &volume)).await
+    }
+    pub async fn current_session(&self, session: String, volume: String) -> Result<()> {
+        self.call(move |j| j.current_session(&session, &volume))
+            .await
+    }
+    pub async fn obsolete_session(&self, session: String, volume: String) -> Result<bool> {
+        self.call(move |j| j.obsolete_session(&session, &volume))
+            .await
+    }
+    pub async fn pending_recovery(
+        &self,
+        volume: String,
+        node: String,
+    ) -> Result<Option<crate::namespace_client::opens::session::RecoveryRecord>> {
+        self.call(move |j| j.pending_recovery(&volume, &node)).await
+    }
+    pub async fn prepare_recovery(
+        &self,
+        session: String,
+        volume: String,
+        node: String,
+        cancel: Option<crate::namespace_client::Input>,
+    ) -> Result<crate::namespace_client::opens::session::RecoveryRecord> {
+        self.call(move |j| j.prepare_recovery(&session, &volume, &node, cancel))
+            .await
+    }
+    pub async fn finish_recovery(
+        &self,
+        session: String,
+        key: String,
+    ) -> Result<crate::namespace_client::opens::session::RecoveryRecord> {
+        self.call(move |j| j.finish_recovery(&session, &key)).await
+    }
+    pub async fn recovered(&self, key: String) -> Result<bool> {
+        self.call(move |j| j.recovered(&key)).await
+    }
     pub async fn retire(&self, id: String) -> Result<()> {
         self.call(move |j| j.retire(&id)).await
     }

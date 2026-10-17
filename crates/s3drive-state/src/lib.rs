@@ -20,13 +20,14 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 19;
+pub const SCHEMA_VERSION: i32 = 20;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub struct State {
     // Drop the connection before releasing exclusive directory ownership.
     connection: Connection,
     _directory: Option<directory::OwnedDirectory>,
+    incarnation: Option<String>,
 }
 
 #[derive(Debug)]
@@ -62,6 +63,13 @@ impl State {
         // Only tighten legacy file modes after confirming this is our DB.
         owner.finish_initialization()?;
         state._directory = Some(owner);
+        let mut bytes = [0u8; 16];
+        getrandom::fill(&mut bytes).map_err(|_| "state-owner identity generation failed")?;
+        let incarnation: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
+        if incarnation == namespace::ROOT {
+            return Err("state-owner identity generation failed".into());
+        }
+        state.incarnation = Some(incarnation);
         remote::recover_interrupted(&mut state)?;
         Ok(state)
     }
@@ -166,6 +174,9 @@ impl State {
             if version <= 18 {
                 tx.execute_batch(include_str!("../migrations/019.sql"))?;
             }
+            if version <= 19 {
+                tx.execute_batch(include_str!("../migrations/020.sql"))?;
+            }
             logical::check_schema(&tx)?;
             managed::check_schema(&tx)?;
             namespace::check_schema(&tx)?;
@@ -200,6 +211,7 @@ impl State {
         Ok(Self {
             connection,
             _directory: None,
+            incarnation: None,
         })
     }
 

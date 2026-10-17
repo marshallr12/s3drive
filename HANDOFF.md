@@ -1,55 +1,64 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **completed-open retirement** on
-`codex/windows-open-retirement`. Goal ACTIVE. Read the implementation plan and
-`docs/src/windows-open-retirement.md` before continuing.
+Updated: 2026-10-17. Current phase: **exclusive mount-session recovery** on
+`codex/windows-session-recovery`. Goal ACTIVE. Read the implementation plan,
+`docs/src/windows-session-recovery.md` and controller/session modules.
 
 Published baseline verified live: private clean local/remote main
-`28c527e2e56351fbab7214bcaeaa36f27c0b892a`, terminal all-green
-[run 39055610947](https://github.com/marshallr12/s3drive/actions/runs/39055610947).
-Linux117462844538, Windows117462844330, book117462844593. 220/216 state,
-nine HTTP, fifteen SDK, seven native cases per OS, fourteen NTFS traces, four
-pinned upstream and nine malformed-fixture checks passed. Linux no-systemd and
-Windows non-admin independent-logon startup passed. Source-bound reference
-artifact12109825160 matched every typed record and OS at2026-10-17T17:57:21Z.
-Proof `/tmp/s3drive-controller-publication.json`; logs
-`/tmp/s3drive-controller-{linux,windows,book}.log`. Schema18/config6 baseline.
-GitHub unexpectedly reported public during that phase; restored private per the
-user's request and verified after publication. Do not assume privacy persists.
+`50e7709e69117b56194512b443164b02f09933b2`, terminal all-green
+[run39056932966](https://github.com/marshallr12/s3drive/actions/runs/39056932966).
+Linux117466704318, Windows117466704535, book117466704549. 228/224 state,
+nine HTTP, fifteen SDK, seven native cases per OS, fourteen typed NTFS traces,
+four pinned upstream and nine malformed-fixture checks passed. Linux no-systemd
+and Windows non-admin independent-logon startup passed. Source-bound reference
+artifact12109299418 matched OS/typed records at2026-10-17T18:19:47Z.
+Proof `/tmp/s3drive-retirement-publication.json`; logs
+`/tmp/s3drive-retirement-{linux,windows,book}.log`. Schema19/config6 baseline.
+Repository privacy must be checked live; it was restored from public in the
+previous controller phase and confirmed private after retirement publication.
 
-The Publisher-backed disposition controller has planned responses, same-fence
-rejection compensation, repeated True/False, deleting cleanup/current IDs,
-nonempty-directory preservation and late detached writes through Close. No
-kernel response acknowledgment is inferred. Its accepted local gate is
-`/tmp/s3drive-controller-gate4.log`. CleanupDelete unlinks during cleanup, not
-only at Close. Five killed SDK stages used six retained immutable PUTs.
+The controller supports planned replies, exact same-fence compensation, repeated
+True/False, deleting cleanup/current IDs, nonempty-directory preservation and
+late detached writes through Close. Complete controlled opens retire from live
+256-open/4096-event budgets without deleting any input/event/namespace proof.
+Exact replay remains historical; identity reuse/new retired events are refused.
+CleanupDelete unlinks during cleanup, never invent deletion only at Close.
 
-Current work: lossless retirement of fully completed controlled opens to free
-live 256-open/4096-event admission. Keep full input/event/namespace proof rows,
-seal the final row, refuse identity reuse and new events, permit exact history
-replay. Controller Close and recovery retry retirement after failed bookkeeping.
-Schema19 adds only the retirement index; old hashes/config6 remain unchanged.
-Historical-schema fixtures must remove that table; Windows startup expects19.
-Require SQL-full/ignored writes/corruption/migration, >256 lifetimes with a live
-reader, killed SDK owners and exact-tip all-three native/reference/startup CI.
+Current implementation: schema20 immutable mount sessions bind to a random
+incarnation created only after exclusive State directory acquisition. One session
+per volume/runtime; replacing Storage proves older registered owners obsolete.
+Controller::attach enforces session-bound opens/callbacks; unbound prototype
+records are not silently adopted. recover_previous replays exact admissions and
+recorded effects, flushes/retains logical work, freezes complete old open hashes
+and a same-fence cancellation, then records separate abandonment proof. Missing
+cleanup/close/activation stays missing. Full old bytes and proof rows remain;
+finished recovery can retire their live admission. Unknowns/conflicts remain
+quarantined; no fresh guard/ID fallback or automatic successor cancellation.
 
-This is not evidence pruning or completed mount-session recovery. Unclosed,
-unknown or incomplete records remain live; a different session ID never proves
-old process death or fabricates cleanup. Namespace journal and disk admission
-limits still apply. Next resolve exclusive mount-session recovery/quarantine and
-native reply acknowledgment, measure deferred destination replacement against
-selected WinFsp, then integrate the complete native lifecycle with explicit new
-config. Native SetDelete/DoC remain unsupported until full native acceptance.
-No new Wasabi writes, NNP bypass or workstation startup changes are authorized.
+The SDK recovery uncovered a real existing barrier bug: replaying an acknowledged
+promotion link was blocked by a later unknown Commit of that node. Exact link
+identity now replays as bookkeeping; new effects stay blocked. A state regression
+and the real promote+unknown-commit recovery exercise this. Sixteen SDK cases
+include five new session process stages with four immutable PUTs, binary/empty/
+Unicode names, cancellation loss, failed proof, recorded deletion and uncertain
+admission. Targeted SDK passed `/tmp/s3drive-session-sdk2.log`. Final local gate
+passed exit0 at `/tmp/s3drive-session-gate2.log`: 240 state, nine HTTP, sixteen
+SDK, lint/build/book. Twelve new state tests include full256-open quota and
+retained-session identity loss without any opens. Final guard prevents minting
+a replacement client identity while any session history remains. Prior gate1
+passed239 before that guard. Diagram PNG/SVG rendered and visually inspected.
+Require terminal exact-tip hosted native/reference/startup acceptance and typed
+source-bound reference artifact before guarded publication from50e7709. Then
+continue native reply/lifecycle integration; do not infer native deletion.
 
-Final local gate passed exit0: `/tmp/s3drive-retirement-gate1.log`, 228 state,
-nine HTTP, fifteen SDK, formatting/Clippy/build/book. Eight retirement cases
-exercise 300 lifetimes/>4096 retained events with a live reader, SQL-full/ignored
-writes, corruption, exact replay/identity refusal and schema18 migration/refusal.
-Six SDK stages retain six immutable PUTs after failed retirement/killed owner.
-Targeted SDK `/tmp/s3drive-retirement-sdk1.log` passed; final gate includes the
-strengthened seal check. Require terminal exact-tip all-three hosted acceptance
-and source-bound reference verification before guarded publication from28c527e.
+Keep config6/native SetDelete/DoC unsupported until full acceptance. Session
+recovery is not proof the kernel consumed a planned reply. Next reconcile that
+uncertainty from the actual WinFsp lifecycle, measure deferred destination
+replacement, and integrate the complete native bridge with explicit new config.
+Do not enable SetDelete-only behavior or permanently refuse required operations.
+No new Wasabi mutation, NNP bypass or workstation startup change is authorized.
+Turso remains proposed, and target-workstation reboot/PAM/SSH acceptance remains
+unverified. Preserve namespace/disk caps and retained conflicts explicitly.
 
 ## Previous expanded reference phase
 
