@@ -67,8 +67,10 @@ SDK cases, plus the new shared-filesystem lifecycle engine, lint, build and book
 checks. The engine proves early cleanup with another object, retained late I/O,
 non-deleting cleanup, two-store replacement and renamed nonempty directories.
 Paired-control/profile/migration checks pass; older serialized fields stay absent
-by default. An unboxed test dispatch future caused an existing stack overflow;
-boxing the dispatch restored that test and the full gate.
+by default. An initial unboxed dispatch was corrected. A later reproducer traced a
+remaining overflow to nested S3 HEAD state during reopen; generated HEAD/GET
+send futures now stay on the heap inside their deadlines. The original test
+passes without diagnostic instrumentation or larger stack limits.
 
 The new Windows-only suite remains unverified here. It includes an actual NTFS
 directory-create control, atomic DoC creation, duplicates/multiple objects,
@@ -76,3 +78,19 @@ regular/extended cancellation, explicit POSIX early cleanup, four replacement
 modes, cross-store retained I/O and native lost-response/killed-owner recovery.
 It must compile and pass on the actual runner along with the frozen reference
 matrices and existing startup/mount gates before config7 is published to main.
+
+
+Candidate `6199af5` (CI39069635074) passed Linux/book but stopped Windows Clippy
+on misplaced Open/Create context initialization and typed flag composition.
+Those compile errors are corrected locally; no native runtime success is inferred.
+A valid narrowed policy also exposed a missing metadata-only DoC creation guard:
+the public and worker paths now require the selected store's write permission,
+and the loopback test proves both file/directory denial without PUT or namespace
+admission. Windows-only native acceptance now runs in a dedicated early step;
+the later native suite excludes that one case to avoid repeating it.
+
+
+The corrected local gate passed exit0 (`/tmp/s3drive-lifecycle-gate6.log`): 255
+state tests, ten HTTP, seventeen SDK, lifecycle/policy and original mutation
+regression, formatting, Clippy, builds and book. No stack limits changed. Native
+Windows compilation/runtime and exact-tip hosted acceptance remain required.

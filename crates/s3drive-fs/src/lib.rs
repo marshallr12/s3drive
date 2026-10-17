@@ -503,6 +503,9 @@ impl ReadOnlyFs {
         if parent.kind != Kind::Directory {
             return Err(Error::NotDirectory);
         }
+        if !self.writable_directory(&parent) {
+            return Err(Error::ReadOnly);
+        }
         let w = self
             .managed
             .as_ref()

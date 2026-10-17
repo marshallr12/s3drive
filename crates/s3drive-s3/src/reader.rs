@@ -287,14 +287,17 @@ impl S3Reader {
     pub async fn head(&self, key: &str) -> Result<ObjectMetadata> {
         let full_key = self.full_key(key)?;
         deadline(self.deadline, "head", async {
-            let output = self
-                .client
-                .head_object()
-                .bucket(&self.source.bucket)
-                .key(full_key)
-                .send()
-                .await
-                .map_err(|e| sdk_error("head", e))?;
+            // Keep the generated SDK state out of the enclosing deadline's
+            // inline state and native callback poll frames.
+            let output = Box::pin(
+                self.client
+                    .head_object()
+                    .bucket(&self.source.bucket)
+                    .key(full_key)
+                    .send(),
+            )
+            .await
+            .map_err(|e| sdk_error("head", e))?;
             Ok(ObjectMetadata {
                 key: key.to_owned(),
                 size: size(output.content_length(), "head")?,
@@ -388,18 +391,19 @@ impl ReadHandle {
         let length = (length as u64).min(self.metadata.size - offset);
         let end = offset + length - 1;
         deadline(self.reader.deadline, "read", async {
-            let mut output = self
-                .reader
-                .client
-                .get_object()
-                .bucket(&self.reader.source.bucket)
-                .key(&self.full_key)
-                .range(format!("bytes={offset}-{end}"))
-                .set_if_match(self.metadata.revision.etag.clone())
-                .set_version_id(self.metadata.revision.version_id.clone())
-                .send()
-                .await
-                .map_err(|e| sdk_error("read", e))?;
+            let mut output = Box::pin(
+                self.reader
+                    .client
+                    .get_object()
+                    .bucket(&self.reader.source.bucket)
+                    .key(&self.full_key)
+                    .range(format!("bytes={offset}-{end}"))
+                    .set_if_match(self.metadata.revision.etag.clone())
+                    .set_version_id(self.metadata.revision.version_id.clone())
+                    .send(),
+            )
+            .await
+            .map_err(|e| sdk_error("read", e))?;
             let expected = format!("bytes {offset}-{end}/{}", self.metadata.size);
             if output.content_range() != Some(expected.as_str())
                 || size(output.content_length(), "read")? != length

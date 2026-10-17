@@ -308,20 +308,11 @@ impl FileSystemContext for Adapter {
                 .native_file_object(node.id, options & 0x1000 != 0)
                 .await
                 .map_err(storage_error)?;
-            let native = match object {
-                Some(object) => Some(object),
-                None => self
-                    .fs
-                    .native_file_object(node.id, false)
-                    .await
-                    .map_err(storage_error)?,
-            };
             output.set_normalized_name(&normalized, None);
             *output.as_mut() = info.clone();
             Ok(FileContext {
                 node,
                 file,
-                native,
                 native,
                 info,
                 directory: Mutex::new(None),
@@ -439,11 +430,20 @@ impl FileSystemContext for Adapter {
                 .transpose()
                 .map_err(storage_error)?;
             let info = self.file_info(&node, metadata.as_ref());
+            let native = match object {
+                Some(object) => Some(object),
+                None => self
+                    .fs
+                    .native_file_object(node.id, false)
+                    .await
+                    .map_err(storage_error)?,
+            };
             output.set_normalized_name(&normalized, None);
             *output.as_mut() = info.clone();
             Ok(FileContext {
                 node,
                 file,
+                native,
                 info,
                 directory: Mutex::new(None),
                 _permit: permit,
@@ -531,14 +531,22 @@ impl FileSystemContext for Adapter {
         if let Some(object) = &context.native {
             // Actual void observations are persisted even during cancellation.
             if let Err(error) = self.runtime.block_on(object.cleanup(flags)) {
-                eprintln!("Native cleanup retained for recovery: {error}");
+                use std::io::Write;
+                let _ = writeln!(
+                    std::io::stderr().lock(),
+                    "Native cleanup retained for recovery: {error}"
+                );
             }
         }
     }
     fn close(&self, context: FileContext) {
         if let Some(object) = &context.native {
             if let Err(error) = self.runtime.block_on(object.close()) {
-                eprintln!("Native close retained for recovery: {error}");
+                use std::io::Write;
+                let _ = writeln!(
+                    std::io::stderr().lock(),
+                    "Native close retained for recovery: {error}"
+                );
             }
         }
         drop(context);

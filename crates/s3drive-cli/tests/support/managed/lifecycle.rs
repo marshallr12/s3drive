@@ -13,6 +13,16 @@ pub(super) async fn portable() {
         .filter(|r| r.starts_with("DELETE "))
         .count();
     h.child("lifecycle-engine").await;
+    // A valid but narrower write policy must reject even metadata-only DoC
+    // creation before any namespace admission or provider transfer.
+    let policy = h.root.join("first/policy.toml");
+    let text = std::fs::read_to_string(&policy)
+        .unwrap()
+        .replace("writable_prefix='writable/'", "writable_prefix='denied/'");
+    std::fs::write(&policy, text).unwrap();
+    let count = puts(&f);
+    h.child("lifecycle-policy").await;
+    assert_eq!(puts(&f), count);
     assert_eq!(
         f.requests
             .lock()
@@ -23,6 +33,25 @@ pub(super) async fn portable() {
         before
     );
     s.stop().await;
+}
+pub(super) async fn policy(c: &s3drive_core::Config) {
+    let fs = s3drive_fs::ReadOnlyFs::new(c).await.unwrap();
+    let root = fs.node(s3drive_fs::ROOT).unwrap();
+    assert!(!fs.writable_directory(&root));
+    for directory in [false, true] {
+        assert!(matches!(
+            fs.create_native_deferred(s3drive_fs::ROOT, "denied DoC metadata", directory)
+                .await,
+            Err(s3drive_fs::Error::ReadOnly)
+        ));
+    }
+    assert!(
+        fs.lookup(s3drive_fs::ROOT, "denied DoC metadata")
+            .await
+            .is_err()
+    );
+    fs.shutdown_writes().await.unwrap();
+    fs.cache_control().unwrap().close().await.unwrap();
 }
 pub(super) async fn engine(c: &s3drive_core::Config) {
     let fs = s3drive_fs::ReadOnlyFs::new(c).await.unwrap();

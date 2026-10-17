@@ -49,6 +49,10 @@ jobs:
           path: ${{ runner.temp }}/windows-replacement-reference.json
           if-no-files-found: error
           retention-days: 30
+      - name: Verify complete Windows disposition lifecycle
+        if: runner.os == 'Windows'
+        timeout-minutes: 5
+        run: cargo test -p s3drive-cli --test windows_mount actual_managed_windows_disposition_lifecycle --locked -- --ignored --nocapture --test-threads=1
       - run: cargo test --workspace --locked
       - run: cargo build --workspace --locked
       - name: Prepare Linux FUSE acceptance
@@ -86,7 +90,7 @@ jobs:
           # GitHub destroys this fresh VM after the job. Only a retained Windows
           # fixture-profile sharing violation may defer to that disposal.
           S3DRIVE_DISPOSABLE_WINDOWS_VM: '1'
-        run: cargo test -p s3drive-cli --test windows_mount --locked -- --ignored --nocapture --test-threads=1
+        run: cargo test -p s3drive-cli --test windows_mount --locked -- --ignored --nocapture --test-threads=1 --skip actual_managed_windows_disposition_lifecycle
       - name: Verify Linux startup without systemd
         if: runner.os == 'Linux'
         timeout-minutes: 5

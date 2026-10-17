@@ -611,6 +611,7 @@ pub async fn child() {
     let w = wire(&c);
     match mode.as_str() {
         "lifecycle-engine" => Box::pin(lifecycle::engine(&c)).await,
+        "lifecycle-policy" => Box::pin(lifecycle::policy(&c)).await,
         "producer" => {
             use std::io::BufRead;
             println!("PRODUCER_READY");

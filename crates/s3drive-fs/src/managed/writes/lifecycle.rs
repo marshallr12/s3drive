@@ -536,6 +536,9 @@ impl Writes {
                 .get(&writer.default_store)
                 .ok_or(Error::ReadOnly)?;
             let node = random_id()?;
+            if !publisher.can_edit(&node, 0) {
+                return Err(Error::ReadOnly);
+            }
             let info = writer.reader.volume().await.map_err(error)?;
             let admission = publisher
                 .namespace_input(Apply {

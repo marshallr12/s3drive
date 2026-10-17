@@ -29,6 +29,24 @@ must freeze both original controls; no silent rebind or permanent refusal as a
 substitute. Use publication/edit/controller lock order. Require full local and
 exact-source hosted native/reference/startup gates before guarded publication.
 
+Current candidate6199af5, run39069635074 is terminal failure: Linux/book pass,
+Windows117504375158 Clippy failed on an Open/Create initialization insertion and
+FILE_DISPOSITION_INFO_EX_FLAGS lacking BitOr. Corrected locally, not pushed yet.
+Windows compile log `/tmp/s3drive-lifecycle-windows1.log`; no native run occurred.
+A subsequent local gate5 exposed the stack overflow again. Traces narrowed it to
+S3 HEAD during reopening uploaded data; boxing generated HEAD/GET send futures
+inside deadlines fixes the original test after all traces are removed
+(`/tmp/s3drive-lifecycle-stack11.log`, exit0). No stack limit increase.
+Narrow-policy test also exposed/fixed metadata-only DoC creation missing its
+write guard; file/directory denial now passes without provider PUT or namespace
+admission (`/tmp/s3drive-lifecycle-policy1.log`). Local gate6 passed exit0 at
+`/tmp/s3drive-lifecycle-gate6.log`: 255 state, ten HTTP, seventeen SDK, lifecycle
+engine/policy, original mutation regression, lint/build/book.
+Windows-only fixes and non-panicking void-callback logging are pending source.
+CI now runs the new complete native test early, and skips only that same test in
+the later existing native suite; expect 1+7 Windows native, seven Linux native.
+Do not publish main or claim native success until final exact-source all-green.
+
 Local portable gate `/tmp/s3drive-lifecycle-gate4.log` passed exit0: 255 state,
 ten HTTP, seventeen SDK, new shared-FS lifecycle engine, lint/build/book. The
 engine exercised early unlink with another object active, detached late writes,
