@@ -1,5 +1,6 @@
 //! Configuration and a bucket-alias namespace. No filesystem or network I/O.
 
+pub mod names;
 use serde::Deserialize;
 use std::{
     collections::HashSet,
@@ -200,10 +201,10 @@ impl Config {
         if let Some(managed) = &self.managed {
             if !matches!(
                 (&self.mode, self.version, &self.writes),
-                (Mode::ReadOnly, 3, None) | (Mode::ReadWrite, 4, Some(_))
+                (Mode::ReadOnly, 3, None) | (Mode::ReadWrite, 4 | 5, Some(_))
             ) || self.cache.is_some()
             {
-                return Err("managed mode requires version 3/read-only or version 4/read-write with policies, without a separate cache".into());
+                return Err("managed mode requires version 3/read-only or versions 4/5 read-write with policies, without a separate cache".into());
             }
             managed.validate(&self.sources)?;
             if self.version == 3 && managed.default_store.is_some() {
@@ -211,7 +212,7 @@ impl Config {
                     "read-only managed settings do not select a default write store".into(),
                 );
             }
-            if self.version == 4
+            if matches!(self.version, 4 | 5)
                 && !managed.default_store.as_ref().is_some_and(|id| {
                     managed.stores.iter().any(|s| {
                         &s.id == id
@@ -231,7 +232,7 @@ impl Config {
         match (&self.mode, self.version, &self.writes) {
             (Mode::ReadOnly, 3, None) if self.managed.is_some() => {}
             (Mode::ReadOnly, 1, None) if self.managed.is_none() => {}
-            (Mode::ReadWrite, version, Some(writes)) if (version==2 && self.managed.is_none()) || (version==4 && self.managed.is_some()) => {
+            (Mode::ReadWrite, version, Some(writes)) if (version==2 && self.managed.is_none()) || (matches!(version,4|5) && self.managed.is_some()) => {
                 if !absolute_local(&writes.directory)
                     || writes.sources.is_empty()
                     || self
@@ -254,7 +255,7 @@ impl Config {
                 }
             }
             _ => return Err(
-                "version 1 is read-only; version 2 requires writes; versions 3/4 require managed read-only/read-write settings"
+                "version 1 is read-only; version 2 requires writes; versions 3/4/5 require managed read-only/read-write settings"
                     .into(),
             ),
         }

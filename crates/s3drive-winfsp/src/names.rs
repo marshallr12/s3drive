@@ -1,38 +1,7 @@
 #![forbid(unsafe_code)]
 
 // Reject projections that the Windows shell cannot address unambiguously.
-pub fn valid_component(name: &str) -> bool {
-    if name.is_empty()
-        || name == "."
-        || name == ".."
-        || name.len() > 255
-        || name.ends_with([' ', '.'])
-        || name.contains(['<', '>', ':', '"', '/', '\\', '|', '?', '*'])
-        || name.chars().any(char::is_control)
-    {
-        return false;
-    }
-    let stem = name
-        .split('.')
-        .next()
-        .unwrap_or("")
-        .trim_end_matches(' ')
-        .to_ascii_uppercase();
-    if matches!(
-        stem.as_str(),
-        "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$"
-    ) {
-        return false;
-    }
-    !["COM", "LPT"].iter().any(|prefix| {
-        stem.strip_prefix(prefix).is_some_and(|suffix| {
-            matches!(
-                suffix,
-                "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "¹" | "²" | "³"
-            )
-        })
-    })
-}
+pub use s3drive_core::names::valid_component;
 
 #[cfg(test)]
 mod tests {

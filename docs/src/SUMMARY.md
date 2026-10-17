@@ -9,6 +9,7 @@
 - [Managed native read-only drives](managed-native.md)
 - [Durable managed local edits](managed-edits.md)
 - [Managed existing-file editing](managed-write-plan.md)
+- [Managed namespace and application saves](managed-namespace-plan.md)
 - [Turso and cross-machine coordination](turso-coordination.md)
 - [Filesystem behavior contract](filesystem-contract.md)
 - [Implemented read-only provider contract](provider-contract.md)

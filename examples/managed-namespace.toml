@@ -1,0 +1,37 @@
+# Template only. Use real authority/store IDs and absolute private local paths.
+# Requires a NEW authority started with --name-policy portable-collision-v1.
+# Copy its actual volume/store IDs below. No existing volume is converted.
+# This does not authorize a live provider probe.
+version = 5
+mode = "read-write"
+
+[managed]
+authority = "http://127.0.0.1:43128/v1/namespace"
+volume = "00000000000000000000000000000001"
+token_file = "/home/YOU/.local/state/s3drive/authority-secret/authority.token"
+default_store = "00000000000000000000000000000002"
+
+[[managed.stores]]
+id = "00000000000000000000000000000002"
+source = "documents"
+
+[[sources]]
+alias = "documents"
+bucket = "s3drivetest"
+region = "us-east-2"
+endpoint = "https://s3.us-east-2.wasabisys.com"
+profile = "wasabi-s3drive"
+prefix = ""
+path_style = true
+list_url_encoding = "form"
+
+[writes]
+directory = "/home/YOU/.local/state/s3drive/managed-edits"
+
+[[writes.sources]]
+alias = "documents"
+policy = "/home/YOU/.config/s3drive/wasabi-policy.toml"
+plan = "/home/YOU/.config/s3drive/wasabi-plan.toml"
+report = "/home/YOU/.config/s3drive/wasabi-report.toml"
+# Credentials remain in the private AWS INI profile, outside this repository.
+# On Windows replace all local paths with absolute private paths for that user.

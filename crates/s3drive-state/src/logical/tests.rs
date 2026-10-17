@@ -12,6 +12,7 @@ fn binding() -> Binding {
             kind: Kind::EmptyFile,
             revision: 1,
             deleted: false,
+            placement: None,
             payload: None,
         },
         store: Store {
@@ -335,7 +336,7 @@ fn logical_migration_preserves_schema9_data_and_rejects_unknown_shapes_atomicall
         j.seal(g).unwrap();
         s.connection
             .execute_batch(
-                "DROP TABLE logical_publication_links; DROP TABLE logical_edits; DROP TABLE logical_files; PRAGMA user_version=9",
+                "DROP TABLE namespace_intents; DROP INDEX namespace_portable_names; ALTER TABLE namespace_nodes DROP COLUMN name_key; ALTER TABLE namespace_nodes DROP COLUMN placement; DROP TABLE logical_publication_links; DROP TABLE logical_edits; DROP TABLE logical_files; PRAGMA user_version=9",
             )
             .unwrap();
         if damaged {
@@ -505,7 +506,7 @@ fn schema9_authority_migration_preserves_volume_and_cannot_host_local_edits() {
     let mut s = open(&root);
     let volume = s.namespace_initialize().unwrap();
     s.connection
-        .execute_batch("DROP TABLE logical_publication_links; DROP TABLE logical_edits; DROP TABLE logical_files; PRAGMA user_version=9")
+        .execute_batch("DROP TABLE namespace_intents; DROP INDEX namespace_portable_names; ALTER TABLE namespace_nodes DROP COLUMN name_key; ALTER TABLE namespace_nodes DROP COLUMN placement; DROP TABLE logical_publication_links; DROP TABLE logical_edits; DROP TABLE logical_files; PRAGMA user_version=9")
         .unwrap();
     drop(s);
     let mut s = open(&root);
@@ -599,7 +600,7 @@ fn verified_observation_preserves_identity_and_rejects_dirty_external_changes() 
     assert_eq!(f.binding, original);
     assert_eq!(f.base, renamed.node);
     // Simulate an old schema-10 file, preserving its original hash encoding.
-    s.connection.execute_batch("UPDATE logical_files SET observed_base=NULL; ALTER TABLE logical_files DROP COLUMN observed_base; PRAGMA user_version=10").unwrap();
+    s.connection.execute_batch("DROP TABLE namespace_intents; DROP INDEX namespace_portable_names; ALTER TABLE namespace_nodes DROP COLUMN name_key; ALTER TABLE namespace_nodes DROP COLUMN placement; UPDATE logical_files SET observed_base=NULL; ALTER TABLE logical_files DROP COLUMN observed_base; PRAGMA user_version=10").unwrap();
     let row = FileRow {
         binding: original.clone(),
         settled: None,
@@ -696,7 +697,7 @@ fn schema10_settled_file_and_legacy_receipts_keep_their_hashes() {
         .unwrap();
     s.connection
         .execute_batch(
-            "ALTER TABLE logical_files DROP COLUMN observed_base; PRAGMA user_version=10",
+            "DROP TABLE namespace_intents; DROP INDEX namespace_portable_names; ALTER TABLE namespace_nodes DROP COLUMN name_key; ALTER TABLE namespace_nodes DROP COLUMN placement; ALTER TABLE logical_files DROP COLUMN observed_base; PRAGMA user_version=10",
         )
         .unwrap();
     drop(s);

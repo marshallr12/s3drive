@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated: 2026-10-17. Current phase: **P6m3b2 native managed existing-file edits**; native checkpoint accepted on `codex/managed-native-writes`; exact-tip publication checks remain mandatory.
+Updated: 2026-10-17. Current phase: **P6m3b3a managed file/directory creation** on `codex/managed-namespace`; implementation and portable recovery tests pass; native acceptance/publication remain required.
 Goal active. Linux/Windows read-only drives and startup foundations work;
 library writes/flush are progressing toward safe writable native filesystems.
 Do not call the broader editable-drive goal complete before its documented
@@ -17,9 +17,9 @@ safe-write contract and real OS acceptance pass.
   Wasabi is the first live provider; other endpoints need separate conformance.
 - Linux FUSE and Windows WinFsp adapters have stable read-only acceptance.
   Existing opt-in editing and guarded file creation passed native acceptance.
-  Version-3 managed read-only integration is accepted. Version-4 managed existing-file callbacks are implemented with separate native acceptance; namespace/save-replace remains unfinished.
+  Version-3 managed read-only integration is accepted. Version-4 managed existing-file callbacks are natively accepted. Version-5 creation/directories are implemented pending their native gates; rename/removal/save-replace remains unfinished.
   New online opens authorize through S3; pinned old handles preserve revisions.
-  No ordinary CLI upload command, directory creation, delete/rename,
+  No ordinary CLI upload command, delete/rename,
   multipart, payload reclamation, new offline opens or desktop packaging yet.
 - Startup at sign-in after reboot; same-user incoming SSH sessions and surviving
   tmux/Codex/Claude processes must share the mount. The user's “SSL sessions”
@@ -36,35 +36,41 @@ safe-write contract and real OS acceptance pass.
 ## Authoritative publication baseline
 
 Published private main at phase start:
-`e216fb869ef58e77969b7ef92dd69e2932f0b21d` (durable managed logical edits).
-Terminal all-green [run 39006862182](https://github.com/marshallr12/s3drive/actions/runs/39006862182):
-Linux `117320990545`, Windows `117320990468`, book `117320990552`.
-Baseline: schema 10, 106 Linux / 102 Windows state tests, 50 S3, 12 FS,
-four authority TCP tests and four native cases per OS. Prior accepted logs:
-`/tmp/s3drive-logical-{linux,windows,book}-ci.log`.
+`683ec51a405198bfedc64f3a3b1c5eed7e7ed218` (managed existing-file editing).
+Terminal all-green [run 39010367651](https://github.com/marshallr12/s3drive/actions/runs/39010367651):
+Linux `117331445504`, Windows `117331445221`, book `117331445339`.
+The duplicate main run `39011329487` also completed successfully. Baseline:
+schema 11, 109 Linux / 105 Windows state tests, 50 S3, 12 FS, four authority
+TCP tests and five native cases per OS, with no-systemd startup and Windows
+non-admin cross-logon acceptance. Local/remote main/private visibility were verified.
+Logs: `/tmp/s3drive-managed-writer-final-{linux,windows,book}-ci.log`.
 
-Current branch adds schema 11, content-reference CAS and capability negotiation,
-version-4 config/default store, snapshot-authorized base observation, shared local
-native editing/coalescing and exact-ID recovery. Mutations/base adoption and
-publication are serialized conservatively; reads keep owned snapshots. No native
-namespace mutation/save-replace is enabled. See `docs/src/managed-write-plan.md`.
-Local gate log: `/tmp/s3drive-managed-writer-gate-producer.log`. Before publication require
-terminal exact-tip Linux/Windows/book CI including the fifth native case per OS. Native cases now run serially (`--test-threads=1`) to isolate process-wide FUSE descriptors and Windows driver/Shell resources.
+Current branch introduces schema 12, a Unicode-17 portable collision policy,
+explicit new-volume policy selection, guarded creation with authoritative empty-file
+store placement, a private namespace intent ledger and exact-ID recovery, and
+version-5 shared/native file and directory creation. Existing exact-name volumes
+are not converted; version 4 keeps its existing-file boundary. Rename/remove and
+full save-replacement remain unsupported until subsequent acceptance.
+See `docs/src/managed-namespace-plan.md` for the full remaining phases.
 
-Native checkpoint `9a0185680f397070d31172f880c0fcc37eb71b82` passed both real
-native steps in [run 39009806732](https://github.com/marshallr12/s3drive/actions/runs/39009806732).
-Linux full job `117329725284` passed with 109 state tests and no-systemd startup.
-Windows native step `117329725178` passed all five cases; its cache-save/overall
-job was still pending when the evidence snapshot was captured. This is not an
-in-progress full-run acceptance claim. Durable snapshot:
-`docs/src/evidence/managed-native-writes-2026-10-17.json`.
-The final candidate adds serial native gating to isolate process-wide descriptors
-and Windows driver/Shell resources. Require terminal exact-tip CI before main.
-Earlier candidates `6969f85`/run39009012508 and `89c044c`/run39009408181 failed:
-Linux fixture ordering was affected by fork/exec close flushes; the latter also
-hit an existing Windows PowerShell/Explorer deadline under five parallel native
-cases. No assertions/timeouts were weakened; the prestarted producer and serial
-suite isolation address those test interactions.
+Portable proof: new nested Unicode entries, collision refusal, real SDK publication,
+a peer with another default following the recorded store, lost create reply after
+authority commit plus killed/restarted caller, unchanged sequence on replay, and
+authority-process restart. State tests cover source placement, corrupt keys,
+namespace row integrity, SQL-full/ignored ACK rollback and schema-11 migration.
+A larger integration future exposed stack overflow; `ReadOnlyFs::new` now boxes
+its large construction state and has a caller-frame size regression test.
+Native acceptance adds a sixth case per OS, including exclusive creation,
+normal remount, a new file's dirty restart, another default store, and killing a
+mount after create commits but before its reply. Windows audits every BMP native
+upcase alias before enabling the portable policy; mismatch fails closed.
+
+The full local gate passed at `/tmp/s3drive-namespace-gate-final.log` (116 Linux state tests, 50 S3, 13 FS, four authority TCP tests and four managed engine/helper cases). The new diagram was rendered and visually inspected.
+
+Use `bash scripts/gate.sh` locally, then require terminal exact-tip Linux,
+Windows and book jobs before main publication. Native cases remain serialized
+(`--test-threads=1`); no assertions or deadlines are weakened. No new live Wasabi
+mutation, real startup registration or credential/config change is authorized.
 
 Windows testing runs remotely on GitHub's **Windows Server 2025 VM**, not this
 Linux workstation. Native folder/drive/security/UTF-16 tests and distinct
@@ -147,8 +153,7 @@ Version-3 managed native mounts remain read-only. Native managed local edit
 views, patch/truncate/fsync and recovery integration are **P6m3b2**. Include
 verified clean external refresh, dirty conflict retention and per-file publication
 serialization; address unrelated-volume-guard conflicts before native writers.
-This is now the next
-required work. P6m3b3 adds portable names and create/rename/replace/unlink; P6m4
+This requirement is now fulfilled by the published P6m3b2 checkpoint. P6m3b3 adds portable names and create/rename/replace/unlink; P6m4
 supervises/deploys authority/Turso and proves multi-host/sign-in behavior.
 No real Wasabi mutation, credential/config change or startup entry is authorized
 or performed here. Preserve unsupported callbacks until their native criteria pass.
@@ -265,7 +270,7 @@ were already removed. Do not infer remaining cleanup from old plans/logs.
 
 ## Next implementation and durable decisions
 
-P6m3a and P6m3b1 are published. P6m3b2 now connects native existing-file edits; finish its exact-source native gate/publication, then implement P6m3b3 namespace/save workflows following the implementation plan. Stable storage/file identities,
+P6m3b2 is published. Finish P6m3b3a creation/directory native acceptance/publication, then implement guarded rename/replacement/removal and open-unlinked publication, followed by real application save workflows as laid out in the namespace plan. Stable storage/file identities,
 create-only unique blob keys and metadata CAS are now separate from the direct
 writer's mutable-key ETag lineage; preserve that distinction during integration. Keep uncertain bytes and new physical blob
 references distinct; an S3 upload alone does not acknowledge filesystem flush.

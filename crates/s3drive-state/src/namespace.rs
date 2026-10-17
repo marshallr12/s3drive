@@ -4,6 +4,7 @@ pub mod publication;
 use crate::State;
 pub use publication::{Artifact, ContentGuard, Payload, Reservation, Store, payload_reference};
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
+use s3drive_core::names;
 use serde::{Deserialize, Serialize};
 
 pub const ROOT: &str = "00000000000000000000000000000000";
@@ -63,6 +64,8 @@ pub struct Node {
     pub deleted: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub payload: Option<Payload>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub placement: Option<Store>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
@@ -91,6 +94,13 @@ pub enum Mutation {
         upload_operation: String,
         etag: String,
         version: Option<String>,
+    },
+    CreateEntry {
+        parent: String,
+        parent_revision: u64,
+        store: Option<String>,
+        name: String,
+        node_kind: Kind,
     },
     Create {
         parent: String,
@@ -171,6 +181,21 @@ impl Apply {
             | Mutation::Reserve { .. }
             | Mutation::ReserveContent { .. }
             | Mutation::Publish { .. } => publication::valid(&self.mutation),
+            Mutation::CreateEntry {
+                parent,
+                parent_revision,
+                name,
+                node_kind,
+                store,
+            } => {
+                (*node_kind == Kind::Directory && store.is_none()
+                    || *node_kind == Kind::EmptyFile
+                        && store.as_ref().is_some_and(|s| valid_id(s) && s != ROOT))
+                    && *parent_revision <= self.expected_sequence
+                    && *node_kind != Kind::File
+                    && valid_id(parent)
+                    && names::collision_key(name).is_some()
+            }
             Mutation::Create {
                 parent,
                 name,
@@ -187,8 +212,9 @@ impl Apply {
 
 pub(crate) fn check_schema(db: &Connection) -> crate::Result<()> {
     db.prepare("SELECT volume_id, sequence, name_policy FROM namespace_volume LIMIT 0")?;
+    db.prepare("SELECT name_key FROM namespace_nodes LIMIT 0")?;
     db.prepare(
-        "SELECT node_id, parent_id, name, kind, revision, deleted, payload FROM namespace_nodes LIMIT 0",
+        "SELECT node_id, parent_id, name, kind, revision, deleted, payload, placement FROM namespace_nodes LIMIT 0",
     )?;
     db.prepare("SELECT operation_id, request, outcome FROM namespace_operations LIMIT 0")?;
     publication::check_schema(db)?;
@@ -231,6 +257,19 @@ fn row_node(r: &rusqlite::Row<'_>) -> rusqlite::Result<Node> {
     }) {
         return Err(rusqlite::Error::InvalidQuery);
     }
+    let placement: Option<Vec<u8>> = r.get(7)?;
+    let placement: Option<Store> = placement
+        .map(|b| serde_json::from_slice(&b).map_err(|_| rusqlite::Error::InvalidQuery))
+        .transpose()?;
+    if placement.as_ref().is_some_and(|p| {
+        !p.valid()
+            || payload
+                .as_ref()
+                .is_some_and(|body| body.reservation.store != *p)
+    }) || (kind == "directory" && (placement.is_some() || payload.is_some()))
+    {
+        return Err(rusqlite::Error::InvalidQuery);
+    }
     let kind = match kind.as_str() {
         "directory" => Kind::Directory,
         "empty-file" if payload.is_some() => Kind::File,
@@ -245,14 +284,37 @@ fn row_node(r: &rusqlite::Row<'_>) -> rusqlite::Result<Node> {
         revision: nonnegative(r, 4)?,
         deleted: r.get(5)?,
         payload,
+        placement,
     })
 }
 fn node(db: &Connection, id: &str) -> Result<Node> {
     if !valid_id(id) {
         return Err(Error::Invalid);
     }
-    sql(db.query_row("SELECT node_id, parent_id, name, kind, revision, deleted, payload FROM namespace_nodes WHERE node_id=?", [id], row_node).optional())?
-        .ok_or(Error::NotFound)
+    let value=sql(db.query_row("SELECT node_id, parent_id, name, kind, revision, deleted, payload, placement FROM namespace_nodes WHERE node_id=?", [id], row_node).optional())?.ok_or(Error::NotFound)?;
+    check_name_key(db, &value)?;
+    Ok(value)
+}
+fn check_name_key(db: &Connection, node: &Node) -> Result<()> {
+    if let Some(placement) = &node.placement
+        && publication::store(db, &placement.id)? != *placement
+    {
+        return Err(Error::Internal);
+    }
+    let expected = if node.parent.is_some() && volume(db)?.name_policy == names::PORTABLE {
+        Some(names::collision_key(&node.name).ok_or(Error::Internal)?)
+    } else {
+        None
+    };
+    let actual: Option<String> = sql(db.query_row(
+        "SELECT name_key FROM namespace_nodes WHERE node_id=?",
+        [&node.id],
+        |r| r.get(0),
+    ))?;
+    if actual != expected {
+        return Err(Error::Internal);
+    }
+    Ok(())
 }
 fn live_node(db: &Connection, id: &str) -> Result<Node> {
     let n = node(db, id)?;
@@ -270,13 +332,47 @@ fn directory(db: &Connection, id: &str) -> Result<Node> {
     Ok(n)
 }
 fn available(db: &Connection, parent: &str, name: &str, own_id: Option<&str>) -> Result<()> {
-    let existing: Option<String> = sql(db
-        .query_row(
-            "SELECT node_id FROM namespace_nodes WHERE parent_id=?1 AND name=?2 AND deleted=0",
-            params![parent, name],
-            |r| r.get(0),
-        )
-        .optional())?;
+    let policy = volume(db)?.name_policy;
+    let key = if policy == names::PORTABLE {
+        Some(names::collision_key(name).ok_or(Error::Invalid)?)
+    } else {
+        None
+    };
+    let existing: Option<String> = if let Some(key) = key {
+        // Validate retained sibling keys before admitting a new entry. A
+        // damaged index value must not let an alias bypass the policy.
+        let mut statement=sql(db.prepare("SELECT node_id,name,name_key FROM namespace_nodes WHERE parent_id=? AND deleted=0 LIMIT 1001"))?;
+        let rows = sql(sql(statement.query_map([parent], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, Option<String>>(2)?,
+            ))
+        }))?
+        .collect::<rusqlite::Result<Vec<_>>>())?;
+        if rows.len() > MAX_CHILDREN {
+            return Err(Error::Limit);
+        }
+        let mut found = None;
+        for (id, name, actual) in rows {
+            let expected = names::collision_key(&name).ok_or(Error::Internal)?;
+            if actual.as_ref() != Some(&expected) {
+                return Err(Error::Internal);
+            }
+            if expected == key {
+                found = Some(id);
+            }
+        }
+        found
+    } else {
+        sql(db
+            .query_row(
+                "SELECT node_id FROM namespace_nodes WHERE parent_id=?1 AND name=?2 AND deleted=0",
+                params![parent, name],
+                |r| r.get(0),
+            )
+            .optional())?
+    };
     if existing.is_some() && existing.as_deref() != own_id {
         Err(Error::AlreadyExists)
     } else {
@@ -297,6 +393,12 @@ impl State {
     /// Initialize one authority volume. IDs are independent of AWS profiles.
     /// Keep this DB separate from all clients' local cache/staging databases.
     pub fn namespace_initialize(&mut self) -> Result<Volume> {
+        self.namespace_initialize_with_policy(names::EXACT)
+    }
+    pub fn namespace_initialize_with_policy(&mut self, policy: &str) -> Result<Volume> {
+        if !names::supported(policy) {
+            return Err(Error::Invalid);
+        }
         self._directory
             .as_ref()
             .ok_or(Error::Internal)?
@@ -316,7 +418,8 @@ impl State {
                         (SELECT count(*) FROM managed_publications) +
                         (SELECT count(*) FROM logical_files) +
                         (SELECT count(*) FROM logical_edits) +
-                        (SELECT count(*) FROM logical_publication_links)",
+                        (SELECT count(*) FROM logical_publication_links) +
+                        (SELECT count(*) FROM namespace_intents)",
                 [],
                 |r| r.get(0),
             ))?;
@@ -330,8 +433,8 @@ impl State {
                 return Err(Error::Internal);
             }
             sql(tx.execute(
-                "INSERT INTO namespace_volume VALUES(1, ?1, 0, 'exact-utf8-v1')",
-                [&id],
+                "INSERT INTO namespace_volume VALUES(1, ?1, 0, ?2)",
+                params![id, policy],
             ))?;
             sql(tx.execute(
                 "INSERT INTO namespace_nodes(node_id,parent_id,name,kind,revision,deleted) VALUES(?1, NULL, '', 'directory', 0, 0)",
@@ -340,7 +443,7 @@ impl State {
         }
         let v = volume(&tx)?;
         let root = directory(&tx, ROOT)?;
-        if root.parent.is_some() || !root.name.is_empty() || v.name_policy != "exact-utf8-v1" {
+        if root.parent.is_some() || !root.name.is_empty() || v.name_policy != policy {
             return Err(Error::Internal);
         }
         sql(tx.commit())?;
@@ -360,9 +463,12 @@ impl State {
         let v = check_volume(&tx, volume_id)?;
         directory(&tx, parent)?;
         let children = {
-            let mut stmt = sql(tx.prepare("SELECT node_id,parent_id,name,kind,revision,deleted,payload FROM namespace_nodes WHERE parent_id=? AND deleted=0 ORDER BY name LIMIT 1001"))?;
+            let mut stmt = sql(tx.prepare("SELECT node_id,parent_id,name,kind,revision,deleted,payload,placement FROM namespace_nodes WHERE parent_id=? AND deleted=0 ORDER BY name LIMIT 1001"))?;
             sql(sql(stmt.query_map([parent], row_node))?.collect::<rusqlite::Result<Vec<_>>>())?
         };
+        for child in &children {
+            check_name_key(&tx, child)?;
+        }
         if children.len() > MAX_CHILDREN {
             return Err(Error::Limit);
         }
@@ -412,7 +518,8 @@ impl State {
         }
         // A savepoint rolls back any partial mutation before retaining rejection.
         sql(tx.execute_batch("SAVEPOINT namespace_effect"))?;
-        let content_guard = publication::uses_content_guard(&tx, &request.mutation)?;
+        let content_guard = publication::uses_content_guard(&tx, &request.mutation)?
+            || matches!(request.mutation, Mutation::CreateEntry { .. });
         let outcome = if request.expected_sequence > v.sequence
             || (!content_guard && request.expected_sequence != v.sequence)
         {
@@ -455,28 +562,43 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
         | Mutation::Publish { .. } => {
             return Err(Error::Invalid);
         }
+        Mutation::CreateEntry {
+            parent,
+            parent_revision,
+            name,
+            node_kind,
+            store,
+        } => {
+            if volume(db)?.name_policy != names::PORTABLE {
+                return Err(Error::Invalid);
+            }
+            if directory(db, parent)?.revision != *parent_revision {
+                return Err(Error::Conflict);
+            }
+            let placement = store
+                .as_ref()
+                .map(|id| publication::store(db, id))
+                .transpose()?;
+            create(
+                db,
+                request,
+                parent,
+                name,
+                *node_kind,
+                placement,
+                sql_sequence,
+            )?;
+            request.operation.as_str()
+        }
         Mutation::Create {
             parent,
             name,
             node_kind,
         } => {
-            directory(db, parent)?;
-            available(db, parent, name, None)?;
-            let count: i64 =
-                sql(db.query_row("SELECT count(*) FROM namespace_nodes", [], |r| r.get(0)))?;
-            if count >= MAX_NODES {
-                return Err(Error::Limit);
+            if *node_kind == Kind::EmptyFile && volume(db)?.name_policy == names::PORTABLE {
+                return Err(Error::Invalid);
             }
-            sql(db.execute(
-                "INSERT INTO namespace_nodes(node_id,parent_id,name,kind,revision,deleted) VALUES(?1,?2,?3,?4,?5,0)",
-                params![
-                    request.operation,
-                    parent,
-                    name,
-                    node_kind.sql(),
-                    sql_sequence
-                ],
-            ))?;
+            create(db, request, parent, name, *node_kind, None, sql_sequence)?;
             request.operation.as_str()
         }
         Mutation::Move {
@@ -504,7 +626,12 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
                     cursor = directory(db, &id2)?.parent;
                 }
             }
-            sql(db.execute("UPDATE namespace_nodes SET parent_id=?1,name=?2,revision=?3 WHERE node_id=?4 AND deleted=0", params![parent,name,sql_sequence,id]))?;
+            let key = if volume(db)?.name_policy == names::PORTABLE {
+                Some(names::collision_key(name).ok_or(Error::Invalid)?)
+            } else {
+                None
+            };
+            sql(db.execute("UPDATE namespace_nodes SET parent_id=?1,name=?2,revision=?3,name_key=?5 WHERE node_id=?4 AND deleted=0", params![parent,name,sql_sequence,id,key]))?;
             id.as_str()
         }
         Mutation::Remove { node: id } => {
@@ -529,6 +656,35 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
     };
     finish(db, request, sequence, changed, None)
 }
+fn create(
+    db: &Connection,
+    request: &Apply,
+    parent: &str,
+    name: &str,
+    kind: Kind,
+    placement: Option<Store>,
+    sequence: i64,
+) -> Result<()> {
+    directory(db, parent)?;
+    available(db, parent, name, None)?;
+    let count: i64 = sql(db.query_row("SELECT count(*) FROM namespace_nodes", [], |r| r.get(0)))?;
+    let children: i64 = sql(db.query_row(
+        "SELECT count(*) FROM namespace_nodes WHERE parent_id=? AND deleted=0",
+        [parent],
+        |r| r.get(0),
+    ))?;
+    if count >= MAX_NODES || children >= MAX_CHILDREN as i64 {
+        return Err(Error::Limit);
+    }
+    let key = if volume(db)?.name_policy == names::PORTABLE {
+        Some(names::collision_key(name).ok_or(Error::Invalid)?)
+    } else {
+        None
+    };
+    sql(db.execute("INSERT INTO namespace_nodes(node_id,parent_id,name,kind,revision,deleted,name_key,placement) VALUES(?1,?2,?3,?4,?5,0,?6,?7)",params![request.operation,parent,name,kind.sql(),sequence,key,placement.as_ref().map(serde_json::to_vec).transpose().map_err(|_|Error::Internal)?]))?;
+    Ok(())
+}
+
 fn finish(
     db: &Connection,
     _request: &Apply,

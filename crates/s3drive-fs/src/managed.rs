@@ -15,7 +15,7 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
             .request(&s3drive_authority::Request::Features {})
             .await
             .map_err(error)?;
-        if !matches!(reply,s3drive_authority::Reply::Features(ref features) if features.iter().any(|f|f=="content-cas-v1"))
+        if !matches!(reply,s3drive_authority::Reply::Features(ref features) if features.iter().any(|f|f=="content-cas-v1") && (config.version!=5 || features.iter().any(|f|f=="namespace-create-v1")))
         {
             return Err(Error::Configuration);
         }
@@ -90,6 +90,24 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
         s3drive_managed::Reader::open(authority.clone(), settings.volume.clone(), bindings)
             .await
             .map_err(error)?;
+    if config.version == 5
+        && reader.volume().await.map_err(error)?.name_policy != s3drive_core::names::PORTABLE
+    {
+        return Err(Error::Configuration);
+    }
+    let writes = storage.map(|s| {
+        Arc::new(writes::Writes::new(
+            s,
+            settings.volume.clone(),
+            authority,
+            publishers,
+            settings.default_store.clone().unwrap_or_default(),
+            config.version == 5,
+        ))
+    });
+    if let Some(w) = &writes {
+        w.recover_namespace().await?;
+    }
     let root = Arc::new(Node {
         id: ROOT,
         parent: ROOT,
@@ -111,18 +129,7 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
         aliases: Vec::new(),
         cache: None,
         writes: None,
-        managed: Some(Arc::new(Backend {
-            reader,
-            writes: storage.map(|s| {
-                Arc::new(writes::Writes::new(
-                    s,
-                    settings.volume.clone(),
-                    authority,
-                    publishers,
-                    settings.default_store.clone().unwrap_or_default(),
-                ))
-            }),
-        })),
+        managed: Some(Arc::new(Backend { reader, writes })),
     })
 }
 impl Nodes {
@@ -181,6 +188,8 @@ pub(super) fn error<E: Into<Box<dyn std::error::Error + Send + Sync>>>(e: E) -> 
             Failure::NotFound => Error::NotFound,
             Failure::IsDirectory => Error::IsDirectory,
             Failure::Authority(s3drive_authority::Error::NotFound) => Error::NotFound,
+            Failure::Authority(s3drive_authority::Error::AlreadyExists) => Error::AlreadyExists,
+            Failure::Authority(s3drive_authority::Error::Invalid) => Error::InvalidName,
             Failure::Authority(s3drive_authority::Error::Conflict) => Error::Conflict,
             Failure::Authority(s3drive_authority::Error::NotDirectory) => Error::NotDirectory,
             Failure::Authority(s3drive_authority::Error::Limit) => Error::ResourceLimit,

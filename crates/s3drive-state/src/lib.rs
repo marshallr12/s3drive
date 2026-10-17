@@ -12,6 +12,7 @@ pub mod journal;
 pub mod logical;
 pub mod managed;
 pub mod namespace;
+pub mod namespace_client;
 pub mod remote;
 pub mod worker;
 
@@ -19,7 +20,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 11;
+pub const SCHEMA_VERSION: i32 = 12;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub struct State {
@@ -133,10 +134,15 @@ impl State {
             }
             if version == 10 {
                 tx.execute_batch(include_str!("../migrations/011.sql"))?;
+                version = 11;
+            }
+            if version == 11 {
+                tx.execute_batch(include_str!("../migrations/012.sql"))?;
             }
             logical::check_schema(&tx)?;
             managed::check_schema(&tx)?;
             namespace::check_schema(&tx)?;
+            namespace_client::check_schema(&tx)?;
             // Catch a damaged/current-version database before returning success.
             tx.prepare("SELECT source_alias, object_key, etag, version_id, size_bytes FROM legacy_cached_objects_v1 LIMIT 0")?;
             tx.prepare("SELECT source_id, config_fingerprint FROM source_bindings LIMIT 0")?;

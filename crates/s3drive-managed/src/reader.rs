@@ -38,7 +38,7 @@ impl Reader {
         let Reply::Info(info) = reply(authority.request(&Request::Info {}).await?)? else {
             return Err(Failure::Protocol.into());
         };
-        if info.id != volume || info.name_policy != "exact-utf8-v1" {
+        if info.id != volume || !s3drive_core::names::supported(&info.name_policy) {
             return Err(Failure::Binding.into());
         }
         let mut stores = Vec::new();
@@ -69,7 +69,7 @@ impl Reader {
         let Reply::Info(v) = reply(self.0.authority.request(&Request::Info {}).await?)? else {
             return Err(Failure::Protocol.into());
         };
-        if v.id != self.0.volume || v.name_policy != "exact-utf8-v1" {
+        if v.id != self.0.volume || !s3drive_core::names::supported(&v.name_policy) {
             return Err(Failure::Binding.into());
         }
         Ok(v)
@@ -101,6 +101,18 @@ impl Reader {
                 .any(|c| c.is_control() || c == '/' || c == '\\')
         {
             return Err(Failure::Protocol.into());
+        }
+        if let Some(placement) = &node.placement {
+            let (mapped, _) = self.0.stores.get(&placement.id).ok_or(Failure::Binding)?;
+            if placement != mapped
+                || node.kind == Kind::Directory
+                || node
+                    .payload
+                    .as_ref()
+                    .is_some_and(|p| p.reservation.store != *placement)
+            {
+                return Err(Failure::Binding.into());
+            }
         }
         if let Some(payload) = &node.payload {
             let r = &payload.reservation;

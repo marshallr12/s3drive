@@ -213,6 +213,33 @@ impl Publisher {
             })
             .await
     }
+    pub fn namespace_input(
+        &self,
+        request: Apply,
+    ) -> Result<s3drive_state::namespace_client::Input> {
+        if request.volume != self.0.volume {
+            return Err(Failure::Binding.into());
+        }
+        let target = self
+            .0
+            .executor
+            .recovery_target(&format!("{}binding", self.0.store.root))?;
+        Ok(s3drive_state::namespace_client::Input {
+            request,
+            store: self.0.store.clone(),
+            source: *target.source(),
+            fingerprint: target.fingerprint().into(),
+        })
+    }
+    pub fn check_namespace_input(
+        &self,
+        input: &s3drive_state::namespace_client::Input,
+    ) -> Result<()> {
+        if self.namespace_input(input.request.clone())? != *input {
+            return Err(Failure::Binding.into());
+        }
+        Ok(())
+    }
     pub fn check_edit_binding(&self, binding: &s3drive_state::logical::Binding) -> Result<()> {
         let target = self
             .0

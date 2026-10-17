@@ -105,6 +105,11 @@ impl Storage {
             options: self.cache_options,
         }
     }
+    pub fn namespace(&self) -> Namespace {
+        Namespace {
+            owner: self.owner.clone(),
+        }
+    }
     pub fn logical(&self) -> Logical {
         Logical {
             owner: self.owner.clone(),
@@ -609,6 +614,46 @@ impl Logical {
         after: Option<String>,
         limit: u16,
     ) -> Result<Vec<crate::logical::Record>> {
+        self.call(move |j| j.pending(after.as_deref(), limit)).await
+    }
+}
+
+/// Metadata requests share the same owner/queue as file bytes and publications.
+#[derive(Clone)]
+pub struct Namespace {
+    owner: Owner,
+}
+impl Namespace {
+    async fn call<T: Send + 'static>(
+        &self,
+        work: impl FnOnce(&mut crate::namespace_client::Journal<'_>) -> Result<T> + Send + 'static,
+    ) -> Result<T> {
+        self.owner
+            .call(move |store| {
+                work(&mut crate::namespace_client::Journal::new(
+                    &mut store.state,
+                )?)
+            })
+            .await
+    }
+    pub async fn begin(
+        &self,
+        input: crate::namespace_client::Input,
+    ) -> Result<crate::namespace_client::Record> {
+        self.call(move |j| j.begin(input)).await
+    }
+    pub async fn acknowledge(
+        &self,
+        id: String,
+        outcome: crate::namespace::Result<crate::namespace::Receipt>,
+    ) -> Result<crate::namespace_client::Record> {
+        self.call(move |j| j.acknowledge(&id, outcome)).await
+    }
+    pub async fn pending(
+        &self,
+        after: Option<String>,
+        limit: u16,
+    ) -> Result<Vec<crate::namespace_client::Record>> {
         self.call(move |j| j.pending(after.as_deref(), limit)).await
     }
 }

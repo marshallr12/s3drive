@@ -190,7 +190,7 @@ fn decode<T: for<'de> Deserialize<'de>>(bytes: Vec<u8>) -> Result<T> {
 fn encode<T: Serialize>(value: &T) -> Result<Vec<u8>> {
     serde_json::to_vec(value).map_err(|_| Error::Internal)
 }
-fn store(db: &Connection, id: &str) -> Result<Store> {
+pub(super) fn store(db: &Connection, id: &str) -> Result<Store> {
     if !valid_id(id) {
         return Err(Error::Invalid);
     }
@@ -283,6 +283,9 @@ pub(super) fn mutate(
                 _ => None,
             };
             let n = live_node(db, id)?;
+            if n.placement.as_ref().is_some_and(|p| &p.id != store_id) {
+                return Err(Error::Conflict);
+            }
             if !base_matches(&n, *expected_revision, guard.as_ref()) {
                 return Err(Error::Conflict);
             }

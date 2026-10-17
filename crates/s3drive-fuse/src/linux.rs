@@ -197,6 +197,25 @@ impl Filesystem for Adapter {
             Err(e) => reply.error(e),
         }
     }
+    fn mkdir(
+        &self,
+        _req: &Request,
+        parent: INodeNo,
+        name: &OsStr,
+        _mode: u32,
+        _umask: u32,
+        reply: ReplyEntry,
+    ) {
+        let result = name
+            .to_str()
+            .ok_or(Errno::EINVAL)
+            .and_then(|name| self.wait(self.fs.create_directory(parent.0, name)))
+            .and_then(|node| self.attributes(INodeNo(node.id), None));
+        match result {
+            Ok(attr) => reply.entry(&TTL, &attr, Generation(0)),
+            Err(e) => reply.error(e),
+        }
+    }
     fn create(
         &self,
         _req: &Request,

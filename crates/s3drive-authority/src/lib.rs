@@ -1,6 +1,6 @@
 //! Managed namespace authority prototype. Loopback-only transport; no S3 writes,
 //! remote deployment or Turso backend is enabled. Managed read-only mounts use
-//! this development transport; native writes remain a later phase.
+//! this development transport, including opt-in managed native editing.
 mod wire;
 use axum::{
     Json, Router,
@@ -66,7 +66,10 @@ impl Request {
     }
     fn execute(self, state: &mut State) -> Reply {
         let reply = match self {
-            Self::Features {} => Ok(Reply::Features(vec!["content-cas-v1".into()])),
+            Self::Features {} => Ok(Reply::Features(vec![
+                "content-cas-v1".into(),
+                "namespace-create-v1".into(),
+            ])),
             Self::Info {} => state.namespace_volume().map(Reply::Info),
             Self::Store { volume, store } => {
                 state.namespace_store(&volume, &store).map(Reply::Store)
@@ -123,6 +126,9 @@ pub struct Authority {
 }
 impl Authority {
     pub async fn open(directory: PathBuf) -> namespace::Result<Self> {
+        Self::open_with_policy(directory, s3drive_core::names::EXACT.into()).await
+    }
+    pub async fn open_with_policy(directory: PathBuf, policy: String) -> namespace::Result<Self> {
         let (sender, mut receiver) = mpsc::channel(QUEUE);
         let (ready, started) = oneshot::channel();
         let thread = thread::Builder::new()
@@ -131,7 +137,7 @@ impl Authority {
                 let state = State::open_managed(&directory)
                     .map_err(|_| Error::Internal)
                     .and_then(|mut state| {
-                        state.namespace_initialize()?;
+                        state.namespace_initialize_with_policy(&policy)?;
                         Ok(state)
                     });
                 let mut state = match state {

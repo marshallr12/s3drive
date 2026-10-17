@@ -30,6 +30,8 @@ enum Command {
         listen: std::net::SocketAddr,
         #[arg(long)]
         stop_on_stdin_close: bool,
+        #[arg(long,default_value="exact-utf8-v1",value_parser=["exact-utf8-v1","portable-collision-v1"])]
+        name_policy: String,
     },
     /// Plan/run an explicit disposable-key conditional-write capability probe.
     ProbeWrites {
@@ -80,7 +82,7 @@ enum Command {
         #[arg(long, default_value_t = 65536)]
         length: usize,
     },
-    /// Mount a drive in the foreground (versions 1/3 read-only; explicit versions 2/4 writes).
+    /// Mount a drive in the foreground (versions 1/3 read-only; explicit versions 2/4/5 writes).
     Mount {
         config: PathBuf,
         mountpoint: PathBuf,
@@ -139,8 +141,16 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
             token_file,
             listen,
             stop_on_stdin_close,
+            name_policy,
         } => {
-            run_authority(directory, token_file, listen, stop_on_stdin_close).await?;
+            run_authority(
+                directory,
+                token_file,
+                listen,
+                stop_on_stdin_close,
+                name_policy,
+            )
+            .await?;
         }
         // Keep SDK mutation futures out of the existing mount startup envelope.
         Command::ProbeWrites { command } => Box::pin(run_probe(command)).await?,
@@ -473,13 +483,14 @@ async fn run_authority(
     token_file: PathBuf,
     listen: std::net::SocketAddr,
     stdin_close: bool,
+    name_policy: String,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     use s3drive_authority::{Authority, Reply, Request, Token};
     if !listen.ip().is_loopback() {
         return Err("authority development server requires a numeric loopback listener".into());
     }
     let token=Token::from_private_file(&token_file).map_err(|_|"authority token must be an owner-private local file containing 64 hexadecimal characters")?;
-    let authority = Authority::open(directory)
+    let authority = Authority::open_with_policy(directory, name_policy)
         .await
         .map_err(|_| "private authority initialization failed")?;
     let listener = tokio::net::TcpListener::bind(listen).await?;

@@ -6,6 +6,7 @@ publish.workspace = true
 repository.workspace = true
 
 [dependencies]
+s3drive-core.workspace = true
 reqwest.workspace = true
 url.workspace = true
 axum.workspace = true

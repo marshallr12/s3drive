@@ -367,3 +367,29 @@ Linux/Windows/book jobs at its own exact tip before main publication. Its
 [branch CI history](https://github.com/marshallr12/s3drive/actions?query=branch%3Acodex%2Fmanaged-native-writes)
 provides that terminal publication evidence. All five native cases remain enabled;
 no deadline, assertion or recovery check was removed.
+
+
+## Managed creation and directory acceptance (2026-10-17)
+
+The [namespace phase](managed-namespace-plan.md) adds a sixth ignored native case,
+`actual_managed_file_and_directory_creation`, to both OS suites. Preserve serial
+case execution and all existing read/write/startup regressions. The Windows
+workstation boundary remains a remote Server 2025 VM; actual MX mount/reboot/SSH
+and Windows desktop acceptance are not inferred from these fixtures.
+
+Pure state tests cover portable collision admission, source placement, stale
+parent guards, unrelated-sequence independence, corrupt sibling keys, schema-11
+migration/rollback, exact namespace inputs, ignored ACK updates, real SQLITE_FULL
+and retained unknown outcomes. The actual CLI/SDK test separately loses an
+already-committed create reply and kills/restarts its caller; recovery must not
+create another node. It also checks a peer with another default store and an
+authority-process restart. No live Wasabi mutations are performed.
+
+Resolved APIs inspected: unicode-normalization 0.1.25 Unicode-17 tables and `nfkc`
+iterator, Rust 1.99.1 Unicode-17 character data, WinFsp 0.13.1 create/cleanup/delete
+trait contracts, fuser 0.18.0 mkdir/create callbacks, axum 0.8.9 routing/state,
+and Tokio 1.53.3 notification/blocking-task contracts. The newest downloaded
+normalization crate, 0.1.26, has Unicode-18 tables; it is intentionally not used
+for the versioned Unicode-17 namespace policy. Windows runtime and unit checks
+audit every BMP upcase alias before enabling namespace creation. Table drift
+requires explicit policy review, not an automatic namespace-key rewrite.

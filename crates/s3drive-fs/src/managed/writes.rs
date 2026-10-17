@@ -12,6 +12,7 @@ pub(crate) struct Writes {
     pub storage: Storage,
     volume: String,
     default_store: String,
+    namespace: bool,
     authority: WireClient,
     publishers: HashMap<String, Publisher>,
     stores: Mutex<HashMap<String, String>>,
@@ -68,11 +69,13 @@ impl Writes {
         authority: WireClient,
         publishers: HashMap<String, Publisher>,
         default_store: String,
+        namespace: bool,
     ) -> Self {
         Self {
             storage,
             volume,
             default_store,
+            namespace,
             authority,
             publishers,
             stores: Mutex::new(HashMap::new()),
@@ -83,12 +86,150 @@ impl Writes {
             slots: Semaphore::new(4),
         }
     }
+    pub fn namespace_enabled(&self) -> bool {
+        self.namespace
+    }
+    pub fn permits_directory(&self) -> bool {
+        self.namespace
+            && self
+                .publishers
+                .get(&self.default_store)
+                .is_some_and(|p| p.can_edit(&"1".repeat(32), 0))
+    }
+    async fn apply_namespace(
+        &self,
+        input: s3drive_state::namespace_client::Input,
+    ) -> Result<s3drive_authority::Node> {
+        let publisher = self
+            .publishers
+            .get(&input.store.id)
+            .ok_or(Error::ReadOnly)?;
+        publisher.check_namespace_input(&input).map_err(error)?;
+        let ledger = self.storage.namespace();
+        let r = ledger.begin(input.clone()).await.map_err(error)?;
+        let outcome = if let Some(outcome) = r.outcome {
+            outcome
+        } else {
+            let reply = self
+                .authority
+                .request(&Request::Apply {
+                    request: input.request.clone(),
+                })
+                .await
+                .map_err(error)?;
+            let outcome = match reply {
+                Reply::Applied(r) => Ok(r),
+                Reply::Error(e) => Err(e),
+                _ => return Err(Error::Conflict),
+            };
+            ledger
+                .acknowledge(input.request.operation.clone(), outcome)
+                .await
+                .map_err(error)?
+                .outcome
+                .ok_or(Error::Conflict)?
+        };
+        outcome
+            .map(|r| r.node)
+            .map_err(|e| error(s3drive_managed::Failure::Authority(e)))
+    }
+    pub async fn recover_namespace(&self) -> Result<()> {
+        let mut after = None;
+        loop {
+            let page = self
+                .storage
+                .namespace()
+                .pending(after, 1000)
+                .await
+                .map_err(error)?;
+            if page.is_empty() {
+                return Ok(());
+            }
+            if !self.namespace {
+                return Err(Error::Configuration);
+            }
+            after = page.last().map(|r| r.input.request.operation.clone());
+            for r in page {
+                self.apply_namespace(r.input).await?;
+            }
+        }
+    }
+    pub async fn create_node(
+        &self,
+        parent: &str,
+        name: &str,
+        kind: s3drive_authority::Kind,
+    ) -> Result<s3drive_authority::Node> {
+        if !self.permits_directory() {
+            return Err(Error::ReadOnly);
+        }
+        if s3drive_core::names::collision_key(name).is_none() {
+            return Err(Error::InvalidName);
+        }
+        let _publication = self.publish_serial.lock().await;
+        let _mutation = self.edit_serial.lock().await;
+        let Reply::Info(info) = self
+            .authority
+            .request(&Request::Info {})
+            .await
+            .map_err(error)?
+        else {
+            return Err(Error::Conflict);
+        };
+        if info.id != self.volume || info.name_policy != s3drive_core::names::PORTABLE {
+            return Err(Error::Configuration);
+        }
+        let Reply::Node(node) = self
+            .authority
+            .request(&Request::Node {
+                volume: self.volume.clone(),
+                node: parent.into(),
+            })
+            .await
+            .map_err(error)?
+        else {
+            return Err(Error::NotFound);
+        };
+        if node.deleted {
+            return Err(Error::NotFound);
+        }
+        if node.kind != s3drive_authority::Kind::Directory {
+            return Err(Error::NotDirectory);
+        }
+        // Metadata read can race unrelated effects. The server guards this
+        // parent revision and the target name, rather than the old global hint.
+        let sequence = info.sequence.max(node.revision);
+        let request = Apply {
+            volume: self.volume.clone(),
+            operation: random_id()?,
+            expected_sequence: sequence,
+            mutation: Mutation::CreateEntry {
+                parent: parent.into(),
+                parent_revision: node.revision,
+                store: if kind == s3drive_authority::Kind::EmptyFile {
+                    Some(self.default_store.clone())
+                } else {
+                    None
+                },
+                name: name.into(),
+                node_kind: kind,
+            },
+        };
+        let input = self
+            .publishers
+            .get(&self.default_store)
+            .ok_or(Error::ReadOnly)?
+            .namespace_input(request)
+            .map_err(error)?;
+        self.apply_namespace(input).await
+    }
     pub fn remember(&self, node: &s3drive_authority::Node) -> Result<()> {
         if node.kind != s3drive_authority::Kind::Directory {
             let store = node
                 .payload
                 .as_ref()
                 .map(|p| p.reservation.store.id.clone())
+                .or_else(|| node.placement.as_ref().map(|s| s.id.clone()))
                 .unwrap_or_else(|| self.default_store.clone());
             self.stores
                 .lock()
@@ -123,6 +264,7 @@ impl Writes {
             .payload
             .as_ref()
             .map(|p| p.reservation.store.id.as_str())
+            .or_else(|| node.placement.as_ref().map(|s| s.id.as_str()))
             .unwrap_or(&self.default_store);
         let Some(publisher) = self.publishers.get(store) else {
             self.require_clean_unbound(&node.id).await?;
@@ -163,6 +305,13 @@ impl Writes {
             .payload
             .as_ref()
             .map(|p| p.reservation.store.id.as_str())
+            .or_else(|| {
+                snapshot
+                    .metadata()
+                    .placement
+                    .as_ref()
+                    .map(|s| s.id.as_str())
+            })
             .unwrap_or(&self.default_store);
         let Some(publisher) = self.publishers.get(store) else {
             self.require_clean_unbound(&snapshot.metadata().id).await?;

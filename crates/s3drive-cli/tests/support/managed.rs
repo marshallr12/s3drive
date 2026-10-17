@@ -8,7 +8,10 @@ use std::{
     io::{Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
     process::Stdio,
-    sync::{Arc, atomic::Ordering},
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
     time::Duration,
 };
 use tokio::{
@@ -47,6 +50,79 @@ async fn change(w: &WireClient, op: u64, mutation: Mutation) {
         .unwrap();
     assert!(matches!(r, Reply::Applied(_)), "{r:?}");
 }
+#[derive(Clone)]
+struct NamespaceFault {
+    upstream: WireClient,
+    cut: Arc<AtomicBool>,
+    committed: Arc<tokio::sync::Notify>,
+    release: Arc<tokio::sync::Notify>,
+}
+async fn namespace_proxy(
+    axum::extract::State(p): axum::extract::State<NamespaceFault>,
+    axum::Json(request): axum::Json<Request>,
+) -> axum::Json<Reply> {
+    let is_create = matches!(
+        &request,
+        Request::Apply {
+            request: Apply {
+                mutation: Mutation::CreateEntry { .. },
+                ..
+            }
+        }
+    );
+    let reply = p.upstream.request(&request).await.unwrap();
+    if is_create && matches!(reply, Reply::Applied(_)) && p.cut.swap(false, Ordering::SeqCst) {
+        p.committed.notify_one();
+        p.release.notified().await;
+    }
+    axum::Json(reply)
+}
+struct NamespaceProxy {
+    state: NamespaceFault,
+    endpoint: String,
+    task: tokio::task::JoinHandle<()>,
+}
+impl Drop for NamespaceProxy {
+    fn drop(&mut self) {
+        self.task.abort();
+    }
+}
+impl NamespaceProxy {
+    async fn start(h: &Harness) -> Self {
+        let state = NamespaceFault {
+            upstream: wire(&cfg(&h.config)),
+            cut: Arc::new(AtomicBool::new(true)),
+            committed: Arc::new(tokio::sync::Notify::new()),
+            release: Arc::new(tokio::sync::Notify::new()),
+        };
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}/v1/namespace", listener.local_addr().unwrap());
+        let app = axum::Router::new()
+            .route("/v1/namespace", axum::routing::post(namespace_proxy))
+            .with_state(state.clone());
+        let task = tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        Self {
+            state,
+            endpoint,
+            task,
+        }
+    }
+    fn route(&self, h: &Harness) {
+        let c = cfg(&h.config);
+        let old = &c.managed.unwrap().authority;
+        let text = std::fs::read_to_string(&h.config)
+            .unwrap()
+            .replace(old, &self.endpoint);
+        std::fs::write(&h.config, text).unwrap();
+    }
+    async fn committed(&self) {
+        tokio::time::timeout(Duration::from_secs(30), self.state.committed.notified())
+            .await
+            .unwrap();
+    }
+}
 struct Service {
     child: Child,
     endpoint: String,
@@ -54,8 +130,12 @@ struct Service {
 }
 impl Service {
     async fn start(root: &Path) -> Self {
+        Self::start_policy(root, "exact-utf8-v1").await
+    }
+    async fn start_policy(root: &Path, policy: &str) -> Self {
         let mut child = Command::new(env!("CARGO_BIN_EXE_s3drive"))
             .arg("authority-serve")
+            .args(["--name-policy", policy])
             .arg("--directory")
             .arg(root.join("authority"))
             .arg("--token-file")
@@ -99,6 +179,9 @@ struct Harness {
 }
 impl Harness {
     async fn new(root: &Path, f: &Fixture) -> (Self, Service) {
+        Self::new_policy(root, f, false).await
+    }
+    async fn new_policy(root: &Path, f: &Fixture, portable: bool) -> (Self, Service) {
         for name in ["first", "second"] {
             std::fs::create_dir(root.join(name)).unwrap();
         }
@@ -143,7 +226,15 @@ impl Harness {
                 .status
                 .success()
         );
-        let server = Service::start(root).await;
+        let server = Service::start_policy(
+            root,
+            if portable {
+                "portable-collision-v1"
+            } else {
+                "exact-utf8-v1"
+            },
+        )
+        .await;
         h.configure(&server, f);
         h.child("seed").await;
         (h, server)
@@ -192,6 +283,13 @@ impl Harness {
                 self.root.join(which).join("report.toml").to_str().unwrap()
             );
         }
+        std::fs::write(&self.config, text).unwrap();
+    }
+    fn configure_namespace(&self) {
+        self.configure_writable();
+        let text = std::fs::read_to_string(&self.config)
+            .unwrap()
+            .replace("version=4", "version=5");
         std::fs::write(&self.config, text).unwrap();
     }
     fn environment(&self, c: &mut Command) {
@@ -518,16 +616,39 @@ pub async fn child() {
                 (21, 20, "Case", Kind::EmptyFile),
                 (22, 20, "case", Kind::EmptyFile),
             ] {
-                change(
-                    &w,
-                    n,
+                if n == 22 && info(&w).await.name_policy == "portable-collision-v1" {
+                    continue;
+                }
+                let mutation = if info(&w).await.name_policy == "portable-collision-v1" {
+                    Mutation::CreateEntry {
+                        parent: id(parent),
+                        parent_revision: match w
+                            .request(&Request::Node {
+                                volume: info(&w).await.id,
+                                node: id(parent),
+                            })
+                            .await
+                            .unwrap()
+                        {
+                            Reply::Node(n) => n.revision,
+                            _ => panic!("parent"),
+                        },
+                        store: if kind == Kind::EmptyFile {
+                            Some(id(if n == 12 { 201 } else { 200 }))
+                        } else {
+                            None
+                        },
+                        name: name.into(),
+                        node_kind: kind,
+                    }
+                } else {
                     Mutation::Create {
                         parent: id(parent),
                         name: name.into(),
                         node_kind: kind,
-                    },
-                )
-                .await;
+                    }
+                };
+                change(&w, n, mutation).await;
             }
             publish(&root, &w, "first", 200, 11, 1000, &data(0)).await;
             publish(
@@ -555,6 +676,129 @@ pub async fn child() {
             .await
         }
         "unlink" => change(&w, 3042, Mutation::Remove { node: id(11) }).await,
+        "namespace-uncertain" => {
+            let fs = s3drive_fs::ReadOnlyFs::new(&c).await.unwrap();
+            fs.create_directory(s3drive_fs::ROOT, "recovered 🦀")
+                .await
+                .unwrap();
+            panic!("fault injection failed to hold metadata reply");
+        }
+        "namespace-recovered" => {
+            let fs = s3drive_fs::ReadOnlyFs::new(&c).await.unwrap();
+            assert!(fs.lookup(s3drive_fs::ROOT, "recovered 🦀").await.is_ok());
+            fs.cache_control().unwrap().close().await.unwrap();
+        }
+        "namespace-engine" => {
+            let fs = s3drive_fs::ReadOnlyFs::new(&c).await.unwrap();
+            assert!(fs.namespace_creation());
+            let directory = fs
+                .create_directory(s3drive_fs::ROOT, "new 資料 🦀")
+                .await
+                .unwrap();
+            let file = fs
+                .create_file(directory.id, "café %2F.bin", |a, b| a == b, true)
+                .await
+                .unwrap();
+            assert!(file.read(0, 100).await.unwrap().is_empty());
+            file.write(0, Arc::from(&b"new durable content"[..]), false, false)
+                .await
+                .unwrap();
+            file.flush().await.unwrap();
+            assert_eq!(
+                fs.open(file.node.id)
+                    .await
+                    .unwrap()
+                    .read(0, 100)
+                    .await
+                    .unwrap(),
+                b"new durable content"
+            );
+            assert!(
+                fs.create_file(directory.id, "CAFE\u{301} %2F.bin", |a, b| a == b, true)
+                    .await
+                    .is_err()
+            );
+            assert!(
+                fs.create_directory(s3drive_fs::ROOT, "NEW 資料 🦀")
+                    .await
+                    .is_err()
+            );
+            assert!(
+                fs.create_directory(s3drive_fs::ROOT, "con.txt")
+                    .await
+                    .is_err()
+            );
+            fs.cache_control().unwrap().close().await.unwrap();
+        }
+        "namespace-placement" => {
+            let mut a = cfg(&root.join("managed.toml"));
+            a.managed.as_mut().unwrap().default_store = Some(id(201));
+            let first = s3drive_fs::ReadOnlyFs::new(&a).await.unwrap();
+            let empty = first
+                .create_file(s3drive_fs::ROOT, "placement 🦀", |a, b| a == b, true)
+                .await
+                .unwrap();
+            drop(empty);
+            first.cache_control().unwrap().close().await.unwrap();
+            drop(first);
+            let mut peer = cfg(&root.join("managed.toml"));
+            peer.writes.as_mut().unwrap().directory = root.join("managed-peer-state");
+            assert_eq!(
+                peer.managed.as_ref().unwrap().default_store.as_deref(),
+                Some(id(200).as_str())
+            );
+            let second = s3drive_fs::ReadOnlyFs::new(&peer).await.unwrap();
+            let n = second
+                .lookup(s3drive_fs::ROOT, "placement 🦀")
+                .await
+                .unwrap();
+            let file = second.open_write(n.id).await.unwrap();
+            file.write(0, Arc::from(&b"peer follows placement"[..]), false, false)
+                .await
+                .unwrap();
+            file.flush().await.unwrap();
+            drop(file);
+            second.cache_control().unwrap().close().await.unwrap();
+            drop(second);
+            let Reply::Node(n) = w
+                .request(&Request::Node {
+                    volume: info(&w).await.id,
+                    node: match w
+                        .request(&Request::List {
+                            volume: info(&w).await.id,
+                            parent: id(0),
+                        })
+                        .await
+                        .unwrap()
+                    {
+                        Reply::List(l) => {
+                            l.children
+                                .into_iter()
+                                .find(|n| n.name == "placement 🦀")
+                                .unwrap()
+                                .id
+                        }
+                        _ => panic!("list"),
+                    },
+                })
+                .await
+                .unwrap()
+            else {
+                panic!("node")
+            };
+            assert_eq!(n.placement.as_ref().unwrap().id, id(201));
+            assert_eq!(n.payload.as_ref().unwrap().reservation.store.id, id(201));
+        }
+        "namespace-check" => {
+            let fs = s3drive_fs::ReadOnlyFs::new(&c).await.unwrap();
+            let d = fs.lookup(s3drive_fs::ROOT, "new 資料 🦀").await.unwrap();
+            let n = fs.lookup(d.id, "café %2F.bin").await.unwrap();
+            assert_eq!(
+                fs.open(n.id).await.unwrap().read(0, 100).await.unwrap(),
+                b"new durable content"
+            );
+            fs.cache_control().unwrap().close().await.unwrap();
+        }
         "rw-stage" => {
             let fs = s3drive_fs::ReadOnlyFs::new(&c).await.unwrap();
             assert!(!fs.is_read_only());
@@ -1030,5 +1274,248 @@ pub async fn native_writes() {
     s.stop().await;
     eprintln!(
         "managed native writes: Unicode, two stores, patch/truncate/append/sparse, rename, dirty restart, uncertain PUT recovery and retained conflict passed"
+    );
+}
+
+pub async fn portable_creation() {
+    let f = Fixture::start().await;
+    let tmp = tempfile::tempdir().unwrap();
+    let (h, s) = Harness::new_policy(tmp.path(), &f, true).await;
+    h.configure_namespace();
+    let before = puts(&f);
+    h.child("namespace-engine").await;
+    assert_eq!(
+        puts(&f),
+        before + 1,
+        "only actual file bytes publish, not directory/empty metadata"
+    );
+    h.child("namespace-check").await;
+    assert_eq!(puts(&f), before + 1);
+    h.child("namespace-placement").await;
+    assert_eq!(
+        puts(&f),
+        before + 2,
+        "peer must follow authoritative placement"
+    );
+    assert!(
+        f.requests
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|r| r.starts_with("PUT /other-bucket/desktop/writable/.s3drive/"))
+    );
+    let actual = wire(&cfg(&h.config));
+    let volume = info(&actual).await;
+    let request = |op: u64, name: &str| Request::Apply {
+        request: Apply {
+            volume: volume.id.clone(),
+            operation: id(op),
+            expected_sequence: volume.sequence,
+            mutation: Mutation::CreateEntry {
+                parent: id(0),
+                parent_revision: 0,
+                store: None,
+                name: name.into(),
+                node_kind: Kind::Directory,
+            },
+        },
+    };
+    let left = request(5500, "peer race");
+    let right = request(5501, "PEER RACE");
+    let peer = actual.clone();
+    let (left, right) = tokio::join!(actual.request(&left), peer.request(&right));
+    let results = [left.unwrap(), right.unwrap()];
+    assert_eq!(
+        results
+            .iter()
+            .filter(|r| matches!(r, Reply::Applied(_)))
+            .count(),
+        1
+    );
+    assert_eq!(
+        results
+            .iter()
+            .filter(|r| matches!(r, Reply::Error(s3drive_authority::Error::AlreadyExists)))
+            .count(),
+        1
+    );
+    assert_eq!(puts(&f), before + 2, "metadata race emitted PUT");
+    let proxy = NamespaceProxy::start(&h).await;
+    proxy.route(&h);
+    let mut command = Command::new(std::env::current_exe().unwrap());
+    command
+        .args(["--exact", "managed_native_child", "--nocapture"])
+        .env("S3DRIVE_NATIVE_MANAGED_MODE", "namespace-uncertain")
+        .env("S3DRIVE_NATIVE_MANAGED_ROOT", &h.root)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::inherit())
+        .kill_on_drop(true);
+    h.environment(&mut command);
+    let mut child = command.spawn().unwrap();
+    proxy.committed().await;
+    let committed = info(&proxy.state.upstream).await.sequence;
+    child.kill().await.unwrap();
+    proxy.state.release.notify_one();
+    h.child("namespace-recovered").await;
+    assert_eq!(
+        info(&proxy.state.upstream).await.sequence,
+        committed,
+        "recovery created a second entry"
+    );
+    assert_eq!(puts(&f), before + 2, "metadata recovery emitted PUT");
+    let volume = s.volume.clone();
+    s.stop().await;
+    let restarted = Service::start_policy(tmp.path(), "portable-collision-v1").await;
+    assert_eq!(restarted.volume, volume);
+    h.configure(&restarted, &f);
+    h.configure_namespace();
+    h.child("namespace-check").await;
+    restarted.stop().await;
+}
+
+pub async fn native_creation() {
+    let f = Fixture::start().await;
+    let tmp = tempfile::tempdir().unwrap();
+    let (h, s) = Harness::new_policy(tmp.path(), &f, true).await;
+    h.configure_namespace();
+    let before = puts(&f);
+    let m = h.mount().await;
+    let directory = h.mount.join("new 資料 🦀");
+    std::fs::create_dir(&directory).unwrap();
+    let nested = directory.join("nested café");
+    std::fs::create_dir(&nested).unwrap();
+    let path = nested.join("日本語 %2F + café.bin");
+    let mut file = std::fs::OpenOptions::new()
+        .create_new(true)
+        .read(true)
+        .write(true)
+        .open(&path)
+        .unwrap();
+    assert_eq!(
+        puts(&f),
+        before,
+        "empty metadata creation uploaded an object"
+    );
+    file.write_all(b"created\0\xff").unwrap();
+    assert_eq!(std::fs::read(&path).unwrap(), b"created\0\xff");
+    file.sync_all().unwrap();
+    drop(file);
+    assert_eq!(puts(&f), before + 1);
+    assert!(
+        std::fs::OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(nested.join("日本語 %2F + CAFE\u{301}.BIN"))
+            .is_err()
+    );
+    std::fs::write(nested.join("empty 🦀"), b"").unwrap();
+    assert_eq!(puts(&f), before + 1);
+    assert!(std::fs::create_dir(h.mount.join("NEW 資料 🦀")).is_err());
+    // Concurrent native callers must get exactly one successful exclusive create.
+    let barrier = Arc::new(std::sync::Barrier::new(2));
+    let mut workers = Vec::new();
+    for _ in 0..2 {
+        let barrier = barrier.clone();
+        let path = nested.join("exclusive 🦀");
+        workers.push(std::thread::spawn(move || {
+            barrier.wait();
+            std::fs::OpenOptions::new()
+                .create_new(true)
+                .write(true)
+                .open(path)
+                .is_ok()
+        }));
+    }
+    assert_eq!(
+        workers
+            .into_iter()
+            .map(|t| usize::from(t.join().unwrap()))
+            .sum::<usize>(),
+        1
+    );
+    m.stop().await;
+    // Existing files keep their placement when the mount's default changes;
+    // new files below now choose the second bucket.
+    let text = std::fs::read_to_string(&h.config).unwrap().replace(
+        &format!("default_store={:?}", id(200)),
+        &format!("default_store={:?}", id(201)),
+    );
+    std::fs::write(&h.config, text).unwrap();
+    let other_before = f
+        .requests
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|r| r.starts_with("PUT /other-bucket/desktop/writable/.s3drive/"))
+        .count();
+    let m = h.mount().await;
+    assert_eq!(std::fs::read(&path).unwrap(), b"created\0\xff");
+    let dirty = nested.join("dirty restart 🦀");
+    let mut file = std::fs::OpenOptions::new()
+        .create_new(true)
+        .read(true)
+        .write(true)
+        .open(&dirty)
+        .unwrap();
+    file.write_all(b"new file retained before flush").unwrap();
+    assert_eq!(puts(&f), before + 1);
+    m.kill().await;
+    drop(file);
+    let m = h.mount().await;
+    assert_eq!(
+        std::fs::read(&dirty).unwrap(),
+        b"new file retained before flush"
+    );
+    let file = std::fs::OpenOptions::new()
+        .write(true)
+        .open(&dirty)
+        .unwrap();
+    file.sync_all().unwrap();
+    drop(file);
+    assert_eq!(puts(&f), before + 2);
+    assert_eq!(
+        f.requests
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|r| r.starts_with("PUT /other-bucket/desktop/writable/.s3drive/"))
+            .count(),
+        other_before + 1
+    );
+    m.stop().await;
+    // The real native create loses its reply after authority commit. Kill the
+    // mount, then recover the exact durable operation on the next mount.
+    let proxy = NamespaceProxy::start(&h).await;
+    proxy.route(&h);
+    let m = h.mount().await;
+    let recovered = h.mount.join("recovered 🦀");
+    let operation = tokio::task::spawn_blocking({
+        let path = recovered.clone();
+        move || std::fs::create_dir(path)
+    });
+    proxy.committed().await;
+    let sequence = info(&proxy.state.upstream).await.sequence;
+    m.kill().await;
+    proxy.state.release.notify_one();
+    assert!(
+        tokio::time::timeout(Duration::from_secs(20), operation)
+            .await
+            .unwrap()
+            .unwrap()
+            .is_err()
+    );
+    let m = h.mount().await;
+    assert!(recovered.is_dir());
+    assert_eq!(
+        info(&proxy.state.upstream).await.sequence,
+        sequence,
+        "native unknown create was duplicated"
+    );
+    assert_eq!(puts(&f), before + 2);
+    m.stop().await;
+    s.stop().await;
+    eprintln!(
+        "managed native creation: nested Unicode directories/files, empty metadata, exclusive/canonical collisions, orderly remount, dirty restart and lost create reply recovery passed"
     );
 }

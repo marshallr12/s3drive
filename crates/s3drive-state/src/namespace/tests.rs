@@ -22,7 +22,7 @@ fn migration_preserves_local_rows_and_refuses_role_mixing() {
     let path = dir.path().join("state");
     let mut s = State::open_managed(&path).unwrap();
     s.register_source(&[1; 32], &"a".repeat(64)).unwrap();
-    s.connection.execute_batch("DROP TABLE logical_publication_links; DROP TABLE logical_edits; DROP TABLE logical_files; DROP TABLE managed_publications; DROP TABLE namespace_uploads; DROP TABLE namespace_stores; DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; PRAGMA user_version=7;").unwrap();
+    s.connection.execute_batch("DROP TABLE namespace_intents; DROP INDEX namespace_portable_names; ALTER TABLE namespace_nodes DROP COLUMN name_key; ALTER TABLE namespace_nodes DROP COLUMN placement; DROP TABLE logical_publication_links; DROP TABLE logical_edits; DROP TABLE logical_files; DROP TABLE managed_publications; DROP TABLE namespace_uploads; DROP TABLE namespace_stores; DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; PRAGMA user_version=7;").unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
     assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
@@ -45,7 +45,7 @@ fn migration_failure_keeps_schema_seven_and_original_data() {
     let path = dir.path().join("state");
     let mut s = State::open_managed(&path).unwrap();
     s.register_source(&[1; 32], &"a".repeat(64)).unwrap();
-    s.connection.execute_batch("DROP TABLE logical_publication_links; DROP TABLE logical_edits; DROP TABLE logical_files; DROP TABLE managed_publications; DROP TABLE namespace_uploads; DROP TABLE namespace_stores; DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; CREATE TABLE namespace_nodes(keep TEXT); INSERT INTO namespace_nodes(keep) VALUES('untouched'); PRAGMA user_version=7;").unwrap();
+    s.connection.execute_batch("DROP TABLE namespace_intents; DROP INDEX namespace_portable_names; ALTER TABLE namespace_nodes DROP COLUMN name_key; ALTER TABLE namespace_nodes DROP COLUMN placement; DROP TABLE logical_publication_links; DROP TABLE logical_edits; DROP TABLE logical_files; DROP TABLE managed_publications; DROP TABLE namespace_uploads; DROP TABLE namespace_stores; DROP TABLE namespace_operations; DROP TABLE namespace_nodes; DROP TABLE namespace_volume; CREATE TABLE namespace_nodes(keep TEXT); INSERT INTO namespace_nodes(keep) VALUES('untouched'); PRAGMA user_version=7;").unwrap();
     drop(s);
     assert!(State::open_managed(&path).is_err());
     let db = Connection::open(path.join("metadata.sqlite3")).unwrap();
@@ -361,4 +361,256 @@ fn content_cas_allows_independent_files_and_renames_but_rejects_stale_content() 
     drop(s);
     let mut s = State::open_managed(&dir.path().join("authority")).unwrap();
     assert_eq!(s.namespace_apply(&publish(3000, 1000)), Ok(winner));
+}
+
+#[test]
+fn portable_creation_guards_parent_and_name_without_unrelated_sequence_conflicts() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("authority");
+    let mut s = State::open_managed(&path).unwrap();
+    let v = s.namespace_initialize_with_policy(names::PORTABLE).unwrap();
+    s.namespace_apply(&Apply {
+        volume: v.id.clone(),
+        operation: format!("{:032x}", 200),
+        expected_sequence: 0,
+        mutation: Mutation::RegisterStore {
+            route: "a".repeat(64),
+            root: "writable/.s3drive/".into(),
+        },
+    })
+    .unwrap();
+    let make = |op: u64, name: &str| Apply {
+        volume: v.id.clone(),
+        operation: format!("{op:032x}"),
+        expected_sequence: 0,
+        mutation: Mutation::CreateEntry {
+            parent: ROOT.into(),
+            parent_revision: 0,
+            store: Some(format!("{:032x}", 200)),
+            name: name.into(),
+            node_kind: Kind::EmptyFile,
+        },
+    };
+    let a = make(1, "café");
+    let r = s.namespace_apply(&a).unwrap();
+    assert_eq!(s.namespace_apply(&a), Ok(r));
+    assert!(s.namespace_apply(&make(2, "independent 🦀")).is_ok());
+    assert_eq!(
+        s.namespace_apply(&make(3, "cafe\u{301}")),
+        Err(Error::AlreadyExists)
+    );
+    assert_eq!(
+        s.namespace_apply(&make(4, "CAFÉ")),
+        Err(Error::AlreadyExists)
+    );
+    assert_eq!(s.namespace_apply(&make(5, "con.txt")), Err(Error::Invalid));
+    let mut legacy = make(6, "ＣＡＦÉ");
+    legacy.expected_sequence = s.namespace_volume().unwrap().sequence;
+    legacy.mutation = Mutation::Create {
+        parent: ROOT.into(),
+        name: "ＣＡＦÉ".into(),
+        node_kind: Kind::Directory,
+    };
+    assert_eq!(
+        s.namespace_apply(&legacy),
+        Err(Error::AlreadyExists),
+        "legacy clients must not bypass a portable volume's policy"
+    );
+    let d = Apply {
+        volume: v.id.clone(),
+        operation: format!("{:032x}", 10),
+        expected_sequence: s.namespace_volume().unwrap().sequence,
+        mutation: Mutation::CreateEntry {
+            parent: ROOT.into(),
+            parent_revision: 0,
+            store: None,
+            name: "dir".into(),
+            node_kind: Kind::Directory,
+        },
+    };
+    let directory = s.namespace_apply(&d).unwrap().node;
+    let stale = Apply {
+        volume: v.id.clone(),
+        operation: format!("{:032x}", 12),
+        expected_sequence: s.namespace_volume().unwrap().sequence,
+        mutation: Mutation::CreateEntry {
+            parent: directory.id.clone(),
+            parent_revision: directory.revision,
+            store: Some(format!("{:032x}", 200)),
+            name: "nested".into(),
+            node_kind: Kind::EmptyFile,
+        },
+    };
+    s.namespace_apply(&Apply {
+        volume: v.id.clone(),
+        operation: format!("{:032x}", 11),
+        expected_sequence: s.namespace_volume().unwrap().sequence,
+        mutation: Mutation::Move {
+            node: directory.id.clone(),
+            parent: ROOT.into(),
+            name: "moved".into(),
+        },
+    })
+    .unwrap();
+    assert_eq!(s.namespace_apply(&stale), Err(Error::Conflict));
+    assert!(
+        s.namespace_initialize().is_err(),
+        "no implicit policy conversion"
+    );
+    drop(s);
+    let mut s = State::open_managed(&path).unwrap();
+    assert_eq!(
+        s.namespace_initialize_with_policy(names::PORTABLE)
+            .unwrap()
+            .id,
+        v.id
+    );
+    assert_eq!(s.namespace_list(&v.id, ROOT).unwrap().children.len(), 3);
+}
+
+#[test]
+fn portable_name_key_corruption_is_not_hidden_by_listing_or_lookup() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut s = State::open_managed(&tmp.path().join("authority")).unwrap();
+    let v = s.namespace_initialize_with_policy(names::PORTABLE).unwrap();
+    s.namespace_apply(&Apply {
+        volume: v.id.clone(),
+        operation: format!("{:032x}", 200),
+        expected_sequence: 0,
+        mutation: Mutation::RegisterStore {
+            route: "a".repeat(64),
+            root: "writable/.s3drive/".into(),
+        },
+    })
+    .unwrap();
+    let r = s
+        .namespace_apply(&Apply {
+            volume: v.id.clone(),
+            operation: format!("{:032x}", 1),
+            expected_sequence: 0,
+            mutation: Mutation::CreateEntry {
+                parent: ROOT.into(),
+                parent_revision: 0,
+                store: Some(format!("{:032x}", 200)),
+                name: "café".into(),
+                node_kind: Kind::EmptyFile,
+            },
+        })
+        .unwrap();
+    s.connection
+        .execute(
+            "UPDATE namespace_nodes SET name_key='wrong' WHERE node_id=?",
+            [&r.node.id],
+        )
+        .unwrap();
+    assert_eq!(s.namespace_node(&v.id, &r.node.id), Err(Error::Internal));
+    assert_eq!(s.namespace_list(&v.id, ROOT), Err(Error::Internal));
+    assert_eq!(
+        s.namespace_apply(&Apply {
+            volume: v.id.clone(),
+            operation: format!("{:032x}", 2),
+            expected_sequence: 1,
+            mutation: Mutation::CreateEntry {
+                parent: ROOT.into(),
+                parent_revision: 0,
+                store: Some(format!("{:032x}", 200)),
+                name: "CAFÉ".into(),
+                node_kind: Kind::EmptyFile
+            }
+        }),
+        Err(Error::Internal)
+    );
+}
+#[test]
+fn schema11_upgrade_preserves_exact_names_and_refuses_incompatible_tables_atomically() {
+    let tmp = tempfile::tempdir().unwrap();
+    for broken in [false, true] {
+        let path = tmp.path().join(if broken { "bad" } else { "good" });
+        let mut s = State::open_managed(&path).unwrap();
+        let v = s.namespace_initialize().unwrap();
+        let created = s.namespace_apply(&request(&v, 1)).unwrap();
+        s.connection.execute_batch("DROP TABLE namespace_intents; DROP INDEX namespace_portable_names; ALTER TABLE namespace_nodes DROP COLUMN name_key; ALTER TABLE namespace_nodes DROP COLUMN placement; PRAGMA user_version=11").unwrap();
+        if broken {
+            s.connection.execute_batch("CREATE TABLE namespace_intents(keep TEXT); INSERT INTO namespace_intents VALUES('untouched')").unwrap();
+        }
+        drop(s);
+        if broken {
+            assert!(State::open_managed(&path).is_err());
+            let db = Connection::open(path.join("metadata.sqlite3")).unwrap();
+            assert_eq!(
+                db.pragma_query_value::<i32, _>(None, "user_version", |r| r.get(0))
+                    .unwrap(),
+                11
+            );
+            assert_eq!(
+                db.query_row::<String, _, _>("SELECT keep FROM namespace_intents", [], |r| r
+                    .get(0))
+                    .unwrap(),
+                "untouched"
+            );
+            assert!(db.prepare("SELECT name_key FROM namespace_nodes").is_err());
+        } else {
+            let mut s = State::open_managed(&path).unwrap();
+            assert_eq!(s.namespace_initialize().unwrap().id, v.id);
+            assert_eq!(
+                s.namespace_node(&v.id, &created.node.id).unwrap(),
+                created.node
+            );
+            assert!(s.namespace_initialize_with_policy(names::PORTABLE).is_err());
+        }
+    }
+}
+
+#[test]
+fn portable_empty_file_placement_is_authoritative_before_first_publication() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut s = State::open_managed(&tmp.path().join("authority")).unwrap();
+    let v = s.namespace_initialize_with_policy(names::PORTABLE).unwrap();
+    for id in [200u64, 201] {
+        s.namespace_apply(&Apply {
+            volume: v.id.clone(),
+            operation: format!("{id:032x}"),
+            expected_sequence: s.namespace_volume().unwrap().sequence,
+            mutation: Mutation::RegisterStore {
+                route: format!("{id:064x}"),
+                root: "writable/.s3drive/".into(),
+            },
+        })
+        .unwrap();
+    }
+    let created = s
+        .namespace_apply(&Apply {
+            volume: v.id.clone(),
+            operation: format!("{:032x}", 10),
+            expected_sequence: 2,
+            mutation: Mutation::CreateEntry {
+                parent: ROOT.into(),
+                parent_revision: 0,
+                name: "empty 🦀".into(),
+                node_kind: Kind::EmptyFile,
+                store: Some(format!("{:032x}", 200)),
+            },
+        })
+        .unwrap();
+    assert!(created.node.payload.is_none());
+    assert_eq!(
+        created.node.placement.as_ref().unwrap().id,
+        format!("{:032x}", 200)
+    );
+    assert_eq!(
+        s.namespace_apply(&Apply {
+            volume: v.id.clone(),
+            operation: format!("{:032x}", 20),
+            expected_sequence: 3,
+            mutation: Mutation::ReserveContent {
+                node: created.node.id,
+                expected_revision: created.node.revision,
+                store: format!("{:032x}", 201),
+                size: 0,
+                sha256: "a".repeat(64),
+                expected_payload: None
+            }
+        }),
+        Err(Error::Conflict)
+    );
 }

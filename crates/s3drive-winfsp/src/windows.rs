@@ -310,10 +310,19 @@ impl FileSystemContext for Adapter {
         {
             return Err(STATUS_MEDIA_WRITE_PROTECTED.into());
         }
-        if options & 1 != 0
+        let directory = options & 1 != 0;
+        if (directory && !self.fs.namespace_creation())
             || reparse
             || extra.is_some_and(|b| !b.is_empty())
-            || attributes & !(FILE_ATTRIBUTE_NORMAL.0 | FILE_ATTRIBUTE_ARCHIVE.0) != 0
+            || attributes
+                & !(FILE_ATTRIBUTE_NORMAL.0
+                    | FILE_ATTRIBUTE_ARCHIVE.0
+                    | if directory {
+                        FILE_ATTRIBUTE_DIRECTORY.0
+                    } else {
+                        0
+                    })
+                != 0
         {
             return Err(STATUS_NOT_SUPPORTED.into());
         }
@@ -340,27 +349,38 @@ impl FileSystemContext for Adapter {
             if normalized.len() * 2 > usize::from(output.normalized_name_size()) {
                 return Err(STATUS_NAME_TOO_LONG.into());
             }
-            let writing = access & (FILE_WRITE_DATA.0 | FILE_APPEND_DATA.0) != 0;
-            let file = Box::new(
-                Box::pin(self.fs.create_file(
-                    parent.id,
-                    leaf,
-                    |a, b| native::name_key(a) == native::name_key(b),
-                    writing,
-                ))
-                .await
-                .map_err(storage_error)?,
-            );
-            let node = file.node.clone();
-            let info = self.file_info(
-                &node,
-                Some(&file.current_metadata().map_err(storage_error)?),
-            );
+            let (node, file) = if directory {
+                let node = self
+                    .fs
+                    .create_directory(parent.id, leaf)
+                    .await
+                    .map_err(storage_error)?;
+                (node, None)
+            } else {
+                let writing = access & (FILE_WRITE_DATA.0 | FILE_APPEND_DATA.0) != 0;
+                let file = Box::new(
+                    Box::pin(self.fs.create_file(
+                        parent.id,
+                        leaf,
+                        |a, b| native::name_key(a) == native::name_key(b),
+                        writing,
+                    ))
+                    .await
+                    .map_err(storage_error)?,
+                );
+                (file.node.clone(), Some(file))
+            };
+            let metadata = file
+                .as_ref()
+                .map(|f| f.current_metadata())
+                .transpose()
+                .map_err(storage_error)?;
+            let info = self.file_info(&node, metadata.as_ref());
             output.set_normalized_name(&normalized, None);
             *output.as_mut() = info.clone();
             Ok(FileContext {
                 node,
-                file: Some(file),
+                file,
                 info,
                 directory: Mutex::new(None),
                 _permit: permit,
@@ -574,6 +594,7 @@ pub async fn run(
     let runtime = tokio::runtime::Handle::current();
     let mounted = tokio::task::spawn_blocking(move || -> Result<Mounted> {
         let _init = winfsp::winfsp_init()?;
+        if fs.namespace_creation() && !native::portable_mapping_compatible(){return Err(STATUS_NOT_SUPPORTED.into())}
         let read_only=fs.is_read_only();
         let descriptor = native::owner_descriptor(!read_only)?;
         let (cancel, cancelled) = watch::channel(false);

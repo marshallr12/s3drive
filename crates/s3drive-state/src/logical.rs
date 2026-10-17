@@ -57,6 +57,7 @@ impl Binding {
             || n.deleted
             || n.revision == 0
             || n.revision >= i64::MAX as u64
+            || n.placement.as_ref().is_some_and(|p| p != &self.store)
             || !self.store.valid()
             || !digest(&self.fingerprint)
             || n.name.is_empty()

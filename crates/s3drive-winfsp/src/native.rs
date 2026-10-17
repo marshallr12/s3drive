@@ -67,6 +67,39 @@ pub fn name_key(name: &str) -> Vec<u16> {
         .collect()
 }
 
+/// Refuse writable portable namespaces on an incompatible host upcase table.
+/// Supplementary scalars are pairs of unchanged surrogate units in this API.
+fn portable_mapping_issue() -> Option<u32> {
+    for value in 0..=u16::MAX as u32 {
+        let Some(c) = char::from_u32(value) else {
+            continue;
+        };
+        let text = c.to_string();
+        let Some(key) = s3drive_core::names::collision_key(&text) else {
+            continue;
+        };
+        let Ok(upper) = String::from_utf16(&name_key(&text)) else {
+            return Some(value);
+        };
+        if s3drive_core::names::collision_key(&upper).as_ref() != Some(&key) {
+            return Some(value);
+        }
+    }
+    None
+}
+#[test]
+fn portable_policy_covers_native_bmp_upcase_aliases() {
+    assert_eq!(
+        portable_mapping_issue(),
+        None,
+        "portable policy must cover host BMP mappings"
+    );
+}
+
+pub fn portable_mapping_compatible() -> bool {
+    portable_mapping_issue().is_none()
+}
+
 pub fn owner_descriptor(writable: bool) -> Result<Vec<u8>> {
     let mut handle = HANDLE::default();
     // SAFETY: output is initialized, process pseudo-handle is valid.

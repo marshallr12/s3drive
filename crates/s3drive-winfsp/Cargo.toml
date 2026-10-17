@@ -5,6 +5,9 @@ edition.workspace = true
 publish.workspace = true
 repository.workspace = true
 
+[dependencies]
+s3drive-core.workspace = true
+
 [target.'cfg(windows)'.dependencies]
 s3drive-fs.workspace = true
 s3drive-s3.workspace = true

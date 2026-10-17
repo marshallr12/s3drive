@@ -271,9 +271,12 @@ fn cache_error(error: Box<dyn std::error::Error + Send + Sync>) -> Error {
 
 impl ReadOnlyFs {
     pub async fn new(config: &Config) -> Result<Self> {
+        Box::pin(Self::new_inner(config)).await
+    }
+    async fn new_inner(config: &Config) -> Result<Self> {
         config.validate().map_err(|_| Error::Configuration)?;
         if config.managed.is_some() {
-            return managed::filesystem(config).await;
+            return Box::pin(managed::filesystem(config)).await;
         }
         if config.sources.len() >= MAX_NODES {
             return Err(Error::ResourceLimit);
@@ -437,7 +440,16 @@ impl ReadOnlyFs {
                     .is_some_and(|w| w.permits(source, &node.key))
             })
     }
+    pub fn namespace_creation(&self) -> bool {
+        self.managed
+            .as_ref()
+            .and_then(|m| m.writes.as_ref())
+            .is_some_and(|w| w.namespace_enabled())
+    }
     pub fn writable_directory(&self, node: &Node) -> bool {
+        if let Some(w) = self.managed.as_ref().and_then(|m| m.writes.as_ref()) {
+            return node.kind == Kind::Directory && w.permits_directory();
+        }
         node.kind == Kind::Directory
             && node.source.is_some_and(|source| {
                 self.writes
@@ -460,6 +472,17 @@ impl ReadOnlyFs {
         }
         if !self.writable_directory(&parent) {
             return Err(Error::ReadOnly);
+        }
+        if let Some(w) = self.managed.as_ref().and_then(|m| m.writes.as_ref()) {
+            let created = w
+                .create_node(&parent.key, name, s3drive_authority::Kind::EmptyFile)
+                .await?;
+            let node = self
+                .nodes
+                .lock()
+                .map_err(|_| Error::Internal)?
+                .insert_managed(&created, parent.id)?;
+            return Box::pin(self.open_mode(node.id, writing)).await;
         }
         let writer = self.writes.as_ref().ok_or(Error::ReadOnly)?;
         let _serial = writer.create_serial.lock().await;
@@ -488,6 +511,25 @@ impl ReadOnlyFs {
             name.into(),
         )?;
         Box::pin(self.open_mode(node.id, writing)).await
+    }
+    pub async fn create_directory(&self, parent: u64, name: &str) -> Result<Arc<Node>> {
+        validate_name(name)?;
+        let parent = self.node(parent)?;
+        if parent.kind != Kind::Directory {
+            return Err(Error::NotDirectory);
+        }
+        let w = self
+            .managed
+            .as_ref()
+            .and_then(|m| m.writes.as_ref())
+            .ok_or(Error::ReadOnly)?;
+        let created = w
+            .create_node(&parent.key, name, s3drive_authority::Kind::Directory)
+            .await?;
+        self.nodes
+            .lock()
+            .map_err(|_| Error::Internal)?
+            .insert_managed(&created, parent.id)
     }
     pub async fn flush_all(&self) -> Result<()> {
         if let Some(w) = self.managed.as_ref().and_then(|m| m.writes.as_ref()) {
@@ -824,6 +866,13 @@ fn insert_entry(entries: &mut BTreeMap<String, Entry>, name: String, entry: Entr
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn construction_future_keeps_large_sdk_state_off_caller_stacks() {
+        let config =
+            s3drive_core::Config::parse(include_str!("../../../examples/s3drive.toml")).unwrap();
+        assert!(std::mem::size_of_val(&super::ReadOnlyFs::new(&config)) < 16 * 1024);
+    }
+
     use super::*;
     use s3drive_s3::ListedObject;
     fn page(files: &[(&str, u64)], dirs: &[&str]) -> ListPage {

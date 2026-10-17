@@ -15,7 +15,7 @@ chosen by the user on 2026-10-16. A shared authority owns the namespace; immutab
 S3 objects hold file generations. Existing direct mounts stay available without
 automatic conversion. The SQLite authority and [immutable publication library](managed-publication.md)
 are implemented. [Managed read-only integration](managed-native.md) now connects
-the native adapters and passed Linux/Windows native acceptance; [managed existing-file editing](managed-write-plan.md) has a verified Linux/Windows native checkpoint, with exact-tip publication gates recorded separately. Managed namespace/save operations and remote deployment remain work.
+the native adapters and passed Linux/Windows native acceptance; [managed existing-file editing](managed-write-plan.md) has a verified Linux/Windows native checkpoint, with exact-tip publication gates recorded separately. [Managed creation/directories](managed-namespace-plan.md) are implemented pending native acceptance; rename/removal, full saves and remote deployment remain work.
 
 ## Recommendation
 
