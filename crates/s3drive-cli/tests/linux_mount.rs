@@ -397,6 +397,12 @@ async fn actual_managed_existing_file_writes_and_recovery() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "native metadata flush acceptance: requires the real OS filesystem driver"]
+async fn actual_managed_metadata_flush_burst() {
+    managed::native_flush_burst().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "native managed namespace acceptance: requires the real OS filesystem driver"]
 async fn actual_managed_file_and_directory_creation() {
     managed::native_creation().await;

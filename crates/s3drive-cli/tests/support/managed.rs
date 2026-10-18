@@ -778,12 +778,17 @@ struct Mount {
     child: Child,
     path: PathBuf,
 }
-async fn report_native_failure(h: &Harness, service: &mut Service, mount: &mut Mount) {
+async fn report_native_failure(
+    case: &'static str,
+    h: &Harness,
+    service: &mut Service,
+    mount: &mut Mount,
+) {
     let started = std::time::Instant::now();
     let mount_running = mount.child.try_wait().ok().map(|s| s.is_none());
     let probe = failure_probe(h, service).await;
     eprintln!(
-        "FAILED native lifecycle control: mount_running={mount_running:?} {probe:?} elapsed_ms={}",
+        "FAILED native {case} control: mount_running={mount_running:?} {probe:?} elapsed_ms={}",
         started.elapsed().as_millis()
     );
     for child in [&mut mount.child, &mut service.child] {
@@ -1671,6 +1676,53 @@ pub async fn bootstrap_write_refusals() {
         "setup refusal performed a provider mutation"
     );
     s.stop().await;
+}
+
+/// A short all-positive gate for the callback/HTTPS/SQLite/SDK flush path.
+/// No injected outage, allowed failure, retry, or real provider is involved.
+pub async fn native_flush_burst() {
+    let f = Fixture::start().await;
+    let tmp = tempfile::tempdir().unwrap();
+    let (h, s) = Harness::new(tmp.path(), &f).await;
+    let (h, mut s) = h.use_tls(s, &f).await;
+    h.configure_writable();
+    let mut m = h.mount().await;
+    let before = puts(&f);
+    let exercise = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        // Mounted calls block on the fixture's network services. Hand the
+        // Tokio worker back rather than blocking its network work queue.
+        tokio::task::block_in_place(|| {
+            let path = h.mount.join("empty 🦀");
+            let mut file = std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(&path)
+                .unwrap();
+            for step in 0u8..32 {
+                eprintln!("native flush burst step={step}");
+                let mut expected = [step; 32];
+                expected[0] = 0;
+                expected[31] = 255;
+                file.set_len(32).unwrap();
+                file.seek(SeekFrom::Start(0)).unwrap();
+                file.write_all(&expected).unwrap();
+                file.sync_all().unwrap();
+                assert_eq!(std::fs::read(&path).unwrap(), expected);
+                assert_eq!(puts(&f), before + usize::from(step) + 1);
+            }
+            drop(file);
+            assert_eq!(puts(&f), before + 32, "close repeated a settled PUT");
+        });
+    }));
+    if let Err(panic) = exercise {
+        report_native_failure("flush-burst", &h, &mut s, &mut m).await;
+        std::panic::resume_unwind(panic);
+    }
+    m.stop().await;
+    s.stop().await;
+    eprintln!(
+        "PASS: managed native32 HTTPS flushes, Unicode path, binary bytes and exact single-PUT counts; no retry or injected outage"
+    );
 }
 
 pub async fn native_writes() {

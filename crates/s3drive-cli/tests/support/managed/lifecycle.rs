@@ -437,7 +437,7 @@ pub(super) async fn native() {
     if let Err(panic) = exercise {
         // Preserve the original failed assertion. Only read metadata, then
         // explicitly reap owned processes before unwinding the test fixture.
-        report_native_failure(&h, &mut s, &mut m).await;
+        report_native_failure("lifecycle", &h, &mut s, &mut m).await;
         std::panic::resume_unwind(panic);
     }
     m.stop().await;

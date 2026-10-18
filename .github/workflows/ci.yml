@@ -37,6 +37,10 @@ jobs:
       - name: Classify coordinator TLS I/O and exercise fresh CLI connections
         timeout-minutes: 5
         run: cargo test -p s3drive-cli --test authority_restart tls_cli_ --locked -- --nocapture
+      - name: Verify Windows metadata body-poll controls
+        if: runner.os == 'Windows'
+        timeout-minutes: 3
+        run: cargo test -p s3drive-authority --test remote --locked -- --nocapture
       # The preceding real CLI/TLS test already builds this same executable and
       # fixture worker. Exercise snapshots/console in the ordinary account
       # before native lifecycle failures can skip their independent acceptance.
@@ -46,6 +50,10 @@ jobs:
         env:
           S3DRIVE_DISPOSABLE_WINDOWS_VM: '1'
         run: cargo test -p s3drive-cli --test authority_restart supervised_windows_coordinator_tls_independent_logons_and_recovery --locked -- --ignored --nocapture --exact
+      - name: Verify Windows metadata flush burst
+        if: runner.os == 'Windows'
+        timeout-minutes: 5
+        run: cargo test -p s3drive-cli --test windows_mount actual_managed_metadata_flush_burst --locked -- --ignored --nocapture --exact --test-threads=1
       - name: Verify Windows replacement fixture rejection checks
         if: runner.os == 'Windows'
         run: ./scripts/test-windows-replacement-fixture.ps1
@@ -112,7 +120,8 @@ jobs:
           # GitHub destroys this fresh VM after the job. Only a retained Windows
           # fixture-profile sharing violation may defer to that disposal.
           S3DRIVE_DISPOSABLE_WINDOWS_VM: '1'
-        run: cargo test -p s3drive-cli --test windows_mount --locked -- --ignored --nocapture --test-threads=1 --skip actual_managed_windows_disposition_lifecycle
+        # Both skipped cases already run explicitly above on this same source.
+        run: cargo test -p s3drive-cli --test windows_mount --locked -- --ignored --nocapture --test-threads=1 --skip actual_managed_windows_disposition_lifecycle --skip actual_managed_metadata_flush_burst
       - name: Verify Linux startup without systemd
         if: runner.os == 'Linux'
         timeout-minutes: 5

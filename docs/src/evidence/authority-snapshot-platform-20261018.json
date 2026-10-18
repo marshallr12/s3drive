@@ -274,5 +274,37 @@
       "scope": "Linux portable gate; no local native FUSE or Windows runtime acceptance"
     },
     "body_representation_limit": "Public wrapped streaming body cannot be cloned; retries/redirects remain disabled and controlled wire framing matches; no claim that scheduling is identical"
+  },
+  "native_flush_candidate": {
+    "base_commit": "7edc4f1e75a6f39c3ae9919a61198b3eb9670606",
+    "native_acceptance": "pending; not run on this restricted workstation",
+    "distinct_generations": 32,
+    "bytes_per_generation": 32,
+    "unicode_path": "empty \ud83e\udd80",
+    "requires": "Each successful fsync followed by fresh byte-exact read and exactly one additional SDK PUT; close must not repeat a settled PUT",
+    "failure_policy": "Stop first unexpected error; independent read-only CLI control and owned-process reap; original panic resumed; fixture does not retry failed step",
+    "local_check": "cargo check -p s3drive-cli --tests --locked passed",
+    "workflow_validation": "Fresh PyYAML parse/structure assertions passed after adding both early controls and burst; all previous named steps retained; Windows remote controls precede standalone and burst; burst invoked once with broad duplicate exclusion",
+    "full_local_gate": {
+      "command": "bash scripts/gate.sh",
+      "exit_code": 0,
+      "log_sha256": "988805a20db543e929aecb44626c13ee0467305c6f4075d82ffbfc87bb3b130a",
+      "subsequent_change": "Rust unchanged; Windows-only early remote-controls step added afterward and separately structurally checked; six remote controls already passed local gates"
+    },
+    "source_sha256": {
+      ".github/workflows/ci.yml": "bd6ca0537a39e367aa06b81924630f25fc81d84933936dcc0215b8b40d16ddd9",
+      "crates/s3drive-cli/tests/support/managed.rs": "19f9ca92a850f38c08de7fbff89ec0ba96f308834eb3b056e4400dad8f29aca8",
+      "crates/s3drive-cli/tests/support/managed/lifecycle.rs": "89209f2c4c54a6d4d003e3033b170d93bb00f8d6edbd90c166b2b131bccacfb8",
+      "crates/s3drive-cli/tests/linux_mount.rs": "35ec116ba8f2cfc25ff616ffb555f57530447e02473b421632da246eaecdabf3",
+      "crates/s3drive-cli/tests/windows_mount.rs": "0f778fc5736733f5e6f9213fc60058442f41685ded7c8ed1f127768f47e1e41f"
+    },
+    "expected_hosted_native_counts": {
+      "linux_full_suite": 9,
+      "windows_early_burst": 1,
+      "windows_lifecycle": 1,
+      "windows_broad": 7
+    },
+    "no_real_provider_mutation": true,
+    "not_a_windows_root_cause_claim": true
   }
 }

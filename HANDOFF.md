@@ -29,9 +29,17 @@ Research, decisions, acceptance and plans belong in docs/src/.
   Full local gate PASSED exit0 /tmp/s3drive-body-poll-gate1.log:274 state,
   Hyper2/lifetime2/HTTP10/TLS6, snapshot CLI2, restart8, SDK17, managed8,
   lint/build/57-doc. Rust stayed frozen. Ready for local diagnostic checkpoint.
-  Do not push yet: next add an early bounded native flush-burst gate so the
-  request-body observation can be exercised before the long Windows workspace.
-  Keep all prior native/reference/startup checks, then full-gate the new fixture.
+  Local checkpoint7edc4f1 is NOT PUSHED. New uncommitted phase adds a common
+  32-flush native HTTPS fixture + Linux/Windows ignored wrappers, failure-only
+  control/cleanup/rethrow, early Windows step and no duplicate broad invocation.
+  Exact binary bytes/fresh reads and one PUT per changed generation required;
+  no injected outage, tolerated error, explicit retry or provider mutation.
+  cargo check CLI tests and PyYAML workflow structure passed at
+  /tmp/s3drive-flush-burst-check1.log. Combined full local gate PASSED exit0:
+  /tmp/s3drive-flush-burst-gate1.log (274 state, Hyper2/lifetime2/HTTP10/TLS6,
+  snapshot CLI2, restart8, SDK17, managed8, lint/build/57-doc). Rust stayed frozen.
+  Native results NOT established: expected Linux9 and Windows earlyburst1 +
+  lifecycle1 + broad7. Keep real provider/startup/root/hosting changes out of scope.
 - Previous pushed topic d6d8bd915d7c04764013071f152076740959fd68:
   CI39102804077 is TERMINAL FAILURE: Linux117602351415/book117602351527
   succeeded; Windows117602351510 passed early standalone snapshot and private
@@ -114,9 +122,10 @@ Research, decisions, acceptance and plans belong in docs/src/.
   /tmp/s3drive-snapshot-console-33-reference-check.ps1 must not be treated as
   proof.33 has only replacement artifact; disposition step never ran.
 
-Next: checkpoint the green body-frame diagnostic locally, add/gate an early
-native32-flush HTTPS fixture (real mounted Unicode path, exact bytes/PUT count,
-no retries), then push both substantive phases once for new hosted evidence. CI39103791947 is failed, not live. Require terminal Windows/native/reference/
+Next: commit the green native fixture phase and push7edc4f1 plus that checkpoint
+once from remotee51; then inspect new exact-source hosted evidence. Require new
+exact-source early Windows burst, all native/reference/startup checks before
+main promotion. Previous e51 remains failed; do not restart its jobs. CI39103791947 is failed, not live. Require terminal Windows/native/reference/
 startup evidence before any promotion. Require
 native/reference/startup gates before any snapshot main promotion. Keep restore
 unsupported. No new provider/user startup/root/hosting mutations authorized.

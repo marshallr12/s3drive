@@ -855,6 +855,15 @@ request-body polling with independently received-byte and failed-trust controls;
 it does not establish a socket write or resolve an unknown operation. See the
 [scoped diagnostic contract](remote-authority.md#client-body-poll-observation-candidate-2026-10-18).
 
+The follow-up also prepares an early32-flush native HTTPS fixture, with distinct
+binary bytes in a Unicode path, fresh reads, exact single-PUT counts, no injected
+outage and no tolerated error. On failure the read-only control/owned cleanup
+preserves the original panic. Windows runs it once before the long workspace;
+Linux includes it in native acceptance. This adds a gate, retaining every earlier
+case. Compilation and workflow structure checks passed; actual OS results remain
+pending. The body diagnostic alone was checkpointed after its full local gate;
+the combined source requires its own full gate and exact-source hosted cohort.
+
 Require exclusive existing-authority ownership and explicit volume/policy pin;
 read supported legacy/current state without migrations or namespace changes.
 Produce a new private artifact outside mounted trees, with a database filename

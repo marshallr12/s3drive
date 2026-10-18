@@ -131,6 +131,24 @@ and private-error redaction remain required. These observations validate the
 marker's meaning, not a correction of the Windows failure. Full local and new
 exact-source native/reference/startup gates remain required before publication.
 
+The accompanying native fixture adds32 consecutive positive flushes through a
+real mounted Unicode path, each with a distinct32-byte binary payload, a fresh
+read and exactly one additional SDK PUT. It has no injected outage or accepted
+error and stops at the first unexpected failure. A failure runs the independent
+read-only CLI control, reaps owned processes and resumes the original panic;
+the fixture does not retry the failed step. Its control sends no mutations.
+Blocking filesystem operations yield the test's
+Tokio worker with `block_in_place`, so its S3 fixture can continue serving.
+
+Windows CI runs this case explicitly after ordinary-account coordinator/snapshot
+checks and before lifecycle/workspace checks. The raw TLS controls run first on
+Windows too, so a native failure's marker is not supported only by Linux tests.
+The broad Windows step excludes
+only the two cases already run explicitly; all earlier checks remain. Linux's
+native suite includes the same fixture. Local compilation/workflow parsing
+cannot establish either native result; this workstation's FUSE restriction is
+preserved, and new hosted acceptance is required.
+
 ## Bounded failure diagnostics (2026-10-17)
 
 The [same-source Windows failure investigation](authority-startup.md#same-source-repeat-failure-2026-10-17)
