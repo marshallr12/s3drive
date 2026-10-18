@@ -1273,3 +1273,17 @@ neither object publication nor authority trust. Next implement durable frozen
 edit identities and a bounded dependency journal, preserving unknown operations,
 original guards and every legacy payload/hash. See the
 [object identity evidence](evidence/manifest-objects-20261018.json).
+
+
+Next-phase source audit (2026-10-18): `journal::Target` and
+`Staging::begin_operation` already freeze a bounded target and operation key
+before a payload digest exists. Reuse those physical-object staging guarantees;
+`logical::Input` separately requires the whole digest and caps bytes at 8 MiB,
+so lifting that constant is not a chunked edit protocol. The new 16 byte object
+generation identity also differs from the positive signed SQLite `GenerationId`:
+retain an explicit mapping, never reinterpret either ID. Budget the frozen edit,
+physical staged generations, object records and manifest edges independently.
+`Owner::call` skips a cancelled queued command, but execution can commit before
+a lost response; therefore persist/reuse the original operation key and inspect
+its result before retrying. These are inspected existing contracts, not newly
+implemented graph recovery or permission to send.

@@ -206,6 +206,13 @@
       ],
       "physical_mx_reboot_or_provider_acceptance": false,
       "new_object_identity_module_acceptance": false
+    },
+    "windows_last_observation": {
+      "status": "in_progress",
+      "step": "Save Rust build cache",
+      "native_steps_completed_successfully": true,
+      "completed_raw_review": false,
+      "terminal_job_or_artifact_acceptance": false
     }
   }
 }

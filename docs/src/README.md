@@ -35,7 +35,7 @@ same-supervisor child replacement have scoped hosted acceptance. This does not
 establish actual workstation reboot, restore/failover or elimination of the
 historical intermittent Windows transport failures.
 
-**Current work:** bounded [dispatch-boundary observations](owned-authority-client.md#dispatch-boundary-observations-candidate-2026-10-18)
+**Transport investigation:** bounded [dispatch-boundary observations](owned-authority-client.md#dispatch-boundary-observations-candidate-2026-10-18)
 add sender/body/budget hints to distinguish an active driver from body/header
 progress. Focused controls pass; this candidate changes no scheduling or retry
 policy and does not establish the historical Windows cause.
@@ -48,7 +48,7 @@ artifacts; see [separate repeat evidence](evidence/dispatch-repeat-20261018.json
 The historical transport cause remains unresolved. These checks do not certify
 the newer manifest codec or promote runtime main.
 
-The [large managed-file representation study](large-managed-files.md) audits
+**Current large-file work:** the [representation study](large-managed-files.md) audits
 the remaining whole-file boundaries and compares one-object generations with
 immutable chunks and authenticated manifests. The recommendation and diagram
 explain the chunked format selected by the user on2026-10-18. An offline bounded
