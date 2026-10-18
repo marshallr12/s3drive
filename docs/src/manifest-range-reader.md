@@ -139,3 +139,10 @@ quota control exceeded a minute and then passed; no performance conclusion is
 inferred. The [14-member indexed local archive](evidence/manifest-range-reader-local-20261018.tar.gz)
 retains logs, source, self-review and checks; every member was verified. Its
 SHA-256 is `a1737729817e21d78c356c699987e1d4129f128172c71363007b04d9bb4a2ffd`.
+
+Published source `88d02f7` is on `codex/manifest-range-reader`. Its
+[own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39171113280)
+is running. The clean exact remote and all 256 runtime hashes were verified;
+repository visibility remains PUBLIC and main was not changed. Hosted acceptance
+requires the exact source's completed jobs, reviewed logs and own native-reference
+artifacts before the next integration phase.

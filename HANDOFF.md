@@ -60,6 +60,21 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
+## Reader publication and hosted acceptance running (2026-10-18)
+
+Combined reader source88d02f7a6605bf13bfd212d67c6609ae16b0ebfd pushed on
+codex/manifest-range-reader; clean exactremote/all256frozen hashes verified.
+PUBLIC read-only verified; main1a93b5f unchanged. Own run39171113280 attempt1:
+Windows117804178631, Linux117804178819, book117804178853 all in progress.
+Watch42929 -> /tmp/s3drive-manifest-reader-88d-watch.log. Resume same watch,
+do not rerun CI or borrow older native artifacts. On terminal all3SUCCESS:
+review all own raw logs, bind own finalized replacement/disposition artifactIDs,
+verify payload source/digests/typed21+14/projectoracles/raw35 before acceptance.
+On failure preserve actual cohort evidence and diagnose before a new source.
+No own raw review/artifact acceptance has occurred yet. Keep256runtime files
+frozen. Proof /tmp/s3drive-manifest-reader-publication.json. Helper acceptance
+ae06faa is pushed; controller474 accepted independently; both are ancestors.
+
 ## Active reader implementation (2026-10-18)
 
 Checkout /home/marshall/src/worktrees/s3drive-manifest-range-reader,

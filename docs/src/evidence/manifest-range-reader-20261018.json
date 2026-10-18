@@ -127,5 +127,36 @@
     "members": 14,
     "all_indexed_members_verified": true,
     "acceptance": "local gate only"
-  }
+  },
+  "publication": {
+    "head": "88d02f7a6605bf13bfd212d67c6609ae16b0ebfd",
+    "remote": "88d02f7a6605bf13bfd212d67c6609ae16b0ebfd",
+    "clean": true,
+    "all256_hashes_unchanged": true,
+    "visibility": "PUBLIC",
+    "main": "1a93b5f7248892fec96dc8da4438ee7967692e77",
+    "run_id": 39171113280,
+    "run_attempt": 1,
+    "jobs": [
+      {
+        "id": 117804178631,
+        "name": "rust (windows-latest)",
+        "status": "in_progress",
+        "conclusion": null
+      },
+      {
+        "id": 117804178819,
+        "name": "rust (ubuntu-latest)",
+        "status": "in_progress",
+        "conclusion": null
+      },
+      {
+        "id": 117804178853,
+        "name": "book",
+        "status": "in_progress",
+        "conclusion": null
+      }
+    ]
+  },
+  "hosted_acceptance": "pending; own cohort running; no own raw log or artifact acceptance yet"
 }
