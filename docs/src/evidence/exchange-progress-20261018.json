@@ -3,7 +3,7 @@
   "date": "2026-10-18",
   "parent": "47e9dd45e5ec4868b71ce94a8a3ad9d8f5615a73",
   "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
-  "status": "final full local gate passed; private diagnostic candidate published; own hosted native observations pending",
+  "status": "full local gate and one exact-source Linux/Windows/book cohort passed; own strict21/14 artifacts/oracles verified; no root-cause or repeat acceptance",
   "native_failure_fixed": false,
   "provider_requests": 0,
   "source_sha256": {
@@ -87,14 +87,14 @@
   "hosted": {
     "run": 39124027385,
     "source": "90a83571de346f3aeb092da749b96078a301704d",
-    "status": "in_progress",
-    "conclusion": "",
+    "status": "completed",
+    "conclusion": "success",
     "jobs": [
       {
         "databaseId": 117665289707,
         "name": "rust (windows-latest)",
-        "status": "in_progress",
-        "conclusion": ""
+        "status": "completed",
+        "conclusion": "success"
       },
       {
         "databaseId": 117665289879,
@@ -105,12 +105,12 @@
       {
         "databaseId": 117665289919,
         "name": "rust (ubuntu-latest)",
-        "status": "in_progress",
-        "conclusion": ""
+        "status": "completed",
+        "conclusion": "success"
       }
     ],
-    "observed_at_utc": "2026-10-18T11:54:07.647306+00:00",
-    "native_acceptance": false,
+    "observed_at_utc": "2026-10-18T12:12:29.380155+00:00",
+    "native_acceptance": true,
     "repeat_acceptance": false,
     "native_correction_proven": false,
     "watch_log": "/tmp/s3drive-exchange-progress-hosted-watch.log",
@@ -121,6 +121,11 @@
         "sha256": "85f6f648d808bfa75a53c5c44a8fe34db1deaa28493e61e08223ce7faca160eb",
         "reviewed": true
       },
+      "windows": {
+        "path": "/tmp/s3drive-exchange-progress-90-windows.log",
+        "sha256": "0619794a6d4ba4cdc01fa0215fc5edd8ea1411e3f25f6008db46a43ea5f97791",
+        "reviewed": true
+      },
       "book": {
         "path": "/tmp/s3drive-exchange-progress-90-book.log",
         "sha256": "cafa408c64f7de9c57fa2259f90063a721032c8a6db672d5f960f258beb53db6",
@@ -128,7 +133,68 @@
       }
     },
     "linux_scope": "48 authority and274 state;9 real native cases,32 flushes and paired/no-systemd mount and HTTP/TLS coordinator startup passed; stopped-authority Node/Connect control has no HTTP milestones or I/O polls",
-    "windows_scope": "32burst step completed successfully per workflow metadata; later native acceptance still live/unreviewed; no correction claim"
+    "windows_scope": "Server2025/WinFsp2.1:48 authority controls,269 Windows state cases; ordinary-account TLS/snapshots/private-console cancellation;32 strict flushes; full disposition lifecycle; paired startup/recovery; broad7 native passed; own21/14 reference traces and four pinned upstream legacy probes. No physical Windows10/11/reboot/real SSH/provider proof.",
+    "windows_expected_faults": [
+      "deliberate TLS handshake/partial-header/partial-body faults",
+      "intentional managed HEAD403 and dirty external conflict",
+      "List/Connect TimedOut after deliberate coordinator stop; Unopened/no HTTP IO",
+      "LNK4199 delay-load ignored in non-WinFsp test binaries",
+      "rustup/toolchain, Git hints and pinned action Node deprecation notices"
+    ],
+    "windows_unexpected_positive_path_transport_failures": 0,
+    "artifact_acceptance": {
+      "status": "passed",
+      "directory": "/tmp/s3drive-exchange-progress-90-artifacts",
+      "checker": "/tmp/s3drive-check-exchange-progress-90.py",
+      "checker_sha256": "4bbbc8f1d15f4c222d987d407c39d697d977d03fdfd2d1e3620de80de200ecba",
+      "independent_checker_sha256": "571b597bba675257de83df1eb0a238e4be452dd70bd48c482474ce2620acbe65",
+      "downloads": [
+        {
+          "kind": "disposition",
+          "id": 12135424301,
+          "zip_sha256": "0f1d3bf03148e6abc3e41e3bd0a04165b37c6949d0ec9c80109c040b6eac18e3",
+          "json_sha256": "73cd182fb7cafc927ee9e0ea89ec109c11ec226ca34a5eb91ceb8ed470cc0b57"
+        },
+        {
+          "kind": "replacement",
+          "id": 12135377768,
+          "zip_sha256": "f0623628c03fd35d8bbe0a008f11f3cab234216fecbdefd248cd830b02491a1f",
+          "json_sha256": "5d05a79c86eca53e234f0b086ac8b25fdca189d5731a89d6ffb53d8e891796be"
+        }
+      ],
+      "strict_reports": [
+        {
+          "kind": "replacement",
+          "records": 21,
+          "source": "90a83571de346f3aeb092da749b96078a301704d",
+          "sha256": "5d05a79c86eca53e234f0b086ac8b25fdca189d5731a89d6ffb53d8e891796be",
+          "strict_types_and_all_fields_match": true
+        },
+        {
+          "kind": "disposition",
+          "records": 14,
+          "source": "90a83571de346f3aeb092da749b96078a301704d",
+          "sha256": "73cd182fb7cafc927ee9e0ea89ec109c11ec226ca34a5eb91ceb8ed470cc0b57",
+          "strict_types_and_all_fields_match": true
+        }
+      ],
+      "timestamp_checks": [
+        {
+          "kind": "replacement",
+          "observed_at_utc": "2026-10-18T11:46:24Z",
+          "within_completed_windows_job": true
+        },
+        {
+          "kind": "disposition",
+          "observed_at_utc": "2026-10-18T12:01:11Z",
+          "within_completed_windows_job": true
+        }
+      ],
+      "project_oracles": "PASS: 90a8357 exchange progress typed21/14 project oracles and exact source",
+      "raw_review_marker": "/tmp/s3drive-exchange-progress-90-raw-reviewed.json",
+      "no_other_cohort_artifacts_reused": true
+    },
+    "main_promoted": false
   },
   "resolved_sources": {
     "tokio-1.53.3/src/io/async_write.rs": "08e060b892eb57fdaa79f83c4f0c39877587866e67ef0565896d9c3abc05e720",
@@ -162,5 +228,17 @@
     "native_failure_fixed": false,
     "main_promotion_planned": false,
     "at_utc": "2026-10-18T11:38:06.546582+00:00"
+  },
+  "post_native_observation_docs": {
+    "build": {
+      "log": "/tmp/s3drive-native-observation-20261018-book-build.log",
+      "exit_code": 0,
+      "sha256": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4"
+    },
+    "test": {
+      "log": "/tmp/s3drive-native-observation-20261018-book-test.log",
+      "exit_code": 0,
+      "sha256": "97720c7cb99636bad850ae2bafc0123dc4924ad805a03b456dc108e32f1c6c90"
+    }
   }
 }

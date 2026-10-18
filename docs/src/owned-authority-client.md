@@ -160,8 +160,26 @@ empty-header cause. Native source-bound diagnostics remain required.
 
 The final instrumented local gate passed48 authority tests (including13 unit
 controls),274 state and17 core cases, workspace formatting/lint/build and58-page
-book checks. Its own hosted native observations remain pending; no main promotion
-is planned from diagnostics alone.
+book checks. Its exact-source90a8357
+[cohort39124027385](https://github.com/marshallr12/s3drive/actions/runs/39124027385)
+then passed Linux/Windows/book, Windows32 flushes, full lifecycle, paired startup
+and broad7 native cases. Its own21/14 reports passed ZIP/API digest, source,
+strict field/type, observation-time and project-oracle checks. The completed logs
+contain only deliberate TLS/authorization/conflict/stopped-authority faults and
+documented toolchain/linker/action notices. This single cohort does not explain
+the earlier failures or provide a source-identical repeat. No main promotion is
+planned from diagnostics alone; see the instrumentation evidence for exact scope.
+
+The later client-local [pending-scan candidate](managed-edits.md#retained-history-scan-validation-candidate-2026-10-18)
+at64aa073 passed its own Linux/Windows native/startup and strict21/14 cohort.
+Its [unchanged-source repeat](https://github.com/marshallr12/s3drive/actions/runs/39127440399)
+failed Windows paired startup; Linux/book passed. The failed Info exchange had
+469 driver polls,468 Pending reads and no write polls or plaintext bytes; its TCP
+tag matched the server's empty-header timeout. Active polling alone did not
+produce a request. Preserve that evidence without inferring a scheduler, TLS,
+HTTP or SQLite cause. The failed run cannot supply repeat acceptance or a full
+strict21/14 artifact cohort. The optimization reduces redundant journal checks;
+it does not change HTTP polling/deadlines or establish a causal transport fix.
 
 ## Resolved implementation sources
 

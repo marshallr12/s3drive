@@ -133,6 +133,68 @@ Follow with initiation/part/completion uncertainty, streamed verification and
 owned-abort acceptance before changing the8MiB write bound. No new Wasabi
 request or mutation permission is implied.
 
+## Offline immutable plans (candidate implementation, 2026-10-18)
+
+`s3drive-state::multipart` now implements the offline preparation boundary on
+the existing storage owner. Obtain a planner with `Storage::multipart(options)`;
+provide an operation `Id`, sealed generation, preferred size and explicit
+`s3drive-core::multipart::Limits`. There are no provider defaults. `freeze`
+durably records the complete original input before hashing. `prepare` produces
+whole-file and ordered part SHA-256 commitments. `info` and `for_generation`
+recover the recorded identity after an unknown local reply. These APIs do not
+create an upload ID or issue initiation, part-send, completion or flush permits.
+
+| State | Persistent content | Recovery |
+| --- | --- | --- |
+| Frozen | Caller-supplied ID, sealed generation/manifest, exact target/configuration/credential-generation binding, original guard and ancestor operation/state-hash receipt, explicit geometry/limits and part quota reservation | Reuse the same ID/input; changed input conflicts; transient hashing restarts from zero |
+| Hashing | Frozen row remains; hash state and at most10,000 part digests are transient | Each owner command reads/verifies/hashes at most1MiB, then releases the queue for other commands; cancellation retains the frozen row and sealed bytes |
+| Ready | Whole SHA-256, all ordered part rows and a domain-separated plan digest commit atomically | Recover exactly the same artifact; partial rows never look ready; preparing again rehashes rather than selecting a new guard |
+
+Freeze and finalization validate their exact saved rows before committing, in
+addition to checking affected-row counts. Six trigger controls exercise ignored,
+deleted and corrupted SQL effects; no false Frozen result or partial Ready
+artifact can be committed by those faults.
+
+Schema24 adds `multipart_plans` and `multipart_parts`. They remain client-local
+tables, forbidden when populated in an authority database or snapshot. Migration
+preserves legacy remote intent/state hashes; a conflicting new table rolls back
+instead of being adopted. The shared read-only guard-selection extraction keeps
+the single-PUT admission and error order, including its quota check. Existing
+single-PUT, managed publication, logical-edit and native8MiB bounds remain.
+
+Planning defaults reserve at most64 plans and100,000 total parts and admit at
+most4,096 extents per generation. Explicit resource ceilings are4,096 plans,
+1,000,000 total parts and65,536 extents. Reservations include Frozen plans.
+These limits bound local work/metadata; they do not prove a provider capability.
+Payload reads retain complete manifest validation, so the measured repeated-scan
+cost still exists. Admission/finalization validate retained metadata and ancestry;
+the1MiB step bound and an interleaving test do not prove maximum-catalog latency
+or fairness. No metadata proof survives across owner commands.
+
+A Ready artifact commits to the generation's **expected immutable bytes**. Each
+consumed chunk was verified when read; a final manifest check does not certify
+that previously read media cannot later corrupt. Sealed-generation public
+mutators refuse modification, and current retention preserves the data. Future
+send-range reads must revalidate current bytes against the staging and plan
+commitments; future reclamation must honor plan/generation/anchor references.
+The corruption-after-read test explicitly demonstrates this boundary. An offline
+hash plan cannot be presented as an uploaded object or remotely durable file.
+
+Focused controls cover a16MiB asynchronous plan with intervening owner reads,
+nonaligned parts, sparse inherited/new data, unchanged input across restart and
+newer receipts, five kill/transaction boundaries, true `SQLITE_FULL`, independent
+part/extent quotas, malformed digest/ID cells, legacy error precedence, migration
+and both new-table authority exclusions. The initial state regression exposed
+two synthetic legacy fixtures that retained new tables while lowering the schema
+number; they were corrected without weakening production collision refusal.
+The final focused suite passed16 tests. The full local gate then passed292 state
+tests (one diagnostic study intentionally ignored),48 authority tests and the
+workspace/build/lint/book checks on unchanged frozen source. Source-bound
+platform acceptance remains a separate requirement, recorded in the
+[dated evidence](evidence/multipart-plans-20261018.json).
+The unchanged64aa073 Windows repeat failed paired startup; this offline feature
+does not correct that transport failure. No real provider requests occurred.
+
 ## Next journal and streaming phases (proposal, 2026-10-18)
 
 Current source inspection found independent8MiB boundaries in
@@ -141,7 +203,7 @@ the filesystem's whole-file edit implementation. A multipart sizing result does
 not relax any of them. Do not enlarge the single-PUT table's limit and pass an
 oversized buffer into its existing executor.
 
-First add a separately versioned immutable planning artifact with the sealed
+The offline candidate above supplies a separately versioned immutable planning artifact with the sealed
 generation ID/manifest, exact target and credential/configuration binding,
 original guard/ancestor receipt, whole-body SHA-256, explicit limits/geometry,
 and ordered per-part SHA-256 values. Bound both plan and total part-row quotas.
@@ -170,3 +232,104 @@ Reads and append/truncate need the same bounds. A newer local descendant must
 not be discarded when an ancestor upload or logical metadata commit settles.
 Integrate large native files only after both the streaming engine and durable
 multipart executor satisfy their acceptance contracts.
+
+## Staged range cost and planning boundary (investigated 2026-10-18)
+
+An isolated experiment at production source `64aa073` read sealed16,32 and64MiB
+generations through1MiB ranges. Every returned byte and the complete streamed
+hash matched an independently generated pattern; reads made no SQLite changes,
+and a tail read plus manifest check passed after reopening. The test module,
+registration patch, complete final log, Clippy log and source hashes are retained
+in the [reproduction archive](evidence/staged-range-study-20261018.tar.gz), with
+[structured results](evidence/staged-range-study-20261018.json). This measures
+`Journal::read`, not the asynchronous queue, a native mount or an upload.
+
+| Sealed size | Extents | Data reads of1MiB | Scan progress callbacks | Scan time, instrumented debug fixture |
+| --- | --- | --- | --- | --- |
+|16MiB|16|16|11,610|1.365sec|
+|32MiB|32|32|37,394|2.731sec|
+|64MiB|64|64|132,738|5.459sec|
+|16MiB|64|16|36,162|1.370sec|
+|16MiB|256|16|134,370|1.416sec|
+
+Callbacks were registered at interval1. Scan measurements include exact-byte
+comparisons, SHA-256 and final EOF/bounds/head/manifest checks; times are not
+production latency guarantees. Holding size and data-read count constant exposes
+the metadata cost as extent count grows. A separate zero-length read also
+validated the complete manifest:571 callbacks at16 extents,6,571 at256 extents.
+No elapsed-time threshold or maximum-quota acceptance follows.
+
+The source explains this behavior: every range calls `validate_manifest` before
+reading its intersecting chunks, and those chunks separately recheck their
+payload digests. `copy_next_at` also scans its parent manifest for each piece.
+`seal` verifies all payloads inside one synchronous SQLite transaction.
+Consequently, small payload buffers alone do not bound command duration or
+prove fair service for other queued work.
+[Range validation and sealing source](https://github.com/marshallr12/s3drive/blob/64aa073a6ecbfc6cc27739c6c767663143811ffd/crates/s3drive-state/src/journal.rs)
+
+The worker snapshot holds generation metadata and an owner clone; its reads
+recheck the expected manifest and call the same range reader. It does not
+implement a per-generation reclamation pin. Current sealed generations cannot
+be aborted and their chunks remain retained, but a future collector must add
+explicit plan/snapshot references before reclaiming them. The pending-scan
+optimization's proof lifetime ends with one synchronous command; it cannot be
+copied into a cache spanning asynchronous reads without a separate integrity
+and lifetime argument.
+[Worker snapshot source](https://github.com/marshallr12/s3drive/blob/64aa073a6ecbfc6cc27739c6c767663143811ffd/crates/s3drive-state/src/worker.rs#L449)
+
+### Planning contract derived from the study (implemented offline candidate)
+
+The following contract was derived at baseline64aa073 and is implemented by the
+offline candidate above. Executor admission, network operations, reclamation and
+large native editing remain future phases.
+
+Freeze a durable planning input **before** the long hashing phase, under the
+existing owner and an idempotency key supplied by the caller. It must include
+the generation/manifest, target and credential/configuration binding, original
+guard and ancestor receipt, exact geometry/limits, and reserved plan/part quotas.
+Repeated admission with that key must return the same input or an explicit
+conflict. Cancellation or a lost local reply must not allocate a replacement
+identity or discard the input and sealed bytes.
+
+Hash bounded ranges while allowing other owner commands between chunks. Whole
+and current-part SHA-256 states can advance together without collecting the
+file in memory. The first format can restart hashing from byte zero after
+process death; do not persist an opaque dependency-specific hasher state.
+Recompute from the frozen input, rather than choosing a new guard on resume.
+The measured repeated-manifest cost must be addressed or explicitly bounded by
+admission policy before promising large-catalog fairness. Any optimized cursor
+needs its own immutable-byte, corruption and future-reclamation contract;
+skipping validation is not an optimization acceptance criterion.
+
+Keep the finalizer private. After verifying all bytes, atomically publish the
+whole hash, complete ordered part hashes and a versioned plan digest as one
+ready artifact. Revalidate its frozen bindings and reject changed input;
+partial parts or disk-full rollback must never look ready. A ready artifact is
+data, not an initiation or completion permit. Later send admission must resolve
+both single-PUT and multipart target ownership atomically and preserve the
+original guard if it has become stale.
+
+At the study baseline, `remote::prepare` could not be reused to obtain that guard for a large
+generation: it first builds and hashes its bounded single-PUT payload. Its later
+transaction selects the verified ancestor and checks head, target and credential
+binding. Extracting shared admission must preserve these checks and original
+receipt hashes, rather than merely copying the final guard field.
+[Current preparation source](https://github.com/marshallr12/s3drive/blob/64aa073a6ecbfc6cc27739c6c767663143811ffd/crates/s3drive-state/src/remote.rs#L281)
+
+A separate planning schema also affects migration and database-role validation.
+At the study baseline, schema23 was shared by local and authority state. Snapshot validation
+accepts only explicitly named tables and refuses nonempty client-local tables
+in an authority artifact. Add new local planning tables to the explicit checks
+with migration/snapshot tests; do not broadly permit unknown tables or weaken
+client/authority separation.
+[Migration source](https://github.com/marshallr12/s3drive/blob/64aa073a6ecbfc6cc27739c6c767663143811ffd/crates/s3drive-state/src/lib.rs),
+[snapshot role checks](https://github.com/marshallr12/s3drive/blob/64aa073a6ecbfc6cc27739c6c767663143811ffd/crates/s3drive-state/src/authority_snapshot/native.rs#L142)
+
+Acceptance must include exact plans across restart and changed-input conflicts;
+mixed inherited/new chunks, sparse holes and nonaligned part boundaries; corrupt
+or short chunks, quota exhaustion, process death and SQL-full rollback before
+each ready-publication boundary; preserved legacy receipts and role separation;
+and no network permission from any partial or ready record. The full local gate
+and later executor/native/provider gates remain separate. The isolated study
+changed no production source, upload limit, schema or real-provider permission;
+the subsequent offline candidate changes local schema and planning APIs only.

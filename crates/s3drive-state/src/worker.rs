@@ -134,6 +134,14 @@ impl Storage {
             options: self.staging_options,
         }
     }
+    /// Offline immutable multipart plans on the same private SQLite owner.
+    /// Construction and Ready records do not enable network mutations.
+    pub fn multipart(
+        &self,
+        options: crate::multipart::Options,
+    ) -> Result<crate::multipart::Planner> {
+        crate::multipart::Planner::new(self.owner.clone(), options)
+    }
     pub fn uploads(&self) -> Uploads {
         Uploads {
             owner: self.owner.clone(),

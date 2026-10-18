@@ -667,7 +667,9 @@ impl State {
                         (SELECT count(*) FROM client_identity) +
                         (SELECT count(*) FROM retained_client_identity) +
                         (SELECT count(*) FROM managed_rejections) +
-                        (SELECT count(*) FROM logical_conflicts)",
+                        (SELECT count(*) FROM logical_conflicts) +
+                        (SELECT count(*) FROM multipart_plans) +
+                        (SELECT count(*) FROM multipart_parts)",
                 [],
                 |r| r.get(0),
             ))?;

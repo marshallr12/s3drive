@@ -89,6 +89,8 @@ fn existing_authority_wrong_identity_does_not_migrate_or_change_operation_bytes(
     let (v, request, receipt) = seed(&path);
     {
         let db = Connection::open(path.join("metadata.sqlite3")).unwrap();
+        db.execute_batch("DROP TABLE multipart_parts; DROP TABLE multipart_plans")
+            .unwrap();
         db.pragma_update(None, "user_version", 22).unwrap();
     }
     let before = rows(&path);

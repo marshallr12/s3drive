@@ -485,7 +485,7 @@ fn schema_twelve_migration_preserves_old_serialized_nodes_and_guards() {
     let volume = w.state.namespace_volume().unwrap();
     w.state
         .connection
-        .execute_batch("DROP TABLE recovered_windows_opens; DROP TABLE windows_session_recoveries; DROP TABLE windows_mount_sessions; DROP TABLE retired_windows_opens; DROP TABLE windows_open_events; DROP TABLE retained_windows_opens; DROP TABLE windows_open_journal; DROP TABLE namespace_removal_events; ALTER TABLE namespace_removals DROP COLUMN mode; ALTER TABLE namespace_removals DROP COLUMN event_id; DROP TABLE logical_conflicts; DROP TABLE managed_rejections; DROP TABLE retained_client_identity; DROP TABLE client_identity; DROP TABLE namespace_removals; PRAGMA user_version=12")
+        .execute_batch("DROP TABLE multipart_parts; DROP TABLE multipart_plans; DROP TABLE recovered_windows_opens; DROP TABLE windows_session_recoveries; DROP TABLE windows_mount_sessions; DROP TABLE retired_windows_opens; DROP TABLE windows_open_events; DROP TABLE retained_windows_opens; DROP TABLE windows_open_journal; DROP TABLE namespace_removal_events; ALTER TABLE namespace_removals DROP COLUMN mode; ALTER TABLE namespace_removals DROP COLUMN event_id; DROP TABLE logical_conflicts; DROP TABLE managed_rejections; DROP TABLE retained_client_identity; DROP TABLE client_identity; DROP TABLE namespace_removals; PRAGMA user_version=12")
         .unwrap();
     w.reopen();
     assert_eq!(
@@ -577,7 +577,7 @@ fn real_full_disk_preserves_arm_uncertainty_and_exact_retry() {
 fn failed_schema_thirteen_migration_preserves_version_and_original_database() {
     let mut w = World::new();
     let n = w.file("preserved migration data");
-    w.state.connection.execute_batch("DROP TABLE recovered_windows_opens; DROP TABLE windows_session_recoveries; DROP TABLE windows_mount_sessions; DROP TABLE retired_windows_opens; DROP TABLE windows_open_events; DROP TABLE retained_windows_opens; DROP TABLE windows_open_journal; DROP TABLE namespace_removal_events; ALTER TABLE namespace_removals DROP COLUMN mode; ALTER TABLE namespace_removals DROP COLUMN event_id; DROP TABLE logical_conflicts; DROP TABLE managed_rejections; DROP TABLE retained_client_identity; DROP TABLE client_identity; DROP TABLE namespace_removals; CREATE TABLE namespace_removals(keep TEXT); INSERT INTO namespace_removals VALUES('untouched'); PRAGMA user_version=12").unwrap();
+    w.state.connection.execute_batch("DROP TABLE multipart_parts; DROP TABLE multipart_plans; DROP TABLE recovered_windows_opens; DROP TABLE windows_session_recoveries; DROP TABLE windows_mount_sessions; DROP TABLE retired_windows_opens; DROP TABLE windows_open_events; DROP TABLE retained_windows_opens; DROP TABLE windows_open_journal; DROP TABLE namespace_removal_events; ALTER TABLE namespace_removals DROP COLUMN mode; ALTER TABLE namespace_removals DROP COLUMN event_id; DROP TABLE logical_conflicts; DROP TABLE managed_rejections; DROP TABLE retained_client_identity; DROP TABLE client_identity; DROP TABLE namespace_removals; CREATE TABLE namespace_removals(keep TEXT); INSERT INTO namespace_removals VALUES('untouched'); PRAGMA user_version=12").unwrap();
     let path = w.tmp.path().join("authority");
     let placeholder = State::open_managed(&w.tmp.path().join("placeholder")).unwrap();
     drop(std::mem::replace(&mut w.state, placeholder));

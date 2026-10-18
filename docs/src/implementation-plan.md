@@ -1063,5 +1063,53 @@ threshold. Reducing scan cost does not by itself prove the Windows transport
 cause or permit dropping the unresolved transport acceptance requirements.
 The [measured candidate](managed-edits.md#retained-history-scan-validation-candidate-2026-10-18)
 passed its local gate:276 state,48 authority and workspace/book checks. Its own
-native cohort remains required; the32-edit study is not a production latency or
-large-catalog acceptance claim.
+Linux/Windows native/startup cohort at64aa073 and its own strict21/14 reference
+reports also passed. Its unchanged-source repeat atCI39127440399 failed Windows
+paired startup; Linux/book passed. The matched owned exchange had469 driver
+polls but zero write polls/bytes before a server empty-header timeout. The failed
+run is not eligible for the success artifact checker or repeat acceptance.
+Transport reliability remains unresolved. The32-edit study is not a production latency or large-catalog
+acceptance claim. Parent diagnostic90 passed its own cohort without explaining
+the historical failure; neither cohort establishes a causal transport correction.
+
+
+### P5b2 preparation — measured staging boundary (2026-10-18)
+
+An isolated study of unchanged64aa073 production passed exact16/32/64MiB staged
+range reads, full hashes, unchanged read SQL state and reopening. At a fixed16MiB,
+increasing extents from16 to256 raised read-scan progress callbacks from11,610
+to134,370. Source, logs and reproduction are retained in the
+[staged-range investigation](multipart-plan.md#staged-range-cost-and-planning-boundary-investigated-2026-10-18).
+This is diagnostic evidence, not multipart or native large-file acceptance.
+Implement the concrete frozen-input/private-finalizer contract there, with
+bounded owner work, durable quotas, legacy/role compatibility and restart/
+corruption/disk-full controls. Preserve the original guard before hashing;
+a ready plan issues no send permit. Existing8MiB upload/edit limits remain.
+
+
+### P5b2 offline preparation — immutable plans (candidate, 2026-10-18)
+
+The candidate now implements `Storage::multipart` on the existing owner, schema24
+client-local plan/part tables, caller-retained idempotency IDs, original target/
+credential/guard/ancestor-receipt bindings and explicit provider geometry.
+Freeze reserves plan/part quota before hashing. Each async owner step verifies
+and hashes at most1MiB; whole/part digests become Ready atomically through a
+private finalizer that checks exact saved SQL effects before commit. Re-preparing
+rehashes the same frozen input; it never adopts a new guard. Ready is an expected
+byte commitment, not a send permit or atomic media-freshness proof.
+
+Done criteria for this phase: exact original identity across restart/newer heads,
+sparse/inherited/nonaligned bytes and16MiB queued planning, independent quota/
+extent caps, bounded malformed-cell reads, actual process death, true SQLITE_FULL,
+six ignored/deleted/corrupt SQL-effect controls, strict schema23 migration/hash
+compatibility and both local-table authority exclusions. The final focused suite
+passed16 tests. The full local gate passed292 state/48 authority tests and
+workspace/build/lint/book checks on frozen final source. Require its own hosted
+Windows/Linux schema/native/startup acceptance before considering integration. Record outcomes in the [dated evidence](evidence/multipart-plans-20261018.json).
+
+No initiation/upload ID, shared single-PUT/multipart target admission, part send,
+completion, abort, reclamation or large native edit path is enabled. Preserve
+all8MiB bounds and unknown outcomes. Further phases in the
+[multipart contract](multipart-plan.md) remain required, together with resolution
+of the failed unchanged64 Windows paired-startup repeat. No new provider requests
+or permissions arise from this offline work.

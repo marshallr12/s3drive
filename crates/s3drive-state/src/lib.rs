@@ -12,6 +12,7 @@ mod directory_windows;
 pub mod journal;
 pub mod logical;
 pub mod managed;
+pub mod multipart;
 pub mod namespace;
 pub mod namespace_client;
 pub mod remote;
@@ -21,7 +22,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 23;
+pub const SCHEMA_VERSION: i32 = 24;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
@@ -262,6 +263,11 @@ impl State {
             }
             // Versions21–23 strengthen callback/profile policy and add paired owned-
             // target controls in the existing logs. Old hashes stay unchanged.
+            if version <= 23 {
+                tx.execute_batch(include_str!("../migrations/024.sql"))?;
+            }
+            multipart::check_schema(&tx)?;
+            multipart::validate_all(&tx)?;
             logical::check_schema(&tx)?;
             managed::check_schema(&tx)?;
             namespace::check_schema(&tx)?;

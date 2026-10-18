@@ -101,3 +101,20 @@ release, even if remote access is subsequently revoked. New opens require online
 HEAD and cannot use cached bytes to bypass a denied or unavailable provider.
 The cache's private local directory protects plaintext BLOBs with user ownership
 and OS permissions; privileged local administrators remain outside that boundary.
+
+
+## Repository visibility and automation permissions
+
+Checked2026-10-18. The user intentionally made `marshallr12/s3drive` public;
+[D040](decisions.md) supersedes the original private-repository request. Agents
+must not change visibility without a direct request for that specific action.
+A visibility check is read-only and must not automatically restore an older
+setting. This rule is also in the repository's `AGENTS.md`.
+
+For an enforced API boundary, use a fine-grained automation token scoped to the
+needed repositories and code/CI operations, without **Administration: write**.
+GitHub requires that permission for its repository-update endpoint, which
+includes visibility changes. Keep owner/admin credentials separate and
+unavailable as an automation fallback; an instruction alone does not remove
+existing credentials' authority. Credential changes have not been performed.
+[GitHub repository-update permissions](https://docs.github.com/en/rest/repos/repos#fine-grained-access-tokens-for-update-a-repository)

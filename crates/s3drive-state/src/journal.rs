@@ -176,6 +176,11 @@ pub struct Generation {
     pub manifest_hash: Option<[u8; 32]>,
     extents: u32,
 }
+impl Generation {
+    pub(crate) fn extent_count(&self) -> u32 {
+        self.extents
+    }
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Receipt {
     pub generation: GenerationId,

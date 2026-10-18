@@ -1,0 +1,240 @@
+{
+  "format": "s3drive-staged-range-study-v1",
+  "date": "2026-10-18",
+  "source": "64aa073a6ecbfc6cc27739c6c767663143811ffd",
+  "status": "isolated current-production measurement passed; no reader optimization or multipart implementation",
+  "environment": {
+    "os": "linux",
+    "arch": "x86_64",
+    "sqlite": "3.53.2",
+    "rust": "1.99.1",
+    "build": "debug"
+  },
+  "production_unchanged_sha256": {
+    "crates/s3drive-state/src/journal.rs": "265571d5e8af01d60af7dd3066d642a65fd25c26c2731b2889a42a59d0e82a06",
+    "crates/s3drive-state/src/worker.rs": "9674ad6bc0ca9f97f4b298d7033b5022bc0c086180b61a3640f255e5cee7c775",
+    "crates/s3drive-state/src/remote.rs": "2a553593f508af3bf975b0f7517d35959704410e49aff735466439e908881421",
+    "crates/s3drive-state/src/lib.rs": "04be4c952a2de47d79f86dc39112dbc3d51ac0b38339da53f4602bd5750afcce",
+    "crates/s3drive-state/src/authority_snapshot/native.rs": "fbc2c04245f73a9b695a098255788e231f5476a23a65333df283eb7530bd8dd3",
+    "Cargo.toml": "03e8f88c622328e53d02083c18c721293dbcc3c0d423b95bc318c3f6f81e8936",
+    "Cargo.lock": "ca1be721c031390b235be520cae431dcb5321d6a5711f11751db3aa58cc66616"
+  },
+  "isolated_worktree": "/tmp/s3drive-staged-range-study-20261018-tjtdatmk/source",
+  "only_changes": [
+    "crates/s3drive-state/src/journal/tests.rs: register test module",
+    "crates/s3drive-state/src/journal/tests/range_study.rs: diagnostic test module"
+  ],
+  "final_test_source_sha256": "a55a2dcdcda126ceaa4e87d30cf861983afa7051ce60cf11f5c852b5a48d81d4",
+  "experiment": {
+    "command": "cargo test -p s3drive-state journal::tests::range_study::large_sealed_range_scan_study --locked -- --ignored --nocapture --exact",
+    "exit_code": 0,
+    "log": "/tmp/s3drive-staged-range-study2.log",
+    "log_sha256": "745800b7d1399ad987eec5367191833ea41644526d2274043c4f7be7ac49afe8",
+    "metrics": [
+      {
+        "size": 16777216,
+        "extents": 16,
+        "range_bytes": 1048576,
+        "reads": 16,
+        "seal_vm_callbacks": 1691,
+        "seal_us": 505637,
+        "zero_read_vm_callbacks": 571,
+        "zero_read_us": 525,
+        "scan_vm_callbacks": 11610,
+        "scan_us": 1365433,
+        "exact_bytes": true,
+        "read_sql_changes": 0,
+        "reopen": true
+      },
+      {
+        "size": 33554432,
+        "extents": 32,
+        "range_bytes": 1048576,
+        "reads": 32,
+        "seal_vm_callbacks": 2939,
+        "seal_us": 1018514,
+        "zero_read_vm_callbacks": 971,
+        "zero_read_us": 789,
+        "scan_vm_callbacks": 37394,
+        "scan_us": 2730633,
+        "exact_bytes": true,
+        "read_sql_changes": 0,
+        "reopen": true
+      },
+      {
+        "size": 67108864,
+        "extents": 64,
+        "range_bytes": 1048576,
+        "reads": 64,
+        "seal_vm_callbacks": 5435,
+        "seal_us": 2078290,
+        "zero_read_vm_callbacks": 1771,
+        "zero_read_us": 1153,
+        "scan_vm_callbacks": 132738,
+        "scan_us": 5459141,
+        "exact_bytes": true,
+        "read_sql_changes": 0,
+        "reopen": true
+      },
+      {
+        "size": 16777216,
+        "extents": 64,
+        "range_bytes": 1048576,
+        "reads": 16,
+        "seal_vm_callbacks": 5435,
+        "seal_us": 499122,
+        "zero_read_vm_callbacks": 1771,
+        "zero_read_us": 873,
+        "scan_vm_callbacks": 36162,
+        "scan_us": 1370072,
+        "exact_bytes": true,
+        "read_sql_changes": 0,
+        "reopen": true
+      },
+      {
+        "size": 16777216,
+        "extents": 256,
+        "range_bytes": 1048576,
+        "reads": 16,
+        "seal_vm_callbacks": 20411,
+        "seal_us": 525653,
+        "zero_read_vm_callbacks": 6571,
+        "zero_read_us": 2666,
+        "scan_vm_callbacks": 134370,
+        "scan_us": 1415750,
+        "exact_bytes": true,
+        "read_sql_changes": 0,
+        "reopen": true
+      }
+    ],
+    "sqlite_progress_interval": 1,
+    "timing_threshold": false,
+    "checks": [
+      "every returned byte equals independently generated absolute-position pattern",
+      "whole streamed SHA-256 equals independently generated hash",
+      "EOF empty; oversized read refused",
+      "sealed head and manifest unchanged",
+      "SQL total_changes unchanged during reads",
+      "exact tail and manifest after database reopen"
+    ],
+    "scope": "Journal::read, not end-to-end worker Snapshot/queue or native filesystem"
+  },
+  "initial_run": {
+    "log": "/tmp/s3drive-staged-range-study1.log",
+    "exit_code": 0,
+    "unused_mut_warning": true,
+    "final_source_warning_removed": true,
+    "log_sha256": "231c74fb09a8bf7c6a8fab600759b560be83a31a5213bcb8b65438e4df8db0f7",
+    "metrics": [
+      {
+        "size": 16777216,
+        "extents": 16,
+        "range_bytes": 1048576,
+        "reads": 16,
+        "seal_vm_callbacks": 1691,
+        "seal_us": 502795,
+        "zero_read_vm_callbacks": 571,
+        "zero_read_us": 490,
+        "scan_vm_callbacks": 11610,
+        "scan_us": 1375418,
+        "exact_bytes": true,
+        "read_sql_changes": 0,
+        "reopen": true
+      },
+      {
+        "size": 33554432,
+        "extents": 32,
+        "range_bytes": 1048576,
+        "reads": 32,
+        "seal_vm_callbacks": 2939,
+        "seal_us": 1004650,
+        "zero_read_vm_callbacks": 971,
+        "zero_read_us": 773,
+        "scan_vm_callbacks": 37394,
+        "scan_us": 2828247,
+        "exact_bytes": true,
+        "read_sql_changes": 0,
+        "reopen": true
+      },
+      {
+        "size": 67108864,
+        "extents": 64,
+        "range_bytes": 1048576,
+        "reads": 64,
+        "seal_vm_callbacks": 5435,
+        "seal_us": 2002313,
+        "zero_read_vm_callbacks": 1771,
+        "zero_read_us": 900,
+        "scan_vm_callbacks": 132738,
+        "scan_us": 5823706,
+        "exact_bytes": true,
+        "read_sql_changes": 0,
+        "reopen": true
+      },
+      {
+        "size": 16777216,
+        "extents": 64,
+        "range_bytes": 1048576,
+        "reads": 16,
+        "seal_vm_callbacks": 5435,
+        "seal_us": 521541,
+        "zero_read_vm_callbacks": 1771,
+        "zero_read_us": 1040,
+        "scan_vm_callbacks": 36162,
+        "scan_us": 1366411,
+        "exact_bytes": true,
+        "read_sql_changes": 0,
+        "reopen": true
+      },
+      {
+        "size": 16777216,
+        "extents": 256,
+        "range_bytes": 1048576,
+        "reads": 16,
+        "seal_vm_callbacks": 20411,
+        "seal_us": 516393,
+        "zero_read_vm_callbacks": 6571,
+        "zero_read_us": 2732,
+        "scan_vm_callbacks": 134370,
+        "scan_us": 1415897,
+        "exact_bytes": true,
+        "read_sql_changes": 0,
+        "reopen": true
+      }
+    ]
+  },
+  "clippy": {
+    "command": "cargo clippy -p s3drive-state --all-targets --locked -- -D warnings",
+    "exit_code": 0,
+    "log": "/tmp/s3drive-staged-range-study-clippy.log",
+    "sha256": "8c258828670aff42264865960f958ce03e4ab47aa53bb99fb0eb7df2fa9fa737"
+  },
+  "archive": {
+    "path": "docs/src/evidence/staged-range-study-20261018.tar.gz",
+    "sha256": "4d19af5c5c5da8389a315ef54eb6c07f7966172d49d54f2575e40d6de3797b88",
+    "entries": [
+      "study/README.md",
+      "study/clippy.log",
+      "study/range_study.rs",
+      "study/register.patch",
+      "study/run.log",
+      "study/source-sha256.json"
+    ],
+    "contents_independently_reopened_and_verified": true
+  },
+  "findings": [
+    "For fixed16MiB/16 one-MiB data reads,16/64/256 extents produced11610/36162/134370 instrumented SQLite progress callbacks",
+    "Sealed16/32/64MiB generations returned exact data through one-MiB ranges without whole-file buffers in the fixture",
+    "read_data revalidates full manifest on every call; selected chunks also recheck payload digest",
+    "seal remains one synchronous transaction that verifies all payloads; Snapshot only holds owner clone and generation metadata, not a future GC pin",
+    "8MiB limits remain independently in remote schema/payload, logical/managed input and filesystem whole-file buffers"
+  ],
+  "limits": [
+    "Instrumented debug fixture; no production latency, peak-memory or maximum-quota acceptance",
+    "scan_us includes byte comparisons, hashing and final metadata checks; callback count includes all measured SQL",
+    "No corruption semantics weakened and no reusable proof retained between production owner commands",
+    "No provider requests, new send permits, schema changes or Windows testing in this experiment",
+    "Multipart, bounded native large-file editing and fair verified streaming still require implementation"
+  ],
+  "at_utc": "2026-10-18T12:34:39.907936+00:00"
+}

@@ -35,16 +35,28 @@ same-supervisor child replacement have scoped hosted acceptance. This does not
 establish actual workstation reboot, restore/failover or elimination of the
 historical intermittent Windows transport failures.
 
-**Current work:** the [owned authority client](owned-authority-client.md) replaces
-the production metadata HTTP execution path on a private candidate branch. Its
+**Current work:** [offline immutable multipart plans](multipart-plan.md#offline-immutable-plans-candidate-implementation-2026-10-18)
+freeze original bindings and hash verified staged bytes in bounded owner commands.
+The candidate adds schema24 and preserves the existing8MiB upload/edit limits;
+no multipart network execution is enabled. Local and source-bound platform
+acceptance are recorded separately in the [dated evidence](evidence/multipart-plans-20261018.json).
+
+The [owned authority client](owned-authority-client.md) replaces
+the production metadata HTTP execution path on the candidate branch. Its
 portable controls retain complete SQLite receipts through bounded shutdown;
 its exact-source47e9dd4 Windows burst failed at step22 with an empty-header
-timeout, while Linux/book passed. Current work adds bounded driver/I/O progress
-observations to locate the missing work; this is not an established fix.
-The client-local journal also has a measured
+timeout, while Linux/book passed. The later instrumented90a8357
+[cohort](https://github.com/marshallr12/s3drive/actions/runs/39124027385) passed
+Linux/Windows native gates and its own strict21/14 reference artifacts. This is
+one cohort without a source-identical repeat or established failure cause.
+The measured client-local
 [pending-scan optimization](managed-edits.md#retained-history-scan-validation-candidate-2026-10-18)
-under verification, preserving checks on retained history while reusing proofs
-within one read command.
+at64aa073 passed its own Linux/Windows native/startup checks and strict21/14
+reference reports. Its [unchanged-source repeat](https://github.com/marshallr12/s3drive/actions/runs/39127440399)
+failed Windows paired startup while Linux/book passed. Its matched exchange
+was actively polled but wrote no plaintext bytes before the server timed out.
+It preserves checks on retained history while reusing proofs within one read
+command; no causal transport correction is established.
 The accepted main still uses the previous client. Multipart/large files,
 writable restoration, real managed-provider acceptance and remote deployment
 remain incomplete. No real user startup, remote hosting or Turso backend has
@@ -86,7 +98,7 @@ application limits are recorded in the [filesystem contract](filesystem-contract
 | Rust workspace and CLI | Implemented |
 | TOML parsing and source/namespace validation | Implemented; no network checks |
 | Alias + prefix + file-path resolution | Implemented as a planning utility |
-| Local SQLite state | Schema23; separate authoritative namespace and client databases, immutable staged bytes, exact operation/receipt recovery, private ownership, publication/disposition/open-session journals and cache |
+| Local SQLite state | Main schema23; offline multipart candidate schema24; separate authoritative namespace and client databases, immutable staged bytes, exact operation/receipt recovery, private ownership, publication/disposition/open-session journals and cache |
 | mdBook research, design and acceptance plan | Implemented |
 | S3 transport and credentials | Implemented; [Wasabi read acceptance](wasabi.md) passed; broader conformance pending |
 | Linux filesystem mount | FUSE reads and explicit policy-bound writes/creation/managed mutation; [initial mount contract](linux-mount.md) and later managed acceptance |
@@ -95,7 +107,7 @@ application limits are recorded in the [filesystem contract](filesystem-contract
 | Windows startup across login sessions | [Scheduled task and shared NTFS folder implemented](startup-and-sessions.md); native cross-logon reads/removal passed; workstation reboot/SSH authentication pending |
 | Managed local edits | [Durable logical heads and settlement](managed-edits.md); storage/SDK library; [native integration](managed-write-plan.md) adds version-4 existing-file edits |
 | Managed file publication | [Real SDK/HTTP/SQLite library](managed-publication.md); existing-file edits and creation passed native acceptance; remote deployment/live managed-provider acceptance pending |
-| Authority client transport | [Owned TCP/TLS/HTTP execution candidate](owned-authority-client.md); portable controls passed, exact-source Windows burst failed; bounded progress instrumentation under test; accepted main retains the previous client |
+| Authority client transport | [Owned TCP/TLS/HTTP execution candidate](owned-authority-client.md); source47 failed Windows; later64 passed its primary native/reference cohort but failed Windows paired startup on its unchanged-source repeat; historical cause unresolved and accepted main retains the previous client |
 | Private authority snapshots | [Offline creation and inspection](authority-backup-recovery.md) accepted at bf9509e; integrity is not history freshness; writable restore/failover remain unsupported |
 | Managed namespace authority | [Rust/SQLite service](managed-layout.md), authenticated [HTTPS](remote-authority.md), exact replay and explicit [store/configuration setup](managed-bootstrap.md); real remote deployment pending |
 | Managed native reads | [Authority namespace and verified immutable payloads](managed-native.md); real FUSE/WinFsp acceptance passed |

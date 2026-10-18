@@ -505,7 +505,7 @@ fn schema_fourteen_migration_preserves_old_managed_hashes_and_refuses_conflictin
                 r.get(0)
             })
             .unwrap();
-        f.client.connection.execute_batch("DROP TABLE recovered_windows_opens; DROP TABLE windows_session_recoveries; DROP TABLE windows_mount_sessions; DROP TABLE retired_windows_opens; DROP TABLE windows_open_events; DROP TABLE retained_windows_opens; DROP TABLE windows_open_journal; DROP TABLE namespace_removal_events; ALTER TABLE namespace_removals DROP COLUMN mode; ALTER TABLE namespace_removals DROP COLUMN event_id; DROP TABLE logical_conflicts; DROP TABLE managed_rejections; PRAGMA user_version=14").unwrap();
+        f.client.connection.execute_batch("DROP TABLE multipart_parts; DROP TABLE multipart_plans; DROP TABLE recovered_windows_opens; DROP TABLE windows_session_recoveries; DROP TABLE windows_mount_sessions; DROP TABLE retired_windows_opens; DROP TABLE windows_open_events; DROP TABLE retained_windows_opens; DROP TABLE windows_open_journal; DROP TABLE namespace_removal_events; ALTER TABLE namespace_removals DROP COLUMN mode; ALTER TABLE namespace_removals DROP COLUMN event_id; DROP TABLE logical_conflicts; DROP TABLE managed_rejections; PRAGMA user_version=14").unwrap();
         if conflict {
             f.client.connection.execute_batch("CREATE TABLE managed_rejections(keep TEXT); INSERT INTO managed_rejections VALUES('preserved')").unwrap();
         }

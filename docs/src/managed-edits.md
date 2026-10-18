@@ -171,3 +171,20 @@ large-history scalability or explain/fix the intermittent Windows HTTP failure.
 No schema, public API, network policy, retry, unknown operation or overwrite rule
 changes. Large files, reference-aware reclamation and real provider acceptance
 remain separate phases.
+
+Exact-source64aa073 Linux
+[CI39125456457](https://github.com/marshallr12/s3drive/actions/runs/39125456457)
+subsequently passed9 real native cases,32 HTTPS flush iterations, paired recovery
+and both no-systemd coordinator startup protocols. The loop's runner-log span
+through owned teardown was13.29 seconds versus69.37 seconds at parent90a8357.
+These ran on different hosted VMs and are observational fixture spans, not a
+controlled latency guarantee. The same source's Windows job also passed32 HTTPS
+flushes, lifecycle/startup/recovery/broader native checks and its own strict21/14
+reference reports. Completed logs and artifact digests are retained in the dated
+evidence. The [source-identical repeat](https://github.com/marshallr12/s3drive/actions/runs/39127440399)
+failed Windows paired startup; Linux/book passed. Its matched Info exchange
+had469 driver polls but no write polls/bytes before the server's empty-header
+timeout. Its success-only artifact checker is ineligible, and later Windows
+reference/native steps were skipped. No causal transport fix, repeat acceptance
+or physical workstation reboot acceptance follows. There are no new live provider
+requests.

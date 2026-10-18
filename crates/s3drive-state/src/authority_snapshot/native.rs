@@ -179,6 +179,8 @@ fn identity(
         "windows_mount_sessions",
         "windows_session_recoveries",
         "recovered_windows_opens",
+        "multipart_plans",
+        "multipart_parts",
     ];
     if tables.len() > 64 {
         return Err(Error::Validation);
@@ -615,15 +617,16 @@ mod tests {
             Err(Error::Cancelled)
         );
         for sql in [
-            "PRAGMA application_id=99",
-            "PRAGMA user_version=24",
-            "INSERT INTO client_identity VALUES(1,'44444444444444444444444444444444',zeroblob(32))",
+            "PRAGMA application_id=99".to_owned(),
+            format!("PRAGMA user_version={}", SCHEMA_VERSION + 1),
+            "INSERT INTO client_identity VALUES(1,'44444444444444444444444444444444',zeroblob(32))"
+                .to_owned(),
         ] {
             let case = tempfile::tempdir().unwrap();
             let source = case.path().join("bad");
             let v = seed(&source);
             let db = Connection::open(source.join("metadata.sqlite3")).unwrap();
-            db.execute_batch(sql).unwrap();
+            db.execute_batch(&sql).unwrap();
             drop(db);
             let output = case.path().join("out");
             assert!(create(&source, &v.id, POLICY, &output, &Limits::default()).is_err());
@@ -649,7 +652,7 @@ mod tests {
                 "unknown" => m["private marker"] = "never echo this configuration".into(),
                 "filename" => m["database"] = "../private marker".into(),
                 "future" => m["version"] = 2.into(),
-                "schema" => m["schema_version"] = 24.into(),
+                "schema" => m["schema_version"] = (SCHEMA_VERSION + 1).into(),
                 "policy" => m["volume"]["name_policy"] = "exact-utf8-v1".into(),
                 "sidecar" => {
                     crate::create_private_document(

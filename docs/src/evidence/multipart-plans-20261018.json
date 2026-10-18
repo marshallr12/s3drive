@@ -1,0 +1,291 @@
+{
+  "format": "s3drive-offline-multipart-plans-evidence-v1",
+  "date": "2026-10-18",
+  "branch": "codex/multipart-plans",
+  "parent": "9c14c996ca476304731a8ab3de072fd33862f77a",
+  "main_policy_checkpoint": "1a93b5f7248892fec96dc8da4438ee7967692e77",
+  "main_runtime_checkpoint": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+  "repository_visibility": "public by user decision; read-only checks only",
+  "status": "final local gate passed on frozen source; hosted acceptance pending; no runtime promotion",
+  "schema": {
+    "from": 23,
+    "to": 24,
+    "local_tables": [
+      "multipart_plans",
+      "multipart_parts"
+    ],
+    "legacy_remote_hashes_preserved": true
+  },
+  "provider_requests": 0,
+  "network_permission_added": false,
+  "dependencies_changed": false,
+  "source_sha256": {
+    "Cargo.lock": "ca1be721c031390b235be520cae431dcb5321d6a5711f11751db3aa58cc66616",
+    "Cargo.toml": "03e8f88c622328e53d02083c18c721293dbcc3c0d423b95bc318c3f6f81e8936",
+    "crates/s3drive-state/migrations/024.sql": "73bcbe1a00ebb03d5b951b4c62abd77323e8a168d2029836595616b044882cf7",
+    "crates/s3drive-state/src/authority_restart_tests.rs": "0c8e35714cfaa16417effc5594dbf0fb5e58e34dcdfca29637d71cb298bcda2a",
+    "crates/s3drive-state/src/authority_snapshot/native.rs": "b7a76ae1c4fdbd38f4cd02d00bfffcd8effd98ed2ac16324b640bd91fb0a7064",
+    "crates/s3drive-state/src/cache/tests.rs": "f0971e10da2620c899c83844373f773a3a3363a81d90dd4b9780ba8188538a17",
+    "crates/s3drive-state/src/journal.rs": "3a9be4ca456bfa32e1a2742c9bc13612c2391382f82059ab2a94121ce0790efc",
+    "crates/s3drive-state/src/journal/tests.rs": "fe0e8284c8706c237bda34aef0f5f22b21be63626af96fdeeb2018edac24689f",
+    "crates/s3drive-state/src/lib.rs": "f265116826d26c71cdf4efbd25c0bd7c0ea26d1cdf31ff27f8e46d8a2a9ec79c",
+    "crates/s3drive-state/src/logical/tests.rs": "9e2866f31819b16f701798bf07c2cf0e77c62b4e874f7f66f76ce23ca053c68b",
+    "crates/s3drive-state/src/managed/tests.rs": "6fe9c8ba396c8c3918c6cb2973502a534290f1a46c0f9106bdee05483a627754",
+    "crates/s3drive-state/src/multipart.rs": "7c6a325c813bb8786847b9f1deb6ce296c9e8cf82c6a49d8f1e15d098ee90684",
+    "crates/s3drive-state/src/multipart/tests.rs": "d1985219e9e21acfe1df65bedae98bdeb8c5dbfe1fe98979c7f3a4ab07d61320",
+    "crates/s3drive-state/src/namespace.rs": "bc84f6ea4088c05562753c09e525b32beef1f1b2d562b667e53e600c769f76e0",
+    "crates/s3drive-state/src/namespace/removals/tests.rs": "b38e1a5fcc4994d0718212140fa59941b261533b3e3937fbb3b2ce93500501f7",
+    "crates/s3drive-state/src/namespace/removals/tests/deferred.rs": "4b3f869665655565e43ee2b6092a2e833cda5dec5a3d3691046f7a4488950d6c",
+    "crates/s3drive-state/src/namespace/tests.rs": "2750d74d20a2f15025f35da7095e392d0dc2ac362d4d719da04547527f6799da",
+    "crates/s3drive-state/src/namespace_client/changes/tests/pending_publication.rs": "81d3cbf9c7aff2a45fc7834b715f33faf66dfe5ba69c4f2589bb3e0073c8619c",
+    "crates/s3drive-state/src/namespace_client/changes/tests/removals.rs": "f5fe23d6676eccf6dfc2711cc2b49e1d6a742f5d9cee08c3398e3f6643f2d65e",
+    "crates/s3drive-state/src/namespace_client/changes/tests/removals/replacement.rs": "86c9ac0366af3ffe05aa0769455af9dddb20a3815607d8df19e2c8c0d60de88f",
+    "crates/s3drive-state/src/namespace_client/opens/tests.rs": "939950555b1897138108e8102fda13ec21ee483f797ec3b9ef5ded02dff6845b",
+    "crates/s3drive-state/src/namespace_client/opens/tests/controlled.rs": "a9ea7926e6f827ae9132b06b8bf8758c3ea83c4857c1e914e0b112560e435f1d",
+    "crates/s3drive-state/src/namespace_client/opens/tests/retirement.rs": "9ce9202d9c8b15aac401161fe94e15b54b813989661f8fcb157b96fbe6568975",
+    "crates/s3drive-state/src/namespace_client/opens/tests/session.rs": "b51a63234525670db33bffca59093ed3c976fe280c9ec75519d06b8f4e9b67df",
+    "crates/s3drive-state/src/remote.rs": "9e4dbc506e542b2bfbe9a08ca9ec265786c17e208dda73b272b4998904d0c667",
+    "crates/s3drive-state/src/remote/acknowledgments/tests.rs": "60caae2fbce06e6ed4c8a47a254dd294d99312a5cb7eef3db76c6effd544637b",
+    "crates/s3drive-state/src/remote/tests.rs": "29f7ef76f3eb2de1e6d2080cb822278e114f90685050cfc143f9c5f61e23e702",
+    "crates/s3drive-state/src/worker.rs": "27fe2c20a5935e9d5a8febe1198d8805516b650bfbb6452a3adaf9b7e45361c5",
+    "scripts/test-windows-snapshot-worker.ps1": "d9e0c89e6d86617627cd150c3b5693c4418d97de3bc9c0840a3eaaca964bf694"
+  },
+  "focused": {
+    "command": "cargo test -p s3drive-state --locked multipart::tests -- --nocapture",
+    "log": "/tmp/s3drive-multipart-plan-focused5.log",
+    "sha256": "f2eb38d9746fa50a0e57ad5f2f7819be81f46b0b015085eeff3242845cd0970e",
+    "exit_code": 0,
+    "passed": 16,
+    "failed": 0,
+    "scope": "offline local planning only"
+  },
+  "review": {
+    "agent": "multipart_contract_review",
+    "role": "legacy-impl-reviewer",
+    "read_only": true,
+    "result": "Final review: atomicity gap closed; no new blocker in the reviewed delta. Full final gate still required."
+  },
+  "prior_checks": [
+    {
+      "name": "state regression1",
+      "passed": 284,
+      "failed": 2,
+      "ignored": 1,
+      "resolution": "synthetic lower-schema test fixtures removed new tables before lowering schema; strict production collision refusal unchanged"
+    },
+    {
+      "name": "gate1",
+      "exit_code": 101,
+      "resolution": "Clippy drop_non_drop in test fixed by lexical scope"
+    },
+    {
+      "name": "gate2",
+      "exit_code": 0,
+      "state_passed": 291,
+      "state_ignored": 1,
+      "accepts_final_source": false,
+      "reason": "Started before final atomicity fix/test; superseded, not final acceptance"
+    }
+  ],
+  "final_local_gate": {
+    "command": "bash scripts/gate.sh",
+    "exit_code": 0,
+    "log": "/tmp/s3drive-multipart-plan-gate3.log",
+    "sha256": "13e970aaaafccefc03b300d20b8b9dfbef29c653f045270e7aa3332d83289634",
+    "source_matches": true,
+    "results": [
+      {
+        "section": "Running unittests src/lib.rs (target/debug/deps/s3drive_authority-acf173ab6b0184a7)",
+        "result": "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.24s"
+      },
+      {
+        "section": "Running tests/connection_lifetime.rs (target/debug/deps/connection_lifetime-901afd7bfe4955a0)",
+        "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      },
+      {
+        "section": "Running tests/execution.rs (target/debug/deps/execution-5db262be858f7fe1)",
+        "result": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Running tests/namespace.rs (target/debug/deps/namespace-1e14b317c27b3f82)",
+        "result": "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.75s"
+      },
+      {
+        "section": "Running tests/owned_exchange.rs (target/debug/deps/owned_exchange-67d53c1d63715381)",
+        "result": "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 20.62s"
+      },
+      {
+        "section": "Running tests/remote.rs (target/debug/deps/remote-35821a8c79883e12)",
+        "result": "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.21s"
+      },
+      {
+        "section": "Running tests/wire_parity.rs (target/debug/deps/wire_parity-afb0066852efa342)",
+        "result": "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.56s"
+      },
+      {
+        "section": "Running unittests src/main.rs (target/debug/deps/s3drive-34330810c301c2e2)",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Running tests/authority_restart.rs (target/debug/deps/authority_restart-b645edb08c3ebfad)",
+        "result": "test result: ok. 9 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 10.45s"
+      },
+      {
+        "section": "Running tests/authority_snapshots.rs (target/debug/deps/authority_snapshots-e16240e45fb20956)",
+        "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s"
+      },
+      {
+        "section": "Running tests/cli.rs (target/debug/deps/cli-40718b7be6343ee7)",
+        "result": "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s"
+      },
+      {
+        "section": "Running tests/creation_engine.rs (target/debug/deps/creation_engine-8f135989c1defe48)",
+        "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.28s"
+      },
+      {
+        "section": "Running tests/linux_mount.rs (target/debug/deps/linux_mount-77f6bf34b6144c85)",
+        "result": "test result: ok. 2 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 8.19s"
+      },
+      {
+        "section": "Running tests/managed_bootstrap.rs (target/debug/deps/managed_bootstrap-90048eb08c466600)",
+        "result": "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.67s"
+      },
+      {
+        "section": "Running tests/managed_native.rs (target/debug/deps/managed_native-981634de161487b5)",
+        "result": "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.99s"
+      },
+      {
+        "section": "Running tests/managed_publication.rs (target/debug/deps/managed_publication-0f3b004a14ebe5e8)",
+        "result": "test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.81s"
+      },
+      {
+        "section": "Running tests/probe_cli.rs (target/debug/deps/probe_cli-3969d972efa466cf)",
+        "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s"
+      },
+      {
+        "section": "Running tests/staged_edits.rs (target/debug/deps/staged_edits-3741ce13cb1f9ef4)",
+        "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s"
+      },
+      {
+        "section": "Running tests/windows_mount.rs (target/debug/deps/windows_mount-b2d450420c5e06f2)",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Running tests/writable_engine.rs (target/debug/deps/writable_engine-0f3d7182165f1074)",
+        "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.09s"
+      },
+      {
+        "section": "Running unittests src/lib.rs (target/debug/deps/s3drive_core-046c66f461d072f9)",
+        "result": "test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s"
+      },
+      {
+        "section": "Running unittests src/lib.rs (target/debug/deps/s3drive_fs-6990081aa6e2432d)",
+        "result": "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.30s"
+      },
+      {
+        "section": "Running unittests src/lib.rs (target/debug/deps/s3drive_fuse-999ed9e7f7cf725c)",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Running unittests src/lib.rs (target/debug/deps/s3drive_managed-06d246333719e644)",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Running unittests src/lib.rs (target/debug/deps/s3drive_s3-e2fed0030b668749)",
+        "result": "test result: ok. 51 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.29s"
+      },
+      {
+        "section": "Running unittests src/lib.rs (target/debug/deps/s3drive_state-6e55562b43f7bb8c)",
+        "result": "test result: ok. 292 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 134.91s"
+      },
+      {
+        "section": "Running unittests src/lib.rs (target/debug/deps/s3drive_winfsp-8e53f823a65b7c94)",
+        "result": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Doc-tests s3drive_authority",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Doc-tests s3drive_core",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Doc-tests s3drive_fs",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Doc-tests s3drive_fuse",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Doc-tests s3drive_managed",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Doc-tests s3drive_s3",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Doc-tests s3drive_state",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Doc-tests s3drive_winfsp",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      }
+    ],
+    "warnings": 0,
+    "final_chapters": 54,
+    "status": "passed",
+    "state": {
+      "passed": 292,
+      "failed": 0,
+      "ignored": 1,
+      "ignored_reason": "retained-history diagnostic study has separate recorded execution"
+    }
+  },
+  "bounds": {
+    "hash_bytes_per_owner_command": 1048576,
+    "default_plans": 64,
+    "default_reserved_parts": 100000,
+    "default_scan_extents": 4096,
+    "hard_plans": 4096,
+    "hard_reserved_parts": 1000000,
+    "hard_scan_extents": 65536,
+    "parts_per_plan": 10000
+  },
+  "controls": [
+    "frozen_identity_and_non_aligned_parts_survive_reopen_without_target_permission",
+    "original_anchor_is_not_reselected_when_a_newer_head_and_receipt_appear",
+    "inherited_chunks_sparse_holes_and_small_final_part_hash_exactly",
+    "quotas_are_reserved_before_hashing_and_changed_binding_or_corruption_is_refused",
+    "boundary_failures_leave_only_frozen_or_complete_ready_records",
+    "real_sqlite_full_rolls_back_part_rows_and_preserves_the_original_input",
+    "corrupt_unread_bytes_fail_and_ready_metadata_does_not_claim_atomic_media_freshness",
+    "async_planner_hashes_above_single_put_bound_yields_and_recovers_ready",
+    "crash_child",
+    "process_death_preserves_original_input_and_all_or_nothing_ready_parts",
+    "schema_twenty_three_migration_keeps_exact_legacy_hashes_and_conflicts_roll_back",
+    "every_local_planning_table_is_refused_by_authority_initialization_and_snapshots",
+    "shared_guard_extraction_keeps_legacy_error_precedence",
+    "reserved_parts_and_extent_work_are_independent_admission_limits",
+    "malformed_large_digest_and_identifier_cells_are_refused_before_materializing_them",
+    "ignored_or_deleted_sql_effects_cannot_commit_partial_ready_or_a_false_frozen_input"
+  ],
+  "limitations": [
+    "Ready describes expected immutable bytes, not atomic current-media freshness; future executor must verify send ranges",
+    "No initiation, upload ID, target admission, part send, completion, abort, flush permit or reclamation",
+    "Existing single-PUT, managed, logical and native 8 MiB bounds unchanged",
+    "Repeated full manifest and global catalog/ancestry validation remain; no maximum-quota latency/fairness claim",
+    "Current sealed retention preserves bytes; future GC must honor plan/generation/anchor references",
+    "Exact64 repeat39127440399 failed Windows paired startup; offline plans do not correct the transport failure",
+    "New source-bound Windows/Linux schema/native/startup acceptance remains required; historical artifacts cannot substitute"
+  ],
+  "handoff_archive": {
+    "path": "docs/archive/HANDOFF-before-multipart-plans-20261018.md",
+    "before_lines": 511,
+    "after_lines_before_gate_result": 468,
+    "historical_live_or_private_notes_are_superseded": true
+  }
+}

@@ -4,7 +4,7 @@
   "parent": "90a83571de346f3aeb092da749b96078a301704d",
   "branch": "codex/pending-scan-proofs",
   "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
-  "status": "final full local gate passed; separate private candidate branch publication and own native acceptance pending",
+  "status": "primary cohort passed; unchanged-source repeat FAILED Windows paired startup; no runtime promotion/reliability acceptance",
   "native_failure_fixed": false,
   "provider_requests": 0,
   "schema_change": false,
@@ -176,12 +176,273 @@
     "at_utc": "2026-10-18T11:59:15.199238+00:00"
   },
   "hosted": {
-    "status": "not published",
-    "native_acceptance": false,
-    "repeat_acceptance": false
+    "run": 39125456457,
+    "source": "64aa073a6ecbfc6cc27739c6c767663143811ffd",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "databaseId": 117669532918,
+        "name": "book",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "databaseId": 117669533055,
+        "name": "rust (windows-latest)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "databaseId": 117669533142,
+        "name": "rust (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "observed_at_utc": "2026-10-18T12:32:08.265065+00:00",
+    "native_acceptance": true,
+    "repeat_acceptance": false,
+    "native_correction_proven": false,
+    "watch_log": "/tmp/s3drive-pending-scan-hosted-watch.log",
+    "watch_session": 8568,
+    "raw_logs": {
+      "windows": {
+        "path": "/tmp/s3drive-pending-scan-64-windows.log",
+        "sha256": "b1876381e08376032012dc419d18eb9c3ec75ca9c56ef3f5c3964603976a3aea",
+        "reviewed": true
+      },
+      "linux": {
+        "path": "/tmp/s3drive-pending-scan-64-linux.log",
+        "sha256": "51e5384d9d682dcccca386017f0fff46420d11b4f1baae7c9d2321b214c6a123",
+        "reviewed": true
+      },
+      "book": {
+        "path": "/tmp/s3drive-pending-scan-64-book.log",
+        "sha256": "9dac4febf6e5691a388e79ad1935982d660d8bb86cd4ff8ec13dcc25c08d021d",
+        "reviewed": true
+      }
+    },
+    "linux_native_scope": "9 real native cases,32 HTTPS Unicode/binary fsync/read/exact-PUT iterations, paired crash/conflict recovery and both no-systemd coordinator startup protocols passed;276 state/48 authority portable cases passed; only controlled S3 HEAD403, stopped-authority Node/Connect refusal and TLS negative controls",
+    "linux_native_acceptance": true,
+    "linux_native_timing_comparison": [
+      {
+        "source": "90a83571de346f3aeb092da749b96078a301704d",
+        "run": 39124027385,
+        "log": "/tmp/s3drive-exchange-progress-90-linux.log",
+        "sha256": "85f6f648d808bfa75a53c5c44a8fe34db1deaa28493e61e08223ce7faca160eb",
+        "steps": 32,
+        "first_marker": "2026-10-18T11:45:29.8181762Z",
+        "last_marker": "2026-10-18T11:46:32.3350870Z",
+        "success": "2026-10-18T11:46:39.1865286Z",
+        "first_to_success_seconds": 69.368352,
+        "scope": "32-iteration HTTPS native write/fsync/read/count loop plus owned fixture teardown, based on runner log timestamps; different hosted VMs, observational comparison only"
+      },
+      {
+        "source": "64aa073a6ecbfc6cc27739c6c767663143811ffd",
+        "run": 39125456457,
+        "log": "/tmp/s3drive-pending-scan-64-linux.log",
+        "sha256": "51e5384d9d682dcccca386017f0fff46420d11b4f1baae7c9d2321b214c6a123",
+        "steps": 32,
+        "first_marker": "2026-10-18T12:05:06.3864606Z",
+        "last_marker": "2026-10-18T12:05:18.8788164Z",
+        "success": "2026-10-18T12:05:19.6771208Z",
+        "first_to_success_seconds": 13.29066,
+        "scope": "32-iteration HTTPS native write/fsync/read/count loop plus owned fixture teardown, based on runner log timestamps; different hosted VMs, observational comparison only"
+      }
+    ],
+    "reference_acceptance": true,
+    "raw_review": {
+      "source": "64aa073a6ecbfc6cc27739c6c767663143811ffd",
+      "run_id": 39125456457,
+      "reviewed": true,
+      "at_utc": "2026-10-18T12:27:53.413783+00:00",
+      "jobs": {
+        "117669533055": {
+          "log": "/tmp/s3drive-pending-scan-64-windows.log",
+          "sha256": "b1876381e08376032012dc419d18eb9c3ec75ca9c56ef3f5c3964603976a3aea"
+        },
+        "117669533142": {
+          "log": "/tmp/s3drive-pending-scan-64-linux.log",
+          "sha256": "51e5384d9d682dcccca386017f0fff46420d11b4f1baae7c9d2321b214c6a123"
+        },
+        "117669532918": {
+          "log": "/tmp/s3drive-pending-scan-64-book.log",
+          "sha256": "9dac4febf6e5691a388e79ad1935982d660d8bb86cd4ff8ec13dcc25c08d021d"
+        }
+      },
+      "warnings_reviewed": [
+        "Deliberate TLS handshake, incomplete 29-byte header and 189-byte body deadlines",
+        "Intentional managed HEAD403 and dirty external-content conflict",
+        "Post-authority-stop List/Connect TimedOut with Unopened socket and no HTTP milestones or I/O",
+        "LNK4199 ignored WinFsp delay-load in non-native binaries",
+        "Disposable VM locked fixture profiles: dummy credentials removed and profile deletion deferred to VM destruction",
+        "Git/toolchain and pinned action Node deprecation notices"
+      ],
+      "unexpected_positive_path_transport_failures": 0,
+      "scope": "Exact-source hosted Server2025/WinFsp and Linux native fixtures; no Wasabi, physical desktop/reboot or root-cause claim"
+    },
+    "artifacts": {
+      "directory": "/tmp/s3drive-pending-scan-64-artifacts",
+      "exit_code": 0,
+      "proof": [
+        {
+          "kind": "disposition",
+          "id": 12136403188,
+          "zip_sha256": "6b42ffb4d68be6c5b437bebcafd789c6711b526ec04ee556aabdcfbb4eafade4",
+          "json_sha256": "c053eb09ec22815a94be89f435ad0989eda25cd4da1bb55cc1f607a74c673497"
+        },
+        {
+          "kind": "replacement",
+          "id": 12136077616,
+          "zip_sha256": "4f6f2762dae310e04d2a6729226ce43a2743afcb7c7a123f3539d4e9cba6cf94",
+          "json_sha256": "7f1773300a8133eb914d0a0908edf1e136312784ee5eff4daa74b2cd6b3ba406"
+        }
+      ],
+      "strict_independent_check": [
+        {
+          "kind": "replacement",
+          "records": 21,
+          "source": "64aa073a6ecbfc6cc27739c6c767663143811ffd",
+          "sha256": "7f1773300a8133eb914d0a0908edf1e136312784ee5eff4daa74b2cd6b3ba406",
+          "strict_types_and_all_fields_match": true
+        },
+        {
+          "kind": "disposition",
+          "records": 14,
+          "source": "64aa073a6ecbfc6cc27739c6c767663143811ffd",
+          "sha256": "c053eb09ec22815a94be89f435ad0989eda25cd4da1bb55cc1f607a74c673497",
+          "strict_types_and_all_fields_match": true
+        }
+      ],
+      "project_oracles_passed": true,
+      "timestamp_check": [
+        {
+          "kind": "replacement",
+          "observed_at_utc": "2026-10-18T12:07:09Z",
+          "within_own_completed_job": true
+        },
+        {
+          "kind": "disposition",
+          "observed_at_utc": "2026-10-18T12:21:52Z",
+          "within_own_completed_job": true
+        }
+      ],
+      "own_source_and_run_only": true
+    },
+    "windows_native_scope": "Server2025/WinFsp2.1.25156:32 strict HTTPS flushes, full native disposition lifecycle/recovery,271 state and48 authority cases, ordinary-account snapshot/TLS/startup and paired recovery,broad7 native,own21replacement/14NTFSreference+4legacy probes passed. No unexplained positive-path transport failure. Snapshot cancellation15ms/5ms are individual observations, not a guarantee. Physical Win10/11/reboot/SSH and real provider remain unverified.",
+    "windows_native_acceptance": true,
+    "repeat": {
+      "run": 39127440399,
+      "url": "https://github.com/marshallr12/s3drive/actions/runs/39127440399",
+      "source": "64aa073a6ecbfc6cc27739c6c767663143811ffd",
+      "status": "completed",
+      "conclusion": "failure",
+      "jobs": [
+        {
+          "databaseId": 117675434589,
+          "name": "book",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "databaseId": 117675434721,
+          "name": "rust (windows-latest)",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "databaseId": 117675434731,
+          "name": "rust (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "observed_at_utc": "2026-10-18T13:04:36.776209+00:00",
+      "watch_session": 97242,
+      "watch_log": "/tmp/s3drive-pending-scan-repeat-watch.log",
+      "acceptance": false,
+      "publication": {
+        "source": "64aa073a6ecbfc6cc27739c6c767663143811ffd",
+        "primary_run": 39125456457,
+        "repeat_branch": "codex/pending-scan-repeat-64aa073",
+        "private_before_and_after": true,
+        "normal_new_branch_push": true,
+        "no_source_change": true,
+        "working_branch_unchanged": true,
+        "dirty_docs_preserved_sha256": {
+          "HANDOFF.md": "935e3cfa9901e8d168f54e5907a33aec4b6efc9ab2860597a51e7b66345f644f",
+          "docs/src/README.md": "0ec408ce66e5cbe78bdc4ab61d734f8f7571f2aaf8fa3315dd8d08f15be50f36",
+          "docs/src/evidence/exchange-progress-20261018.json": "3b6707f5fa6acc219efc62fabd925c0bc484794814992057d96125349224213c",
+          "docs/src/evidence/pending-scan-20261018.json": "7515e1c8fffb6356899f0635826b5251dd3959924d3b5a879a2988a9f569ce76",
+          "docs/src/implementation-plan.md": "9c8286e7c3a943c658ec3d47f065d0e6e6c2e8b36e4cf80ad9570b437c5bacdb",
+          "docs/src/managed-edits.md": "c58a51cc7c086bebef9310c95af4cce9b88cd8ec5c94e84bd9ad4837284c19fc",
+          "docs/src/owned-authority-client.md": "cc124ca817cc49d005a75257bf27cbe2ea1d2fb753bfff64e796e44e082c4005"
+        },
+        "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+        "no_native_fix_claim": true,
+        "at_utc": "2026-10-18T12:28:45.616788+00:00"
+      },
+      "raw_logs": {
+        "book": {
+          "path": "/tmp/s3drive-pending-scan-repeat-64-book.log",
+          "sha256": "f9100ccb6f924de5b8418f5eae8d4cad6728f231e05d1d14ad831a4b90ad245e",
+          "reviewed": true,
+          "scope": "58 links and mdBook build/test; standard Git hints, pinned Rust override and action Node deprecation notices"
+        },
+        "linux": {
+          "path": "/tmp/s3drive-pending-scan-repeat-64-linux.log",
+          "sha256": "b5d0e0ee14831b31b4606aae722736d196a1637ac62f5e69c448a04981a674b9",
+          "reviewed": true,
+          "scope": "276 state/48 authority,9 real native/32 HTTPS flushes,paired recovery and both no-systemd startup protocols; only controlled TLS/HEAD403/stopped Node/Connect refusals and standard tool/action notices"
+        },
+        "windows": {
+          "path": "/tmp/s3drive-pending-scan-repeat-64-windows.log",
+          "sha256": "8b0877b37bdb796d2b846b87829568d3ec5244baa3e6b635ba0b7ed5fc9336d0",
+          "reviewed_failure_section": true
+        }
+      },
+      "linux_native_acceptance": true,
+      "book_acceptance": true,
+      "success_checker_eligible": false,
+      "success_checker_executed": false,
+      "failure": {
+        "step": "Verify paired Windows managed startup and recovery",
+        "request": "Info",
+        "kind": "UnexpectedEof",
+        "body_frame_polled": false,
+        "owned_tcp": {
+          "client_port": 53632,
+          "server_port": 53628
+        },
+        "task_started_ms": 0,
+        "http_ready_ms": 162,
+        "request_queued_ms": 162,
+        "first_driver_poll_ms": 162,
+        "last_driver_poll_ms": 5258,
+        "driver_polls": 469,
+        "driver_succeeded": true,
+        "max_driver_poll_gap_ms": 57,
+        "read_polls": 469,
+        "read_pending_polls": 468,
+        "read_bytes": 0,
+        "write_polls": 0,
+        "written_bytes": 0,
+        "flush_polls": 468,
+        "server_connection": 4,
+        "server_http_ms": 5098,
+        "server_read_bytes": 0,
+        "server_dispatched": false,
+        "later_steps_skipped": [
+          "Windows deletion reference contract",
+          "broader Windows native acceptance"
+        ],
+        "interpretation": "Matched empty-header timeout while the client driver was actively polled; lack of driver polling is not established; no upload/commit/root-cause or fix inferred"
+      }
+    }
   },
   "remaining": [
-    "own source-bound native Linux/Windows/startup/reference gates and repeat",
+    "diagnose paired-startup transport failure; failed repeat is ineligible for success artifact verification",
     "historical Windows root cause unresolved",
     "retained ancestry/bytes/catalog costs remain",
     "large files/multipart/provider/multi-host/reboot/packaging not completed"
@@ -216,5 +477,65 @@
       "log": "/tmp/s3drive-pending-scan-final-test.log",
       "sha256": "97720c7cb99636bad850ae2bafc0123dc4924ad805a03b456dc108e32f1c6c90"
     }
+  },
+  "publication": {
+    "source": "64aa073a6ecbfc6cc27739c6c767663143811ffd",
+    "parent": "90a83571de346f3aeb092da749b96078a301704d",
+    "branch": "codex/pending-scan-proofs",
+    "private_before_and_after": true,
+    "normal_push": true,
+    "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+    "local_gate_exit_code": 0,
+    "client_local_read_proof_reuse": true,
+    "native_acceptance": false,
+    "native_failure_fixed": false,
+    "main_promotion_planned": false,
+    "at_utc": "2026-10-18T11:59:52.427849+00:00"
+  },
+  "post_native_observation_docs": {
+    "build": {
+      "log": "/tmp/s3drive-native-observation-20261018-book-build.log",
+      "exit_code": 0,
+      "sha256": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4"
+    },
+    "test": {
+      "log": "/tmp/s3drive-native-observation-20261018-book-test.log",
+      "exit_code": 0,
+      "sha256": "97720c7cb99636bad850ae2bafc0123dc4924ad805a03b456dc108e32f1c6c90"
+    }
+  },
+  "post_acceptance_and_range_docs": {
+    "doc-links": {
+      "log": "/tmp/s3drive-acceptance-range-doc-links.log",
+      "sha256": "f6028d02872e091a088a99380d476c03d0d0f09a0601480387c500f260d2f75b",
+      "exit_code": 0
+    },
+    "book-build": {
+      "log": "/tmp/s3drive-acceptance-range-book-build.log",
+      "sha256": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4",
+      "exit_code": 0
+    },
+    "book-test": {
+      "log": "/tmp/s3drive-acceptance-range-book-test.log",
+      "sha256": "97720c7cb99636bad850ae2bafc0123dc4924ad805a03b456dc108e32f1c6c90",
+      "exit_code": 0
+    },
+    "final_links": {
+      "exit_code": 0,
+      "log": "/tmp/s3drive-acceptance-range-final-links.log"
+    },
+    "final_build": {
+      "exit_code": 0,
+      "log": "/tmp/s3drive-acceptance-range-final-book.log"
+    }
+  },
+  "current_repository_policy": {
+    "visibility": "PUBLIC",
+    "user_decision_date": "2026-10-18",
+    "main_policy_commit": "1a93b5f7248892fec96dc8da4438ee7967692e77",
+    "runtime_candidate_promoted": false,
+    "historical_private_checks_are_not_current_policy": true,
+    "visibility_mutation_during_investigation": false,
+    "active_repeat_checker_requires_privacy": false
   }
 }

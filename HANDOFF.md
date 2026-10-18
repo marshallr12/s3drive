@@ -5,71 +5,132 @@ capability was available. Read this and docs/src/implementation-plan.md before
 implementation. Keep research/decisions/status/plans in docs/src/. Run the local
 gate with `bash scripts/gate.sh`; native/provider/recovery gates are separate.
 
-## Current pending-scan candidate and next action
+## Current repository visibility: PUBLIC (user decision, 2026-10-18)
 
-Current branch codex/owned-authority-client at privately pushed
-90a83571de346f3aeb092da749b96078a301704d. Main remains
-bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05. Goal ACTIVE.
-New client-local pending-scan proof reuse, tests and docs are uncommitted.
-No provider requests, schema/public API/dependency/overwrite/retry change.
+The user intentionally made marshallr12/s3drive public. Preserve that setting.
+This supersedes the initial private-repository request and every historical
+private-publication guard below. Never PATCH visibility or use repo-edit to
+restore privacy unless the user directly asks for that specific change.
+Read-only identity/visibility checks may report state; they must not repair it.
+The assistant's earlier commands DID set private=true on2026-10-17 at17:52:11Z
+and20:35:41Z; both returned success/private=true. Those were mistaken attempts
+to enforce the original request, not an identified autonomous GitHub rule.
+Current GitHub GET reports public. The rule was published to main as
+1a93b5f7248892fec96dc8da4438ee7967692e77 (four policy/docs files only), normal
+fast-forward frombf9509; docs links/build passed and public was read-only
+verified before/after. Proof /tmp/s3drive-public-visibility-policy-publication.json.
+No visibility or credential mutation was performed during this investigation.
+Do not reuse stale private-only publication guards as current policy. The active
+repeat checker now verifies identity/source/artifacts without requiring private.
+See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
+include main's policy commit; current HEAD9c14c996 already includes that rule.
 
-Parent90 exact-source CI39124027385 is live: Windows117665289707 disposition
-lifecycle; Linux117665289919 and book117665289879 terminal SUCCESS. Watch78734
-/tmp/s3drive-exchange-progress-hosted-watch.log. Completed raw Linux/book
-/tmp/s3drive-exchange-progress-90-{linux,book}.log reviewed. Linux48 authority,
-274 state/9 native/32flush/paired recovery and both no-systemd coordinator startup
-protocols passed. Its only production-path transport refusals are controlled
-stopped-authority Node/Connect with HTTP/I/O milestones absent. Windows32burst
-passed per completed workflow step, but later acceptance is not established.
-Poll exact run/source and retain terminal raw Windows; never restart on observation
-timeout. Diagnostics alone do not justify main promotion or a root-cause claim.
+## Current work: offline immutable multipart plans (2026-10-18)
 
-P6m4h measures and reduces redundant local journal read verification. Baseline
-32 settled32-byte generations:2,069,199 SQLite progress callbacks/~3.246sec.
-Candidate162,294/~0.350sec on this Linux/SQLite3.53.2 fixture, including progress
-instrumentation. The post-change reference uses current public validators and
-is not the exact legacy implementation; both measurement sets are retained.
-Private ReadProofs exist only for one synchronous owner read command: lazy full
-remote acknowledgment forest proof, compact roots, fully verified File keyed by
-(volume,node). Every logical row still loads/validates bytes/hash/conflict/receipt/
-ancestry before coverage/page filtering. Each requested full physical result is
-reloaded and bound to the verified root. No mutation/await/persistent proof cache.
+Branch codex/multipart-plans, HEAD9c14c996ca476304731a8ab3de072fd33862f77a,
+merges public-policy main1a93b5f into candidate64aa073. Main/origin-main remain
+1a93b5f (runtimebf9509 plus policy only). No owned-client runtime promotion.
+Implementation and carried observation/research docs are dirty and uncommitted;
+preserve them. The policy files are committed through the merge, not dirty copies.
 
-Focused4 logical tests16PASS/1 intentionally ignored study at
-/tmp/s3drive-pending-scan-focused4.log; final study EXIT0 at
-/tmp/s3drive-pending-scan-final-study.log. Full field/page/draft/reopen equivalence,
-SQL total_changes, same-node/different-volume isolation, covered/offpage and
-unrelated remote forest corruption, valid-rehashed foreign settlement/ancestry,
-and validly hashed forged logical receipt checks added. Omitting volume from the
-cache key made its negative control EXIT101 (3vs2 rows), then exact production
-source restored; proof /tmp/s3drive-pending-scan-key-negative.json. Initial study
-fixture reused IDs at hex10 due existing helper decimal parsing; explicit unique
-IDs fixed the fixture without weakening the production ownership constraint.
-Targeted Clippy1 passed before the last test-only controls. Final full gate1
-completed EXIT0 session79421 /tmp/s3drive-pending-scan-gate1.log:276 state passed,
-1 intentionally ignored study,48 authority,17 core and workspace/build/lint/58-doc
-book checks; frozen seven source/manifest hashes match and no warning/failure.
+New multipart.rs/tests and migration024 implement OFFLINE Frozen→Ready plans.
+Caller-supplied ID freezes exact sealed manifest, target/config/credential binding,
+original guard and ancestor state-hash receipt, explicit geometry and reserved
+plan/part quotas. Async prepare verifies/hashes <=1MiB per owner command and
+yields between commands; no metadata proof crosses commands. Private finalizer
+atomically saves all part/whole hashes and checks exact stored SQL effects before
+commit. Ready commits expected bytes, not current-media freshness or network
+permission. Re-prepare rehashes the same input. Current sealed retention keeps
+bytes; future GC/executor must respect references and verify send-range bytes.
 
-Read-only legacy review found no hidden read-path mutations or lost invariant.
-Two requested adversarial gaps were added; final read-only follow-up found no
-remaining blocker. Frozen seven
-source/manifest hashes and results: docs/src/evidence/pending-scan-20261018.json.
-Book discussion: docs/src/managed-edits.md. Next: normal guarded private push
-to new codex/pending-scan-proofs branch and inspect its own native acceptance. No Windows fix claim.
-No main promotion planned before actual native/reference/repeat evidence and
-resolution of transport reliability requirements. Larger files/multipart, approved
-managed Wasabi, multi-host/partitions, continuity/fencing, reboot/SSH and packaging
-remain full-goal work.
+Schema24 role/migration/snapshot checks move together; Windows snapshot helper
+expects24. Shared read-only legacy remote guard extraction preserves old error
+order and intent/state hashes. Existing8MiB single-PUT/managed/logical/native
+bounds stay unchanged. No upload IDs, target admission, send/completion/abort/
+flush permits, network calls or reclamation were added.
 
-Historical source47 CI39122239338 and parentea CI39120702390 are terminal
-Windows failures, not eligible for success artifact checkers or repeats. Source47
-ownedTCP client51322/server51021 matched server164 timeout5196ms/read0/bodyfalse;
-fresh CLI OriginalVolume844ms with both processes alive. Parentea broad
-empty.sync_all Info EOF matched client55617/server55607/server10/5120ms/read0.
-These failures remain in dated JSON. Mainbf9509 primary/repeat accepted only its
-scoped unchanged source. Preserve every original unknown identity and dirty byte.
-Previous handoff retained byte-identically at
-`docs/archive/HANDOFF-before-pending-scan-20261018.md`.
+Final focused5 EXIT0 /tmp/s3drive-multipart-plan-focused5.log:16PASS, including
+real process kills at5 boundaries, SQLITE_FULL, sparse/inherited/nonaligned
+parts,16MiB async owner interleaving, independent quota/extent caps, bounded
+malformed cells, exact schema23 legacy hashes/collision rollback, both new-table
+authority exclusions and6 ignored/deleted/corrupted SQL trigger controls.
+Read-only multipart_contract_review found atomicity gap closed and no new blocker.
+First state regression284PASS/2FAIL/1ignored exposed synthetic lowered-schema
+fixtures retaining new tables; corrected fixtures, no weakened production checks.
+Gate1 failed only Clippy drop_non_drop; fixed test lexical scope. Gate2 EXIT0,
+291state/1ignored but started before final atomicity fix/test; SUPERSEDED, not
+final-source acceptance. Frozen29 source hashes:
+/tmp/s3drive-multipart-plan-frozen-source.json and dated evidence below.
+
+Final full gate3 EXIT0 session70024 /tmp/s3drive-multipart-plan-gate3.log:
+292state/1ignored,48authority,17core and workspace/build/lint/book checks passed;
+no warnings/errors and all29 frozen source hashes still match. Log SHA256
+13e970aaaafccefc03b300d20b8b9dfbef29c653f045270e7aa3332d83289634.
+Result /tmp/s3drive-multipart-plan-gate3-result.json. This supersedes gate2.
+
+NEXT: record final result in docs, run their link/build/test checks, inspect scope,
+commit/push codex/multipart-plans normally with PUBLIC read-only checks. Prepared
+explicit40-file scope /tmp/s3drive-multipart-plan-publication-plan.json.
+Require source-bound hosted acceptance; never borrow64/90 artifacts. Do not
+promote runtime to main while transport reliability remains unresolved.
+Book: docs/src/multipart-plan.md and implementation-plan.md.
+Evidence: docs/src/evidence/multipart-plans-20261018.json.
+
+## Previous64 acceptance: primary passed, exact repeat FAILED
+
+Primary64aa073 CI39125456457 passed Linux/Windows/book and its OWN strict21
+replacement/14NTFSdisposition artifacts. Completed raw logs/API ZIP digests/
+field/type/project oracles/timestamps reviewed and closed. Marker
+/tmp/s3drive-pending-scan-64-raw-reviewed.json; checker EXIT0
+/tmp/s3drive-pending-scan-64-artifact-check.log. All scoped details retained in
+pending-scan-20261018.json; never infer a transport fix from this primary pass.
+
+Source-identical repeat CI39127440399 is terminal FAILURE at exact64aa073.
+Windows117675434721 failed paired startup; Linux117675434731 and book117675434589
+succeeded. Current GitHub state reverified. Raw completed logs:
+/tmp/s3drive-pending-scan-repeat-64-{windows,linux,book}.log. Linux/book reviewed;
+Windows failure section reviewed. Earlier Windows workspace271state,32 HTTPS
+flushes, standalone startup/snapshot and lifecycle passed, but later14disposition
+reference and broad native were skipped. SUCCESS checker is INELIGIBLE and must
+not run. Do not create a success raw-review marker or use partial artifacts as a
+complete cohort. Prepared /tmp/s3drive-check-pending-scan-repeat-64.py remains
+unexecuted. No restart/repeat is needed merely to erase the failure.
+
+Matched failing Info exchange: client53632/server53628/server connection4;
+469 driver polls, maxgap57ms,468 Pending reads,0readbytes,0writepolls/bytes,
+468flushpolls; driver_succeeded=true. Server HttpTimeout5098ms/read0/write0/
+dispatchedfalse. This disproves a claim that the driver simply never polled;
+HTTP/TLS/scheduler/root cause remains unresolved. Fresh child install identity
+refusal/worker panic are observations, not established root cause.
+Historical source47/parentea failures remain retained; source90 had one passing
+cohort without same-source repeat. Runtime mainbf9509 retains its accepted
+primary39113628548/repeat39115395230 scoped checkpoint. Never reuse another
+source/run's acceptance artifacts.
+
+Pending-scan optimization reuses proofs only within one synchronous owner read;
+32-row study callbacks2,069,199→162,294, no fixed latency guarantee. Source64
+isolated staged-range study passed16/32/64MiB exact hashes/reopen/unchanged read
+SQL state.16MiB at16/64/256extents took11,610/36,162/134,370 progress callbacks.
+Its final test source/log/Clippy archive is
+ docs/src/evidence/staged-range-study-20261018.tar.gz,
+SHA2564d19af5c5c5da8389a315ef54eb6c07f7966172d49d54f2575e40d6de3797b88.
+Payload step bounds do not remove repeated manifest or global catalog scans.
+
+## Remaining full-goal requirements
+
+Resolve Windows transport reliability; implement multipart executor uncertainty,
+streamed native large-file edits and later reference-aware GC; obtain fresh
+concrete Wasabi approval (all14 earlier PUT attempts exhausted). Preserve exact
+unknown identities/conflicts/dirty bytes. No real provider calls in this phase.
+Managed live Wasabi, independent hosts/partitions, restore/continuity/fencing,
+physical Win10/11/MX reboot/real SSH+tmux, application workflows and packaging/
+licensing remain incomplete. Local FUSE is blocked by workstation privilege
+constraints; hosted mounts are separate evidence. No user startup/hosting/Turso
+service installed. Goal remains ACTIVE.
+
+Previous current-state handoff is archived at
+`docs/archive/HANDOFF-before-multipart-plans-20261018.md`; historical live/privacy
+statements there and below are superseded, not instructions to mutate visibility.
 
 ### Historical e00 study checkpoint (superseded closure control)
 

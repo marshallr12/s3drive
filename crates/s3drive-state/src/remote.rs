@@ -296,79 +296,14 @@ impl<'a> Journal<'a> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let mut count = 0;
-        let mut anchor = None;
-        scan(&tx, |info| {
-            count += 1;
-            if same_locator(&info.target, &generation_data.target) {
-                if info.phase.blocks() {
-                    return Err(Failure::TargetBlocked.into());
-                }
-                if info.target != generation_data.target {
-                    return Err(Failure::BindingMismatch.into());
-                }
-                if info.phase == Phase::Verified
-                    && anchor
-                        .as_ref()
-                        .is_none_or(|old: &Info| info.generation > old.generation)
-                {
-                    anchor = Some(info.clone());
-                }
-            }
-            Ok(())
-        })?;
-        if count >= self.options.max_records {
+        let history = preparation_history(&tx, &generation_data)?;
+        if history.count >= self.options.max_records {
             return Err(Failure::QuotaExceeded.into());
         }
-        // Another credential generation's local bytes need explicit rebinding,
-        // including when they have not yet reached the remote journal.
-        let mut heads = tx.prepare("SELECT generation_id FROM staged_heads NOT INDEXED")?;
-        let mut rows = heads.query([])?;
-        while let Some(row) = rows.next()? {
-            let other = journal::load(&tx, GenerationId::from_database(row.get(0)?)?)?;
-            if same_locator(&other.target, &generation_data.target)
-                && other.target != generation_data.target
-            {
-                return Err(Failure::BindingMismatch.into());
-            }
-        }
-        drop(rows);
-        drop(heads);
-        if journal::current_head(&tx, &generation_data.target)? != Some(generation) {
-            return Err(Failure::StaleGeneration.into());
-        }
-        let current = journal::load(&tx, generation)?;
-        if current.manifest_hash != generation_data.manifest_hash {
-            return Err(Failure::Corrupt.into());
-        }
-        let (guard, anchor_id, anchor_receipt) = if let Some(anchor) = anchor {
-            if anchor.generation >= generation
-                || !ancestor(&tx, &generation_data, anchor.generation)?
-            {
-                return Err(Failure::Corrupt.into());
-            }
-            (
-                Guard::Match(
-                    anchor
-                        .revision
-                        .as_ref()
-                        .ok_or(Failure::Corrupt)?
-                        .etag
-                        .clone(),
-                ),
-                Some(anchor.operation),
-                Some(anchor.state_hash),
-            )
-        } else {
-            let guard = match &generation_data.base {
-                Base::Missing => Guard::Missing,
-                Base::Existing {
-                    etag: Some(tag), ..
-                } if valid_etag(tag) => Guard::Match(tag.clone()),
-                _ => return Err(Failure::InvalidInput.into()),
-            };
-            (guard, None, None)
-        };
+        let selected = preparation_base(&tx, &generation_data, history)?;
+        let guard = selected.guard;
+        let anchor_id = selected.anchor.map(OperationId);
+        let anchor_receipt = selected.anchor_receipt;
         let mut info = Info {
             operation: OperationId(operation),
             generation,
@@ -599,6 +534,151 @@ pub(crate) fn recover_interrupted(state: &mut State) -> Result<()> {
     tx.commit()?;
     Ok(())
 }
+/// Read-only extraction shared by single PUT and offline multipart planning.
+/// Keeping history and base selection separate preserves the legacy quota/error
+/// order. Neither helper grants target ownership or permission to send.
+pub(crate) struct PreparationHistory {
+    pub count: u32,
+    anchor: Option<Info>,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct PreparedBase {
+    pub guard: Guard,
+    pub anchor: Option<[u8; 32]>,
+    pub anchor_receipt: Option<[u8; 32]>,
+}
+pub(crate) fn preparation_history(
+    connection: &Connection,
+    generation_data: &journal::Generation,
+) -> Result<PreparationHistory> {
+    let mut count = 0;
+    let mut anchor = None;
+    scan(connection, |info| {
+        count += 1;
+        if same_locator(&info.target, &generation_data.target) {
+            if info.phase.blocks() {
+                return Err(Failure::TargetBlocked.into());
+            }
+            if info.target != generation_data.target {
+                return Err(Failure::BindingMismatch.into());
+            }
+            if info.phase == Phase::Verified
+                && anchor
+                    .as_ref()
+                    .is_none_or(|old: &Info| info.generation > old.generation)
+            {
+                anchor = Some(info.clone());
+            }
+        }
+        Ok(())
+    })?;
+    Ok(PreparationHistory { count, anchor })
+}
+pub(crate) fn preparation_base(
+    connection: &Connection,
+    generation_data: &journal::Generation,
+    history: PreparationHistory,
+) -> Result<PreparedBase> {
+    let anchor = history.anchor;
+    // Another credential generation's local bytes need explicit rebinding,
+    // including when they have not yet reached the remote journal.
+    let mut heads = connection.prepare("SELECT generation_id FROM staged_heads NOT INDEXED")?;
+    let mut rows = heads.query([])?;
+    while let Some(row) = rows.next()? {
+        let other = journal::load(connection, GenerationId::from_database(row.get(0)?)?)?;
+        if same_locator(&other.target, &generation_data.target)
+            && other.target != generation_data.target
+        {
+            return Err(Failure::BindingMismatch.into());
+        }
+    }
+    drop(rows);
+    drop(heads);
+    if journal::current_head(connection, &generation_data.target)? != Some(generation_data.id) {
+        return Err(Failure::StaleGeneration.into());
+    }
+    let current = journal::load(connection, generation_data.id)?;
+    if current.manifest_hash != generation_data.manifest_hash {
+        return Err(Failure::Corrupt.into());
+    }
+    let (guard, anchor_id, anchor_receipt) = if let Some(anchor) = anchor {
+        if anchor.generation >= generation_data.id
+            || !ancestor(connection, generation_data, anchor.generation)?
+        {
+            return Err(Failure::Corrupt.into());
+        }
+        (
+            Guard::Match(
+                anchor
+                    .revision
+                    .as_ref()
+                    .ok_or(Failure::Corrupt)?
+                    .etag
+                    .clone(),
+            ),
+            Some(anchor.operation.0),
+            Some(anchor.state_hash),
+        )
+    } else {
+        let guard = match &generation_data.base {
+            Base::Missing => Guard::Missing,
+            Base::Existing {
+                etag: Some(tag), ..
+            } if valid_etag(tag) => Guard::Match(tag.clone()),
+            _ => return Err(Failure::InvalidInput.into()),
+        };
+        (guard, None, None)
+    };
+    Ok(PreparedBase {
+        guard,
+        anchor: anchor_id,
+        anchor_receipt,
+    })
+}
+/// Revalidate the original selection; never choose a newer guard on resume.
+pub(crate) fn validate_prepared_base(
+    connection: &Connection,
+    generation: &journal::Generation,
+    base: &PreparedBase,
+) -> Result<()> {
+    match (base.anchor, base.anchor_receipt) {
+        (Some(operation), Some(receipt)) => {
+            let anchor = load_operation(connection, OperationId(operation))?;
+            if anchor.phase != Phase::Verified
+                || anchor.target != generation.target
+                || anchor.generation >= generation.id
+                || anchor.state_hash != receipt
+                || !ancestor(connection, generation, anchor.generation)?
+                || base.guard
+                    != Guard::Match(
+                        anchor
+                            .revision
+                            .as_ref()
+                            .ok_or(Failure::Corrupt)?
+                            .etag
+                            .clone(),
+                    )
+            {
+                return Err(Failure::Corrupt.into());
+            }
+        }
+        (None, None) => {
+            let expected = match &generation.base {
+                Base::Missing => Guard::Missing,
+                Base::Existing {
+                    etag: Some(tag), ..
+                } if valid_etag(tag) => Guard::Match(tag.clone()),
+                _ => return Err(Failure::Corrupt.into()),
+            };
+            if base.guard != expected {
+                return Err(Failure::Corrupt.into());
+            }
+        }
+        _ => return Err(Failure::Corrupt.into()),
+    }
+    Ok(())
+}
+
 fn payload(state: &mut State, id: GenerationId) -> Result<(journal::Generation, [u8; 32])> {
     let j = journal::Journal::new(state, journal::Options::default())?;
     let info = j.info(id)?;
