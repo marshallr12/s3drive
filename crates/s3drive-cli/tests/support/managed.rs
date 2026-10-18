@@ -767,6 +767,39 @@ pub async fn child() {
                         )
                         .await
                     }
+                    "rename-guarded" => {
+                        let volume = info(&w).await;
+                        let mut guards = Vec::new();
+                        for n in [11, 10] {
+                            let Reply::Node(node) = w
+                                .request(&Request::Node {
+                                    volume: volume.id.clone(),
+                                    node: id(n),
+                                })
+                                .await
+                                .unwrap()
+                            else {
+                                panic!("guarded rename node")
+                            };
+                            guards.push(s3drive_authority::NodeGuard {
+                                id: node.id,
+                                revision: node.revision,
+                            });
+                        }
+                        change(
+                            &w,
+                            3041,
+                            Mutation::MoveEntry {
+                                node: guards[0].clone(),
+                                source_parent: guards[1].clone(),
+                                parent: guards[1].clone(),
+                                name: MOVED.into(),
+                                destination: None,
+                                destination_removal: None,
+                            },
+                        )
+                        .await;
+                    }
                     "update" => publish(&root, &w, "first", 200, 11, 1040, &data(1)).await,
                     _ => panic!("unknown producer command"),
                 }
@@ -2472,4 +2505,39 @@ pub async fn native_lifecycle() {
 #[cfg(target_os = "linux")]
 pub async fn native_supervised_startup() {
     startup::native().await;
+}
+
+pub async fn portable_supervised_startup_preparation() {
+    let f = Fixture::start().await;
+    let tmp = tempfile::tempdir().unwrap();
+    let (h, service) = Harness::new_options(tmp.path(), &f, true, true).await;
+    h.configure_bootstrap(true, false).await;
+    let c = cfg(&h.config);
+    assert_eq!(c.version, 6);
+    assert_eq!(info(&wire(&c)).await.name_policy, "portable-collision-v1");
+    assert!(
+        c.managed
+            .as_ref()
+            .unwrap()
+            .authority
+            .starts_with("https://")
+    );
+    let before = puts(&f);
+    let mut producer = Producer::start(&h).await;
+    producer.send("rename-guarded").await;
+    let Reply::Node(node) = wire(&c)
+        .request(&Request::Node {
+            volume: service.volume.clone(),
+            node: id(11),
+        })
+        .await
+        .unwrap()
+    else {
+        panic!("renamed node")
+    };
+    assert_eq!(node.name, MOVED);
+    assert_eq!(node.id, id(11));
+    assert_eq!(puts(&f), before, "guarded metadata rename moved S3 bytes");
+    producer.stop().await;
+    service.stop().await;
 }

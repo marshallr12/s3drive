@@ -733,3 +733,8 @@ checks dirty bytes and rival conflicts, and proves independent removal. Its
 controller starts before descriptors exist to avoid test-induced Unix-fork flush
 callbacks. Local compile/lint passed; hosted native execution and paired Windows
 acceptance are pending. This adds acceptance coverage, not a completed phase.
+
+The first paired Linux native attempt failed during writable bootstrap because
+the fixture selected exact naming. It now uses the required portable naming and
+a guarded producer rename; an ordinary live HTTPS preparation test passed.
+Native startup/recovery remains unverified until the corrected case runs.

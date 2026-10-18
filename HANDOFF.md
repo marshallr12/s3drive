@@ -109,8 +109,28 @@ and clippy2.log; the second includes added logical publication/reservation
 identity and actual immutable fixture-object body assertions. Python3.11 syntax
 passed. /tmp/s3drive-authority-paired-gate1.log is running in exec72043; its
 Rust test compile preceded those additional ignored-native assertions, so a
-final complete gate remains required after platform work. Native outcome still
-pending; NoNewPrivs1 reverified.
+final complete gate remains required after platform work. That gate1 has now
+completed exit0; the final extra ignored-native assertions were separately
+compiled/linted. Paired checkpoint d67a17dc4b2e61aa5cb135226f99e156630ec9bb
+was privately pushed; run39084297874 is live. Source review then corrected its
+fixture-body lookup to include the configured bucket/source prefix: remote
+journal object_key is relative, as reader::scoped_key proves. Formatting and
+/tmp/s3drive-authority-paired-key-clippy.log passed after the correction. Native
+outcome is still pending; NoNewPrivs1 reverified. The older be0d996 Windows job
+has reached cache save after its native tests; terminal status/log inspection
+still required. No phase publication and no paired Windows proof yet.
+
+Run39084297874 Linux117547531601 FAILED the new native case before startup:
+CLI writable configure refuses exact-utf8-v1. All seven previous native cases
+passed. Raw log /tmp/s3drive-authority-paired-linux1.log. Corrected fixture to
+portable-collision-v1 and added Producer rename-guarded using current NodeGuard
+revisions/MoveEntry. New ordinary managed_native preparation case passed at
+/tmp/s3drive-authority-paired-preparation1.log, proving the actual HTTPS writable
+CLI setup and guarded rename without claiming FUSE. Prefix correction described
+above remains part of this corrective checkpoint. Windows from the failed-Linux
+run is still live; don't restart/cancel it on a poll timeout. The test service,
+actual paired native checks and Windows coordinator runtime still need reruns.
+
 Require final full local gate and exact-source hosted/native/reference/startup
 checks before phase publication, including new paired Windows acceptance.
 No user startup installation, host/account provisioning or new Wasabi mutation.

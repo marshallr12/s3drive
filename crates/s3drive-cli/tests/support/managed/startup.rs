@@ -148,7 +148,7 @@ fn attempts(h: &Harness) -> Vec<Attempt> {
 pub(super) async fn native() {
     let f = Fixture::start().await;
     let tmp = tempfile::tempdir().unwrap();
-    let (h, service) = Harness::new_options(tmp.path(), &f, false, true).await;
+    let (h, service) = Harness::new_options(tmp.path(), &f, true, true).await;
     h.configure_bootstrap(true, false).await;
     let mut producer = Producer::start(&h).await;
     let mut startup = Controller::start(&h, service).await;
@@ -212,8 +212,11 @@ pub(super) async fn native() {
         logical,
         "logical request identity changed during recovery"
     );
+    let source_config = cfg(&h.config);
+    let source = &source_config.sources[0];
     assert_eq!(
-        f.objects.lock().unwrap()[&format!("/test-bucket/{}", after[0].key)].0,
+        f.objects.lock().unwrap()[&format!("/{}/{}{}", source.bucket, source.prefix, after[0].key)]
+            .0,
         expected,
         "actual immutable S3 fixture bytes differ from local cache"
     );
@@ -227,7 +230,7 @@ pub(super) async fn native() {
         .write(true)
         .open(&path)
         .unwrap();
-    producer.send("rename").await;
+    producer.send("rename-guarded").await;
     file.seek(SeekFrom::Start(0)).unwrap();
     file.write_all(b"dirty conflict").unwrap();
     let mut local = Vec::new();

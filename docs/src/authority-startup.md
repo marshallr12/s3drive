@@ -285,3 +285,43 @@ Local all-target Clippy and Python syntax checks passed. Native outcome remains
 pending on hosted Linux: this workstation still has `NoNewPrivs: 1`, which must
 not be bypassed. Neither this candidate nor the standalone Windows coordinator
 test replaces the required paired native Windows acceptance.
+
+
+## Remaining paired Windows implementation plan
+
+Proposal: reuse the same disposable-account harness, with a separate writable
+managed mount registration alongside its Authority registration. Prepare both
+source policy/plan/report fixtures against the owned loopback S3 server, copy
+those inputs without credentials, and rebase only local path fields inside the
+ordinary account. That account must create its own private TLS/SQLite files,
+bootstrap and pin the service, register stores through the production CLI,
+publish the Unicode/binary/empty seed, and generate a separate managed journal.
+Secondary-logon Rust clients must receive explicit paths to the fixture account's
+dummy profile; the scheduled daemon must independently load that same account.
+
+Use the existing credential pipe for each registration. Track both task names
+and exact actions for failure cleanup; remove owner-private metadata as its
+owner before deleting the disposable account. A metadata-only receipt check or
+an empty mounted namespace cannot satisfy the paired-drive criterion.
+
+A native FileStream must keep dirty bytes through an exact-owned-child
+coordinator crash and real scheduler retry. Inject an owned fixture's lost PUT
+reply, inspect the original operation/publication identities, restore observation
+and require exact recovery without another PUT. A rival publisher must produce
+an explicit retained conflict, with dirty bytes surviving mount removal and
+journal reopening. Stop/remove the drive while proving authenticated coordinator
+access still works, then remove only the authority registration and verify its
+original database remains. Keep provider credentials, system certificate stores,
+real login startup and hosting provisioning outside this disposable acceptance.
+
+
+The first paired native run at `d67a17d` failed before startup registration:
+[Linux job117547531601](https://github.com/marshallr12/s3drive/actions/runs/39084297874/job/117547531601)
+reported that writable CLI bootstrap requires `portable-collision-v1`. The
+fixture now selects that policy and uses `MoveEntry` with current node/parent
+revision guards for the rival rename. A new portable preparation test exercises
+that exact HTTPS bootstrap and guarded rename; it passed locally. This catches
+setup regressions without claiming OS-mount acceptance. Source inspection also
+corrected the actual-object assertion: the journal key is relative, so fixture
+lookup must prepend the configured bucket and source prefix. Native rerun is
+still required; the first failed run proves no paired mount or recovery success.

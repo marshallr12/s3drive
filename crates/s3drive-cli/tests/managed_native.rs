@@ -34,3 +34,8 @@ async fn managed_namespace_moves_replacements_and_retained_unlinked_views() {
 async fn bootstrap_preserves_existing_state_and_refuses_out_of_scope_default_store() {
     managed::bootstrap_write_refusals().await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn paired_startup_preparation_requires_portable_https_and_guarded_rename() {
+    managed::portable_supervised_startup_preparation().await;
+}
