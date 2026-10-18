@@ -307,6 +307,95 @@ async fn tls_cli_fresh_processes_and_reused_clients_preserve_exact_receipts() {
     );
 }
 
+// Only the two complete Info calls in the isolated fault fixture can occupy
+// connection ordinals 4/5. This is fixture-order attribution, not independently
+// observed success-path client socket identity. Never use this as replay proof.
+fn completed_info_shutdown(
+    event: &str,
+    server_port: u16,
+    injected: &[s3drive_authority::LoopbackSocket],
+) -> Option<u64> {
+    if !event.starts_with("authority TLS connection failure: HttpShutdown ") {
+        return None;
+    }
+    let counter = |key: &str| {
+        let prefix = format!("{key}=");
+        let mut values = event
+            .split_whitespace()
+            .filter_map(|part| part.strip_prefix(&prefix));
+        let n = values.next()?.parse::<u64>().ok()?;
+        values.next().is_none().then_some(n)
+    };
+    let number = counter("connection")?;
+    if !matches!(number, 4 | 5)
+        || ["read_bytes", "written_bytes", "flushes"]
+            .iter()
+            .any(|key| !counter(key).is_some_and(|n| n > 0))
+    {
+        return None;
+    }
+    let (_, tag) =
+        event.split_once(" loopback=Some(LoopbackSocket { ipv6: false, client_port: ")?;
+    let (client, rest) = tag.split_once(", server_port: ")?;
+    let server = rest.strip_suffix(" }) dispatched=true")?;
+    let socket = s3drive_authority::LoopbackSocket {
+        ipv6: false,
+        client_port: client.parse().ok()?,
+        server_port: server.parse().ok()?,
+    };
+    (socket.client_port != 0 && socket.server_port == server_port && !injected.contains(&socket))
+        .then_some(number)
+}
+
+#[test]
+fn completed_info_shutdown_rejects_other_connections_and_incomplete_exchange_shapes() {
+    let event = "authority TLS connection failure: HttpShutdown connection=5 http_ms=4 read_bytes=243 written_bytes=246 flushes=2 loopback=Some(LoopbackSocket { ipv6: false, client_port: 1234, server_port: 4321 }) dispatched=true";
+    assert_eq!(completed_info_shutdown(event, 4321, &[]), Some(5));
+    assert_eq!(
+        completed_info_shutdown(&event.replace("connection=5", "connection=4"), 4321, &[]),
+        Some(4)
+    );
+    for (from, to) in [
+        ("HttpShutdown", "HttpTransport"),
+        ("HttpShutdown", "HttpTimeout"),
+        ("connection=5", "connection=3"),
+        ("connection=5", "connection=6"),
+        ("read_bytes=243", "read_bytes=0"),
+        ("written_bytes=246", "written_bytes=0"),
+        ("flushes=2", "flushes=0"),
+        ("flushes=2", "flushes=2 flushes=3"),
+        ("client_port: 1234", "client_port: 0"),
+        ("server_port: 4321", "server_port: 4322"),
+        ("ipv6: false", "ipv6: true"),
+        ("dispatched=true", "dispatched=false"),
+    ] {
+        assert_eq!(
+            completed_info_shutdown(&event.replace(from, to), 4321, &[]),
+            None
+        );
+    }
+    assert_eq!(
+        completed_info_shutdown(
+            "authority TLS: further connection diagnostics suppressed",
+            4321,
+            &[]
+        ),
+        None
+    );
+    assert_eq!(
+        completed_info_shutdown(
+            event,
+            4321,
+            &[s3drive_authority::LoopbackSocket {
+                ipv6: false,
+                client_port: 1234,
+                server_port: 4321,
+            }]
+        ),
+        None
+    );
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn tls_cli_diagnostics_distinguish_idle_partial_headers_and_partial_body_privately() {
     use std::sync::Arc;
@@ -386,14 +475,22 @@ async fn tls_cli_diagnostics_distinguish_idle_partial_headers_and_partial_body_p
         });
     }
     let w = wire(&server.endpoint, Some(cert.pem().as_bytes()));
-    assert_eq!(info(&w).await.sequence, 0);
+    let before = info(&w).await;
+    assert_eq!(
+        (before.id.as_str(), before.sequence),
+        (server.volume.as_str(), 0)
+    );
     let mut peer_failures = Vec::new();
     while let Some(result) = peers.join_next().await {
         if let Err(error) = result {
             peer_failures.push(error);
         }
     }
-    assert_eq!(info(&w).await.sequence, 0);
+    let after = info(&w).await;
+    assert_eq!(
+        (after.id.as_str(), after.sequence),
+        (server.volume.as_str(), 0)
+    );
     let log = server.stop().await;
     assert!(
         peer_failures.is_empty(),
@@ -401,9 +498,9 @@ async fn tls_cli_diagnostics_distinguish_idle_partial_headers_and_partial_body_p
     );
     let events: Vec<_> = log
         .lines()
-        .filter(|l| l.starts_with("authority TLS connection failure:"))
+        .filter(|l| l.starts_with("authority TLS"))
         .collect();
-    assert_eq!(events.len(), 3, "{log}");
+    let mut consumed = vec![false; events.len()];
     for (count, dispatched, kind) in [
         (0, false, "HttpTimeout"),
         (partial_header.len(), false, "HttpTimeout"),
@@ -414,18 +511,32 @@ async fn tls_cli_diagnostics_distinguish_idle_partial_headers_and_partial_body_p
             .find(|(length, _)| *length == count)
             .unwrap()
             .1;
-        assert_eq!(
-            events
-                .iter()
-                .filter(|l| l.contains(&format!("failure: {kind} "))
+        let matches: Vec<_> = events
+            .iter()
+            .enumerate()
+            .filter(|(_, l)| {
+                l.starts_with(&format!("authority TLS connection failure: {kind} "))
                     && l.split_whitespace()
                         .any(|s| s == format!("read_bytes={count}"))
                     && l.contains(&format!("loopback=Some({socket:?})"))
-                    && l.ends_with(&format!("dispatched={dispatched}")))
-                .count(),
-            1,
-            "{log}"
-        );
+                    && l.ends_with(&format!("dispatched={dispatched}"))
+            })
+            .map(|(i, _)| i)
+            .collect();
+        assert_eq!(matches.len(), 1, "{log}");
+        consumed[matches[0]] = true;
+    }
+    let injected: Vec<_> = sockets.iter().map(|(_, socket)| *socket).collect();
+    let mut completed_connections = std::collections::BTreeSet::new();
+    for (i, event) in events.iter().enumerate() {
+        if !consumed[i] {
+            let number = completed_info_shutdown(event, endpoint.port().unwrap(), &injected)
+                .unwrap_or_else(|| panic!("unclassified exchange failure:\n{log}"));
+            assert!(
+                completed_connections.insert(number),
+                "duplicate shutdown:\n{log}"
+            );
+        }
     }
     for private in [
         "never-log-this",

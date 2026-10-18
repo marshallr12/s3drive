@@ -7,9 +7,74 @@ gate with `bash scripts/gate.sh`; native/provider/recovery gates are separate.
 
 ## Accepted checkpoint and first action
 
-Current branch: codex/owned-http1-probe, based on b793ea5. Preserve existing
-post-push docs plus new Cargo feature declaration/test-only owned_exchange.rs,
-implementation plan and docs/src/evidence/owned-http1-study-20261018.json.
+Current branch: codex/owned-http1-close, based on e00b5e7. Source changes are
+not committed/pushed yet. Goal remains ACTIVE. A required pre-rewrite review
+found an untested TLS close_notify boundary in the test-only study. New gated
+shutdown control failed old logic EXIT101 (/tmp/s3drive-owned-close-before.log),
+then revised final focused9 controls passed EXIT0 (/tmp/s3drive-owned-close-
+focused2.log). Clean successful TLS peer read==Ok(0) now rejects missing-alert
+EOF/reset. Complete framed replies survive cleanup failure/expiry; unfinished
+replies still time out. One absolute10sec budget starts before TCP/TLS and
+covers driver cleanup, with no detached driver/retry. The delayed6sec-response
+control holds shutdown and rejects a fresh10sec cleanup budget via14sec watchdog.
+Read-only reviewer found no remaining load-bearing issue in this scoped revision.
+No production WireClient/routing/config/dependency/lock change or provider call.
+
+First full gate /tmp/s3drive-owned-close-gate1.log is terminal EXIT1: doc link
+checked before the new evidence JSON was created. Its earlier Rust iteration
+also discarded a complete reply at cleanup expiry and is superseded. Final combined full gate3 completed EXIT0 session11113,
+/tmp/s3drive-owned-close-gate3.log: owned9, authority7unit/10HTTP/9TLS,
+CLI restart9, core17/state274, workspace/build/lint and57-doc book. Frozen
+source fingerprints /tmp/s3drive-owned-close-frozen-source.json match.
+Hosted closure/native acceptance remains. See remote-authority.md,
+implementation-plan.md and evidence/owned-http1-close-20261018.json. Preserve all
+existing dirty docs, including multipart terminal failure and e00 observations.
+
+b793 CI39117793980 is now terminal FAILURE: Windows117647008136 broad native
+existing-file write failed Info/Request/UnexpectedEof/native1117, bodyfalse;
+candidate/error loopback client64582/server64551 matches empty server24,
+HttpTimeout5044/read0/write0/flush1/dispatchedfalse. Earlier32-flush, lifecycle,
+workspace and paired recovery passed; final broader6PASS/1FAIL. Linux/book passed.
+Completed raw /tmp/s3drive-multipart-b793-windows.log reviewed. DO NOT RUN the
+success-only b793 checker or promote; main remainsbf9509. Dated sizing JSON has
+terminal evidence. e00 CI39119010538 is terminal FAILURE: Windows workspace diagnostic fixture
+expected3 events but saw the3 controlled faults plus positive/dispatched
+HttpShutdown connection5/read243/write246/flush2 after both typed Info replies.
+Owned7 passed twice,32 native flushes/lifecycle/startup passed; later gates
+skipped. Linux/book terminal SUCCESS. Required narrow fixture correction must
+retain exact controlled socket counts/categories/privacy and reject all other
+I/O; it is not the original EOF cause. Completed raw /tmp/s3drive-owned-e00-{linux,book}.log retained;
+Linux owned7 and native9/32flush/startup passed. Still unchanged production client.
+
+The diagnosed e00 mixed-fault fixture is now corrected locally: two full Info
+replies must match original volume+seq0; exactly3 injected socket/category/byte/
+dispatch events remain; only optional distinct complete Info shutdown IDs4/5
+with positive counters and correct non-injected loopback metadata are allowed.
+Every authority TLS line is checked; suppression/unknown/duplicate events fail.
+Focused validator negatives passed EXIT0 /tmp/s3drive-owned-close-classifier.log.
+No production API/transport change. Final combined gate3 includes this revision and passed EXIT0. Earlier gate2
+completed EXIT0 on final closure logic but preceded this fixture correction,
+so it is superseded for combined acceptance.
+
+Next: publish the locally gated substantive closure source privately,
+and check its own hosted controls. Then implement the production carryover audit,
+including complete-reply retention under caller deadline and truthful direct-I/O
+diagnostics, followed by native/reference/startup gates and same-source repeat.
+Do not substitute the prototype or passing arithmetic for production reliability.
+
+### Historical e00 study checkpoint (superseded closure control)
+
+Historical branch: codex/owned-http1-probe at
+e00b5e7d3c6b84aaedc93bd73b213af969f6d26f, normally pushed privately with
+source/ref/privacy-before-and-after guards. Proof /tmp/s3drive-owned-http1-publication.json.
+Post-push HANDOFF/study JSON updates are intentionally dirty; preserve for the
+next substantive phase. No docs-only native CI cycle.
+Exact-source CI39119010538 is live: Linux117650584393,
+Windows117650584540, book117650584582. Watch67313,
+/tmp/s3drive-owned-http1-hosted-watch.log. Poll this exact handle/run, never
+restart solely on observation timeout. First inspect the independent7-test owned
+exchange results on Windows before treating the prototype as portable. Any
+production native results still exercise unchanged WireClient, not the prototype.
 No production WireClient/routing or dependency version/lockfile change. Public
 Hyper1.12/Rustls/tokio-rustls/rcgen/body APIs inspected in resolved sources.
 Seven independent local HTTP/TLS controls passed at
@@ -33,7 +98,7 @@ EXIT0 (session75443, /tmp/s3drive-multipart-sizing-gate1.log): core17 including
 multipart6, state274, all workspace/build/lint/book checks. No payload/network,
 schema/config or8MiB write-bound change. New evidence: docs/src/evidence/
 multipart-sizing-20261018.json. Done criteria in multipart-plan.md and plan.
-Exact new CI39117793980 is live: Windows117647008136, Linux117647008237,
+Historical in-progress observation (now failed above): CI39117793980:  Windows117647008136, Linux117647008237,
 book117647008193. Watch87567, /tmp/s3drive-multipart-sizing-hosted-watch.log.
 Linux and book are terminal SUCCESS. Completed raw /tmp/s3drive-multipart-b793-
 {linux,book}.log reviewed: Linux9 native/32-flush/paired and both coordinator
@@ -41,7 +106,7 @@ startup protocols passed; only controlled faults and stopped-authority refusal.
 After terminal Windows raw review and all-three success only, prepared
 /tmp/s3drive-check-multipart-b793.py and its reference checker may validate the
 own strict21/14 artifacts at new /tmp/s3drive-multipart-b793-artifacts. They have
-NOT RUN. Never run them on a failed source or reuse another cohort's artifacts.
+NOT RUN and MUST NOT RUN after the recorded Windows failure. Never run them on a failed source or reuse another cohort's artifacts.
 Poll this exact handle/run, never restart solely on observation timeout. This
 planner does not change transport behavior; even a passing run cannot erase the
 parent failure or establish a transport correction. No main promotion is planned
@@ -69,9 +134,9 @@ independently bound to that CLI. Standalone startup/snapshot and authority7unit/
 10HTTP/9TLS passed; console Ctrl+C5ms single observation only. No upload/outcome
 or root-cause inference. Current multipart changes do not belong to hosted0bbc.
 
-First action next: poll b793 hosted status;
-complete final study documentation checks and a guarded private topic
-checkpoint. Then prioritize the correlated transport
+First action next: poll both exact hosted runs and retain completed raw logs;
+require scoped raw/strict artifacts before any cohort acceptance. Then prioritize
+the correlated transport
 failure before enabling new upload paths. Do not promote0bbc despite portable
 success or replace its original IDs/assertions/deadlines. Fresh CLI refusal means
 native-callback-only explanations are not established. A different per-RPC

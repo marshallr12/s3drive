@@ -1,0 +1,149 @@
+{
+  "format": "s3drive-owned-http1-close-evidence-v1",
+  "date": "2026-10-18",
+  "branch": "codex/owned-http1-close",
+  "parent": "e00b5e7d3c6b84aaedc93bd73b213af969f6d26f",
+  "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+  "status": "final full local gate passed; hosted acceptance pending; production transport unchanged",
+  "scope": "test-only owned exchange closure correction and independent controls; production WireClient unchanged",
+  "source_sha256": {
+    "crates/s3drive-authority/tests/owned_exchange.rs": "f715b915d433016e56c501089866b0bdf1ebf0ec48cd8c42786cb926187aae27",
+    "crates/s3drive-authority/src/wire.rs": "817ba3c0ca618755d85cefb1aedf26958f10b6fa256ffd6a4329526f40a3906f",
+    "Cargo.toml": "d2d511dd0bbc4ae5c5c90942622b8799320107467fdd9426df73161bc5d6dc70",
+    "Cargo.lock": "85a582c41797f59a6cd5891a5c490ddf6d8c5abbf4ab3ba28141bdda2a3ab716",
+    "crates/s3drive-cli/tests/authority_restart.rs": "6669ac3f4c5031ae5bd9056ba850ed1d2bc0b4a714921db3f4e9f794e9024376"
+  },
+  "review": {
+    "role": "legacy-impl-reviewer",
+    "read_only": true,
+    "rfc": "https://www.rfc-editor.org/rfc/rfc9112.html#section-9.8",
+    "finding": "consumer completion can drop pending connection driver; read_u8 conflates clean EOF and TLS missing-alert error",
+    "secondary_findings": [
+      "retain full reply on bounded cleanup expiry",
+      "reap both fixtures before regression assertions",
+      "distinguish remaining deadline from reset cleanup budget"
+    ],
+    "followup": "read-only final review found no remaining load-bearing issue in scoped component; no production/native acceptance"
+  },
+  "before_control": {
+    "log": "/tmp/s3drive-owned-close-before.log",
+    "sha256": "a669ca90fdfc41fec37730c36dffd8e82995232b51f4f757b14ce02ce0bba721",
+    "exit_code": 101,
+    "failure": "reply returned while TLS shutdown was held",
+    "scope": "old select with deterministic pending TLS shutdown; not proof of historical native cause"
+  },
+  "intermediate_iteration": {
+    "focused_log": "/tmp/s3drive-owned-close-focused1.log",
+    "focused_exit_code": 0,
+    "focused_cases": 9,
+    "rejected_semantics": "whole timeout discarded full reply if shutdown alone stalled",
+    "gate_log": "/tmp/s3drive-owned-close-gate1.log",
+    "gate_status": "terminal EXIT1: doc link checked before new evidence file was created; earlier Rust iteration also superseded",
+    "gate_exit_code": 1,
+    "gate_log_sha256": "16c7f75b3b6f314f695fdf92095f74a7b70430d8a774599237168696d75f9bd5",
+    "second_gate": {
+      "log": "/tmp/s3drive-owned-close-gate2.log",
+      "exit_code": 0,
+      "log_sha256": "f8de6a81fe3cd6241364bac06da7d6e0591d52d650611da36142e740e2d1e9c7",
+      "scope": "closure result semantics final, earlier CLI mixed-fault fixture; superseded for combined source after hosted diagnosis"
+    }
+  },
+  "final_focused": {
+    "log": "/tmp/s3drive-owned-close-focused2.log",
+    "sha256": "21f4f79adaa4a291832ff4f0ce23cafad221e2a94ec7d501bddd1daf1642ce9c",
+    "exit_code": 0,
+    "cases": 9,
+    "later_change": "assertion timing message only; final full gate still required"
+  },
+  "controls": [
+    "32 exact authenticated HTTP and32 TLS exchanges with clean EOF; peer omits close header",
+    "TLS shutdown held pending after full framed reply; client waits, then sends close_notify when released",
+    "response delayed6sec, shutdown held forever; complete reply preserved and socket dropped at original10sec deadline, independent14sec watchdog rejects new cleanup budget",
+    "unchanged incomplete-reply10sec timeout,2sec stalled handshake, wrong root/name, no replay after loss, redirect refusal, bounded chunked and declared bodies",
+    "cancellation remains separate EOF/reset ownership proof"
+  ],
+  "result_policy": {
+    "complete_framed_reply_survives_cleanup_error_or_expiry": true,
+    "precompletion_expiry_returns_deadline": true,
+    "cleanup_budget_reset": false,
+    "orphan_driver_task": false,
+    "retry": false
+  },
+  "dependency_sources_read": {
+    "hyper-1.12.0/src/proto/h1/dispatch.rs": "9cd6638c59ae4857ae43ee58857abf585cc6a52dfda616c3631e2e48c02eaba2",
+    "tokio-rustls-0.26.6/src/client.rs": "99c21fc31cd2a7e9b10e6802a41598a3e42bf1b17e6007c4c7f59257e1e77293",
+    "rustls-0.23.46/src/conn.rs": "60b4bf4186776efe7df71c43be3aef44027cfde06f393e1238efbb9d1cfdfcf9"
+  },
+  "production_transport_replaced": false,
+  "windows_correction_proven": false,
+  "provider_requests": 0,
+  "remaining": [
+    "hosted closure and corrected fixture controls; local final full gate passed",
+    "production URL/private-file/platform-trust/status/JSON/caller-queue parity and truthful owned diagnostics",
+    "native/startup/reference gates and same-source repeat; historical root cause remains open"
+  ],
+  "mixed_fixture": {
+    "source": "crates/s3drive-cli/tests/authority_restart.rs",
+    "reason": "e00 Windows observed3 controlled faults plus positive HttpShutdown after both typed replies; blanket event count failed",
+    "original_later_socket_assertions_executed_in_failed_cohort": false,
+    "production_change": false,
+    "acceptance": [
+      "exact3 controlled per-socket/category/bytes/dispatch events",
+      "only0..2 distinct complete Info shutdown connection IDs4/5",
+      "positive read/write/flush, dispatched, actual server port, nonzero IPv4 loopback client, exclude injected tags",
+      "scan every authority TLS line; reject suppression and all other categories",
+      "both replies match original volume and sequence0; existing privacy checks retained"
+    ],
+    "attribution_limit": "fixture-order binding; no independently observed success-path client socket metadata",
+    "validator_log": "/tmp/s3drive-owned-close-classifier.log",
+    "validator_exit_code": 0,
+    "validator_log_sha256": "7e053ec1b2155303e0e7896933b588f2163f0b074e7130cc6ed9b9bb807844ec",
+    "negative_controls": [
+      "generic transport",
+      "historical timeout category",
+      "foreign connection IDs3/6",
+      "each zero counter",
+      "duplicate counter",
+      "zero client/wrong server port",
+      "wrong family",
+      "false dispatch",
+      "suppression",
+      "injected socket tag"
+    ],
+    "hosted_acceptance": false,
+    "review": "read-only legacy reviewer found no remaining blocking issue; acceptance limited to fixture logic",
+    "clippy": {
+      "log": "/tmp/s3drive-owned-close-classifier-clippy.log",
+      "exit_code": 0,
+      "sha256": "99b0d198425955af515ee408c6d4bb586a5db4fb47cb6d470e96f4fb041f0378"
+    }
+  },
+  "local_gate": {
+    "command": "bash scripts/gate.sh",
+    "status": "completed",
+    "session": 11113,
+    "log": "/tmp/s3drive-owned-close-gate3.log",
+    "source_fingerprint_file": "/tmp/s3drive-owned-close-frozen-source.json",
+    "exit_code": 0,
+    "log_sha256": "c203d2e8747b7c7b7e2d317c40e87d1a0e3471d40f0956ab888503857316a9ea",
+    "owned_exchange_cases": 9,
+    "authority_unit_cases": 7,
+    "http_cases": 10,
+    "tls_cases": 9,
+    "core_cases": 17,
+    "state_cases": 274,
+    "cli_authority_restart_cases": 9,
+    "book_markdown_files": 57,
+    "source_unchanged": true,
+    "at_utc": "2026-10-18T10:48:05.051847+00:00"
+  },
+  "final_docs": {
+    "links": 57,
+    "build_exit_code": 0,
+    "test_exit_code": 0,
+    "log_sha256": {
+      "/tmp/s3drive-owned-close-final-book.log": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4",
+      "/tmp/s3drive-owned-close-final-book-tests.log": "18cb1cf40c90c10e5ad5730f90e6845f480c1c0e9795f03a3b78ab6d21854d2d"
+    }
+  }
+}

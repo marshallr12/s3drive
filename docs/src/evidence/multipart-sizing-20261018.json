@@ -102,14 +102,14 @@
   "hosted": {
     "run": 39117793980,
     "source": "b793ea58e662f7884981f9ce89ce94482e3fb489",
-    "status": "in_progress",
-    "conclusion": "",
+    "status": "completed",
+    "conclusion": "failure",
     "jobs": [
       {
         "databaseId": 117647008136,
         "name": "rust (windows-latest)",
-        "status": "in_progress",
-        "conclusion": ""
+        "status": "completed",
+        "conclusion": "failure"
       },
       {
         "databaseId": 117647008193,
@@ -124,7 +124,7 @@
         "conclusion": "success"
       }
     ],
-    "observed_at_utc": "2026-10-18T10:21:45.047836+00:00",
+    "observed_at_utc": "2026-10-18T10:38:25.540357+00:00",
     "acceptance": false,
     "note": "Pure geometry changes do not resolve parent0bbc Windows transport failure; no main promotion based on geometry alone",
     "completed_raw_review": {
@@ -135,10 +135,43 @@
       "book": {
         "sha256": "648e74ec7465feefdaf3c96f9735b64f14740ee648e3ff8bcca9af38d9c195b0",
         "scope": "completed job log retained"
+      },
+      "windows": {
+        "log": "/tmp/s3drive-multipart-b793-windows.log",
+        "sha256": "ef765179c718e9e7dc9225a7f92b2adeec10f9711b290e150eece1fe81cdd1db",
+        "scope": "reviewed all transport warnings and test outcomes; final native broad6PASS/1FAIL; earlier flush32/lifecycle/workspace/paired recovery/reference steps passed",
+        "failure": {
+          "test": "actual_managed_existing_file_writes_and_recovery",
+          "request": "Info",
+          "phase": "Request",
+          "io_kind": "UnexpectedEof",
+          "native_error": 1117,
+          "body_frame_polled": false,
+          "connector_started": true,
+          "connector_completed": true,
+          "connector_candidate_matches_error_connection": true,
+          "ipv6": false,
+          "client_port": 64582,
+          "server_port": 64551,
+          "server_connection": 24,
+          "http_ms": 5044,
+          "read_bytes": 0,
+          "written_bytes": 0,
+          "flushes": 1,
+          "dispatched": false
+        },
+        "other_warnings": "controlled TLS faults; one positive-byte dispatched HttpShutdown; deliberate stopped-authority List/Connect/TimedOut",
+        "console_cancel_to_exit_ms_single_observations": [
+          5,
+          105
+        ],
+        "root_cause_proven": false
       }
     },
     "success_only_checker": "/tmp/s3drive-check-multipart-b793.py",
-    "checker_executed": false
+    "checker_executed": false,
+    "success_only_checker_executed": false,
+    "success_artifact_directory_exists": false
   },
   "postpush_docs": {
     "links": 57,

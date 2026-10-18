@@ -110,5 +110,111 @@
       "/tmp/s3drive-owned-http1-final-book.log": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4",
       "/tmp/s3drive-owned-http1-final-book-tests.log": "18cb1cf40c90c10e5ad5730f90e6845f480c1c0e9795f03a3b78ab6d21854d2d"
     }
+  },
+  "publication": {
+    "source": "e00b5e7d3c6b84aaedc93bd73b213af969f6d26f",
+    "parent": "b793ea58e662f7884981f9ce89ce94482e3fb489",
+    "branch": "codex/owned-http1-probe",
+    "private_before_and_after": true,
+    "normal_push": true,
+    "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+    "local_gate_exit_code": 0,
+    "test_only_study": true,
+    "production_transport_replaced": false,
+    "native_failure_fixed": false,
+    "at_utc": "2026-10-18T10:22:43.693280+00:00"
+  },
+  "hosted": {
+    "run": 39119010538,
+    "source": "e00b5e7d3c6b84aaedc93bd73b213af969f6d26f",
+    "status": "completed",
+    "conclusion": "failure",
+    "jobs": [
+      {
+        "databaseId": 117650584393,
+        "name": "rust (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "databaseId": 117650584540,
+        "name": "rust (windows-latest)",
+        "status": "completed",
+        "conclusion": "failure"
+      },
+      {
+        "databaseId": 117650584582,
+        "name": "book",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "observed_at_utc": "2026-10-18T10:40:55.122580+00:00",
+    "component_acceptance": false,
+    "native_correction_proven": false,
+    "completed_raw_review": {
+      "linux": {
+        "log": "/tmp/s3drive-owned-e00-linux.log",
+        "sha256": "6ea17d7d06de6e9a4cd6b09a3bbb1dce68e73c8c816733013682f453f8dbfd7a",
+        "scope": "owned7 pass; existing authority7unit/10HTTP/9TLS,274state, native9/32flush, paired no-systemd and both coordinator startup protocols; only controlled faults and deliberate stopped-authority refusal"
+      },
+      "book": {
+        "log": "/tmp/s3drive-owned-e00-book.log",
+        "sha256": "3abd863f09d9311bbb09a5043193be8438160fc4063da44e3134651630bdd1e6",
+        "scope": "completed book job retained"
+      },
+      "windows": {
+        "log": "/tmp/s3drive-owned-e00-windows.log",
+        "sha256": "4571b8a7ba894537da9a373c7aa78edbdfe30b48426794fb8c8c6346e37bcfb4",
+        "scope": "owned7 passed twice; authority7unit/10HTTP/9TLS,32 native flushes, lifecycle, standalone startup/snapshot and replacement reference passed; workspace failed later CLI diagnostic count assertion; remaining native/recovery/reference jobs skipped",
+        "failure_test": "tls_cli_diagnostics_distinguish_idle_partial_headers_and_partial_body_privately",
+        "assertion": "expected exactly3 controlled failure events, saw4; both complete typed Info replies had already passed",
+        "extra_event": {
+          "kind": "HttpShutdown",
+          "connection": 5,
+          "http_ms": 4,
+          "read_bytes": 243,
+          "written_bytes": 246,
+          "flushes": 2,
+          "dispatched": true
+        },
+        "three_expected_faults": "HttpTimeout idle read0, HttpTimeout partial-header read54, Lifetime partial-body read217; all observed",
+        "production_transport_changed": false,
+        "root_cause_proven": false
+      }
+    }
+  },
+  "production_carryover_audit": {
+    "source_files": [
+      "crates/s3drive-authority/src/wire.rs",
+      "crates/s3drive-authority/src/lib.rs"
+    ],
+    "source_sha256": {
+      "crates/s3drive-authority/src/wire.rs": "817ba3c0ca618755d85cefb1aedf26958f10b6fa256ffd6a4329526f40a3906f",
+      "crates/s3drive-authority/src/lib.rs": "222a22baf9598f871106b8bbead078a33088f909bcc7cd96844d4317c07c3a76"
+    },
+    "important_differences": [
+      "production accepts all2xx before JSON parsing; probe only200",
+      "production validates4KiB request before task/network; probe uses known valid bytes",
+      "production absolute caller deadline includes task queue; probe starts its10sec timer when polled",
+      "production default platform roots, URL/private-file validation and typed JSON/receipts not implemented by prototype"
+    ],
+    "replacement_status": "not implemented; preserve existing semantics and independent acceptance before adoption"
+  },
+  "postpush_docs": {
+    "links": 57,
+    "build_exit_code": 0,
+    "test_exit_code": 0,
+    "log_sha256": {
+      "/tmp/s3drive-owned-http1-postpush-book.log": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4",
+      "/tmp/s3drive-owned-http1-postpush-book-tests.log": "18cb1cf40c90c10e5ad5730f90e6845f480c1c0e9795f03a3b78ab6d21854d2d"
+    }
+  },
+  "later_review": {
+    "date": "2026-10-18",
+    "superseding_scope": "successful TLS shutdown and complete reply retention",
+    "evidence": "owned-http1-close-20261018.json",
+    "old_test_peer_could_not_distinguish_clean_tls_eof": true,
+    "production_transport_replaced": false
   }
 }

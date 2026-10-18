@@ -4,6 +4,7 @@ use axum::http::{Request, header};
 use hyper::body::{Body, Bytes, Frame, SizeHint};
 use hyper_util::rt::TokioIo;
 use std::{
+    future::Future,
     net::SocketAddr,
     pin::Pin,
     sync::{
@@ -14,7 +15,7 @@ use std::{
     time::Duration,
 };
 use tokio::{
-    io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
+    io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadBuf},
     net::{TcpListener, TcpStream},
     sync::oneshot,
 };
@@ -75,84 +76,106 @@ async fn exchange(
     payload: Vec<u8>,
     polled: Arc<AtomicBool>,
 ) -> Result<Vec<u8>, Failure> {
-    tokio::time::timeout(WHOLE, async move {
-        let stream: Stream = tokio::time::timeout(CONNECT, async move {
-            let stream = TcpStream::connect(address)
+    let deadline = tokio::time::Instant::now() + WHOLE;
+    let stream: Stream = tokio::time::timeout(CONNECT, async move {
+        let stream = TcpStream::connect(address)
+            .await
+            .map_err(|_| Failure::Connect)?;
+        stream.set_nodelay(true).map_err(|_| Failure::Connect)?;
+        if let Some(trust) = trust {
+            let name = rustls::pki_types::ServerName::try_from(trust.name)
+                .map_err(|_| Failure::Connect)?;
+            let stream = TlsConnector::from(trust.config)
+                .connect(name, stream)
                 .await
                 .map_err(|_| Failure::Connect)?;
-            stream.set_nodelay(true).map_err(|_| Failure::Connect)?;
-            if let Some(trust) = trust {
-                let name = rustls::pki_types::ServerName::try_from(trust.name)
-                    .map_err(|_| Failure::Connect)?;
-                let stream = TlsConnector::from(trust.config)
-                    .connect(name, stream)
-                    .await
-                    .map_err(|_| Failure::Connect)?;
-                Ok(Box::new(stream) as Stream)
-            } else {
-                Ok(Box::new(stream) as Stream)
-            }
-        })
-        .await
-        .map_err(|_| Failure::ConnectDeadline)??;
-        let (mut sender, connection) = hyper::client::conn::http1::handshake(TokioIo::new(stream))
-            .await
-            .map_err(|_| Failure::Http)?;
-        let request = Request::post("/v1/namespace")
-            .header(header::HOST, address.to_string())
-            .header(header::AUTHORIZATION, format!("Bearer {TOKEN}"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .header(header::CONNECTION, "close")
-            .body(TrackedBody {
-                body: reqwest::Body::from(payload),
-                polled,
-            })
-            .map_err(|_| Failure::Http)?;
-        let work = async move {
-            // The first request is queued before the connection driver polls.
-            // Resolved Hyper permits one buffered request without ready().
-            let response = sender
-                .send_request(request)
-                .await
-                .map_err(|_| Failure::Http)?;
-            if response.status().as_u16() != 200 {
-                return Err(Failure::Status(response.status().as_u16()));
-            }
-            if response
-                .body()
-                .size_hint()
-                .upper()
-                .is_some_and(|n| n > MAX_REPLY as u64)
-            {
-                return Err(Failure::TooLarge);
-            }
-            let mut body = response.into_body();
-            let mut bytes = Vec::new();
-            while let Some(frame) =
-                std::future::poll_fn(|cx| Pin::new(&mut body).poll_frame(cx)).await
-            {
-                let frame = frame.map_err(|_| Failure::Body)?;
-                if let Ok(data) = frame.into_data() {
-                    if data.len() > MAX_REPLY - bytes.len() {
-                        return Err(Failure::TooLarge);
-                    }
-                    bytes.extend_from_slice(&data);
-                }
-            }
-            Ok(bytes)
-        };
-        tokio::pin!(work, connection);
-        // No pool, driver spawn or task that can outlive this exchange.
-        // A finished driver may already have queued the complete response or
-        // its body error; drain that work under the same absolute deadline.
-        tokio::select! {
-            biased;
-            result = &mut work => result,
-            _ = &mut connection => work.await,
+            Ok(Box::new(stream) as Stream)
+        } else {
+            Ok(Box::new(stream) as Stream)
         }
     })
     .await
+    .map_err(|_| Failure::ConnectDeadline)??;
+    exchange_stream(stream, address, payload, polled, deadline).await
+}
+
+// The caller owns the whole deadline, including graceful connection shutdown.
+async fn exchange_stream(
+    stream: Stream,
+    address: SocketAddr,
+    payload: Vec<u8>,
+    polled: Arc<AtomicBool>,
+    deadline: tokio::time::Instant,
+) -> Result<Vec<u8>, Failure> {
+    let (mut sender, connection) = tokio::time::timeout_at(
+        deadline,
+        hyper::client::conn::http1::handshake(TokioIo::new(stream)),
+    )
+    .await
     .map_err(|_| Failure::Deadline)?
+    .map_err(|_| Failure::Http)?;
+    let request = Request::post("/v1/namespace")
+        .header(header::HOST, address.to_string())
+        .header(header::AUTHORIZATION, format!("Bearer {TOKEN}"))
+        .header(header::CONTENT_TYPE, "application/json")
+        .header(header::CONNECTION, "close")
+        .body(TrackedBody {
+            body: reqwest::Body::from(payload),
+            polled,
+        })
+        .map_err(|_| Failure::Http)?;
+    let work = async move {
+        // The first request is queued before the connection driver polls.
+        // Resolved Hyper permits one buffered request without ready().
+        let response = sender
+            .send_request(request)
+            .await
+            .map_err(|_| Failure::Http)?;
+        if response.status().as_u16() != 200 {
+            return Err(Failure::Status(response.status().as_u16()));
+        }
+        if response
+            .body()
+            .size_hint()
+            .upper()
+            .is_some_and(|n| n > MAX_REPLY as u64)
+        {
+            return Err(Failure::TooLarge);
+        }
+        let mut body = response.into_body();
+        let mut bytes = Vec::new();
+        while let Some(frame) = std::future::poll_fn(|cx| Pin::new(&mut body).poll_frame(cx)).await
+        {
+            let frame = frame.map_err(|_| Failure::Body)?;
+            if let Ok(data) = frame.into_data() {
+                if data.len() > MAX_REPLY - bytes.len() {
+                    return Err(Failure::TooLarge);
+                }
+                bytes.extend_from_slice(&data);
+            }
+        }
+        Ok(bytes)
+    };
+    let work = tokio::time::timeout_at(deadline, work);
+    tokio::pin!(work, connection);
+    // No pool, driver spawn or task that can outlive this exchange.
+    // A finished driver may already have queued the complete response or
+    // its body error; drain that work under the same absolute deadline.
+    tokio::select! {
+        biased;
+        result = &mut work => {
+            let result = result.map_err(|_| Failure::Deadline)?;
+            if result.is_ok() {
+                // Reading all response bytes does not imply the driver has
+                // finished poll_shutdown (including TLS close_notify). Keep
+                // driving under the caller's ORIGINAL whole deadline. A
+                // cleanup error cannot invalidate an already framed reply.
+                let _ = tokio::time::timeout_at(deadline, connection).await;
+            }
+            result
+        },
+        _ = &mut connection => work.await.map_err(|_| Failure::Deadline)?,
+    }
 }
 
 fn tls(name: &str) -> (TlsAcceptor, Trust) {
@@ -285,12 +308,10 @@ async fn peer(
         }
         // Omit response Connection: close. The caller still owns finite lifetime.
         if matches!(response, Response::Complete | Response::ChunkedExact) {
-            let closed = stream.read_u8().await;
-            assert!(
-                matches!(&closed, Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof),
-                "closure result: {:?}",
-                closed.as_ref().err().map(std::io::Error::kind)
-            );
+            // read_u8 maps both a clean zero-byte EOF and TLS's missing-alert
+            // error to UnexpectedEof. Only read == Ok(0) proves clean TLS EOF.
+            let closed = stream.read(&mut [0; 1]).await;
+            assert_eq!(closed.unwrap(), 0, "extra data after the sole request");
         }
     }
     assert!(
@@ -326,6 +347,188 @@ fn canceled_socket_closed(result: std::io::Result<u8>) -> std::io::ErrorKind {
         "cancellation closure: {kind:?}"
     );
     kind
+}
+
+// Gate outside TLS so close_notify cannot be emitted until shutdown is released.
+// Normal reads/writes are untouched. This makes the post-response pending-driver
+// boundary deterministic rather than depending on socket scheduler timing.
+struct GatedShutdown {
+    inner: Stream,
+    release: Option<oneshot::Receiver<()>>,
+    entered: Option<oneshot::Sender<()>>,
+    complete: Arc<AtomicBool>,
+}
+impl AsyncRead for GatedShutdown {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.inner).poll_read(cx, buf)
+    }
+}
+impl AsyncWrite for GatedShutdown {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        bytes: &[u8],
+    ) -> Poll<std::io::Result<usize>> {
+        Pin::new(&mut self.inner).poll_write(cx, bytes)
+    }
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.inner).poll_flush(cx)
+    }
+    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        if let Some(entered) = self.entered.take() {
+            let _ = entered.send(());
+        }
+        if let Some(release) = &mut self.release {
+            if Pin::new(release).poll(cx).is_pending() {
+                return Poll::Pending;
+            }
+            self.release = None;
+        }
+        let result = Pin::new(&mut self.inner).poll_shutdown(cx);
+        if matches!(result, Poll::Ready(Ok(()))) {
+            self.complete.store(true, Ordering::Release);
+        }
+        result
+    }
+}
+
+#[tokio::test]
+async fn completed_tls_reply_keeps_pending_driver_until_clean_shutdown() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let (acceptor, trust) = tls("127.0.0.1");
+    let server = tokio::spawn(async move {
+        let (stream, _) = listener.accept().await.unwrap();
+        let mut stream: Stream = Box::new(acceptor.accept(stream).await.unwrap());
+        assert_eq!(received(&mut stream, address).await, payload());
+        // Leave the write side open; the client must initiate TLS closure.
+        stream
+            .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nreply")
+            .await
+            .unwrap();
+        stream.flush().await.unwrap();
+        stream.read(&mut [0; 1]).await
+    });
+    let (release, released) = oneshot::channel();
+    let (entered, entering) = oneshot::channel();
+    let complete = Arc::new(AtomicBool::new(false));
+    let observed = complete.clone();
+    let mut client = tokio::spawn(async move {
+        let deadline = tokio::time::Instant::now() + WHOLE;
+        tokio::time::timeout(WHOLE + Duration::from_secs(5), async move {
+            let tcp = TcpStream::connect(address).await.unwrap();
+            let stream = TlsConnector::from(trust.config)
+                .connect(trust.name.try_into().unwrap(), tcp)
+                .await
+                .unwrap();
+            exchange_stream(
+                Box::new(GatedShutdown {
+                    inner: Box::new(stream),
+                    release: Some(released),
+                    entered: Some(entered),
+                    complete,
+                }),
+                address,
+                payload(),
+                Arc::new(AtomicBool::new(false)),
+                deadline,
+            )
+            .await
+        })
+        .await
+    });
+    let entered = tokio::time::timeout(Duration::from_secs(5), entering).await;
+    let premature = tokio::time::timeout(Duration::from_millis(100), &mut client).await;
+    let returned_early = premature.is_ok();
+    let _ = release.send(());
+    let result = match premature {
+        Ok(result) => result.unwrap(),
+        Err(_) => finish(client).await,
+    };
+    let closed = finish(server).await;
+    entered.unwrap().unwrap();
+    assert!(
+        !returned_early,
+        "reply returned while TLS shutdown was held"
+    );
+    assert_eq!(result.unwrap(), Ok(b"reply".to_vec()));
+    assert!(observed.load(Ordering::Acquire));
+    assert_eq!(closed.unwrap(), 0, "peer did not observe clean TLS EOF");
+}
+
+#[tokio::test]
+async fn pending_shutdown_preserves_complete_reply_with_only_remaining_budget() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let server = tokio::spawn(async move {
+        let (stream, _) = listener.accept().await.unwrap();
+        let mut stream: Stream = Box::new(stream);
+        assert_eq!(received(&mut stream, address).await, payload());
+        // Spend most of the original budget BEFORE the response. A new whole
+        // timeout for cleanup would run beyond the independent 14s watchdog.
+        tokio::time::sleep(Duration::from_secs(6)).await;
+        stream
+            .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nreply")
+            .await
+            .unwrap();
+        stream.flush().await.unwrap();
+        stream.read(&mut [0; 1]).await
+    });
+    let (_release, released) = oneshot::channel();
+    let (entered, entering) = oneshot::channel();
+    let complete = Arc::new(AtomicBool::new(false));
+    let observed = complete.clone();
+    let started = tokio::time::Instant::now();
+    let deadline = started + WHOLE;
+    let watchdog = deadline + Duration::from_secs(4);
+    let client = tokio::spawn(async move {
+        let stream = TcpStream::connect(address).await.unwrap();
+        exchange_stream(
+            Box::new(GatedShutdown {
+                inner: Box::new(stream),
+                release: Some(released),
+                entered: Some(entered),
+                complete,
+            }),
+            address,
+            payload(),
+            Arc::new(AtomicBool::new(false)),
+            deadline,
+        )
+        .await
+    });
+    let entered = tokio::time::timeout_at(watchdog, entering).await;
+    // Bound fixture lifetime even if the whole-deadline behavior regresses.
+    let mut client = client;
+    let result = tokio::time::timeout_at(watchdog, &mut client).await;
+    let result = match result {
+        Ok(result) => Some(result),
+        Err(_) => {
+            client.abort();
+            let _ = client.await;
+            None
+        }
+    };
+    let elapsed = started.elapsed();
+    let closed = finish(server).await;
+    entered.unwrap().unwrap();
+    assert_eq!(
+        result
+            .expect("shutdown outlived original whole deadline")
+            .unwrap(),
+        Ok(b"reply".to_vec()),
+        "cleanup lost the complete response"
+    );
+    assert!(
+        elapsed >= WHOLE && elapsed < WHOLE + Duration::from_secs(4),
+        "shutdown remaining-budget observation: {elapsed:?}"
+    );
+    assert!(!observed.load(Ordering::Acquire));
+    assert_eq!(closed.unwrap(), 0, "deadline did not drop the owned socket");
 }
 
 #[tokio::test]

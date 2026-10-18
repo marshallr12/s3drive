@@ -978,3 +978,28 @@ sanitized errors and no retry, proxy, pool or independently spawned driver.
 Inspect resolved APIs before implementation and run the full local gate. This
 study does not replace URL/config/platform-trust validation or production
 transport, and cannot prove a Windows correction or a committed mutation.
+
+
+### P6m4e closure prerequisite (candidate, 2026-10-18)
+
+The pre-rewrite protocol review requires the [successful TLS closure control](remote-authority.md#successful-tls-closure-review-candidate-2026-10-18)
+before production adoption. Retain a fully framed response while polling the
+unfinished driver under the original absolute deadline; a cleanup error/expiry
+must not discard that response. Incomplete replies still time out. Require a
+controlled pending TLS shutdown that fails the old logic, clean TLS peer EOF,
+and a delayed-response control that distinguishes remaining budget from a new
+cleanup timeout. Reap both fixtures before assertions. Run the exact final
+source's full local gate and hosted Linux/Windows controls. The older local
+iteration's successful controls do not substitute for final result semantics.
+
+Then replace the production client using the carryover audit, preserving public
+constructors, URL/Host/SNI rules, private files, platform/explicit trust, request
+bounds, every2xx with strict JSON, response limits, caller-owned task and absolute
+queue/RPC deadline. Define truthful owned-socket diagnostics rather than inventing
+legacy error metadata. Keep all exact-operation/receipt/cancellation controls,
+add malformed framing and status201/204 cases, then require exact-source native/
+startup/reference gates and a source-identical repeat. No proxy, replay, deadline
+extension, new operation identity or unconditional overwrite fallback is permitted.
+Transport adoption and native reliability remain work; multipart execution,
+real managed Wasabi acceptance, independent hosts/partitions, history continuity,
+actual desktop startup/reboot and packaging remain full-goal requirements.

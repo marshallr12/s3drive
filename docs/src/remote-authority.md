@@ -494,6 +494,132 @@ gate passed:7 owned-exchange controls, existing7 authority unit/10 HTTP/9 TLS,
 book checks. No production transport or native correction is accepted from this
 local result; see the [dated source and scope record](evidence/owned-http1-study-20261018.json).
 
+### Successful TLS closure review (candidate, 2026-10-18)
+
+The pre-rewrite review identified a gap in the original test-only study: reading
+all response bytes could win the select and drop an unfinished connection driver.
+A successful `read_u8()` peer check also conflated clean zero-byte EOF with TLS's
+missing-alert `UnexpectedEof`. HTTP/TLS clients must send a closure alert before
+normal closure; fully length/chunk-delimited replies should remain complete despite
+incomplete peer closure. [RFC9112 §9.8](https://www.rfc-editor.org/rfc/rfc9112.html#section-9.8)
+The pinned Hyper driver invokes transport shutdown, and tokio-rustls emits
+`close_notify` there; dropping a pending driver cannot establish this completion.
+See the [dated source/review record](evidence/owned-http1-close-20261018.json).
+
+An independent control now holds shutdown pending outside the TLS stream after
+an exact complete reply. Against the previous co-poll logic it failed with
+“reply returned while TLS shutdown was held.” The revised logic retains the
+completed result and polls the unfinished driver within the original absolute
+budget. If the driver finishes first, only the pending consumer is drained; a
+finished driver is never polled twice. Successful peers leave their write side
+open and require `read(&mut [u8;1]) == Ok(0)`, rejecting reset, missing-alert EOF,
+extra bytes and timeout. Cancellation/reset controls remain separate.
+
+A second control spends six seconds before completing a reply, then never
+releases shutdown. The already complete reply survives cleanup expiry at the
+original ten-second deadline, and the owned socket closes. An independent
+fourteen-second watchdog rejects granting a new ten-second cleanup budget;
+pre-completion expiry still returns `Deadline`. All fixtures are reaped before
+asserting their observations. This is a bounded cleanup attempt, not a claim that
+an alert can always be sent after transport failure, cancellation or expiry.
+
+An earlier local nine-test iteration discarded a complete reply on cleanup
+expiry. Review rejected that result-semantics change before production adoption;
+the retained-reply revision replaces it. The first full gate ran on that earlier
+iteration and failed its documentation check before the new evidence file was
+created; it is superseded. The final source subsequently passed the full local gate, including9 owned
+controls,9 CLI restart/diagnostic cases,274 state tests, lint/build and57-document
+book checks. Hosted controls remain required. Production `WireClient` is still unchanged;
+this correction does not explain or establish a fix for native Windows failures.
+
+The parent multipart source b793ea5 subsequently failed its broad Windows native
+existing-file write test in [CI39117793980](https://github.com/marshallr12/s3drive/actions/runs/39117793980).
+Info/Request/UnexpectedEof/native1117 with no body-frame poll matched empty-header
+server connection24, client64582/server64551, timeout5044ms, read/write0,
+flush1 and dispatched=false. Earlier32-flush, lifecycle, workspace and paired
+recovery checks passed, but the broader suite finished6 passed/1 failed. Both
+other jobs passed. Keep this contradictory evidence and mainbf9509; do not run
+that candidate's success-only acceptance checker or promote it.
+
+### Mixed fault/complete-reply diagnostic fixture (candidate, 2026-10-18)
+
+The original study source e00b5e7 passed its seven owned-exchange controls twice
+on hosted Windows, then failed an older CLI diagnostics assertion in
+[CI39119010538](https://github.com/marshallr12/s3drive/actions/runs/39119010538).
+Both complete `Info` replies had already returned sequence0. The server logged
+the three induced idle/header/body failures plus `HttpShutdown` on connection5,
+read243/write246/flush2 and dispatched=true. The blanket count expected3 and
+saw4; later per-socket assertions were not executed in that cohort. This event
+is distinct from the correlated empty-header failure, and does not explain it.
+
+The corrected isolated fixture first requires both typed replies to carry the
+original volume and sequence. It then consumes exactly one event for each of
+the three injected sockets, with exact category, byte count and dispatch state.
+Only zero to two remaining shutdown events may belong to distinct connection
+ordinals4/5, with positive independently parsed read/write/flush counters,
+dispatched=true, canonical loopback metadata, the actual authority server port,
+nonzero client ports and no injected socket tag. The server assigns ordinals
+on accept; three sequential TLS fixtures precede the two sequential `Info` calls.
+This binds fixture order, not independently observed successful-client sockets.
+
+Every `authority TLS` line is inspected, including suppression notices. Unknown
+categories, timeouts, missing metadata, duplicate ordinals and all other leftover
+events fail. Validator controls reject the historical timeout shape, generic I/O,
+foreign ordinals, zero/duplicate counters, wrong port/family, false dispatch,
+suppression and injected sockets. Existing private-input redaction and full
+reply checks remain. The revised fixture and classifier passed the final full
+local gate. Production transport behavior is unchanged; hosted acceptance must
+establish this fixture revision's actual Windows result.
+
+### Production carryover audit (2026-10-18; required before replacement)
+
+Source review of `wire.rs` and `Request::validate` found these boundaries. This
+table records remaining work, not implemented parity or a new service contract.
+
+| Existing production behavior | Study coverage | Required carryover |
+| --- | --- | --- |
+| HTTPS or numeric-loopback HTTP, exact path, no URL credentials/query/fragment | Fixed generated local endpoint only | Reuse URL/config validation and test IPv6/Host/SNI and port handling |
+| Owner-private token/optional CA files; default platform trust or explicit roots replacing it | In-memory synthetic token and explicit generated roots | Preserve private-file checks, bounded PEM parsing, platform verifier and redacted errors |
+| Request validation and4KiB serialized JSON bound before I/O | One known valid payload, peer verifies exact bytes | Keep invalid-input refusal before task/connection and original operation bytes |
+| Caller-owned task, foreign-thread support, absolute10-second queue plus RPC limit | Exchange limit starts when polled | Retain outer caller ownership/queue deadline and task failure classification |
+| Any successful2xx HTTP status proceeds to bounded JSON parsing | Prototype accepts200 only | Preserve existing2xx behavior; do not silently tighten the accepted response set |
+| Reply bound8MiB for declared and streamed length, then typed strict JSON | Raw bounded bytes, including chunked limit controls | Retain typed reply parsing and higher-layer volume/receipt checks |
+| Connector/error-chain observations tied to legacy implementation | Dedicated connection owned by exchange | Define accurate direct-I/O diagnostics; no invented legacy metadata or absent-info replay permission |
+| Exact unknown-operation recovery, SDK/native/startup/reference gates | Wire receipt/cancellation controls only | Preserve original identities, guards, receipts and every semantic acceptance case |
+
+The resolved rustls-platform-verifier0.7.1 builder extension can construct its
+platform verifier with the selected crypto provider; current reqwest uses that
+same verifier's constructor for its default-trust path. This is API research from
+the inspected local package sources, with hashes in the dated study record;
+the prototype does not link or exercise a new verifier path. Actual Linux and
+Windows trust behavior still needs its own production-candidate controls.
+
+### Caller deadline and retained result (production proposal, 2026-10-18)
+
+The production audit must include the caller's outer timer, not only the inner
+exchange's timer. `WireClient::request` currently waits on an owned task with
+an absolute queue/RPC deadline. Simply placing the revised prototype inside that
+task would still let the caller timer discard a complete reply while cleanup
+is pending. The production replacement must make the completed result available
+to the caller at deadline without returning early and abandoning shutdown.
+
+A proposed implementation uses one bounded one-shot result channel between
+the response consumer and the caller, separate from sanitized progress fields.
+Publish a fully parsed reply there once, keep the socket/driver inside the owned
+task, and await bounded cleanup. On cleanup completion or the original caller
+deadline, consume the retained result if present; otherwise preserve the existing
+classified failure/unknown outcome. Caller cancellation still aborts and reaps
+owned work. No second cleanup task, timeout reset, new request identity or replay
+is allowed. This proposal is not implemented or accepted by the test-only study.
+It needs controls where an exact committed receipt is retained while shutdown
+stalls, plus expiry before task dispatch, response loss and cancellation.
+
+Error paths need their own bounded closure policy: receiving an HTTP status or
+invalid JSON is not evidence that TLS shutdown completed. Preserve prompt bounded
+errors and no replay, while making a closure attempt where the connection is
+still usable. Inspect the pinned connection/stream extraction APIs before
+choosing that mechanism; do not infer all-path closure from successful peers.
+
 ## Bounded failure diagnostics (2026-10-17)
 
 The [same-source Windows failure investigation](authority-startup.md#same-source-repeat-failure-2026-10-17)
