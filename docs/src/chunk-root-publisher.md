@@ -89,8 +89,13 @@ The [13-member indexed local archive](evidence/chunk-root-publisher-local-202610
 retains the final gate, focused attempts, lint findings/fix, frozen source hashes,
 review and exact controller/test source. SVG XML, librsvg rendering, visual review
 and HTTP preview passed. See the [dated evidence](evidence/chunk-root-publisher-20261018.json).
-Own-source hosted Windows/Linux/book regression remains pending; previous cohorts
-cannot establish acceptance of these new files.
+Source `cf9d972` is pushed on `codex/chunk-root-publisher`, with a clean tree,
+exact remote tip and all249 frozen hashes verified. Public visibility was checked
+read-only before/after; main is unchanged. Its own
+[Windows/Linux/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39156593000)
+is running. Hosted acceptance remains pending until its logs and fresh own-source
+artifacts are reviewed; previous cohorts cannot establish acceptance of these
+new files. This paragraph is a documentation-only status child of that source.
 
 ## Remaining work
 

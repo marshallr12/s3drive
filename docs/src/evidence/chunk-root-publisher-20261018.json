@@ -36,7 +36,30 @@
     "frozen_manifest_sha256": "00e8661189b568a53bf7581b2644a659195dd5ba598965df5e9a9324c778ad9e"
   },
   "full_gate_passed": true,
-  "own_hosted_cohort": "pending new commit",
+  "own_hosted_cohort": {
+    "run_id": 39156593000,
+    "run_attempt": 1,
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39156593000",
+    "source": "cf9d972173b0b0709c08f3c65ec102fa44fa5a6e",
+    "status": "in_progress",
+    "jobs": {
+      "book": 117760980164,
+      "rust (windows-latest)": 117760980265,
+      "rust (ubuntu-latest)": 117760980367
+    },
+    "watch_session": 5878,
+    "watch_log": "/tmp/s3drive-chunk-publisher-cf9-watch.log",
+    "checker": "/tmp/s3drive-check-chunk-publisher-cf9.py",
+    "checker_prepared_not_executed": true,
+    "fresh_output_directory": "/tmp/s3drive-chunk-publisher-cf9-artifacts",
+    "fresh_output_absent": true,
+    "raw_review_required_before_checker": true,
+    "prior_artifacts_rejected_including_parent": [
+      12146631312,
+      12146506974
+    ],
+    "scope": "not yet acceptance; require own completed raw review and fresh source-bound artifacts"
+  },
   "source_sha256": {
     ".github/workflows/ci.yml": "ad8a598db786dfde8d5fd016b4f4306e1e08f8533b1a2851066d3422731cbe13",
     "Cargo.lock": "35e25b8368c88bfd8a5a3d2e94e2858fdc6e5c36a180196adb60345dbe3a1f9f",
@@ -329,5 +352,15 @@
     "new sparse multilevel missing-grandchild control",
     "existing retired-open budget control",
     "existing obsolete-full-open quota control"
-  ]
+  ],
+  "runtime_commit": "cf9d972173b0b0709c08f3c65ec102fa44fa5a6e",
+  "publication": {
+    "proof": "/tmp/s3drive-chunk-publisher-publication.json",
+    "clean_exact_remote_tip": true,
+    "frozen_hashes_match": 249,
+    "visibility_before": "PUBLIC",
+    "visibility_after": "PUBLIC",
+    "visibility_mutations": 0,
+    "main_unchanged": "1a93b5f7248892fec96dc8da4438ee7967692e77"
+  }
 }

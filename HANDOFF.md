@@ -98,8 +98,23 @@ Durable13member localarchive chunk-root-publisher-local-20261018.tar.gz,
 46976bytes,SHA5d9638bf5e489aced912113346aba42a9d92dd6914a6a25d1a3817bc1b98d591;
 allindexedmembersverified. SVG XML/librsvg/visual and HTTP33767 passed. Final
 review matched249/249; corrected sparsefixture description to128MiB+64bytes.
-This is the tested runtime checkpoint; publication proof and own hosted cohort
-must be recorded after push. Main remains1a93b5f; no native activation follows. Logical
+Published tested runtime cf9d972173b0b0709c08f3c65ec102fa44fa5a6e, clean/exact
+remote tip/all249hashes/PUBLICbefore-after; no visibilitymutations/mainunchanged.
+Proof /tmp/s3drive-chunk-publisher-publication.json. OwnCI39156593000 attempt1
+LIVE: Windows117760980265,book117760980164,Linux117760980367. Watch5878 LIVE,
+/tmp/s3drive-chunk-publisher-cf9-watch.log. Resume the same handle/run; do not
+rerun on observation timeout. Checker /tmp/s3drive-check-chunk-publisher-cf9.py
+and rawcompare /tmp/s3drive-chunk-publisher-cf9-raw-compare.py prepared/compiled
+only, NOTexecuted. Fresh output /tmp/s3drive-chunk-publisher-cf9-artifacts absent;
+require all3 terminal success and own rawreview marker
+/tmp/s3drive-chunk-publisher-cf9-raw-reviewed.json before checker. Bind source/run/
+attempt/jobs/finalizedartifactIDs/APIdigest/time; stricttyped21/14+projectoracles,
+then all35rawfields/types. RejectpriorIDs including parent12146631312/12146506974.
+Download each own completed job's rawlog, review controls/warnings/expectedfaults
+before making marker. On failure do not run successchecker or borrow oldcohort.
+Archive rawlogs/checkers/artifacts/index aftercomplete. This handoff is a docs-only
+status child ofcf9d972; final docchecks and normal push preserve all249runtime
+hashes andPUBLIC. Main remains1a93b5f; no native activation follows. Logical
 settlement, range reader, native chunk activation, provider/physical startup stay
 unfinished. Goal ACTIVE; repository must stay PUBLIC.
 
