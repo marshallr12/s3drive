@@ -62,7 +62,8 @@ P0 table now reflects D040 public policy instead of stale privacy requirement.
 
 ## Current phase: manifest root authority (2026-10-18)
 
-Working branch codex/manifest-root-authority from2097d44. Schema26 is a
+Branch codex/manifest-root-authority from2097d44; published runtime source
+91db06bb4c98ecc9e251817444672e1ab44764ac. Schema26 is a
 comments-only persistent JSON-format marker, no data/hash rewriting. Optional
 strict ManifestRoot is omitted from old reservations, keeping independent frozen
 legacy bytes/hash vectors. ReserveManifest binds root identity/store/key/geometry
@@ -91,9 +92,19 @@ after. No stack-size or assertion changes. All18contracts pass in the full gate.
 Clippy constant-chunk/collapsible-match/large-enum findings fixed without
 suppressions; only the new mutation boxes metadata, JSON unchanged.
 
-Own source-bound hosted acceptance is not yet dispatched. Source publication
-must preserve PUBLIC visibility and main1a93b5f; do not borrow parent252 native
-artifacts or claim chunked native/real provider acceptance from this gate.
+Published normally: clean/exact remote/all243frozen hashes/PUBLIC before-after;
+main1a93b5f unchanged. Proof /tmp/s3drive-manifest-authority-publication.json.
+Own CI39149314656 attempt1 at91db06b LIVE: Windows117739515199, book117739515201,
+Linux117739515267. Watch21911 LIVE /tmp/s3drive-manifest-authority-91d-watch.log;
+track this handle/run, do not rerun on an observation timeout. Checker
+/tmp/s3drive-check-manifest-authority-91d.py compiled only, NOT executed.
+Require all3 terminal success plus completed own raw reviews at
+/tmp/s3drive-manifest-authority-91d-raw-reviewed.json, own finalized Windows
+artifact IDs/API digests/times, fresh output /tmp/s3drive-manifest-authority-91d-artifacts,
+strict typed21/14/all-field raw equality and both project oracles. Refuse prior
+artifacts including252's12143780290/12143656516. On failure retain evidence and
+do not run success checker. No chunked native/provider/physical-workstation
+acceptance or historical NoWrite-cause claim follows from hosted regressions.
 
 Next phase requires an exact durable chunk-publication/settlement journal binding
 original snapshot/guard/parent/frozen plan/route, reserve+publish UUIDs, physical

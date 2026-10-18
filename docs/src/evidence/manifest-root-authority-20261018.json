@@ -285,7 +285,37 @@
     "boxing new dispatch future alone did not fix overflow; split four original owner-move scenarios into separately boxed futures, all scenario statements preserved modulo formatting and terminal return location; all18 publication tests now pass"
   ],
   "hosted": {
-    "status": "not dispatched; source not yet pushed"
+    "source": "91db06bb4c98ecc9e251817444672e1ab44764ac",
+    "run_id": 39149314656,
+    "run_attempt": 1,
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39149314656",
+    "status": "in_progress",
+    "jobs": [
+      {
+        "id": 117739515199,
+        "name": "rust (windows-latest)",
+        "status": "in_progress"
+      },
+      {
+        "id": 117739515201,
+        "name": "book",
+        "status": "in_progress"
+      },
+      {
+        "id": 117739515267,
+        "name": "rust (ubuntu-latest)",
+        "status": "in_progress"
+      }
+    ],
+    "watch_session": 21911,
+    "watch_log": "/tmp/s3drive-manifest-authority-91d-watch.log",
+    "checker_script": "/tmp/s3drive-check-manifest-authority-91d.py",
+    "checker_compiled_only": true,
+    "checker_executed": false,
+    "all_raw_reviews_closed": false,
+    "new_artifact_output": "/tmp/s3drive-manifest-authority-91d-artifacts",
+    "own_native_cohort_accepted": false,
+    "chunked_native_large_file_or_provider_acceptance": false
   },
   "manifest_authority_metadata": true,
   "logical_file_settlement": false,
@@ -524,5 +554,15 @@
     "url": "http://127.0.0.1:33767/manifest-root-authority.html",
     "chapter_http_ok": true,
     "svg_http_matches_source": true
+  },
+  "publication": {
+    "source": "91db06bb4c98ecc9e251817444672e1ab44764ac",
+    "branch": "codex/manifest-root-authority",
+    "exact_remote": true,
+    "clean": true,
+    "all243_frozen_hashes_match": true,
+    "public_before_after": true,
+    "visibility_mutations": 0,
+    "main_unchanged": "1a93b5f7248892fec96dc8da4438ee7967692e77"
   }
 }
