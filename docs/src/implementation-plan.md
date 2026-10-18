@@ -1834,4 +1834,6 @@ absence refusal, invalid input before requests and bounded future layout; then
 the full local gate and this source's own hosted cohort before integration.
 The focused S3 suite passed 62 controls. The full local gate passed with
 252 frozen hashes unchanged, 62 S3 / 365 state tests and 63 book chapters.
-Its own hosted acceptance remains pending; no managed/native activation follows.
+Its own source-bound cohort 39167583915 has passed all three jobs and strict
+21/14 artifact plus raw35 comparisons. Both prerequisites are accepted; combine
+them before gating the verified manifest reader. No native activation follows.

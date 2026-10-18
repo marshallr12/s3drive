@@ -60,44 +60,30 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Active work: independent pinned related-object reads (2026-10-18)
+## Accepted helper; next manifest reader (2026-10-18)
 
-Checkout /home/marshall/src/worktrees/s3drive-pinned-related-reads,
-branch codex/pinned-related-reads, from accepted20706cd. The primary checkout
-/home/marshall/src/s3drive stays oncodex/chunk-source-controller with253frozen
-sourcefiles and liveCI39165918104/watch79476. Do not edit its runtime or borrow
-its acceptance for this branch. RootcontrollerLinux/book passed; Windows LIVE.
-This helper is independent prep for the future managed manifest range reader;
-that reader still follows controller acceptance.
-
-Only productiondelta: S3reader.rs ReadHandle.open_related delegatesboxed to the
-captured reader.open, preserving source/credentialgeneration but requiringfresh
-onlineHEAD. Tests reader/tests.rs addrotation(root/child/grandchild/GET), new
-independentgeneration, exactscope/IfMatch, freshHEADdenial/missing, invalidinput
-norequest, futureinlinebudget. No schema/wire/native/write change.
-Focused1 95205 EXIT101:2pass/1fail onfixturetargetsubstring; lockedSDK1.152.0
-get_object.rs402 addsx-id=GetObject. FixedexactparsedURLpath (notproduction),
-alsoextendedchainedopen. Focused2 64173 EXIT0,62S3pass21.04s, log
-/tmp/s3drive-pinned-related-focus2.log. Existingrotatingprovider reusesdummykeys,
-no realcredentials/provider calls. Resolvedaws-config1.12.0 andcredential-types
-1.3.0 inspected; profilefilescachedperSDKdocs, nothotreloadpromise.
-Fullgate57146 CLOSED EXIT0, /tmp/s3drive-pinned-related-gate.log;252sourcefiles frozen
-in/tmp/s3drive-pinned-related-frozen.json, onlytwoS3deltasvsacceptedbase.
-Selfreview/audit/runtimepatch retained in/tmp/s3drive-pinned-related-{review,
-dependency-audit}.json andruntime.patch. Noindependentreviewer/noagentdispatch.
-Full local gatePASS:62S3/3new20.40s,365state/1ignored171.38s,34core,50authority,
-18existingpublication,8existingchunk,10TLS/3ignored,67docfiles/63chapters;fmt/clippy/
-build. Oneoldretainedsessionquota longnotice thenPASS; nobenchmarkclaim.
-LogSHAe1305a09ed2f1b688ccb56e3888013c38927937da48ad42e23086e696eb7be71;
-mapSHAf03483401f4c8d911f12d8bcb084b781a6e042a1c6b45441f15ab80123abf6bb.
-12memberlocalarchive pinned-related-reads-local-20261018.tar.gz,49869bytes,SHA
-387f5d110ae830aa896bbe1d12c8700ee34cab27dcf818206cd0634a1bc155db;allindex
-membersverified. /tmp/s3drive-pinned-related-gate-result.json andarchive-proof.json.
-No runtime edits needed. Next finaldocs/sourcepublication/ownhostedcohort before
-integration. Controller474evidence remainsindependent inprimarycheckout.
-Use CARGO_TARGET_DIR=/home/marshall/src/s3drive/target forlocalbuildreuse; no
-otherlocalS3Drive cargo job was live when selecting it. Sources remainisolated.
-Main visibilitypolicyPUBLIC applies unchanged. GoalACTIVE, no newagentdispatch.
+Source fef944268c89d2c0b1d859a6a86d0f6761c24361, own run39167583915 attempt1:
+Windows117793655137, Linux117793655088, book117793654818 all SUCCESS.
+Watch43951 CLOSED EXIT0; checker60633 CLOSED EXIT0. All three raw logs reviewed
+and hash-bound; own finalized replacement12151153703/disposition12151479241
+passed independent strict21/14, project oracles and raw35 field/type comparison.
+22-member archive pinned-related-fef-hosted-20261018.tar.gz,118377bytes, SHA
+15d38ecf5047cd5f67c70c37347a19b527e2476d77c5580654edfbf44c629d26;
+all indexed members verified. Do not reexecute one-use checker/archive builders.
+Both prerequisites now accepted; combine with controller474 before reader gate.
+Reader draft: /home/marshall/src/worktrees/s3drive-manifest-range-reader,
+codex/manifest-range-reader. Focused reader78806 EXIT0,5 controls,4.68s;
+Clippy75607 EXIT0. No mounted chunk acceptance or main promotion.
+Existing native regression only; Windows3 locked disposable profiles retain
+no dummy credentials, delay-import/Node notices retained. No physical reboot or
+new Wasabi mutations. PUBLIC policy remains current. Goal ACTIVE.
+Helper full local gate57146 CLOSED EXIT0,252 frozen files unchanged; archive
+pinned-related-reads-local-20261018.tar.gz retains source/audit/self-review.
+Only production delta is ReadHandle.open_related with fresh scoped HEAD under
+captured credentials. Independent new opens rotate; legacy reader unchanged.
+Three new S3 controls prove chained credential pinning, exact scope/fresh denial
+and bounded inline future layout. No profile hot-reload promise. See book
+pinned-related-reads.md and dated evidence for detailed checks and failure history.
 
 ## Accepted prerequisite: exact chunk source settlement state (2026-10-18)
 
