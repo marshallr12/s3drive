@@ -405,6 +405,26 @@ not authentication, delivery or commit proof and never authorizes replay.
 The full local and new exact-source hosted native gates are required before
 accepting this candidate; the bf9509 cohorts prove only their unchanged source.
 
+At exact0bbc4db,
+[CI39117045361](https://github.com/marshallr12/s3drive/actions/runs/39117045361)
+passed the early Windows CLI/TLS and7-unit/10-HTTP/9-TLS controls plus standalone
+ordinary-account startup and snapshot checks, then failed the native32-flush
+burst at step25. The Info request returned UnexpectedEof/native1117 before its
+body was polled. Both connector candidate and error-reported connection were
+loopback client57583/server57240; that matches server connection185's header
+timeout after5039ms, with read0/write0/flush1/dispatched=false. This is an actual
+client-error/server socket match, beyond the earlier merely nearby empty sockets.
+
+The failure-only fresh CLI also refused after5206ms while both owned processes
+remained alive. A subsequent server connection186 expired its header deadline
+with read0, but its exact association to that CLI was not independently logged.
+Do not attribute the failure solely to the native callback client's runtime.
+These observations narrow the failure boundary; they do not establish its
+cause, whether any preceding upload committed or permission to retry. Later
+Windows workspace/lifecycle/paired/reference/broad gates were skipped. This
+candidate is not accepted and main remainsbf9509. Preserve the existing assertions
+and deadlines while investigating; see the [dated raw evidence](evidence/authority-snapshot-platform-20261018.json).
+
 ## Bounded failure diagnostics (2026-10-17)
 
 The [same-source Windows failure investigation](authority-startup.md#same-source-repeat-failure-2026-10-17)

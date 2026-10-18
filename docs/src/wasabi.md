@@ -145,6 +145,19 @@ with one winner each, Unicode/literal-key replacement, empty-object round trip,
 and receipt-independent observation using metadata plus a complete SHA-256 GET.
 The literal key included `nested/日本語 %2F + café.txt`. Rejections returned 412.
 
+Research refresh2026-10-18: Wasabi's current
+[bucket/object documentation](https://docs.wasabi.com/docs/en/working-with-buckets-and-objects)
+says object names containing four-byte UTF-8 characters, such as emoji, are
+unsupported. The live literal-key sample above uses only one-, two- and
+three-byte UTF-8 characters; it does not establish emoji-key support or disprove
+that documentation. This is a provider documentation claim, not a new live
+result. The chosen managed layout keeps logical names in the Rust authority's
+database and forms immutable payload keys from volume/node/operation IDs under
+the selected store root. Thus logical filenames do not need to become literal
+S3 keys; an emoji in a configured physical store root still needs separate
+validation. Managed logical emoji names and native/provider behavior retain
+their separate acceptance scopes. No additional Wasabi request was made.
+
 Cleanup verified ownership and exact bytes before deleting only the six fixture
 keys. The final prefix listing was empty, with no errors or remaining keys.
 The [sanitized evidence](evidence/wasabi-conditional-put-2026-10-16.json) records

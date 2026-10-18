@@ -1,0 +1,90 @@
+{
+  "format": "s3drive-multipart-sizing-evidence-v1",
+  "date": "2026-10-18",
+  "status": "local gate passed; native acceptance not claimed, parent Windows transport failure retained",
+  "branch": "codex/multipart-sizing",
+  "parent": "0bbc4dbdf5915cd6252e2d718bdf370c15407b7d",
+  "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+  "overall_large_file_acceptance": false,
+  "scope": "Pure immutable multipart geometry, no payload/persistence/network/permit/configuration/schema changes",
+  "source_sha256": {
+    "crates/s3drive-core/src/lib.rs": "c43a4579f3be6c5ec6550f70613e58603b175285837e8eee88aeb130d1e4b646",
+    "crates/s3drive-core/src/multipart.rs": "7651dd03cd1be7858dd3ebc632687008dcf9e7fcc1313a20b65e7e132c861d07",
+    "crates/s3drive-core/src/multipart/tests.rs": "b985ad1dd599ff09ddb99e2ea5565652e3f5fef03de80a4fb731f762eedd7d48"
+  },
+  "limits": {
+    "explicit_inputs": true,
+    "no_provider_default": true,
+    "client_max_parts": 10000,
+    "client_max_object_bytes": 9223372036854775807,
+    "client_ceiling_is_not_provider_capability": true
+  },
+  "behavior": [
+    "raise preferred stride for configured nonfinal minimum or part-count pressure",
+    "positive consecutive one-based parts cover exact bytes with no gaps or overlap",
+    "last part may be below nonfinal minimum",
+    "empty object explicitly stays on single-PUT path",
+    "invalid or impossible limits rejected without truncation",
+    "O(1) lazy iterator state; no body or per-part-vector allocation"
+  ],
+  "controls": [
+    "short final, exact multiple, tiny nonempty",
+    "count pressure and impossible layout",
+    "signed64 maximum, unsigned overflow inputs, no payload allocation",
+    "exact10000-part capacity and one extra byte rejection",
+    "invalid limits/preference/zero object",
+    "exhaustive synthetic minima1..5, maxima min..9, counts1..5, sizes1..60, preferences1..max; independent enumeration feasibility oracle"
+  ],
+  "focused_initial": {
+    "test_count": 5,
+    "exit_code": 0,
+    "log": "/tmp/s3drive-multipart-sizing-focused1.log",
+    "scope": "before adding exact10000-part test; final six cases require full gate"
+  },
+  "local_gate": {
+    "command": "bash scripts/gate.sh",
+    "status": "completed",
+    "session": 75443,
+    "log": "/tmp/s3drive-multipart-sizing-gate1.log",
+    "exit_code": 0,
+    "log_sha256": "9726bf3844ac6dd963a6345beeb207e5337bf8505e45a110d8fd0434813fa50a",
+    "multipart_cases": 6,
+    "core_cases": 17,
+    "state_cases": 274,
+    "source_unchanged": true
+  },
+  "sources_read_20261018": [
+    {
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html",
+      "scope": "AWS documents10000 parts,5MiB..5GiB nonfinal; rounded48.8TiB maximum not converted into an asserted exact byte ceiling"
+    },
+    {
+      "url": "https://docs.wasabi.com/docs/en/working-with-buckets-and-objects",
+      "scope": "Wasabi documents5TB objects/5GB single PUT; exact byte units and multipart conditions unverified"
+    },
+    {
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_CompleteMultipartUpload.html",
+      "scope": "future completion API research; no execution added"
+    }
+  ],
+  "remaining": [
+    "durable byte/generation/target/credential/guard/part-hash binding",
+    "initiation/part/completion/abort uncertainty and streamed verification",
+    "bounded staged range composition replacing whole-file filesystem editing buffers",
+    "approved real-provider multipart and native large-file acceptance"
+  ],
+  "provider_requests_performed": 0,
+  "current_8mib_write_bound_changed": false,
+  "parent_hosted_run": 39117045361,
+  "parent_windows_failure": "Info/UnexpectedEof/native1117 in flush burst at step25; correlated error/server loopback socket; main remainsbf9509",
+  "large_file_sends_enabled": false,
+  "final_docs": {
+    "links": 57,
+    "build_exit_code": 0,
+    "test_exit_code": 0,
+    "log_sha256": {
+      "/tmp/s3drive-multipart-sizing-final-book.log": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4",
+      "/tmp/s3drive-multipart-sizing-final-book-tests.log": "18cb1cf40c90c10e5ad5730f90e6845f480c1c0e9795f03a3b78ab6d21854d2d"
+    }
+  }
+}

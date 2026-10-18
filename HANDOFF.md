@@ -7,10 +7,40 @@ gate with `bash scripts/gate.sh`; native/provider/recovery gates are separate.
 
 ## Accepted checkpoint and first action
 
-Current branch: codex/error-connection-metadata, new diagnostic work after accepted
-bf9509. Preserve existing uncommitted acceptance/research/archive files while
-adding this phase. New code has a passing local gate; exact-source hosted
-acceptance remains required before main promotion.
+Current branch: codex/multipart-sizing, dependent on pushed diagnostic0bbc4db.
+Pure geometry code/docs are uncommitted; preserve them. Its full local gate passed
+EXIT0 (session75443, /tmp/s3drive-multipart-sizing-gate1.log): core17 including
+multipart6, state274, all workspace/build/lint/book checks. No payload/network,
+schema/config or8MiB write-bound change. New evidence: docs/src/evidence/
+multipart-sizing-20261018.json. Done criteria in multipart-plan.md and plan.
+
+Diagnostic0bbc4dbdf5915cd6252e2d718bdf370c15407b7d was normally pushed privately
+to codex/error-connection-metadata with frozen source/privacy/ref guards, proof
+/tmp/s3drive-error-connection-publication.json. Main staysbf9509. Exact-source
+CI39117045361 has terminal Windows117644838870 FAILURE (native flush burst),
+book117644838943 and Linux117644839047 SUCCESS. Whole run is terminal FAILURE.
+Completed logs /tmp/s3drive-error-connection-0bbc-{linux,windows,book}.log reviewed;
+run metadata /tmp/s3drive-error-connection-0bbc-run.json. No active0bbc job remains.
+Linux9 native,32-flush, paired no-systemd recovery and both coordinator startup
+protocols passed; only deliberate stopped-authority refusals and TLS fault cases.
+DO NOT RUN prepared
+/tmp/s3drive-check-error-connection-0bbc.py or its reference checker: this failed
+source is not eligible. Later Windows native/reference/workspace gates skipped.
+Completed Windows raw /tmp/s3drive-error-connection-0bbc-windows.log reviewed.
+At burst step25, Info/Request/UnexpectedEof/native1117, body_frame_polled=false;
+candidate AND error connection client57583/server57240 exactly match server185
+HttpTimeout5039ms/read0/write0/flush1/dispatched=false. Fresh CLI also Refused
+after5206ms with both owned processes alive. Subsequent empty server186 was not
+independently bound to that CLI. Standalone startup/snapshot and authority7unit/
+10HTTP/9TLS passed; console Ctrl+C5ms single observation only. No upload/outcome
+or root-cause inference. Current multipart changes do not belong to hosted0bbc.
+
+First action next: complete the local planner checkpoint/docs, then prioritize
+the correlated transport
+failure before enabling new upload paths. Do not promote0bbc despite portable
+success or replace its original IDs/assertions/deadlines. Fresh CLI refusal means
+native-callback-only explanations are not established. A different per-RPC
+transport ownership design is only a proposal, not a demonstrated correction.
 
 Local/remote main AND codex/authority-snapshots are now
 bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05. Exact-source primary CI39113628548 is
@@ -138,9 +168,9 @@ full request receipt. Unknown extras and ambiguous observations are covered.
 Focused authority tests EXIT0 (/tmp/s3drive-error-connection-focused1.log), full
 local gate EXIT0 (/tmp/s3drive-error-connection-gate1.log, recovered session77211):
 authority7unit, lifetime2, execution1, HTTP10/TLS9, state274, workspace/build/lint
-and57-doc book checks. First action next: finish docs checks, commit/push this
-topic with private/ref/source guards, then require its own exact-source hosted
-cohort. Main staysbf9509 until acceptance. No native mount or provider call was
+and57-doc book checks. Final docs build/test and links passed. Topic is now
+pushed as0bbc4db with its failed Windows gate above. Main staysbf9509;0bbc is not
+accepted. No native mount or provider call was
 performed locally. See implementation-plan and dated JSON.
 
 A separate standalone Linux control proved public Hyper-util Error::connect_info

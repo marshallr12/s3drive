@@ -1,6 +1,7 @@
 # Multipart uploads: research and implementation plan
 
-**Researched 2026-10-16. Proposed; not implemented or live-tested.** Multipart
+**Researched 2026-10-16; limits refreshed 2026-10-18. Upload execution remains
+proposed and not live-tested.** Multipart
 support must extend the single-PUT journal before files above its 8 MiB bound
 can upload. A passing `PutObject` probe cannot verify conditional completion.
 The completed six-object Wasabi approval does not cover multipart operations.
@@ -100,3 +101,72 @@ Finally prepare a **new**, concrete live plan with exact keys, multipart IDs,
 operation/byte limits and owned-part cleanup. It will need fresh user
 authorization; this document performs no provider requests or policy changes.
 Passing small single-PUT checks cannot substitute for this acceptance.
+
+## First implementation phase: sizing only (candidate, 2026-10-18)
+
+Add a pure `s3drive-core::multipart` planner before adding durable attempts.
+Its done criterion is a bounded, immutable part geometry that covers the exact
+nonempty object once, with contiguous positive parts, consecutive numbering,
+the configured minimum for nonfinal parts and maximum for every part. Select
+the greater of the requested preferred size, configured nonfinal minimum and
+the size needed to fit the part-count limit. Raise the preferred size when
+needed; reject an object that cannot fit instead of truncating or silently
+changing the configured limits. An empty file stays on the single-PUT path.
+
+Limits are explicit inputs, with no provider defaults or capability claim.
+The client bounds its plans to10,000 parts and signed64-bit lengths compatible
+with its SQLite staging model. These are implementation ceilings, not exact
+Wasabi service limits. Validate malformed limits and use division/remainder
+arithmetic that cannot overflow at the largest accepted object length. Part
+lookup and lazy iteration must avoid allocating a payload or a per-part vector.
+Test final-short/exact-multiple parts, boundary growth past the count limit,
+impossible layouts, the signed64-bit boundary and exhaustive small geometries.
+Run the full local gate and preserve every current unsupported upload path.
+See the [dated implementation record](evidence/multipart-sizing-20261018.json).
+
+This sizing phase does not bind or persist bytes, generation, credentials,
+guards or part hashes, and cannot issue a send permit. The next journal phase
+must freeze those bindings and hashes before initiation. The filesystem's
+current whole-file edit/read buffers also need replacement with bounded staged
+range composition; a valid size plan alone cannot enable large-file writes.
+Follow with initiation/part/completion uncertainty, streamed verification and
+owned-abort acceptance before changing the8MiB write bound. No new Wasabi
+request or mutation permission is implied.
+
+## Next journal and streaming phases (proposal, 2026-10-18)
+
+Current source inspection found independent8MiB boundaries in
+`s3drive-state/migrations/006.sql`, `remote::payload`, managed publication and
+the filesystem's whole-file edit implementation. A multipart sizing result does
+not relax any of them. Do not enlarge the single-PUT table's limit and pass an
+oversized buffer into its existing executor.
+
+First add a separately versioned immutable planning artifact with the sealed
+generation ID/manifest, exact target and credential/configuration binding,
+original guard/ancestor receipt, whole-body SHA-256, explicit limits/geometry,
+and ordered per-part SHA-256 values. Bound both plan and total part-row quotas.
+Use the existing retained staged chunks and private SQLite owner. Hash verified
+ranges in bounded buffers; keep a long hash scan from monopolizing all owner
+commands. A prepared plan grants no network permission. Repeated preparation
+must recover the identical recorded plan; differing inputs require explicit
+resolution, without replacing or rehashing an uncertain attempt into a new one.
+Test sparse zero extents, mixed inherited/new chunks and nonaligned boundaries,
+corrupt/short bytes, schema conflicts, disk-full rollback, process death during
+planning and preservation of existing generations/receipts.
+
+Before initiation is possible, design shared target admission across both
+single-PUT and multipart attempts. The existing unique blocked-target index
+covers only `remote_intents`; a second unrelated table must not let two upload
+strategies acquire conflicting permission. Check both kinds atomically at
+prepare/claim, validate retained history at reopen and preserve old operation
+hashes and unknown outcomes during migration. Completion/acknowledgment and
+abort need their own state transitions and fault tests; a complete plan alone
+cannot be treated as a verified upload.
+
+Separately replace whole-file editing with bounded staged range composition:
+copy untouched immutable ranges, retain exact parent revision/manifest, stage
+only changed chunks and represent holes without allocating their logical size.
+Reads and append/truncate need the same bounds. A newer local descendant must
+not be discarded when an ancestor upload or logical metadata commit settles.
+Integrate large native files only after both the streaming engine and durable
+multipart executor satisfy their acceptance contracts.

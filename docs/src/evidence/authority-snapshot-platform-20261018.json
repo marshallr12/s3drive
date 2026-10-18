@@ -973,7 +973,7 @@
     "date": "2026-10-18",
     "branch": "codex/error-connection-metadata",
     "parent": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
-    "status": "local candidate; hosted acceptance pending",
+    "status": "native Windows failure reproduced; not accepted, main unchanged",
     "source_sha256": {
       "crates/s3drive-authority/src/connection_tag.rs": "d995fd49d6e231cdd806c670562803a61986bd57884f22f9f8da91a85457ab5b",
       "crates/s3drive-authority/src/lib.rs": "222a22baf9598f871106b8bbead078a33088f909bcc7cd96844d4317c07c3a76",
@@ -1042,6 +1042,79 @@
         "/tmp/s3drive-error-connection-final-book.log": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4",
         "/tmp/s3drive-error-connection-final-book-tests.log": "18cb1cf40c90c10e5ad5730f90e6845f480c1c0e9795f03a3b78ab6d21854d2d"
       }
+    },
+    "hosted_run": {
+      "run": 39117045361,
+      "url": "https://github.com/marshallr12/s3drive/actions/runs/39117045361",
+      "source": "0bbc4dbdf5915cd6252e2d718bdf370c15407b7d",
+      "status": "completed",
+      "windows_job": 117644838870,
+      "windows_conclusion": "failure",
+      "failed_step": "Verify Windows metadata flush burst",
+      "book_job": 117644838943,
+      "book_conclusion": "success",
+      "linux_job": 117644839047,
+      "linux_status": "completed",
+      "observed_at_utc": "2026-10-18T10:02:05.827053+00:00",
+      "windows_raw_log_sha256": "9b7080902821ad3c147575913b4f12ff18d81b7069733c97872530196c7a467e",
+      "windows_controls": "early real CLI/TLS controls, authority7unit/2lifetime/1execution/10HTTP/9TLS and standalone ordinary-account startup/snapshot/private-console passed",
+      "console_cancel_to_exit_ms": 5,
+      "console_timing_scope": "single observed standalone Ctrl+C result in completed Windows raw log, not guarantee",
+      "native_failure": {
+        "at_utc": "2026-10-18T09:59:09Z",
+        "burst_step": 25,
+        "request": "Info",
+        "phase": "Request",
+        "io_kind": "UnexpectedEof",
+        "native_code": 1117,
+        "timed_out": false,
+        "body_frame_polled": false,
+        "connector_started": true,
+        "connector_completed": true,
+        "candidate_matches_error_connection_and_server": true,
+        "loopback": {
+          "ipv6": false,
+          "client_port": 57583,
+          "server_port": 57240
+        },
+        "server": {
+          "connection": 185,
+          "failure": "HttpTimeout",
+          "http_ms": 5039,
+          "read_bytes": 0,
+          "written_bytes": 0,
+          "flushes": 1,
+          "dispatched": false
+        }
+      },
+      "failure_control": {
+        "mount_running": true,
+        "coordinator_running": true,
+        "fresh_cli": "Refused",
+        "elapsed_ms": 5206,
+        "subsequent_server_connection": 186,
+        "subsequent_server_header_timeout_ms": 5045,
+        "subsequent_server_read_bytes": 0,
+        "fresh_cli_to_connection186_exact_socket_binding_proven": false
+      },
+      "later_windows_gates_skipped": true,
+      "strict21_14_artifacts_accepted": false,
+      "limits": [
+        "actual error-reported socket now matches the server deadline event, unlike prior unbound nearby sockets",
+        "no request-body poll or server plaintext read/dispatch was observed; no upload/commit or absence-of-effect conclusion",
+        "fresh CLI also refused while owned processes were alive; do not attribute solely to native callback runtime scheduling",
+        "root cause still unproven; do not promote failed source or run success-only artifact checker"
+      ],
+      "conclusion": "failure",
+      "linux_conclusion": "success",
+      "raw_log_sha256": {
+        "linux": "d1af1ac7d071d2642bd23e16330793ff705bd816326ec86a2832a6c7d18d611b",
+        "windows": "9b7080902821ad3c147575913b4f12ff18d81b7069733c97872530196c7a467e",
+        "book": "76a45e6933fc5026ad8b42bc1a47ceebe813f8103479a0d1947fa0f5a084b8b3"
+      },
+      "run_record_sha256": "173c453ddc21eefa9f7bc08c7645cf3d860e23ce87e0f617035751bf4da3808e",
+      "linux_review": "All9 native including32 flushes, paired no-systemd recovery and both coordinator startup protocols passed; only two intentional stopped-authority Node/ConnectionRefused/Unavailable events and controlled TLS faults",
+      "native_overall_acceptance": false
     }
   }
 }

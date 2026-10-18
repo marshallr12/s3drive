@@ -917,6 +917,15 @@ redaction/no-replay/outcome guards and require the full local gate plus a new
 hosted cohort. Error-reported connection information is not delivery/commit proof.
 The completed main repeat remains evidence only for the unchanged bf9509 source.
 
+The error-connection candidate0bbc4db subsequently reproduced Windows's native
+Info/UnexpectedEof failure at flush-burst step25. Its sanitized error connection
+and connector candidate matched server connection185's empty-header deadline.
+The fresh independent CLI also refused while both owned processes were alive.
+Keep mainbf9509 and retain the failed source/raw evidence; later Windows gates
+were skipped. This is useful correlation, not a root-cause or upload outcome.
+Transport investigation takes priority before enabling additional upload paths.
+
+
 Require exclusive existing-authority ownership and explicit volume/policy pin;
 read supported legacy/current state without migrations or namespace changes.
 Produce a new private artifact outside mounted trees, with a database filename
@@ -941,3 +950,17 @@ validation, synchronization and completion publication; no false success or
 replacement. Require real CLI round trips, the full local gate, actual Windows
 file/ACL behavior and existing native/reference/startup regressions before
 publication. Real deployment restore drills remain separate.
+
+### P5b1 — bounded multipart geometry (candidate, 2026-10-18)
+
+While the error-connection candidate0bbc4db runs its own hosted acceptance,
+implement the [sizing-only phase](multipart-plan.md#first-implementation-phase-sizing-only-candidate-2026-10-18)
+on a dependent topic. Require explicit validated limits, overflow-safe complete
+coverage, bounded lazy part enumeration, boundary/exhaustive geometry tests and
+the full local gate. No database migration, SDK/network operation, config change
+or increase to the8MiB write bound is part of this phase. Persisted immutable
+byte/binding plans and bounded filesystem range composition remain required
+before multipart execution; do not substitute arithmetic tests for those gates.
+The pure planner's six cases, complete local workspace/lint/build and book gate
+passed. Its parent0bbc4db has a recorded native Windows failure; this local
+sizing result is not acceptance of that parent or large-file execution.
