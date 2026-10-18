@@ -144,7 +144,7 @@ impl Storage {
     }
     /// Offline chunk/page plans on the existing private owner, never send permits.
     pub fn chunked(&self, options: crate::chunked::Options) -> Result<crate::chunked::Planner> {
-        crate::chunked::Planner::new(self.owner.clone(), options)
+        crate::chunked::Planner::new(self.owner.clone(), options, self.staging_options)
     }
     pub fn uploads(&self) -> Uploads {
         Uploads {

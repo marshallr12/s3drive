@@ -1,6 +1,6 @@
 {
   "research_date": "2026-10-18",
-  "status": "offline plans locally accepted and pushed; own hosted run in progress",
+  "status": "offline planner local and own hosted cohort accepted; chunked mounted format remains inactive",
   "branch": "codex/chunk-plan-journal",
   "parent_commit": "fa0a91dc482fde50e3238bbc29c6e5abc2f72900",
   "module": "s3drive-state::chunked",
@@ -214,8 +214,8 @@
     "run_id": 39142749429,
     "run_attempt": 1,
     "url": "https://github.com/marshallr12/s3drive/actions/runs/39142749429",
-    "status": "in_progress",
-    "conclusion": null,
+    "status": "completed",
+    "conclusion": "success",
     "jobs": [
       {
         "id": 117720340366,
@@ -227,8 +227,8 @@
       {
         "id": 117720340529,
         "name": "rust (windows-latest)",
-        "status": "in_progress",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "success",
         "html_url": "https://github.com/marshallr12/s3drive/actions/runs/39142749429/job/117720340529"
       },
       {
@@ -260,13 +260,116 @@
     },
     "watch_log": "/tmp/s3drive-chunk-plan-bdb-watch.log",
     "success_checker_script": "/tmp/s3drive-check-chunk-plan-bdb.py",
-    "checker_compiled_only": true,
-    "success_checker_executed": false,
-    "success_checker_eligible": false,
-    "all_raw_reviews_closed": false,
+    "checker_compiled_only": false,
+    "success_checker_executed": true,
+    "success_checker_eligible": true,
+    "all_raw_reviews_closed": true,
     "new_output": "/tmp/s3drive-chunk-plan-bdb-artifacts",
-    "own_native_cohort_accepted": false,
+    "own_native_cohort_accepted": true,
     "native_large_file_or_provider_acceptance": false,
-    "watch_session": 33001
+    "watch_session": 33001,
+    "completed_raw_reviews": {
+      "source": "bdb220c69b187d3b3d764f4b3832d95f01d11e07",
+      "run_id": 39142749429,
+      "run_attempt": 1,
+      "reviewed": true,
+      "jobs": {
+        "117720340366": {
+          "source": "bdb220c69b187d3b3d764f4b3832d95f01d11e07",
+          "run_id": 39142749429,
+          "run_attempt": 1,
+          "job_id": 117720340366,
+          "status": "completed",
+          "conclusion": "success",
+          "reviewed": true,
+          "log": "/tmp/s3drive-chunk-plan-bdb-book.log",
+          "sha256": "05acd48e5c7a95b9d5be3916d3b2a4bb2cb7339f6a1f2fa09cd383e986cc11b0",
+          "scope": "schema25 strict preflight,60doclink files,56mdBook chapters",
+          "routine_download_compile_lines_compacted": 382,
+          "notices": [
+            "Git default branch advice",
+            "pinned Rust override during mdBook install",
+            "checkout Node20 forced24"
+          ],
+          "native_or_provider_acceptance": false
+        },
+        "117720340601": {
+          "source": "bdb220c69b187d3b3d764f4b3832d95f01d11e07",
+          "run_id": 39142749429,
+          "run_attempt": 1,
+          "job_id": 117720340601,
+          "status": "completed",
+          "conclusion": "success",
+          "reviewed": true,
+          "log": "/tmp/s3drive-chunk-plan-bdb-linux.log",
+          "sha256": "cc41e34056462032c64530c2395fef7443e0b1d98e37a8f054caf0a9155d79d4",
+          "scope": "310state/1ignored,34core,50authority,51S3;9FUSE;32HTTPS;11Unicode;paired and coordinator HTTP/TLS no-systemd startup",
+          "review": "Routine setup, successful per-test/compile/cache lines compacted. Relevant assertions, failures, notices and diagnostics reviewed. Structured 21/14 reference JSON to be checked against fresh artifacts by strict typed checker.",
+          "notices": [
+            "Node actions/cache deprecations and forced24",
+            "Windows LNK4199 unused delayed WinFsp imports on nine CLI test targets",
+            "Windows three locked disposable profiles: dummy credentials removed; VM disposal",
+            "Expected injected TLS handshake/partial-header Timeout/Lifetime, HEAD403, rival conflict, stopped-authority connect failures",
+            "Windows state suite221.38s successful"
+          ],
+          "chunked_native_large_file_acceptance": false,
+          "provider_requests": 0
+        },
+        "117720340529": {
+          "source": "bdb220c69b187d3b3d764f4b3832d95f01d11e07",
+          "run_id": 39142749429,
+          "run_attempt": 1,
+          "job_id": 117720340529,
+          "status": "completed",
+          "conclusion": "success",
+          "reviewed": true,
+          "log": "/tmp/s3drive-chunk-plan-bdb-windows.log",
+          "sha256": "7b8f6f28ee64ea4770a3a9c5fdbd8c1587d5fd7d34200c84404d995440bcd2c9",
+          "scope": "305state/1ignored,34core,50authority,51S3;32HTTPS;disposition lifecycle;21/14 typed references;paired and coordinator cross-logon;7native;Unicode cache/session tests",
+          "review": "Routine setup, successful per-test/compile/cache lines compacted. Relevant assertions, failures, notices and diagnostics reviewed. Structured 21/14 reference JSON to be checked against fresh artifacts by strict typed checker.",
+          "notices": [
+            "Node actions/cache deprecations and forced24",
+            "Windows LNK4199 unused delayed WinFsp imports on nine CLI test targets",
+            "Windows three locked disposable profiles: dummy credentials removed; VM disposal",
+            "Expected injected TLS handshake/partial-header Timeout/Lifetime, HEAD403, rival conflict, stopped-authority connect failures",
+            "Windows state suite221.38s successful"
+          ],
+          "chunked_native_large_file_acceptance": false,
+          "provider_requests": 0
+        }
+      }
+    },
+    "watch_exit_code": 0,
+    "watch_session_closed": true,
+    "success_checker_exit_code": 0,
+    "success_checker_log": "/tmp/s3drive-chunk-plan-bdb-artifact-check.log",
+    "fresh_artifacts": [
+      {
+        "kind": "replacement",
+        "id": 12142621547,
+        "source": "bdb220c69b187d3b3d764f4b3832d95f01d11e07",
+        "run_id": 39142749429,
+        "run_attempt": 1,
+        "windows_job": 117720340529,
+        "zip_sha256": "a2bdd15c67ae30a7bcbd2e44fdeff85ab4343b24d6126b22c2e71c8457f57887",
+        "json_sha256": "809f268c2188713e33c5fb884050a389b888b59ee105e17405e6553ba574f818",
+        "primary_artifact_reused": false
+      },
+      {
+        "kind": "disposition",
+        "id": 12142503573,
+        "source": "bdb220c69b187d3b3d764f4b3832d95f01d11e07",
+        "run_id": 39142749429,
+        "run_attempt": 1,
+        "windows_job": 117720340529,
+        "zip_sha256": "fc41f291ca495ad128d645416a28884a8de137d0079c2e25dddb006a8ced9646",
+        "json_sha256": "3d8d9ef9c0e2e660fa26e3657156232e25305c8812bf7bdfd6d14874afd17982",
+        "primary_artifact_reused": false
+      }
+    ],
+    "strict21_14_typed_checks_and_both_project_oracles_passed": true,
+    "raw35_reference_records_equal_fresh_artifact_fields_and_types": true,
+    "exact_source_repeat_performed": false,
+    "chunked_native_large_file_acceptance": false
   }
 }

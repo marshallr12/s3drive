@@ -19,16 +19,18 @@ through main `f8c4f58`. Existing direct mounts remain available without
 implicit migration. Multipart/large files, reclamation, full application
 compatibility and real remote deployment remain work.
 
-**Current main checkpoint:** [coordinator supervision and TLS diagnostics](docs/src/authority-startup.md)
+**Earlier hosted checkpoint:** [coordinator supervision and TLS diagnostics](docs/src/authority-startup.md)
 passed hosted Linux/Windows native, paired recovery and strict reference gates
 at `f8c4f58`, [CI39097275707](https://github.com/marshallr12/s3drive/actions/runs/39097275707).
 Exact uncertain identities, dirty conflicts, Unicode/binary/empty reads and
 same-supervisor child replacement passed. Earlier timeout causes remain open.
 
-**Current work:** [offline snapshots and inspection](docs/src/authority-backup-recovery.md)
-have a locally tested unpublished prototype. Windows/platform acceptance and
-restoration remain incomplete. No real user startup, remote hosting or Turso
-backend has been installed.
+**Current work:** the user selected immutable chunks and manifests for large
+managed files. The [offline planner](docs/src/chunk-plans.md) passed its own
+Linux/Windows hosted cohort. The [chunk object upload bridge](docs/src/chunk-object-uploads.md)
+connects prepared trees to exact create-only operations and verified child
+receipts; authority-root publication and mounted large-file activation remain
+unfinished. No real user startup, remote hosting or Turso backend is installed.
 
 The shared engine preserves uncertain/conflicting bytes and exact operation
 identities. Direct and managed writes require explicit source/prefix policy and

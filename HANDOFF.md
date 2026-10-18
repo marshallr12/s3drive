@@ -60,7 +60,39 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Current implementation: durable offline chunk plans (2026-10-18)
+## Current phase: chunk object upload bridge (2026-10-18)
+
+Working branch codex/chunk-object-uploads frome2f0709. State Transfer/materialize
+bind exact physical operations via existing staged_operations; no schema change.
+Planner inherits Storage's exact staging quotas. New policy-bound
+s3drive-s3::uploads::chunks::Uploader uses that same owner, checks binding/policy,
+sends data then pages, and requires exact durable direct-child receipts. Unknown
+attempts only observe, including after expiry/narrowed policy; collisions retained.
+Page Merkle vs raw-body checksums remain distinct. UploadedTree is not a logical
+file flush: original snapshot stays pending; authority root CAS is future work.
+
+Focused8 SDK/TCP tests PASS /tmp/s3drive-chunk-upload-s3-2.log, including >128MiB
+sparse multi-level tree with exactly4object PUTs, Unicode/binary/empty/hole,
+missing local acknowledgment, lost response/restart, claimed recovery after
+expiry/narrowed policy, rejected rival and uncertain-absent child. State5 PASS
+/tmp/s3drive-chunk-upload-state-final.log: begin/append/seal reopen, exact mappings,
+corrupt media/dependencies, quotas and actual SQLITE_FULL. Initial state run had
+2fixture failures (UNIQUE/FK prevented deliberate damage); corrected to redirect
+to unmapped foreign generation / explicitly disable FKs for the damage fixture.
+No assertions weakened. Initial compile/API test errors corrected using inspected
+Target/Reference getters and UTF8 strings; full local gate2990 closed EXIT0. Log /tmp/s3drive-chunk-upload-gate.log;
+315state/1ignored,59S3,34core,50authority, format/Clippy/build,61doclinks and
+57book chapters PASS. All230 frozen runtime/fixture hashes unchanged; no warnings
+or errors. Existing full-open quota stress test exceeded60s then passed. Do not
+restart the completed gate. Evidence docs/src/evidence/chunk-object-uploads-20261018.json.
+
+New docs/src/chunk-object-uploads.md and images/chunk-object-uploads.svg: raster
+and visual review passed. Sequential uploads; repeated graph/retained-history
+scans can amplify work; no scalable-throughput/native-limit claim. No S3 provider
+requests, authority wire changes, credential installs or repository visibility
+mutations. Existing mounted representation and main remain unchanged.
+
+## Preceding implementation: durable offline chunk plans (2026-10-18)
 
 Branch codex/chunk-plan-journal from fa0a91d; published runtime source
 bdb220c69b187d3b3d764f4b3832d95f01d11e07.
@@ -109,18 +141,23 @@ records. Limits are documented; no constant-latency or native large-file claim.
 Published normally, clean/exact remote/all56 frozen hashes/PUBLIC before-after,
 main1a93b5f unchanged. Proof /tmp/s3drive-chunk-plan-publication.json. Final status
 doc links/build/56chapter checks passed; preview33767 serves new chapter/image.
-Own CI39142749429 attempt1 at bdb220c: book117720340366 SUCCESS with completed
-raw review; Linux117720340601 and Windows117720340529 LIVE. Track same run;
-never rerun on observation timeout. Watch33001 is LIVE, log
-/tmp/s3drive-chunk-plan-bdb-watch.log; poll that same handle/run.
-Prepared /tmp/s3drive-check-chunk-plan-bdb.py compiled only, NOT executed. Require
-all3 terminal successes and own completed raw reviews with job/source/log hashes
-in /tmp/s3drive-chunk-plan-bdb-raw-reviewed.json before success checker. New
-output /tmp/s3drive-chunk-plan-bdb-artifacts. Select own Windows finalized upload
-IDs, API digests/timestamps/source and strict21/14 typed/project oracles; refuse
-all old artifact IDs. No borrowing of parent52/e48/257 cohorts. On failure retain
-it and do not run success checker. Provider/large-file acceptance remains absent.
-Next integration still needs bounded physical publication/unknown recovery,
+Own CI39142749429 attempt1 at bdb220c is ALL3 terminal SUCCESS:
+book117720340366, Linux117720340601, Windows117720340529. Watch33001 closed
+EXIT0. Own completed raw reviews closed in /tmp/s3drive-chunk-plan-bdb-raw-reviewed.json.
+Checker24959 closed EXIT0, /tmp/s3drive-chunk-plan-bdb-artifact-check.log; fresh
+replacement12142621547 and disposition12142503573 from own finalized uploads,
+API source/run/digests/times, strict21/14 all-field/type and both project oracles
+PASS. All35 raw trace records equal own fresh artifact fields/types. New output
+/tmp/s3drive-chunk-plan-bdb-artifacts is final: do not rerun into it or borrow it
+for later sources. WindowsServer2025 10.0.26100/WinFsp2.1.25156;305state/1ignored,
+34core/50authority/51S3,32HTTPS/disposition/paired/snapshot/cross-logon/7native.
+Linux310state/1ignored plus9FUSE/32HTTPS/paired/no-systemd startup. Reviewed notices:
+LNK4199 unused imports on9CLI test targets, action/cache Node deprecations/forced24,
+3disposable locked profiles with dummy credentials removed for VM disposal.
+Expected injected TLS/partial-header/HEAD403/rival/stopped-authority failures were
+reviewed against fixture requirements. No new provider or chunked native large-file
+acceptance, no exact-source repeat or main promotion. Historical failures remain.
+Next integration needs physical publication/unknown recovery (in progress above),
 authority root capability/CAS, verified range readers, native adapters, remote
 reference reuse and separately authorized provider acceptance.
 

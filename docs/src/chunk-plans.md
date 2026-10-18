@@ -116,3 +116,7 @@ quotas, ignored/deleted SQL effects, actual SQLite disk-full rollback, migration
 and authority role isolation. Portable tests do not substitute for real mounts
 or separately approved provider checks. The [dated evidence](evidence/chunk-plans-20261018.json) records the actual
 completed gate results and the source to which each applies.
+
+The subsequent [chunk object upload bridge](chunk-object-uploads.md) connects these
+plans to physical create-only uploads. This offline planner itself still issues
+no send permits or authority root capabilities.

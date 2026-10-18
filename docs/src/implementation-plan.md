@@ -1334,3 +1334,30 @@ multipart prerequisite. Its 4 KiB/empty disposable fixtures do not certify 1 MiB
 chunk writes, a complete managed tree, current application policy or recovery.
 No provider requests were made for the chunk-plan phase. New live acceptance
 still requires a concrete bounded plan and new authorization.
+
+## Chunk object upload bridge — implementation 2026-10-18
+
+This phase connects a Ready offline chunk plan to existing create-only single-PUT
+execution. It does not publish an authority root or acknowledge the logical file.
+Use the same SQLite owner and frozen source binding throughout. Derive each
+physical staging operation from the frozen plan, attached snapshot manifest and
+exact object record; persist/recover it with `staged_operations`. Validate page
+Merkle hashes separately from raw upload-body SHA-256. Pages require exact durable
+flush receipts for their direct non-hole dependencies. Send data, leaves and
+parents in that order. An uncertain attempt retains its original identity and
+only observes on retry, including after evidence expiry or scope narrowing.
+
+Done criteria: local state tests cover interrupted materialization, exact mapping,
+corruption and dependency refusal; SDK/TCP tests cover binary/Unicode content,
+holes/empty files, page hash domains, guarded collision, lost response and restart
+without repeated PUT. The full local gate must pass. Existing generation/remote
+quotas remain in force; no schema/dependency/mounted-format change, no provider
+writes, no inference of native large-file or authority-CAS acceptance. Hosted
+regressions and any future live-provider acceptance retain their own source IDs.
+
+Focused result: 8 SDK/TCP and 5 state tests pass, including a sparse multi-level
+file above 128 MiB with four physical objects and actual SQLite-full rollback.
+Full local gate passed (315 state, 59 S3, 34 core and 50 authority tests;
+format/Clippy/build, links and 57 book chapters). Own-source hosted regressions
+remain separate. See the
+[upload bridge contract](chunk-object-uploads.md).

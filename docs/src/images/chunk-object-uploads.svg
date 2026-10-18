@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="510" viewBox="0 0 1040 510" role="img" aria-labelledby="title desc">
+<title id="title">Chunk object upload handoff</title>
+<desc id="desc">Ready local snapshot and manifest graph use SQLite durable physical operation mappings. The policy-bound S3 client sends immutable data then pages. Verified child receipts enable parent uploads. Authority root CAS and logical file acknowledgment are future work.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#46627b"/></marker></defs>
+<rect width="1040" height="510" fill="#f4f7fc" rx="18"/>
+<g font-family="sans-serif" fill="#172b42">
+<text x="30" y="38" font-size="23" font-weight="bold">Immutable objects first; file publication follows</text>
+<text x="30" y="65" font-size="15">Library integration • 2026-10-18 • existing mounted representation unchanged</text>
+<rect x="25" y="90" width="740" height="260" rx="14" fill="#e9f1ff" stroke="#a3bbdc"/>
+<text x="43" y="118" font-size="17" font-weight="bold">Local workstation — one private SQLite owner</text>
+<rect x="43" y="145" width="200" height="115" rx="9" fill="white" stroke="#8aa7c5"/>
+<text x="58" y="172" font-size="16" font-weight="bold">Ready chunk plan</text>
+<text x="58" y="198" font-size="14">Frozen file/edit identity</text><text x="58" y="221" font-size="14">Staged immutable bytes</text><text x="58" y="244" font-size="14">Data + authenticated pages</text>
+<rect x="283" y="145" width="210" height="115" rx="9" fill="white" stroke="#8aa7c5"/>
+<text x="298" y="172" font-size="16" font-weight="bold">SQLite upload journal</text>
+<text x="298" y="198" font-size="14">Exact operation → generation</text><text x="298" y="221" font-size="14">Durable claim before PUT</text><text x="298" y="244" font-size="14">Retained body + raw SHA-256</text>
+<rect x="533" y="145" width="210" height="115" rx="9" fill="white" stroke="#8aa7c5"/>
+<text x="548" y="172" font-size="16" font-weight="bold">Pinned Rust S3 client</text>
+<text x="548" y="198" font-size="14">Create-only explicit policy</text><text x="548" y="221" font-size="14">One PUT claim per object</text><text x="548" y="244" font-size="14">Unknown result → observe</text>
+<rect x="805" y="145" width="210" height="115" rx="10" fill="#e1f3ea" stroke="#75a48d"/>
+<text x="823" y="173" font-size="17" font-weight="bold">S3-compatible service</text>
+<text x="823" y="200" font-size="14">Immutable data objects</text><text x="823" y="223" font-size="14">Leaf and parent pages</text><text x="823" y="246" font-size="14">No objects for sparse holes</text>
+<g stroke="#46627b" stroke-width="2" fill="none" marker-end="url(#arrow)"><path d="M243 202 H280"/><path d="M493 202 H530"/><path d="M743 202 H802"/></g>
+<text x="44" y="294" font-size="15" font-weight="bold">Dependency rule:</text><text x="196" y="294" font-size="15">verified child receipts + local acknowledgment before parent PUT</text>
+<text x="44" y="325" font-size="14">Page Merkle hash ≠ raw upload checksum • conflicts and uncertain operations keep their IDs and bytes</text>
+<rect x="43" y="385" width="450" height="90" rx="10" fill="white" stroke="#8aa7c5"/>
+<text x="61" y="414" font-size="17" font-weight="bold">UploadedTree</text><text x="61" y="439" font-size="14">Root descriptor + historical root-object receipt</text><text x="61" y="461" font-size="14">Logical file snapshot remains pending</text>
+<rect x="565" y="385" width="450" height="90" rx="10" fill="#fff3db" stroke="#ad8c50" stroke-dasharray="6 4"/>
+<text x="584" y="414" font-size="17" font-weight="bold">Future: Rust authority root CAS</text><text x="584" y="439" font-size="14">Authenticate route + original content guard</text><text x="584" y="461" font-size="14">Then commit and acknowledge the logical file</text>
+<path d="M388 350 V382" stroke="#46627b" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+<path d="M493 430 H562" stroke="#ad8c50" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow)" fill="none"/>
+</g></svg>

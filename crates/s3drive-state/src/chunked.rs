@@ -10,6 +10,8 @@ use s3drive_core::manifest::{
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fmt;
+mod transfers;
+pub use transfers::Transfer;
 
 const MAX_CHUNKS: u64 = 65_536;
 const MAX_OBJECTS: u64 = 262_144;
@@ -191,6 +193,20 @@ impl Info {
     }
     pub fn generation(&self) -> Option<GenerationId> {
         self.generation
+    }
+    /// Offline geometry only; callers must still require a Ready root.
+    pub fn object_slots(&self, level: i8) -> Result<u64> {
+        if !(-1..=root_level(self.input.size)).contains(&level) {
+            return Err(Failure::Invalid.into());
+        }
+        Ok(if level == -1 {
+            chunks(self.input.size)
+        } else {
+            level_count(self.input.size, level)
+        })
+    }
+    pub fn root_level(&self) -> i8 {
+        root_level(self.input.size)
     }
     fn state_hash(&self) -> Result<[u8; 32]> {
         hash(
@@ -767,12 +783,18 @@ impl fmt::Debug for PreparedObject {
 pub struct Planner {
     owner: Owner,
     options: Options,
+    staging_options: journal::Options,
 }
 impl Planner {
-    pub(crate) fn new(owner: Owner, options: Options) -> Result<Self> {
+    pub(crate) fn new(
+        owner: Owner,
+        options: Options,
+        staging_options: journal::Options,
+    ) -> Result<Self> {
         Ok(Self {
             owner,
             options: options.validate()?,
+            staging_options,
         })
     }
     async fn call<T: Send + 'static>(

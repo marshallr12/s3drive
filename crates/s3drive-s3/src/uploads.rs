@@ -3,6 +3,7 @@
 //! Construction requires a separate, explicit source-bound write policy and
 //! complete local provider evidence. Existing configurations and mounts remain
 //! read-only. A probe report alone never authorizes application writes.
+pub mod chunks;
 mod policy;
 use crate::{
     ErrorKind, ObjectRevision,
