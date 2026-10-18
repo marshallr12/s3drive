@@ -6,14 +6,17 @@ use std::{
     fmt, io,
     pin::Pin,
     sync::{
-        Arc,
+        Arc, OnceLock,
         atomic::{AtomicBool, AtomicU8, Ordering},
     },
     task::{Context, Poll},
     time::Duration,
 };
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
-mod connector;
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
+mod owned;
+#[cfg(test)]
+mod tests;
 
 /// Bounded sanitized diagnostics only. Never retains a URL, token, request,
 /// response body, certificate, or the underlying dependency error.
@@ -37,7 +40,12 @@ pub enum WireError {
         /// identify the selected socket or establish request delivery/commit.
         connector_completed: bool,
         connector_candidate: crate::ConnectorCandidate,
+        /// Legacy error-chain metadata. The direct transport leaves this
+        /// Unobserved; it never fabricates a legacy connector error.
         error_connection: crate::ErrorConnection,
+        /// Actual TCP connection owned by this RPC, including TLS rejection.
+        /// No address other than canonical loopback ports is representable.
+        owned_connection: crate::OwnedConnection,
     },
     HttpStatus(u16),
     ResponseTooLarge,
@@ -83,35 +91,28 @@ impl From<&Request> for WireRequest {
 }
 impl WireError {
     fn transport(
-        error: reqwest::Error,
+        error: &(dyn std::error::Error + 'static),
         phase: WirePhase,
         request: WireRequest,
         progress: &Progress,
     ) -> Self {
-        let phase = if error.is_connect() {
-            WirePhase::Connect
-        } else {
-            phase
-        };
         let mut io_kind = None;
         let mut incomplete_message = false;
         let mut connection_closed = false;
-        let mut error_connection = crate::ErrorConnection::Unobserved;
-        let mut source = std::error::Error::source(&error);
-        // Inspect pinned types/public getters, never dependency error strings.
-        // Error source chains are not stable across dependency upgrades.
-        // Bound traversal even if a future dependency provides a cyclic source.
+        let mut timed_out = false;
+        let mut source = Some(error);
+        // Pinned public typed predicates only, including the root error.
+        // Never dependency strings, URLs, certificates, headers or payloads.
         for _ in 0..16 {
             let Some(cause) = source else { break };
             if let Some(error) = cause.downcast_ref::<io::Error>() {
                 io_kind = Some(error.kind());
+                timed_out |= error.kind() == io::ErrorKind::TimedOut;
             }
             if let Some(error) = cause.downcast_ref::<hyper::Error>() {
                 incomplete_message |= error.is_incomplete_message();
                 connection_closed |= error.is_closed();
-            }
-            if let Some(error) = cause.downcast_ref::<hyper_util::client::legacy::Error>() {
-                error_connection.observe(error.connect_info());
+                timed_out |= error.is_timeout();
             }
             source = cause.source();
         }
@@ -119,7 +120,7 @@ impl WireError {
         Self::Transport {
             request,
             phase,
-            timed_out: error.is_timeout(),
+            timed_out,
             io_kind,
             incomplete_message,
             connection_closed,
@@ -127,13 +128,31 @@ impl WireError {
             connector_started,
             connector_completed,
             connector_candidate: progress.candidate.snapshot(),
-            error_connection,
+            error_connection: crate::ErrorConnection::Unobserved,
+            owned_connection: progress.owned_connection(),
+        }
+    }
+    fn deadline(phase: WirePhase, request: WireRequest, progress: &Progress) -> Self {
+        let (connector_started, connector_completed) = progress.connector_observation();
+        Self::Transport {
+            request,
+            phase,
+            timed_out: true,
+            io_kind: None,
+            incomplete_message: false,
+            connection_closed: false,
+            body_frame_polled: progress.body_frame_polled.load(Ordering::Acquire),
+            connector_started,
+            connector_completed,
+            connector_candidate: progress.candidate.snapshot(),
+            error_connection: crate::ErrorConnection::Unobserved,
+            owned_connection: progress.owned_connection(),
         }
     }
 }
 
-// Preserve reqwest's original serialized body, framing hints and errors. Only
-// retain a boolean when its HTTP consumer actually polls a data frame.
+// Preserve the exact validated serialized bytes and framing hints. Only retain
+// a boolean when the HTTP consumer actually polls a data frame.
 struct ObservedBody {
     inner: reqwest::Body,
     progress: Arc<Progress>,
@@ -145,8 +164,16 @@ struct Progress {
     // Monotonic aggregate: 0=unobserved, 1=called, 2=at least one success.
     connector: AtomicU8,
     candidate: crate::connection_tag::Candidate,
+    socket: OnceLock<Option<crate::LoopbackSocket>>,
 }
 impl Progress {
+    fn owned_connection(&self) -> crate::OwnedConnection {
+        match self.socket.get() {
+            None => crate::OwnedConnection::Unopened,
+            Some(None) => crate::OwnedConnection::Omitted,
+            Some(Some(socket)) => crate::OwnedConnection::Loopback(*socket),
+        }
+    }
     fn connector_observation(&self) -> (bool, bool) {
         let observed = self.connector.load(Ordering::Acquire);
         (observed >= 1, observed == 2)
@@ -186,7 +213,7 @@ impl fmt::Display for WireError {
 impl std::error::Error for WireError {}
 #[derive(Clone)]
 pub struct WireClient {
-    http: reqwest::Client,
+    tls: Option<Arc<rustls::ClientConfig>>,
     url: url::Url,
     token: Token,
 }
@@ -251,127 +278,94 @@ impl WireClient {
         }
     }
     fn build(url: url::Url, token: Token, roots: Option<&[u8]>) -> Result<Self, WireError> {
-        let mut builder = reqwest::Client::builder()
-            .no_proxy()
-            .http1_only()
-            .tls_sslkeylogfile(false)
-            .redirect(reqwest::redirect::Policy::none())
-            .retry(reqwest::retry::never())
-            .connector_layer(connector::Observe)
-            .connect_timeout(Duration::from_secs(2))
-            .timeout(REQUEST_TIMEOUT);
-        if let Some(roots) = roots {
-            if roots.is_empty() || roots.len() > 65_536 {
-                return Err(WireError::Configuration);
-            }
-            let certs = reqwest::Certificate::from_pem_bundle(roots)
-                .map_err(|_| WireError::Configuration)?;
-            if certs.is_empty() {
-                return Err(WireError::Configuration);
-            }
-            builder = builder.tls_certs_only(certs);
-        }
-        if url.scheme() == "https" {
-            builder = builder.https_only(true);
-        }
-        let http = builder.build().map_err(|_| WireError::Configuration)?;
-        Ok(Self { http, url, token })
+        use rustls::pki_types::pem::PemObject;
+        use rustls_platform_verifier::BuilderVerifierExt;
+        let tls = if url.scheme() == "https" {
+            let builder = rustls::ClientConfig::builder_with_provider(Arc::new(
+                rustls::crypto::aws_lc_rs::default_provider(),
+            ))
+            .with_safe_default_protocol_versions()
+            .map_err(|_| WireError::Configuration)?;
+            let builder = if let Some(roots) = roots {
+                if roots.is_empty() || roots.len() > 65_536 {
+                    return Err(WireError::Configuration);
+                }
+                let mut store = rustls::RootCertStore::empty();
+                for cert in rustls::pki_types::CertificateDer::pem_slice_iter(roots) {
+                    store
+                        .add(cert.map_err(|_| WireError::Configuration)?)
+                        .map_err(|_| WireError::Configuration)?;
+                }
+                if store.is_empty() {
+                    return Err(WireError::Configuration);
+                }
+                builder.with_root_certificates(store)
+            } else {
+                builder
+                    .with_platform_verifier()
+                    .map_err(|_| WireError::Configuration)?
+            };
+            let mut config = builder.with_no_client_auth();
+            config.alpn_protocols = vec![b"http/1.1".to_vec()];
+            // Rustls defaults: no key logger, no early data. Explicit roots
+            // replace platform trust; HTTP never consults proxy configuration.
+            Some(Arc::new(config))
+        } else {
+            None
+        };
+        Ok(Self { tls, url, token })
     }
     pub async fn request(&self, request: &Request) -> Result<Reply, WireError> {
         request.validate().map_err(|_| WireError::InvalidRequest)?;
+        let bytes = serde_json::to_vec(request).map_err(|_| WireError::InvalidRequest)?;
         let kind = WireRequest::from(request);
         let runtime = tokio::runtime::Handle::try_current()
             .map_err(|_| WireError::Execution { request: kind })?;
-        // Native callback threads wait on this future. Drive HTTP itself in an
-        // owned Tokio task, with one deadline covering both queuing and I/O.
         let deadline = tokio::time::Instant::now() + REQUEST_TIMEOUT;
         let progress = Arc::new(Progress::default());
         let observed = progress.clone();
         let client = self.clone();
-        let request = request.clone();
-        // JoinSet aborts owned work on drop, including caller cancellation.
-        // A canceled/lost reply never makes a mutation safe to replay.
+        let (completed, reply) = tokio::sync::oneshot::channel();
+        // Drop aborts the whole RPC task, socket and driver, but never promises
+        // to roll back an already accepted remote operation.
         let mut tasks = tokio::task::JoinSet::new();
         tasks.spawn_on(
             async move {
-                connector::CURRENT
-                    .scope(observed.clone(), client.request_inner(&request, observed))
+                client
+                    .request_inner(bytes, kind, observed, deadline, completed)
                     .await
             },
             &runtime,
         );
-        match tokio::time::timeout_at(deadline, tasks.join_next()).await {
-            Ok(Some(Ok(result))) => result,
-            Ok(Some(Err(_))) | Ok(None) => Err(WireError::Execution { request: kind }),
-            Err(_) => {
-                let (connector_started, connector_completed) = progress.connector_observation();
-                Err(WireError::Transport {
-                    request: kind,
-                    phase: if progress.response_headers.load(Ordering::Acquire) {
-                        WirePhase::ResponseBody
-                    } else {
-                        WirePhase::Request
-                    },
-                    timed_out: true,
-                    io_kind: None,
-                    incomplete_message: false,
-                    connection_closed: false,
-                    body_frame_polled: progress.body_frame_polled.load(Ordering::Acquire),
-                    connector_started,
-                    connector_completed,
-                    connector_candidate: progress.candidate.snapshot(),
-                    error_connection: crate::ErrorConnection::Unobserved,
-                })
-            }
-        }
+        finish_request(tasks, reply, deadline, kind, &progress).await
     }
-    async fn request_inner(
-        &self,
-        request: &Request,
-        progress: Arc<Progress>,
-    ) -> Result<Reply, WireError> {
-        let kind = WireRequest::from(request);
-        let mut built = self
-            .http
-            .post(self.url.clone())
-            // One RPC per transport matches the TLS listener's finite lifetime.
-            // This also makes loopback HTTP independent of peer keep-alive.
-            .header(reqwest::header::CONNECTION, "close")
-            .bearer_auth(&self.token.0)
-            .json(request)
-            .build()
-            .map_err(|e| WireError::transport(e, WirePhase::Request, kind, &progress))?;
-        let inner = built.body_mut().take().ok_or(WireError::InvalidRequest)?;
-        *built.body_mut() = Some(reqwest::Body::wrap(ObservedBody {
-            inner,
-            progress: progress.clone(),
-        }));
-        let mut response = self
-            .http
-            .execute(built)
-            .await
-            .map_err(|e| WireError::transport(e, WirePhase::Request, kind, &progress))?;
-        progress.response_headers.store(true, Ordering::Release);
-        if !response.status().is_success() {
-            return Err(WireError::HttpStatus(response.status().as_u16()));
-        }
-        if response
-            .content_length()
-            .is_some_and(|n| n > 8 * 1024 * 1024)
-        {
-            return Err(WireError::ResponseTooLarge);
-        }
-        let mut bytes = Vec::new();
-        while let Some(chunk) = response
-            .chunk()
-            .await
-            .map_err(|e| WireError::transport(e, WirePhase::ResponseBody, kind, &progress))?
-        {
-            if bytes.len() + chunk.len() > 8 * 1024 * 1024 {
-                return Err(WireError::ResponseTooLarge);
-            }
-            bytes.extend_from_slice(&chunk);
-        }
-        serde_json::from_slice(&bytes).map_err(|_| WireError::InvalidReply)
+}
+
+// Retain a known parsed reply/error while the same task attempts bounded
+// shutdown. The caller's outer timer cannot erase that known result. Nothing
+// private is placed in Progress or a diagnostic field.
+async fn finish_request(
+    mut tasks: tokio::task::JoinSet<Result<(), WireError>>,
+    mut reply: tokio::sync::oneshot::Receiver<Result<Reply, WireError>>,
+    deadline: tokio::time::Instant,
+    kind: WireRequest,
+    progress: &Progress,
+) -> Result<Reply, WireError> {
+    let joined = tokio::time::timeout_at(deadline, tasks.join_next()).await;
+    if let Ok(result) = reply.try_recv() {
+        return result;
+    }
+    match joined {
+        Ok(Some(Ok(Err(error)))) => Err(error),
+        Ok(_) => Err(WireError::Execution { request: kind }),
+        Err(_) => Err(WireError::deadline(
+            if progress.response_headers.load(Ordering::Acquire) {
+                WirePhase::ResponseBody
+            } else {
+                WirePhase::Request
+            },
+            kind,
+            progress,
+        )),
     }
 }

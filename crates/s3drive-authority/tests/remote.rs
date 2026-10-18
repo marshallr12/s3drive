@@ -2,8 +2,8 @@
 //! not evidence of remote hosting, multiple physical hosts or Turso behavior.
 use s3drive_authority::{
     Apply, Authority, ConnectorCandidate, Error, ErrorConnection, Kind, LoopbackSocket, Mutation,
-    ROOT, Reply, Request, ServerTls, Token, WireClient, WireError, WirePhase, WireRequest,
-    serve_tls,
+    OwnedConnection, ROOT, Reply, Request, ServerTls, Token, WireClient, WireError, WirePhase,
+    WireRequest, serve_tls,
 };
 use std::{
     sync::{
@@ -175,8 +175,8 @@ async fn tls_neither_follows_redirects_nor_replays_a_dropped_reply() {
             assert_eq!(error, WireError::HttpStatus(307));
         } else {
             assert!(
-                matches!(error, WireError::Transport { connector_candidate: ConnectorCandidate::Loopback(observed), error_connection: ErrorConnection::Loopback(reported), .. } if observed == socket && reported == socket),
-                "lost mutation reply candidate/error connection differs from independently accepted TCP socket: {error:?}"
+                matches!(error, WireError::Transport { connector_candidate: ConnectorCandidate::Loopback(observed), owned_connection: OwnedConnection::Loopback(reported), .. } if observed == socket && reported == socket),
+                "lost mutation reply candidate/owned connection differs from independently accepted TCP socket: {error:?}"
             );
             assert!(
                 matches!(
@@ -422,7 +422,8 @@ async fn tls_requires_correct_trust_hostname_token_and_volume() {
                 connector_started: true,
                 connector_completed: false,
                 connector_candidate: ConnectorCandidate::Unobserved,
-                error_connection: ErrorConnection::Unavailable,
+                error_connection: ErrorConnection::Unobserved,
+                owned_connection: OwnedConnection::Loopback(_),
                 ..
             }
         ),
@@ -529,7 +530,12 @@ async fn tls_concurrent_connector_observations_stay_with_the_original_request() 
                 ));
                 // Drop the exact connection after a fully received request.
             });
-            let (stalled_tcp, _) = listener.accept().await.unwrap();
+            let (stalled_tcp, stalled_peer) = listener.accept().await.unwrap();
+            let stalled_socket = LoopbackSocket {
+                ipv6: false,
+                client_port: stalled_peer.port(),
+                server_port: stalled_tcp.local_addr().unwrap().port(),
+            };
             stopped.await.unwrap();
             drop(stalled_tcp);
             requests.join_next().await.unwrap().unwrap();
@@ -539,7 +545,7 @@ async fn tls_concurrent_connector_observations_stay_with_the_original_request() 
                     .is_err(),
                 "connector diagnostic replayed a request"
             );
-            expected_socket
+            (expected_socket, stalled_socket)
         };
         tokio::time::timeout(Duration::from_secs(8), exchange)
             .await
@@ -558,7 +564,7 @@ async fn tls_concurrent_connector_observations_stay_with_the_original_request() 
         peer.abort();
         let _ = peer.await;
     }
-    let expected_socket = finished
+    let (expected_socket, stalled_socket) = finished
         .expect("controlled peer deadline")
         .expect("controlled peer did not finish");
     let (first, second) = results.expect("bounded connector control");
@@ -576,9 +582,10 @@ async fn tls_concurrent_connector_observations_stay_with_the_original_request() 
                     connector_started: true,
                     connector_completed: false,
                     connector_candidate: ConnectorCandidate::Unobserved,
-                    error_connection: ErrorConnection::Unavailable,
+                    error_connection: ErrorConnection::Unobserved,
+                owned_connection: OwnedConnection::Loopback(observed_stalled),
                     ..
-                }
+                } if *observed_stalled == stalled_socket
             ))
             .count(),
         1,
@@ -597,7 +604,7 @@ async fn tls_concurrent_connector_observations_stay_with_the_original_request() 
                     connector_started: true,
                     connector_completed: true,
                     connector_candidate: ConnectorCandidate::Loopback(socket),
-                    error_connection: ErrorConnection::Loopback(reported),
+                    owned_connection: OwnedConnection::Loopback(reported),
                     ..
                 } if *socket == expected_socket && *reported == expected_socket
             ))

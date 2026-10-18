@@ -43,6 +43,15 @@ pub enum ConnectorCandidate {
     Multiple,
 }
 
+/// TCP stream actually owned by a direct RPC. Establishment alone does not
+/// prove TLS success, request delivery, authentication or commit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OwnedConnection {
+    Unopened,
+    Omitted,
+    Loopback(LoopbackSocket),
+}
+
 /// Connection information reported by a pinned dependency's error. Even a
 /// reported connection does not prove delivery, authentication or commit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -58,6 +67,7 @@ pub enum ErrorConnection {
     Multiple,
 }
 impl ErrorConnection {
+    #[cfg(test)]
     pub(crate) fn observe(
         &mut self,
         info: Option<&hyper_util::client::legacy::connect::Connected>,

@@ -15,11 +15,11 @@ serde_json.workspace = true
 s3drive-state.workspace = true
 tokio.workspace = true
 rustls.workspace = true
+rustls-platform-verifier.workspace = true
 tokio-rustls.workspace = true
 hyper.workspace = true
 hyper-util.workspace = true
 zeroize.workspace = true
-tower-layer.workspace = true
 tower-service.workspace = true
 
 [dev-dependencies]

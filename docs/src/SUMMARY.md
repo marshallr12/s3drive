@@ -29,6 +29,7 @@
   - [Publication while deletion is pending](pending-owner-publication.md)
 - [Turso and cross-machine coordination](turso-coordination.md)
 - [Shared authority over HTTPS](remote-authority.md)
+  - [Owned authority client](owned-authority-client.md)
 - [Set up a managed drive](managed-bootstrap.md)
 - [Coordinator startup and pinned restarts](authority-startup.md)
 - [Coordinator backups and recovery](authority-backup-recovery.md)

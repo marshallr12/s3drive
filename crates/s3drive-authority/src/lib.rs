@@ -11,7 +11,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
-pub use connection_tag::{ConnectorCandidate, ErrorConnection, LoopbackSocket};
+pub use connection_tag::{ConnectorCandidate, ErrorConnection, LoopbackSocket, OwnedConnection};
 use s3drive_state::{State, namespace};
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::Arc, thread};

@@ -145,5 +145,70 @@
       "/tmp/s3drive-owned-close-final-book.log": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4",
       "/tmp/s3drive-owned-close-final-book-tests.log": "18cb1cf40c90c10e5ad5730f90e6845f480c1c0e9795f03a3b78ab6d21854d2d"
     }
+  },
+  "publication": {
+    "source": "ea9342a78d11d97877a20584622227921e6b52f7",
+    "parent": "e00b5e7d3c6b84aaedc93bd73b213af969f6d26f",
+    "branch": "codex/owned-http1-close",
+    "private_before_and_after": true,
+    "normal_push": true,
+    "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+    "local_gate_exit_code": 0,
+    "production_transport_replaced": false,
+    "native_failure_fixed": false,
+    "at_utc": "2026-10-18T10:48:28.039942+00:00"
+  },
+  "hosted": {
+    "run": 39120702390,
+    "source": "ea9342a78d11d97877a20584622227921e6b52f7",
+    "status": "in_progress",
+    "conclusion": "",
+    "jobs": [
+      {
+        "databaseId": 117655552056,
+        "name": "rust (windows-latest)",
+        "status": "in_progress",
+        "conclusion": ""
+      },
+      {
+        "databaseId": 117655552179,
+        "name": "rust (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "databaseId": 117655552211,
+        "name": "book",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "observed_at_utc": "2026-10-18T11:05:26.591372+00:00",
+    "acceptance": false,
+    "production_transport_replaced": false,
+    "native_correction_proven": false,
+    "watch_session": 97697,
+    "watch_log": "/tmp/s3drive-owned-close-hosted-watch.log",
+    "completed_raw_review": {
+      "linux": {
+        "log": "/tmp/s3drive-owned-close-ea934-linux.log",
+        "sha256": "777bc6fc14855e3073a5a3ca8412f6023f707b2d650eb4560be77e78194356c4",
+        "scope": "owned9 pass; previous production wire/SQLite, native9/32flush, paired no-systemd and both coordinator startup profiles passed; only controlled faults and deliberate stopped-authority refusals"
+      },
+      "book": {
+        "log": "/tmp/s3drive-owned-close-ea934-book.log",
+        "sha256": "45a051c4fbbe216e43c22f41f3025cb7099b024c679d52271e8db235273d1929",
+        "scope": "completed book job retained"
+      }
+    }
+  },
+  "postpush_docs": {
+    "links": 57,
+    "build_exit_code": 0,
+    "test_exit_code": 0,
+    "log_sha256": {
+      "/tmp/s3drive-owned-close-postpush-book.log": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4",
+      "/tmp/s3drive-owned-close-postpush-book-tests.log": "18cb1cf40c90c10e5ad5730f90e6845f480c1c0e9795f03a3b78ab6d21854d2d"
+    }
   }
 }

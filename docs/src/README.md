@@ -5,7 +5,7 @@ on Linux and Windows, using Rust. Files should remain remotely stored while
 ordinary desktop applications access them through familiar filesystem paths.
 One drive may expose several buckets or prefixes.
 
-**Research dates: 2026-10-16–17.** This book records research, design,
+**Research dates: 2026-10-16–18.** This book records research, design,
 implementation contracts and scoped acceptance evidence. External technical
 claims have primary-source links; recommendations and unverified behavior are
 labelled.
@@ -22,19 +22,27 @@ and retained handles are implemented; Windows deletion uses the explicit
 [version7/POSIX lifecycle profile](native-windows-lifecycle.md), with its measured
 WinFsp limitations. [HTTPS transport](remote-authority.md) and
 [store/configuration bootstrap](managed-bootstrap.md) are accepted through main
-`f8c4f58`. This is still a research/development filesystem with incomplete
+`bf9509e`. This is still a research/development filesystem with incomplete
 application, platform and provider acceptance.
 
-**Current main checkpoint:** [coordinator supervision and TLS diagnostics](authority-startup.md)
-passed hosted Linux/Windows native, paired recovery and strict reference gates
-at `f8c4f58`, [CI39097275707](https://github.com/marshallr12/s3drive/actions/runs/39097275707).
+**Current main checkpoint:** coordinator startup, private offline
+[snapshot creation/inspection](authority-backup-recovery.md), and bounded TLS
+socket diagnostics passed at `bf9509e`,
+[primary CI39113628548](https://github.com/marshallr12/s3drive/actions/runs/39113628548)
+and an [unchanged-source repeat](https://github.com/marshallr12/s3drive/actions/runs/39115395230).
 Exact uncertain identities, dirty conflicts, Unicode/binary/empty reads and
-same-supervisor child replacement passed. Earlier timeout causes remain open.
+same-supervisor child replacement have scoped hosted acceptance. This does not
+establish actual workstation reboot, restore/failover or elimination of the
+historical intermittent Windows transport failures.
 
-**Current work:** [offline snapshots and inspection](authority-backup-recovery.md)
-have a locally tested unpublished prototype. Windows/platform acceptance and
-restoration remain incomplete. No real user startup, remote hosting or Turso
-backend has been installed.
+**Current work:** the [owned authority client](owned-authority-client.md) replaces
+the production metadata HTTP execution path on a private candidate branch. Its
+portable controls retain complete SQLite receipts through bounded shutdown;
+exact-source native/startup/reference and repeat acceptance remain required.
+The accepted main still uses the previous client. Multipart/large files,
+writable restoration, real managed-provider acceptance and remote deployment
+remain incomplete. No real user startup, remote hosting or Turso backend has
+been installed.
 
 ## Recommendation
 
@@ -81,6 +89,8 @@ application limits are recorded in the [filesystem contract](filesystem-contract
 | Windows startup across login sessions | [Scheduled task and shared NTFS folder implemented](startup-and-sessions.md); native cross-logon reads/removal passed; workstation reboot/SSH authentication pending |
 | Managed local edits | [Durable logical heads and settlement](managed-edits.md); storage/SDK library; [native integration](managed-write-plan.md) adds version-4 existing-file edits |
 | Managed file publication | [Real SDK/HTTP/SQLite library](managed-publication.md); existing-file edits and creation passed native acceptance; remote deployment/live managed-provider acceptance pending |
+| Authority client transport | [Owned TCP/TLS/HTTP execution candidate](owned-authority-client.md); portable fault/receipt controls passed, hosted/native acceptance pending; accepted main retains the previous client |
+| Private authority snapshots | [Offline creation and inspection](authority-backup-recovery.md) accepted at bf9509e; integrity is not history freshness; writable restore/failover remain unsupported |
 | Managed namespace authority | [Rust/SQLite service](managed-layout.md), authenticated [HTTPS](remote-authority.md), exact replay and explicit [store/configuration setup](managed-bootstrap.md); real remote deployment pending |
 | Managed native reads | [Authority namespace and verified immutable payloads](managed-native.md); real FUSE/WinFsp acceptance passed |
 | Managed rename/replacement and Linux removal | [Version6 contract](managed-native-mutations.md), retained handles and exact recovery; versions1–6 retain unsupported Windows deletion, version7 selects the measured lifecycle profile |

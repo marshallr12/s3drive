@@ -1003,3 +1003,24 @@ extension, new operation identity or unconditional overwrite fallback is permitt
 Transport adoption and native reliability remain work; multipart execution,
 real managed Wasabi acceptance, independent hosts/partitions, history continuity,
 actual desktop startup/reboot and packaging remain full-goal requirements.
+
+
+### P6m4f — production owned client (candidate, 2026-10-18)
+
+Implement the [owned production client](owned-authority-client.md) using the
+pre-rewrite audit and corrected closure controls. Preserve validated constructors,
+private bounded files, platform/explicit trust, original serialized requests,
+all2xx bounded strict JSON, queue/RPC deadline and exact durable recovery. Reuse
+the pinned DNS/TCP Happy Eyeballs connector; a sequential connect loop is a
+rejected regression. One task owns TLS/HTTP driver/body/cleanup, with one private
+result channel retaining a complete receipt through cleanup expiry. Error paths
+attempt bounded stream shutdown without retry. Document the additive public
+WireError diagnostic-field compatibility exception and actual owned TCP tags.
+
+Require actual SQLite commit/lookup equality under clean/failed/stalled shutdown,
+pre-dispatch expiry and invalid-input no-I/O, independent status/framing/trailer/
+8MiB/DNS/SNI/IPv6 peers, all existing fault/recovery controls and the full local
+gate. Then run exact-source Linux/Windows native/startup/reference acceptance and
+a source-identical repeat, reviewing all warnings and independent strict21/14
+artifacts before promotion. No root-cause or reliability claim follows from the
+portable suite. Keep all larger-file/provider/deployment/recovery requirements.

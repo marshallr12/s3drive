@@ -13,6 +13,12 @@ and the S3 layout are unchanged. See [operator setup](managed-bootstrap.md).
 
 ![Linux and Windows keep private local SQLite state and access one Rust metadata service over HTTPS; immutable file bytes travel directly between their S3 clients and Wasabi.](images/remote-authority.svg)
 
+The current2026-10-18 [owned-client candidate](owned-authority-client.md) replaces
+the metadata client's HTTP execution path while retaining this trust/recovery
+contract. Its production-path code has portable controls; native and repeat
+acceptance remain required. The dated sections below preserve earlier candidates
+and their contradictory Windows evidence rather than establishing reliability.
+
 ## What runs where
 
 The coordinator is a **Rust service** (`s3drive authority-serve`). It owns one

@@ -1,0 +1,127 @@
+{
+  "format": "s3drive-owned-authority-client-evidence-v1",
+  "date": "2026-10-18",
+  "branch": "codex/owned-authority-client",
+  "parent": "ea9342a78d11d97877a20584622227921e6b52f7",
+  "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+  "status": "final full local gate passed; production candidate pending hosted native and repeat acceptance",
+  "production_path_replaced": true,
+  "native_failure_fixed": false,
+  "provider_requests": 0,
+  "source_sha256": {
+    "Cargo.toml": "03e8f88c622328e53d02083c18c721293dbcc3c0d423b95bc318c3f6f81e8936",
+    "Cargo.lock": "ca1be721c031390b235be520cae431dcb5321d6a5711f11751db3aa58cc66616",
+    "crates/s3drive-authority/Cargo.toml": "e2be73af5c2c2c45519eedeadb3bd1cc367df9a30bded3a5453b58535a503c06",
+    "crates/s3drive-authority/src/lib.rs": "66fa4544f961bd48f093f559cf059dabc866a3e9a904a221126a9ef7dd3806ba",
+    "crates/s3drive-authority/src/connection_tag.rs": "d40626b1dce32db7f44fdfbe3b8c6ff1bc18ee606ae536074b86a4bdf16b4024",
+    "crates/s3drive-authority/src/wire.rs": "3cbc04171ae1402ff73bcd348dfe239b68e80a607879e7931097349fc80d4f04",
+    "crates/s3drive-authority/src/wire/owned.rs": "fda38396f61ece5f8110e88e94c99b5361be1034c907c66dd24b8096b63de99f",
+    "crates/s3drive-authority/src/wire/tests.rs": "75ab241f14b45e6a691633fe8c9e1d5c2de29a92c2dcd75b8118e806ddb2d5ee",
+    "crates/s3drive-authority/tests/remote.rs": "c99747f10c9fe3dd3db6985d19e16ec6cfc716fe37e8625a6cf0989edd3e6f76",
+    "crates/s3drive-authority/tests/wire_parity.rs": "50df657b38cfac86187cd5e6c55b74e9a1c4dbcd90d721cd6536a6b1554fbf24"
+  },
+  "removed": [
+    "crates/s3drive-authority/src/wire/connector.rs"
+  ],
+  "dependency_versions_changed": false,
+  "direct_dependency_added": "already-resolved rustls-platform-verifier0.7.1",
+  "api_exception": "additive owned_connection field in public WireError::Transport is source-incompatible for exhaustive construction/patterns; constructors/request signatures preserved",
+  "legacy_error_connection": "retained always Unobserved; no invented legacy metadata",
+  "review_findings_addressed": [
+    "retained parsed result channel crosses outer caller deadline",
+    "same absolute remaining cleanup budget",
+    "actual TCP ownership separate from TLS success",
+    "reuse pinned DNS/TCP300ms alternate-family fallback and original keepalive/nodelay settings; sequential Tokio address connect rejected"
+  ],
+  "focused_history": [
+    {
+      "log": "/tmp/s3drive-owned-client-focused1.log",
+      "exit_code": 0,
+      "scope": "existing suite plus3 new SQLite receipt/shutdown controls before DNS correction"
+    },
+    {
+      "log": "/tmp/s3drive-owned-client-focused2.log",
+      "exit_code": 101,
+      "scope": "new IPv6 fixture used Request equality; Request has no PartialEq; fixed matches without production change"
+    },
+    {
+      "log": "/tmp/s3drive-owned-client-focused3.log",
+      "exit_code": 0,
+      "scope": "existing suite plus4 production parity controls, before final DNS correction/2 extra units"
+    }
+  ],
+  "focused_final": {
+    "log": "/tmp/s3drive-owned-client-focused4.log",
+    "status": "completed",
+    "exit_code": 0,
+    "cases": 46,
+    "unit_cases": 11,
+    "parity_cases": 4,
+    "sha256": "6ead73e5b001adff1b77ed48c71ef0d1ebe08ab09d6098a1fed3744652375389"
+  },
+  "local_gate": {
+    "command": "bash scripts/gate.sh",
+    "status": "completed",
+    "session": 5296,
+    "log": "/tmp/s3drive-owned-client-gate1.log",
+    "exit_code": 0,
+    "log_sha256": "eb5659d4f77649860a7bfa5b8d7775858c40bae1af82f7303952d2f2b18f8a76",
+    "source_unchanged": true,
+    "authority_tests": 46,
+    "authority_unit_cases": 11,
+    "http_cases": 10,
+    "tls_cases": 9,
+    "new_parity_cases": 4,
+    "core_cases": 17,
+    "state_cases": 274,
+    "book_markdown_files": 58,
+    "at_utc": "2026-10-18T11:11:08.098887+00:00"
+  },
+  "dependency_sources_read": {
+    "hyper-1.12.0/src/client/conn/http1.rs": "6ec8124f5dc3f176baae99d9528d467e976e2522912d5bab13603a792fecb203",
+    "hyper-1.12.0/src/proto/h1/dispatch.rs": "9cd6638c59ae4857ae43ee58857abf585cc6a52dfda616c3631e2e48c02eaba2",
+    "hyper-util-0.1.21/src/client/legacy/connect/http.rs": "1b255783854e5d55e9490df682b52b1fd89e2ebb5b7f1daa39fd34720cac84ea",
+    "hyper-util-0.1.21/src/rt/tokio.rs": "143023606be7994c8ecbf538eb5816cbedd62172cb3fbb5f981ea411a1581d28",
+    "rustls-platform-verifier-0.7.1/src/lib.rs": "cb63f0781eb232fb16dfaeacde94cbfe256c71c064bef09b58ca43625e7d605d",
+    "rustls-pki-types-1.15.1/src/pem.rs": "b0fbf1416f09894808cb058fdb05989bb9ca2364e288c9c6a7c20c18d15d3051",
+    "tokio-rustls-0.26.6/src/client.rs": "99c21fc31cd2a7e9b10e6802a41598a3e42bf1b17e6007c4c7f59257e1e77293",
+    "tokio-1.53.3/src/sync/oneshot.rs": "c9b2824053358a147ff59784a63472bea8b078010e912633998b3ac7992a2d78",
+    "reqwest-0.13.5/src/async_impl/client.rs": "5b7e2556d122a75cd8d3ef62a33d45e430c8eff229a33bc3f53fc7e9af2d97de",
+    "reqwest-0.13.5/src/tls.rs": "a32a7a2cb98994af681c1258315512c379988ff3fe500eb6e51a1a33fc4d6a6d"
+  },
+  "acceptance_limits": [
+    "no native mount on local NoNewPrivs workstation",
+    "no source-identical hosted candidate/repeat yet",
+    "no actual blackholed-first-family experiment; retained pinned dependency fallback algorithm",
+    "no real managed Wasabi or multipart writes",
+    "no actual desktop reboot/remote-host/partition/failover acceptance"
+  ],
+  "handoff_refresh": {
+    "archive": "docs/archive/HANDOFF-before-owned-client-20261018.md",
+    "archive_sha256": "ffce0f90e40ab6b0006f9edea79f6fb489031822a19599aae1ede15c48a5b4f4",
+    "before_lines": 412,
+    "after_lines": 410,
+    "archive_byte_identical": true
+  },
+  "targeted_clippy": {
+    "log": "/tmp/s3drive-owned-client-clippy3.log",
+    "exit_code": 0,
+    "sha256": "d7f21bbc6764afddf8db979799f3b07e1d07eaf64122d7785155f6fdb3db59bf"
+  },
+  "review_final": "read-only legacy reviewer inspected DNS correction and other carryovers; no remaining load-bearing issue, API shape exception explicit; no native reliability acceptance",
+  "dependency_package_identity_check": {
+    "baseline": "ea9342a78d11d97877a20584622227921e6b52f7",
+    "name_version_source_checksum_unchanged": true,
+    "package_count": 362,
+    "root_dependency_edges_changed_only": true
+  },
+  "final_docs": {
+    "links": 58,
+    "build_exit_code": 0,
+    "test_exit_code": 0,
+    "log_sha256": {
+      "/tmp/s3drive-owned-client-final-book.log": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4",
+      "/tmp/s3drive-owned-client-final-book-tests.log": "97720c7cb99636bad850ae2bafc0123dc4924ad805a03b456dc108e32f1c6c90"
+    }
+  }
+}

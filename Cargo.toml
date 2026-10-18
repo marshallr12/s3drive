@@ -12,6 +12,7 @@ repository = "https://github.com/marshallr12/s3drive"
 [workspace.dependencies]
 axum = { version = "=0.8.9", default-features = false, features = ["http1", "json", "tokio"] }
 reqwest = { version = "=0.13.5", default-features = false, features = ["json", "rustls"] }
+rustls-platform-verifier = "=0.7.1"
 rustls = { version = "=0.23.46", default-features = false, features = ["std", "aws_lc_rs", "tls12"] }
 tokio-rustls = { version = "=0.26.6", default-features = false, features = ["tls12"] }
 hyper = { version = "=1.12.0", default-features = false, features = ["server", "client", "http1"] }

@@ -5,62 +5,74 @@ capability was available. Read this and docs/src/implementation-plan.md before
 implementation. Keep research/decisions/status/plans in docs/src/. Run the local
 gate with `bash scripts/gate.sh`; native/provider/recovery gates are separate.
 
-## Accepted checkpoint and first action
+## Current production client candidate and next action
 
-Current branch: codex/owned-http1-close, based on e00b5e7. Source changes are
-not committed/pushed yet. Goal remains ACTIVE. A required pre-rewrite review
-found an untested TLS close_notify boundary in the test-only study. New gated
-shutdown control failed old logic EXIT101 (/tmp/s3drive-owned-close-before.log),
-then revised final focused9 controls passed EXIT0 (/tmp/s3drive-owned-close-
-focused2.log). Clean successful TLS peer read==Ok(0) now rejects missing-alert
-EOF/reset. Complete framed replies survive cleanup failure/expiry; unfinished
-replies still time out. One absolute10sec budget starts before TCP/TLS and
-covers driver cleanup, with no detached driver/retry. The delayed6sec-response
-control holds shutdown and rejects a fresh10sec cleanup budget via14sec watchdog.
-Read-only reviewer found no remaining load-bearing issue in this scoped revision.
-No production WireClient/routing/config/dependency/lock change or provider call.
+Current branch codex/owned-authority-client is based on privately pushed
+ea9342a78d11d97877a20584622227921e6b52f7. The production replacement is locally
+uncommitted; preserve the earlier dirty HANDOFF/closure-evidence observations.
+Main remains bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05. Goal ACTIVE.
 
-First full gate /tmp/s3drive-owned-close-gate1.log is terminal EXIT1: doc link
-checked before the new evidence JSON was created. Its earlier Rust iteration
-also discarded a complete reply at cleanup expiry and is superseded. Final combined full gate3 completed EXIT0 session11113,
-/tmp/s3drive-owned-close-gate3.log: owned9, authority7unit/10HTTP/9TLS,
-CLI restart9, core17/state274, workspace/build/lint and57-doc book. Frozen
-source fingerprints /tmp/s3drive-owned-close-frozen-source.json match.
-Hosted closure/native acceptance remains. See remote-authority.md,
-implementation-plan.md and evidence/owned-http1-close-20261018.json. Preserve all
-existing dirty docs, including multipart terminal failure and e00 observations.
+The actual WireClient now co-owns its Hyper HTTP/1 driver/consumer/TCP+Rustls
+stream in one caller-owned task, no HTTP pool/driver task/redirect/retry. Existing
+constructors, private token/CA reads, explicit roots replacing platform trust,
+4KiB validated exact serialized bytes, all2xx then strict8MiB JSON, operation
+identities/guards and2sec/absolute cooperative10sec budgets remain. A private
+one-shot result channel prevents the caller's outer timer from losing a parsed
+receipt while bounded cleanup is pending. Errors attempt owned stream shutdown;
+never claim all-path close_notify, rollback, unsent or safe replay.
 
-b793 CI39117793980 is now terminal FAILURE: Windows117647008136 broad native
-existing-file write failed Info/Request/UnexpectedEof/native1117, bodyfalse;
-candidate/error loopback client64582/server64551 matches empty server24,
-HttpTimeout5044/read0/write0/flush1/dispatchedfalse. Earlier32-flush, lifecycle,
-workspace and paired recovery passed; final broader6PASS/1FAIL. Linux/book passed.
-Completed raw /tmp/s3drive-multipart-b793-windows.log reviewed. DO NOT RUN the
-success-only b793 checker or promote; main remainsbf9509. Dated sizing JSON has
-terminal evidence. e00 CI39119010538 is terminal FAILURE: Windows workspace diagnostic fixture
-expected3 events but saw the3 controlled faults plus positive/dispatched
-HttpShutdown connection5/read243/write246/flush2 after both typed Info replies.
-Owned7 passed twice,32 native flushes/lifecycle/startup passed; later gates
-skipped. Linux/book terminal SUCCESS. Required narrow fixture correction must
-retain exact controlled socket counts/categories/privacy and reject all other
-I/O; it is not the original EOF cause. Completed raw /tmp/s3drive-owned-e00-{linux,book}.log retained;
-Linux owned7 and native9/32flush/startup passed. Still unchanged production client.
+Read-only legacy reviewer found and rejected an initial sequential-DNS-connect
+regression. Final code reuses pinned Hyper-util HttpConnector for DNS/TCP only:
+300ms alternate-family fallback, original connect/nodelay/15sec keepalive settings.
+One winning TCP enters one TLS handshake. No independently blackholed-first-family
+experiment has been run; this retains the existing dependency algorithm.
 
-The diagnosed e00 mixed-fault fixture is now corrected locally: two full Info
-replies must match original volume+seq0; exactly3 injected socket/category/byte/
-dispatch events remain; only optional distinct complete Info shutdown IDs4/5
-with positive counters and correct non-injected loopback metadata are allowed.
-Every authority TLS line is checked; suppression/unknown/duplicate events fail.
-Focused validator negatives passed EXIT0 /tmp/s3drive-owned-close-classifier.log.
-No production API/transport change. Final combined gate3 includes this revision and passed EXIT0. Earlier gate2
-completed EXIT0 on final closure logic but preceded this fixture correction,
-so it is superseded for combined acceptance.
+New owned_connection diagnostic records actual TCP even if TLS fails, canonical
+loopback ports only. Legacy error_connection remains always Unobserved; no
+invented legacy metadata. The additive field changes public Transport struct
+patterns/construction: explicitly document this source compatibility exception.
+Constructors/request signatures stay unchanged. Old connector observer removed.
+No dependency versions changed; already-resolved platform-verifier0.7.1 is now
+direct. SQLite schema/config/S3 writes/startup registration remain unchanged.
 
-Next: publish the locally gated substantive closure source privately,
-and check its own hosted controls. Then implement the production carryover audit,
-including complete-reply retention under caller deadline and truthful direct-I/O
-diagnostics, followed by native/reference/startup gates and same-source repeat.
-Do not substitute the prototype or passing arithmetic for production reliability.
+Final focused /tmp/s3drive-owned-client-focused4.log completed EXIT0:46 tests,
+including11unit,2 lifetime,1 queued cancellation,10 HTTP namespace,9 original
+study,9 TLS and4 new independent parity controls. Actual SQLite commit/gated
+shutdown controls check retained exact receipts/sequence1 under clean/failure/
+original deadline. Invalid/expired pre-dispatch no-I/O, DNS/SNI/IPv6,201/299/204,
+strict JSON, conflicting lengths, missing chunks, trailers and8MiB boundaries
+passed. Final targeted Clippy /tmp/s3drive-owned-client-clippy3.log EXIT0.
+Read-only final review found no remaining load-bearing issue in this revision.
+The initial new IPv6 fixture equality compile error was fixed with matches;
+Request has no PartialEq. No production weakening was made to pass it.
+
+FINAL full local gate completed EXIT0 session5296,
+/tmp/s3drive-owned-client-gate1.log: authority46 (11unit/10HTTP/9TLS/4parity
+plus lifetime/execution/study), core17/state274, workspace/build/lint and58-doc
+book. Frozen /tmp/s3drive-owned-client-frozen-source.json matches. No local
+gate process remains.
+
+Next: normally publish this exact locally gated source privately for exact-source Linux/Windows native/startup/
+reference gates and a same-source repeat. Review all transport warnings and
+independent strict21/14 artifacts before promotion. Do not claim a Windows fix
+or historical cause from portable tests. See docs/src/owned-authority-client.md,
+implementation-plan.md and evidence/owned-authority-client-20261018.json.
+
+Parent ea9342a CI39120702390 is still live Windows117655552056 workspace;
+Linux117655552179 and book117655552211 succeeded. Watch97697 writes
+/tmp/s3drive-owned-close-hosted-watch.log. Poll exact source/run, never restart
+solely on observation timeout. Parent evidence is test-only transport plus
+corrected mixed-fault fixture; production client remains old in that run.
+
+Retain failed b793 CI39117793980 Windows native broad Info/UnexpectedEof,
+matching empty-header socket client64582/server64551/server24/5044ms,6PASS/1FAIL;
+no success checker/main promotion. Retain failed e00 CI39119010538 Windows CLI
+fixture count3vs4 (positive/dispatched HttpShutdown after typed replies); that
+fixture is corrected at ea9342a. Both raw records/limits are in dated JSON.
+These distinct failures do not establish one shared cause or a production fix.
+
+The previous current-state section is byte-identically archived at
+docs/archive/HANDOFF-before-owned-client-20261018.md. Older source/recovery history below remains.
 
 ### Historical e00 study checkpoint (superseded closure control)
 
