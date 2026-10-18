@@ -1,9 +1,13 @@
 #requires -Version 5.1
 # Explicit disposable-runner acceptance. Never run this against an existing
 # user account: it creates and removes its own non-administrator local user.
-param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$Config)
+param([Parameter(Mandatory)][string]$Executable, [string]$Config,
+    [switch]$AuthorityOnly, [string]$AuthorityFixture)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+if (($AuthorityOnly -and -not $AuthorityFixture) -or (-not $AuthorityOnly -and -not $Config)) {
+    throw 'Fixture requires Config for mounts, or AuthorityOnly with AuthorityFixture'
+}
 $runner = [Security.Principal.WindowsIdentity]::GetCurrent()
 if (-not ([Security.Principal.WindowsPrincipal]::new($runner)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     throw 'Native session acceptance requires an elevated disposable Windows runner'
@@ -20,7 +24,8 @@ $mount = Join-Path $root 'mounted'
 $powershell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 $account = $null
 $taskName = $null
-$taskArguments = $null
+$taskArguments = [Collections.Generic.List[string]]::new()
+$taskNames = @()
 $service = New-Object -ComObject Schedule.Service
 $service.Connect()
 $worker = Join-Path $root 'worker.ps1'
@@ -149,17 +154,17 @@ function User-Action([string]$Operation) {
         $authenticationId = [S3DriveFixtureNative]::AuthenticationId($process.Handle)
         $output = $process.StandardOutput.ReadToEndAsync()
         $errors = $process.StandardError.ReadToEndAsync()
-        if ($Operation -eq 'Install') {
+        if ($Operation -in @('Install','AuthorityInstall')) {
             # The receiving StreamReader recognizes the encoding preamble from
             # Windows PowerShell's console-derived StandardInput writer.
             $process.StandardInput.WriteLine($plainPassword)
         }
         $process.StandardInput.Close()
-        if (-not $process.WaitForExit(90000)) { $process.Kill(); throw "Timed out in disposable-user $Operation" }
+        if (-not $process.WaitForExit(150000)) { $process.Kill(); throw "Timed out in disposable-user $Operation" }
         $text = $output.GetAwaiter().GetResult()
         $errorText = $errors.GetAwaiter().GetResult()
         if ($process.ExitCode -ne 0) { throw "Disposable-user $Operation failed: $errorText $text" }
-        if ($Operation -eq 'Probe') {
+        if ($Operation -in @('Probe','AuthorityProbe','AuthorityRecover')) {
             $probe = $text | ConvertFrom-Json
             $probe | Add-Member -NotePropertyName authentication_id -NotePropertyValue $authenticationId
             return ($probe | ConvertTo-Json -Compress)
@@ -178,6 +183,8 @@ try {
     $batchRightGranted = $true
     $profileDirectory = [S3DriveFixtureNative]::CreateFixtureProfile($account.SID,$userName)
     $taskName = "S3Drive-$($account.SID.Value)-acceptance"
+    $authorityTaskName = "S3DriveAuthority-$($account.SID.Value)-acceptance"
+    $taskNames = @($taskName,$authorityTaskName)
     $null = [IO.Directory]::CreateDirectory($root)
     $acl = [Security.AccessControl.DirectorySecurity]::new()
     $acl.SetOwner($runner.User)
@@ -188,7 +195,11 @@ try {
     Set-Acl -LiteralPath $root -AclObject $acl
     [IO.File]::WriteAllText((Join-Path $root 'profile-path.txt'), $profileDirectory)
     Copy-Item -LiteralPath $Executable -Destination (Join-Path $root 's3drive.exe')
-    Copy-Item -LiteralPath $Config -Destination (Join-Path $root 'drive.toml')
+    if (-not $AuthorityOnly) { Copy-Item -LiteralPath $Config -Destination (Join-Path $root 'drive.toml') }
+    if ($AuthorityFixture) {
+        Copy-Item -LiteralPath (Join-Path $AuthorityFixture 'cert.pem'),(Join-Path $AuthorityFixture 'key.pem'),(Join-Path $AuthorityFixture 'authority-worker.exe') -Destination $root
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'test-windows-authority-worker.ps1') -Destination (Join-Path $root 'authority-worker.ps1')
+    }
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'windows-session.ps1') -Destination (Join-Path $root 'source-manager.ps1')
     # All worker paths are derived from its own private directory. The account
     # password arrives through a pipe, never a file, environment or argv string.
@@ -218,6 +229,10 @@ function Initialize-LocalState([string]$Directory=$databaseState) {
     }
 }
 try {
+    if ($Operation.StartsWith('Authority')) {
+        & (Join-Path $root 'authority-worker.ps1') -Operation $Operation
+        exit $LASTEXITCODE
+    }
     switch ($Operation) {
         'Install' {
             $reader=[IO.StreamReader]::new([Console]::OpenStandardInput(),[Text.Encoding]::UTF8,$true)
@@ -279,7 +294,7 @@ try {
             # Fixture disposal only: application removal preserves local data.
             # This protected directory grants its owning account and SYSTEM
             # access. Remove it as its owner before deleting that account.
-            foreach ($directory in @($databaseState,$cacheState)) {
+            foreach ($directory in @($databaseState,$cacheState,(Join-Path $root 'authority-state'),(Join-Path $root 'authority-inputs'))) {
                 if ([IO.Directory]::Exists($directory)) {
                     Remove-Item -LiteralPath $directory -Recurse -Force
                 }
@@ -287,6 +302,9 @@ try {
             }
         }
         'Diagnostics' {
+            if ([IO.File]::Exists((Join-Path $root 'authority-worker.ps1'))) {
+                & (Join-Path $root 'authority-worker.ps1') -Operation AuthorityDiagnostics
+            }
             if ([IO.File]::Exists((Join-Path $state 'startup.json'))) {
                 try { Manage Status } catch { Write-Output ("Status diagnostic failed: " + $_.Exception.Message) }
             }
@@ -296,35 +314,60 @@ try {
 } catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }
 exit 0
 '@ | Set-Content -LiteralPath $worker -Encoding UTF8
-    Write-Output (User-Action Install)
-    # The installer process (and its independent logon) has exited. Task
-    # Scheduler must keep the mount alive without that process or console.
-    $first = User-Action Probe | ConvertFrom-Json
-    $second = User-Action Probe | ConvertFrom-Json
-    Write-Output ("First login: " + ($first | ConvertTo-Json -Compress))
-    Write-Output ("Second login: " + ($second | ConvertTo-Json -Compress))
-    if ($first.authentication_id -eq $second.authentication_id -or $first.child_pid -ne $second.child_pid) {
-        throw 'Repeated independent logons did not access the same mount'
+    if (-not $AuthorityOnly) {
+        Write-Output (User-Action Install)
+        # The installer process (and its independent logon) has exited. Task
+        # Scheduler must keep the mount alive without that process or console.
+        $first = User-Action Probe | ConvertFrom-Json
+        $second = User-Action Probe | ConvertFrom-Json
+        Write-Output ("First login: " + ($first | ConvertTo-Json -Compress))
+        Write-Output ("Second login: " + ($second | ConvertTo-Json -Compress))
+        if ($first.authentication_id -eq $second.authentication_id -or $first.child_pid -ne $second.child_pid) {
+            throw 'Repeated independent logons did not access the same mount'
+        }
+        $unexpectedRead=$false
+        try { $null=[IO.File]::ReadAllText((Join-Path $mount 'other\readme')); $unexpectedRead=$true } catch {}
+        if ($unexpectedRead) { throw 'A different account could read the owner-only mount' }
+        $unexpectedStateRead=$false
+        try { $null=[IO.File]::ReadAllBytes((Join-Path $root 'database-state\metadata.sqlite3')); $unexpectedStateRead=$true } catch {}
+        if ($unexpectedStateRead) { throw 'A different account could read the private local database' }
+        $task = $service.GetFolder('\').GetTask($taskName)
+        $definition = $task.Definition
+        if ($definition.Principal.LogonType -ne 1 -or $definition.Principal.RunLevel -ne 0 -or
+            $definition.Settings.ExecutionTimeLimit -ne 'PT0S' -or $definition.Settings.MultipleInstances -ne 2 -or
+            $definition.Settings.AllowHardTerminate -or $definition.Triggers.Count -ne 1 -or
+            $definition.Triggers.Item(1).Type -ne 9) { throw 'Unexpected startup/lifetime settings' }
+        # No copy of the disposable password may escape into persisted task/state.
+        if ($task.Xml.Contains($plainPassword)) { throw 'Password leaked into task definition' }
+        $null = User-Action Remove
+        $removed=$false
+        try { $null=$service.GetFolder('\').GetTask($taskName) }
+        catch { if ($_.Exception.GetBaseException().HResult -eq -2147024894) { $removed=$true } else { throw } }
+        if (-not $removed) { throw 'Task remains after removal' }
     }
-    $unexpectedRead=$false
-    try { $null=[IO.File]::ReadAllText((Join-Path $mount 'other\readme')); $unexpectedRead=$true } catch {}
-    if ($unexpectedRead) { throw 'A different account could read the owner-only mount' }
-    $unexpectedStateRead=$false
-    try { $null=[IO.File]::ReadAllBytes((Join-Path $root 'database-state\metadata.sqlite3')); $unexpectedStateRead=$true } catch {}
-    if ($unexpectedStateRead) { throw 'A different account could read the private local database' }
-    $task = $service.GetFolder('\').GetTask($taskName)
-    $definition = $task.Definition
-    if ($definition.Principal.LogonType -ne 1 -or $definition.Principal.RunLevel -ne 0 -or
-        $definition.Settings.ExecutionTimeLimit -ne 'PT0S' -or $definition.Settings.MultipleInstances -ne 2 -or
-        $definition.Settings.AllowHardTerminate -or $definition.Triggers.Count -ne 1 -or
-        $definition.Triggers.Item(1).Type -ne 9) { throw 'Unexpected startup/lifetime settings' }
-    # No copy of the disposable password may escape into persisted task/state.
-    if ($task.Xml.Contains($plainPassword)) { throw 'Password leaked into task definition' }
-    $null = User-Action Remove
-    $removed=$false
-    try { $null=$service.GetFolder('\').GetTask($taskName) }
-    catch { if ($_.Exception.GetBaseException().HResult -eq -2147024894) { $removed=$true } else { throw } }
-    if (-not $removed) { throw 'Task remains after removal' }
+    if ($AuthorityFixture) {
+        Write-Output (User-Action AuthorityInstall)
+        $first = User-Action AuthorityProbe | ConvertFrom-Json
+        $second = User-Action AuthorityProbe | ConvertFrom-Json
+        if ($first.authentication_id -eq $second.authentication_id -or $first.child_pid -ne $second.child_pid) { throw 'Coordinator not shared across independent logons' }
+        Write-Output ('Coordinator first login: ' + ($first | ConvertTo-Json -Compress))
+        Write-Output ('Coordinator second login: ' + ($second | ConvertTo-Json -Compress))
+        $task=$service.GetFolder('\').GetTask($authorityTaskName)
+        if ($task.Xml.Contains($plainPassword)) { throw 'Password leaked into coordinator task' }
+        $forbidden=$false
+        try { $null=[IO.File]::ReadAllBytes((Join-Path $root 'authority-state\metadata.sqlite3')); $forbidden=$true } catch {}
+        if ($forbidden) { throw 'Other account could read coordinator database' }
+        $forbidden=$false
+        try { $null=[IO.File]::ReadAllBytes((Join-Path $root 'authority-inputs\key.pem')); $forbidden=$true } catch {}
+        if ($forbidden) { throw 'Other account could read TLS key' }
+        Write-Output (User-Action AuthorityCrash)
+        Write-Output (User-Action AuthorityRecover)
+        Write-Output (User-Action AuthorityRemove)
+        $removed=$false
+        try { $null=$service.GetFolder('\').GetTask($authorityTaskName) }
+        catch { if ($_.Exception.GetBaseException().HResult -eq -2147024894) { $removed=$true } else { throw } }
+        if (-not $removed) { throw 'Coordinator task remains after removal' }
+    }
     $acceptancePassed = $true
 } catch {
     # Keep the original assertion visible even if cleanup independently fails.
@@ -336,7 +379,7 @@ exit 0
     if ($taskName) {
         try {
             Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-TaskScheduler/Operational';StartTime=$started} -ErrorAction Stop |
-                Where-Object { $_.Message.Contains($taskName) } |
+                Where-Object { $message=$_.Message; @($taskNames | Where-Object { $message.Contains($_) }).Count -gt 0 } |
                 Select-Object -First 20 Id,Message | Format-List | Out-String | Write-Output
         } catch { Write-Warning 'Task history unavailable' }
     }
@@ -344,18 +387,18 @@ exit 0
 } finally {
     # Cleanup is restricted to the randomly named account, task and directory
     # made here. Force termination is a test-failure cleanup, never app behavior.
-    if ($taskName) {
+    foreach ($ownedTaskName in $taskNames) {
         try {
-            $task=$service.GetFolder('\').GetTask($taskName)
-            $taskArguments=$task.Definition.Actions.Item(1).Arguments
+            $task=$service.GetFolder('\').GetTask($ownedTaskName)
+            $taskArguments.Add($task.Definition.Actions.Item(1).Arguments)
             $task.Enabled=$false
-            $service.GetFolder('\').DeleteTask($taskName,0)
+            $service.GetFolder('\').DeleteTask($ownedTaskName,0)
         } catch { if ($_.Exception.GetBaseException().HResult -ne -2147024894) { $cleanupFailures.Add('Could not delete disposable task') } }
     }
     if ([IO.Directory]::Exists($root)) {
         foreach ($process in Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='s3drive.exe'") {
             if (($process.ExecutablePath -eq (Join-Path $root 's3drive.exe')) -or
-                ($taskArguments -and $process.CommandLine -and $process.CommandLine.Contains($taskArguments))) {
+                ($process.CommandLine -and @($taskArguments | Where-Object { $process.CommandLine.Contains($_) }).Count -gt 0)) {
                 Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
                 Wait-Process -Id $process.ProcessId -Timeout 15 -ErrorAction SilentlyContinue
             }
@@ -424,7 +467,10 @@ exit 0
                         $cleanupFailures.Add('Disposable account still owns a process')
                     }
                 }
-                try { Remove-Item -LiteralPath (Join-Path $profileDirectory '.aws') -Recurse -Force }
+                try {
+                    $dummyAws=Join-Path $profileDirectory '.aws'
+                    if ([IO.Directory]::Exists($dummyAws)) { Remove-Item -LiteralPath $dummyAws -Recurse -Force }
+                }
                 catch { $cleanupFailures.Add('Could not remove dummy credentials from retained profile') }
                 Write-Warning 'DISPOSABLE VM CLEANUP: Windows retained its locked fixture profile; dummy credentials removed, profile deletion deferred to VM destruction.'
             } else { $cleanupFailures.Add('Could not remove disposable profile: ' + $failure.Message) }
@@ -446,4 +492,5 @@ exit 0
     $password.Dispose()
     if ($cleanupFailures.Count) { throw ($cleanupFailures -join '; ') }
 }
-Write-Output 'PASS: non-admin registration, independent same-account logons, exact S3 and Unicode reads, duplicate starts, retained mount and removal'
+if ($AuthorityFixture) { Write-Output 'PASS: non-admin TLS coordinator, independent logons, duplicate starts, scheduled crash recovery, exact receipts and controlled removal' }
+if (-not $AuthorityOnly) { Write-Output 'PASS: non-admin registration, independent same-account logons, exact S3 and Unicode reads, duplicate starts, retained mount and removal' }

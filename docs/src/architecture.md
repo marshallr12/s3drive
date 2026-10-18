@@ -10,8 +10,11 @@ payloads and each machine's private SQLite cache/journal. See the executable
 The authority and [managed publication library](managed-publication.md) join
 SQLite, its HTTP API and the real S3 SDK. Managed native writes and the explicit
 [Windows lifecycle](native-windows-lifecycle.md) passed native acceptance at0f6104c.
-[Shared HTTPS transport](remote-authority.md) is the next implementation phase;
-remote deployment, backup/failover and Turso acceptance remain outstanding.
+[Shared HTTPS transport](remote-authority.md) and the explicit
+[store/configuration bootstrap](managed-bootstrap.md) are implemented and tested
+with private-CA fixtures. [Pinned coordinator supervision](authority-startup.md)
+is under implementation; remote deployment, paired startup acceptance,
+backup/failover and Turso acceptance remain outstanding.
 No bucket migration or Turso service is enabled.
 
 The existing direct-layout implementation below has native read/cache, explicit
@@ -24,11 +27,15 @@ Linux without systemd and account-owned Windows mounts.
 
 ## Crate ownership and process model
 
-`s3drive-authority` owns the bounded development HTTP/worker service and calls
-`s3drive-state::namespace` for persistent metadata transactions. It is separate
-from local client state; version-3 read-only mounts call its loopback API. `s3drive-managed`
-joins it with the SDK executor and schema-9 local logical publication journal. Its loopback
-protocol is the first contract for an optional remote/Turso implementation.
+`s3drive-authority` implements the shared Rust metadata service, launched by
+`s3drive authority-serve`. It calls `s3drive-state::namespace` for authoritative
+SQLite transactions and exposes an authenticated HTTPS API. Numeric loopback
+HTTP remains available for explicit local configurations. Its database is
+separate from every client's private cache/journal. `s3drive-managed` joins the
+metadata client with the SDK executor and durable logical publication journal.
+Clients transfer immutable file payloads directly to S3; the coordinator
+serializes metadata changes rather than forwarding file bytes. Turso remains
+an optional future backend behind this service contract, not an enabled service.
 
 
 `s3drive-core` owns configuration validation and path resolution.

@@ -197,9 +197,30 @@ and all-target Clippy passed. The final gate must run again after remaining
 platform/native work. This acceptance does not mount FUSE, use S3, install
 anything into the user's real login profile, or prove physical reboot behavior.
 
-The Windows component passes PowerShell AST parsing only. Runtime acceptance
-must use the disposable ordinary-account test machinery; existing Mount-only
-startup results do not establish Authority component behavior.
+The Windows component and its new native acceptance harness pass PowerShell
+AST parsing locally. The Rust subprocess worker also passed a portable live
+TLS/SQLite crash-and-replay test, including private-input creation, Unicode
+namespace contents and exact receipt recovery with no extra sequence increment.
+This validates the client fixture, not Task Scheduler on Windows.
+
+A separate hosted test now uses the same randomly created ordinary account,
+password pipe, batch-logon right and profile cleanup as the existing Mount gate:
+
+```text
+cargo test -p s3drive-cli --test authority_restart supervised_windows_coordinator_tls_independent_logons_and_recovery --locked -- --ignored --nocapture --exact
+```
+
+The candidate checks private TLS inputs and namespace ACLs, independent
+AuthenticationIds, duplicate starts, wrong-volume registration refusal and
+Task Scheduler settings. It kills only an opened, image/parent/pin-verified
+fixture child and waits for the scheduler's configured retry without issuing
+Start. Authenticated Rust clients then recover the original volume and replay
+the exact saved operation receipt before controlled removal. Passwords stay
+in memory/pipes; neither system trust stores nor real user registrations change.
+The actual hosted outcome is pending; existing Mount-only startup results do
+not establish Authority behavior. This test covers acknowledged metadata receipt
+recovery. Paired native drives, uncertain flush IDs and conflicts still require
+the separate acceptance described below.
 
 ## Next native acceptance work
 

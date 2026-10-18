@@ -713,8 +713,9 @@ Pinned-startup local gate passed (265 state, two new real CLI HTTP/TLS restart
 cases plus the existing suites, lint/build/book). The separate Linux coordinator
 supervisor acceptance passed with gio/tmux, killed-child/WAL and unknown-result
 recovery, missing/overlapping metadata refusal and controlled removal. Windows
-helper has AST-only evidence; actual independent-logon coordinator and paired
-native drive acceptance remain required. This is a development checkpoint,
+helper and new disposable-account coordinator harness have local AST evidence.
+The Rust subprocess fixture passed live TLS/crash/exact-replay locally; hosted
+Task Scheduler acceptance and paired native drive acceptance remain required. This is a development checkpoint,
 not publication or completed coordinator supervision.
 
 Linux supervision additionally passed the explicit HTTP and HTTPS/private-CA

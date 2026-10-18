@@ -64,16 +64,38 @@ Python fixture client; hostname/certificate verification stays enabled.
 Windows helper adds analogous Authority component/v2 manifest and separate
 Task Scheduler registration, stable expected-volume/TLS settings and child stdin
 shutdown. PowerShell AST parsed locally; native Authority runtime is NOT tested.
-Existing test-windows-session.ps1 currently tests only Mount. Must extend/add
-actual disposable non-admin independent-logon TLS coordinator acceptance,
+test-windows-session.ps1 now supports AuthorityOnly/AuthorityFixture and reuses
+the ordinary-account provisioning/cleanup. New test-windows-authority-worker.ps1
+uses the production Rust TLS client via a bounded subprocess. Native outcome is
+pending. It tests separate logons, duplicates, private inputs/ACLs, wrong pin,
+verified-own-child crash and actual scheduler retry (no manual Start), exact
+acknowledged receipts and removal. A new CI step runs this Windows test. The
+portable Rust worker smoke passed at /tmp/s3drive-authority-startup-worker-local1.log
+(three ordinary CLI tests). Still require actual disposable non-admin TLS
+coordinator acceptance,
 killed-child/retry and removal, plus paired real managed mounts on both OSes.
 Do not infer coordinator acceptance from baseline mount startup or AST parsing.
 
-Next: extend disposable Windows startup acceptance and pair both native
-managed drives with supervised coordinator recovery (Unicode bytes, exact
-uncertain IDs, dirty/conflict retention). Add explicit Linux authority CI step
-after tmux/gio availability. Full local gate, then exact-tip hosted all-three/
-native/reference/startup gates and source-bound artifacts before publication.
+Next: inspect the new disposable Windows coordinator CI step, fix runtime
+failures if any, then pair both native managed drives with supervised coordinator
+recovery (Unicode bytes, exact uncertain IDs, dirty/conflict retention). The
+Linux authority CI step is installed and passed at source be0d996 in job
+117544391821/run39083244133. Raw log is
+/tmp/s3drive-authority-startup-checkpoint-linux.log, including both HTTP/private-CA
+TLS supervisor PASS lines and existing native managed HTTPS acceptance. Windows
+and the complete run are still live at this checkpoint; do not restart them.
+
+New native-harness full local gate is running in exec session61312, log
+/tmp/s3drive-authority-startup-native-gate1.log. Clippy and the three ordinary
+restart/client CLI cases have passed in this run; state tests are still running
+at checkpoint creation. Focused worker log has three passing cases (the earlier
+worker-local1 log was subsequently extended by the full gate). The first native
+Clippy attempt had a test Listing.entries/children typo, corrected before this
+gate. All three PowerShell files and extracted embedded worker parse. No new
+production dependency or API change. Architecture prose now reflects the
+implemented Rust HTTPS service and bootstrap rather than calling HTTPS future.
+Full local gate, then exact-final-tip hosted all-three/native/reference/startup
+gates and source-bound artifacts are still required before phase publication.
 No user startup installation, host/account provisioning or new Wasabi mutation.
 Keep complete phase acceptance criteria in the book; the Rust preflight alone
 is not completed coordinator supervision. Development checkpoint on codex/authority-startup; no phase publication.

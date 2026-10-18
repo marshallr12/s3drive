@@ -99,6 +99,12 @@ jobs:
         if: runner.os == 'Linux'
         timeout-minutes: 5
         run: cargo test -p s3drive-cli --test authority_restart supervised_linux_coordinator_http_and_tls_with_private_ca --locked -- --ignored --nocapture
+      - name: Verify Windows coordinator startup and recovery
+        if: runner.os == 'Windows'
+        timeout-minutes: 10
+        env:
+          S3DRIVE_DISPOSABLE_WINDOWS_VM: '1'
+        run: cargo test -p s3drive-cli --test authority_restart supervised_windows_coordinator_tls_independent_logons_and_recovery --locked -- --ignored --nocapture --exact
       - name: Save Rust build cache
         if: success()
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4

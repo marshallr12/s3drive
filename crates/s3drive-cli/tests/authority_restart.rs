@@ -337,3 +337,224 @@ async fn supervised_linux_coordinator_http_and_tls_with_private_ca() {
         eprintln!("{log}");
     }
 }
+
+// A subprocess test worker lets the disposable ordinary Windows account use
+// the production Rust TLS client. No machine certificate-store changes or
+// certificate-verification callbacks are involved.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "fixture subprocess only: requires an owned root and explicit mode"]
+async fn windows_authority_fixture_worker() {
+    let root = PathBuf::from(std::env::var_os("S3DRIVE_AUTHORITY_FIXTURE_ROOT").unwrap());
+    let mode = std::env::var("S3DRIVE_AUTHORITY_FIXTURE_MODE").unwrap();
+    if mode == "Init" {
+        let private = root.join("authority-inputs");
+        s3drive_state::create_private_secret(&private, "a".repeat(64).as_bytes()).unwrap();
+        for name in ["cert.pem", "key.pem"] {
+            s3drive_state::create_private_document(
+                &private,
+                name,
+                &std::fs::read(root.join(name)).unwrap(),
+            )
+            .unwrap();
+        }
+        return;
+    }
+    assert!(matches!(mode.as_str(), "Seed" | "Verify" | "Recover"));
+    let identity: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(root.join("authority-identity.json")).unwrap())
+            .unwrap();
+    let volume = identity["volume"].as_str().unwrap();
+    let cert = std::fs::read(root.join("authority-inputs/cert.pem")).unwrap();
+    let w = wire(identity["endpoint"].as_str().unwrap(), Some(&cert));
+    let deadline = Duration::from_secs(if mode == "Recover" { 100 } else { 20 });
+    let v = tokio::time::timeout(deadline, async {
+        loop {
+            if let Ok(Reply::Info(v)) = w.request(&Request::Info {}).await {
+                break v;
+            }
+            tokio::time::sleep(Duration::from_millis(150)).await;
+        }
+    })
+    .await
+    .expect("authenticated pinned TLS coordinator not available");
+    assert_eq!(v.id, volume);
+    let request = Apply {
+        volume: volume.into(),
+        operation: "c".repeat(32),
+        expected_sequence: 0,
+        mutation: Mutation::CreateEntry {
+            parent: s3drive_authority::ROOT.into(),
+            parent_revision: 0,
+            store: None,
+            name: "資料 café 🦀".into(),
+            node_kind: s3drive_authority::Kind::Directory,
+        },
+    };
+    let retained = root.join("authority-receipt.json");
+    if mode == "Seed" {
+        let reply = w.request(&Request::Apply { request }).await.unwrap();
+        assert!(matches!(reply, Reply::Applied(_)), "{reply:?}");
+        std::fs::write(retained, serde_json::to_vec(&reply).unwrap()).unwrap();
+    } else {
+        let original: Reply = serde_json::from_slice(&std::fs::read(retained).unwrap()).unwrap();
+        let Reply::Applied(receipt) = &original else {
+            panic!("original receipt missing")
+        };
+        assert_eq!(
+            w.request(&Request::Operation {
+                volume: volume.into(),
+                operation: request.operation.clone(),
+            })
+            .await
+            .unwrap(),
+            Reply::Operation(Some(Ok(receipt.clone())))
+        );
+        assert_eq!(
+            w.request(&Request::Apply { request }).await.unwrap(),
+            original
+        );
+    }
+    assert_eq!(
+        info(&w).await.sequence,
+        1,
+        "replay repeated namespace effect"
+    );
+    let Reply::List(list) = w
+        .request(&Request::List {
+            volume: volume.into(),
+            parent: s3drive_authority::ROOT.into(),
+        })
+        .await
+        .unwrap()
+    else {
+        panic!("Unicode namespace listing")
+    };
+    assert_eq!(list.children.len(), 1);
+    assert_eq!(list.children[0].name, "資料 café 🦀");
+}
+
+#[cfg(windows)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "native coordinator supervision: disposable elevated Windows runner"]
+async fn supervised_windows_coordinator_tls_independent_logons_and_recovery() {
+    let tmp = tempfile::tempdir().unwrap();
+    let rcgen::CertifiedKey { cert, signing_key } =
+        rcgen::generate_simple_self_signed(vec!["127.0.0.1".into()]).unwrap();
+    // These are ephemeral test-only inputs, copied into account-private files
+    // by the ordinary account before Rust can use them.
+    std::fs::write(tmp.path().join("cert.pem"), cert.pem()).unwrap();
+    std::fs::write(tmp.path().join("key.pem"), signing_key.serialize_pem()).unwrap();
+    std::fs::copy(
+        std::env::current_exe().unwrap(),
+        tmp.path().join("authority-worker.exe"),
+    )
+    .unwrap();
+    let out = tokio::time::timeout(
+        Duration::from_secs(540),
+        Command::new("powershell.exe")
+            .env_remove("PSModulePath")
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+            ])
+            .arg(
+                Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../scripts/test-windows-session.ps1"),
+            )
+            .arg("-Executable")
+            .arg(env!("CARGO_BIN_EXE_s3drive"))
+            .arg("-AuthorityOnly")
+            .arg("-AuthorityFixture")
+            .arg(tmp.path())
+            .kill_on_drop(true)
+            .output(),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    eprintln!("{}", String::from_utf8_lossy(&out.stdout));
+    assert!(
+        out.status.success(),
+        "Windows coordinator supervision: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(String::from_utf8_lossy(&out.stdout).contains("PASS: non-admin TLS coordinator"));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn disposable_account_worker_uses_private_tls_inputs_and_exact_restart_receipts() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path();
+    let rcgen::CertifiedKey { cert, signing_key } =
+        rcgen::generate_simple_self_signed(vec!["127.0.0.1".into()]).unwrap();
+    std::fs::write(root.join("cert.pem"), cert.pem()).unwrap();
+    std::fs::write(root.join("key.pem"), signing_key.serialize_pem()).unwrap();
+    async fn run_worker(root: &Path, mode: &str) {
+        let out = tokio::time::timeout(
+            Duration::from_secs(30),
+            Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--ignored",
+                    "--exact",
+                    "windows_authority_fixture_worker",
+                    "--nocapture",
+                ])
+                .env("S3DRIVE_AUTHORITY_FIXTURE_ROOT", root)
+                .env("S3DRIVE_AUTHORITY_FIXTURE_MODE", mode)
+                .kill_on_drop(true)
+                .output(),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert!(
+            out.status.success(),
+            "worker {mode}: {}\n{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+    run_worker(root, "Init").await;
+    let private = root.join("authority-inputs");
+    let secret = private.join("authority.token");
+    let cert = private.join("cert.pem");
+    let key = private.join("key.pem");
+    let db = root.join("authority-state");
+    let first = Server::start(command(
+        &db,
+        &secret,
+        None,
+        Some((&cert, &key)),
+        "127.0.0.1:0",
+    ))
+    .await;
+    let write_identity = |server: &Server| {
+        std::fs::write(
+            root.join("authority-identity.json"),
+            serde_json::to_vec(
+                &serde_json::json!({"endpoint":server.endpoint,"volume":server.volume}),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    };
+    write_identity(&first);
+    run_worker(root, "Seed").await;
+    run_worker(root, "Verify").await;
+    let volume = first.volume.clone();
+    first.kill().await;
+    let second = Server::start(command(
+        &db,
+        &secret,
+        Some(&volume),
+        Some((&cert, &key)),
+        "127.0.0.1:0",
+    ))
+    .await;
+    write_identity(&second);
+    run_worker(root, "Recover").await;
+    second.stop().await;
+}
