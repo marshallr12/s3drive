@@ -60,6 +60,20 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
+## Active reader implementation (2026-10-18)
+
+Checkout /home/marshall/src/worktrees/s3drive-manifest-range-reader,
+branch codex/manifest-range-reader. Accepted controller474 and helperfef sources
+are now combined here; primary and helper checkouts retain accepted sources.
+New reader and owned read fixture passed5 focused controls (78806 EXIT0,4.68s)
+and Clippy75607 EXIT0 before combination. Full combined gate is next.
+No legacy Reader, schema/wire/codec/native changes. Fixed4active/256snapshots,
+8MiB output/1MiB data/10432byte page/27visits/9data, max30s overall deadline.
+ReadOptions accepts shorter positive deadlines. Sparse64GiB deepest tree,
+older chunk reuse, holes, Unicode, corruption/denial, cancellation and capacity
+controls passed locally. No mounted chunks or new provider acceptance yet.
+Historical pending/live sections below are superseded by current acceptance.
+
 ## Accepted helper; next manifest reader (2026-10-18)
 
 Source fef944268c89d2c0b1d859a6a86d0f6761c24361, own run39167583915 attempt1:
@@ -84,6 +98,88 @@ captured credentials. Independent new opens rotate; legacy reader unchanged.
 Three new S3 controls prove chained credential pinning, exact scope/fresh denial
 and bounded inline future layout. No profile hot-reload promise. See book
 pinned-related-reads.md and dated evidence for detailed checks and failure history.
+
+
+## Current work: controller accepted; verified reader preparation (2026-10-18)
+
+Previous goal turn was verified wait on39163298774/Windows117780950165. This
+turn completed own41b acceptance:all3SUCCESS, watch28386 EXIT0, ownrawreview,
+strict21/14+projectoracles andraw35PASS,22memberarchive verified; docscheckpoint
+20706cd pushed oncodex/chunk-source-settlement. PUBLIC retained. No rerun.
+
+Branch codex/chunk-source-controller from20706cd. Productiondelta only
+crates/s3drive-managed/src/chunks.rs: explicitPublisher/Recovery.resume_source
+returnsSourceReceipt afterdurableroot then sameownerfacadesettle; onefamilypermit
+throughboth; privateunlockedpublisherhelper preservesoldresume.RootCommit.
+Knownroot noRPC; Preparedunknown fullsavedApplyonly, scopefirst. No schema,
+S3format/wire/native change. Tests parentchunk_publication.rs + newchildmodule
+chunk_publication/source_settlement.rs reuseexistingownedSDK/authauthorityfixture.
+Fournewcases:Unicode/binary/sparse/empty/history; killedunknownroot withnewerroot/
+localhead; killedknownroot afterrefusedsourceinsert; expired/narrowpolicy plus
+rootreceiptsavefailure, barrierBusy andconcurrentfirstack. Parent assertskilled
+exitunsuccessful, removesonlyfixturetrigger, disablesdummycredentials/policy,
+corruptssourcebytes, countsallS3+uniquePUTs. Rivalconflictalsoexplicitlyrefuses
+newAPI. Source state unchanged. One compile error (double-reference to manifest
+getter) fixed; focused2 session75700 CLOSED EXIT0,12pass60.30s; log
+/tmp/s3drive-chunk-source-controller-focus2.log. Additive corrupt-record newAPI refusal passed29993 EXIT0,1pass0.90s.
+Fullgate80848 CLOSED EXIT0, runtime frozen253files in
+/tmp/s3drive-chunk-source-controller-frozen.json. Log
+/tmp/s3drive-chunk-source-controller-gate.log. Full local gate PASS:12chunk59.79s,
+365state/1ignored172.37s,59S3,34core,50authority,18existingpublication,10TLS/3ignored,
+66docfiles/62chapters;fmt/clippy/build. Oneoldretainedsessionquota longnotice then
+PASS; no benchmark/regressioncause claim. 253hashes unchanged. ResultJSON
+/tmp/s3drive-chunk-source-controller-gate-result.json. GateLogSHA
+0c441d6b18a101269bbca02e2dd4b2fb059f74fa9936c0f7795fccad7135484a.
+12memberlocalarchive chunk-source-controller-local-20261018.tar.gz,53154bytes,
+SHA9289080295e870ccf68f1915aba328e5e69c60353190da7e0516604aa2589228,
+allindexedmembersverified. Implementation self-review only, noindependentreviewer.
+Published testedsource474601edd5582ebed9316d04cf4524db6d72694b,8files, clean
+exactremote/all253hashes/PUBLIC/main1a93b5funchanged; normalnewbranchpush. Proof
+/tmp/s3drive-chunk-source-controller-publication.json. Publication21576 EXIT0.
+Own CI39165918104 attempt1 all3SUCCESS:Windows117788707767,Linux117788707913,
+book117788707918. Watch79476 CLOSED EXIT0. All3ownrawlogsreviewed andhashbound.
+Oneusechecker25752 EXIT0; own4newcases passedbothOSlogs,253sourcehashes+4oracles
+match, ownfinalizedIDs12150891787/12151260949 withAPIdigest/timechecks; strict
+21/14+projectoracles PASS and all35rawfields/types equal. Ownoutput
+/tmp/s3drive-chunk-source-controller-474-artifacts; no oldartifactpayloadsreused.
+22memberhostedarchive chunk-source-controller-474-hosted-20261018.tar.gz,
+116497bytes,SHAdc56024d08b133c10b51e9db8609814df2922e8b91b01ee0ed4d53c6cc8dde41;
+allindexedmembersverified. Builder /tmp/s3drive-chunk-source-controller-474-archive.py
+executedEXIT0; notprepared-onlyanymore. Do notreexecuteoneusechecker/archive.
+Windows12chunk32.39s,360state/1ignored,7native71.81s,pairedstartup70.87s,
+32HTTPSflushes/disposition/snapshotconsole PASS. 3lockeddisposableprofileswith
+removeddummycredentials,unuseddelayimport+9dups,Node/cachedeprecations andexpected
+HEAD403/contentconflict/stoppedauthorityListtimeout retained. Linux12chunk44.40s,
+365state/1ignored,9native62.68s,no-systemd/SSH/HTTP/privateCAHTTPS recovery PASS.
+Book66files/62chapters PASS. Existingmountedformat only; notmountedchunks,
+newWasabi orphysicalreboot acceptance. Source474controllerlibraryisaccepted.
+RelatedS3helper isisolatedbelow andhasownliveCI39167583915/watch43951. FullgoalACTIVE.
+ Nativechunklifecycle/rangereader remainlater. Concrete subsequent verified-range
+reader contract now inimplementation-plan.md; preserveslegacyrefusal, pinnedroot,
+separatephysical/pagehashes, boundedauthenticatedpath/chunkfetches andcurrentS3
+authorization. Plan only, no reader implementation yet.
+Book117788707918 SUCCESS/rawreviewed own474/schema28/66files/62chapters; marker
+/tmp/s3drive-chunk-source-controller-474-book-reviewed.json. Linux117788707913
+alsoSUCCESS/rawreviewed:12chunk44.40s(all4new),365state/1ignored,9native62.68s,
+no-systemd desktop/SSH andpinnedHTTP/HTTPS/privateCA recovery24.15s. Marker
+/tmp/s3drive-chunk-source-controller-474-linux-reviewed.json, logSHA
+c5273e9fe0732986a166f42a71c5193a744bb3a78aff5286f6594ea7fc86b0a3. Expected
+HEAD403/ConnectionRefused/removedstartup.json refusal andNode/cachedeprecations
+retained. Existingmountedformat only; notmountedchunks/Wasabi/physicalreboot.
+Windows117788707767 subsequentlySUCCESS; owncontroller acceptance above. Watch79476closed.
+
+Readerdesignaudit foundmissing pinned-credential related-object open API. New
+concretecontract inimplementation-plan: samecredentialgeneration forroot/children,
+rootactuallevel == descriptorordinallevel (authoritymaxlevel2), metadata-only
+EmptyFile vs publishedemptyroot,4activeoperations/256pinnedsnapshots/8MiBoutput/
+1MiBdatabuffer/10432pagebytes/27pagevisits/9dataobjects/30sdeadline, perreaderfamily.
+Budgetsproposed, notmeasuredRSS; no readerimplementation. Lockedaws-config1.12.0
+andcredential-types1.3.0 sources inspected+hashed; docs.rsprimaryconfirmsprofile
+filesparsedonce/cached, so testrotation viaexistingRotatingCredentials fixture.
+Datedevidence manifest-range-reader-contract-20261018.json. IndependentS3helper
+preparation allowedinnewisolatedworktreefromaccepted20706cd; fullmanagedreader
+stillfollowscontrolleracceptance. Keeporiginal253sourcehashes frozen for474checker.
+
 
 ## Accepted prerequisite: exact chunk source settlement state (2026-10-18)
 
@@ -172,9 +268,9 @@ ExpectedHEAD403/contentconflict/stoppedauthorityListtimeout; unusedWinFspdelay
 import+9duplicatewarnings,Node/cachedeprecations,3lockeddisposableprofiles with
 removeddummycredentials retained. Existingmountedformat, notmountedchunks,
 physicalreboot ornewWasabi acceptance. Book66files/62chapters PASS. Repository
-PUBLIC; no visibility/credentialmutation. Next implement controller contract.
+PUBLIC; no visibility/credentialmutation. Current controller work is above.
 
-Next controller contract now concrete in implementation-plan.md under
+Controller contract recorded at this state checkpoint in implementation-plan.md under
 "Next controller slice: explicit source acknowledgment" (2026-10-18 proposal).
 Read complete current chunks.rs and existing realSDK/authenticatedauthority
 subprocess fixture. AddPublisher/Recovery.resume_source returningopaqueSourceReceipt,
@@ -185,7 +281,8 @@ proof. Proposedfourcontrols:Unicode/binary/sparse/empty historicalflow; killed
 unknownreply withnewerremote/localhead; killedknownroot afterfailedsourceinsert;
 expired/narrowpolicy/localreceiptsavefailure/explicitbarrierBusy/concurrentfirstack.
 Reuseparentharness+smallchildmodule; actualkilledstatusunsuccessful/reap, countall
-S3+uniquePUTs+completeApplys. No implementation yet; accepted41b prerequisite now satisfied. Native
+S3+uniquePUTs+completeApplys. This checkpoint had no controller implementation; current active section above
+records its implementation and tests. Accepted41b prerequisite satisfied. Native
 chunklifecycle/verifiedrange reader remainlater. StateFULL/grandchild/postcommit
 faults remainstateevidence, not newcontrollerclaims. No newagentsdispatched.
 
@@ -1356,24 +1453,25 @@ Archive SHA256: 7e6ea7afa13c681ba9f46f166b0cbcf4a75b1091722fab54f77f820d7877769c
 Previous complete archives before-a14-refresh, before-snapshot-cancel and
 before-flush-receipts remain in docs/archive; no history was discarded.
 
-Published testedsourcefef944268c89d2c0b1d859a6a86d0f6761c24361 on
-codex/pinned-related-reads, normalpush64425 EXIT0,8files,cleanexactremote/252hashes/
-PUBLIC/main1a93b5funchanged. Proof /tmp/s3drive-pinned-related-publication.json.
-OwnCI39167583915attempt1 LIVE:book117793654818,Linux117793655088,
-Windows117793655137. Watch43951LIVE,/tmp/s3drive-pinned-related-fef-watch.log;
-resumeSAMErun/handle. Prepared/compiledONLY notexecuted: /tmp/s3drive-check-
-pinned-related-fef.py and/tmp/s3drive-pinned-related-fef-{reference-check.ps1,
-raw-compare.py,archive.py}. Freshoutput /tmp/s3drive-pinned-related-fef-artifacts
-andmarker /tmp/s3drive-pinned-related-fef-raw-reviewed.json absent. Requireall3
-terminalSUCCESS+own3rawreviews beforeoneusechecker; binds ownsource/runattempt/
-jobs/artifactIDs/APIdigests/times/252hashes/4oracles andall3newS3tests inbothOSlogs;
-strict21/14+projectoracles thenraw35allfield/typecomparison. Rejectold474 IDs
-12150891787/12151260949,41b IDs12149243457/12149814008 andolder. Nooldpayloadreuse.
-Hostedarchivebuilderpoints ownfefchecker/reader.rs/252map; executeonlyafterall
-checks. No successchecker onfailedcohort; archivefailureinstead. Rootcontroller
-474nowall3accepted+ownstrict21/14/raw35/archive; seeprimaryHANDOFF. Thisbranch
-still lackscontroller474source (parent20706cd); integratebothafterhelperacceptance.
-Fullmanagedrangereader/nativelifecycle/provider/physicalreboot remainunfinished.
+## Independent helper checkout running (2026-10-18)
 
-Book117793654818 SUCCESS/rawreviewed ownfef/schema28/67files/63chapters; marker
-/tmp/s3drive-pinned-related-fef-book-reviewed.json. Linux/WindowsstillLIVE.
+Related-read prep is now implemented only in
+/home/marshall/src/worktrees/s3drive-pinned-related-reads, branch
+codex/pinned-related-reads fromaccepted20706cd. Productionreader.rs adds8lines
+ReadHandle.open_related (samecapturedprovider,freshHEAD,boxedfuture); testsadd
+3controls: chainedroot/child/grandchildcredentialgeneration vs newgeneration,
+exactscope/GETpreconditions, freshHEADdenial/missing/invalidkey, inlinefuturebound.
+Focused1 95205 EXIT101:2pass/1fixturetargetassertfail (SDKx-id=GetObject query);
+fixedexactparsedpath, productionunchanged. Focus2 64173 EXIT0,62S3pass21.04s.
+Fullgate57146 CLOSED EXIT0, /tmp/s3drive-pinned-related-gate.log. Its own252filemap
+/tmp/s3drive-pinned-related-frozen.json (twoS3deltasvsacceptedbase). Root253
+controllerhashesstillunchanged. Newworktree source/docs published atfef944268c89d2c0b1d859a6a86d0f6761c24361; readitsown
+HANDOFF andpinned-related-reads.md beforecontinuing. No newmanagedreader/native
+activation. Fullgatesourcefrozen. Helperownhostedacceptancepending; fullgate/localarchivepassed.
+LocalbuildusesCARGO_TARGET_DIR=/home/marshall/src/s3drive/target to reuseexisting
+buildcache; do notstartanotherlocalS3Drivecargo job while57146is live. Controller
+CI runsremotely andisindependent. OwnhelperCI39167583915 attempt1 LIVE:book117793654818,Linux117793655088,
+Windows117793655137. Watch43951 /tmp/s3drive-pinned-related-fef-watch.log. Its
+252map/ROOT areisolatedworktree, notprimary253. 474controllerisaccepted above.
+Next accepthelperowncohort thenmergecodewithcontroller andimplementfullreader;
+fullcontract/budgets alreadydocumented. Primaryruntime253stillunchanged.

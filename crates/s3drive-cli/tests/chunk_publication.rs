@@ -2,6 +2,8 @@
 //! fixtures/dummy profiles only. No provider or mounted chunk-format acceptance.
 #[path = "support/fixture.rs"]
 pub mod fixture;
+#[path = "chunk_publication/source_settlement.rs"]
+mod source_settlement;
 #[path = "support/writes.rs"]
 pub mod writes;
 use s3drive_authority::{
@@ -640,6 +642,20 @@ async fn races(config: &s3drive_core::Config, root: &Path, s: &Server) {
     typed(recovery.resume(li).await, |e| {
         matches!(e, Failure::RetainedConflict)
     });
+    typed(recovery.resume_source(li).await, |e| {
+        matches!(e, Failure::RetainedConflict)
+    });
+    assert!(
+        loser
+            .storage()
+            .chunk_publications()
+            .sources()
+            .source_status(li)
+            .await
+            .unwrap()
+            .settlement()
+            .is_none()
+    );
     assert!(s.proxy.requests().is_empty());
     pending(&a.storage(), ga).await;
     pending(&b.storage(), gb).await;
@@ -733,12 +749,22 @@ async fn refusals(config: &s3drive_core::Config, root: &Path, s: &Server) {
     .unwrap();
     typed(wrong.resume(i).await, |e| matches!(e, Failure::Binding));
     assert!(s.proxy.requests().is_empty());
+    let recovery = Recovery::open(
+        e.storage(),
+        s.wire.clone(),
+        r.input().reserve().volume.clone(),
+        id(200),
+    )
+    .await
+    .unwrap();
     // Corrupt saved intent cannot be reinterpreted as Missing and readmitted.
     let db = raw(root);
     db.execute("UPDATE chunk_publications SET state_hash=zeroblob(32)", [])
         .unwrap();
     s.proxy.clear();
     assert!(p.begin(i, id(72)).await.is_err());
+    assert!(p.resume_source(i).await.is_err());
+    assert!(recovery.resume_source(i).await.is_err());
     assert!(s.proxy.requests().is_empty());
     let h = hash_record(&r);
     db.execute(
@@ -824,13 +850,18 @@ async fn proof_fault(config: &s3drive_core::Config, root: &Path, s: &Server) {
     pending(&e.storage(), g).await;
     e.storage().close().await.unwrap();
 }
-async fn crash(config: &s3drive_core::Config, root: &Path, s: &Server) {
+async fn crash(config: &s3drive_core::Config, root: &Path, s: &Server, source: bool) {
     let e = setup(config, root, s).await;
     let p = publisher(&e, s).await;
     let (i, g) = plan(&e, s, 10, 40, b"committed but reply lost\0", None, 0).await;
     p.begin(i, id(41)).await.unwrap();
     s.proxy.mode.store(2, Ordering::SeqCst);
-    assert!(p.resume(i).await.is_err());
+    let result = if source {
+        p.resume_source(i).await.map(|_| ())
+    } else {
+        p.resume(i).await.map(|_| ())
+    };
+    assert!(result.is_err());
     let r = e.storage().chunk_publications().get(i).await.unwrap();
     assert!(r.publication().is_some() && r.receipt().is_none());
     pending(&e.storage(), g).await;
@@ -1020,8 +1051,20 @@ async fn chunk_child() {
         s3drive_core::names::PORTABLE
     };
     let s = Server::open(&root, policy).await;
-    if mode == "recover" {
-        Box::pin(recover(&root, &s)).await;
+    if matches!(
+        mode.as_str(),
+        "recover" | "source_recover_unknown" | "source_recover_known"
+    ) {
+        if mode == "recover" {
+            Box::pin(recover(&root, &s)).await;
+        } else {
+            Box::pin(source_settlement::recover(
+                &root,
+                &s,
+                mode == "source_recover_known",
+            ))
+            .await;
+        }
     } else {
         let config = s3drive_core::Config::parse(
             &std::fs::read_to_string(std::env::var("S3DRIVE_CHUNK_CONFIG").unwrap()).unwrap(),
@@ -1033,8 +1076,14 @@ async fn chunk_child() {
             "races" => Box::pin(races(&config, &root, &s)).await,
             "refusals" => Box::pin(refusals(&config, &root, &s)).await,
             "proof_fault" => Box::pin(proof_fault(&config, &root, &s)).await,
-            "crash" => Box::pin(crash(&config, &root, &s)).await,
+            "crash" => Box::pin(crash(&config, &root, &s, false)).await,
             "policy" => Box::pin(policy_recovery(&config, &root, &s)).await,
+            "source_flow" => Box::pin(source_settlement::flow(&config, &root, &s)).await,
+            "source_crash" => Box::pin(crash(&config, &root, &s, true)).await,
+            "source_ack_crash" => Box::pin(source_settlement::ack_crash(&config, &root, &s)).await,
+            "source_policy" => {
+                Box::pin(source_settlement::policy_recovery(&config, &root, &s)).await
+            }
             _ => panic!(),
         }
     }
@@ -1045,10 +1094,11 @@ async fn run(mode: &str) {
     let tmp = tempfile::tempdir().unwrap();
     let setup = writes::setup(&f, tmp.path()).await;
     let mut counts = None;
-    for stage in if mode == "crash" {
-        vec!["crash", "recover"]
-    } else {
-        vec![mode]
+    for stage in match mode {
+        "crash" => vec!["crash", "recover"],
+        "source_crash" => vec!["source_crash", "source_recover_unknown"],
+        "source_ack_crash" => vec!["source_ack_crash", "source_recover_known"],
+        _ => vec![mode],
     } {
         let mut command = tokio::process::Command::new(std::env::current_exe().unwrap());
         command
@@ -1105,16 +1155,19 @@ async fn run(mode: &str) {
         let err = errors.await.unwrap();
         assert!(
             result.is_ok()
-                && if stage == "crash" {
-                    killed
+                && if matches!(stage, "crash" | "source_crash" | "source_ack_crash") {
+                    killed && !status.success()
                 } else {
                     status.success() && !killed
                 },
             "case {stage}: {status}: {err}"
         );
-        if stage == "crash" {
-            assert_eq!(puts(&f), 4);
+        if matches!(stage, "crash" | "source_crash" | "source_ack_crash") {
+            assert_eq!(puts(&f), if stage == "source_ack_crash" { 2 } else { 4 });
             let db = raw(tmp.path());
+            if stage == "source_ack_crash" {
+                db.execute_batch("DROP TRIGGER no_source_ack").unwrap();
+            }
             db.execute("UPDATE staged_chunks SET data=zeroblob(length(data))", [])
                 .unwrap();
             drop(db);
@@ -1126,7 +1179,15 @@ async fn run(mode: &str) {
             .unwrap();
             counts = Some(f.requests.lock().unwrap().len());
         }
-        if stage == "recover" || stage == "policy" {
+        if matches!(
+            stage,
+            "recover"
+                | "policy"
+                | "source_recover_unknown"
+                | "source_recover_known"
+                | "source_policy"
+                | "source_flow"
+        ) {
             assert_eq!(
                 f.requests.lock().unwrap().len(),
                 counts.unwrap(),
@@ -1136,8 +1197,9 @@ async fn run(mode: &str) {
     }
     let expected = match mode {
         "flow" => 6,
-        "races" | "crash" | "proof_fault" => 4,
-        "policy" | "exact" => 2,
+        "source_flow" => 5,
+        "races" | "crash" | "proof_fault" | "source_crash" => 4,
+        "policy" | "exact" | "source_ack_crash" | "source_policy" => 2,
         "refusals" => 0,
         _ => panic!(),
     };
@@ -1214,4 +1276,20 @@ async fn exact_names(config: &s3drive_core::Config, root: &Path, s: &Server) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn chunk_roots_exact_policy_names_survive_rename_during_publication() {
     run("exact").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn chunk_sources_publish_unicode_sparse_empty_and_acknowledge_exact_history() {
+    run("source_flow").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn chunk_sources_killed_unknown_publish_recovers_without_credentials_or_source_bytes() {
+    run("source_crash").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn chunk_sources_killed_after_failed_ack_recovers_known_root_without_rpc() {
+    run("source_ack_crash").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn chunk_sources_expired_narrow_policy_busy_and_concurrent_first_ack() {
+    run("source_policy").await;
 }
