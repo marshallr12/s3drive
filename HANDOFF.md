@@ -23,7 +23,7 @@ No visibility or credential mutation was performed during this investigation.
 Do not reuse stale private-only publication guards as current policy. The active
 repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
-include main's policy commit; current HEADc7fca789 already includes that rule.
+include main's policy commit; the c7fca789 feature lineage includes that rule.
 
 ## Large-file representation study (published, 2026-10-18)
 
@@ -63,6 +63,7 @@ P0 table now reflects D040 public policy instead of stale privacy requirement.
 ## Current phase: complete historical chunk-tree receipt (2026-10-18)
 
 Branch codex/chunk-tree-receipts from259e0f8 (status child of91db06b).
+Published runtime3e55fe78f6112d817a2ea131bcb4602aa7212410.
 Implemented opaque historical TreeReceipt, one synchronous metadata-only owner
 command validating every non-hole exact receipt, Planner wrapper and S3 uploader
 finalization through full-context comparison. Five new state tests (10including
@@ -84,15 +85,30 @@ or stack-size changes. Schema stays26. New docs/src/chunk-tree-receipts.md and
 image XML/librsvg/visual checks PASS; full book/links passed. Durable6member
 local log/hash archive docs/src/evidence/chunk-tree-receipts-local-20261018.tar.gz
 SHA256cfde2422ab636fefc6efa777fe4a19d674cb841e0b64cf996f885c3bf50e3ef2
-(30938bytes), indexed members all verified. Own-source hosted run not yet pushed.
+(30938bytes), indexed members all verified. Normal publication clean/exact remote,
+all244frozen hashes/PUBLIC before-after, main1a93b5f unchanged; proof
+/tmp/s3drive-tree-receipts-publication.json. Preview33767/chunk-tree-receipts.html
+and exactSVG HTTP, XML/librsvg/visual review all passed.
+
+Own CI39150996811 attempt1 at3e55fe7 LIVE: Windows117744444907, book117744444680,
+Linux117744444873. Watch79516 LIVE /tmp/s3drive-tree-receipts-3e5-watch.log;
+track same run/handle, do not rerun on observation timeout. Prepared checker
+/tmp/s3drive-check-tree-receipts-3e5.py compiled only, NOT executed; require all3
+terminal success and own completed raw review marker
+/tmp/s3drive-tree-receipts-3e5-raw-reviewed.json. Output must be fresh
+/tmp/s3drive-tree-receipts-3e5-artifacts; source/run/attempt/finalized artifact IDs/
+API digest/time and strict typed21/14/all raw fields plus project oracles must
+match. Reject prior IDs, including91d12144981486/12144507996. Do not borrow
+parent acceptance; do not run success checker on failure.
 
 Required legacy review agreed metadata-only proof scope and future journal
 barriers. model-select: reused gpt-6-astra/xhigh (local8:spec1 blast2 depth2
 verify1 cost2; persistence/security override), no additional agents spawned.
 Read final implementation-plan prerequisites/constraints before next work.
-Keep own91d CI watch21911: book/Linux SUCCESS with raw review markers; Windows
-still LIVE. Own checker compiled only; no all3raw marker/outputdir yet. Do not
-rerun, borrow artifacts or treat parent acceptance as this source acceptance.
+Preceding91d cohort is now closed SUCCESS with own fresh strict artifacts;
+this does not accept current3e5 source. Next work is the client root publication
+journal with persistent lifecycle exclusion, then logical settlement/range reader.
+No real provider mutations are authorized by these local/hosted phases.
 
 ## Preceding manifest root authority (2026-10-18)
 
@@ -128,17 +144,24 @@ suppressions; only the new mutation boxes metadata, JSON unchanged.
 
 Published normally: clean/exact remote/all243frozen hashes/PUBLIC before-after;
 main1a93b5f unchanged. Proof /tmp/s3drive-manifest-authority-publication.json.
-Own CI39149314656 attempt1 at91db06b LIVE: Windows117739515199, book117739515201,
-Linux117739515267. Watch21911 LIVE /tmp/s3drive-manifest-authority-91d-watch.log;
-track this handle/run, do not rerun on an observation timeout. Checker
-/tmp/s3drive-check-manifest-authority-91d.py compiled only, NOT executed.
-Require all3 terminal success plus completed own raw reviews at
-/tmp/s3drive-manifest-authority-91d-raw-reviewed.json, own finalized Windows
-artifact IDs/API digests/times, fresh output /tmp/s3drive-manifest-authority-91d-artifacts,
-strict typed21/14/all-field raw equality and both project oracles. Refuse prior
-artifacts including252's12143780290/12143656516. On failure retain evidence and
-do not run success checker. No chunked native/provider/physical-workstation
-acceptance or historical NoWrite-cause claim follows from hosted regressions.
+Own CI39149314656 attempt1 at91db06b CLOSED SUCCESS all3: Windows117739515199,
+book117739515201, Linux117739515267. Watch21911 CLOSED EXIT0; checker33071 CLOSED
+EXIT0. Own fresh replacement12144981486 and disposition12144507996 artifacts
+pass strict typed21/14 plus project oracles; all35raw records exactly match every
+field/type, duplicate/nonfinite JSON rejected. Proof dir
+/tmp/s3drive-manifest-authority-91d-artifacts and durable20member archive
+ docs/src/evidence/manifest-authority-91d-hosted-20261018.tar.gz
+SHA2567164f27c6a0035cd7ed787532e10c9f3acf41424c4316568803422385a741db1
+(95143bytes), all indexed members verified. Root evidence JSON records ZIP/JSON
+hashes/API IDs/source. Raw logs reviewed for all3; old representation native9FUSE/
+7WinFsp,32HTTPS,paired/snapshot/cross-logon/no-systemd passed; root metadata TCP
+and14state contracts passed both platforms (329Linux/324Windows state totals).
+Hosted Ubuntu24.04.5 / Windows Server2025 / WinFsp2.1.25156 only. Retain Node/cache/
+unused delay-import notices and3locked disposable profiles (dummy creds removed,
+VM disposal). TLS handshake/partial29byte timeout/lifetime, HEAD403/rival and
+stopped-authority List connectTimedOut are expected controls. Long stress and
+supervision/native cases passed. No new chunked mount/provider/physical startup
+acceptance, current3e5 source acceptance or historical NoWrite-cause resolution.
 
 Next phase requires an exact durable chunk-publication/settlement journal binding
 original snapshot/guard/parent/frozen plan/route, reserve+publish UUIDs, physical

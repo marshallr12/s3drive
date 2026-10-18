@@ -439,7 +439,37 @@
   "complexity": "full graph/history scans, linear root lookups may make total walk quadratic; no scalable latency claim",
   "diagram": "images/chunk-tree-receipts.svg",
   "hosted": {
-    "status": "not dispatched; source not yet pushed"
+    "source": "3e55fe78f6112d817a2ea131bcb4602aa7212410",
+    "run_id": 39150996811,
+    "run_attempt": 1,
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39150996811",
+    "status": "in_progress",
+    "jobs": [
+      {
+        "id": 117744444907,
+        "name": "rust (windows-latest)",
+        "status": "in_progress"
+      },
+      {
+        "id": 117744444680,
+        "name": "book",
+        "status": "in_progress"
+      },
+      {
+        "id": 117744444873,
+        "name": "rust (ubuntu-latest)",
+        "status": "in_progress"
+      }
+    ],
+    "watch_session": 79516,
+    "watch_log": "/tmp/s3drive-tree-receipts-3e5-watch.log",
+    "checker_script": "/tmp/s3drive-check-tree-receipts-3e5.py",
+    "checker_compiled_only": true,
+    "checker_executed": false,
+    "all_raw_reviews_closed": false,
+    "new_artifact_output": "/tmp/s3drive-tree-receipts-3e5-artifacts",
+    "own_native_cohort_accepted": false,
+    "chunked_native_large_file_or_provider_acceptance": false
   },
   "diagram_review": {
     "xml_parse": true,
@@ -458,5 +488,15 @@
     "url": "http://127.0.0.1:33767/chunk-tree-receipts.html",
     "chapter_http_ok": true,
     "svg_http_matches_source": true
+  },
+  "publication": {
+    "source": "3e55fe78f6112d817a2ea131bcb4602aa7212410",
+    "branch": "codex/chunk-tree-receipts",
+    "exact_remote": true,
+    "clean": true,
+    "all244_frozen_hashes_match": true,
+    "public_before_after": true,
+    "visibility_mutations": 0,
+    "main_unchanged": "1a93b5f7248892fec96dc8da4438ee7967692e77"
   }
 }

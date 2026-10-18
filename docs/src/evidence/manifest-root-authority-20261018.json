@@ -1,6 +1,6 @@
 {
   "implementation_date": "2026-10-18",
-  "status": "full local gate passed; own source-bound hosted acceptance pending",
+  "status": "full local gate and own source-bound hosted cohort passed",
   "branch": "codex/manifest-root-authority",
   "parent_commit": "2097d44b1f424ecec5c6fb4871e6fa413bf46548",
   "schema_version": 26,
@@ -289,12 +289,13 @@
     "run_id": 39149314656,
     "run_attempt": 1,
     "url": "https://github.com/marshallr12/s3drive/actions/runs/39149314656",
-    "status": "in_progress",
+    "status": "completed",
     "jobs": [
       {
         "id": 117739515199,
         "name": "rust (windows-latest)",
-        "status": "in_progress"
+        "status": "completed",
+        "conclusion": "success"
       },
       {
         "id": 117739515201,
@@ -314,13 +315,68 @@
     "watch_session": 21911,
     "watch_log": "/tmp/s3drive-manifest-authority-91d-watch.log",
     "checker_script": "/tmp/s3drive-check-manifest-authority-91d.py",
-    "checker_compiled_only": true,
-    "checker_executed": false,
-    "all_raw_reviews_closed": false,
+    "checker_compiled_only": false,
+    "checker_executed": true,
+    "all_raw_reviews_closed": true,
     "new_artifact_output": "/tmp/s3drive-manifest-authority-91d-artifacts",
-    "own_native_cohort_accepted": false,
+    "own_native_cohort_accepted": true,
     "chunked_native_large_file_or_provider_acceptance": false,
-    "book_linux_raw_reviews_closed": true
+    "book_linux_raw_reviews_closed": true,
+    "conclusion": "success",
+    "checker_exit_code": 0,
+    "raw_review": "/tmp/s3drive-manifest-authority-91d-raw-reviewed.json",
+    "checker_log": "/tmp/s3drive-manifest-authority-91d-artifact-check.log",
+    "checker_log_sha256": "14c009a269e930a7d74eba34a770bbdccba4f41bf449e7bf46d7f7d46f686eed",
+    "artifacts": [
+      {
+        "kind": "replacement",
+        "id": 12144981486,
+        "source": "91db06bb4c98ecc9e251817444672e1ab44764ac",
+        "run_id": 39149314656,
+        "run_attempt": 1,
+        "windows_job": 117739515199,
+        "zip_sha256": "4a84b488d553f6ec724f51e879e1655420b1d8836ed5095fdc46a2a6f940c571",
+        "json_sha256": "a3397d813694d78f7508c38e85f4308d6b1436482e1d7eefa271591275b41628",
+        "primary_artifact_reused": false
+      },
+      {
+        "kind": "disposition",
+        "id": 12144507996,
+        "source": "91db06bb4c98ecc9e251817444672e1ab44764ac",
+        "run_id": 39149314656,
+        "run_attempt": 1,
+        "windows_job": 117739515199,
+        "zip_sha256": "6b27db00eaffdd7f32821cb04da2af24c0662c7ada2efc33d22b44b476d2eeb4",
+        "json_sha256": "2741585fa236f7a345c3fab6a9e59eec4a4552939ca40b89a7763324e68e5916",
+        "primary_artifact_reused": false
+      }
+    ],
+    "raw_records": [
+      {
+        "kind": "replacement",
+        "records": 21,
+        "all_fields_and_types_equal": true,
+        "duplicate_keys_or_nonfinite_json_rejected": true
+      },
+      {
+        "kind": "disposition",
+        "records": 14,
+        "all_fields_and_types_equal": true,
+        "duplicate_keys_or_nonfinite_json_rejected": true
+      }
+    ],
+    "platform_scope": "Ubuntu24.04.5 and Windows Server2025/WinFsp2.1.25156 hosted; old mounted representation only",
+    "current_tree_receipt_source_accepted": false,
+    "historical_windows_transport_cause_resolved": false,
+    "notices": "Node/cache deprecations, unused delayed WinFsp import,3locked disposable profiles stripped of dummy credentials left for VM disposal; long stress/snapshot/native fixtures passed; upcoming Ubuntu label migration notice, actual runner24.04.5",
+    "expected_faults": "TLS handshake/partial29byte header timeout/lifetime; HEAD403/rival conflict; deliberately stopped authority List connectTimedOut",
+    "archive": {
+      "path": "manifest-authority-91d-hosted-20261018.tar.gz",
+      "sha256": "7164f27c6a0035cd7ed787532e10c9f3acf41424c4316568803422385a741db1",
+      "bytes": 95143,
+      "members": 20,
+      "all_member_hashes_verified": true
+    }
   },
   "manifest_authority_metadata": true,
   "logical_file_settlement": false,
