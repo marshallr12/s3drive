@@ -66,12 +66,13 @@ impl Diagnostics {
                 if let Some(p) = progress {
                     let _ = writeln!(
                         stderr,
-                        "authority TLS connection failure: {failure:?} connection={} http_ms={} read_bytes={} written_bytes={} flushes={} dispatched={}",
+                        "authority TLS connection failure: {failure:?} connection={} http_ms={} read_bytes={} written_bytes={} flushes={} loopback={:?} dispatched={}",
                         p.connection,
                         p.started.elapsed().as_millis(),
                         p.read.load(Ordering::Relaxed),
                         p.written.load(Ordering::Relaxed),
                         p.flushed.load(Ordering::Relaxed),
+                        p.loopback,
                         p.dispatched.load(Ordering::Relaxed)
                     );
                 } else {
@@ -175,10 +176,11 @@ where
                 }
             }
             accepted = listener.accept() => {
-                let (stream, _) = match accepted {
+                let (stream, peer) = match accepted {
                     Ok(value) => value,
                     Err(error) => { failure = Some(error); break; }
                 };
+                let loopback = stream.local_addr().ok().and_then(|local| crate::LoopbackSocket::from_endpoints(peer, local));
                 let Ok(slot) = slots.clone().try_acquire_owned() else {
                     diagnostics.record(ConnectionFailure::Capacity);
                     drop(stream);
@@ -205,7 +207,7 @@ where
                     let mut http = hyper::server::conn::http1::Builder::new();
                     http.timer(TokioTimer::new()).header_read_timeout(Duration::from_secs(5))
                         .max_buf_size(16_384).keep_alive(false);
-                    let (stream, progress) = ObservedIo::new(stream, number);
+                    let (stream, progress) = ObservedIo::new(stream, number, loopback);
                     let observed = progress.clone();
                     let service = TowerToHyperService::new(app);
                     let service = hyper::service::service_fn(move |request| {

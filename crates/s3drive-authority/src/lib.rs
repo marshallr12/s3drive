@@ -1,5 +1,6 @@
 //! Single-volume managed namespace authority. Optional authenticated HTTPS;
 //! no S3 writes, remote provisioning or Turso backend is enabled implicitly.
+mod connection_tag;
 mod tls;
 mod wire;
 use axum::{
@@ -10,6 +11,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
+pub use connection_tag::{ConnectorCandidate, LoopbackSocket};
 use s3drive_state::{State, namespace};
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::Arc, thread};

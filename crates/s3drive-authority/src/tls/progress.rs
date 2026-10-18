@@ -19,13 +19,18 @@ pub(super) struct Progress {
     pub written: AtomicU64,
     pub flushed: AtomicU64,
     pub dispatched: AtomicBool,
+    pub loopback: Option<crate::LoopbackSocket>,
 }
 pub(super) struct ObservedIo<T> {
     inner: T,
     progress: Arc<Progress>,
 }
 impl<T> ObservedIo<T> {
-    pub fn new(inner: T, connection: u64) -> (Self, Arc<Progress>) {
+    pub fn new(
+        inner: T,
+        connection: u64,
+        loopback: Option<crate::LoopbackSocket>,
+    ) -> (Self, Arc<Progress>) {
         let progress = Arc::new(Progress {
             connection,
             started: Instant::now(),
@@ -33,6 +38,7 @@ impl<T> ObservedIo<T> {
             written: AtomicU64::new(0),
             flushed: AtomicU64::new(0),
             dispatched: AtomicBool::new(false),
+            loopback,
         });
         (
             Self {
@@ -141,7 +147,7 @@ mod tests {
     async fn hyper_identifies_shutdown_failure_after_a_complete_independently_read_reply() {
         use hyper_util::rt::TokioIo;
         let (inner, mut peer) = tokio::io::duplex(4096);
-        let (io, progress) = ObservedIo::new(ShutdownFails(inner), 1);
+        let (io, progress) = ObservedIo::new(ShutdownFails(inner), 1, None);
         let observed = progress.clone();
         let service = hyper::service::service_fn(move |_| {
             observed.dispatched.store(true, Ordering::Relaxed);
@@ -186,7 +192,7 @@ mod tests {
     #[tokio::test]
     async fn preserves_partial_io_flush_shutdown_and_counts_only_new_bytes() {
         let (inner, mut peer) = tokio::io::duplex(2);
-        let (mut io, p) = ObservedIo::new(inner, 1);
+        let (mut io, p) = ObservedIo::new(inner, 1, None);
         // More bytes than the pipe can hold forces pending/partial writes.
         let mut received = [0; 5];
         let (write, read) = tokio::join!(io.write_all(b"abcde"), peer.read_exact(&mut received));

@@ -15,7 +15,7 @@ use std::{
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 mod connector;
 
-/// Low-cardinality diagnostics only. Never retains a URL, token, request,
+/// Bounded sanitized diagnostics only. Never retains a URL, token, request,
 /// response body, certificate, or the underlying dependency error.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WireError {
@@ -36,6 +36,7 @@ pub enum WireError {
         /// Such a connector returned a connection successfully. This does not
         /// identify the selected socket or establish request delivery/commit.
         connector_completed: bool,
+        connector_candidate: crate::ConnectorCandidate,
     },
     HttpStatus(u16),
     ResponseTooLarge,
@@ -119,6 +120,7 @@ impl WireError {
             body_frame_polled: progress.body_frame_polled.load(Ordering::Acquire),
             connector_started,
             connector_completed,
+            connector_candidate: progress.candidate.snapshot(),
         }
     }
 }
@@ -135,6 +137,7 @@ struct Progress {
     response_headers: AtomicBool,
     // Monotonic aggregate: 0=unobserved, 1=called, 2=at least one success.
     connector: AtomicU8,
+    candidate: crate::connection_tag::Candidate,
 }
 impl Progress {
     fn connector_observation(&self) -> (bool, bool) {
@@ -309,6 +312,7 @@ impl WireClient {
                     body_frame_polled: progress.body_frame_polled.load(Ordering::Acquire),
                     connector_started,
                     connector_completed,
+                    connector_candidate: progress.candidate.snapshot(),
                 })
             }
         }

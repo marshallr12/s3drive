@@ -1,8 +1,8 @@
 //! Real TCP/TLS, SQLite and independent clients. This is local wire acceptance,
 //! not evidence of remote hosting, multiple physical hosts or Turso behavior.
 use s3drive_authority::{
-    Apply, Authority, Error, Kind, Mutation, ROOT, Reply, Request, ServerTls, Token, WireClient,
-    WireError, WirePhase, WireRequest, serve_tls,
+    Apply, Authority, ConnectorCandidate, Error, Kind, LoopbackSocket, Mutation, ROOT, Reply,
+    Request, ServerTls, Token, WireClient, WireError, WirePhase, WireRequest, serve_tls,
 };
 use std::{
     sync::{
@@ -116,8 +116,16 @@ async fn tls_neither_follows_redirects_nor_replays_a_dropped_reply() {
         let url = format!("https://{}/v1/namespace", listener.local_addr().unwrap());
         let location = format!("https://{}/v1/namespace", target.local_addr().unwrap());
         let acceptor = cert.acceptor();
+        let (socket_seen, socket_received) = oneshot::channel();
         let task = tokio::spawn(async move {
-            let (tcp, _) = listener.accept().await.unwrap();
+            let (tcp, peer) = listener.accept().await.unwrap();
+            socket_seen
+                .send(LoopbackSocket {
+                    ipv6: false,
+                    client_port: peer.port(),
+                    server_port: tcp.local_addr().unwrap().port(),
+                })
+                .unwrap();
             let mut stream = acceptor.accept(tcp).await.unwrap();
             let mut header = Vec::new();
             while !header.ends_with(b"\r\n\r\n") {
@@ -158,9 +166,17 @@ async fn tls_neither_follows_redirects_nor_replays_a_dropped_reply() {
             assert!(follow.is_err(), "transport followed redirect");
         });
         let error = cert.client(&url).request(&request).await.unwrap_err();
+        let socket = tokio::time::timeout(Duration::from_secs(3), socket_received)
+            .await
+            .unwrap()
+            .unwrap();
         if redirect {
             assert_eq!(error, WireError::HttpStatus(307));
         } else {
+            assert!(
+                matches!(error, WireError::Transport { connector_candidate: ConnectorCandidate::Loopback(observed), .. } if observed == socket),
+                "lost mutation reply candidate differs from independently accepted TCP socket: {error:?}"
+            );
             assert!(
                 matches!(
                     error,
@@ -175,7 +191,7 @@ async fn tls_neither_follows_redirects_nor_replays_a_dropped_reply() {
                 "{error:?}"
             );
         }
-        assert_redacted(&error, &[SECRET, &url]);
+        assert_redacted(&error, &[SECRET, &url, "127.0.0.1", &cert.cert]);
         tokio::time::timeout(Duration::from_secs(3), task)
             .await
             .unwrap()
@@ -404,6 +420,7 @@ async fn tls_requires_correct_trust_hostname_token_and_volume() {
                 body_frame_polled: false,
                 connector_started: true,
                 connector_completed: false,
+                connector_candidate: ConnectorCandidate::Unobserved,
                 ..
             }
         ),
@@ -478,7 +495,12 @@ async fn tls_concurrent_connector_observations_stay_with_the_original_request() 
     let (stop, stopped) = oneshot::channel();
     let mut peer = tokio::spawn(async move {
         let exchange = async {
-            let (tcp, _) = listener.accept().await.unwrap();
+            let (tcp, remote) = listener.accept().await.unwrap();
+            let expected_socket = LoopbackSocket {
+                ipv6: false,
+                client_port: remote.port(),
+                server_port: tcp.local_addr().unwrap().port(),
+            };
             let mut requests = tokio::task::JoinSet::new();
             requests.spawn(async move {
                 let mut stream = acceptor.accept(tcp).await.unwrap();
@@ -515,10 +537,11 @@ async fn tls_concurrent_connector_observations_stay_with_the_original_request() 
                     .is_err(),
                 "connector diagnostic replayed a request"
             );
+            expected_socket
         };
         tokio::time::timeout(Duration::from_secs(8), exchange)
             .await
-            .unwrap();
+            .unwrap()
     });
     let results = tokio::time::timeout(Duration::from_secs(6), async {
         tokio::join!(
@@ -533,10 +556,9 @@ async fn tls_concurrent_connector_observations_stay_with_the_original_request() 
         peer.abort();
         let _ = peer.await;
     }
-    assert!(
-        matches!(finished, Ok(Ok(()))),
-        "controlled peer did not finish"
-    );
+    let expected_socket = finished
+        .expect("controlled peer deadline")
+        .expect("controlled peer did not finish");
     let (first, second) = results.expect("bounded connector control");
     let errors = [first.unwrap_err(), second.unwrap_err()];
     assert_eq!(
@@ -551,6 +573,7 @@ async fn tls_concurrent_connector_observations_stay_with_the_original_request() 
                     body_frame_polled: false,
                     connector_started: true,
                     connector_completed: false,
+                    connector_candidate: ConnectorCandidate::Unobserved,
                     ..
                 }
             ))
@@ -570,8 +593,9 @@ async fn tls_concurrent_connector_observations_stay_with_the_original_request() 
                     body_frame_polled: true,
                     connector_started: true,
                     connector_completed: true,
+                    connector_candidate: ConnectorCandidate::Loopback(socket),
                     ..
-                }
+                } if *socket == expected_socket
             ))
             .count(),
         1,

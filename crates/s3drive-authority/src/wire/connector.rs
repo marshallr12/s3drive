@@ -1,8 +1,9 @@
-//! Observe only connector call/success, never its destination, I/O or errors.
+//! Observe connector call/success and bounded canonical-loopback metadata only.
 //! Capture the request scope at call time, so a later background poll cannot
 //! attribute completion to another concurrent request. Unscoped calls count
 //! toward neither request. No retries or replacement connections are added.
 use super::Progress;
+use hyper_util::client::legacy::connect::{Connection, HttpInfo};
 use std::{
     future::Future,
     pin::Pin,
@@ -30,7 +31,7 @@ impl<S, R> Service<R> for Observed<S>
 where
     S: Service<R>,
     S::Future: Send + 'static,
-    S::Response: 'static,
+    S::Response: Connection + 'static,
     S::Error: 'static,
 {
     type Response = S::Response;
@@ -48,9 +49,15 @@ where
         let future = self.0.call(request);
         Box::pin(async move {
             let result = future.await;
-            if result.is_ok()
+            if let Ok(connection) = &result
                 && let Some(progress) = &progress
             {
+                let mut extras = axum::http::Extensions::new();
+                connection.connected().get_extras(&mut extras);
+                let socket = extras.get::<HttpInfo>().and_then(|info| {
+                    crate::LoopbackSocket::from_endpoints(info.local_addr(), info.remote_addr())
+                });
+                progress.candidate.observe(socket);
                 progress.connector.fetch_max(2, Ordering::Release);
             }
             result
@@ -64,15 +71,21 @@ mod tests {
     use std::future::{Ready, ready};
     #[derive(Clone)]
     struct Peer;
+    struct PeerConnection;
+    impl Connection for PeerConnection {
+        fn connected(&self) -> hyper_util::client::legacy::connect::Connected {
+            hyper_util::client::legacy::connect::Connected::new()
+        }
+    }
     impl Service<bool> for Peer {
-        type Response = ();
+        type Response = PeerConnection;
         type Error = ();
-        type Future = Ready<Result<(), ()>>;
+        type Future = Ready<Result<PeerConnection, ()>>;
         fn poll_ready(&mut self, _: &mut Context<'_>) -> Poll<Result<(), ()>> {
             Poll::Ready(Ok(()))
         }
         fn call(&mut self, success: bool) -> Self::Future {
-            ready(if success { Ok(()) } else { Err(()) })
+            ready(if success { Ok(PeerConnection) } else { Err(()) })
         }
     }
 
@@ -86,7 +99,12 @@ mod tests {
         assert_eq!(a.connector.load(Ordering::Acquire), 1);
         CURRENT.scope(b.clone(), future).await.unwrap();
         assert_eq!(a.connector_observation(), (true, true));
+        assert_eq!(a.candidate.snapshot(), crate::ConnectorCandidate::Omitted);
         assert_eq!(b.connector_observation(), (false, false));
+        assert_eq!(
+            b.candidate.snapshot(),
+            crate::ConnectorCandidate::Unobserved
+        );
         assert_ne!(b.connector.load(Ordering::Acquire), 2);
 
         let failed = CURRENT.sync_scope(b.clone(), || service.call(false));
@@ -96,5 +114,9 @@ mod tests {
         let unscoped = service.call(true);
         CURRENT.scope(b.clone(), unscoped).await.unwrap();
         assert_ne!(b.connector.load(Ordering::Acquire), 2);
+        assert_eq!(
+            b.candidate.snapshot(),
+            crate::ConnectorCandidate::Unobserved
+        );
     }
 }

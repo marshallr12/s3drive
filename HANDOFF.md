@@ -6,9 +6,37 @@ implementation. Research, decisions and acceptance records belong in docs/src/.
 
 ## Current source and first action
 
-- Topic codex/authority-snapshots has a new connector-observation checkpoint
-  based on949073f783c0e930f52e0d01010828312819d01f. Final normal FF push/new CI
-  follow local gate2; check exact HEAD/remote/private state before use.
+- Private topic codex/authority-snapshots is e9887dfc8a73cae80b0f30a01f8ed29184911c1b,
+  normal FF pushed from949; exact remote SHA/privacy and main f8 rechecked.
+- CI39111567111 at e988 is TERMINAL FAILURE. Linux117628636755/book117628636627
+  SUCCESS; Windows117628636806 failed paired managed startup/recovery after raw
+  controls, standalone snapshot/console,32flush, full lifecycle and workspace
+  (269state) passed. Raw /tmp/s3drive-connector-e988-{linux,windows,book}.log.
+  Paired Info/Request/UnexpectedEof at08:52:23Z had body_frame_polled=false,
+  connector_started=true AND connector_completed=true. Thus a scoped connector
+  returned successfully before the failure; no exact socket/dispatch correlation.
+  Nearby emptyTLSsocket133 HttpTimeout5083ms/read0/write0/flush1/dispatched=false.
+  Semantic failure: lost upload response did not retain exactly one uncertain PUT;
+  actual provider upload/commit NOT proven. Secondary locked disposable profile
+  cleanup failed; preserve original failure. Later14-reference/broad steps skipped.
+  Process-class logs show both supervisors/children BelowNormal in this paired
+  run; actual thread priorities and any causal connection remain unmeasured.
+  Standalone cancellation16ms is a single observation. No artifact acceptance or
+  main promotion. Prepared e988 cohort/oracle scripts MUST NOT run for failure.
+- NEW loopback-tag source (parent e988) remains UNCOMMITTED. Full local gate1 EXIT0,
+  /tmp/s3drive-loopback-tag-gate1.log; Rust/Cargo fingerprints unchanged.
+  Counts: authority6unit, lifetime2/execution1/HTTP10/TLS9, state274, remaining
+  workspace suites/build/57-doc links/mdBook build/test. Session43574 is closed.
+  Authority focused2 and CLI2 controls exit0. Final docs/source/privacy review,
+  then normal topic push to obtain NEW hosted proof are next.
+  e988 results never establish acceptance for the new working tree.
+- Local new source records one canonical loopback candidate with only family/
+  client+server ports, omitted for other/missing metadata and ambiguous after
+  multiple successes. Server adds the same sanitized tag before final dispatched=;
+  original failure classes/assertions stay. Scope/concurrent/missing/multiple,
+  independent lost mutation TCP tags and actual CLI failure-event tags pass.
+  No native fixture or workflow changes. All new source/research/probe archive
+  should be bundled in the next substantive checkpoint; no docs-only native CI.
 - Main remains f8c4f5832e399c6c54567c122c875e2a438ce681. No new candidate accepted.
 - CI39108821537 at949 is TERMINAL FAILURE: Linux117620351955 and book117620351830
   SUCCESS; Windows117620351957 failed broad native existing-file writes. Raw logs
@@ -21,7 +49,7 @@ implementation. Research, decisions and acceptance records belong in docs/src/.
   Deliberate authority-stop List/Connect timeout in the immutable-read case is
   expected by that fixture; no other broad transport warning found. Do not treat
   the older e51 passing-mutation List/EOF as classified. No main promotion.
-- New diagnostic source adds request-scoped connector call/success
+- The earlier e988 checkpoint adds request-scoped connector call/success
   flags through public reqwest connector_layer. Layer captures task-local Arc at
   call; one monotonic atomic snapshot; no destinations/headers/bodies/errors.
   Public layering changes connector boxing/scheduling; no causal fix claim.
@@ -41,7 +69,8 @@ implementation. Research, decisions and acceptance records belong in docs/src/.
   Watch72681 is closed/obsolete. No artifact acceptance or main promotion.
 - The new source runs all authority wire/execution controls early on Windows,
   then the unchanged native32-flush case and every prior gate. At the connector
-  candidate expect nine TLS controls, connector unit1, execution1, Hyper2/lifetime2/HTTP10; Linux9 native, Windows burst1+
+  candidate expect nine TLS controls, authority unit6, execution1, lifetime2/HTTP10;
+  Linux9 native, Windows burst1+
   lifecycle1+broad7. Validate actual counts in raw logs, not a step label alone.
 - Prepared NOT RUN /tmp/s3drive-check-949-cohort.py and
   /tmp/s3drive-949-reference-check.ps1 require terminal all-three SUCCESS, then
@@ -57,6 +86,31 @@ implementation. Research, decisions and acceptance records belong in docs/src/.
   detached at failed33ddfe1 for inspection only. All share
   /home/marshall/src/s3drive/target; rebuild/verify the intended source before
   using that executable, because another checkout's build replaces it.
+
+## Parallel read-only transport investigation (2026-10-18)
+
+The following investigation was completed before further production changes.
+A new bounded loopback-tag diagnostic phase is now being implemented aftere988;
+its acceptance criteria are in implementation-plan. Existing CI39111567111
+remains evidence for exacte988; do not claim its results for the new working tree. Upstream4208 stale want fix is already
+in resolvedHyper1.12.0/want0.3.2. Separate4222 shutdown/drain fix mergedOct9 AFTER
+latest release1.12.0 Oct6 and is absent locally; do not attribute our EOFs to it
+without proof (different queued-request hang mechanism).
+
+A standalone public connector metadata control passed HTTP/HTTPS complete+lost
+reply cases on local Linux, comparing public Connection::connected/get_extras
+HttpInfo local/remote addresses with independently accepted TCP metadata. Four
+PASS lines, exit0 /tmp/s3drive-public-connector-probe2.log. Scratch directory
+/tmp/s3drive-public-connector-20261018-jdfysrlm; pointer
+/tmp/s3drive-public-connector-probe-location.txt. Reproducible source/manifest/lock
+archive docs/src/evidence/public-connector-probe-20261018.tar.gz; hashes and limits
+in platform JSON. No credentials/provider requests and no Windows/native proof.
+This avoids the earlier unsupported request-extension observer, but a connector
+candidate is STILL not proven to be the selected failed RPC socket. Adoption
+needs bounded loopback-only correlation, missing-metadata and concurrency tests;
+do not expose addresses or infer safe replay. API source contracts inspected.
+Local links/build/test passed for both upstream discussion and the new probe link:
+/tmp/s3drive-e988-public-info-book{,-tests}.log; no production source change.
 
 ## Runtime-owned RPC candidate (locally green; pushed949, hosted FAILED)
 

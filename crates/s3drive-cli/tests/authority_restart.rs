@@ -355,10 +355,19 @@ async fn tls_cli_diagnostics_distinguish_idle_partial_headers_and_partial_body_p
         "a".repeat(64)
     );
     let mut peers = tokio::task::JoinSet::new();
+    let mut sockets = Vec::new();
     for payload in [&b""[..], &partial_header[..], partial_body.as_bytes()] {
         let tcp = tokio::net::TcpStream::connect(("127.0.0.1", endpoint.port().unwrap()))
             .await
             .unwrap();
+        sockets.push((
+            payload.len(),
+            s3drive_authority::LoopbackSocket {
+                ipv6: false,
+                client_port: tcp.local_addr().unwrap().port(),
+                server_port: tcp.peer_addr().unwrap().port(),
+            },
+        ));
         let mut tls = connector
             .connect(ServerName::try_from("127.0.0.1".to_owned()).unwrap(), tcp)
             .await
@@ -400,12 +409,18 @@ async fn tls_cli_diagnostics_distinguish_idle_partial_headers_and_partial_body_p
         (partial_header.len(), false, "HttpTimeout"),
         (partial_body.len(), true, "Lifetime"),
     ] {
+        let socket = sockets
+            .iter()
+            .find(|(length, _)| *length == count)
+            .unwrap()
+            .1;
         assert_eq!(
             events
                 .iter()
                 .filter(|l| l.contains(&format!("failure: {kind} "))
                     && l.split_whitespace()
                         .any(|s| s == format!("read_bytes={count}"))
+                    && l.contains(&format!("loopback=Some({socket:?})"))
                     && l.ends_with(&format!("dispatched={dispatched}")))
                 .count(),
             1,

@@ -884,6 +884,17 @@ contracts, followed by the full local gate and the same hosted native gates.
 It is not a substitute for correcting the transport failure. See
 [connector observations](remote-authority.md#connector-observations-candidate-2026-10-18).
 
+The next diagnostic phase uses the independently tested public connector
+metadata API to record a bounded loopback candidate tag (address family and
+client/server ports only). It must omit all other addresses and missing
+metadata, mark multiple successful candidates as ambiguous, and retain the
+original request scope across background completion. Server diagnostics may
+include the same loopback-only tag. Acceptance requires independent TCP/TLS
+comparison, missing/non-loopback/multiple-candidate and concurrency controls,
+redaction/no-replay regressions and a new full gate plus hosted native cohort.
+A candidate tag is not proof of selected socket, delivery, authorization or
+commit. The current e988 hosted run remains evidence for that exact commit.
+
 Require exclusive existing-authority ownership and explicit volume/policy pin;
 read supported legacy/current state without migrations or namespace changes.
 Produce a new private artifact outside mounted trees, with a database filename

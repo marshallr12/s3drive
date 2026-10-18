@@ -228,6 +228,93 @@ local gate passed, including274 state tests, nine TLS cases, three authority
 unit cases (two Hyper controls and one scope control), lint/build and57-document
 checks. No native mount or live-provider acceptance follows from that gate.
 
+### Upstream triage (researched 2026-10-18)
+
+Hyper's [stale readiness fix](https://github.com/hyperium/hyper/pull/4208) is
+already present in the resolved1.12.0 source (`Receiver::poll_recv` withdraws
+`want`), with want0.3.2 in Cargo.lock. This is not a missing dependency update.
+A separate [queued-request shutdown report](https://github.com/hyperium/hyper/issues/4202)
+was closed by [asynchronous dispatcher draining](https://github.com/hyperium/hyper/pull/4222)
+on October9, after [1.12.0's October6 release](https://github.com/hyperium/hyper/releases/tag/v1.12.0).
+The resolved source lacks that later drain change; no patch has been applied.
+
+That report concerns a queued request stranded after dispatcher closure until
+its caller's timeout. Our recorded949 error returned EOF before the10-second
+client deadline and lacks queue/socket correlation. A shared cause remains
+unproven. Compare the new connector observations before changing dependencies;
+upstream recovery of a request does not authorize replaying an uncertain logical
+mutation. These findings are research, not a native reproducer or fix.
+
+### Public socket-metadata control (Linux only, 2026-10-18)
+
+An isolated [reproducer archive](evidence/public-connector-probe-20261018.tar.gz)
+contains source, manifest, lockfile and instructions. It passed four local
+controls: HTTP and HTTPS, each with a complete reply and with a deliberately
+lost reply after receipt of request headers. Using only the public
+[Connection](https://docs.rs/hyper-util/0.1.21/hyper_util/client/legacy/connect/trait.Connection.html),
+[Connected::get_extras](https://docs.rs/hyper-util/0.1.21/hyper_util/client/legacy/connect/struct.Connected.html#method.get_extras)
+and [HttpInfo](https://docs.rs/hyper-util/0.1.21/hyper_util/client/legacy/connect/struct.HttpInfo.html)
+APIs, the connector observed the same TCP address pair as the independent peer.
+No second connection occurred in the bounded observation window; no credentials
+or provider requests were involved. Resolved source fingerprints and archive
+hashes are in the [dated record](evidence/authority-snapshot-platform-20261018.json).
+
+This establishes a possible diagnostic path even when a reply is lost; the
+previous rejected request-extension capture is not required. The experiment is
+not part of the production client and does not identify a socket selected by a
+failed production RPC. Before adoption, limit output to bounded loopback-only
+correlation, preserve request-scope attribution, and test missing metadata and
+concurrent candidates. It provides no Windows mount or provider acceptance.
+
+The e988 candidate subsequently failed
+[CI39111567111](https://github.com/marshallr12/s3drive/actions/runs/39111567111).
+Linux/book passed; Windows passed the controls, standalone snapshot/console,
+32-flush gate, full lifecycle and workspace, then failed paired recovery. The
+Info/Request/UnexpectedEof error recorded connector_started=true and
+connector_completed=true but body_frame_polled=false. A connector returned
+successfully before the error; the exact socket/dispatch stage is still unproven.
+The nearby empty TLS connection133 expired after5083ms. The fixture's expected
+single uncertain PUT was not established; do not claim an upload or commit.
+Later14-reference/broad native steps were skipped. A locked disposable profile
+also failed cleanup; the original failure was retained. Main remains f8c4f58.
+
+Paired process-class logs showed both supervisors and children BelowNormal.
+Actual thread priorities and a causal scheduling explanation remain unmeasured;
+no priority change is part of this diagnostic phase. The standalone private-console
+cancellation took16ms in one observation. See the
+[dated record](evidence/authority-snapshot-platform-20261018.json) for scope and
+raw-log hashes. None of this is acceptance for the later loopback-tag source.
+
+## Bounded loopback candidate tags (implementation candidate, 2026-10-18)
+
+The follow-up implements the independently tested public metadata path. A
+transport error may now contain one connector candidate with only an IPv4/IPv6
+flag and client/server TCP ports. Only the exact `127.0.0.1` or `::1` address pair,
+matching families and nonzero ports qualify; other addresses and missing metadata
+produce `Omitted`. No address, hostname, certificate, request field or dependency
+error is retained. Before any successful connector handoff the tag is `Unobserved`; more than one
+successful connector becomes `Multiple` and exposes no individual candidate.
+The aggregate uses one atomic snapshot and never replaces the first observation
+with a later single candidate.
+
+The connector captures its request scope when called, then records sanitized
+metadata before marking connector completion. Server TLS diagnostics record the
+same loopback-only port/family tag, alongside their existing connection ordinal,
+byte counters and dispatch flag. Existing rate limits and failure classes remain.
+Ports can be reused; a matching candidate is not proof that a pooled RPC selected
+that socket. It cannot establish delivery, authentication or commit, or permit
+replay. Non-loopback deployment intentionally receives no address correlation.
+
+Controlled lost-Apply-reply and concurrent TLS tests compare the client candidate
+against the independent peer's actual TCP ports; a stalled handshake remains
+unobserved. A real CLI listener's idle, partial-header and partial-body events
+must match the caller's socket tag and their original byte/failure assertions.
+Unit controls cover missing metadata, cross-scope completion, non-loopback and
+mixed-family omission, duplicate candidates and concurrent successes. Existing
+wire framing, privacy, trust, timeout and no-replay assertions remain. These
+focused local checks and the full local gate passed (including274 state tests,
+nine TLS cases and six authority unit cases). A new native cohort is required. The e988 hosted run covers its earlier source without these tags.
+
 ## Bounded failure diagnostics (2026-10-17)
 
 The [same-source Windows failure investigation](authority-startup.md#same-source-repeat-failure-2026-10-17)

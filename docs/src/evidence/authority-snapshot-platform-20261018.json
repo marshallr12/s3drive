@@ -549,6 +549,187 @@
       "Cargo.lock": "85a582c41797f59a6cd5891a5c490ddf6d8c5abbf4ab3ba28141bdda2a3ab716",
       "crates/s3drive-authority/Cargo.toml": "314cca0827308a2391ca492c48b53c0fe960a4708f1bcc74e0c937156b4d56a6"
     },
-    "ci_workflow_unchanged_from_parent": true
+    "ci_workflow_unchanged_from_parent": true,
+    "hosted_run": {
+      "source_commit": "e9887dfc8a73cae80b0f30a01f8ed29184911c1b",
+      "run": 39111567111,
+      "url": "https://github.com/marshallr12/s3drive/actions/runs/39111567111",
+      "observed_at_utc": "2026-10-18T08:55:53.837900+00:00",
+      "status": "completed",
+      "overall_acceptance": false,
+      "linux_job": 117628636755,
+      "windows_job": 117628636806,
+      "book_job": 117628636627,
+      "raw_review": "Completed Linux/book/Windows logs reviewed; overall acceptance failed; strict artifacts not run",
+      "remote_private_verified": true,
+      "remote_main_unchanged": "f8c4f5832e399c6c54567c122c875e2a438ce681",
+      "book_conclusion": "success",
+      "book_raw_sha256": "917bc98f753b381af020b9f5b4c40fef8e20e7f37ec6c04047ba65669fe2dce6",
+      "linux_conclusion": "success",
+      "linux_raw_sha256": "18017f3e3dd37246513ecbe0c97dc5b06579526ea1ad841c0318180d503811ef",
+      "linux_raw_verified": [
+        "274state and authority3unit/lifetime2/execution1/HTTP10/TLS9 controls",
+        "all9 native cases including32 exact HTTPS binary/Unicode flushes",
+        "paired no-systemd HTTPS/FUSE terminal loss, coordinator crashes, exact unknown IDs/no repeated PUT and retained rival conflict",
+        "no-systemd drive and coordinator HTTP plus HTTPS startup/recovery/removal",
+        "two Node/ConnectionRefused observations occur in the immutable-read deliberate authority-stop check; caller pinned snapshot and restart proofs completed"
+      ],
+      "windows_status": "completed",
+      "windows_step_observations": [
+        "early coordinator CLI/TLS and wire/execution controls success",
+        "standalone coordinator/snapshot success",
+        "native32-flush success",
+        "full native disposition lifecycle success",
+        "workspace tests running"
+      ],
+      "run_conclusion": "failure",
+      "windows_conclusion": "failure",
+      "windows_failed_step": "Verify paired Windows managed startup and recovery",
+      "windows_raw_sha256": "db69d652681dbbe30f82b2be3b34a586b43baeef7a7606494815761d20e79250",
+      "windows_raw_verified": [
+        "Hyper2 plus scope1, lifetime2/execution1/HTTP10/TLS9 controls",
+        "ordinary-account standalone TLS coordinator, independent logons and supervised recovery",
+        "offline snapshot create/inspect ACL/link/case/read-handle checks and private-console cancellation16ms (single observation)",
+        "all32 native HTTPS flush generations and exact single-PUT counts",
+        "project21 replacement reference step and native complete disposition lifecycle",
+        "workspace including269 state cases",
+        "paired initial coordinator/drive registration and independent logons occurred; paired recovery failed, no acceptance"
+      ],
+      "failure": {
+        "at_utc": "2026-10-18T08:52:23Z",
+        "test": "supervised_windows_managed_drive_and_coordinator_recovery",
+        "request": "Info",
+        "phase": "Request",
+        "timed_out": false,
+        "io_kind": "UnexpectedEof",
+        "incomplete_message": false,
+        "connection_closed": false,
+        "body_frame_polled": false,
+        "connector_started": true,
+        "connector_completed": true,
+        "semantic_assertion": "Lost upload response did not retain exactly one uncertain PUT",
+        "actual_provider_upload_or_commit_proven": false,
+        "nearby_server_event": {
+          "category": "HttpTimeout",
+          "connection": 133,
+          "http_ms": 5083,
+          "read_bytes": 0,
+          "written_bytes": 0,
+          "flushes": 1,
+          "dispatched": false
+        },
+        "exact_socket_rpc_correlation": false,
+        "process_scheduling_observed": {
+          "mount_supervisor": "BelowNormal",
+          "mount_child": "BelowNormal",
+          "authority_supervisor": "BelowNormal",
+          "authority_child": "BelowNormal",
+          "thread_priorities_or_causality": "not measured/proven"
+        },
+        "secondary_cleanup_failure": "disposable Windows fixture profile remained locked; test failure preserved rather than treated as successful cleanup",
+        "later_reference14_and_broad_native_steps": "skipped"
+      },
+      "interpretation": "A request-scoped connector returned successfully before the error, but no HTTP body frame was polled; this narrows the stage, not the exact socket, scheduling cause or mutation outcome. New working-tree tags are not part of e988."
+    },
+    "upstream_triage": {
+      "researched_at_utc": "2026-10-18T08:31:37.226709+00:00",
+      "sources": [
+        "https://github.com/hyperium/hyper/pull/4208",
+        "https://github.com/hyperium/hyper/issues/4202",
+        "https://github.com/hyperium/hyper/pull/4222",
+        "https://github.com/hyperium/hyper/releases/tag/v1.12.0"
+      ],
+      "stale_readiness_fix": "PR4208 is included in resolved Hyper1.12.0: Receiver::poll_recv calls Taker::unwant; want0.3.2 is locked. Not a missing update.",
+      "shutdown_drain_fix": "PR4222 merged Oct9 after latest published1.12.0 Oct6. Resolved source still uses immediate close/try_recv without async drain. No dependency patch applied.",
+      "relevance_limit": "Issue4202 concerns dispatcher closure while a request is queued and a response future stranded to its outer deadline; the recorded949 failure returned EOF before10sec and has no exact socket/queue correlation. Shared cause is unproven. Never treat an upstream unsent label as permission to replay a logical mutation.",
+      "production_source_changed": false
+    },
+    "public_metadata_control": {
+      "recorded_at_utc": "2026-10-18T08:41:45.675638+00:00",
+      "source": "standalone exploratory program outside production workspace",
+      "archive": "public-connector-probe-20261018.tar.gz",
+      "archive_sha256": "384e70016bb616aedaf929355ed3f60cb0a4c87bc310f8696888c493f4081178",
+      "archive_members_sha256": {
+        "Cargo.toml": "77042d9cd3f591d229c4db6cf1660ee0975694ff03463a06de2712e034aa3272",
+        "Cargo.lock": "68ab88bb45f799666e84da337628621d8302f0aea0276b7aeaa12bbfc6a11595",
+        "src/main.rs": "360a9003152bd93674f51f06ce07af0c16f3667db66b0cc17b0a840c9a55627d",
+        "README.md": "0d57d190320800fc93ef4b03307856818856b26f3ad8a1628f190e5e427cc3f1"
+      },
+      "run_command": "cargo run --manifest-path SCRATCH/Cargo.toml --offline --locked",
+      "exit_code": 0,
+      "log": "/tmp/s3drive-public-connector-probe2.log",
+      "log_sha256": "309fb5b4a0a6a2c4d0ee63d42fd1b113ea9b6222f4376b8d3c23d0ed8db72714",
+      "controls": [
+        "HTTP complete reply",
+        "HTTP lost reply after received headers",
+        "HTTPS complete reply",
+        "HTTPS lost reply after received headers"
+      ],
+      "observed": "Each public connector Connection::connected/get_extras HttpInfo pair matched the independently accepted TCP client/server addresses; no second connection in bounded observation window",
+      "limitations": [
+        "Linux loopback only; generated private CA; no provider or native filesystem",
+        "Plain GET fixture, not actual authority JSON, bearer authentication or mutation",
+        "Connection metadata belongs to a connector candidate, not proof of selected pooled socket in failed production RPC",
+        "Future diagnostic must suppress non-loopback addresses and bound attribution/privacy before adoption"
+      ],
+      "production_source_changed": false,
+      "resolved_public_sources_sha256": {
+        "hyper-util-0.1.21/src/client/legacy/connect/mod.rs": "0b471b9813f46bdb80ca2b2263d9adef5f89051b8230e528968a2b2fe87dcb20",
+        "hyper-util-0.1.21/src/client/legacy/connect/http.rs": "1b255783854e5d55e9490df682b52b1fd89e2ebb5b7f1daa39fd34720cac84ea",
+        "reqwest-0.13.5/src/connect.rs": "74827c0f4dce00fa6c35dfc6d4f79a93944e55c82b243140f03a0db8458505ff"
+      }
+    }
+  },
+  "loopback_candidate_phase": {
+    "recorded_at_utc": "2026-10-18T08:53:40.527855+00:00",
+    "parent_source": "e9887dfc8a73cae80b0f30a01f8ed29184911c1b",
+    "status": "full local gate1 passed; uncommitted, hosted acceptance pending",
+    "contract": "At most one canonical IPv4/IPv6 loopback port pair, Omitted for absent/non-loopback metadata, Multiple after more than one successful connector; candidate is not selected-socket/delivery/commit/replay proof",
+    "privacy": "Only family and nonzero TCP ports; no addresses/hostnames/headers/certificates/dependency errors retained; server logging remains bounded by original16-category diagnostic budget",
+    "controls": [
+      "lost-Apply-reply transport candidate matches independently accepted TCP ports; exact serialized bytes/framing and no replay/redirect remain",
+      "concurrent shared-client TLS lost reply vs stalled handshake retain independent candidate state",
+      "real CLI TLS idle/partial-header/partial-body diagnostic events match callers TCP ports with unchanged count/category/dispatch assertions",
+      "canonical IPv4/IPv6 tag roundtrip; non-loopback/mixed-family/noncanonical/zero-port omission",
+      "missing and repeated candidates; eight concurrent successes remain Multiple",
+      "cross-scope/unscoped completion and absent extra HttpInfo do not pollute another request"
+    ],
+    "focused_logs": {
+      "authority": "/tmp/s3drive-loopback-tag-focused2.log",
+      "cli": "/tmp/s3drive-loopback-tag-cli1.log"
+    },
+    "focused_exit_code": 0,
+    "full_gate": "/tmp/s3drive-loopback-tag-gate1.log",
+    "effective_dependency_versions_changed": false,
+    "explicit_feature": "hyper-util/client-legacy was already selected through reqwest; now declared directly for its public Connection/HttpInfo APIs",
+    "native_or_provider_acceptance": false,
+    "production_transport_retry_deadline_identity_or_framing_change": false,
+    "source_sha256": {
+      "Cargo.toml": "54d52265dae1573643a2c875be752d614ff3567dcbbba24c37eb7a3db0410b2d",
+      "Cargo.lock": "85a582c41797f59a6cd5891a5c490ddf6d8c5abbf4ab3ba28141bdda2a3ab716",
+      "crates/s3drive-authority/src/lib.rs": "095e16b3a3ed6004ddc96c1564efdb983e1c5ccc252e9a535a23e18704ddaf88",
+      "crates/s3drive-authority/src/connection_tag.rs": "87d41a744be537b6efc6b2d00e17e2f1c7e44c9d275d1c0e199deb753f998b30",
+      "crates/s3drive-authority/src/wire.rs": "f1e0eb91ada294561855c7add027fe83b3b44efd88b429ca93bb63d601144e4c",
+      "crates/s3drive-authority/src/wire/connector.rs": "8082674d1458de9b22ff9673dcdbec6f1ac5ad390d4e526ac60877603f1cfa36",
+      "crates/s3drive-authority/src/tls.rs": "d1ae8bdd6712f5180e6c96f017cf901740a138b6bca02ca70e7191121018d676",
+      "crates/s3drive-authority/src/tls/progress.rs": "9972acef747116cf17fdd7c766d3009c1500172d4016aa50f4ce8c1e806de3ee",
+      "crates/s3drive-authority/tests/remote.rs": "b7e37e29988de5b9faa932b9c7bd5ac4fb114cebca3fe39c7311562a69cb559d",
+      "crates/s3drive-cli/tests/authority_restart.rs": "dd91bb6ba9c010d7cd58be08093213136764bc2f4390f9273b504dc423f888e4"
+    },
+    "gate1": {
+      "exit_code": 0,
+      "log_sha256": "28f4166c6f5308b83643f167f6d79a3970fe5e6b2771e99b470a4aa756ed698a",
+      "counts": {
+        "authority_unit": 6,
+        "lifetime": 2,
+        "execution": 1,
+        "http": 10,
+        "tls": 9,
+        "state": 274
+      },
+      "scope": "fmt/clippy/workspace tests/build/doc links/mdBook build/test; not native or live provider acceptance",
+      "rust_and_cargo_unchanged": true
+    },
+    "finished_at_utc": "2026-10-18T08:59:11.802977+00:00"
   }
 }
