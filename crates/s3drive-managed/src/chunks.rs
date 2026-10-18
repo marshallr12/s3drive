@@ -1,5 +1,6 @@
 //! Isolated immutable-tree publication. Root commits are not logical file
-//! flushes. No native activation, detached/removal mode or source settlement.
+//! flushes. Explicit source acknowledgment is historical metadata only.
+//! No native activation, detached/removal mode or payload reclamation.
 use s3drive_authority::{Apply, Error, Reply, Request, Store, WireClient};
 use s3drive_s3::uploads::{Executor, chunks::Uploader};
 use s3drive_state::{
@@ -11,6 +12,8 @@ use s3drive_state::{
 };
 use std::{fmt, sync::Arc};
 use tokio::sync::Semaphore;
+
+pub use s3drive_state::chunk_publication::sources::SourceReceipt;
 
 #[derive(Debug)]
 pub enum Failure {
@@ -128,6 +131,22 @@ impl Recovery {
         let _slot = self.0.slots.try_acquire().map_err(|_| Failure::Busy)?;
         let r = self.0.storage.chunk_publications().get(plan).await?;
         self.resume_inner(r).await
+    }
+    /// Recover the exact prepared root, then acknowledge its frozen source on
+    /// the same SQLite owner. Known roots need no RPC; unknown roots replay only
+    /// the saved Apply. No S3 client, credentials or current write policy is used.
+    /// Failure retains the root/request and bytes for a later exact recovery.
+    /// This does not settle ancestors/newer edits or prove current payload health.
+    pub async fn resume_source(&self, plan: [u8; 32]) -> Result<SourceReceipt> {
+        let _slot = self.0.slots.try_acquire().map_err(|_| Failure::Busy)?;
+        let r = self.0.storage.chunk_publications().get(plan).await?;
+        self.resume_inner(r).await?;
+        self.0
+            .storage
+            .chunk_publications()
+            .sources()
+            .settle_source(plan)
+            .await
     }
     async fn resume_inner(&self, r: Record) -> Result<RootCommit> {
         self.scope(&r)?;
@@ -348,6 +367,29 @@ impl Publisher {
             .slots
             .try_acquire()
             .map_err(|_| Failure::Busy)?;
+        self.resume_inner(plan).await
+    }
+    /// Publish/recover the exact root and acknowledge just its frozen source.
+    /// One family permit covers both steps. A local acknowledgment failure may
+    /// leave a durable root commit; retry/recovery must use this same plan ID.
+    /// No whole-file clean state, payload deletion or fresh media proof follows.
+    pub async fn resume_source(&self, plan: [u8; 32]) -> Result<SourceReceipt> {
+        let _slot = self
+            .0
+            .recovery
+            .0
+            .slots
+            .try_acquire()
+            .map_err(|_| Failure::Busy)?;
+        self.resume_inner(plan).await?;
+        self.storage()
+            .chunk_publications()
+            .sources()
+            .settle_source(plan)
+            .await
+    }
+    // Caller holds the family permit through any subsequent source settlement.
+    async fn resume_inner(&self, plan: [u8; 32]) -> Result<RootCommit> {
         let journal = self.storage().chunk_publications();
         let mut r = journal.get(plan).await?;
         self.0.recovery.scope(&r)?;

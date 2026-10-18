@@ -1735,6 +1735,14 @@ building draft or current file clean. This extends the existing
 [chunk controller](https://github.com/marshallr12/s3drive/blob/41b759aeb09511f2e27956c8c6a0110bfe283dcb/crates/s3drive-managed/src/chunks.rs)
 and uses the implemented [source-state facade](chunk-source-settlement.md).
 
+Current status: schema-28 source `41b759a` is accepted through its own three-job
+cohort, raw review and independent artifact comparison. Controller methods and
+four additional real-SDK integration scenarios are implemented on
+`codex/chunk-source-controller`. Focused tests and the full local gate passed:
+12 integration controls, 365 state tests / 1 ignored and 253 frozen hashes
+unchanged. Its own hosted cohort is still required; no mounted chunk activation
+follows from either library slice.
+
 Hold one controller-family operation permit across root recovery/publication
 and local source acknowledgment. Refactor the existing publisher body into a
 private helper called under that permit; calling public `resume()` from another
@@ -1785,6 +1793,56 @@ controls remain separate evidence, not claims of new controller fault coverage.
 Accept the slice only after focused integration tests, the full local gate and
 its own source-bound Linux/Windows/book cohort. Mounted chunk lifecycle and
 verified manifest-range reads remain subsequent phases.
+
+#### Subsequent slice: verified manifest range reads (proposal, 2026-10-18)
+
+After controller acceptance, add a separate managed manifest reader that opens
+an authenticated authority node and retains its exact root. The current
+[managed Reader](https://github.com/marshallr12/s3drive/blob/41b759aeb09511f2e27956c8c6a0110bfe283dcb/crates/s3drive-managed/src/reader.rs)
+intentionally refuses manifests and retains whole-file buffers. Preserve that
+explicit refusal and the old format while building the bounded reader; do not
+raise native limits or replace its snapshot type with an unverified lazy view.
+The existing [codec verification](https://github.com/marshallr12/s3drive/blob/41b759aeb09511f2e27956c8c6a0110bfe283dcb/crates/s3drive-core/src/manifest.rs)
+and [role-specific object mapping](https://github.com/marshallr12/s3drive/blob/41b759aeb09511f2e27956c8c6a0110bfe283dcb/crates/s3drive-core/src/manifest/objects.rs)
+provide the structural/hash primitives; they do not authenticate a caller's
+descriptor or confer S3 authorization.
+
+Bind the expected volume/name policy, feature and store route through the
+authenticated Rust metadata client. Obtain the manifest descriptor from that
+client's validated live Node response, never an arbitrary caller-supplied root.
+Validate payload/store/node/volume/generation context and derive the root key
+through `Namespace`. HEAD the root using the mapped S3 reader, require the exact
+published size/ETag/version, read its bounded complete bytes and verify both its
+ordinary physical SHA and the descriptor's domain-separated page hash. They
+are different hash meanings. Keep that root immutable for the open handle;
+rename, replacement or a later root must not silently retarget it.
+
+For each bounded range, traverse only intersecting authenticated child entries.
+Verify each complete bounded page against its parent's hash, identity, start,
+length and decreasing level before following any reference. Derive data/page
+keys with the pinned file namespace and require the mapped store. Use the
+existing S3 pinned HEAD/range-GET handle for each fetched object, require its
+expected size, and verify the entire data chunk before exposing its subrange.
+Only authenticated Hole entries produce zeros; missing, denied, truncated or
+changed objects are errors. No missing-object fallback or whole-file scan.
+
+Declare finite output, concurrent-read, traversal and temporary-buffer budgets
+before implementation. Keep read lengths within the current S3 reader's 8 MiB
+bound and data verification within the codec's 1 MiB chunk bound; check EOF and
+arithmetic before allocation. An initial reader without shared persistent cache
+can establish integrity and online authorization first. Any later cache must
+preserve credential/configuration isolation and require current authorization;
+cache presence never grants access. No new database is needed for this slice.
+
+Real-SDK/authenticated-authority acceptance must cover empty/sparse/binary/Unicode,
+unaligned ranges, cross-chunk and cross-page reads, EOF and limits; request counts
+must show that opening/reading a small range does not fetch the whole tree/file.
+Corruption outside the returned portion of a fetched chunk must still fail.
+Test wrong hash/domain/context/store/role, malformed pages and depth, changed
+ETag/version, missing/denied/truncated/oversized responses, cancellation and
+concurrent read capacity. Prove pinned old-root reads after newer publication
+and rename while new opens see the new root. Existing native callbacks, legacy
+whole-file readers and mounted-format activation remain separately gated.
 
 ### Current acceptance repair: TLS budget fixture (2026-10-18)
 

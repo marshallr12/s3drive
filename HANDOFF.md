@@ -60,7 +60,45 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Active work: exact chunk source settlement state (2026-10-18)
+## Active work: chunk source controller (2026-10-18)
+
+Previous goal turn was verified wait on39163298774/Windows117780950165. This
+turn completed own41b acceptance:all3SUCCESS, watch28386 EXIT0, ownrawreview,
+strict21/14+projectoracles andraw35PASS,22memberarchive verified; docscheckpoint
+20706cd pushed oncodex/chunk-source-settlement. PUBLIC retained. No rerun.
+
+Branch codex/chunk-source-controller from20706cd. Productiondelta only
+crates/s3drive-managed/src/chunks.rs: explicitPublisher/Recovery.resume_source
+returnsSourceReceipt afterdurableroot then sameownerfacadesettle; onefamilypermit
+throughboth; privateunlockedpublisherhelper preservesoldresume.RootCommit.
+Knownroot noRPC; Preparedunknown fullsavedApplyonly, scopefirst. No schema,
+S3format/wire/native change. Tests parentchunk_publication.rs + newchildmodule
+chunk_publication/source_settlement.rs reuseexistingownedSDK/authauthorityfixture.
+Fournewcases:Unicode/binary/sparse/empty/history; killedunknownroot withnewerroot/
+localhead; killedknownroot afterrefusedsourceinsert; expired/narrowpolicy plus
+rootreceiptsavefailure, barrierBusy andconcurrentfirstack. Parent assertskilled
+exitunsuccessful, removesonlyfixturetrigger, disablesdummycredentials/policy,
+corruptssourcebytes, countsallS3+uniquePUTs. Rivalconflictalsoexplicitlyrefuses
+newAPI. Source state unchanged. One compile error (double-reference to manifest
+getter) fixed; focused2 session75700 CLOSED EXIT0,12pass60.30s; log
+/tmp/s3drive-chunk-source-controller-focus2.log. Additive corrupt-record newAPI refusal passed29993 EXIT0,1pass0.90s.
+Fullgate80848 CLOSED EXIT0, runtime frozen253files in
+/tmp/s3drive-chunk-source-controller-frozen.json. Log
+/tmp/s3drive-chunk-source-controller-gate.log. Full local gate PASS:12chunk59.79s,
+365state/1ignored172.37s,59S3,34core,50authority,18existingpublication,10TLS/3ignored,
+66docfiles/62chapters;fmt/clippy/build. Oneoldretainedsessionquota longnotice then
+PASS; no benchmark/regressioncause claim. 253hashes unchanged. ResultJSON
+/tmp/s3drive-chunk-source-controller-gate-result.json. GateLogSHA
+0c441d6b18a101269bbca02e2dd4b2fb059f74fa9936c0f7795fccad7135484a.
+12memberlocalarchive chunk-source-controller-local-20261018.tar.gz,53154bytes,
+SHA9289080295e870ccf68f1915aba328e5e69c60353190da7e0516604aa2589228,
+allindexedmembersverified. Implementation self-review only, noindependentreviewer.
+Next finaldocs/source publication andownhostedcohort. No newruntime edits needed. Nativechunklifecycle/rangereader remainlater. Concrete subsequent verified-range
+reader contract now inimplementation-plan.md; preserveslegacyrefusal, pinnedroot,
+separatephysical/pagehashes, boundedauthenticatedpath/chunkfetches andcurrentS3
+authorization. Plan only, no reader implementation yet.
+
+## Accepted prerequisite: exact chunk source settlement state (2026-10-18)
 
 Accepted prerequisite: corrected32d CI all3SUCCESS, own strict21/14+raw35 PASS,
 22member hosted archive verified; state contract/docs pushed at96b6441. Schema28 source41b's own cohort is now accepted below; no CI wait remains.
@@ -147,9 +185,9 @@ ExpectedHEAD403/contentconflict/stoppedauthorityListtimeout; unusedWinFspdelay
 import+9duplicatewarnings,Node/cachedeprecations,3lockeddisposableprofiles with
 removeddummycredentials retained. Existingmountedformat, notmountedchunks,
 physicalreboot ornewWasabi acceptance. Book66files/62chapters PASS. Repository
-PUBLIC; no visibility/credentialmutation. Next implement controller contract.
+PUBLIC; no visibility/credentialmutation. Current controller work is above.
 
-Next controller contract now concrete in implementation-plan.md under
+Controller contract recorded at this state checkpoint in implementation-plan.md under
 "Next controller slice: explicit source acknowledgment" (2026-10-18 proposal).
 Read complete current chunks.rs and existing realSDK/authenticatedauthority
 subprocess fixture. AddPublisher/Recovery.resume_source returningopaqueSourceReceipt,
@@ -160,7 +198,8 @@ proof. Proposedfourcontrols:Unicode/binary/sparse/empty historicalflow; killed
 unknownreply withnewerremote/localhead; killedknownroot afterfailedsourceinsert;
 expired/narrowpolicy/localreceiptsavefailure/explicitbarrierBusy/concurrentfirstack.
 Reuseparentharness+smallchildmodule; actualkilledstatusunsuccessful/reap, countall
-S3+uniquePUTs+completeApplys. No implementation yet; accepted41b prerequisite now satisfied. Native
+S3+uniquePUTs+completeApplys. This checkpoint had no controller implementation; current active section above
+records its implementation and tests. Accepted41b prerequisite satisfied. Native
 chunklifecycle/verifiedrange reader remainlater. StateFULL/grandchild/postcommit
 faults remainstateevidence, not newcontrollerclaims. No newagentsdispatched.
 

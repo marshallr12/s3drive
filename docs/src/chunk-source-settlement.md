@@ -3,8 +3,9 @@
 Implementation date: **2026-10-18**. This state-library slice adds an explicit
 historical acknowledgment for one frozen chunked file snapshot. It follows the
 [root publisher](chunk-root-publisher.md), whose root object and original file
-snapshot have different identities and bytes. Controller integration and mounted
-chunk callbacks remain unfinished. The full local gate passed; this source's
+snapshot have different identities and bytes. Mounted chunk callbacks remain
+unfinished. Controller integration is being tested in a
+separate slice below. The full local gate passed; this state source's
 own source-bound Linux, Windows and book acceptance also passed.
 
 ![An exact snapshot acknowledgment is stored by the same SQLite owner that retains its chunk tree and authority receipt. A newer edit stays pending.](images/chunk-source-settlement.svg)
@@ -119,11 +120,48 @@ errors remain in the logs. These checks cover the existing mounted format;
 they do not activate mounted chunks or prove a physical reboot. See
 the [dated evidence](evidence/chunk-source-settlement-20261018.json).
 
+## Controller integration (local gate passed, 2026-10-18)
+
+`s3drive_managed::chunks::{Publisher, Recovery}` now have an explicit
+`resume_source(plan)` method returning the state's opaque `SourceReceipt`.
+The existing `resume(plan)` still returns only a historical `RootCommit`.
+The new method first completes or recovers durable root publication, then
+invokes the same SQLite owner's source facade. The facade reloads and verifies
+the exact publication; the controller does not substitute its returned root
+commit for that proof. One controller-family permit spans both steps.
+
+`Recovery::resume_source` needs the private local store, metadata client and
+expected volume/store IDs. It constructs no S3 client and needs no S3 credentials
+or current upload policy. A known root requires no metadata RPC; a prepared
+unknown root replays only its complete saved Apply before local acknowledgment.
+The publisher takes that historical branch before S3 policy or binding checks,
+as its root-only API already did. If local acknowledgment fails after the root
+was committed, the caller receives an error and can recover the same plan.
+
+New real-SDK/dummy-S3 and authenticated-authority controls cover binary/Unicode,
+sparse and empty sources, first historical acknowledgment after newer work,
+missing/unprepared/wrong-scope refusal, actual killed-owner unknown/known-root
+recovery with dummy credentials/policy removed and current payload damaged,
+refused source insertion, expired/narrow policy, refused root-receipt storage,
+same-family Busy and concurrent first acknowledgment. The parent counts all S3
+requests during metadata-only recovery and checks unique immutable PUT keys.
+The 12-control focused suite passed in 60.30 s. An additive damaged-record
+refusal check passed separately in 0.90 s. The full local gate also passed:
+12 chunk-publication controls, 365 state tests / 1 ignored, 59 S3, 34 core,
+50 authority, 18 existing managed-publication controls, formatting, Clippy,
+build and 62 book chapters. All 253 frozen runtime/fixture hashes matched.
+The [12-member indexed local archive](evidence/chunk-source-controller-local-20261018.tar.gz)
+retains the complete log, focused controls, exact source, implementation
+self-review and frozen map. This was self-review, not independent review. One
+existing retained-session quota test exceeded a minute and then passed; times
+are gate observations, not a benchmark. Its own hosted cohort is still required.
+See the
+[controller evidence](evidence/chunk-source-controller-20261018.json).
+
 No payload eviction/reclamation, role release, implicit migration, detached or
 removal-owner publication, native chunk activation, fresh provider-health claim
-or physical reboot acceptance follows. The next controller slice must connect
-root publication/recovery to this facade and prove it with the real SDK and
-authenticated loopback authority. The [next controller contract](implementation-plan.md#next-controller-slice-explicit-source-acknowledgment-proposal-2026-10-18)
+or physical reboot acceptance follows. Controller acceptance requires the full
+local gate and its own source-bound hosted cohort. The [controller contract](implementation-plan.md#next-controller-slice-explicit-source-acknowledgment-proposal-2026-10-18)
 defines the distinct API, operation permit and subprocess recovery controls.
 Verified manifest range reads and native
 lifecycle barriers remain later requirements.
