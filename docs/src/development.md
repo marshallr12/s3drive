@@ -45,7 +45,7 @@ explicit Linux native test uses `/dev/fuse` and a local fixture.
 Build-cache restore may fall back to the same OS/compiler with an older lockfile;
 Cargo still checks the current locked dependency graph and every gate runs.
 
-Windows testing runs remotely in the private repository's GitHub Actions
+Windows testing runs remotely in the repository's GitHub Actions
 `windows-latest` VM, not by emulation or cross-compilation on the MX Linux
 workstation. The 2026-10-16 run logs identify Windows Server 2025
 (`10.0.26100`, image `windows-2025-vs2026`). This is native Windows driver/API

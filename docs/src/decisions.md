@@ -15,7 +15,7 @@ to the user.
 | D007 | Adopted for P1 reads | AWS SDK implements list/head/range reads; mutation/recovery requirements still need evaluation |
 | D008 | Proposed | Explicit flush means remote durability by default; offline local durability must be a separate mode |
 | D009 | Adopted | Unknown capabilities remain unknown; no fallback from failed conditional writes to unconditional overwrite |
-| D010 | Private prototype; distribution deferred | P3 uses GPL-3.0 winfsp wrapper; application distribution license and installer arrangement remain undecided |
+| D010 | Prototype; distribution deferred; original private setting superseded by D040 | P3 uses GPL-3.0 winfsp wrapper; application distribution license and installer arrangement remain undecided |
 | D011 | Deferred | Full POSIX/NTFS compatibility, distributed locks, writable database workloads and cross-source atomicity |
 | D012 | Deferred | Tray UI and optional Cloud Files surface until the shared engine is reliable |
 | D013 | Adopted for P1 | Source configuration controls S3 endpoint/region; explicit profiles do not fall back to ambient keys; numeric-loopback HTTP is test-only opt-in |
@@ -45,6 +45,7 @@ to the user.
 | D037 | Native creation accepted, 2026-10-17 | New portable-collision-v1 volumes preserve display names but admit one Unicode-17 compatibility/case-closure alias per directory. Version 5 opts into creation/directories; no existing-volume conversion. Persist complete namespace intents and authoritative empty-file store placement before effects; recover exact operation IDs. Native rename/removal/save replacement remain separate phases |
 | D038 | Authority entry CAS implemented, 2026-10-17; native integration pending | Guard source/destination identities and revisions plus both parent revisions; replace by an atomic move and retained target tombstone. Persist exact outcomes with the effect, detect ignored writes and preserve all payload references. Do not enable mounted rename/removal before journal, detached publication and native acceptance |
 | D039 | Library implemented, 2026-10-17; native integration pending | Commit namespace outcome and retained file observations atomically. Preserve original bindings and dirty heads, serialize pending effects against new publication preparation, and publish unlinked content only with an explicit tombstone content guard. Never resurrect a name or silently rebase dirty data |
+| D040 | User decision, 2026-10-18 | `marshallr12/s3drive` is intentionally public. This supersedes the original private-repository request. Agents must not change visibility without a direct request for that specific action; read-only checks must never automatically restore a historical setting. Ordinary implementation, pushes, CI and goal continuations do not authorize visibility changes. Public visibility does not select a distribution license |
 
 ## Questions to resolve at the relevant phase
 
