@@ -73,8 +73,21 @@ Do not borrow older native artifacts or claim mounted chunks before own controls
 pass. On success: all3 terminal source-bound jobs, own rawlog review, own finalized
 Windows reference artifactIDs/API digests/typed21+14/projectoracles/raw35, plus
 new named native test success on BOTH platforms. On failure preserve cohort and
-diagnose before fresh source. No own rawreview/hosted acceptance yet.
+diagnose before fresh source. No own Linux/Windows raw review or combined hosted acceptance yet.
 Runtime257 remains frozen in/tmp/s3drive-native-manifest-v3-frozen.json.
+
+Book117820371587 SUCCESS; own raw log reviewed/hash-bound in
+/tmp/s3drive-native-manifest-d98-book-reviewed.json (schema28/69files/65chapters).
+Linux/Windows still live; current observed Linux at old native mount gate,
+Windows at disposition lifecycle before fullworkspace/newnative step.
+Prepared (not executed) /tmp/s3drive-check-native-manifest-d98.py,
+/tmp/s3drive-native-manifest-d98-reference-check.ps1, raw-compare.py andarchive.py.
+Checker binds source/run/jobs/257map and BOTH explicit native step successes plus
+named engine/native tests; requires6reader/1ignored+12publication+62S3 controls.
+Combined /tmp/s3drive-native-manifest-d98-raw-reviewed.json and artifacts directory
+must remain absent until all3terminalSUCCESS and all ownrawlogs reviewed.
+Archive also retains exact FS/native-test sources, not just the managed reader.
+
 
 Local fullgate3 session58981 CLOSED EXIT0, RUST_TEST_THREADS2, all257 unchanged:
 12publication+6reader/1nativeignored+62S3+365state/1ignored+69docfiles/65chapters,
