@@ -66,13 +66,27 @@ Checkout /home/marshall/src/worktrees/s3drive-manifest-range-reader,
 branch codex/manifest-range-reader. Accepted controller474 and helperfef sources
 are now combined here; primary and helper checkouts retain accepted sources.
 New reader and owned read fixture passed5 focused controls (78806 EXIT0,4.68s)
-and Clippy75607 EXIT0 before combination. Full combined gate is next.
+and Clippy75607 EXIT0 before combination. Full combined gate84960 CLOSED EXIT0; all256 frozen source hashes unchanged.
 No legacy Reader, schema/wire/codec/native changes. Fixed4active/256snapshots,
 8MiB output/1MiB data/10432byte page/27visits/9data, max30s overall deadline.
 ReadOptions accepts shorter positive deadlines. Sparse64GiB deepest tree,
 older chunk reuse, holes, Unicode, corruption/denial, cancellation and capacity
 controls passed locally. No mounted chunks or new provider acceptance yet.
 Historical pending/live sections below are superseded by current acceptance.
+
+Full combined gate:12publication/source,5reader(4.94s),62S3,365state/1ignored,
+68docfiles/64chapters,fmt/clippy/build. Existing retained-open quota long notice
+then passed; no performance claim. Log /tmp/s3drive-manifest-reader-gate.log SHA
+1766197333b078b036f5f728b0996e89efe845a6ac0c584b490ca83a68360093.
+Frozen map /tmp/s3drive-manifest-reader-frozen.json SHA
+2aff69552178c0881e75f09bfb1fa94c84a8a1443941e5a850cfa1f7bd1dc49b.
+14-member local archive manifest-range-reader-local-20261018.tar.gz,72706bytes,
+SHAa1737729817e21d78c356c699987e1d4129f128172c71363007b04d9bb4a2ffd;
+all indexed members verified. Self-review, no independent agent review.
+SVG XML/render/visual review passed after fixing Rsvg.Rectangle initialization.
+Do not repeat local gate without new change/failure. Next own Linux/Windows/book
+cohort with own finalized native artifacts/raw checks; old helper/controller
+artifacts cannot certify new reader source. No new provider mutation/main push.
 
 ## Accepted helper; next manifest reader (2026-10-18)
 

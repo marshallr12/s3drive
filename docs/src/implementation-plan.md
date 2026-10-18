@@ -2002,3 +2002,21 @@ unchanged. Done: declared range/integrity/authorization/budget/cancellation
 controls, full local gate and its own hosted cohort before native activation.
 Focused reader controls passed 5/5 in 4.68s, including sparse 64 GiB metadata.
 
+
+Next proposed slice after this reader's own acceptance: expose authenticated
+manifest metadata and bounded read-only snapshots through the filesystem layer.
+Current managed namespace validation explicitly refuses manifests, file handles
+hold the whole-byte FileSnapshot, and writes use that legacy snapshot. Therefore
+native integration must cover lookup/list/getattr logical sizes as well as open
+and range-read dispatch; merely switching the byte-read call is insufficient.
+Keep legacy empty/one-object behavior compatible, retain pinned handles across
+rename/republication, map Busy/integrity/authorization errors explicitly and
+refuse chunk writes until their independent acceptance. Require dedicated real
+FUSE and WinFsp chunk-read controls with Unicode, two stores, sparse/cross-page
+ranges, late corruption, denied objects and no whole-file download. This is a
+source-inspection plan, not mounted acceptance or a finalized public API.
+
+Reader result: combined full local gate84960 EXIT0, all256 frozen hashes
+unchanged, 12 publication/source +5 reader +62 S3 +365state/1ignored,64chapters.
+The 14-member local archive is indexed and verified. Own hosted acceptance is
+next; portable controls do not activate native chunk reads or writes.
