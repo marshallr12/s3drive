@@ -1,6 +1,6 @@
 # Managed layout and namespace authority
 
-**User decision, 2026-10-16:** use a managed layout with stronger coordination
+**User decision, 2026-10-16; status clarified 2026-10-18:** use a managed layout with stronger coordination
 between machines. Ordinary S3 tools will see internal generation objects, not
 the drive's directory tree. Existing direct-layout mounts are compatibility
 prototypes; no existing bucket or configuration is converted automatically.
@@ -13,9 +13,9 @@ The target design separates three kinds of state:
 
 | State | Owner and purpose | Current implementation |
 | --- | --- | --- |
-| Local SQLite on each computer | Cache, staged bytes, unknown attempts, recovery; outside the mounted tree | Existing implementation; managed logical-file binding still needs integration |
+| Local SQLite on each computer | Cache, staged bytes, unknown attempts, recovery; outside the mounted tree | [Logical bindings/edits](managed-edits.md) and [native writes](managed-write-plan.md) implemented; dirty and uncertain state remains local |
 | One authoritative metadata database | Volume/node identities, directory entries, revisions, operation outcomes, immutable payload references | SQLite namespace and payload references implemented; Turso backend pending |
-| One or more S3-compatible buckets | Immutable file-generation bytes; never derive these keys from directory names | [Managed publisher library](managed-publication.md) joins SDK and metadata; [native reads](managed-native.md) passed, native writes pending |
+| One or more S3-compatible buckets | Immutable file-generation bytes; never derive these keys from directory names | [Managed publisher](managed-publication.md), [native reads](managed-native.md), [writes](managed-write-plan.md) and [mutations](managed-native-mutations.md) passed scoped driver acceptance; actual managed Wasabi remains pending |
 
 The namespace is authoritative at the service, rather than assembled from S3
 LIST results. A directory move changes its parent/name in one metadata
@@ -31,7 +31,14 @@ local source bindings continue to protect credentials; they cannot stand in for
 a shared storage identity. Do not reinterpret an existing direct-layout staged
 head as a managed file or silently rewrite pending data.
 
-## P6m1: persistent namespace prototype
+## Historical P6m1: persistent namespace prototype
+
+The following records the initial sequence-guarded, exact-name contract. Later
+[content guards](managed-write-plan.md#content-references-and-conflicts),
+[guarded namespace operations](managed-unlinked.md),
+[portable naming/creation](managed-namespace-plan.md) and
+[Windows lifecycle](native-windows-lifecycle.md) add explicit capabilities;
+existing operation encodings and unknown requests retain their original meaning.
 
 `s3drive-state::namespace` and `s3drive-authority` implement one volume per private
 authority database. Schema 8 adds separate namespace volume, node and operation
@@ -40,7 +47,7 @@ an authority refuses a database containing client source/cache/staging data.
 Once initialized, client source registration and staging refuse that database.
 The existing private-directory ownership and exclusive process lock apply.
 
-Implemented operations are create-directory, create-**empty-file metadata**,
+Initial operations were create-directory, create-**empty-file metadata**,
 move without replacement, remove-file and remove-empty-directory. The [managed publisher](managed-publication.md) now adds reservations and
 immutable payload-reference publication. Removal retains a tombstone; nothing in S3 is deleted.
 Root mutation, cycles, missing/non-directory parents, existing destination
@@ -78,9 +85,9 @@ silently truncating. Records are not garbage collected; hitting a cap preserves
 history and reports a limit. Directory paging and durable operation retention
 beyond these prototype bounds require a subsequent protocol.
 
-## Service boundary and verification
+## Original service boundary and verification
 
-The `s3drive-authority` library serves `POST /v1/namespace` on an explicitly
+The initial `s3drive-authority` library served `POST /v1/namespace` on an explicitly
 supplied **loopback** listener, with a caller-supplied 256-bit bearer token,
 4 KiB JSON limit, eight-command owner queue and eight HTTP operation slots.
 SQLite runs on one dedicated thread. Domain results use a versioned JSON
@@ -89,11 +96,13 @@ request contents. Shutdown stops admission, drains accepted work and releases
 the database lock. The development CLI now creates private tokens and runs a
 foreground local authority; it does not deploy a remote service or cloud account.
 
-This is a development/contract-test server, not a deployable remote service.
-Cross-machine deployment still needs TLS, device identity and volume ACLs,
-request/connection deadlines, admission hardening, backup/restore and single
-leader/failover acceptance. Multiple clients on loopback prove the protocol,
-not operation over a real network partition or a Turso failover.
+Subsequent [HTTPS transport](remote-authority.md) implements remote endpoint
+validation, explicit trust, deadlines and bounded admission. The current token
+trusts devices of one owner for the service's one volume; separate reader roles
+and device revocation are not implemented. [Pinned supervision](authority-startup.md)
+has Linux/Windows acceptance. Real independent-host partitions, backup/restore,
+history continuity, single-writer failover and Turso acceptance remain open.
+Multiple loopback clients do not prove operation over an actual network partition.
 
 ```bash
 cargo test -p s3drive-authority --locked
@@ -109,11 +118,14 @@ failure after namespace effects/before result persistence, schema-7 migration
 and rollback, role separation and retained limits. These are separate from
 native OS mounts and live provider acceptance.
 
-## P6m2 publication library and next native integration
+## P6m2 publication library and subsequent integration
 
 [Managed immutable-file publication](managed-publication.md) implements steps
-1–5 below with real SDK/HTTP tests and a separate local logical receipt. [Native read-only integration](managed-native.md) is implemented; writable
-integration, deployment and reclamation remain planned.
+1–5 below with real SDK/HTTP tests and a separate local logical receipt.
+[Native reads](managed-native.md), [writes](managed-write-plan.md) and
+[mutations](managed-native-mutations.md) subsequently passed scoped acceptance.
+The numbered list records the delivery sequence; real deployment, provider
+acceptance and reference-aware reclamation remain open.
 
 
 1. Register stable storage identities and reserve an upload operation/new object
@@ -147,5 +159,6 @@ mutation was created for this phase.
 
 Implemented 2026-10-17: [managed read-only drives](managed-native.md), explicit
 version-3 config, multi-store routing and private-token authority CLI. The
-authority still uses a local SQLite database and numeric loopback transport.
-Native writable callbacks and remote/Turso deployment remain later phases.
+initial authority used local SQLite and numeric loopback transport. Later
+[HTTPS](remote-authority.md) and native writable phases are implemented; actual
+remote hosting and Turso deployment remain unprovisioned.

@@ -37,6 +37,15 @@ jobs:
       - name: Classify coordinator TLS I/O and exercise fresh CLI connections
         timeout-minutes: 5
         run: cargo test -p s3drive-cli --test authority_restart tls_cli_ --locked -- --nocapture
+      # The preceding real CLI/TLS test already builds this same executable and
+      # fixture worker. Exercise snapshots/console in the ordinary account
+      # before native lifecycle failures can skip their independent acceptance.
+      - name: Verify Windows coordinator startup and recovery
+        if: runner.os == 'Windows'
+        timeout-minutes: 10
+        env:
+          S3DRIVE_DISPOSABLE_WINDOWS_VM: '1'
+        run: cargo test -p s3drive-cli --test authority_restart supervised_windows_coordinator_tls_independent_logons_and_recovery --locked -- --ignored --nocapture --exact
       - name: Verify Windows replacement fixture rejection checks
         if: runner.os == 'Windows'
         run: ./scripts/test-windows-replacement-fixture.ps1
@@ -62,12 +71,6 @@ jobs:
         if: runner.os == 'Windows'
         timeout-minutes: 2
         run: ./scripts/test-windows-supervisor-policy.ps1
-      - name: Verify Windows coordinator startup and recovery
-        if: runner.os == 'Windows'
-        timeout-minutes: 10
-        env:
-          S3DRIVE_DISPOSABLE_WINDOWS_VM: '1'
-        run: cargo test -p s3drive-cli --test authority_restart supervised_windows_coordinator_tls_independent_logons_and_recovery --locked -- --ignored --nocapture --exact
       - name: Verify paired Windows managed startup and recovery
         if: runner.os == 'Windows'
         timeout-minutes: 16

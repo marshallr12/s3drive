@@ -792,11 +792,11 @@ new exact-source Windows evidence before attributing the old event or promoting.
 
 #### P6m4d1 — private offline snapshots and inspection (prototype; acceptance pending)
 
-Unpublished branch `codex/authority-snapshots` is rebased onto accepted f8c4f58
+The private topic branch `codex/authority-snapshots` is rebased onto accepted f8c4f58
 and has an
 experimental library and platform directory helpers. This is the first stage
 of the full recovery contract, not writable restoration/failover. Experimental
-`authority-snapshot create|inspect` commands now exist locally; no restore is
+`authority-snapshot create|inspect` commands exist on the topic; no restore is
 implemented. Combined-source local/Windows acceptance is required before publication.
 
 Local2026-10-18 evidence: state check/Clippy passed; nine filtered tests passed
@@ -812,8 +812,8 @@ The full local gate passed, including the combined f8c4f58-plus-snapshot source
 remains. The existing disposable ordinary-account startup workflows now
 include prepared live-owner refusal and stopped create/inspect checks, exact
 source bytes, duplicate-output preservation, widened-ACL/hardlink/junction/
-case-alias refusal and concurrent read-handle sharing. Actual Windows execution
-is pending; see the [fixture contract](authority-backup-recovery.md#prepared-windows-acceptance-runtime-pending-2026-10-18). A separate real Linux CLI SIGINT
+case-alias refusal and concurrent read-handle sharing. These component checks
+passed at f9a52e2; full candidate native/console acceptance remains pending; see the [fixture contract](authority-backup-recovery.md#windows-component-observations-full-acceptance-pending-2026-10-18). A separate real Linux CLI SIGINT
 fixture passed at defc8b9: source bytes stayed identical, no success/manifest
 was published, partial inspection refused and the original destination could
 not be replaced. See the [dated cancellation proof](evidence/authority-snapshot-sigint-20261018.json);
@@ -832,6 +832,16 @@ and source-bound Windows acceptance. The follow-up local gate passed, along
 with final PS AST and C#5/.NET4.5 compilation; Windows runtime remains pending.
 Never signal a shared runner console or substitute
 forced termination for cooperative cleanup.
+
+Hosted f9a52e2 subsequently passed269 Windows state cases, snapshot CLI2 and
+ordinary-account Active/Stopped snapshot checks after both standalone and paired
+recovery. Its overall CI failed in later native TLS operations. Follow-up33ddfe1
+failed the earlier native lifecycle HTTP case before reaching console acceptance.
+Both Linux/book jobs succeeded. No main promotion; see the
+[dated platform record](evidence/authority-snapshot-platform-20261018.json).
+A failure-only independent CLI metadata probe is now being tested locally to
+separate coordinator liveness from the failed native client's runtime/pool.
+It preserves the failed assertion and performs no mutation retry.
 
 Require exclusive existing-authority ownership and explicit volume/policy pin;
 read supported legacy/current state without migrations or namespace changes.

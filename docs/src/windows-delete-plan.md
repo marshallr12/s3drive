@@ -1,12 +1,17 @@
 # Windows deletion and durable disposition
 
-**Research and implementation phase, 2026-10-17.** Windows deletion remains
-unsupported in the native adapter. This plan extends the managed layout's strong
-coordination; it does not replace remote acknowledgment with a local-only queue.
+**Historical research and delivery plan, 2026-10-17; status clarified 2026-10-18.**
+The phases below led to the accepted [native Windows lifecycle bridge](native-windows-lifecycle.md).
+Explicit config7 selects the measured `posix-v1` profile; versions1–6 keep
+native deletion unsupported. This chapter retains the original phase boundaries
+and initial non-POSIX driver analysis, not a claim that all callbacks are still
+planned. Current scoped startup/native evidence is in [coordinator acceptance](authority-startup.md).
+The protocol preserves strong coordination and does not replace remote
+acknowledgment with a local-only queue.
 
-![Authority reservations preserve file identity; native WinFsp lifecycle integration remains planned.](images/windows-delete.png)
+![Original phase diagram: authority reservations preserve identity before the later native lifecycle bridge.](images/windows-delete.png)
 
-## Verified platform lifecycle
+## Initial non-POSIX platform lifecycle
 
 WinFsp 2.1 calls SetDelete to test or change deletion disposition, including
 repeated true/false calls. It must not remove the entry. Delete-on-close opens
@@ -20,8 +25,10 @@ checked 2026-10-17. Windows also distinguishes ordinary deferred deletion from
 
 The resolved Rust binding is WinFsp 0.13.1 + WinFsp 2.1. Its default volume
 parameters use descriptor contexts, and each open boxes a new context. The
-adapter does not advertise `supports_posix_unlink_rename`. These are inspected
-dependency-source facts; the following protocol is our design.
+initial adapter did not advertise `supports_posix_unlink_rename`. The later
+config7 bridge explicitly enables the separately measured POSIX profile; this
+initial non-POSIX behavior must not be treated as its complete lifecycle model.
+These are dependency-source facts and phase history; the protocol is our design.
 
 ## Kernel details the client phase must preserve
 
@@ -126,7 +133,7 @@ No real Wasabi mutation, workstation startup change, remote/Turso deployment or
 credential change is authorized by these local protocol tests.
 
 
-## Current verification boundary
+## Initial authority-phase verification boundary
 
 The new state tests cover reversible disposition, guarded/legacy namespace
 bypasses, owner content fences, stale guards, name reuse, exact replay,

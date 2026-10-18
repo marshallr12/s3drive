@@ -421,7 +421,7 @@ mod windows {
 pub(super) async fn native() {
     let f = Fixture::start().await;
     let tmp = tempfile::tempdir().unwrap();
-    let (h, s) = Harness::new_policy(tmp.path(), &f, true).await;
+    let (h, mut s) = Harness::new_policy(tmp.path(), &f, true).await;
     h.configure_bootstrap(true, true).await;
     let deletes = f
         .requests
@@ -430,8 +430,16 @@ pub(super) async fn native() {
         .iter()
         .filter(|r| r.starts_with("DELETE "))
         .count();
-    let m = h.mount().await;
-    tokio::task::block_in_place(|| windows::exercise(&h.mount));
+    let mut m = h.mount().await;
+    let exercise = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        tokio::task::block_in_place(|| windows::exercise(&h.mount))
+    }));
+    if let Err(panic) = exercise {
+        // Preserve the original failed assertion. Only read metadata, then
+        // explicitly reap owned processes before unwinding the test fixture.
+        report_native_failure(&h, &mut s, &mut m).await;
+        std::panic::resume_unwind(panic);
+    }
     m.stop().await;
     // A committed admission loses its native reply, and the mount process dies.
     let proxy = NamespaceProxy::start(&h).await;

@@ -104,8 +104,12 @@ metadata rename, clean teardown, killing a dirty mount, a committed PUT with los
 blocked observation, restart without a duplicate PUT, and a competing publication
 whose local loser survives. Passing portable tests cannot substitute for these cases.
 
-Creation/mkdir, native rename/unlink and atomic save-by-replacement remain explicitly
-unsupported in managed mode until P6m3b3. Large files, garbage collection, real
+Version4 keeps creation/mkdir, native rename/unlink and save-by-replacement
+unsupported. Subsequent explicit versions add [creation](managed-namespace-plan.md),
+[rename/replacement and Linux removal](managed-native-mutations.md), and the
+[version7 Windows lifecycle](native-windows-lifecycle.md). This distinction was
+clarified 2026-10-18; existing configurations are never upgraded automatically.
+Large files, garbage collection, real
 workstation reboot/SSH acceptance, live writable Wasabi acceptance and remote/Turso
 service deployment remain separate work. This phase changes no real bucket,
 credential, startup registration or user's local configuration.

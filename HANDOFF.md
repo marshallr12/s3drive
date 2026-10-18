@@ -12,9 +12,14 @@ Research, decisions, acceptance and plans belong in docs/src/.
   Remote/main SHA and repository PRIVATE verified after push.
 - Diagnostic worktree /home/marshall/src/s3drive-windows-transport remains clean
   at f8, branch codex/windows-transport-followup.
-- Main publication automatically triggered same-source CI39099187117. Revalidate
-  that exact live handle; a repeat failure is new evidence, not erased by the
-  accepted topic run. Never restart live jobs on observer timeout/log404.
+- Main repeat CI39099187117 is TERMINAL all-three SUCCESS, with raw native/
+  startup and strict21/14 checked independently and by project PS oracles.
+  Windows117591756871 standalone PASS05:28:48UTC, pair05:30:11, lifecycle and
+  seven broad cases; Linux117591756859 all8 native and no-systemd startup.
+  Raw /tmp/s3drive-main-f8-repeat-{linux,windows,book}.log, run metadata and
+  /tmp/s3drive-main-f8-repeat-artifacts/{accepted-repeat,independent-check,
+  download-proof}.json. Both downloaded ZIP digests match API metadata.
+  Artifacts12126286440/12126586047. This pass does not explain the old timeout.
 - Root codex/authority-snapshots was safely rebased onto f8. Current local commits
   f4c37bb/e218381/01af668 correspond to the old UNPUSHED defc8b9/43bfd46/e0a4353.
   Backup ref codex/authority-snapshots-before-transport retains old history.
@@ -22,8 +27,13 @@ Research, decisions, acceptance and plans belong in docs/src/.
   snapshot code and all f8 diagnostics were preserved; only docs conflicted.
 - Snapshot candidate f9a52e2d4fcd575ea4ae73fd4e4a6e6ce75e9566 is now pushed to
   private origin/codex/authority-snapshots; exact remote SHA/privacy verified.
-  CI39100010372 is LIVE: book117594176266/Linux117594176389 success,
-  Windows117594176311 lifecycle at last observation. Raw Linux/book logs
+  CI39100010372 is TERMINAL FAILURE: Linux/book success; Windows117594176311
+  snapshot CLI2/state269 and ordinary-account snapshot checks passed in both
+  standalone05:44:01UTC and pair05:45:39UTC workflows. Later broad native tests
+  failed: existing writes List/UnexpectedEof+native1117; mutation seed child
+  Info/UnexpectedEof. TLS connections22/43 each had read0/write0/flush1 and
+  dispatched=false before5sec header timeout. Not correlated to specific RPCs.
+  Raw /tmp/s3drive-snapshot-f9-windows.log. Linux/book logs
   /tmp/s3drive-snapshot-f9-{linux,book}.log: snapshot CLI2/state274, all8
   native cases, paired PASS05:22:17UTC, ordinary no-systemd and HTTP/TLS
   authority startup passed. No snapshot main promotion.
@@ -34,8 +44,22 @@ Research, decisions, acceptance and plans belong in docs/src/.
   so verify/rebuild the intended source before experiments. The integrated gate
   rebuilt the CLI; historical SIGINT/busy proofs remain bound to old defc8b9.
 
-Next: monitor main-repeat CI39099187117 and snapshot candidateCI39100010372,
-then inspect actual ordinary-account snapshot runtime and unchanged
+- Prior pushed topic33ddfe1366c901022cf516deb648dfeb31888dc0 had a normal FF
+  push and exact remote SHA/privacy verified.
+  CI39100806213 is TERMINAL FAILURE: Linux/book success, Windows117596502607
+  failed the early lifecycle test at support/managed/lifecycle.rs404 cross-store
+  replacement. Numeric-loopback HTTP (NOT TLS); Info/Request timeout, then
+  PendingRemoval timeout and native5. No server-side commit/phase proof.
+  C# console fixture and later Windows gates SKIPPED. Raw
+  /tmp/s3drive-snapshot-console-33-windows.log. Windows signal remains unverified.
+
+- New clean detached worktree /home/marshall/src/s3drive-snapshot-acceptance
+  stays at failed33 for source inspection; no builds there. Prepared (NOT RUN)
+  /tmp/s3drive-snapshot-console-33-reference-check.ps1 must not be treated as
+  proof.33 has only replacement artifact; disposition step never ran.
+
+Next: push the locally gated failure-only fresh CLI diagnostic, then inspect new
+exact-source Windows failure or success evidence before any promotion. Require
 native/reference/startup gates before any snapshot main promotion. Keep restore
 unsupported. No new provider/user startup/root/hosting mutations authorized.
 Publication always requires exact-source all-three terminal CI, raw native/
@@ -159,17 +183,22 @@ and concurrent read handle. AST validation passed for all three changed scripts 
 worker at /tmp/s3drive-snapshot-windows-ast1.log. Updated57-doc links/build/
 tests passed at /tmp/s3drive-snapshot-prepush-book{,tests}1.log.
 Local parsing is not actual Windows acceptance.
-Actual Windows CLI/ACL/reparse/sharing and native/reference/startup gates remain;
-Windows console cancellation is also separate. Remaining snapshot gaps include
+Actual Windows CLI/ACL/reparse/sharing checks passed in the scoped f9 component
+workflows, but full candidate native gates failed as above. Windows console
+cancellation is separate and still unverified. Remaining snapshot gaps include
 broader permission/destination-busy faults and writer-version field validation (currently
 nonempty/length only). Do not mark snapshot phase or overall goal complete.
 
 ## Live observations and prepared verification
 
-- Main repeatCI39099187117 is LIVE: Linux/book success, Windows117591756871
-  paired startup; workspace/standalone/replacement/lifecycle checks passed so far.
-- Existing gh-watch sessions63097 (main) and94801 (snapshot) are live. Logs
-  /tmp/s3drive-main-f8-repeat-watch.log and snapshot-f9-watch.log.
+- Main repeatCI39099187117 is complete/success as above. Source f8 has no
+  snapshot code; its success must not substitute for the newer candidates.
+  Standalone supervisor6904 retained while child2260→1268; pair supervisor3000
+  retained while3100→2264. Independent AuthenticationIds, exact recovery and
+  conflicts passed. Only expected partial-header HttpTimeout logged; no untyped
+  or shutdown event in this repeat. Priority values still unmeasured.
+- All three old runs (main f8, snapshot f9, console33) are terminal. Watch
+  sessions63097/94801/7835 may lag; do not restart or wait as if jobs were live.
 - Independent /tmp/s3drive-check-native-artifacts.py reads reference fixtures
   via exact git-show source; strict duplicate/nonfinite JSON, exact field/type/
   value checks,21/14 records, source/OS/driver and four legacy cases. Passed
@@ -191,9 +220,37 @@ nonempty/length only). Do not mark snapshot phase or overall goal complete.
   original-identity control and numeric-type validation passed fresh AST at
   /tmp/s3drive-snapshot-console-final-ast2.log; C#5/.NET4.5 mcs compilation
   with warnings-as-errors passed. f9 CI tests the previous immutable source.
-- Publish this substantive console follow-up normally after final doc checks.
-  Existing workflow has no cancel-on-push group; preserve both live runs.
-  Never push a docs-only native CI cycle or promote before exact-source gates.
+- Console follow-up33 was pushed after full local gate, final PS AST/C#5
+  compilation and final57-doc links/build/tests. Rust stayed frozen during gate;
+  the subsequent PS-only positive-control/type checks passed fresh AST.
+- UNCOMMITTED follow-up: failure_probe/report_native_failure helpers in
+  support/managed.rs, Windows lifecycle catch/report/reap/resume-original-panic,
+  and a managed_native.rs portable positive/negative probe. Fresh actual CLI
+  Info uses a separate client/runtime, bounded pipes/waits and owned handles;
+  no mutation retry or hidden PASS. Live/stopped control passed at
+  /tmp/s3drive-native-failure-probe1.log (unchanged volume sequence, zero S3).
+  Subsequent cleanup was factored/typechecked on Linux; full local gate PASSED
+  exit0 at /tmp/s3drive-native-failure-probe-gate1.log:274 state, eight restart/
+  worker, snapshot CLI2, Hyper2/HTTP10/TLS6/SDK17/managed8 plus lint/build/57-doc.
+  Rust stayed frozen; later workflow/doc changes have separate checks.
+- CI standalone Windows coordinator/snapshot/console step now runs early after
+  real TLS/CLI compile, before replacement/lifecycle. It still runs exactly once;
+  all existing native/pair/reference gates and deadlines retained. PyYAML parse/
+  structure checks passed (actionlint not installed). No test is skipped to
+  admit the candidate. No old CI restart.
+- Rejected LOCAL experiment: Hyper capture_connection observer. Reqwest0.13.5
+  converts extensions but execute_request discards them before Hyper; controlled
+  received headers/body still yielded false. Fault tests failed at
+  /tmp/s3drive-wire-selection-remote1.log. ALL authority code/Cargo/test edits
+  restored exactly toHEAD33; no false flag shipped and no assertion weakened.
+  Exact resolved source0.1.21/0.13.5 fingerprints in the dated platform record.
+- UNCOMMITTED docs: refresh historical managed layout/publication/write/mutation/
+  Windows-plan descriptions to distinguish old config phases from current main;
+  links/build/test passed historical-status-book{,tests}1.log before latest
+  platform records. New record authority-snapshot-platform-20261018.json and
+  authority-startup/snapshot/implementation-plan explain partial component PASS,
+  both overall failures and the failed capture experiment. Main-repeat record
+  is also pending. Bundle with substantive probe source; no docs-only native CI.
 
 ## Requirements, invariants and authorization
 

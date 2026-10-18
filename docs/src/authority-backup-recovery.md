@@ -1,7 +1,7 @@
 # Coordinator backups and recovery
 
 Research/design dates: **2026-10-17–18**, America/New_York. **Offline snapshot
-prototype; Windows acceptance pending. Restoration and failover remain proposals.**
+prototype; full Windows acceptance pending. Restoration and failover remain proposals.**
 Pinned startup and subsequent transport diagnostics are accepted through f8c4f58;
 see [their scoped evidence](authority-startup.md). No real database,
 account, bucket or hosted service was changed for this research.
@@ -145,10 +145,10 @@ backup schedule, retention store, credential or recovery service was provisioned
 ## Next implementation stage
 
 [P6m4d1](implementation-plan.md#p6m4d1--private-offline-snapshots-and-inspection-prototype-acceptance-pending)
-is an unpublished library prototype on `codex/authority-snapshots`, now rebased
+is a private topic prototype on `codex/authority-snapshots`, now rebased
 from a7994e6 onto accepted diagnostic main f8c4f58;
 experimental offline snapshot/inspection CLI commands are now present locally;
-no restore/promotion command exists. These changes remain unpublished.
+no restore/promotion command exists. These changes remain outside accepted main.
 The artifact uses distinct snapshot filenames so ordinary startup refuses it.
 Local2026-10-18 state check/Clippy and nine filtered tests passed, including
 WAL-only data, exact schema8 receipts, full disk, cancellation and eight actual
@@ -246,7 +246,7 @@ bound. As in the implementation, its checksum file descriptors are opened only
 when its own SQLite connections are closed, preserving POSIX lock behavior.
 
 
-## Prepared Windows acceptance (runtime pending, 2026-10-18)
+## Windows component observations (full acceptance pending, 2026-10-18)
 
 The existing disposable ordinary-account coordinator workflow now includes
 `scripts/test-windows-snapshot-worker.ps1`. It first checks that a live
@@ -260,9 +260,20 @@ source junction and a case-alias nested output. Positive inspection controls
 follow reversible faults. It uses the existing fresh test account and fixtures;
 no real user account, credentials, provider, startup entry or restore is involved.
 
+At f9a52e2, hosted Windows269 state tests and both snapshot CLI cases passed.
+The ordinary-account checks above passed after both standalone coordinator
+recovery05:44:01UTC and paired native drive/coordinator recovery05:45:39UTC.
+This establishes that component's observed Windows behavior. The same run later
+failed two existing native cases with metadata transport errors; the subsequent
+33ddfe1 candidate failed earlier in its native lifecycle gate and never reached
+its console fixture. Neither candidate is accepted for main. See the
+[dated component results and failures](evidence/authority-snapshot-platform-20261018.json)
+and [transport investigation](authority-startup.md#snapshot-topic-regressions-2026-10-18).
+Windows Ctrl+C remains unverified.
+
 PowerShell5.1 lists `HardLink` and `Junction` among filesystem `New-Item` types.
-This API check and local PowerShell parsing do not establish Windows filesystem
-behavior. [Microsoft New-Item documentation](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/new-item?view=powershell-5.1)
+The API check and local PowerShell parsing alone did not establish Windows
+filesystem behavior; the dated f9a52e2 observations provide the component evidence. [Microsoft New-Item documentation](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/new-item?view=powershell-5.1)
 (read2026-10-18). Actual hosted Windows execution, existing native/reference/
 startup regressions, and source-bound logs are required before acceptance.
 Windows console cancellation, physical power loss and target Windows10/11

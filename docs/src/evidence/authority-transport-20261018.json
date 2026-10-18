@@ -88,5 +88,89 @@
     "No snapshot/restore/large-file acceptance",
     "Successful ephemeral VM fixture profile cleanup may defer locked profiles only after all assertions and dummy credential removal",
     "Original timeout/older rename failures remain unexplained"
-  ]
+  ],
+  "same_source_main_repeat": {
+    "recorded_at_utc": "2026-10-18T05:35:31.327574+00:00",
+    "source_commit": "f8c4f5832e399c6c54567c122c875e2a438ce681",
+    "ci_id": 39099187117,
+    "ci_url": "https://github.com/marshallr12/s3drive/actions/runs/39099187117",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 117591756722,
+        "name": "book",
+        "conclusion": "success"
+      },
+      {
+        "id": 117591756859,
+        "name": "rust (ubuntu-latest)",
+        "conclusion": "success"
+      },
+      {
+        "id": 117591756871,
+        "name": "rust (windows-latest)",
+        "conclusion": "success"
+      }
+    ],
+    "artifacts": [
+      {
+        "kind": "replacement",
+        "records": 21,
+        "source": "f8c4f5832e399c6c54567c122c875e2a438ce681",
+        "sha256": "103e586bbd107c8009865a4181b610a3b751edeeaf93081e26b450cbf9f5db85",
+        "strict_types_and_all_fields_match": true
+      },
+      {
+        "kind": "disposition",
+        "records": 14,
+        "source": "f8c4f5832e399c6c54567c122c875e2a438ce681",
+        "sha256": "f9305e1796b766ec5cd11b7520ea520604626d8f5a3f5ef64509d69f9c00c550",
+        "strict_types_and_all_fields_match": true
+      }
+    ],
+    "downloads": [
+      {
+        "id": 12126286440,
+        "kind": "replacement",
+        "archive_sha256": "e05bf0f44fc20078f59e2f4845eee9c06c6348280eff795af12953f92c048e9f",
+        "json_sha256": "103e586bbd107c8009865a4181b610a3b751edeeaf93081e26b450cbf9f5db85"
+      },
+      {
+        "id": 12126586047,
+        "kind": "disposition",
+        "archive_sha256": "b39c0ecd0161583ba9fdec1913e8b77a2a746ddf898f1662d2265542e2012010",
+        "json_sha256": "f9305e1796b766ec5cd11b7520ea520604626d8f5a3f5ef64509d69f9c00c550"
+      }
+    ],
+    "project_typed_oracles_passed": true,
+    "raw_logs_sha256": {
+      "linux": "76bef639fea8b1b13f81a07f83f0213f342362794b4b5555b1bf8e3b3aaf9629",
+      "windows": "40daba4eea1c7317a9ebbf5f806ef20137fb8ac3414678fb9b6517bb5ca89b91",
+      "book": "a013d89906b2fca16e8f0b36dfd4502587ae5b2013da6b02ce9c43a1ef1bea0a"
+    },
+    "observations": {
+      "linux_native_cases": 8,
+      "windows_native_cases": "one lifecycle plus seven broader cases",
+      "windows_standalone_pass_utc": "2026-10-18T05:28:48Z",
+      "windows_pair_pass_utc": "2026-10-18T05:30:11Z",
+      "supervisor_child_replacement": {
+        "standalone": {
+          "supervisor": 6904,
+          "before": 2260,
+          "after": 1268
+        },
+        "paired": {
+          "supervisor": 3000,
+          "before": 3100,
+          "after": 2264
+        }
+      },
+      "independent_authentication_ids": true,
+      "exact_unknown_recovery_and_conflict_preservation": true,
+      "profile_cleanup_deferred_only_under_disposable_vm_policy": true,
+      "healthy_untyped_or_shutdown_event_logged": false,
+      "original_timeout_cause": "unproven; successful repeat does not explain the earlier failure",
+      "snapshot_or_windows_console_acceptance": false
+    }
+  }
 }

@@ -457,3 +457,58 @@ through four attempts and interruptible ten-second delays, always using the same
 pinned command/private inputs. Scheduler restart properties remain secondary,
 unverified launcher policy. Native acceptance must demonstrate recovery under
 that same supervisor without issuing Start.
+
+
+## Snapshot-topic regressions (2026-10-18)
+
+The accepted f8c4f58 main repeatCI39099187117 passed all three jobs, native/
+startup logs and newly downloaded strict21/14 artifacts. This does not explain
+older intermittent failures. The subsequent snapshot topics supplied new
+contradictory reliability evidence.
+
+At f9a52e2, [CI39100010372](https://github.com/marshallr12/s3drive/actions/runs/39100010372)
+passed Linux/book and Windows snapshot/library/ordinary-account startup checks,
+including the actual private ACL/link/handle cases. Its broad native step later
+failed existing-file writes (List/UnexpectedEof, native1117) and mutation setup
+(a fresh seed child's Info/UnexpectedEof). Nearby TLS header timeouts reported
+connection22/read0/write0/flush1/dispatched=false and connection43 with the same
+counters. Those are established TLS sockets with no observed HTTP plaintext;
+there is **no proof that either socket was the failed RPC's selected transport**.
+A separate deliberate-outage new-open timeout remains an expected passing case.
+
+At33ddfe1, [CI39100806213](https://github.com/marshallr12/s3drive/actions/runs/39100806213)
+passed Linux/book but failed the earlier native lifecycle test at cross-store
+replacement. That case uses numeric-loopback **HTTP**. The daemon logged Info
+request timeout, then PendingRemoval timeout during cleanup; rename returned
+native5. This is separate from the TLS socket events and does not establish a
+shared cause or a metadata commit outcome. Its snapshot console worker and
+later Windows steps were skipped. [Exact records](evidence/authority-snapshot-platform-20261018.json).
+
+A local diagnostic experiment attempted Hyper's public connection-capture
+extension. The actual resolved reqwest0.13.5 public conversions preserve
+extensions, but its send implementation rebuilds the Hyper request without
+forwarding arbitrary extensions. Existing controlled TLS tests independently
+received complete requests while the proposed flag stayed false. The observer
+was removed; the original transport and fault assertions are restored. Source
+fingerprints and the failed control are recorded above. Do not add that flag
+without a verified delivery path or reinterpret false as no connection.
+
+Hyper-util0.1.21 also races a pool checkout against connection establishment
+and can finish a losing connection in the background. Thus a server's empty
+socket can be unrelated to a particular successful or failed RPC; correlation
+needs stronger evidence. This is a resolved-source observation, not attribution
+to an upstream bug. The historical [pool discussion](https://github.com/hyperium/hyper/discussions/2628)
+and [older idle-timeout report](https://github.com/hyperium/hyper/issues/3640)
+do not reproduce our pinned stack. These sources were checked2026-10-18; no
+pooling, deadline, retry, scheduler or TLS policy was changed.
+
+The new fixture diagnostic runs only after a native lifecycle assertion fails:
+check retained coordinator/mount process handles, start a fresh read-only CLI
+Info request with its own client/runtime, classify its result without dumping
+request/configuration or dependency text, explicitly reap owned processes, then
+resume the original panic. A portable control passed against both a live and a
+stopped authority, with unchanged metadata sequence and zero new S3 requests.
+A later successful control does not prove availability at the instant of the
+original failure or establish any earlier mutation outcome. It is additional
+diagnostic evidence, not a successful native test or a fix for the production
+failure. Existing native and full candidate gates still apply.

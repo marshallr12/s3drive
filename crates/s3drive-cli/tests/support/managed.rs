@@ -22,7 +22,7 @@ use std::{
     time::Duration,
 };
 use tokio::{
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     process::{Child, Command},
 };
 fn test_cli() -> PathBuf {
@@ -244,6 +244,161 @@ impl Service {
         );
     }
 }
+// Failure-only control, never a mutation retry. A fresh CLI process has its own
+// runtime/client, independent of the failed native daemon's connection pool.
+#[derive(Debug, PartialEq, Eq)]
+struct FailureProbe {
+    coordinator_running: Option<bool>,
+    fresh_cli: FreshInfo,
+}
+#[derive(Debug, PartialEq, Eq)]
+enum FreshInfo {
+    OriginalVolume,
+    Refused,
+    Deadline,
+    LaunchFailed,
+    InvalidOutput,
+    Unreaped,
+}
+async fn reap_fixture_child(child: &mut Child) -> bool {
+    if matches!(child.try_wait(), Ok(Some(_))) {
+        return true;
+    }
+    let _ = child.start_kill();
+    matches!(
+        tokio::time::timeout(Duration::from_secs(5), child.wait()).await,
+        Ok(Ok(_))
+    )
+}
+async fn failure_probe(h: &Harness, service: &mut Service) -> FailureProbe {
+    let coordinator_running = service.child.try_wait().ok().map(|s| s.is_none());
+    let mut c = Command::new(test_cli());
+    c.args([
+        "managed",
+        "info",
+        "--authority",
+        &service.endpoint,
+        "--volume",
+        &service.volume,
+        "--token-file",
+    ])
+    .arg(h.root.join("secrets/authority.token"))
+    .stdin(Stdio::null())
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .kill_on_drop(true);
+    if let Some(ca) = &service.ca_file {
+        c.arg("--ca-file").arg(ca);
+    }
+    h.environment(&mut c);
+    let mut child = match c.spawn() {
+        Ok(child) => child,
+        Err(_) => {
+            return FailureProbe {
+                coordinator_running,
+                fresh_cli: FreshInfo::LaunchFailed,
+            };
+        }
+    };
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+    let mut output = Some(tokio::spawn(async move {
+        let mut bytes = Vec::new();
+        stdout
+            .take(8193)
+            .read_to_end(&mut bytes)
+            .await
+            .map(|_| bytes)
+    }));
+    let mut errors = tokio::spawn(async move {
+        // Drain boundedly without printing or returning dependency error text.
+        stderr.take(8193).read_to_end(&mut Vec::new()).await
+    });
+    let result = tokio::time::timeout(Duration::from_secs(15), child.wait()).await;
+    let needs_reap = !matches!(&result, Ok(Ok(_)));
+    let fresh_cli = match result {
+        Err(_) => FreshInfo::Deadline,
+        Ok(Err(_)) => FreshInfo::LaunchFailed,
+        Ok(Ok(status)) if !status.success() => FreshInfo::Refused,
+        Ok(Ok(_)) => {
+            let mut task = output.take().unwrap();
+            let result = tokio::time::timeout(Duration::from_secs(2), &mut task).await;
+            if result.is_err() {
+                task.abort();
+                let _ = task.await;
+            }
+            match result {
+                Ok(Ok(Ok(bytes))) if bytes.len() <= 8192 => {
+                    let value = serde_json::from_slice::<serde_json::Value>(&bytes);
+                    if value.is_ok_and(|v| {
+                        v["metadata_only"] == true && v["volume"]["id"] == service.volume
+                    }) {
+                        FreshInfo::OriginalVolume
+                    } else {
+                        FreshInfo::InvalidOutput
+                    }
+                }
+                _ => FreshInfo::InvalidOutput,
+            }
+        }
+    };
+    // Preserve the process handle through explicit kill/reap. An unconfirmed
+    // reap is a distinct failure, never an assertion that cleanup succeeded.
+    let fresh_cli = if needs_reap && !reap_fixture_child(&mut child).await {
+        FreshInfo::Unreaped
+    } else {
+        fresh_cli
+    };
+    // No task outlives the observer, including malformed output and deadline.
+    if let Some(task) = output {
+        task.abort();
+        let _ = task.await;
+    }
+    errors.abort();
+    let _ = (&mut errors).await;
+    FailureProbe {
+        coordinator_running,
+        fresh_cli,
+    }
+}
+
+pub async fn portable_failure_probe() {
+    let f = Fixture::start().await;
+    let tmp = tempfile::tempdir().unwrap();
+    let (h, mut s) = Harness::new(tmp.path(), &f).await;
+    let before = info(&wire(&cfg(&h.config))).await;
+    let provider_calls = f.requests.lock().unwrap().len();
+    assert_eq!(
+        failure_probe(&h, &mut s).await,
+        FailureProbe {
+            coordinator_running: Some(true),
+            fresh_cli: FreshInfo::OriginalVolume,
+        }
+    );
+    assert_eq!(info(&wire(&cfg(&h.config))).await, before);
+    assert_eq!(
+        f.requests.lock().unwrap().len(),
+        provider_calls,
+        "metadata control contacted S3"
+    );
+    drop(s.child.stdin.take());
+    assert!(
+        tokio::time::timeout(Duration::from_secs(20), s.child.wait())
+            .await
+            .unwrap()
+            .unwrap()
+            .success()
+    );
+    assert_eq!(
+        failure_probe(&h, &mut s).await,
+        FailureProbe {
+            coordinator_running: Some(false),
+            fresh_cli: FreshInfo::Refused,
+        }
+    );
+    assert_eq!(f.requests.lock().unwrap().len(), provider_calls);
+}
+
 struct Harness {
     root: PathBuf,
     config: PathBuf,
@@ -622,6 +777,20 @@ struct Mount {
     diagnostics: Option<tokio::task::JoinHandle<()>>,
     child: Child,
     path: PathBuf,
+}
+async fn report_native_failure(h: &Harness, service: &mut Service, mount: &mut Mount) {
+    let started = std::time::Instant::now();
+    let mount_running = mount.child.try_wait().ok().map(|s| s.is_none());
+    let probe = failure_probe(h, service).await;
+    eprintln!(
+        "FAILED native lifecycle control: mount_running={mount_running:?} {probe:?} elapsed_ms={}",
+        started.elapsed().as_millis()
+    );
+    for child in [&mut mount.child, &mut service.child] {
+        if !reap_fixture_child(child).await {
+            eprintln!("FAILED native lifecycle cleanup: owned process did not reap");
+        }
+    }
 }
 impl Drop for Mount {
     fn drop(&mut self) {

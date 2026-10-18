@@ -7,7 +7,10 @@ at `7215087`, [run 39022063662](https://github.com/marshallr12/s3drive/actions/r
 The [snapshot](evidence/managed-native-mutations-2026-10-17.json) records native-step
 acceptance; Windows was saving cache at capture. Publication additionally requires
 terminal exact-tip Linux/Windows/book CI.
-Windows deletion remains unsupported. Version 3 remains read-only, version 4
+Windows deletion remains unsupported in versions1–6. Subsequent explicit
+[version7/POSIX lifecycle](native-windows-lifecycle.md) passed native acceptance
+and selects its separately measured behavior; it does not claim NTFS parity.
+Status clarified 2026-10-18. Version 3 remains read-only, version 4
 edits existing files and version 5 creates files/directories. Existing configs
 are never upgraded automatically. The [version-6 template](../../examples/managed-mutations.toml)
 requires a portable-collision-v1 authority, the guarded-entry and detached-content
@@ -57,14 +60,16 @@ successful directory fsync resolves and acknowledges pending namespace work; it
 does not implicitly publish every dirty file. Full file durability still requires
 the file's own successful fsync/publication receipt.
 
-## Windows boundary
+## Windows version-6 boundary
 
 Rename and replacement have a native acceptance case. Windows kernel sharing
 rules can reject replacement while the destination is open. DeleteFile,
 directory removal, delete disposition and FILE_DELETE_ON_CLOSE remain refused.
 WinFsp cleanup cannot return an error, and SetDelete can arm or cancel a later
-removal without removing the node. The [reversible disposition protocol](windows-delete-plan.md) is progressing
-through authority, client and native phases before deletion is enabled.
+removal without removing the node. The [original reversible-disposition plan](windows-delete-plan.md) records the
+subsequent protocol stages; their [version7 native lifecycle](native-windows-lifecycle.md)
+now has separate acceptance. The refusals in this section continue to apply to
+version6, not to the explicit version7 profile.
 [WinFsp callback contract](https://raw.githubusercontent.com/winfsp/winfsp/master/inc/winfsp/winfsp.h),
 checked 2026-10-17. Passing rename does not certify full desktop application
 compatibility or Windows open-unlinked semantics.
@@ -99,8 +104,9 @@ A seventh real-driver case per OS exercises save/replace, Unicode directory
 moves, second-bucket identity, cycle refusal and remount. Both lose a committed
 native rename reply and kill/remount the daemon. Linux additionally tests
 retained replaced/unlinked handles, zero links, name reuse, type/emptiness checks,
-directory fsync and lost removal reply. Windows explicitly verifies deletion and
-delete-on-close refusal. Native cases stay serialized. See
+directory fsync and lost removal reply. The version6 Windows case explicitly verifies deletion and
+delete-on-close refusal; the additional version7 lifecycle case exercises its
+separate enabled contract. Native cases stay serialized. See
 [verification](development.md#managed-native-mutation-gate-2026-10-17) for results.
 
 Remote authority/Turso deployment, multi-host invalidation, full application

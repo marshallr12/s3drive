@@ -1,0 +1,93 @@
+{
+  "recorded_at_utc": "2026-10-18T05:58:36.266917+00:00",
+  "overall_acceptance": false,
+  "main_unchanged": "f8c4f5832e399c6c54567c122c875e2a438ce681",
+  "snapshot_component": {
+    "source_commit": "f9a52e2d4fcd575ea4ae73fd4e4a6e6ce75e9566",
+    "run": 39100010372,
+    "windows_job": 117594176311,
+    "run_conclusion": "failure",
+    "windows_state_cases_passed": 269,
+    "snapshot_cli_cases_passed": 2,
+    "ordinary_account_standalone_pass_utc": "2026-10-18T05:44:01Z",
+    "ordinary_account_paired_pass_utc": "2026-10-18T05:45:39Z",
+    "checked": [
+      "live-owner refusal without output",
+      "offline create and inspection",
+      "original source database SHA256 unchanged",
+      "no artifact replacement or restoration authorization",
+      "widened ACL refused then descriptor restored",
+      "hardlink and source junction refused",
+      "case-alias nested output refused",
+      "concurrent read handle coexists"
+    ],
+    "windows_console_cancellation_exercised": false,
+    "late_native_failures": [
+      {
+        "test": "actual_managed_existing_file_writes_and_recovery",
+        "at_utc": "2026-10-18T05:46:00Z",
+        "native_error": 1117,
+        "client_request": "List",
+        "client_phase": "Request",
+        "client_io_kind": "UnexpectedEof",
+        "server": "HttpTimeout connection22,5032ms,read0/write0,flush1,dispatched=false"
+      },
+      {
+        "test": "actual_managed_rename_replace_and_retained_handles",
+        "at_utc": "2026-10-18T05:46:25Z",
+        "client_request": "Info",
+        "client_phase": "Request",
+        "client_io_kind": "UnexpectedEof",
+        "context": "seed child before native exercise",
+        "server": "HttpTimeout connection43,5048ms,read0/write0,flush1,dispatched=false"
+      }
+    ],
+    "server_events_bound_to_failed_requests": false,
+    "separate_expected_outage": "List/Connect timeout at05:46:15 follows deliberate authority stop; native immutable-read case passed"
+  },
+  "console_candidate": {
+    "source_commit": "33ddfe1366c901022cf516deb648dfeb31888dc0",
+    "run": 39100806213,
+    "windows_job": 117596502607,
+    "run_conclusion": "failure",
+    "linux_and_book": "success",
+    "failed_step": "Verify complete Windows disposition lifecycle",
+    "transport": "numeric-loopback HTTP in lifecycle fixture, not TLS",
+    "first_client_error_at_utc": "2026-10-18T05:43:40Z",
+    "request": "Info",
+    "phase": "Request",
+    "timed_out": true,
+    "cleanup_request": "PendingRemoval",
+    "cleanup_timed_out": true,
+    "native_error": 5,
+    "native_location": "support/managed/lifecycle.rs:404 cross-store source-to-target replacement",
+    "server_request_phase_or_commit_outcome": "unproven; loopback HTTP has no TLS connection counters",
+    "snapshot_console_worker_reached": false,
+    "later_windows_steps": "skipped"
+  },
+  "raw_windows_log_sha256": {
+    "f9a52e2": "a8c7706d2f1fa361ad3e5fbf913dd871c8e3683466fdeccbb32353d1ba2e7edc",
+    "33ddfe1": "c079781c51fbce509eb3bf5dd7a7f6a2611712eb889081eb83ddb2181958a4d7"
+  },
+  "rejected_capture_experiment": {
+    "included_in_candidate": false,
+    "observation": "reqwest public HTTP conversions preserve extensions, but execute_request rebuilds the Hyper request without forwarding arbitrary extensions; only timeout configuration is consumed",
+    "control_result": "even complete independently received headers/body produced connection_selected=false; existing TLS fault assertions failed",
+    "action": "removed observer and restored original transport and original assertions, not weakened",
+    "local_log": "/tmp/s3drive-wire-selection-remote1.log",
+    "resolved_public_source_sha256": {
+      "reqwest-0.13.5/src/async_impl/request.rs": "997fdd44c27a25df909f0ea93dcae94a6bf07bf57d63b5901b68ddebba2e3a90",
+      "reqwest-0.13.5/src/async_impl/client.rs": "5b7e2556d122a75cd8d3ef62a33d45e430c8eff229a33bc3f53fc7e9af2d97de",
+      "hyper-util-0.1.21/src/client/legacy/connect/capture.rs": "e11c194268e124d617d7a174a28cfec35e7cc1573fed87eb5f14974a00e471aa",
+      "hyper-util-0.1.21/src/client/legacy/client.rs": "bc854508f0bee926f93adf5c00b0ecd4387d3047d8f748b3571a2a72dcbbb8a1"
+    }
+  },
+  "next_diagnostic": "failure-only fresh CLI Info control and owned-process liveness; preserve original panic, no mutation replay; portable live/stopped test passed, full gate and Windows pending",
+  "limitations": [
+    "No attribution to scheduler, dependency bug, provider or snapshot implementation",
+    "No direct correlation between server connection ordinal and failed client RPC",
+    "No change to client/server deadlines, retry, pooling, TLS validation or request serialization",
+    "No new live Wasabi writes or workstation startup/root/credential changes",
+    "Hosted Windows Server2025 results do not establish Windows10/11 or physical reboot acceptance"
+  ]
+}

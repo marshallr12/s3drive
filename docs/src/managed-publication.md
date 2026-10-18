@@ -1,11 +1,17 @@
 # Managed immutable-file publication
 
-**P6m2 library implementation, 2026-10-16.** The managed publisher now joins the
-real S3 SDK executor, the authority HTTP API and each client's private SQLite
-journal. [Managed native read-only mounts](managed-native.md) now use the same
-verified reader. Native managed writes and a deployed authority remain subsequent
-acceptance phases. This library phase changed no real bucket, credentials,
-configuration or service.
+**P6m2 library checkpoint, 2026-10-16; status clarified 2026-10-18.** This
+chapter records the original immutable-payload protocol and its library tests.
+The publisher joins the S3 SDK, authority API and each client's private SQLite
+journal. Subsequent [native existing-file editing](managed-write-plan.md),
+[creation and directories](managed-namespace-plan.md),
+[rename/replacement](managed-native-mutations.md), explicit
+[Windows lifecycle profile](native-windows-lifecycle.md), [HTTPS](remote-authority.md)
+and [coordinator supervision](authority-startup.md) have passed their scoped
+acceptance on main through f8c4f58. [Current status](README.md) distinguishes
+these checkpoints from pending work. Actual multi-host deployment and managed
+Wasabi acceptance remain open. The original library phase changed no real
+bucket, credentials, configuration or installed service.
 
 ![An immutable generation passes through local staging, authority reservation, one guarded S3 upload, metadata CAS and local acknowledgment.](images/managed-publication.png)
 
@@ -32,8 +38,9 @@ not move bytes. A separate reservation allocates each immutable generation key;
 local generation IDs never identify files globally. Store roots are canonical
 ASCII component prefixes, at most 128 bytes. Provider key/policy limits are
 checked before staging. Each publisher selects one store. The native read-only
-reader maps up to sixteen stores to local S3 sources; native writable routing
-remains a subsequent phase.
+reader maps up to sixteen stores to local S3 sources. Subsequent native writes
+use explicit per-store policies and a default store for unpublished empty files;
+see [the writable routing contract](managed-write-plan.md#configuration-and-authorization).
 
 ## Publication protocol
 
@@ -102,13 +109,14 @@ collected. Pending enumeration verifies settled records too; a damaged receipt
 cannot silently hide work. Schema 9 preserves earlier client/namespace state
 and adds store, reservation, node-payload and client publication fields.
 
-The new `WireClient` accepts only numeric-loopback HTTP URLs at
-`/v1/namespace`, with explicit bearer token, no redirects/proxy/automatic retry,
-10-second request deadline, 4 KiB requests and 8 MiB bounded replies. It is not a
-remote deployment client. Production TLS, identity/volume ACLs, failover and Turso
-remain separate. Managed writable integration must select a portable versioned
-name comparison policy; the current read-only adapter uses `exact-utf8-v1`
-and rejects unsupported Windows name projections.
+The original P6m2 `WireClient` accepted only numeric-loopback HTTP at
+`/v1/namespace`. Current [authenticated HTTPS transport](remote-authority.md)
+also supports explicit remote endpoints and private trust roots, retaining no
+redirects, proxy inheritance or automatic mutation retry. Its limits and trust
+boundary are documented there. No real remote host or Turso service is deployed.
+The original reader supported `exact-utf8-v1`; subsequent writable integration
+requires `portable-collision-v1`. Existing configurations are not silently
+converted, and unsupported Windows name projections still fail explicitly.
 
 ## Acceptance evidence and remaining work
 
@@ -140,10 +148,13 @@ storage route, while different bucket/prefix/endpoint scopes differ.
 These publication tests alone do not certify native adapters, actual multi-host
 network partitions, Turso, physical power-cut recovery or a live managed Wasabi
 workflow. Separate [native read-only acceptance](managed-native.md) now covers
-FUSE/WinFsp reads and multi-store routing. Managed writable integration still
-needs logical-file heads/edit plans, portable naming and atomic replace-save
-semantics, then its own native/provider/recovery acceptance. Keep unsupported
-writable paths until those criteria pass. No bucket import or deletion/GC is enabled.
+FUSE/WinFsp reads and multi-store routing. Subsequent
+[logical edits](managed-edits.md), [writable integration](managed-write-plan.md)
+and [native mutations](managed-native-mutations.md) implement the later layers
+with separate acceptance. Full application compatibility, actual multi-host
+partitions and managed-provider acceptance remain open. Older config versions
+keep their documented unsupported paths. No bucket import or immutable-blob
+reclamation is enabled; native deletion changes metadata and retains payloads.
 
 ## Wasabi generation churn
 

@@ -39,3 +39,8 @@ async fn bootstrap_preserves_existing_state_and_refuses_out_of_scope_default_sto
 async fn paired_startup_preparation_requires_portable_https_and_guarded_rename() {
     managed::portable_supervised_startup_preparation().await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn independent_metadata_failure_probe_distinguishes_live_and_stopped_authority_without_s3() {
+    managed::portable_failure_probe().await;
+}
