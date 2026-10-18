@@ -683,7 +683,7 @@
   "loopback_candidate_phase": {
     "recorded_at_utc": "2026-10-18T08:53:40.527855+00:00",
     "parent_source": "e9887dfc8a73cae80b0f30a01f8ed29184911c1b",
-    "status": "full local gate1 passed; uncommitted, hosted acceptance pending",
+    "status": "pushed bf9509; new hosted acceptance in progress",
     "contract": "At most one canonical IPv4/IPv6 loopback port pair, Omitted for absent/non-loopback metadata, Multiple after more than one successful connector; candidate is not selected-socket/delivery/commit/replay proof",
     "privacy": "Only family and nonzero TCP ports; no addresses/hostnames/headers/certificates/dependency errors retained; server logging remains bounded by original16-category diagnostic budget",
     "controls": [
@@ -730,6 +730,318 @@
       "scope": "fmt/clippy/workspace tests/build/doc links/mdBook build/test; not native or live provider acceptance",
       "rust_and_cargo_unchanged": true
     },
-    "finished_at_utc": "2026-10-18T08:59:11.802977+00:00"
+    "finished_at_utc": "2026-10-18T08:59:11.802977+00:00",
+    "hosted_run": {
+      "source_commit": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+      "run": 39113628548,
+      "url": "https://github.com/marshallr12/s3drive/actions/runs/39113628548",
+      "observed_at_utc": "2026-10-18T09:28:55.622190+00:00",
+      "status": "completed",
+      "overall_acceptance": true,
+      "book_job": 117634798973,
+      "windows_job": 117634799237,
+      "linux_job": 117634799264,
+      "remote_private_verified": true,
+      "remote_main_unchanged": "f8c4f5832e399c6c54567c122c875e2a438ce681",
+      "raw_review": "Completed all three logs reviewed; only controlled wire faults, deliberate authority-stop read failure and permitted typed shutdown events",
+      "book_conclusion": "success",
+      "linux_status": "in_progress",
+      "windows_status": "completed",
+      "linux_conclusion": "success",
+      "linux_raw_sha256": "caf2e600067f9b4084b03c92e22babe255b4145fdbfd5ebe5152506d8478ac35",
+      "book_raw_sha256": "4c34b1e69140780f20c414f98e0f8825ecd63c80ac24f406cf17778dd083ceac",
+      "linux_raw_verified": [
+        "authority6unit/lifetime2/execution1/HTTP10/TLS9 and real CLI TLS controls",
+        "274state",
+        "all9 native including32 exact HTTPS binary/Unicode flushes with single PUT counts",
+        "paired no-systemd HTTPS/FUSE terminal loss, coordinator crashes, exact unknown IDs/no repeated PUT and retained conflicts",
+        "coordinator startup/recovery/removal over HTTP and HTTPS without systemd",
+        "controlled header timeout and deliberate authority-stop Node/ConnectionRefused are the only transport diagnostics found; no unclassified native RPC error"
+      ],
+      "windows_step_observations": [
+        "early metadata controls success",
+        "ordinary-account standalone coordinator/snapshot step success",
+        "native32-flush step success",
+        "replacement reference step success",
+        "complete native disposition lifecycle step success",
+        "workspace tests in progress"
+      ],
+      "run_conclusion": "success",
+      "windows_conclusion": "success",
+      "acceptance_scope": "exact bf9509 hosted native/wire/startup/snapshot checkpoint only; not full goal completion, general reliability, physical reboot, Windows desktop or live Wasabi acceptance",
+      "windows_raw_sha256": "eed2c6ff449f8f2af7cb4581cada64e53d980a29513ac1d4d185a43a4cef09bd",
+      "windows_raw_verified": [
+        "authority6unit/lifetime2/execution1/HTTP10/TLS9 and real CLI TLS caller socket-tag controls",
+        "standalone ordinary-account supervisor, independent logons and original-volume/receipt recovery",
+        "standalone/paired offline snapshots, ACL/link/case/read-handle checks and isolated Ctrl+C",
+        "native32 HTTPS flush generations with exact binary/Unicode bytes and single PUT counts",
+        "complete native disposition lifecycle and lost callback/killed-owner recovery",
+        "269state and remaining workspace cases",
+        "paired TLS drive/coordinator, independent logons, exact unknown recovery/no repeated PUT, retained conflict and independent removal",
+        "broader native7 cases; no unclassified metadata RPC warning; sole List/ConnectionRefused follows deliberate authority stop",
+        "typed HttpShutdown events have positive read/write/flush/dispatched and completed caller semantics; no HttpTransport/UnexpectedEof"
+      ],
+      "console_cancel_to_exit_ms_single_observations": {
+        "standalone": 4,
+        "paired": 35
+      },
+      "strict_reference_artifacts": [
+        {
+          "kind": "replacement",
+          "records": 21,
+          "source": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+          "sha256": "14fff5670bf36a0a34c20001120ef876b0ff88706c166cf63eb4a846b00ef9a5",
+          "strict_types_and_all_fields_match": true
+        },
+        {
+          "kind": "disposition",
+          "records": 14,
+          "source": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+          "sha256": "c0939b2073bc5db59cf894bf8e0813bf50b586eb1c731342fac32972e0c3ce78",
+          "strict_types_and_all_fields_match": true
+        }
+      ],
+      "artifact_download_proof": [
+        {
+          "kind": "replacement",
+          "id": 12131676383,
+          "zip_sha256": "539dcc51f221e1979e2d660f18f2a4483ec427236edfab776c31dde4fcf37d77",
+          "json_sha256": "14fff5670bf36a0a34c20001120ef876b0ff88706c166cf63eb4a846b00ef9a5"
+        },
+        {
+          "kind": "disposition",
+          "id": 12131668820,
+          "zip_sha256": "02c3596fb0692fd520cd2519f697d3a00140f6475f37479d2dc5f97a9e109cf4",
+          "json_sha256": "c0939b2073bc5db59cf894bf8e0813bf50b586eb1c731342fac32972e0c3ce78"
+        }
+      ],
+      "project_oracles": "strict21/14 passed against exact bf9509 source; log /tmp/s3drive-loopback-bf9509-artifacts/project-oracles.log",
+      "root_cause_or_general_windows_fix_proven": false
+    }
+  },
+  "error_connection_info_research": {
+    "recorded_at_utc": "2026-10-18T09:12:20.018376+00:00",
+    "production_source": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05 remains unchanged",
+    "implemented_in_production": false,
+    "archive": "error-connection-info-probe-20261018.tar.gz",
+    "archive_sha256": "411a5736a93bc129a03a5a4963586cfd60d969d2ceb0948a41e8c3c45aabef79",
+    "members_sha256": {
+      "Cargo.toml": "77042d9cd3f591d229c4db6cf1660ee0975694ff03463a06de2712e034aa3272",
+      "Cargo.lock": "68ab88bb45f799666e84da337628621d8302f0aea0276b7aeaa12bbfc6a11595",
+      "src/main.rs": "5b54c97398e1b7035cc6a6593997b8decc5105ec007356bd5b97169a6e8d5fb9",
+      "README.md": "450bd49a32026f7adab962856af67700ab42ec9fdd8e15dcdff50708a2a4a6d5"
+    },
+    "scratch": "/tmp/s3drive-error-connection-info-20261018-1p10x0dp",
+    "log": "/tmp/s3drive-error-connection-info-probe1.log",
+    "log_sha256": "0db9cdc59e4d4c187be1c658ce25496dc99fcd83629fb5d67256a964910294c7",
+    "exit_code": 0,
+    "observed": "HTTP and HTTPS deliberate lost replies expose Hyper-util Error::connect_info through the bounded reqwest error source chain, matching independently accepted TCP metadata; four existing success/lost controls also pass",
+    "resolved_api": "hyper-util0.1.21 client/legacy/client.rs Error::connect_info; errors returned by pooled.try_send_request attach conn_info; connection_for errors return earlier without attaching it",
+    "dependency_source_sha256": "bc854508f0bee926f93adf5c00b0ecd4387d3047d8f748b3571a2a72dcbbb8a1",
+    "limits": [
+      "Linux-only standalone GET, generated CA, no bearer/body/provider/native acceptance",
+      "dependency error source chains not stable across releases; revalidate exact versions",
+      "absence of metadata never establishes unsent or permits replay",
+      "future production diagnostic must sanitize non-loopback metadata and distinguish absent legacy error from absent HttpInfo",
+      "no outcome/causality conclusion for historical native EOFs without this field"
+    ]
+  },
+  "initial_status_scope": "Top-level overall_acceptance/main_unchanged retain the original record status; later source-specific checkpoint acceptance is recorded under loopback_candidate_phase.hosted_run and publication_bf9509, not full-goal completion",
+  "publication_bf9509": {
+    "recorded_at_utc": "2026-10-18T09:27:17.809755+00:00",
+    "source_commit": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+    "previous_main": "f8c4f5832e399c6c54567c122c875e2a438ce681",
+    "primary_run": 39113628548,
+    "cohort_all_three_success": true,
+    "native_raw_review_complete": true,
+    "windows_scope": "hosted Windows Server2025/WinFsp2.1.25156.ddca7bd; no desktop/reboot/live Wasabi proof",
+    "root_cause_or_general_windows_fix_proven": false,
+    "raw_log_sha256": {
+      "linux": "caf2e600067f9b4084b03c92e22babe255b4145fdbfd5ebe5152506d8478ac35",
+      "windows": "eed2c6ff449f8f2af7cb4581cada64e53d980a29513ac1d4d185a43a4cef09bd",
+      "book": "4c34b1e69140780f20c414f98e0f8825ecd63c80ac24f406cf17778dd083ceac"
+    },
+    "strict_artifacts": [
+      {
+        "kind": "replacement",
+        "records": 21,
+        "source": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+        "sha256": "14fff5670bf36a0a34c20001120ef876b0ff88706c166cf63eb4a846b00ef9a5",
+        "strict_types_and_all_fields_match": true
+      },
+      {
+        "kind": "disposition",
+        "records": 14,
+        "source": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+        "sha256": "c0939b2073bc5db59cf894bf8e0813bf50b586eb1c731342fac32972e0c3ce78",
+        "strict_types_and_all_fields_match": true
+      }
+    ],
+    "artifact_download_proof": [
+      {
+        "kind": "replacement",
+        "id": 12131676383,
+        "zip_sha256": "539dcc51f221e1979e2d660f18f2a4483ec427236edfab776c31dde4fcf37d77",
+        "json_sha256": "14fff5670bf36a0a34c20001120ef876b0ff88706c166cf63eb4a846b00ef9a5"
+      },
+      {
+        "kind": "disposition",
+        "id": 12131668820,
+        "zip_sha256": "02c3596fb0692fd520cd2519f697d3a00140f6475f37479d2dc5f97a9e109cf4",
+        "json_sha256": "c0939b2073bc5db59cf894bf8e0813bf50b586eb1c731342fac32972e0c3ce78"
+      }
+    ],
+    "private_verified": true,
+    "publication_complete": true,
+    "local_main_updated": true,
+    "push_exit_code": 0,
+    "verified_after_push_utc": "2026-10-18T09:27:19.434453+00:00",
+    "dirty_files_preserved": true
+  },
+  "same_source_main_repeat_bf9509": {
+    "run": 39115395230,
+    "source_commit": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39115395230",
+    "status": "completed",
+    "overall_acceptance": true,
+    "raw_review": "completed job logs independently reviewed, own artifacts downloaded/digest checked, strict21/14 and project oracles passed",
+    "source_or_workflow_changed": false,
+    "observed_at_utc": "2026-10-18T09:50:31.364291+00:00",
+    "book_job": 117640049659,
+    "book_conclusion": "success",
+    "linux_job": 117640049798,
+    "linux_status": "completed",
+    "windows_job": 117640049853,
+    "windows_status": "completed",
+    "conclusion": "success",
+    "acceptance_scope": "Exact-source repeated offline snapshot/diagnostic prototype checkpoint only; no historical root cause or full-goal claim",
+    "linux_conclusion": "success",
+    "windows_conclusion": "success",
+    "strict_artifacts": [
+      {
+        "kind": "replacement",
+        "records": 21,
+        "source": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+        "sha256": "3578a664ebcd3446c23308703afd420ba0fbd60910cb1e1f72d28708bc1f2fe3",
+        "strict_types_and_all_fields_match": true
+      },
+      {
+        "kind": "disposition",
+        "records": 14,
+        "source": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+        "sha256": "ed88a3f821d535d58d546fee03e00bd7a9d8356c71b78ab082dbb4cbe0b68d9d",
+        "strict_types_and_all_fields_match": true
+      }
+    ],
+    "artifact_download_proof": [
+      {
+        "kind": "disposition",
+        "id": 12132218301,
+        "zip_sha256": "1488828d95c921991e8f8d2042ab677c188bef0f5eab05952f3bef53690dd849",
+        "json_sha256": "ed88a3f821d535d58d546fee03e00bd7a9d8356c71b78ab082dbb4cbe0b68d9d"
+      },
+      {
+        "kind": "replacement",
+        "id": 12131839899,
+        "zip_sha256": "09496127bd3464bc3b7dab8dd38e6a8b94628e5c93925f4d5f12e0a562f1f6f9",
+        "json_sha256": "3578a664ebcd3446c23308703afd420ba0fbd60910cb1e1f72d28708bc1f2fe3"
+      }
+    ],
+    "raw_log_sha256": {
+      "linux": "182b7477659cc4078f0d80ef997b56a3f88c1a03082884e4b481e77d1bda140f",
+      "windows": "e18aa546a2387673caad79b5dac2f2e070c13ae9911582ac0dd0db5050d15752",
+      "book": "f53781abd5bbeb624edd060378443a3d99b77ce6764d9dcbd0b75665232f4bad"
+    },
+    "windows_console_cancel_to_exit_ms": {
+      "standalone": 3,
+      "paired": 5
+    },
+    "console_timing_scope": "single observations, not guarantees",
+    "windows_transport_review": "One typed HttpShutdown during32-flush burst with read243/write239/flush5/dispatched=true; complete caller32-flush/bytes/single-PUT checks passed. Sole native RPC failure List/Connect/TimedOut after deliberate authority stop. No UnexpectedEof or generic HttpTransport.",
+    "linux_transport_review": "Only intentional stopped-authority Node/Connect/ConnectionRefused twice and controlled TLS fault cases; all9 native and both coordinator startup protocols passed",
+    "proof_directory": "/tmp/s3drive-main-bf9509-repeat-artifacts",
+    "checker_log": "/tmp/s3drive-main-bf9509-repeat-check.log"
+  },
+  "handoff_refresh_bf9509": {
+    "archive": "docs/archive/HANDOFF-before-bf9509-refresh-20261018.md",
+    "archive_sha256": "7e6ea7afa13c681ba9f46f166b0cbcf4a75b1091722fab54f77f820d7877769c",
+    "before_lines": 405,
+    "after_lines": 242,
+    "docs_links_build_test": "passed; /tmp/s3drive-bf9509-handoff-book{,-tests}.log"
+  },
+  "error_connection_metadata_phase": {
+    "date": "2026-10-18",
+    "branch": "codex/error-connection-metadata",
+    "parent": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+    "status": "local candidate; hosted acceptance pending",
+    "source_sha256": {
+      "crates/s3drive-authority/src/connection_tag.rs": "d995fd49d6e231cdd806c670562803a61986bd57884f22f9f8da91a85457ab5b",
+      "crates/s3drive-authority/src/lib.rs": "222a22baf9598f871106b8bbead078a33088f909bcc7cd96844d4317c07c3a76",
+      "crates/s3drive-authority/src/wire.rs": "817ba3c0ca618755d85cefb1aedf26958f10b6fa256ffd6a4329526f40a3906f",
+      "crates/s3drive-authority/tests/remote.rs": "1718f7c0d860e696dceebd7d96dc5a2462bece88483267fae35018ff5da85a28"
+    },
+    "dependency_api": "Resolved Hyper-util0.1.21 public legacy::Error::connect_info and Connected::get_extras; bounded16-source walk, source chains pinned-version only",
+    "dependency_source_sha256": "bc854508f0bee926f93adf5c00b0ecd4387d3047d8f748b3571a2a72dcbbb8a1",
+    "observations": [
+      "Unobserved legacy error or no dependency error under outer deadline",
+      "Unavailable connection information from observed legacy error",
+      "Omitted missing TCP/noncanonical or non-loopback metadata",
+      "Loopback sanitized family/client/server ports",
+      "Multiple matching legacy errors, no single connection exposed"
+    ],
+    "focused_gate": {
+      "command": "cargo test -p s3drive-authority --locked",
+      "exit_code": 0,
+      "log": "/tmp/s3drive-error-connection-focused1.log",
+      "unit": 7,
+      "http": 10,
+      "tls": 9,
+      "connection_lifetime": 2,
+      "execution": 1
+    },
+    "local_full_gate": {
+      "status": "completed",
+      "session": 77211,
+      "log": "/tmp/s3drive-error-connection-gate1.log",
+      "exit_code": 0,
+      "log_sha256": "d4eac8ad61a089ce83e7c86ac0bfd0fc11747ad9aadc6fc44de7ecae7ffc6795",
+      "source_unchanged": true,
+      "authority_unit": 7,
+      "state": 274,
+      "docs": 57
+    },
+    "controls": [
+      "lost mutation reply candidate and error tag match independent peer socket",
+      "concurrent stalled TLS/lost reply remain correctly associated",
+      "failed trust/stalled handshake reports Unavailable",
+      "truncated response proves full request receipt yet has Unobserved legacy error",
+      "unknown extras omitted, multiple observations ambiguous, shared canonical endpoint privacy filter"
+    ],
+    "contract_unchanged": [
+      "request execution",
+      "timeouts",
+      "trust",
+      "retry",
+      "framing",
+      "operation identity",
+      "no-replay and unknown-outcome rules"
+    ],
+    "hosted_acceptance": false,
+    "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+    "limits": [
+      "error-reported connection is not delivery/authentication/commit proof",
+      "absence of information is not proof of unsent and never permits replay",
+      "Linux local portable tests do not replace either native OS gate",
+      "historical intermittent failures remain unexplained"
+    ],
+    "final_docs": {
+      "links": 57,
+      "build_exit_code": 0,
+      "test_exit_code": 0,
+      "log_sha256": {
+        "/tmp/s3drive-error-connection-final-book.log": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4",
+        "/tmp/s3drive-error-connection-final-book-tests.log": "18cb1cf40c90c10e5ad5730f90e6845f480c1c0e9795f03a3b78ab6d21854d2d"
+      }
+    }
   }
 }

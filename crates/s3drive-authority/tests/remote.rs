@@ -1,8 +1,9 @@
 //! Real TCP/TLS, SQLite and independent clients. This is local wire acceptance,
 //! not evidence of remote hosting, multiple physical hosts or Turso behavior.
 use s3drive_authority::{
-    Apply, Authority, ConnectorCandidate, Error, Kind, LoopbackSocket, Mutation, ROOT, Reply,
-    Request, ServerTls, Token, WireClient, WireError, WirePhase, WireRequest, serve_tls,
+    Apply, Authority, ConnectorCandidate, Error, ErrorConnection, Kind, LoopbackSocket, Mutation,
+    ROOT, Reply, Request, ServerTls, Token, WireClient, WireError, WirePhase, WireRequest,
+    serve_tls,
 };
 use std::{
     sync::{
@@ -174,8 +175,8 @@ async fn tls_neither_follows_redirects_nor_replays_a_dropped_reply() {
             assert_eq!(error, WireError::HttpStatus(307));
         } else {
             assert!(
-                matches!(error, WireError::Transport { connector_candidate: ConnectorCandidate::Loopback(observed), .. } if observed == socket),
-                "lost mutation reply candidate differs from independently accepted TCP socket: {error:?}"
+                matches!(error, WireError::Transport { connector_candidate: ConnectorCandidate::Loopback(observed), error_connection: ErrorConnection::Loopback(reported), .. } if observed == socket && reported == socket),
+                "lost mutation reply candidate/error connection differs from independently accepted TCP socket: {error:?}"
             );
             assert!(
                 matches!(
@@ -325,7 +326,7 @@ async fn tls_wire_diagnostics_distinguish_failure_stages_without_disclosing_inpu
                 Fault::Status => assert_eq!(error, WireError::HttpStatus(503), "{context}"),
                 Fault::Oversize => assert_eq!(error, WireError::ResponseTooLarge, "{context}"),
                 Fault::InvalidReply => assert_eq!(error, WireError::InvalidReply, "{context}"),
-                Fault::TruncatedBody => assert!(matches!(error, WireError::Transport { request: WireRequest::Info, phase: WirePhase::ResponseBody, timed_out: false, body_frame_polled: true, .. }), "{context}"),
+                Fault::TruncatedBody => assert!(matches!(error, WireError::Transport { request: WireRequest::Info, phase: WirePhase::ResponseBody, timed_out: false, body_frame_polled: true, error_connection: ErrorConnection::Unobserved, .. }), "{context}"),
                 Fault::RequestTimeout => assert!(matches!(error, WireError::Transport { request: WireRequest::Info, phase: WirePhase::Request, timed_out: true, body_frame_polled: true, .. }), "{context}"),
                 Fault::BodyTimeout => assert!(matches!(error, WireError::Transport { request: WireRequest::Info, phase: WirePhase::ResponseBody, timed_out: true, body_frame_polled: true, .. }), "{context}"),
             }
@@ -421,6 +422,7 @@ async fn tls_requires_correct_trust_hostname_token_and_volume() {
                 connector_started: true,
                 connector_completed: false,
                 connector_candidate: ConnectorCandidate::Unobserved,
+                error_connection: ErrorConnection::Unavailable,
                 ..
             }
         ),
@@ -574,6 +576,7 @@ async fn tls_concurrent_connector_observations_stay_with_the_original_request() 
                     connector_started: true,
                     connector_completed: false,
                     connector_candidate: ConnectorCandidate::Unobserved,
+                    error_connection: ErrorConnection::Unavailable,
                     ..
                 }
             ))
@@ -594,8 +597,9 @@ async fn tls_concurrent_connector_observations_stay_with_the_original_request() 
                     connector_started: true,
                     connector_completed: true,
                     connector_candidate: ConnectorCandidate::Loopback(socket),
+                    error_connection: ErrorConnection::Loopback(reported),
                     ..
-                } if *socket == expected_socket
+                } if *socket == expected_socket && *reported == expected_socket
             ))
             .count(),
         1,

@@ -893,7 +893,29 @@ include the same loopback-only tag. Acceptance requires independent TCP/TLS
 comparison, missing/non-loopback/multiple-candidate and concurrency controls,
 redaction/no-replay regressions and a new full gate plus hosted native cohort.
 A candidate tag is not proof of selected socket, delivery, authorization or
-commit. The current e988 hosted run remains evidence for that exact commit.
+commit. The earlier e988 hosted run is evidence for that exact failed commit.
+
+The bounded loopback-tag phase is now accepted as checkpoint bf9509 at
+[CI39113628548](https://github.com/marshallr12/s3drive/actions/runs/39113628548):
+all three jobs, raw native/startup/snapshot review and independently strict21/14
+artifacts passed. Private main was fast-forwarded to that exact source. This is
+not a root-cause/reliability or full-goal completion claim. An
+[unchanged-source main repeat](https://github.com/marshallr12/s3drive/actions/runs/39115395230)
+also passed all three jobs, raw review and its own independently verified21/14
+artifacts. The separate public Error::connect_info experiment led to the
+unaccepted diagnostic candidate described below. Restore/failover,
+real-provider/application and physical startup/desktop gates remain required.
+
+The next bounded diagnostic phase adopts the independently verified public
+Hyper-util error connection information without changing request execution.
+It must distinguish an unobserved legacy error, observed legacy error without
+connection info, omitted non-loopback/missing TCP metadata, one sanitized
+loopback error connection, and ambiguous multiple legacy errors. A lost-reply
+control must match the independently accepted peer; rejected TLS and truncated
+response controls must validate the missing-information states. Preserve all
+redaction/no-replay/outcome guards and require the full local gate plus a new
+hosted cohort. Error-reported connection information is not delivery/commit proof.
+The completed main repeat remains evidence only for the unchanged bf9509 source.
 
 Require exclusive existing-authority ownership and explicit volume/policy pin;
 read supported legacy/current state without migrations or namespace changes.

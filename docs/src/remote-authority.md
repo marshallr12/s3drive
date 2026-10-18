@@ -315,6 +315,96 @@ wire framing, privacy, trust, timeout and no-replay assertions remain. These
 focused local checks and the full local gate passed (including274 state tests,
 nine TLS cases and six authority unit cases). A new native cohort is required. The e988 hosted run covers its earlier source without these tags.
 
+### Error connection metadata (research control, 2026-10-18)
+
+A separate [standalone reproducer](evidence/error-connection-info-probe-20261018.tar.gz)
+passed the four HTTP/TLS complete/lost-reply controls and two additional
+comparisons. For each deliberately lost reply, Hyper-util's public
+[Error::connect_info](https://docs.rs/hyper-util/0.1.21/hyper_util/client/legacy/struct.Error.html#method.connect_info)
+was reachable through the bounded reqwest error source chain and matched the
+independent peer's actual TCP connection. Production bf9509 does not collect it.
+
+In resolved0.1.21, errors from the pooled send path attach connection information;
+errors returning earlier from `connection_for` do not. This offers a stronger
+future observation than a connector candidate alone. Dependency source chains
+are not stable APIs across releases; validate the pinned versions and sanitize
+non-loopback information before adoption. Missing metadata cannot prove an
+unsent request or authorize replay. This was a Linux-only GET fixture without
+bearer authentication, JSON body or real provider; it does not explain historical
+native failures. See the [dated record](evidence/authority-snapshot-platform-20261018.json)
+for exact source, archive and log hashes.
+
+## Accepted hosted checkpoint bf9509 (2026-10-18)
+
+[CI39113628548](https://github.com/marshallr12/s3drive/actions/runs/39113628548)
+completed all three jobs successfully at exact source bf9509. Raw review confirmed
+Linux's nine native cases, Windows's32-flush and complete lifecycle gates plus
+seven broader native cases, ordinary-account standalone/paired supervisor and
+snapshot checks, exact unknown-operation recovery, retained conflicts and
+controlled removal. The only Windows metadata transport failure was the deliberate
+authority-stop List/ConnectionRefused check. Typed shutdown diagnostics retained
+positive counters and completed caller semantics; no unexpected EOF or generic
+HTTP transport event was found.
+
+The source-bound artifact download digests, independent strict21/14 field/type/
+platform checks and project reference oracles passed. Private `main` was normally
+fast-forwarded from f8c4f58 to bf9509, with remote SHA/privacy rechecked and dirty
+local research preserved. See the [dated publication record](evidence/authority-snapshot-platform-20261018.json).
+
+This accepts the offline snapshot/transport diagnostic checkpoint on hosted Linux
+and Windows Server2025/WinFsp2.1.25156.ddca7bd. Snapshot restoration remains
+unsupported. Console cancellation took4ms standalone and35ms paired, each one
+observation. It does not prove the cause or elimination of earlier intermittent
+EOFs, Windows10/11, physical reboot or live managed Wasabi writes. A new
+[unchanged-source main repeat](https://github.com/marshallr12/s3drive/actions/runs/39115395230)
+completed successfully. Its separately downloaded artifacts passed digest,
+strict21/14 and project-oracle checks. Raw review confirmed Linux9 native cases
+and Windows32-flush, lifecycle, paired recovery and broader7 native cases.
+Windows's sole metadata failure was a Connect/TimedOut List call after the
+deliberate authority stop; Linux's two Node/ConnectionRefused events were also
+in that outage control. One typed Windows HttpShutdown event during the flush
+burst had positive read/write/flush/dispatched counters and the complete32-flush
+caller checks passed. No unexpected EOF or generic HttpTransport appeared.
+Standalone/paired Windows console cancellation observations were3ms/5ms; these
+are individual samples. Two passing cohorts do not establish the historical
+failure's cause or a general reliability guarantee. The full goal remains active.
+
+## Error-reported connection diagnostic (candidate, 2026-10-18)
+
+The follow-up adds `error_connection` when classifying a transport failure.
+It uses the pinned Hyper-util0.1.21 public
+[Error::connect_info](https://docs.rs/hyper-util/0.1.21/hyper_util/client/legacy/struct.Error.html#method.connect_info)
+getter after a bounded16-element error-source walk (resolved source inspected
+2026-10-18). The existing connector candidate is retained separately. The new
+field distinguishes these observations:
+
+| Value | Observation |
+| --- | --- |
+| `Unobserved` | No matching legacy error in the bounded chain, or an outer deadline without a dependency error |
+| `Unavailable` | Matching legacy error reports no connection information |
+| `Omitted` | Information exists, but lacks TCP endpoints or fails the canonical loopback filter |
+| `Loopback` | Sanitized family and client/server ports from error-reported connection information |
+| `Multiple` | More than one matching legacy error; no individual connection is exposed |
+
+Only the existing exact127.0.0.1 or::1 endpoint filter can produce a socket tag.
+No host, other IP address, arbitrary connection extra, request, credential or
+dependency error string is retained. This work runs on the error path and changes
+no request execution, timeout, trust, retry, framing or operation-identity policy.
+Source-chain availability is a pinned-version observation; dependency upgrades
+must rerun these controls.
+
+Local TLS controls match both candidate and error-reported tags to independently
+accepted sockets for lost mutation replies and concurrent requests. Wrong trust
+and a stalled handshake report `Unavailable`. A truncated-response control proves
+full request receipt yet reports `Unobserved`, showing why missing information
+cannot prove a request was unsent. Unit controls cover unknown extras and
+ambiguous repeated observations; the shared endpoint filter retains its IPv4,
+IPv6, mixed-family, noncanonical and non-loopback tests. Redaction and exact
+no-replay assertions remain required. Error-reported connection information is
+not authentication, delivery or commit proof and never authorizes replay.
+The full local and new exact-source hosted native gates are required before
+accepting this candidate; the bf9509 cohorts prove only their unchanged source.
+
 ## Bounded failure diagnostics (2026-10-17)
 
 The [same-source Windows failure investigation](authority-startup.md#same-source-repeat-failure-2026-10-17)

@@ -42,6 +42,42 @@ pub enum ConnectorCandidate {
     /// More than one successful connector; no individual candidate is exposed.
     Multiple,
 }
+
+/// Connection information reported by a pinned dependency's error. Even a
+/// reported connection does not prove delivery, authentication or commit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ErrorConnection {
+    /// No matching legacy error was observed in the bounded source walk.
+    Unobserved,
+    /// A legacy error was observed, but its connect_info() returned None.
+    Unavailable,
+    /// Connection info exists, but TCP metadata is missing or not loopback.
+    Omitted,
+    Loopback(LoopbackSocket),
+    /// More than one legacy error was observed; no single connection is exposed.
+    Multiple,
+}
+impl ErrorConnection {
+    pub(crate) fn observe(
+        &mut self,
+        info: Option<&hyper_util::client::legacy::connect::Connected>,
+    ) {
+        if *self != Self::Unobserved {
+            *self = Self::Multiple;
+            return;
+        }
+        let Some(info) = info else {
+            *self = Self::Unavailable;
+            return;
+        };
+        let mut extras = axum::http::Extensions::new();
+        info.get_extras(&mut extras);
+        *self = extras
+            .get::<hyper_util::client::legacy::connect::HttpInfo>()
+            .and_then(|info| LoopbackSocket::from_endpoints(info.local_addr(), info.remote_addr()))
+            .map_or(Self::Omitted, Self::Loopback);
+    }
+}
 #[derive(Default)]
 pub(crate) struct Candidate(AtomicU64);
 impl Candidate {
@@ -144,5 +180,24 @@ mod tests {
             }
         });
         assert_eq!(candidate.snapshot(), ConnectorCandidate::Multiple);
+    }
+    #[test]
+    fn error_info_distinguishes_absence_omits_unknown_extras_and_refuses_ambiguity() {
+        use hyper_util::client::legacy::connect::Connected;
+        let private = "never-retain-unknown-connection-extra";
+        let info = Connected::new().extra(private.to_owned());
+        let mut observed = ErrorConnection::Unobserved;
+        observed.observe(Some(&info));
+        assert_eq!(observed, ErrorConnection::Omitted);
+        assert!(!format!("{observed:?}").contains(private));
+        observed.observe(None);
+        assert_eq!(observed, ErrorConnection::Multiple);
+        observed.observe(Some(&info));
+        assert_eq!(observed, ErrorConnection::Multiple);
+        let mut unavailable = ErrorConnection::Unobserved;
+        unavailable.observe(None);
+        assert_eq!(unavailable, ErrorConnection::Unavailable);
+        unavailable.observe(Some(&Connected::new()));
+        assert_eq!(unavailable, ErrorConnection::Multiple);
     }
 }

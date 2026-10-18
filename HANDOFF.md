@@ -2,366 +2,266 @@
 
 Updated 2026-10-18. Goal ACTIVE. Mira is the assistant; no voice-context handoff
 capability was available. Read this and docs/src/implementation-plan.md before
-implementation. Research, decisions and acceptance records belong in docs/src/.
+implementation. Keep research/decisions/status/plans in docs/src/. Run the local
+gate with `bash scripts/gate.sh`; native/provider/recovery gates are separate.
 
-## Current source and first action
+## Accepted checkpoint and first action
 
-- Private topic codex/authority-snapshots is e9887dfc8a73cae80b0f30a01f8ed29184911c1b,
-  normal FF pushed from949; exact remote SHA/privacy and main f8 rechecked.
-- CI39111567111 at e988 is TERMINAL FAILURE. Linux117628636755/book117628636627
-  SUCCESS; Windows117628636806 failed paired managed startup/recovery after raw
-  controls, standalone snapshot/console,32flush, full lifecycle and workspace
-  (269state) passed. Raw /tmp/s3drive-connector-e988-{linux,windows,book}.log.
-  Paired Info/Request/UnexpectedEof at08:52:23Z had body_frame_polled=false,
-  connector_started=true AND connector_completed=true. Thus a scoped connector
-  returned successfully before the failure; no exact socket/dispatch correlation.
-  Nearby emptyTLSsocket133 HttpTimeout5083ms/read0/write0/flush1/dispatched=false.
-  Semantic failure: lost upload response did not retain exactly one uncertain PUT;
-  actual provider upload/commit NOT proven. Secondary locked disposable profile
-  cleanup failed; preserve original failure. Later14-reference/broad steps skipped.
-  Process-class logs show both supervisors/children BelowNormal in this paired
-  run; actual thread priorities and any causal connection remain unmeasured.
-  Standalone cancellation16ms is a single observation. No artifact acceptance or
-  main promotion. Prepared e988 cohort/oracle scripts MUST NOT run for failure.
-- NEW loopback-tag source (parent e988) remains UNCOMMITTED. Full local gate1 EXIT0,
-  /tmp/s3drive-loopback-tag-gate1.log; Rust/Cargo fingerprints unchanged.
-  Counts: authority6unit, lifetime2/execution1/HTTP10/TLS9, state274, remaining
-  workspace suites/build/57-doc links/mdBook build/test. Session43574 is closed.
-  Authority focused2 and CLI2 controls exit0. Final docs/source/privacy review,
-  then normal topic push to obtain NEW hosted proof are next.
-  e988 results never establish acceptance for the new working tree.
-- Local new source records one canonical loopback candidate with only family/
-  client+server ports, omitted for other/missing metadata and ambiguous after
-  multiple successes. Server adds the same sanitized tag before final dispatched=;
-  original failure classes/assertions stay. Scope/concurrent/missing/multiple,
-  independent lost mutation TCP tags and actual CLI failure-event tags pass.
-  No native fixture or workflow changes. All new source/research/probe archive
-  should be bundled in the next substantive checkpoint; no docs-only native CI.
-- Main remains f8c4f5832e399c6c54567c122c875e2a438ce681. No new candidate accepted.
-- CI39108821537 at949 is TERMINAL FAILURE: Linux117620351955 and book117620351830
-  SUCCESS; Windows117620351957 failed broad native existing-file writes. Raw logs
-  /tmp/s3drive-rpc-dispatch-949-{linux,windows,book}.log reviewed. Windows controls,
-  unchanged32flush, complete lifecycle, workspace269state, standalone/paired
-  recovery/snapshot/console and project21/14 reference steps passed. Broad6passed/
-  1failed: managed.rs1758 existing nonempty Unicode file open, List/Request/
-  UnexpectedEof/native1117/body_frame_polled=false. Nearby empty TLS socket19
-  HttpTimeout5057ms/read0/write0/flush1/dispatched=false is NOT exactly correlated.
-  Deliberate authority-stop List/Connect timeout in the immutable-read case is
-  expected by that fixture; no other broad transport warning found. Do not treat
-  the older e51 passing-mutation List/EOF as classified. No main promotion.
-- The earlier e988 checkpoint adds request-scoped connector call/success
-  flags through public reqwest connector_layer. Layer captures task-local Arc at
-  call; one monotonic atomic snapshot; no destinations/headers/bodies/errors.
-  Public layering changes connector boxing/scheduling; no causal fix claim.
-  Direct tower-layer/service0.3.3 dependencies already resolved, no version churn.
-  Local focused controls passed; gate1 caught Clippy async-yields-async in test,
-  corrected with inspected sync_scope. Full gate2 EXIT0, log
-  /tmp/s3drive-connector-observation-gate2.log:274state, authority3unit including
-  connector1, lifetime2/execution1/HTTP10/TLS9, other workspace suites/build/57docs.
-  Rust/Cargo fingerprint check unchanged. First action after publication: inspect
-  exact new CI using gh run list/view; no restart of the failed949 source.
-- A14 CI39106656359 is TERMINAL FAILURE: Linux/book success, nine Linux native
-  including32flush passed; Windows six raw controls + standalone snapshot/console
-  passed, then fourth flush failed Apply/UnexpectedEof/native1117 with
-  body_frame_polled=false. Nearby empty TLS socket32 timed out5105ms, not directly
-  correlated. Fresh CLI OriginalVolume152ms after failure, both processes alive.
-  Later Windows steps skipped. Raw /tmp/s3drive-body-burst-a14-{linux,windows,book}.log.
-  Watch72681 is closed/obsolete. No artifact acceptance or main promotion.
-- The new source runs all authority wire/execution controls early on Windows,
-  then the unchanged native32-flush case and every prior gate. At the connector
-  candidate expect nine TLS controls, authority unit6, execution1, lifetime2/HTTP10;
-  Linux9 native, Windows burst1+
-  lifecycle1+broad7. Validate actual counts in raw logs, not a step label alone.
-- Prepared NOT RUN /tmp/s3drive-check-949-cohort.py and
-  /tmp/s3drive-949-reference-check.ps1 require terminal all-three SUCCESS, then
-  exact-source ZIP digests, strict21/14 and project oracles in
-  /tmp/s3drive-rpc-dispatch-949-artifacts. Do not use a14/e51/f8 artifacts.
-  Raw logs are /tmp/s3drive-rpc-dispatch-949-{linux,windows,book}.log; failed cohort
-  checker MUST NOT run. Prepare a new source-bound checker for the next cohort.
-- The connector checkpoint bundles prior post-push949 observations and the
-  offline Wasabi option; no provider requests or new mutation approval. Archive
-  and runtime code/tests/docs/evidence were committed/pushed in949.
-- Other clean worktrees: /home/marshall/src/s3drive-windows-transport at f8 on
-  codex/windows-transport-followup; /home/marshall/src/s3drive-snapshot-acceptance
-  detached at failed33ddfe1 for inspection only. All share
-  /home/marshall/src/s3drive/target; rebuild/verify the intended source before
-  using that executable, because another checkout's build replaces it.
+Current branch: codex/error-connection-metadata, new diagnostic work after accepted
+bf9509. Preserve existing uncommitted acceptance/research/archive files while
+adding this phase. New code has a passing local gate; exact-source hosted
+acceptance remains required before main promotion.
 
-## Parallel read-only transport investigation (2026-10-18)
+Local/remote main AND codex/authority-snapshots are now
+bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05. Exact-source primary CI39113628548 is
+terminal all-three SUCCESS: Linux117634799264, Windows117634799237,
+book117634798973. Completed raw logs reviewed:
+/tmp/s3drive-loopback-bf9509-{linux,windows,book}.log.
 
-The following investigation was completed before further production changes.
-A new bounded loopback-tag diagnostic phase is now being implemented aftere988;
-its acceptance criteria are in implementation-plan. Existing CI39111567111
-remains evidence for exacte988; do not claim its results for the new working tree. Upstream4208 stale want fix is already
-in resolvedHyper1.12.0/want0.3.2. Separate4222 shutdown/drain fix mergedOct9 AFTER
-latest release1.12.0 Oct6 and is absent locally; do not attribute our EOFs to it
-without proof (different queued-request hang mechanism).
+Independent strict21/14 field/type/source/platform validation and project oracles
+passed after exact artifact ZIP SHA256 verification. Proof directory:
+/tmp/s3drive-loopback-bf9509-artifacts/{run,download-proof,independent-check}.json;
+project-oracles.log and both ZIP/JSON reports are there. Guarded normal FF from
+f8c4f5832e399c6c54567c122c875e2a438ce681 to bf9509 verified remote SHA/privacy,
+main not checked out anywhere, unchanged branch/worktree and preserved dirty files.
+Publication proof: /tmp/s3drive-bf9509-publication.json.
 
-A standalone public connector metadata control passed HTTP/HTTPS complete+lost
-reply cases on local Linux, comparing public Connection::connected/get_extras
-HttpInfo local/remote addresses with independently accepted TCP metadata. Four
-PASS lines, exit0 /tmp/s3drive-public-connector-probe2.log. Scratch directory
-/tmp/s3drive-public-connector-20261018-jdfysrlm; pointer
-/tmp/s3drive-public-connector-probe-location.txt. Reproducible source/manifest/lock
-archive docs/src/evidence/public-connector-probe-20261018.tar.gz; hashes and limits
-in platform JSON. No credentials/provider requests and no Windows/native proof.
-This avoids the earlier unsupported request-extension observer, but a connector
-candidate is STILL not proven to be the selected failed RPC socket. Adoption
-needs bounded loopback-only correlation, missing-metadata and concurrency tests;
-do not expose addresses or infer safe replay. API source contracts inspected.
-Local links/build/test passed for both upstream discussion and the new probe link:
-/tmp/s3drive-e988-public-info-book{,-tests}.log; no production source change.
+This accepts the offline snapshot/diagnostic checkpoint on hosted Linux and
+Windows Server2025/WinFsp2.1.25156.ddca7bd. It does NOT prove an explanation or
+elimination of earlier intermittent EOFs, Windows10/11, physical reboot, remote
+hosting, Turso, live managed Wasabi writes, failover or restoration. Keep goal active.
 
-## Runtime-owned RPC candidate (locally green; pushed949, hosted FAILED)
+## Accepted unchanged-source main repeat
 
-WireClient now clones the exact request once and runs the RPC in a caller-scoped
-JoinSet job on the current runtime, with10-second absolute cooperative queue+
-RPC deadline; connect2/reqwest10 remain. Drop aborts owned jobs, not already
-accepted remote effects. New fixed Execution errors preserve unknown outcomes.
-No operation IDs, retries, trust, framing, connection policy or native32-flush
-acceptance changed. This is an execution-context candidate, not root-cause proof.
+Main-push CI39115395230 at exact bf9509 is terminal all-three SUCCESS:
+Linux117640049798, Windows117640049853, book117640049659. Completed raw logs
+reviewed at /tmp/s3drive-main-bf9509-repeat-{linux,windows,book}.log.
+The following scripts completed exit0 against the repeat's own artifacts:
+- /tmp/s3drive-check-main-bf9509-repeat.py
+- /tmp/s3drive-main-bf9509-repeat-reference-check.ps1 (called by checker)
+Proof directory: /tmp/s3drive-main-bf9509-repeat-artifacts, including run,
+download-proof, independent-check JSON, both ZIP/JSON artifacts and project log.
+Checker log: /tmp/s3drive-main-bf9509-repeat-check.log. Strict21/14 source/platform/
+types/fields and ZIP digests passed. Do not rerun mkdir-only scripts into this
+completed directory or substitute primary artifacts.
 
-New tests: queued cancellation leaves no task/TCP connection and same client
-works afterward; foreign-thread real TLS6 commits/receipt lookups/exact replays;
-caller canceled after actual SQLite commit still recovers original receipt with
-one sequence advance and no second request. Early Windows authority controls
-now include all test binaries (execution plus eight TLS cases); all other CI
-steps are byte-identical to a14. Structural comparison passed.
+Repeat Linux9 native, Windows32-flush/lifecycle/broader7, both startup/recovery
+and snapshots passed. Windows sole native RPC failure List/Connect/TimedOut
+followed the intentional authority stop; Linux two Node/ConnectionRefused likewise.
+One typed HttpShutdown in Windows flush burst had read243/write239/flush5 and
+dispatched=true; all32 caller byte/single-PUT checks completed. No UnexpectedEof
+or generic HttpTransport. Console Ctrl+C3ms/5ms single observations only.
+Two passing cohorts do not establish historical EOF root cause or reliability.
 
-Focused /tmp/s3drive-rpc-dispatch-focused2.log exit0 (Hyper2/lifetime2/execution1/
-HTTP10/TLS8). Full /tmp/s3drive-rpc-dispatch-gate1.log exit0:274 state, those
-controls, snapshot CLI2, restart8, SDK17, managed8, lint/build/57-doc. Rust stayed
-frozen. Final docs and source/archive-hash checks passed, then949 was pushed
-privately without force. Next: inspect CI39108821537 at exact949, including
-Windows controls and unchanged early burst. This run now failed later broad writes;
-see current state above. Keep main at f8 pending new full proof.
+The strict independent checker is /tmp/s3drive-check-native-artifacts.py. It
+rejects duplicate/nonfinite JSON, extra/missing fields, wrong exact Python types
+(bool is not int), wrong source/platform/driver and any21/14 mismatch. Known-good
+f8 plus malformed envelope controls passed earlier; logs retained in /tmp.
 
-## What a14 changes and what is verified
+## Verified scope at bf9509
 
-7edc4f1 adds a per-request body_frame_polled diagnostic through reqwest's public
-Body wrapper. It snapshots HTTP data-frame polling at transport-error
-classification. True is NOT proof of a socket write, selected connection,
-server receipt, authentication or commit. False is NOT a safe unsent result and
-cannot authorize replay, new IDs, rebasing or overwriting.
+Full local /tmp/s3drive-loopback-tag-gate1.log EXIT0: authority6unit (Hyper2,
+scope1, tag3), lifetime2, execution1, HTTP10, TLS9, state274, other workspace
+suites, build, lint and57-doc links/mdBook build/test. Rust/Cargo fingerprints
+remained unchanged. Final /tmp/s3drive-loopback-tag-final-book{,-tests}.log passed.
+No native mount was run locally; NoNewPrivs=1 blocks FUSE here. NEVER bypass via
+root, SSH, another launcher or a VM. Hosted Linux supplies native evidence.
 
-It preserves the original JSON body, framing hints and errors. Real TLS controls
-independently received byte-identical Apply JSON, Content-Length/application/json
-and no chunked framing. Lost/truncated/stalled replies observe true; wrong
-certificate trust observes false before HTTP. No second mutation/redirect and
-redaction assertions remain. The wrapper is non-cloneable, unlike the original
-buffered variant: do not claim all scheduling details unchanged. No dependency,
-timeout, retry, trust or connection-policy option changed in this phase.
+Linux raw: all9 native, native32 exact binary/Unicode HTTPS flushes with one PUT
+per generation, paired no-systemd HTTPS/FUSE terminal loss/coordinator crashes,
+exact unknown IDs/no repeated PUT, retained rival conflict, independent removal,
+and coordinator HTTP+TLS supervision passed. Only intentional stop/refusal and
+controlled wire faults occurred; no unclassified native RPC failure found.
 
-Actual resolved APIs were inspected: reqwest0.13.5, Hyper1.12.0, http-body1.1.0;
-source fingerprints are in docs/src/evidence/authority-snapshot-platform-20261018.json.
-The earlier Hyper capture_connection experiment was REJECTED: reqwest drops
-arbitrary request extensions in execute_request. Controlled received bytes still
-gave false. That observer is removed; do not resurrect its unsupported flag.
+Windows raw: early wire controls6unit/9TLS plus real CLI socket-tag controls;
+ordinary-account standalone startup/snapshot; native32 flushes; complete native
+DoC/deferred lifecycle and killed-owner/lost-callback recovery; workspace269state;
+paired coordinator+drive separate logons, exact unknown recovery/no repeated PUT,
+retained conflict, independent removal and snapshots; broader native7 cases passed.
+Standalone/paired snapshot Ctrl+C exit observations4ms/35ms are single samples,
+not guarantees. Typed HttpShutdown events had positive read/write/flush/dispatched
+and completed caller semantics. Sole native metadata failure List/ConnectionRefused
+followed the deliberate authority stop; no UnexpectedEof or generic HttpTransport.
+Reference21 replacement and14 disposition plus four pinned WinFsp legacy cases
+passed, with exact-source independently checked artifacts. Scope is Server2025,
+not actual Windows10/11, reboot or real SSH authentication.
 
-The existing e51 Connection: close policy remains: one exchange per HTTP/1.1
-transport, matching the TLS listener's existing finite lifetime. Sixteen sequential
-calls used16 sockets versus baseline1, and a raw peer omitting close saw client
-EOF after a complete reply. This did NOT eliminate the Windows failure.
+## Source behavior and safety invariants
 
-A14 adds a real native32-flush fixture to the common managed test harness, with
-Linux/Windows ignored wrappers. It uses the existing Unicode empty-file path,
-32 distinct32-byte binary generations, fresh reads, and exactly one additional
-SDK PUT per successful flush. Close cannot repeat a settled PUT. There is no
-injected outage or tolerated failure. At first unexpected error, the read-only
-CLI control checks owned process liveness/original volume, reaps owned children
-and resumes the original panic. The fixture does not retry a failed step.
-Native filesystem work uses block_in_place so its S3 fixture can progress.
+bf9509 adds bounded loopback connector-candidate tags through the public
+Connection::connected/get_extras/HttpInfo APIs. Exact127.0.0.1 or::1 matching
+families/nonzero client+server ports only; other/missing info Omitted, more than
+one successful connector Multiple. One atomic snapshot never replaces a prior
+candidate with a misleading later single candidate. Request scope captured at
+Service::call; unscoped/background completion cannot attach to another request.
+Server diagnostics include the same sanitized tag before final dispatched=.
+Candidate is NOT proof of selected socket, send, authentication or commit.
+No flag/tag, including false/unobserved, authorizes replay or a new identity.
 
-CI now runs Windows raw TLS body-poll controls before standalone startup and
-before the early native burst. Check those controls before interpreting a
-Windows marker. The burst runs once before replacement/lifecycle/workspace;
-the later broad step excludes only this and the lifecycle already run explicitly.
-Every previous gate remains. Expected native counts are Linux9, Windows early
-burst1 + lifecycle1 + broad7. Actual a14 Windows burst failed as recorded above.
+The earlier e988 layer observes connector start/success and selects reqwest's
+boxed connector path; scheduling equivalence is not claimed. Earlier runtime
+ownership runs each exact cloned request once in caller-scoped JoinSet on the
+current runtime, with absolute cooperative10-second queue/RPC deadline; original
+connect2/reqwest10 remain. Drop aborts owned work, not accepted remote effects.
+Execution errors keep outcomes unknown. Body-frame polling is not socket-write
+proof. Existing Connection: close means one exchange per HTTP/1 transport.
+No transport retry/deadline/trust/framing/operation-identity or priority change
+was made by the bounded-tag phase; native fixtures/workflow stayed unchanged.
 
-Local verification (Rust frozen during each gate):
-- Body phase: /tmp/s3drive-body-poll-focused1.log and
-  /tmp/s3drive-body-poll-gate1.log, exit0.
-- Combined fixture: /tmp/s3drive-flush-burst-check1.log and
-  /tmp/s3drive-flush-burst-gate1.log, exit0:274 state, Hyper2/lifetime2/HTTP10/
-  TLS6, snapshot CLI2, restart/worker8, SDK17, managed8, lint/build/57-doc.
-- Windows-only early raw-controls workflow step was added after the combined
-  Rust gate. Rust remained identical; fresh PyYAML structure checks passed,
-  proving two added early steps, retained old steps and one burst invocation.
-  Final links/build/tests and later links/build passed; book CI is SUCCESS.
+Preserve dirty bytes, original unknown logical/physical IDs, guards and receipts.
+No automatic transport replay, new-ID/rebase or unconditional overwrite fallback.
+Only authoritative online commit establishes ownership; S3 PUT alone is not flush.
+Schema23/config7. Local private SQLite cache/journal stays outside mounted trees.
+Managed layout uses immutable S3 payloads and one Rust authority's shared SQLite
+namespace. Authority has no S3 credentials. User chose strong managed coordination;
+hosting undecided, keep SQLite-host and optional Turso choices. Turso is not enabled.
 
-## Exact-source acceptance and publication
+## Error-connection diagnostic candidate and next action
 
-Require all three jobs terminal SUCCESS, then inspect raw native/startup logs,
-including the new early Windows controls/burst and all nine Linux cases. Verify
-ordinary-account snapshot/console checks after standalone AND paired recovery,
-independent logons, original volume/receipts, exact unknown IDs/no repeated PUT,
-Unicode/binary/empty data, preserved dirty conflict and independent removal.
-Unit/portable tests cannot substitute for native/provider/recovery acceptance.
+Post-push observations/research are intentionally uncommitted; bundle with the
+next substantive source, not a docs-only native CI cycle. Preserve:
+- HANDOFF.md and its new before-refresh archive
+- docs/src/evidence/authority-snapshot-platform-20261018.json (primary acceptance,
+  main publication, repeat status and research)
+- docs/src/remote-authority.md and implementation-plan.md (same findings/limits)
+- docs/src/evidence/error-connection-info-probe-20261018.tar.gz
+A new error-connection metadata phase is being implemented after bf9509 on
+codex/error-connection-metadata. Main and its completed repeat remain exactbf9509.
+New source adds ErrorConnection to WireError, collected only on the error path
+through bounded16 legacy sources. Unobserved/Unavailable/Omitted/Loopback/Multiple
+are distinct. Shared canonical loopback filter exposes family/ports only, never
+raw extras or dependency text. No execution/timeout/trust/retry/framing/ID changes.
+Lost TLS reply and concurrent peer controls match independent sockets; failed
+trust/stalled handshake is Unavailable, truncated response is Unobserved despite
+full request receipt. Unknown extras and ambiguous observations are covered.
 
-Fetch only completed jobs with:
-`gh api --allow-escape-sequences repos/marshallr12/s3drive/actions/jobs/JOB/logs`.
-Save a14 logs under /tmp/s3drive-body-burst-a14-{linux,windows,book}.log.
+Focused authority tests EXIT0 (/tmp/s3drive-error-connection-focused1.log), full
+local gate EXIT0 (/tmp/s3drive-error-connection-gate1.log, recovered session77211):
+authority7unit, lifetime2, execution1, HTTP10/TLS9, state274, workspace/build/lint
+and57-doc book checks. First action next: finish docs checks, commit/push this
+topic with private/ref/source guards, then require its own exact-source hosted
+cohort. Main staysbf9509 until acceptance. No native mount or provider call was
+performed locally. See implementation-plan and dated JSON.
 
-Prepared, NOT RUN:
-- /tmp/s3drive-check-a14-cohort.py: refuses incomplete/failed/wrong-source CI;
-  checks repository privacy, exact two artifacts/source, download ZIP digest,
-  bounded exact archive members, then independent strict JSON and project oracles.
-- /tmp/s3drive-a14-reference-check.ps1: project21/14 oracles on exact a14.
-- /tmp/s3drive-check-native-artifacts.py: duplicate/nonfinite JSON rejection,
-  exact root/record fields and Python types (bool is not int), every21/14 record,
-  source/OS/driver, and four pinned upstream legacy cases. Known-good f8 passes;
-  extra/missing/duplicate fields and bool-for-int faults refuse at
-  /tmp/s3drive-artifact-envelope-controls1.log.
+A separate standalone Linux control proved public Hyper-util Error::connect_info
+through the bounded reqwest error source chain: HTTP and HTTPS lost replies
+matched independently accepted TCP sockets, plus all four original connector/
+complete/lost controls. Six PASS lines, EXIT0 at
+/tmp/s3drive-error-connection-info-probe1.log; scratch
+/tmp/s3drive-error-connection-info-20261018-1p10x0dp and location pointer
+/tmp/s3drive-error-connection-info-probe-location.txt. Source/manifest/lock/README
+archive is the uncommitted evidence tar.gz above; hashes/limits in platform JSON.
+Pooled send errors attach conn_info; earlier connection_for errors do not. This
+distinguishes error-reported connection info from candidates. The candidate now
+collects it; accepted mainbf9509 does not. Hosted acceptance is pending. Omission,
+missing-state and exact-version regressions remain required. Source chains are not
+stable across upgrades. Missing info never proves unsent or permits replay.
+No real provider/credentials/native/Windows proof. Book links/build/test passed
+at /tmp/s3drive-bf9509-error-info-book{,-tests}.log.
 
-New artifacts must be in /tmp/s3drive-body-burst-a14-artifacts. Do not substitute
-any f8/e51 artifact. Before main promotion, check exact source/remote main/private
-state, all raw proof and strict artifacts; use guarded normal FF and recheck
-privacy/remote SHA afterward. Main is not checked out in a worktree; preserve
-all dirty files. A green run does not itself explain older intermittent errors.
+Earlier public connector API control (HTTP/TLS complete+lost replies) is committed
+at docs/src/evidence/public-connector-probe-20261018.tar.gz. Original scratch
+/tmp/s3drive-public-connector-20261018-jdfysrlm, log
+/tmp/s3drive-public-connector-probe2.log. Public metadata comparison succeeds even
+without a response; the rejected request-extension capture is NOT needed.
 
-## Prior accepted and contradictory evidence
+## Retained failure history and rejected explanations
 
-Main f8 primary CI39097275707 and unchanged-source repeat CI39099187117 were
-terminal all-three SUCCESS, raw native/startup and strict21/14 independently
-checked before/after guarded private publication. Durable record:
-docs/src/evidence/authority-transport-20261018.json. Repeat artifacts and proof:
-/tmp/s3drive-main-f8-repeat-artifacts/{accepted-repeat,independent-check,
-download-proof}.json; primary proof /tmp/s3drive-f8-publication.json.
+All prior candidate failures remain in platform JSON, remote-authority.md and
+archives. Main previously accepted f8 with two passing cohorts, not a universal
+Windows correction. bf9509's passing primary and repeat likewise do not explain them.
 
-F8 categorizes ONLY Hyper is_shutdown as HttpShutdown. It is permitted only after
-complete caller receipts/sequence proof and positive read/write/flush/dispatch
-counters. Deterministic full Content-Length reply before injected shutdown is
-proved. Generic transport, truncation and timeout still fail. This does not
-attribute older untyped events, scheduler behavior or the original timeout.
+Most recent failed parent e988 CI39111567111: Linux/book success, Windows raw
+controls/standalone snapshot-console/native32/lifecycle/workspace passed, then
+paired Info/Request/UnexpectedEof at08:52:23Z, body_frame_polled=false with
+connector_started AND connector_completed true. Nearby empty TLS socket133
+expired5083ms/read0/write0/flush1/dispatched=false; exact socket correlation absent.
+Expected single uncertain PUT was NOT established; no upload/commit claim.
+Secondary locked disposable profile cleanup failed, original failure preserved.
+Later14-reference/broad checks skipped. Actual process-class logs showed both
+supervisors/children BelowNormal; thread priorities/causality unmeasured.
+Raw /tmp/s3drive-connector-e988-{linux,windows,book}.log. Failed e988/949/a14
+acceptance scripts MUST NOT be run or their artifacts reused for bf9509.
 
-Subsequent snapshot candidates all FAILED overall; preserve partial component
-passes and failures in docs/src/evidence/authority-snapshot-platform-20261018.json:
-- f9a52e2 CI39100010372: Windows snapshot269/CLI2/ordinary-account ACL/link/handle
-  checks passed, later existing writes List/EOF and seed Info/EOF failed.
-- 33ddfe1 CI39100806213: early lifecycle numeric-loopback HTTP Info timeout then
-  PendingRemoval timeout/native5; console workflow never reached.
-- d6d8bd9 CI39102804077: snapshot/isolated Ctrl+C component passed (16ms one
-  observation); later HTTP lifecycle failed. Fresh read-only CLI got original
-  volume in28ms after failure with both processes alive, not proof of earlier
-  availability or any prior mutation outcome.
-- e51f737 CI39103791947: Linux/book, Windows lifecycle/workspace/standalone/pair/
-  snapshot/console passed, broad native6passed/1failed. At managed.rs1708,
-  file.sync_all failed native1117, Info/Request/UnexpectedEof (not client timeout).
-  Nearby TLS socket24:5015ms/read0/write0/flush1/dispatched=false. No RPC/socket
-  correlation. List/EOF near empty socket228 occurred inside a passing mutation
-  case; intent/cause not established, do not silently call it expected.
-  Raw /tmp/s3drive-connection-lifetime-e51-{linux,windows,book}.log.
-  Console15ms standalone/6ms paired are single observations. No main promotion.
+Older source failures:949 broad List EOF; a14 fourth burst Apply EOF; e51 broad
+Info EOF (and an unclassified List/EOF inside a passing negative mutation case);
+d6 HTTP lifecycle timeout;33 earlier HTTP lifecycle timeout;f9 broad native EOF;
+a799 repeat seed EOF. No attribution to snapshot code, scheduler, S3 or a dependency
+bug is proved. Hyper's4208 stale-want fix is already in1.12.0/want0.3.2; separate
+4222 shutdown drain merged AFTER latest release and is absent. Its queued-request
+hang differs from recorded EOF-before-client-deadline; do not patch on assumption.
+Rejected capture_connection experiment: reqwest drops arbitrary request
+extensions in execute_request; even a fully received request gave false. Removed,
+not weakened. Empty server TLS sockets may be unused background connections;
+Hyper-util0.1.21 races checkout/connect. A matching candidate is not selection.
 
-Older a799 same-source repeat CI39092631904 failed store-apply seed before mount
-with Request/UnexpectedEof/server HttpTimeout; no commit/outcome attribution.
-A server's empty TLS socket can be a background connection: actual Hyper-util
-0.1.21 races pool checkout/connect. No proof binds those sockets to failed RPCs.
+## Snapshot contract and remaining recovery work
 
-## Snapshot contract and remaining acceptance
+Offline create|inspect only, no restore/failover. Library state/authority_snapshot
+and CLI snapshot.rs; known schemas8..23, exclusive existing stopped authority,
+explicit volume/policy, no migration, credential resolution, provider or listener.
+New private output outside source/mount tree; distinct snapshot.lock/sqlite3/json.
+Default512MiB/30sec,32-page cooperative backup, close/reopen validate/close/sync/hash,
+manifest LAST. Post-marker failures CompletionUnknown preserve exact output and
+require inspection, not deletion/retry/new name. Never raw-open/close a DB inode
+while a same-process SQLite connection is active (POSIX lock-release hazard).
+Validation sqlite-integrity-authority-identity-v1 is NOT semantic/freshness audit.
+Inspection always denies restore/continuity; same-ID stale history losing a prior
+ack was measured. Broader destination-busy/permission faults, writer_version
+validation and independent-host continuity/fencing/restoration remain work.
 
-Private offline create|inspect prototype only; no restore/failover. Library:
-crates/s3drive-state/src/authority_snapshot{.rs,/native.rs}; platform directory
-helpers; CLI snapshot.rs and tests/authority_snapshots.rs. Requires exclusive
-existing authority and explicit volume/policy, no migration, credentials or S3.
-New private output outside source/mount trees; snapshot.lock/sqlite3/json never
-live filenames. Defaults512MiB/30sec,32-page copy steps, cooperative cancellation,
-SQLite integrity/identity, close/reopen validation, synchronization and hash,
-manifest LAST. Post-marker errors are CompletionUnknown: preserve and inspect
-that exact output, no automatic deletion/retry/new name.
+Linux CLI SIGINT/source-busy checks at e51, binary SHA
+fca6f0e893bfe85365bd2121e05cd64cb73b2bcbb361880a41b7448c4e377e86:
+/tmp/s3drive-e51-snapshot-{sigint,busy}.{json,stderr}. Source bytes preserved,
+no false manifest/replacement, partial output retained and retry refused,
+positive create/inspect after lock released. Durations1.995ms/112.498ms are single
+observations. Current accepted Windows ordinary-account snapshot controls add
+ACL/link/junction/case/read-handle and isolated console checks, not restore proof.
 
-Never raw-open/close a DB inode while a SQLite connection in that process is
-active: POSIX locks can be released. Hash/recheck after connections close.
-Validation is sqlite-integrity-authority-identity-v1, not a full history/freshness
-or semantic audit. Inspection always denies continuity/restore. Same-ID stale
-history forgetting an acknowledged operation was measured at7962058; identity
-and integrity are insufficient. Broader destination-busy/permission faults and
-writer_version validation (currently nonempty/length only) remain work.
+## Startup, provider approval and remaining full-goal work
 
-E51 source-bound Linux SIGINT/busy CLI checks passed after rebuilding the shared
-binary, hash fca6f0e893bfe85365bd2121e05cd64cb73b2bcbb361880a41b7448c4e377e86.
-/tmp/s3drive-e51-snapshot-{sigint,busy}.{json,stderr}: cancellation1.995ms,
-source-lock refusal112.498ms, source bytes unchanged, no false completion or
-replacement, create/inspect positive after lock release. Single observations,
-not guarantees or power-loss/restore/native/provider acceptance. Original older
-SIGINT/busy reproducers and dated records remain in docs/src/evidence/.
+At sign-in with same-account incoming SSH/tmux persistence after disconnect,
+Linux MUST support MX without systemd, plus Windows. No real user startup entry,
+root, credentials, hosting or Turso account changes were made. Actual reboot,
+PAM/SSH and Windows10/11 desktop acceptance remain. Local debug build baseline
+was Debian12/glibc2.36/maxGLIBC_2.34, not release packaging or MX/reboot proof.
 
-## Requirements and authorization
-
-User chose managed layout/stronger coordination. Rust authority owns shared
-SQLite namespace; machines keep private SQLite cache/journals outside mount and
-transfer immutable payloads directly to S3. Hosting undecided: retain SQLite-host
-and optional Turso choices. Turso is researched, not provisioned/enabled; offline
-replica/last-push-wins state cannot decide shared ownership.
-
-Schema23/config7. Preserve dirty bytes, exact unknown physical/logical IDs,
-guards, receipts and explicit conflicts. No unconditional overwrite/rebase/new-ID
-fallback. Only online authoritative commit establishes ownership; S3 PUT alone
-does not acknowledge flush. Keep unsupported paths and explicit retention ack.
-
-Sign-in startup must support MX WITHOUT systemd and same-account incoming SSH/
-tmux after disconnect, plus Windows. No real user startup entry was installed.
-NoNewPrivs=1 blocks local native FUSE: NEVER bypass through root/SSH/other launcher.
-Use hosted native Linux. Windows proof is Server2025/WinFsp2.1.25156.ddca7bd,
-not this Linux workstation or actual Windows10/11/reboot. Disposable CI account/
-rights/hooks/fixtures are distinct from real user provisioning. Locked fixture
-profiles may defer only under the documented successful-acceptance/ephemeral-VM
-policy after owned-process and dummy-credential cleanup; never hide a test failure.
-
-Real Wasabi remains read-only: alias wasabi, s3drivetest, us-east-2,
-https://s3.us-east-2.wasabisys.com, profile wasabi-s3drive. Preserve ignored local
-config/plan/report. Never print/commit keys, configuration source on error or the
-private credential-generation digest. No new live mutations are authorized.
-Earlier three-object Unicode/read scope was cleaned. Later six-key prefix
+Real Wasabi remains read-only: aliaswasabi, bucket s3drivetest, regionus-east-2,
+endpoint https://s3.us-east-2.wasabisys.com, profilewasabi-s3drive. Preserve ignored
+local config/plan/report; never print keys/config source/private credential digest.
+Earlier three-object Unicode/read scope cleaned. Later six-key prefix
 s3drive-conformance/d147830ba5257d762e14c3962cde60f9/ ran ONCE Oct16T23:36:18Z at
-8eeda5b,10 checks passed, six keys deleted/prefix empty; all14 PUT attempts consumed.
-Plan digest98914e5210466c6c1e074ea36184ea580d20c93749363e18650e5ddf14906de6;
-evidence docs/src/evidence/wasabi-conditional-put-2026-10-16.json. Do not reuse that
-approval for probes/multipart/managed writes. New mutations need a prepared exact
-scope and explicit approval. No root/user credentials/hosting/Turso/startup changes.
+8eeda5b,10 checks passed and six keys deleted/prefix empty. All14 PUT attempts
+consumed; plan digest98914e5210466c6c1e074ea36184ea580d20c93749363e18650e5ddf14906de6.
+No new live mutations authorized. Provider capability evidence is not permission.
 
-## Prepared provider option (NOT authorized or executed)
-
-An offline fresh six-key conditional probe plan was generated from the real
-wasabi source at949, without credentials resolution or provider requests:
-/tmp/s3drive-wasabi-next-20261018-wz8t4v1w/probe-plan.toml (mode0600).
-Location pointer /tmp/s3drive-next-wasabi-plan-location.txt. Prefix
-s3drivetest/s3drive-conformance/69329649f34f798791386c4d3c62ac1e/;
-canonical confirmation03febed0e9df68b61994d830830d73abdb972b096b0d74d8344ad0ec728ee177,
+Prepared ONLY, NOT approved/executed: fresh six-key conditional plan (at949),
+/tmp/s3drive-wasabi-next-20261018-wz8t4v1w/probe-plan.toml, mode0600; pointer
+/tmp/s3drive-next-wasabi-plan-location.txt. Prefix
+s3drive-conformance/69329649f34f798791386c4d3c62ac1e/; confirmation
+03febed0e9df68b61994d830830d73abdb972b096b0d74d8344ad0ec728ee177;
 file SHA649c8edbb7f51a27c953b19959ea23f00311af9409551b8f5bed5924068b1720.
-At most14 PUT attempts, six keys,4KiB/object,<1MiB transfer. No approval requested
-or granted for this new scope. DO NOT RUN without explicit fresh approval.
-It is an optional prepared renewal, not proof renewal is necessary: first inspect
-original report age/binding and intended explicit policy max age. Do not extend
-an existing expired policy to bypass it. Application writes cannot use reserved
-s3drive-conformance/ keys; permits_full_key rejects them independently of report.
-Managed Wasabi acceptance needs its own separate approved application prefix,
-concrete runner/plan and bounded effects. Old probe approval grants none of that.
-Sanitized preparation record docs/src/evidence/wasabi-next-plan-20261018.json.
+At most14 PUTs,6 keys,4KiB/object,<1MiB planned script transfer. No credentials
+resolved/provider calls in preparation. Renewal is optional: first inspect original
+report timestamp/binding and explicit max age; never extend expiry to bypass it.
+Application writes reject reserved s3drive-conformance/ namespace. Managed live
+acceptance needs a separate concrete runner/approved application prefix and bounds.
 
-## Full-goal work still required
+Full goal still requires reliability investigation/repeat evidence; approved real
+managed Wasabi and large/multipart files; reference-aware reclamation/application
+workflows; independent-host partitions/deployment; continuity/fencing/restore;
+physical startup/target desktops and packaging/distribution/licensing decisions.
+Do not redefine completion around this passing subset.
 
-- Explain/correct classified Windows transport failures with direct evidence.
-- Snapshot/platform acceptance, continuity/fencing/restore drills, independent
-  hosts/partitions and secure actual deployment.
-- Physical reboot/PAM/real SSH, target Windows10/11, approved managed Wasabi,
-  large/multipart files, reference-aware reclamation and application saves.
-- Product packaging/distribution and recorded WinFsp licensing decisions.
-
-Local debug ELF/--version observation at e51 reports Debian12/glibc2.36 and highest
-GLIBC_2.34 requirement. docs/src/evidence/linux-runtime-baseline-20261018.json
-is not release/MX/reboot proof. platform-integration.md proposes release-baseline
-acceptance; no packaged artifact was made. Use bash scripts/gate.sh per source;
-native/provider/recovery gates remain separate. Inspect resolved dependency
-sources before new APIs; unused installed versions are not the lockfile graph.
+Other clean worktrees: /home/marshall/src/s3drive-windows-transport at f8 on
+codex/windows-transport-followup; /home/marshall/src/s3drive-snapshot-acceptance
+detached at33ddfe1 for inspection. All share root target; rebuilding elsewhere
+replaces binaries. Rebuild/verify intended source before CLI experiments.
 
 ## Archive
 
-The full previous handoff (411 lines) was copied byte-identically before refresh:
-[before a14 refresh](docs/archive/HANDOFF-before-a14-refresh-20261018.md).
-Archive SHA256: 7c9f8fd4bbecb6cf827f55a3dae193b640194f8e6367a473599bb32e7dd9f46a.
-Earlier complete histories remain in docs/archive/HANDOFF-before-snapshot-cancel-20261018.md
-(SHA2568d6eec5434162ea07035bb829ceec5b04936cc352f4939a574b6fe43c5580060) and
-HANDOFF-before-flush-receipts.md. No previous evidence, decisions or divergences
-were removed from repository-owned history.
+The full previous handoff was archived byte-identically before refresh:
+[before bf9509 refresh](docs/archive/HANDOFF-before-bf9509-refresh-20261018.md).
+Archive SHA256: 7e6ea7afa13c681ba9f46f166b0cbcf4a75b1091722fab54f77f820d7877769c. Before: 405 lines; after: 242 lines.
+Previous complete archives before-a14-refresh, before-snapshot-cancel and
+before-flush-receipts remain in docs/archive; no history was discarded.

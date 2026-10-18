@@ -37,6 +37,7 @@ pub enum WireError {
         /// identify the selected socket or establish request delivery/commit.
         connector_completed: bool,
         connector_candidate: crate::ConnectorCandidate,
+        error_connection: crate::ErrorConnection,
     },
     HttpStatus(u16),
     ResponseTooLarge,
@@ -95,8 +96,10 @@ impl WireError {
         let mut io_kind = None;
         let mut incomplete_message = false;
         let mut connection_closed = false;
+        let mut error_connection = crate::ErrorConnection::Unobserved;
         let mut source = std::error::Error::source(&error);
-        // Inspect types and stable predicates, never dependency error strings.
+        // Inspect pinned types/public getters, never dependency error strings.
+        // Error source chains are not stable across dependency upgrades.
         // Bound traversal even if a future dependency provides a cyclic source.
         for _ in 0..16 {
             let Some(cause) = source else { break };
@@ -106,6 +109,9 @@ impl WireError {
             if let Some(error) = cause.downcast_ref::<hyper::Error>() {
                 incomplete_message |= error.is_incomplete_message();
                 connection_closed |= error.is_closed();
+            }
+            if let Some(error) = cause.downcast_ref::<hyper_util::client::legacy::Error>() {
+                error_connection.observe(error.connect_info());
             }
             source = cause.source();
         }
@@ -121,6 +127,7 @@ impl WireError {
             connector_started,
             connector_completed,
             connector_candidate: progress.candidate.snapshot(),
+            error_connection,
         }
     }
 }
@@ -313,6 +320,7 @@ impl WireClient {
                     connector_started,
                     connector_completed,
                     connector_candidate: progress.candidate.snapshot(),
+                    error_connection: crate::ErrorConnection::Unobserved,
                 })
             }
         }
