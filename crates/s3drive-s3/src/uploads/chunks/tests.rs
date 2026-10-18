@@ -75,6 +75,23 @@ async fn binary_unicode_holes_and_empty_tree_uploads_match_verified_pages() {
         let (i, logical) = plan(&e, bytes).await;
         let p = e.storage().chunked(chunked::Options::default()).unwrap();
         let uploaded = uploader(&e).upload_tree(i.id).await.unwrap();
+        let report = uploaded.tree_receipt();
+        assert_eq!(report.plan().input(), &i);
+        assert_eq!(report.snapshot(), logical);
+        assert_eq!(
+            report.planned_hole_chunks() as usize,
+            bytes
+                .chunks(manifest::CHUNK_BYTES as usize)
+                .filter(|c| c.iter().all(|b| *b == 0))
+                .count()
+        );
+        assert_eq!(
+            report.verified_objects() as usize,
+            1 + bytes
+                .chunks(manifest::CHUNK_BYTES as usize)
+                .filter(|c| c.iter().any(|b| *b != 0))
+                .count()
+        );
         let root = p.bytes(i.id, 0, 0).await.unwrap().unwrap();
         let page = uploaded.root().verify_page(&root.bytes).unwrap();
         assert_eq!(page.page().length(), bytes.len() as u64);
@@ -117,6 +134,9 @@ async fn binary_unicode_holes_and_empty_tree_uploads_match_verified_pages() {
             server.count("GET"),
             server.count("HEAD"),
         );
+        let inspected = p.tree_receipt(i.id).await.unwrap();
+        assert_eq!(inspected.snapshot(), logical);
+        assert_eq!(inspected.root(), uploaded.root());
         assert_eq!(
             uploader(&e).upload_tree(i.id).await.unwrap().root(),
             uploaded.root()
@@ -477,6 +497,10 @@ async fn sparse_multilevel_tree_uploads_children_before_root_with_only_four_obje
     assert_eq!(server.count("PUT"), 0);
     let got = uploader(&e).upload_tree(i.id).await.unwrap();
     assert_eq!(got.root().length(), i.size);
+    assert_eq!(got.tree_receipt().plan().input(), &i);
+    assert_eq!(got.tree_receipt().snapshot(), g);
+    assert_eq!(got.tree_receipt().verified_objects(), 4);
+    assert_eq!(got.tree_receipt().planned_hole_chunks(), 128);
     assert_eq!(server.count("PUT"), 4);
     let root = p.bytes(i.id, 1, 0).await.unwrap().unwrap();
     let verified = got.root().verify_page(&root.bytes).unwrap();

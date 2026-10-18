@@ -13,8 +13,7 @@ pub struct Uploader {
 /// Historical upload completion for this tree's objects. The root still needs
 /// an authenticated authority commit before the file can be called flushed.
 pub struct UploadedTree {
-    root: RootDescriptor,
-    root_receipt: remote::FlushReceipt,
+    receipt: chunked::TreeReceipt,
 }
 impl fmt::Debug for UploadedTree {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -23,10 +22,14 @@ impl fmt::Debug for UploadedTree {
 }
 impl UploadedTree {
     pub fn root(&self) -> &RootDescriptor {
-        &self.root
+        self.receipt.root()
     }
     pub fn root_receipt(&self) -> &remote::FlushReceipt {
-        &self.root_receipt
+        self.receipt.root_receipt()
+    }
+    /// Historical complete-tree inspection; never a logical file-flush receipt.
+    pub fn tree_receipt(&self) -> &chunked::TreeReceipt {
+        &self.receipt
     }
 }
 impl Uploader {
@@ -97,21 +100,18 @@ impl Uploader {
     /// the walk immediately with its completed and uncertain objects retained.
     pub async fn upload_tree(&self, id: [u8; 32]) -> Result<UploadedTree> {
         let info = self.planner.info(id).await?;
-        let root = info.root().ok_or(chunked::Failure::Invalid)?.clone();
-        let mut root_receipt = None;
+        info.root().ok_or(chunked::Failure::Invalid)?;
         for level in -1..=info.root_level() {
             for slot in 0..info.object_slots(level)? {
-                let receipt = self.upload_object(id, level, slot).await?;
-                if level == info.root_level() && slot == 0 {
-                    root_receipt = receipt;
-                }
+                self.upload_object(id, level, slot).await?;
                 tokio::task::yield_now().await;
             }
         }
-        Ok(UploadedTree {
-            root,
-            root_receipt: root_receipt.ok_or(Failure::Integrity)?,
-        })
+        let receipt = self.planner.tree_receipt(id).await?;
+        if receipt.plan() != &info {
+            return Err(Failure::Integrity.into());
+        }
+        Ok(UploadedTree { receipt })
     }
 }
 #[cfg(test)]

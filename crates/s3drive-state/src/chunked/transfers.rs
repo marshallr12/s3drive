@@ -2,6 +2,52 @@
 use super::*;
 use crate::remote;
 
+/// Metadata-only historical completion of every non-hole object in one frozen
+/// tree. Not current payload/media/provider integrity, a send permit, authority
+/// publication or logical settlement. A later journal must recheck its owner.
+pub struct TreeReceipt {
+    plan: Box<Info>,
+    snapshot: GenerationId,
+    snapshot_manifest: [u8; 32],
+    root: RootDescriptor,
+    root_receipt: remote::FlushReceipt,
+    verified_objects: u32,
+    planned_hole_chunks: u32,
+}
+impl fmt::Debug for TreeReceipt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("HistoricalChunkTreeReceipt")
+            .field("verified_objects", &self.verified_objects)
+            .field("planned_hole_chunks", &self.planned_hole_chunks)
+            .finish_non_exhaustive()
+    }
+}
+impl TreeReceipt {
+    pub fn plan(&self) -> &Info {
+        &self.plan
+    }
+    pub fn snapshot(&self) -> GenerationId {
+        self.snapshot
+    }
+    pub fn snapshot_manifest(&self) -> &[u8; 32] {
+        &self.snapshot_manifest
+    }
+    pub fn root(&self) -> &RootDescriptor {
+        &self.root
+    }
+    pub fn root_receipt(&self) -> &remote::FlushReceipt {
+        &self.root_receipt
+    }
+    /// Data objects and pages with exact retained local acknowledgments.
+    pub fn verified_objects(&self) -> u32 {
+        self.verified_objects
+    }
+    /// Explicit zero chunks recorded by the frozen plan, not fresh media reads.
+    pub fn planned_hole_chunks(&self) -> u32 {
+        self.planned_hole_chunks
+    }
+}
+
 /// Validated immutable object expectation. A mapped generation is local state,
 /// not evidence of a successful upload. Page digests and raw body SHA differ.
 #[derive(Clone, PartialEq, Eq)]
@@ -56,6 +102,58 @@ impl Transfer {
     }
 }
 impl Journal<'_> {
+    /// One synchronous read-only owner command. Revalidates the complete graph
+    /// and all non-hole receipts, including grandchildren. The compact forest
+    /// proof must never escape this command or cross a mutation/await.
+    pub fn tree_receipt(&mut self, id: [u8; 32]) -> Result<TreeReceipt> {
+        self.state.verify_staging_storage()?;
+        let plan = self.info(id)?;
+        let root = plan.root.clone().ok_or(Failure::Invalid)?;
+        let snapshot = plan.generation.ok_or(Failure::Corrupt)?;
+        let snapshot_manifest = plan.manifest.ok_or(Failure::Corrupt)?;
+        let checked =
+            remote::Journal::new(self.state, remote::Options::default())?.checked_flushes()?;
+        let mut root_receipt = None;
+        let mut verified_objects = 0u32;
+        let mut planned_hole_chunks = 0u32;
+        for level in -1..=plan.root_level() {
+            for slot in 0..plan.object_slots(level)? {
+                let Some(transfer) = self.transfer_inner(&plan, level, slot)? else {
+                    if level != -1 {
+                        return Err(Failure::Corrupt.into());
+                    }
+                    planned_hole_chunks =
+                        planned_hole_chunks.checked_add(1).ok_or(Failure::Corrupt)?;
+                    continue;
+                };
+                let receipt = checked
+                    .receipt(
+                        &self.state.connection,
+                        transfer.generation.ok_or(Failure::Conflict)?,
+                    )?
+                    .ok_or(Failure::Conflict)?;
+                if !transfer.receipt_matches(&receipt) {
+                    return Err(Failure::Corrupt.into());
+                }
+                verified_objects = verified_objects.checked_add(1).ok_or(Failure::Corrupt)?;
+                if level == plan.root_level() && slot == 0 {
+                    if transfer.reference() != root.page() {
+                        return Err(Failure::Corrupt.into());
+                    }
+                    root_receipt = Some(receipt);
+                }
+            }
+        }
+        Ok(TreeReceipt {
+            plan: Box::new(plan),
+            snapshot,
+            snapshot_manifest,
+            root,
+            root_receipt: root_receipt.ok_or(Failure::Conflict)?,
+            verified_objects,
+            planned_hole_chunks,
+        })
+    }
     /// Metadata-only lookup. None means an explicit hole, never a missing row.
     /// Requires a complete validated graph; does not authorize a network send.
     pub fn transfer(&self, id: [u8; 32], level: i8, slot: u64) -> Result<Option<Transfer>> {
@@ -204,6 +302,9 @@ impl Journal<'_> {
     }
 }
 impl Planner {
+    pub async fn tree_receipt(&self, id: [u8; 32]) -> Result<TreeReceipt> {
+        self.call(move |j| j.tree_receipt(id)).await
+    }
     pub async fn transfer(&self, id: [u8; 32], level: i8, slot: u64) -> Result<Option<Transfer>> {
         self.call(move |j| j.transfer(id, level, slot)).await
     }
@@ -225,7 +326,7 @@ impl Planner {
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn setup(s: &mut State) -> (Input, GenerationId) {
+    pub(super) fn setup(s: &mut State) -> (Input, GenerationId) {
         let i = Input {
             id: [7; 32],
             volume: [1; 16],
@@ -263,14 +364,14 @@ mod tests {
         }
         (i, g)
     }
-    fn materialize(s: &mut State, i: &Input, l: i8) -> Transfer {
+    pub(super) fn materialize(s: &mut State, i: &Input, l: i8) -> Transfer {
         Journal::new(s, Options::default())
             .unwrap()
             .materialize(i.id, l, 0, journal::Options::default())
             .unwrap()
             .unwrap()
     }
-    fn acknowledge(s: &mut State, t: &Transfer) -> remote::FlushReceipt {
+    pub(super) fn acknowledge(s: &mut State, t: &Transfer) -> remote::FlushReceipt {
         let mut j = remote::Journal::new(s, remote::Options::default()).unwrap();
         let info = j.prepare(t.generation.unwrap()).unwrap();
         let _permit = j.claim(info.operation, &info.target).unwrap();
@@ -530,3 +631,6 @@ mod tests {
         assert!(t.generation.is_some());
     }
 }
+
+#[cfg(test)]
+mod receipt_tests;

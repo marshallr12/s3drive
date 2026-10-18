@@ -1,5 +1,5 @@
-//! Durable OFFLINE full-snapshot chunk/page preparation. No sends, object
-//! adoption, remote receipts, authority capability or mounted-limit changes.
+//! Durable full-snapshot preparation and historical receipt inspection. No
+//! network sends, object adoption, authority capability or mounted-limit changes.
 use crate::{Result, State, journal, worker::Owner};
 use journal::{GenerationId, Target};
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fmt;
 mod transfers;
-pub use transfers::Transfer;
+pub use transfers::{Transfer, TreeReceipt};
 
 const MAX_CHUNKS: u64 = 65_536;
 const MAX_OBJECTS: u64 = 262_144;

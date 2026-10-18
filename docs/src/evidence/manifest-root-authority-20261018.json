@@ -299,12 +299,16 @@
       {
         "id": 117739515201,
         "name": "book",
-        "status": "in_progress"
+        "status": "completed",
+        "conclusion": "success",
+        "raw_review": "/tmp/s3drive-manifest-authority-91d-book-reviewed.json"
       },
       {
         "id": 117739515267,
         "name": "rust (ubuntu-latest)",
-        "status": "in_progress"
+        "status": "completed",
+        "conclusion": "success",
+        "raw_review": "/tmp/s3drive-manifest-authority-91d-linux-reviewed.json"
       }
     ],
     "watch_session": 21911,
@@ -315,7 +319,8 @@
     "all_raw_reviews_closed": false,
     "new_artifact_output": "/tmp/s3drive-manifest-authority-91d-artifacts",
     "own_native_cohort_accepted": false,
-    "chunked_native_large_file_or_provider_acceptance": false
+    "chunked_native_large_file_or_provider_acceptance": false,
+    "book_linux_raw_reviews_closed": true
   },
   "manifest_authority_metadata": true,
   "logical_file_settlement": false,

@@ -60,7 +60,41 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Current phase: manifest root authority (2026-10-18)
+## Current phase: complete historical chunk-tree receipt (2026-10-18)
+
+Branch codex/chunk-tree-receipts from259e0f8 (status child of91db06b).
+Implemented opaque historical TreeReceipt, one synchronous metadata-only owner
+command validating every non-hole exact receipt, Planner wrapper and S3 uploader
+finalization through full-context comparison. Five new state tests (10including
+existing transfer tests) PASS; eight SDK tests exploratory PASS. Full gate74791 CLOSED EXIT0:334state/1ignored,59S3,34core,50authority,18managed
+publication; format/Clippy/build,63doclinks and59book chapters PASS. Log
+/tmp/s3drive-tree-receipts-gate.log; all244runtime/fixture hashes unchanged at
+/tmp/s3drive-tree-receipts-frozen.json. Final delta review: no blockers; reviewer independently
+matched all244frozen hashes. No schema, wire, metadata RPC, logical settlement or mounted
+activation change. Historical planned holes are not current-media claims; the
+uploader keeps its fresh per-object hole checks. Report may survive current
+payload corruption but must never acknowledge source or settle a file.
+
+Decisive control deletes both grandchild flush and settlement; remaining forest
+and root direct dependencies still pass, new report fails and exact local re-ack
+restores it without PUT. Also no writes, actual SQLITE_FULL read-only success,
+missing/corrupt/redirected records, reopen, source manifest and newer dirty head
+retention. Initial head() fixture type mistake and unused mut fixed; no assertion
+or stack-size changes. Schema stays26. New docs/src/chunk-tree-receipts.md and
+image XML/librsvg/visual checks PASS; full book/links passed. Durable6member
+local log/hash archive docs/src/evidence/chunk-tree-receipts-local-20261018.tar.gz
+SHA256cfde2422ab636fefc6efa777fe4a19d674cb841e0b64cf996f885c3bf50e3ef2
+(30938bytes), indexed members all verified. Own-source hosted run not yet pushed.
+
+Required legacy review agreed metadata-only proof scope and future journal
+barriers. model-select: reused gpt-6-astra/xhigh (local8:spec1 blast2 depth2
+verify1 cost2; persistence/security override), no additional agents spawned.
+Read final implementation-plan prerequisites/constraints before next work.
+Keep own91d CI watch21911: book/Linux SUCCESS with raw review markers; Windows
+still LIVE. Own checker compiled only; no all3raw marker/outputdir yet. Do not
+rerun, borrow artifacts or treat parent acceptance as this source acceptance.
+
+## Preceding manifest root authority (2026-10-18)
 
 Branch codex/manifest-root-authority from2097d44; published runtime source
 91db06bb4c98ecc9e251817444672e1ab44764ac. Schema26 is a

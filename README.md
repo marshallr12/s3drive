@@ -31,7 +31,9 @@ Linux/Windows hosted cohort. The [chunk object upload bridge](docs/src/chunk-obj
 connects prepared trees to exact create-only operations and verified child
 receipts. The [manifest authority contract](docs/src/manifest-root-authority.md)
 adds versioned root metadata and content CAS; client publication/settlement and
-mounted large-file activation remain unfinished. No real user startup, remote hosting or Turso backend is installed.
+mounted large-file activation remain unfinished. A
+[complete-tree receipt check](docs/src/chunk-tree-receipts.md) supplies the next
+prerequisite by checking every object, including grandchildren. No real user startup, remote hosting or Turso backend is installed.
 
 The shared engine preserves uncertain/conflicting bytes and exact operation
 identities. Direct and managed writes require explicit source/prefix policy and

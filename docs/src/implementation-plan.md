@@ -1430,3 +1430,71 @@ responses, content race, corrupt/missing child/root acknowledgment, unchanged
 uncertain operation identity, legacy refusal and actual SQLite-full rollback.
 Require the local gate and its own source-bound Linux/Windows hosted regression;
 no new provider mutation or mounted-file flush claim follows from those tests.
+
+
+### Prerequisite: complete historical tree receipt — implementation 2026-10-18
+
+The pre-journal legacy review found that `require_dependencies(root)` validates
+only immediate children. A retained parent/root receipt can outlive deletion of
+a grandchild's local flush/settlement records. Add one synchronous same-owner
+read command that validates the Ready plan/attached snapshot/manifest/graph,
+checks the retained receipt forest once, then matches every non-hole transfer's
+exact physical generation, target, raw SHA, size, create-only guard, Verified
+phase and single-generation acknowledgment. Return an opaque historical report
+bound to that complete frozen context. Never retain CheckedFlushes across a
+command, mutation or await. Have the S3 upload-tree wrapper finalize through this
+report, preserving its existing getters and its non-file-flush meaning.
+
+This report reads metadata, not every payload byte: explicit holes are recorded
+as the validated plan's hole chunks; the existing uploader still freshly verifies
+them during its bounded per-object walk. It does not certify current local media
+or provider existence. No new persistent schema, metadata RPC, logical settlement,
+write authorization, format migration or mounted limit follows. Full graph and
+retained-history scans remain nonconstant work; no scalable latency claim.
+
+Done criteria: empty/hole/data/multilevel reports retain the exact frozen source;
+a deleted grandchild acknowledgment is refused even with immediate parent/root
+receipts intact; missing/corrupt/redirected receipts and mappings fail without
+rewriting evidence; a newer dirty head is preserved; reopening and read-only
+operation at SQLite-full work; real SDK loopback tests verify report/object
+counts, restart recovery and unchanged PUT identities. Run the local gate and
+an independent source-bound hosted cohort. Publication journal and handle/removal
+closing barriers remain the subsequent phase.
+
+
+### Publication journal constraints from legacy review (2026-10-18)
+
+The prerequisite report is a historical value; reacquire owner validation before
+a publication transition. Keep CheckedFlushes internal to one read-only command.
+For later request recovery, resend the complete frozen Apply: bare operation
+lookup alone does not validate request ownership. Preserve all unknown requests
+and sequences. Initially classify only exact authority Conflict as a terminal
+metadata rejection; a transport error is not rejection. Physical rejection needs
+its exact recorded rejected operation and validated conditional 409/412 evidence.
+
+A generic manifest publisher cannot reuse legacy authorize_publication because
+it takes managed::Input, which must continue refusing ReserveManifest. Either
+isolate its controller from native lifecycle APIs or add mutual persistent
+exclusion: namespace/open/logical admission must see unresolved chunk-root rows,
+and chunk publication must see unresolved namespace effects and removal owners.
+A one-time absence check does not close this race. Start with attached normal
+guards only; detached/removal modes remain explicitly unsupported until their
+barriers and receipt links are implemented. Do not interpret OpenRecord.active()
+as currently open or a close event as completion of all linked work.
+
+Preserve all identity distinctions: source snapshot GenerationId, root physical
+GenerationId, object-generation/reserve UUID, deterministic staging-operation
+key and remote upload operation. Freeze the full plan/source manifest/store
+route/guard plus reserve and distinct publish IDs; use raw page size/SHA for
+physical proof, logical length/Merkle descriptor for the file tree. Legacy
+logical acknowledgment requires its separate original-generation chain and
+cannot be satisfied by the root physical flush. Newer dirty heads stay pending.
+
+
+Prerequisite result: all 10 focused state transfer tests and 8 SDK tests pass.
+The full local gate passed with 334 state/1 ignored, 59 S3, 34 core and 50
+authority tests, all 18 managed publication contracts, formatting/Clippy/build,
+63 doc-link files and 59 book chapters. All 244 frozen runtime/verification
+hashes match. Independent final delta review found no blockers. See
+[complete historical tree receipts](chunk-tree-receipts.md) and dated evidence.
+No schema/RPC/native/provider or logical-settlement acceptance follows.
