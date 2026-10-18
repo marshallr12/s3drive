@@ -60,6 +60,48 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
+## Native local gate passed; publication next (2026-10-18)
+
+Worktree /home/marshall/src/worktrees/s3drive-native-manifest-reads,
+branch codex/native-manifest-reads fromb3e30f0, uncommitted draft. Read plan and
+native-manifest-reads.md. Current257 frozen map is
+/tmp/s3drive-native-manifest-v3-frozen.json; old canonical map records gates1/2.
+Gate3 CLOSED EXIT0,257 hashes unchanged; do not repeat without new change/failure. Shared CARGO_TARGET_DIR=/home/marshall/src/s3drive/target,
+RUST_TEST_THREADS=2, same scripts/gate.sh, inner concurrency/deadlines unchanged.
+Gate3 session58981 EXIT0, log /tmp/s3drive-native-manifest-gate3.log. Preserve prior failed cohorts.
+
+Gate1 22825 EXIT101 at existing setup managed store-plan InfoTLSConnecttimeout
+beforeHTTP/body/newFS; causeunproven, observedhighCPUpressure. Isolated unchanged
+startup39166 EXIT0,2.69s. Gate2 46929 EXIT101 at pairedfixture30s marker timeout.
+Diagnostic33451 defaultthreads passed4.01s; full workspace serial83006 failed at
+ENGINE_READY after file-open-write. Negative20443 caught exact libtest prefix
+in2.54s (EXIT101): serial runner merged test-name prefix with first marker.
+Fixed only fixture framing: leading newline before ENGINE_READY andPRODUCER_READY;
+kept exact marker matching/30s bound and added static stage/marker diagnostics.
+Positive55315 fullworkspace serial fixture EXIT0,4.60s inclrecovery/conflict;
+producer62449 fullworkspace serial startup EXIT0,2.16s. No production retry,
+transport deadline, schema/wire or writer change. Native test now explicitly
+checks native open makes zero data-chunk GETs. No real native success yet.
+
+Native read-only implementation: version3 mixedlegacy/manifest namespace,
+logical64GiB sizes, bounded pinned range OpenFile, two stores/Unicode/sparse/
+oldroot/fault controls, real FUSE/WinFsp test + explicit CIstep. Before latest
+fixture refinements,6focused+1ignored PASS5.74s andClippy3 PASS. Explicitlocal
+native attempt EXIT101 atFUSEreadiness OperationNotPermitted/NoNewPrivs1,
+ownedchildreaped/noFUSEleft. No bypass/root/provider mutations.
+
+Reader88d ACCEPTED all3 ownCI39171113280 andstrict21/14+raw35; checkpoint
+7c2b45435cd4aa3999e63ee16ccb6b03f5985c76 pushed, cleanexactremote.
+Next: commitdraft, merge accepted reader doccheckpoint
+preserving257map, push ownnative source for real FUSE/WinFspCI. Local archive builder executed successfully:27members/114301bytes SHA
+138761972263bdf707c249fccf8954a4766a1e4497153ff2b796fd4e71f2a2a6;
+all indexed members verified. Result /tmp/s3drive-native-manifest-gate-result.json.
+LogSHA0a6fc4dd936983e8268d298f871e179f02a79acd92e3916e9d193d4ef40c3466;
+mapSHA6f192f26f798fc4c411135b73aef3e9d620fcf3a4051b882f40e133653686924.
+12publication+6reader/1nativeignored+62S3+365state/1ignored+65chapters PASS.
+Native FUSE/WinFsp acceptance still pending. Primary253/reader256 unchanged.
+PUBLIC remains current; goalACTIVE. This section supersedes historical pending state.
+
 ## Reader publication and hosted acceptance running (2026-10-18)
 
 Combined reader source88d02f7a6605bf13bfd212d67c6609ae16b0ebfd pushed on

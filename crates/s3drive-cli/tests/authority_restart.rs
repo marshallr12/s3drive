@@ -1584,11 +1584,16 @@ async fn paired_windows_fixture_sdk_tls_recovery_and_conflict_preparation() {
                 if line == expected {
                     return;
                 }
+                assert_ne!(
+                    line.strip_prefix("test paired_windows_fixture_engine_child ... "),
+                    Some(expected),
+                    "libtest prefixed the engine marker; marker must occupy its own line"
+                );
             }
             panic!("engine worker exited before {expected}")
         })
         .await
-        .unwrap();
+        .unwrap_or_else(|_| panic!("engine worker timed out before marker {expected}"));
     }
     until(&mut lines, "ENGINE_READY").await;
     f.hide_committed.store(true, Ordering::SeqCst);
@@ -1657,15 +1662,22 @@ async fn paired_windows_fixture_engine_child() {
     let c =
         s3drive_core::Config::parse(&std::fs::read_to_string(root.join("managed.toml")).unwrap())
             .unwrap();
+    eprintln!("ENGINE_STAGE filesystem-open");
     let fs = s3drive_fs::ReadOnlyFs::new(&c).await.unwrap();
+    eprintln!("ENGINE_STAGE directory-lookup");
     let dir = fs.lookup(s3drive_fs::ROOT, "資料 café 🦀").await.unwrap();
+    eprintln!("ENGINE_STAGE file-lookup");
     let node = fs.lookup(dir.id, "日本語 %2F + café.bin").await.unwrap();
+    eprintln!("ENGINE_STAGE file-open-write");
     let file = fs.open_write(node.id).await.unwrap();
-    println!("ENGINE_READY");
+    // Serial libtest writes its test-name prefix without a newline before
+    // invoking this worker. Keep the protocol marker on its own line.
+    println!("\nENGINE_READY");
     std::io::stdout().flush().unwrap();
     for line in std::io::stdin().lock().lines() {
         match line.unwrap().as_str() {
             "dirty" => {
+                eprintln!("ENGINE_STAGE dirty-truncate-write");
                 file.truncate(0).await.unwrap();
                 file.write(
                     0,
@@ -1675,10 +1687,12 @@ async fn paired_windows_fixture_engine_child() {
                 )
                 .await
                 .unwrap();
+                eprintln!("ENGINE_STAGE uncertain-flush");
                 assert!(file.flush().await.is_err());
                 println!("ENGINE_UNKNOWN");
             }
             "recover" => {
+                eprintln!("ENGINE_STAGE recover-flush");
                 file.flush().await.unwrap();
                 println!("ENGINE_RECOVERED");
             }

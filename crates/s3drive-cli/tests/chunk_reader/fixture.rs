@@ -337,6 +337,25 @@ async fn proxy(
     if p.mode.load(Ordering::SeqCst) == 13 && matches!(request, Request::Store { .. }) {
         r = Reply::Features(vec![]);
     }
+    if p.mode.load(Ordering::SeqCst) == 17 && matches!(request, Request::Features {}) {
+        r = Reply::List(s3drive_authority::Listing {
+            sequence: 0,
+            children: vec![],
+        });
+    }
+    if let Reply::List(list) = &mut r {
+        match p.mode.load(Ordering::SeqCst) {
+            20 => list.sequence = u64::MAX,
+            21 => list.children[0].parent = Some(id(999)),
+            22 => list.children[0].deleted = true,
+            23 => list.children.push(list.children[0].clone()),
+            24 => list.children[1].id = list.children[0].id.clone(),
+            25 => list.children[0].placement.as_mut().unwrap().id = id(999),
+            26 => list.children[0].name = "CON:bad".into(),
+            27 => list.children = vec![list.children[0].clone(); 1001],
+            _ => (),
+        }
+    }
     axum::Json(r)
 }
 pub struct Fixture {
@@ -345,6 +364,7 @@ pub struct Fixture {
     pub wire: WireClient,
     pub volume: String,
     pub source: Source,
+    authority_endpoint: String,
     pub s3: S3State,
     pub mode: Arc<AtomicU8>,
     requests: Arc<Mutex<Vec<Request>>>,
@@ -459,6 +479,7 @@ impl Fixture {
                 allow_http_loopback: true,
                 list_url_encoding: ListUrlEncoding::Percent,
             },
+            authority_endpoint: url,
             s3: state,
             mode,
             requests,
@@ -565,6 +586,29 @@ impl Fixture {
     }
     pub fn requests(&self) -> usize {
         self.requests.lock().unwrap().len()
+    }
+    pub fn config(&self, path: &Path, extra: &[(u64, Source)]) -> s3drive_core::Config {
+        let token =
+            s3drive_state::create_private_secret(&path.join("secrets"), TOKEN.as_bytes()).unwrap();
+        let mut text = format!(
+            "version=3\nmode='read-only'\n[managed]\nauthority={:?}\nvolume={:?}\ntoken_file={:?}\n",
+            self.authority_endpoint,
+            self.volume,
+            token.to_str().unwrap(),
+        );
+        for (store, source) in std::iter::once(&(200, self.source.clone())).chain(extra.iter()) {
+            text.push_str(&format!(
+                "[[managed.stores]]\nid={:?}\nsource={:?}\n",
+                id(*store),
+                source.alias
+            ));
+        }
+        for source in std::iter::once(&self.source).chain(extra.iter().map(|(_, s)| s)) {
+            text.push_str("[[sources]]\n");
+            text.push_str(&toml::to_string(source).unwrap());
+        }
+        std::fs::write(path.join("drive.toml"), &text).unwrap();
+        s3drive_core::Config::parse(&text).unwrap()
     }
     pub async fn publish_page(
         &self,

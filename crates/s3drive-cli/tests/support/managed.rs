@@ -948,7 +948,9 @@ pub async fn child() {
         "lifecycle-open-race" => Box::pin(lifecycle::open_race(c)).await,
         "producer" => {
             use std::io::BufRead;
-            println!("PRODUCER_READY");
+            // Keep this protocol marker independent of serial libtest's
+            // unterminated test-name prefix.
+            println!("\nPRODUCER_READY");
             std::io::stdout().flush().unwrap();
             for command in std::io::stdin().lock().lines() {
                 match command.unwrap().as_str() {

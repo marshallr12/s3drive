@@ -2020,3 +2020,49 @@ Reader result: combined full local gate84960 EXIT0, all256 frozen hashes
 unchanged, 12 publication/source +5 reader +62 S3 +365state/1ignored,64chapters.
 The 14-member local archive is indexed and verified. Own hosted acceptance is
 next; portable controls do not activate native chunk reads or writes.
+
+
+### Draft native manifest reads (2026-10-18)
+
+Worktree /home/marshall/src/worktrees/s3drive-native-manifest-reads, branch
+codex/native-manifest-reads, from b3e30f0. The reader256 runtime remains frozen
+in its own worktree while CI39171113280 runs. Drafting is isolated; publish only
+after prerequisite acceptance and this phase's gates. See
+[native read integration contract](native-manifest-reads.md) for footprint,
+compatibility, failure behavior and engine/FUSE/WinFsp done criteria.
+
+### Next write integration: load-bearing source findings (2026-10-18)
+
+Proposal, pending native read acceptance. The existing logical writer explicitly
+rejects manifest bases and caps a file at8MiB (`logical::Binding::validate` and
+`MAX_BYTES`). Raising that constant would retain whole-file buffering and hashing.
+The offline chunk planner accepts a64GiB logical size but currently prepares a
+complete local staging snapshot; it has no authenticated remote-reference overlay.
+These are distinct boundaries. See the accepted source's
+[logical binding](https://github.com/marshallr12/s3drive/blob/88d02f7a6605bf13bfd212d67c6609ae16b0ebfd/crates/s3drive-state/src/logical.rs),
+[full-snapshot planner](https://github.com/marshallr12/s3drive/blob/88d02f7a6605bf13bfd212d67c6609ae16b0ebfd/crates/s3drive-state/src/chunked.rs)
+and existing bounded range composer in crates/s3drive-fs/src/edits.rs.
+
+The write design therefore needs a durable sparse edit view based on an
+authenticated pinned manifest, bounded changed-chunk staging and reuse of
+unchanged authenticated references. Persist the exact base content CAS guard,
+local dirty identity and eventual publication request before network mutations.
+Keep root commit and source acknowledgment distinct; retain conflicting or unknown
+work after restart. Do not reinterpret a manifest root hash as a whole-file SHA
+or silently route chunks through the legacy logical writer.
+
+Boundary edits/truncation must verify complete old chunks before using their
+bytes. A shortened final data object requires new bytes/hash/length; a prefix of
+an old object is not a valid unchanged reference. Growth can change tree height.
+A previous root key has the root role and cannot simply become a child-page key;
+any copied page must use a valid page-role key and publication provenance. Existing
+reader controls already allow older generations/ordinals while enforcing same
+store/file/role scope. Preserve those checks during reuse.
+
+Plan independently green storage/edit/publication/controller phases before native
+write callbacks. Keep one-object writes compatible and make new format activation
+explicit. Required eventual controls include sparse growth to64GiB without whole-
+file allocation, small edits with measured unchanged-chunk reuse, truncate/append,
+rename during dirty edits, unknown root replies, killed owners, SQLite-full rollback,
+local/remote conflict retention and real FUSE/WinFsp flush/read/restart behavior.
+This section records source findings and proposals, not an implemented write API.

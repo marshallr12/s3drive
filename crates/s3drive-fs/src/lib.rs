@@ -111,6 +111,7 @@ pub struct OpenFile {
     handle: Option<ReadHandle>,
     initial_metadata: ObjectMetadata,
     managed: Option<s3drive_managed::FileSnapshot>,
+    managed_chunks: Option<s3drive_managed::chunks::File>,
     managed_write: Option<(Arc<managed::writes::Writes>, Arc<managed::writes::File>)>,
     cache: Option<(Arc<CacheBackend>, Key)>,
     snapshot: OnceCell<Pinned>,
@@ -184,6 +185,11 @@ impl OpenFile {
         }
         if let Some((_, file)) = &self.writes {
             return file.read(offset, length).await;
+        }
+        if let Some(file) = &self.managed_chunks {
+            return Box::pin(file.read_range(offset, length))
+                .await
+                .map_err(managed::error);
         }
         // Keep the transport's validation/EOF behavior on cached reads too.
         if length > MAX_READ_BYTES {
@@ -755,11 +761,7 @@ impl ReadOnlyFs {
             return Err(Error::NotDirectory);
         }
         if let Some(backend) = &self.managed {
-            let listing = backend
-                .reader
-                .list(&parent.key)
-                .await
-                .map_err(managed::error)?;
+            let listing = backend.list(&parent.key).await?;
             let mut nodes = self.nodes.lock().map_err(|_| Error::Internal)?;
             return listing
                 .children
@@ -839,11 +841,7 @@ impl ReadOnlyFs {
     pub async fn metadata(&self, id: u64) -> Result<Option<ObjectMetadata>> {
         let node = self.node(id)?;
         if let Some(backend) = &self.managed {
-            let live = backend
-                .reader
-                .node(&node.key)
-                .await
-                .map_err(managed::error)?;
+            let live = backend.node(&node.key).await?;
             return Ok(if live.kind == s3drive_authority::Kind::Directory {
                 None
             } else {
@@ -854,7 +852,7 @@ impl ReadOnlyFs {
                             return Ok(Some(metadata));
                         }
                     }
-                    Some(managed::metadata(&live))
+                    Some(managed::logical_metadata(&live)?)
                 }
             });
         }
@@ -886,6 +884,32 @@ impl ReadOnlyFs {
             if writing && backend.writes.is_none() {
                 return Err(Error::ReadOnly);
             }
+            if let Some(reader) = &backend.chunks {
+                let live = backend.node(&node.key).await?;
+                if live
+                    .payload
+                    .as_ref()
+                    .is_some_and(|p| p.reservation.manifest.is_some())
+                {
+                    let file = Box::pin(reader.open_file(&node.key))
+                        .await
+                        .map_err(managed::error)?;
+                    let initial_metadata = managed::logical_metadata(file.metadata())?;
+                    return Ok(OpenFile {
+                        initial_metadata,
+                        node,
+                        handle: None,
+                        managed: None,
+                        managed_chunks: Some(file),
+                        managed_write: None,
+                        cache: None,
+                        snapshot: OnceCell::new(),
+                        bypass: AtomicBool::new(false),
+                        writes: None,
+                        writable_open: false,
+                    });
+                }
+            }
             let (snapshot, managed_write) = if let Some(w) = &backend.writes {
                 let (snapshot, file) = Box::pin(w.open(&node.key, writing)).await?;
                 (snapshot, file.map(|file| (w.clone(), file)))
@@ -908,6 +932,7 @@ impl ReadOnlyFs {
                     None
                 },
                 managed_write,
+                managed_chunks: None,
                 cache: None,
                 snapshot: OnceCell::new(),
                 bypass: AtomicBool::new(false),
@@ -951,6 +976,7 @@ impl ReadOnlyFs {
         Ok(OpenFile {
             node,
             initial_metadata: handle.metadata().clone(),
+            managed_chunks: None,
             handle: Some(handle),
             managed: None,
             managed_write: None,

@@ -1,0 +1,211 @@
+{
+  "date": "2026-10-18",
+  "status": "full portable local gate passed; actual native acceptance pending",
+  "branch": "codex/native-manifest-reads",
+  "base": "b3e30f0a468bdc962a8fa4c3beb5ba866bd5d836",
+  "prerequisite_source": "88d02f7a6605bf13bfd212d67c6609ae16b0ebfd",
+  "prerequisite_run": 39171113280,
+  "prerequisite_acceptance": "accepted all3/own typed21+14+raw35; checkpoint7c2b454 pushed",
+  "focused": {
+    "session": 96091,
+    "exit_code": 0,
+    "passed": 6,
+    "ignored_native": 1,
+    "elapsed_seconds": 5.74,
+    "log_sha256": "06c3ba0117804e035517a4e6473da266722a034700062728e8b4527b6aa1d5cf"
+  },
+  "focused_clippy": {
+    "session": 29393,
+    "exit_code": 0,
+    "log_sha256": "a1b63699a96a29a26dfed14d6e2515e4183c9522b0949f2ca41cab35744c9062"
+  },
+  "first_compile_failure": "fixture incorrectly assumed Receipt.reservation; inspected actual Artifact::Reservation API and corrected",
+  "local_native": {
+    "exit_code": 101,
+    "phase": "readiness",
+    "error": "fusermount3: mount failed: Operation not permitted",
+    "no_new_privs": 1,
+    "child_failed_and_reaped": true,
+    "findmnt_no_remaining_fuse_mount": true,
+    "log_sha256": "75d036ba5e1fa0189b97bfcf8e5cba50933477ff184ee22ea5bd39ea5ea183ac",
+    "success": false
+  },
+  "local_gate": {
+    "session": 58981,
+    "exit_code": 0,
+    "log": "/tmp/s3drive-native-manifest-gate3.log",
+    "log_sha256": "0a6fc4dd936983e8268d298f871e179f02a79acd92e3916e9d193d4ef40c3466",
+    "all_frozen_hashes_unchanged": true,
+    "frozen_count": 257,
+    "frozen_map_sha256": "6f192f26f798fc4c411135b73aef3e9d620fcf3a4051b882f40e133653686924",
+    "environment": {
+      "RUST_TEST_THREADS": "2"
+    },
+    "test_summaries": [
+      "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.55s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.02s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.45s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.30s",
+      "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.75s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 13.03s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s",
+      "test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 68.87s",
+      "test result: ok. 6 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 7.03s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.54s",
+      "test result: ok. 2 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 10.62s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.01s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.97s",
+      "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 33.90s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.10s",
+      "test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+      "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.38s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 21.25s",
+      "test result: ok. 365 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 262.25s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ],
+    "book_chapters": 65,
+    "long_notices": [
+      "test chunk_roots_missing_grandchild_and_failed_prepare_block_publication has been running for over 60 seconds",
+      "test namespace_client::opens::tests::session::obsolete_full_open_quota_can_be_retained_without_synthesizing_closing_callbacks has been running for over 60 seconds"
+    ],
+    "native_acceptance": false
+  },
+  "frozen_source_count": 257,
+  "frozen_map_sha256": "6f192f26f798fc4c411135b73aef3e9d620fcf3a4051b882f40e133653686924",
+  "review": {
+    "date": "2026-10-18",
+    "kind": "implementation self-review; no independent agent",
+    "checks": [
+      "Manifest namespace helper validates every child before returning a listing; malformed parent/id/name/scope/sequence and duplicate identities fail closed",
+      "Metadata reads use shared four-operation permits and overall30s deadline; no retained snapshot permit needed for metadata",
+      "Only version3 read-only configs opt into negotiated manifest namespace; valid capability absence preserves legacy-only server behavior; malformed exchange fails",
+      "Legacy Reader/FileSnapshot, config versions, wire/schema/codec and write/lifecycle controllers unchanged",
+      "Read-only manifest OpenFile stores a bounded pinned File and reports descriptor logical length; no arbitrary descriptor constructor or total-file Vec",
+      "Format selection is followed by independent fresh snapshot authorization; format races fail explicitly without a retry/write fallback",
+      "Typed bounds/busy/timeout/authority/provider errors mapped; integrity/protocol/binding remain I/O errors; no denied/corrupt bytes replaced with zero",
+      "Owned synthetic-profile test subprocess, ephemeral services and SQLite outside mount; readonly writer methods refuse; no provider uploads",
+      "Native worker timeout tears down owned daemon then awaits blocked worker; bounded log/readiness/stop/reap and last-resort unmount",
+      "Native data transfer observation plus source/library controls bound small reads; no total process RSS or physical reboot claim"
+    ],
+    "limitations": [
+      "No actual native success yet: local FUSE rejected mount with Operation not permitted under NoNewPrivs1",
+      "Requires own FUSE and WinFsp CI before acceptance; prerequisite reader Windows still live",
+      "No writable chunk integration, migration, GC or live-provider mutation"
+    ],
+    "source_sha256": {
+      "crates/s3drive-managed/src/chunks/reader.rs": "47118ecc04c23a81cf731c092983ec73e2dcf0bd1c671ee51ce2abccd84cca65",
+      "crates/s3drive-fs/src/managed.rs": "e87ae1624202684cc117908e250bf0fc22032ab9ca9f434d89595973f60706d9",
+      "crates/s3drive-fs/src/lib.rs": "96d96f7e3609141176ade46b358a1e63fd0c2a92885a87a6698edf0cdd29143b",
+      "crates/s3drive-cli/tests/chunk_reader/native.rs": "2a905330c6132edcbab1565774a64a6d6aaf73ba4a95a13fe93a0f03ed8c9593",
+      "crates/s3drive-cli/tests/authority_restart.rs": "92474caabb76477d0b171f6cfbb5d5aa469b407c6575a03e555e5aed9345c372",
+      "crates/s3drive-cli/tests/support/managed.rs": "2aca1c3d0cabc57db73ad8ba7eb6ed1532a67498b6afad9e702f878b1b66a835"
+    },
+    "fixture_refinements": [
+      "Exact serial-libtest prefix negative control fails before marker framing fix",
+      "Leading newline before first engine/producer markers; exact matching and30s deadline unchanged",
+      "Stage diagnostics contain fixed fixture labels only; no private inputs",
+      "Native open explicitly checked to issue zero data-chunk GETs"
+    ]
+  },
+  "local_gate1": {
+    "session": 22825,
+    "exit_code": 101,
+    "log_sha256": "40c3c0fadf0a5ebb1fe6d6c14e3120c4118af2f4152ba0de44aaa5d7a5adaedd",
+    "all257_frozen_hashes_unchanged": true,
+    "failed_suite": "managed_native",
+    "passed": 7,
+    "failed": 1,
+    "failed_case": "paired_startup_preparation_requires_portable_https_and_guarded_rename",
+    "failure": "fixture seed child, managed store-plan Info TLS Connect timeout2.09s; owned TCP loopback, HTTP driver/read/write/body polls zero",
+    "source_location": "tests/support/managed.rs1035",
+    "new_filesystem_not_entered_by_failed_store_plan": true,
+    "cpu_observation": {
+      "loadavg": [
+        39.56,
+        37.48,
+        19.18
+      ],
+      "nproc": 4,
+      "cpu_pressure_avg60": 65.02,
+      "timing_causality": "unproven"
+    },
+    "long_notices": [
+      "test chunk_roots_missing_grandchild_and_failed_prepare_block_publication has been running for over 60 seconds",
+      "test managed_lifecycle_engine_contract has been running for over 60 seconds",
+      "test managed_engine_durable_existing_file_edits_and_content_cas has been running for over 60 seconds",
+      "test managed_namespace_moves_replacements_and_retained_unlinked_views has been running for over 60 seconds"
+    ],
+    "acceptance": false
+  },
+  "targeted_diagnostic": {
+    "session": 39166,
+    "exit_code": 0,
+    "passed": 1,
+    "elapsed_seconds": 2.69,
+    "log_sha256": "f32d2cd8f4c902b8049921e938e818bd335661be1f0c7f8273161996f4ff4972",
+    "caveat": "isolated unchanged test; does not establish prior timeout cause"
+  },
+  "local_gate2": {
+    "session": 46929,
+    "exit_code": 101,
+    "log_sha256": "807cf754ce7fa35f8f81176a7aec76ebc9bdf6d6693989a6dacd6b0f238a0074",
+    "case": "paired_windows_fixture_sdk_tls_recovery_and_conflict_preparation",
+    "failure": "30-second engine marker timeout; marker omitted in original assertion",
+    "location": "authority_restart.rs1591",
+    "suite": {
+      "passed": 9,
+      "failed": 1,
+      "ignored": 3
+    },
+    "source": "unchanged257 snapshot used by gate2; diagnostic-only test refinement follows",
+    "cause": "proven serial libtest stdout prefix merged first ENGINE_READY; transport not implicated by this failure"
+  },
+  "marker_negative_control": {
+    "session": 20443,
+    "exit_code": 101,
+    "elapsed_seconds": 2.54,
+    "reason": "exact-prefix guard caught prefixed ENGINE_READY",
+    "log_sha256": "3b1fb6848d642ea745e13293383251de12d64a48a8cecf39ce2b8cc6d889416d"
+  },
+  "marker_positive_control": {
+    "session": 55315,
+    "exit_code": 0,
+    "elapsed_seconds": 4.6,
+    "scope": "full workspace feature graph, only exact paired fixture selected; RUST_TEST_THREADS1; all recovery/conflict assertions unchanged",
+    "log_sha256": "e535f57a0bcb4c0cfb0f4c1fbb07601f85618954a250903bbb75b8904e4a1b1d"
+  },
+  "fixture_repair": "leading newline before first ENGINE_READY and PRODUCER_READY; expected marker/30s deadline unchanged; private stage diagnostics identify progress",
+  "additional_native_control": "native file open must make zero data-chunk GETs",
+  "producer_positive_control": {
+    "session": 62449,
+    "exit_code": 0,
+    "elapsed_seconds": 2.16,
+    "log_sha256": "c4395fe2197db0b952dd173176eefac5ce4a71b19a1c5742f3461bd294b0f370"
+  },
+  "initial_frozen_map_sha256": "c0bc1fe3c82062cca61c7983a25d3d92811f26e1e81f35ef12765d493023eef5",
+  "local_archive": {
+    "path": "evidence/native-manifest-reads-local-20261018.tar.gz",
+    "sha256": "138761972263bdf707c249fccf8954a4766a1e4497153ff2b796fd4e71f2a2a6",
+    "bytes": 114301,
+    "members": 27,
+    "all_indexed_members_verified": true,
+    "acceptance": "portable local gate only; explicit local native attempt failed at FUSE readiness"
+  }
+}
