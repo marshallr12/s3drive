@@ -1044,3 +1044,24 @@ a portable pass alone cannot establish reliability. No main promotion is planned
 from diagnostics alone, even if the instrumented native cohort passes.
 Separately measure retained
 journal ancestry cost without weakening integrity checks or dropping history.
+
+### P6m4h — pending-scan proof reuse (candidate, 2026-10-18)
+
+Measure retained settled-history scans before optimizing. The current pending
+scan rechecks each file and repeatedly validates the entire remote receipt forest
+through logical receipt verification. Preserve all records, byte/hash checks,
+receipt equality, ancestry, pagination and corruption refusal, including covered
+rows and rows outside the requested page. Any reusable proof must be scoped to
+one synchronous read command on the exclusive state owner, with no awaits or
+mutation while it exists; no proof may survive into another command.
+
+Done criteria: equivalent results against the original scan algorithm, measured
+reduction in SQLite VM progress callbacks for retained history, adversarial covered
+record/receipt/ancestry corruption and changed-between-command checks, the full
+local gate and own native acceptance. Timing is observational, not a flaky test
+threshold. Reducing scan cost does not by itself prove the Windows transport
+cause or permit dropping the unresolved transport acceptance requirements.
+The [measured candidate](managed-edits.md#retained-history-scan-validation-candidate-2026-10-18)
+passed its local gate:276 state,48 authority and workspace/book checks. Its own
+native cohort remains required; the32-edit study is not a production latency or
+large-catalog acceptance claim.

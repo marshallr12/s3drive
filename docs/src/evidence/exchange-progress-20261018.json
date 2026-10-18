@@ -3,7 +3,7 @@
   "date": "2026-10-18",
   "parent": "47e9dd45e5ec4868b71ce94a8a3ad9d8f5615a73",
   "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
-  "status": "final full local gate passed; diagnostic candidate pending private publication and own native observations",
+  "status": "final full local gate passed; private diagnostic candidate published; own hosted native observations pending",
   "native_failure_fixed": false,
   "provider_requests": 0,
   "source_sha256": {
@@ -85,9 +85,50 @@
     "at_utc": "2026-10-18T11:37:27.591735+00:00"
   },
   "hosted": {
-    "status": "not published",
+    "run": 39124027385,
+    "source": "90a83571de346f3aeb092da749b96078a301704d",
+    "status": "in_progress",
+    "conclusion": "",
+    "jobs": [
+      {
+        "databaseId": 117665289707,
+        "name": "rust (windows-latest)",
+        "status": "in_progress",
+        "conclusion": ""
+      },
+      {
+        "databaseId": 117665289879,
+        "name": "book",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "databaseId": 117665289919,
+        "name": "rust (ubuntu-latest)",
+        "status": "in_progress",
+        "conclusion": ""
+      }
+    ],
+    "observed_at_utc": "2026-10-18T11:54:07.647306+00:00",
     "native_acceptance": false,
-    "repeat_acceptance": false
+    "repeat_acceptance": false,
+    "native_correction_proven": false,
+    "watch_log": "/tmp/s3drive-exchange-progress-hosted-watch.log",
+    "watch_session": 78734,
+    "raw_logs": {
+      "linux": {
+        "path": "/tmp/s3drive-exchange-progress-90-linux.log",
+        "sha256": "85f6f648d808bfa75a53c5c44a8fe34db1deaa28493e61e08223ce7faca160eb",
+        "reviewed": true
+      },
+      "book": {
+        "path": "/tmp/s3drive-exchange-progress-90-book.log",
+        "sha256": "cafa408c64f7de9c57fa2259f90063a721032c8a6db672d5f960f258beb53db6",
+        "reviewed": true
+      }
+    },
+    "linux_scope": "48 authority and274 state;9 real native cases,32 flushes and paired/no-systemd mount and HTTP/TLS coordinator startup passed; stopped-authority Node/Connect control has no HTTP milestones or I/O polls",
+    "windows_scope": "32burst step completed successfully per workflow metadata; later native acceptance still live/unreviewed; no correction claim"
   },
   "resolved_sources": {
     "tokio-1.53.3/src/io/async_write.rs": "08e060b892eb57fdaa79f83c4f0c39877587866e67ef0565896d9c3abc05e720",
@@ -107,5 +148,19 @@
       "log": "/tmp/s3drive-exchange-progress-final-test.log",
       "sha256": "97720c7cb99636bad850ae2bafc0123dc4924ad805a03b456dc108e32f1c6c90"
     }
+  },
+  "publication": {
+    "source": "90a83571de346f3aeb092da749b96078a301704d",
+    "parent": "47e9dd45e5ec4868b71ce94a8a3ad9d8f5615a73",
+    "branch": "codex/owned-authority-client",
+    "private_before_and_after": true,
+    "normal_push": true,
+    "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+    "local_gate_exit_code": 0,
+    "diagnostics_only": true,
+    "native_acceptance": false,
+    "native_failure_fixed": false,
+    "main_promotion_planned": false,
+    "at_utc": "2026-10-18T11:38:06.546582+00:00"
   }
 }

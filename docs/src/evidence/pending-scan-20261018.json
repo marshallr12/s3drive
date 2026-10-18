@@ -1,0 +1,220 @@
+{
+  "format": "s3drive-pending-scan-evidence-v1",
+  "date": "2026-10-18",
+  "parent": "90a83571de346f3aeb092da749b96078a301704d",
+  "branch": "codex/pending-scan-proofs",
+  "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+  "status": "final full local gate passed; separate private candidate branch publication and own native acceptance pending",
+  "native_failure_fixed": false,
+  "provider_requests": 0,
+  "schema_change": false,
+  "public_api_change": false,
+  "dependencies_changed": false,
+  "source_sha256": {
+    "crates/s3drive-state/src/logical.rs": "1a910828ca30c22596fee6290b9d9da4fd7bbcff14ca6c319157aeefd0436614",
+    "crates/s3drive-state/src/logical/tests.rs": "5d1cbe45d00d4f18375e83d296e359d690a844cd236294bb7cc18bdc2edc93ec",
+    "crates/s3drive-state/src/logical/tests/pending_scan.rs": "0ae31f7930fe5e0a29a6c7cfa105f77bfa558962edffa4ab2241582e9c9f0501",
+    "crates/s3drive-state/src/remote.rs": "2a553593f508af3bf975b0f7517d35959704410e49aff735466439e908881421",
+    "crates/s3drive-state/src/remote/acknowledgments.rs": "bb95e6ae565b047f324c5c6414829198f61bb2468056865b1b3949f66a88326e",
+    "Cargo.lock": "ca1be721c031390b235be520cae431dcb5321d6a5711f11751db3aa58cc66616",
+    "Cargo.toml": "03e8f88c622328e53d02083c18c721293dbcc3c0d423b95bc318c3f6f81e8936"
+  },
+  "baseline_production_source_sha256": {
+    "crates/s3drive-state/src/logical.rs": "8a50e5279755c6844f1daca0c693e1865e4c56e862b6f74376090e63b160a786",
+    "crates/s3drive-state/src/logical/tests.rs": "00921d12dae6f37e01c7b8401429943be3e4ef78826f0cb3f9af0331f744572f",
+    "crates/s3drive-state/src/remote.rs": "23d1054d02b9367984971ad4cd29667205d93ed01e1efa972ce373a175106716",
+    "crates/s3drive-state/src/remote/acknowledgments.rs": "4ee285c016a024a933cce78c5e8d26390a1fc5db522658963c5686202ab8ad2d",
+    "Cargo.lock": "ca1be721c031390b235be520cae431dcb5321d6a5711f11751db3aa58cc66616",
+    "Cargo.toml": "03e8f88c622328e53d02083c18c721293dbcc3c0d423b95bc318c3f6f81e8936"
+  },
+  "baseline": {
+    "log": "/tmp/s3drive-pending-scan-before2.log",
+    "sha256": "9202171efb39f136dfb1bedf9dbbad8399cc1c3db460f0743c84184af126d48c",
+    "exit_code": 0,
+    "metrics": [
+      {
+        "rows": 4,
+        "reference_vm_callbacks": 45191,
+        "current_vm_callbacks": 45191,
+        "reference_us": 85800,
+        "current_us": 85229
+      },
+      {
+        "rows": 8,
+        "reference_vm_callbacks": 151359,
+        "current_vm_callbacks": 151359,
+        "reference_us": 268805,
+        "current_us": 267083
+      },
+      {
+        "rows": 16,
+        "reference_vm_callbacks": 546671,
+        "current_vm_callbacks": 546671,
+        "reference_us": 907455,
+        "current_us": 880760
+      },
+      {
+        "rows": 32,
+        "reference_vm_callbacks": 2069199,
+        "current_vm_callbacks": 2069199,
+        "reference_us": 3264759,
+        "current_us": 3245695
+      }
+    ],
+    "production_code": "unchanged state implementation from90a8357; new synthetic study fixture only"
+  },
+  "candidate_study": {
+    "log": "/tmp/s3drive-pending-scan-final-study.log",
+    "sha256": "3e66f90f28b64090cb8480cbd57a42d0449445aa70aa08d115617f04dfe1d424",
+    "exit_code": 0,
+    "environment": {
+      "os": "linux",
+      "arch": "x86_64",
+      "sqlite": "3.53.2"
+    },
+    "metrics": [
+      {
+        "rows": 4,
+        "reference_vm_callbacks": 35495,
+        "current_vm_callbacks": 10982,
+        "reference_us": 73478,
+        "current_us": 26394
+      },
+      {
+        "rows": 8,
+        "reference_vm_callbacks": 112735,
+        "current_vm_callbacks": 22710,
+        "reference_us": 202932,
+        "current_us": 50907
+      },
+      {
+        "rows": 16,
+        "reference_vm_callbacks": 392495,
+        "current_vm_callbacks": 56054,
+        "reference_us": 671031,
+        "current_us": 125146
+      },
+      {
+        "rows": 32,
+        "reference_vm_callbacks": 1453135,
+        "current_vm_callbacks": 162294,
+        "reference_us": 2321556,
+        "current_us": 349748
+      }
+    ],
+    "timing_includes_progress_handler": true,
+    "wall_clock_acceptance_threshold": false,
+    "reference_caveat": "post-change reference enumeration uses current public get/file; file itself shares proof within its call, so current-reference is not exact pre-change cost",
+    "source_scope": "same final production implementations and executed study body; later changes extend other adversarial controls only; final combined-source gate required"
+  },
+  "controls": [
+    "all Record fields, dirty head, building draft, pagination/limits and reopen match uncached enumeration",
+    "second settled volume sharing node ID preserves cache-key isolation",
+    "SQL total_changes unchanged across all scan calls",
+    "same Journal rechecks corruption between commands",
+    "covered/off-page logical/physical/remote catalog/staged bytes/parent/file evidence refused",
+    "unrelated remote root and settlement without logical rows refused",
+    "validly rehashed foreign settlement with intact staged manifest reaches logical ancestor refusal",
+    "validly hashed forged logical receipt loads then fails exact receipt comparison"
+  ],
+  "negative_control": {
+    "mutation": "omit volume from per-command file cache key",
+    "exit_code": 101,
+    "source_restored": true,
+    "restored_sha256": "1a910828ca30c22596fee6290b9d9da4fd7bbcff14ca6c319157aeefd0436614",
+    "log": "/tmp/s3drive-pending-scan-key-negative.log"
+  },
+  "fixture_correction": {
+    "log": "/tmp/s3drive-pending-scan-before.log",
+    "exit_code": 101,
+    "reason": "existing test helper interpreted hex edit IDs with decimal parse and reused publication IDs at10; study now assigns explicit unique IDs; no production change to bypass constraint"
+  },
+  "focused": {
+    "log": "/tmp/s3drive-pending-scan-focused4.log",
+    "exit_code": 0,
+    "passed": 16,
+    "intentionally_ignored_study": 1,
+    "final_rust_source": true
+  },
+  "targeted_clippy": {
+    "log": "/tmp/s3drive-pending-scan-clippy1.log",
+    "exit_code": 0,
+    "sha256": "bca8e1545ce93f8fa89b9947b4f01428e4bb753bd2616b70764efedf273da7e7",
+    "later_change": "additional unrelated-forest/valid-ancestry controls and environment output; final gate required"
+  },
+  "proof_scope": {
+    "lifetime": "one synchronous read-only command on exclusive State owner; fresh public get/file and pending contexts",
+    "read_only_paths_reviewed": true,
+    "mutations_or_awaits_while_reusing": false,
+    "retained": "compact verified roots and fully validated files keyed by volume+node",
+    "every_logical_row_checked_before_filtering": true,
+    "no_persistent_cache_or_pruning": true
+  },
+  "review": {
+    "read_only_role": "legacy-impl-reviewer",
+    "implementation_findings": "no hidden mutation or missing original validation invariant found",
+    "test_gaps_addressed": [
+      "unrelated remote forest corruption",
+      "validly hashed foreign settlement reaching logical ancestry check"
+    ],
+    "final_followup_pending": false,
+    "final_followup": "both unrelated-forest and validly rehashed ancestry controls inspected; no remaining blocker found; full gate/native acceptance still separate"
+  },
+  "local_gate": {
+    "command": "bash scripts/gate.sh",
+    "status": "completed",
+    "session": 79421,
+    "log": "/tmp/s3drive-pending-scan-gate1.log",
+    "exit_code": 0,
+    "log_sha256": "23f4e20ed7856ee649fc8811444bdddd6364c9756c5d24cb79b6757e1151045e",
+    "source_unchanged": true,
+    "state_passed": 276,
+    "state_intentionally_ignored_study": 1,
+    "authority_passed": 48,
+    "core_passed": 17,
+    "book_markdown_files": 58,
+    "at_utc": "2026-10-18T11:59:15.199238+00:00"
+  },
+  "hosted": {
+    "status": "not published",
+    "native_acceptance": false,
+    "repeat_acceptance": false
+  },
+  "remaining": [
+    "own source-bound native Linux/Windows/startup/reference gates and repeat",
+    "historical Windows root cause unresolved",
+    "retained ancestry/bytes/catalog costs remain",
+    "large files/multipart/provider/multi-host/reboot/packaging not completed"
+  ],
+  "sources": [
+    {
+      "url": "https://www.sqlite.org/c3ref/progress_handler.html",
+      "read_date": "2026-10-18",
+      "scope": "progress callbacks approximate instructions; may execute during prepare; callback must not modify connection"
+    }
+  ],
+  "handoff_refresh": {
+    "archive": "docs/archive/HANDOFF-before-pending-scan-20261018.md",
+    "sha256": "0173cd6a45fc738e8a705670cee8c52eaabd8a9127deae277b5458008d56f133",
+    "byte_identical": true,
+    "before_lines": 421,
+    "after_lines": 408
+  },
+  "limits": [
+    "metadata cache lives until end of read command and grows with retained file count; peak memory at catalog limits unmeasured",
+    "full byte checks and ancestry walks remain; no large-catalog scalability acceptance",
+    "no causal Windows transport fix established"
+  ],
+  "final_docs": {
+    "build": {
+      "exit_code": 0,
+      "log": "/tmp/s3drive-pending-scan-final-build.log",
+      "sha256": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4"
+    },
+    "test": {
+      "exit_code": 0,
+      "log": "/tmp/s3drive-pending-scan-final-test.log",
+      "sha256": "97720c7cb99636bad850ae2bafc0123dc4924ad805a03b456dc108e32f1c6c90"
+    }
+  }
+}

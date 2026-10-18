@@ -12,6 +12,7 @@ pub use conflicts::RetainedConflict;
 use rusqlite::{Connection, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 const LIMIT: usize = 4096;
 const MAX_BYTES: u64 = 8 * 1024 * 1024;
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -152,6 +153,14 @@ pub struct File {
     pub settled: Option<GenerationId>,
     pub base: Node,
     pub base_observed: bool,
+}
+/// One synchronous read-only command only: no mutation or await may occur while
+/// these proofs are reused. Every public get/file starts fresh; pending shares
+/// one context while still loading and checking every retained edit.
+#[derive(Default)]
+struct ReadProofs {
+    flushes: Option<remote::CheckedFlushes>,
+    files: HashMap<(String, String), File>,
 }
 #[derive(Clone, Serialize, Deserialize)]
 struct FileRow {
@@ -468,6 +477,13 @@ impl<'a> Journal<'a> {
         self.file(&binding.volume, &binding.node.id)
     }
     pub fn file(&mut self, volume: &str, node: &str) -> Result<File> {
+        self.file_with(volume, node, &mut ReadProofs::default())
+    }
+    fn file_with(&mut self, volume: &str, node: &str, proofs: &mut ReadProofs) -> Result<File> {
+        let key = (volume.to_owned(), node.to_owned());
+        if let Some(file) = proofs.files.get(&key) {
+            return Ok(file.clone());
+        }
         let row = file_row(&self.state.connection, volume, node)?;
         let head = journal::Journal::new(self.state, self.options)?
             .head(&row.binding.target()?)?
@@ -478,7 +494,7 @@ impl<'a> Journal<'a> {
                 [g.value()],
                 |r| r.get(0),
             )?;
-            self.get(&id)?;
+            self.get_with(&id, proofs)?;
         }
         let base = if let Some(g) = row.settled {
             if !ancestor(
@@ -494,7 +510,7 @@ impl<'a> Journal<'a> {
                 [g.value()],
                 |r| r.get(0),
             )?;
-            let r = self.get(&id)?;
+            let r = self.get_with(&id, proofs)?;
             if r.publication.as_ref().map(|p| p.id()) != row.publication.as_deref() {
                 return Err("logical settlement publication changed".into());
             }
@@ -502,18 +518,23 @@ impl<'a> Journal<'a> {
         } else {
             row.binding.node.clone()
         };
-        Ok(File {
+        let file = File {
             binding: row.binding,
             head,
             settled: row.settled,
             base_observed: row.observed.is_some(),
             base: row.observed.unwrap_or(base),
-        })
+        };
+        proofs.files.insert(key, file.clone());
+        Ok(file)
     }
     pub fn get(&mut self, id: &str) -> Result<Record> {
+        self.get_with(id, &mut ReadProofs::default())
+    }
+    fn get_with(&mut self, id: &str, proofs: &mut ReadProofs) -> Result<Record> {
         let r = load(&self.state.connection, id)?;
         if let Some(receipt) = &r.receipt {
-            if &self.checked_receipt(&r)? != receipt {
+            if &self.checked_receipt_with(&r, &mut proofs.flushes)? != receipt {
                 return Err("logical receipt changed".into());
             }
             let f = file_row(&self.state.connection, &r.input.volume, &r.input.node)?;
@@ -695,6 +716,13 @@ impl<'a> Journal<'a> {
         self.get(id)
     }
     fn checked_receipt(&mut self, r: &Record) -> Result<Receipt> {
+        self.checked_receipt_with(r, &mut None)
+    }
+    fn checked_receipt_with(
+        &mut self,
+        r: &Record,
+        flushes: &mut Option<remote::CheckedFlushes>,
+    ) -> Result<Receipt> {
         let input = r
             .publication
             .as_ref()
@@ -704,8 +732,15 @@ impl<'a> Journal<'a> {
             return Err("logical/physical publication mismatch".into());
         }
         let g = physical.generation.ok_or("physical bytes not staged")?;
-        let flush = remote::Journal::new(self.state, remote::Options::default())?
-            .flush_receipt(g)?
+        if flushes.is_none() {
+            *flushes = Some(
+                remote::Journal::new(self.state, remote::Options::default())?.checked_flushes()?,
+            );
+        }
+        let flush = flushes
+            .as_ref()
+            .ok_or("missing read-only flush proof")?
+            .receipt(&self.state.connection, g)?
             .ok_or("physical flush not acknowledged")?;
         let info = flush.info();
         if info.target != input.target()?
@@ -784,9 +819,10 @@ impl<'a> Journal<'a> {
             return Err("logical edit limit or integrity failure".into());
         }
         let mut out = Vec::new();
+        let mut proofs = ReadProofs::default();
         for id in ids {
-            let r = self.get(&id)?;
-            let file = self.file(&r.input.volume, &r.input.node)?;
+            let r = self.get_with(&id, &mut proofs)?;
+            let file = self.file_with(&r.input.volume, &r.input.node, &mut proofs)?;
             let covered = match (r.generation, file.settled) {
                 (Some(g), Some(s)) => ancestor(&self.state.connection, &file.binding, g, s)?,
                 _ => false,

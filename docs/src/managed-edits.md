@@ -116,3 +116,58 @@ remote fsync and recovery to those callbacks. P6m3b3 adds portable names,
 create/rename/replace/unlink and real application save workflows. Authority
 supervision, remote/Turso deployment and workstation reboot acceptance remain
 separate requirements.
+
+## Retained-history scan validation (candidate, 2026-10-18)
+
+This change concerns the **client-local** SQLite journal. The prior pending scan
+validated every edit, repeatedly checked the same file, and revalidated the
+complete remote acknowledgment forest for each logical receipt. Settled history
+therefore made a scan progressively more expensive even when no edit was dirty.
+
+The candidate creates private read proofs for one synchronous command on the
+exclusive SQLite owner. It lazily validates the entire remote forest once,
+retains compact roots, and reloads/binds each requested complete receipt to its
+root. A complete verified file is reused by `(volume, node)` within the scan.
+Public `get`/`file` calls create fresh contexts. No context survives a command,
+mutation or await, and no SQL data mutation occurs during proof reuse.
+The proofs retain metadata rather than file contents. Metadata remains live until
+the command ends and grows with retained-file count; peak memory at catalog limits
+has not been measured.
+
+Every retained edit still undergoes row/hash, byte, publication, conflict,
+receipt-equality and ancestry checks **before** coverage or pagination filtering.
+No record or payload is reclaimed. Corrupt covered/off-page rows, an unrelated
+remote root/settlement, a validly rehashed foreign settlement and an exact-receipt
+mismatch all fail. Success followed by corruption on the same `Journal` instance
+fails on the next command. A second volume sharing the same node ID exercises
+the full file-cache key; deliberately omitting volume made its control fail.
+
+One local Linux x86_64 study used SQLite3.53.2, 32-byte generations and no network.
+The table compares the preserved pre-change implementation with the candidate.
+Elapsed times include progress instrumentation and are observational, not a
+production flush benchmark or a cross-platform latency guarantee.
+
+| Settled edits | Before: VM progress callbacks | Candidate: callbacks | Before: instrumented elapsed | Candidate: instrumented elapsed |
+| --- | ---: | ---: | ---: | ---: |
+| 4 | 45,191 | 10,982 | 85 ms | 26 ms |
+| 8 | 151,359 | 22,710 | 267 ms | 51 ms |
+| 16 | 546,671 | 56,054 | 881 ms | 125 ms |
+| 32 | 2,069,199 | 162,294 | 3,246 ms | 350 ms |
+
+SQLite's callback interval approximates VM instructions and can include statement
+preparation; the test uses interval1 and an atomic counter without querying or
+modifying the connection inside the callback. It asserts less work against an
+uncached enumeration using current public validators, without a wall-clock
+threshold. That reference also benefits from the new public `file` implementation;
+its counts are **not** the exact historical baseline above.
+[SQLite progress callback contract](https://www.sqlite.org/c3ref/progress_handler.html).
+
+The full local gate passed276 state and48 authority tests plus workspace/book
+checks. The scaling study is intentionally ignored by the default gate and has
+its own successful recorded run. Source-bound native gates remain required in the
+[dated evidence](evidence/pending-scan-20261018.json). Ancestry walks, complete byte
+verification and other catalog checks still cost work; this does not establish
+large-history scalability or explain/fix the intermittent Windows HTTP failure.
+No schema, public API, network policy, retry, unknown operation or overwrite rule
+changes. Large files, reference-aware reclamation and real provider acceptance
+remain separate phases.

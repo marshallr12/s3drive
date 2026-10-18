@@ -127,18 +127,14 @@ impl Journal<'_> {
         })
     }
     pub fn flush_receipt(&self, generation: GenerationId) -> Result<Option<FlushReceipt>> {
+        self.checked_flushes()?
+            .receipt(&self.state.connection, generation)
+    }
+    pub(crate) fn checked_flushes(&self) -> Result<CheckedFlushes> {
+        // Validate every root, settlement, manifest and ancestry interval before
+        // any result can suppress work. Retain only bounded compact roots.
         let all = validate(&self.state.connection)?;
-        let Some(root) = all
-            .roots
-            .values()
-            .find(|root| root.generation == generation)
-        else {
-            return Ok(None);
-        };
-        Ok(Some(receipt(
-            load_operation(&self.state.connection, root.operation)?,
-            root,
-        )))
+        Ok(CheckedFlushes { roots: all.roots })
     }
     pub fn settlement(&self, generation: GenerationId) -> Result<Option<Settlement>> {
         let all = validate(&self.state.connection)?;
@@ -179,6 +175,34 @@ struct Node {
 struct Validated {
     roots: BTreeMap<[u8; 32], Root>,
     nodes: BTreeMap<GenerationId, Node>,
+}
+/// Private proof for one synchronous read command on the exclusive State owner.
+/// Never cache this across commands, mutations or awaits. It is deliberately
+/// neither Clone nor public, and contains no payloads or complete Info records.
+pub(crate) struct CheckedFlushes {
+    roots: BTreeMap<[u8; 32], Root>,
+}
+impl CheckedFlushes {
+    pub(crate) fn receipt(
+        &self,
+        connection: &Connection,
+        generation: GenerationId,
+    ) -> Result<Option<FlushReceipt>> {
+        let Some(root) = self.roots.values().find(|r| r.generation == generation) else {
+            return Ok(None);
+        };
+        let info = load_operation(connection, root.operation)?;
+        // Bind the reloaded complete result to the compact proof, even though
+        // the owner must not mutate state during this command.
+        if info.generation != generation
+            || info.phase != Phase::Verified
+            || receipt_hash(&info, root.covered) != root.checksum
+            || target_hash(&info.target) != root.target
+        {
+            return Err(Failure::Corrupt.into());
+        }
+        Ok(Some(receipt(info, root)))
+    }
 }
 fn receipt(info: Info, root: &Root) -> FlushReceipt {
     FlushReceipt {

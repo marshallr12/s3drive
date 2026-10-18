@@ -5,74 +5,71 @@ capability was available. Read this and docs/src/implementation-plan.md before
 implementation. Keep research/decisions/status/plans in docs/src/. Run the local
 gate with `bash scripts/gate.sh`; native/provider/recovery gates are separate.
 
-## Current exchange-progress candidate and next action
+## Current pending-scan candidate and next action
 
-Current branch codex/owned-authority-client, based on privately pushed
-47e9dd45e5ec4868b71ce94a8a3ad9d8f5615a73. Main remains
+Current branch codex/owned-authority-client at privately pushed
+90a83571de346f3aeb092da749b96078a301704d. Main remains
 bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05. Goal ACTIVE.
-New Rust progress instrumentation, tests and docs passed the full local gate;
-private publication is next. Preserve all
-post-push observations; no provider writes, startup registration or main promotion.
+New client-local pending-scan proof reuse, tests and docs are uncommitted.
+No provider requests, schema/public API/dependency/overwrite/retry change.
 
-Exact-source47 CI39122239338 is terminal FAILURE: Windows117660011502
-failed native flush burst step22; Linux117660011490 and book117660011334 passed.
-Completed raw /tmp/s3drive-owned-client-47-{windows,linux,book}.log reviewed;
-metadata /tmp/s3drive-owned-client-47-terminal-run.json. Windows Info/Request/
-UnexpectedEof/bodyfalse has owned+candidate TCP client51322/server51021,
-exactly matching server164 HttpTimeout5196ms/read0/write0/flush1/dispatchedfalse.
-Both processes stayed alive; fresh CLI OriginalVolume844ms. The new production
-client did not remove the empty-header failure; no specific cause established.
-DO NOT RUN prepared source47 success artifact checker or repeat branch push.
-No repeat ref was created; no native correction/reliability acceptance.
-Linux passed9 native/32-flush/paired and both coordinator startup protocols.
-Its flush iterations steadily grew from~0.2sec to6.5sec. Windows reached10sec+
-before failure. Timings alone do not establish a cause.
+Parent90 exact-source CI39124027385 is live: Windows117665289707 disposition
+lifecycle; Linux117665289919 and book117665289879 terminal SUCCESS. Watch78734
+/tmp/s3drive-exchange-progress-hosted-watch.log. Completed raw Linux/book
+/tmp/s3drive-exchange-progress-90-{linux,book}.log reviewed. Linux48 authority,
+274 state/9 native/32flush/paired recovery and both no-systemd coordinator startup
+protocols passed. Its only production-path transport refusals are controlled
+stopped-authority Node/Connect with HTTP/I/O milestones absent. Windows32burst
+passed per completed workflow step, but later acceptance is not established.
+Poll exact run/source and retain terminal raw Windows; never restart on observation
+timeout. Diagnostics alone do not justify main promotion or a root-cause claim.
 
-Parent ea9342a CI39120702390 is also terminal FAILURE: Linux/book succeeded,
-Windows broad existing-file write failed at empty.sync_all, Info/UnexpectedEof,
-client55617/server55607 matches server10 HttpTimeout5120ms/read0/write0/flush1.
-Earlier32burst/startup/lifecycle/reference/workspace and test-only owned9 twice
-passed in that run; they do not erase the later broad failure. Both failure
-records and exact source/raw hashes are retained in docs/src/evidence/.
+P6m4h measures and reduces redundant local journal read verification. Baseline
+32 settled32-byte generations:2,069,199 SQLite progress callbacks/~3.246sec.
+Candidate162,294/~0.350sec on this Linux/SQLite3.53.2 fixture, including progress
+instrumentation. The post-change reference uses current public validators and
+is not the exact legacy implementation; both measurement sets are retained.
+Private ReadProofs exist only for one synchronous owner read command: lazy full
+remote acknowledgment forest proof, compact roots, fully verified File keyed by
+(volume,node). Every logical row still loads/validates bytes/hash/conflict/receipt/
+ancestry before coverage/page filtering. Each requested full physical result is
+reloaded and bound to the verified root. No mutation/await/persistent proof cache.
 
-Scoped legacy reviewer found no handshake/send/select sequencing defect.
-Pinned Hyper's first send buffering is intentional; handshake has no I/O.
-Its read-before-write/idle EOF check can encounter timeout EOF before consuming
-a queued body if processing was delayed. This is a possible path, not a measured
-scheduler diagnosis. Do not insert ready() ahead of driving the connection.
-Callbacks use Handle.block_on; CLI uses default multi-thread Tokio runtime;
-native fixture already uses block_in_place. Both SQLite owners run dedicated
-OS threads. logical::Journal::pending scans all retained edits and repeatedly
-walks ancestry: measure separately without dropping corruption/lineage checks.
+Focused4 logical tests16PASS/1 intentionally ignored study at
+/tmp/s3drive-pending-scan-focused4.log; final study EXIT0 at
+/tmp/s3drive-pending-scan-final-study.log. Full field/page/draft/reopen equivalence,
+SQL total_changes, same-node/different-volume isolation, covered/offpage and
+unrelated remote forest corruption, valid-rehashed foreign settlement/ancestry,
+and validly hashed forged logical receipt checks added. Omitting volume from the
+cache key made its negative control EXIT101 (3vs2 rows), then exact production
+source restored; proof /tmp/s3drive-pending-scan-key-negative.json. Initial study
+fixture reused IDs at hex10 due existing helper decimal parsing; explicit unique
+IDs fixed the fixture without weakening the production ownership constraint.
+Targeted Clippy1 passed before the last test-only controls. Final full gate1
+completed EXIT0 session79421 /tmp/s3drive-pending-scan-gate1.log:276 state passed,
+1 intentionally ignored study,48 authority,17 core and workspace/build/lint/58-doc
+book checks; frozen seven source/manifest hashes match and no warning/failure.
 
-P6m4g adds fixed-size ExchangeObservation on Transport errors: relative task,
-HTTP-ready, enqueue, first/last driver timings; polls/result/max-gap; plaintext
-I/O polls/Pending/bytes/flush/shutdown. Counters/times saturateu32. No payload,
-secret, hostname or nonloopback IP. Snapshot at error creation may precede cleanup;
-counts do not prove delivery/commit, and gaps include legitimate network waits.
-Public diagnostic-field addition is a documented API shape exception; Copy kept.
-Driver/work polling order, one-send/ownership/deadlines/receipt channel/recovery
-remain. Transparent wrapper delegates scalar/vectored capabilities and I/O.
-Independent first-read EOF vs first-write BrokenPipe and partial/Pending/vectored
-controls added; real TLS faults require observed successful plaintext writes.
-
-Focused1/2 logs /tmp/s3drive-exchange-progress-focused{1,2}.log completed EXIT0
-on earlier diagnostic layouts; focused1 emitted a deprecated fetch_update warning,
-now replaced with try_update. Initial Clippy1 rejected oversized195-byte Err;
-summary now uses saturatingu32 values; final targeted Clippy2 EXIT0. Full local
-gate1 completed EXIT0 session25385 at /tmp/s3drive-exchange-progress-gate1.log:
-48 authority tests (13unit),274 state,17 core, workspace lint/build and58-doc
-book. Seven frozen source hashes match; no warning or test failure. Evidence docs/src/evidence/exchange-progress-20261018.json.
-Next: normally push the frozen private candidate and inspect its own native Windows failure/success diagnostics. Never
-claim native correction from portable cases, restart on observation timeout, run
-a success checker on failed source, or reuse older21/14 artifacts for acceptance.
-Source-identical repeat and all native/reference/startup gates remain needed
-before a reliability promotion. Larger files/multipart, approved managed Wasabi,
-independent hosts/partitions, continuity/fencing, actual reboot/SSH and packaging
+Read-only legacy review found no hidden read-path mutations or lost invariant.
+Two requested adversarial gaps were added; final read-only follow-up found no
+remaining blocker. Frozen seven
+source/manifest hashes and results: docs/src/evidence/pending-scan-20261018.json.
+Book discussion: docs/src/managed-edits.md. Next: normal guarded private push
+to new codex/pending-scan-proofs branch and inspect its own native acceptance. No Windows fix claim.
+No main promotion planned before actual native/reference/repeat evidence and
+resolution of transport reliability requirements. Larger files/multipart, approved
+managed Wasabi, multi-host/partitions, continuity/fencing, reboot/SSH and packaging
 remain full-goal work.
 
+Historical source47 CI39122239338 and parentea CI39120702390 are terminal
+Windows failures, not eligible for success artifact checkers or repeats. Source47
+ownedTCP client51322/server51021 matched server164 timeout5196ms/read0/bodyfalse;
+fresh CLI OriginalVolume844ms with both processes alive. Parentea broad
+empty.sync_all Info EOF matched client55617/server55607/server10/5120ms/read0.
+These failures remain in dated JSON. Mainbf9509 primary/repeat accepted only its
+scoped unchanged source. Preserve every original unknown identity and dirty byte.
 Previous handoff retained byte-identically at
-`docs/archive/HANDOFF-before-exchange-progress-20261018.md`.
+`docs/archive/HANDOFF-before-pending-scan-20261018.md`.
 
 ### Historical e00 study checkpoint (superseded closure control)
 

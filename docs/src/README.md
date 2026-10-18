@@ -41,6 +41,10 @@ portable controls retain complete SQLite receipts through bounded shutdown;
 its exact-source47e9dd4 Windows burst failed at step22 with an empty-header
 timeout, while Linux/book passed. Current work adds bounded driver/I/O progress
 observations to locate the missing work; this is not an established fix.
+The client-local journal also has a measured
+[pending-scan optimization](managed-edits.md#retained-history-scan-validation-candidate-2026-10-18)
+under verification, preserving checks on retained history while reusing proofs
+within one read command.
 The accepted main still uses the previous client. Multipart/large files,
 writable restoration, real managed-provider acceptance and remote deployment
 remain incomplete. No real user startup, remote hosting or Turso backend has

@@ -1,4 +1,5 @@
 use super::*;
+mod pending_scan;
 fn id(n: u64) -> String {
     format!("{n:032x}")
 }
@@ -163,6 +164,9 @@ fn publication(r: &Record, base: u64) -> managed::Input {
     }
 }
 fn physical_commit(s: &mut State, r: &Record, long: bool) -> managed::Record {
+    physical_commit_at(s, r, long, 4)
+}
+fn physical_commit_at(s: &mut State, r: &Record, long: bool, sequence: u64) -> managed::Record {
     let input = r.publication.as_ref().unwrap().clone();
     let bytes = journal::Journal::new(s, journal::Options::default())
         .unwrap()
@@ -213,7 +217,7 @@ fn physical_commit(s: &mut State, r: &Record, long: bool) -> managed::Record {
         .unwrap();
     remote.acknowledge(send.operation).unwrap();
     let mut m = managed::Journal::new(s, journal::Options::default()).unwrap();
-    let prepared = m.prepare(input.id(), 3).unwrap();
+    let prepared = m.prepare(input.id(), sequence - 1).unwrap();
     let namespace::Mutation::Publish {
         upload_operation,
         etag,
@@ -230,10 +234,10 @@ fn physical_commit(s: &mut State, r: &Record, long: bool) -> managed::Record {
         version: version.clone(),
     };
     let receipt = Receipt {
-        sequence: 4,
+        sequence,
         node: Node {
             kind: Kind::File,
-            revision: 4,
+            revision: sequence,
             payload: Some(payload.clone()),
             ..binding().node
         },
