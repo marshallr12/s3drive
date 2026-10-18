@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "full local gate passed; own source-bound hosted cohort pending",
+  "status": "full local gate and own source-bound hosted cohort accepted",
   "parent_commit": "20706cd521b984a50d7aecd08026a72019ef2e4f",
   "branch": "codex/chunk-source-controller",
   "schema_version": 28,
@@ -38,7 +38,7 @@
   },
   "prior_compile_error": "extra reference to snapshot_manifest getter corrected; no runtime assertion failure",
   "full_local_gate_passed": true,
-  "own_hosted_acceptance": false,
+  "own_hosted_acceptance": true,
   "frozen_source_sha256": {
     ".github/workflows/ci.yml": "ad8a598db786dfde8d5fd016b4f4306e1e08f8533b1a2851066d3422731cbe13",
     "Cargo.lock": "35e25b8368c88bfd8a5a3d2e94e2858fdc6e5c36a180196adb60345dbe3a1f9f",
@@ -404,7 +404,7 @@
     "source": "474601edd5582ebed9316d04cf4524db6d72694b",
     "run_id": 39165918104,
     "run_attempt": 1,
-    "status": "in_progress",
+    "status": "completed",
     "url": "https://github.com/marshallr12/s3drive/actions/runs/39165918104",
     "jobs": {
       "windows": 117788707767,
@@ -414,11 +414,11 @@
     "watch_session": 79476,
     "watch_log": "/tmp/s3drive-chunk-source-controller-474-watch.log",
     "checker": "/tmp/s3drive-check-chunk-source-controller-474.py",
-    "checker_prepared_not_executed": true,
-    "raw_comparator_prepared_not_executed": true,
-    "archive_builder_prepared_not_executed": true,
-    "fresh_output_absent": true,
-    "fresh_review_marker_absent": true,
+    "checker_prepared_not_executed": false,
+    "raw_comparator_prepared_not_executed": false,
+    "archive_builder_prepared_not_executed": false,
+    "fresh_output_absent": false,
+    "fresh_review_marker_absent": false,
     "requires_all_three_terminal_success_and_own_raw_review": true,
     "requires_all_four_new_scenarios_in_both_os_logs": true,
     "rejected_preceding_artifact_ids": [
@@ -427,7 +427,7 @@
       12147997314,
       12147329360
     ],
-    "scope": "not yet acceptance; own exact source/jobs/artifacts/raw review required",
+    "scope": "own474 controller cohort accepted; existing mounted format only, no mountedchunks/realWasabi/physicalreboot",
     "book_raw_reviewed": true,
     "book_review_marker": "/tmp/s3drive-chunk-source-controller-474-book-reviewed.json",
     "linux_raw_reviewed": true,
@@ -437,6 +437,60 @@
     "linux_chunk_controls": 12,
     "linux_chunk_seconds": 44.4,
     "linux_native_controls": 9,
-    "linux_native_seconds": 62.68
+    "linux_native_seconds": 62.68,
+    "conclusion": "success",
+    "windows_conclusion": "success",
+    "windows_raw_reviewed": true,
+    "checker_exit_code": 0,
+    "all_three_raw_logs_reviewed": true,
+    "all_raw_35_fields_and_types_equal": true,
+    "artifact_ids": {
+      "replacement": 12150891787,
+      "disposition": 12151260949
+    },
+    "watch_exit_code": 0,
+    "windows_chunk_controls": 12,
+    "windows_chunk_seconds": 32.39,
+    "windows_native_controls": 7,
+    "windows_native_seconds": 71.81,
+    "windows_review": {
+      "source": "474601edd5582ebed9316d04cf4524db6d72694b",
+      "run_id": 39165918104,
+      "run_attempt": 1,
+      "job_id": 117788707767,
+      "reviewed": true,
+      "log": "/tmp/s3drive-chunk-source-controller-474-windows.log",
+      "sha256": "f0e12f64efe484388ad30d46b980b4cfe74d233101f6133ab5b4d49651414e80",
+      "review_notes": [
+        "Terminal success; own exact474 checkout, Windows2025-vs2026,pinnedWinFsp2.1.25156.ddca7bd",
+        "All4newsourcecases plus8existingchunk passed32.39s;360state/1ignored,59S3,34core,50authority,18existingpublication passed",
+        "Separate7native71.81s;32HTTPSflushes,disposition lifecycle,pairedseparatelogon startup70.87s, private-CA HTTPS coordinator andsnapshotconsole cancellation passed",
+        "Own finalized replacement12150891787/disposition12151260949; strict payload/raw comparison separate",
+        "Unused WinFspdelayimport linker warning+9duplicates,Node/cachedeprecations retained",
+        "Lockeddisposablefixtureprofile warnings retained; dummycredentials removed; expectedHEAD403/contentconflict/stoppedauthorityListtimeout retained",
+        "No mountedchunks,realWasabi orphysicalreboot acceptance inferred"
+      ],
+      "locked_fixture_profile_warnings": 3,
+      "long_test_notices": [
+        "supervised_windows_coordinator_tls_independent_logons_and_recovery",
+        "namespace_client::opens::tests::retirement::retired_opens_free_live_open_and_event_budgets_with_a_long_lived_reader",
+        "supervised_windows_managed_drive_and_coordinator_recovery"
+      ]
+    }
+  },
+  "hosted_archive": {
+    "path": "evidence/chunk-source-controller-474-hosted-20261018.tar.gz",
+    "sha256": "dc56024d08b133c10b51e9db8609814df2922e8b91b01ee0ed4d53c6cc8dde41",
+    "bytes": 116497,
+    "members": 22,
+    "all_indexed_members_verified": true,
+    "source": "474601edd5582ebed9316d04cf4524db6d72694b",
+    "run_id": 39165918104,
+    "run_attempt": 1,
+    "independent_typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true
   }
 }

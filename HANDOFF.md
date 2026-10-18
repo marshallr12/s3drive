@@ -60,7 +60,7 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Active work: chunk source controller (2026-10-18)
+## Current work: controller accepted; verified reader preparation (2026-10-18)
 
 Previous goal turn was verified wait on39163298774/Windows117780950165. This
 turn completed own41b acceptance:all3SUCCESS, watch28386 EXIT0, ownrawreview,
@@ -96,24 +96,24 @@ allindexedmembersverified. Implementation self-review only, noindependentreviewe
 Published testedsource474601edd5582ebed9316d04cf4524db6d72694b,8files, clean
 exactremote/all253hashes/PUBLIC/main1a93b5funchanged; normalnewbranchpush. Proof
 /tmp/s3drive-chunk-source-controller-publication.json. Publication21576 EXIT0.
-Own CI39165918104 attempt1 LIVE:Windows117788707767,Linux117788707913,
-book117788707918. Watch79476 LIVE, log
-/tmp/s3drive-chunk-source-controller-474-watch.log. Resume SAME run/handle;
-observationtimeout is not reason to rerun. No new runtime edits needed.
-Prepared/compiled ONLY, NOTexecuted:
-/tmp/s3drive-check-chunk-source-controller-474.py,
-/tmp/s3drive-chunk-source-controller-474-reference-check.ps1,
-/tmp/s3drive-chunk-source-controller-474-raw-compare.py,
-/tmp/s3drive-chunk-source-controller-474-archive.py.
-Freshoutput /tmp/s3drive-chunk-source-controller-474-artifacts and combinedmarker
-/tmp/s3drive-chunk-source-controller-474-raw-reviewed.json absent. Require all3
-terminalSUCCESS + own3completedrawreview beforeoneusechecker. Checker binds253
-hashes/ownrunattemptjobs/finalizedartifactIDs/APIdigests/times/4unchangedoracles,
-plus all4newsourcecasespassed inbothOSrawlogs; strict21/14+projectoracles then
-raw35field/typecomparison. Rejectolder41b IDs12149243457/12149814008 andall32d/
-cf9oldercohorts. Do notrun successchecker onfailedcohort; archivefailureinstead.
-Hostedarchivebuilder already pointsown474checker/exactchunks.rs and253map;
-execute onlyafterallacceptancechecks. No priorpayloads reusable. FullgoalACTIVE.
+Own CI39165918104 attempt1 all3SUCCESS:Windows117788707767,Linux117788707913,
+book117788707918. Watch79476 CLOSED EXIT0. All3ownrawlogsreviewed andhashbound.
+Oneusechecker25752 EXIT0; own4newcases passedbothOSlogs,253sourcehashes+4oracles
+match, ownfinalizedIDs12150891787/12151260949 withAPIdigest/timechecks; strict
+21/14+projectoracles PASS and all35rawfields/types equal. Ownoutput
+/tmp/s3drive-chunk-source-controller-474-artifacts; no oldartifactpayloadsreused.
+22memberhostedarchive chunk-source-controller-474-hosted-20261018.tar.gz,
+116497bytes,SHAdc56024d08b133c10b51e9db8609814df2922e8b91b01ee0ed4d53c6cc8dde41;
+allindexedmembersverified. Builder /tmp/s3drive-chunk-source-controller-474-archive.py
+executedEXIT0; notprepared-onlyanymore. Do notreexecuteoneusechecker/archive.
+Windows12chunk32.39s,360state/1ignored,7native71.81s,pairedstartup70.87s,
+32HTTPSflushes/disposition/snapshotconsole PASS. 3lockeddisposableprofileswith
+removeddummycredentials,unuseddelayimport+9dups,Node/cachedeprecations andexpected
+HEAD403/contentconflict/stoppedauthorityListtimeout retained. Linux12chunk44.40s,
+365state/1ignored,9native62.68s,no-systemd/SSH/HTTP/privateCAHTTPS recovery PASS.
+Book66files/62chapters PASS. Existingmountedformat only; notmountedchunks,
+newWasabi orphysicalreboot acceptance. Source474controllerlibraryisaccepted.
+RelatedS3helper isisolatedbelow andhasownliveCI39167583915/watch43951. FullgoalACTIVE.
  Nativechunklifecycle/rangereader remainlater. Concrete subsequent verified-range
 reader contract now inimplementation-plan.md; preserveslegacyrefusal, pinnedroot,
 separatephysical/pagehashes, boundedauthenticatedpath/chunkfetches andcurrentS3
@@ -126,7 +126,7 @@ no-systemd desktop/SSH andpinnedHTTP/HTTPS/privateCA recovery24.15s. Marker
 c5273e9fe0732986a166f42a71c5193a744bb3a78aff5286f6594ea7fc86b0a3. Expected
 HEAD403/ConnectionRefused/removedstartup.json refusal andNode/cachedeprecations
 retained. Existingmountedformat only; notmountedchunks/Wasabi/physicalreboot.
-Windows117788707767 still LIVE atworkspace tests. Samewatch79476.
+Windows117788707767 subsequentlySUCCESS; owncontroller acceptance above. Watch79476closed.
 
 Readerdesignaudit foundmissing pinned-credential related-object open API. New
 concretecontract inimplementation-plan: samecredentialgeneration forroot/children,
@@ -1423,12 +1423,15 @@ ReadHandle.open_related (samecapturedprovider,freshHEAD,boxedfuture); testsadd
 exactscope/GETpreconditions, freshHEADdenial/missing/invalidkey, inlinefuturebound.
 Focused1 95205 EXIT101:2pass/1fixturetargetassertfail (SDKx-id=GetObject query);
 fixedexactparsedpath, productionunchanged. Focus2 64173 EXIT0,62S3pass21.04s.
-Fullgate57146 LIVE, /tmp/s3drive-pinned-related-gate.log. Its own252filemap
+Fullgate57146 CLOSED EXIT0, /tmp/s3drive-pinned-related-gate.log. Its own252filemap
 /tmp/s3drive-pinned-related-frozen.json (twoS3deltasvsacceptedbase). Root253
-controllerhashesstillunchanged. Newworktreehasuncommittedsource/docs; readitsown
+controllerhashesstillunchanged. Newworktree source/docs published atfef944268c89d2c0b1d859a6a86d0f6761c24361; readitsown
 HANDOFF andpinned-related-reads.md beforecontinuing. No newmanagedreader/native
-activation. Fullgatesourcefrozen. Nohelperpublication/hostedacceptanceyet.
+activation. Fullgatesourcefrozen. Helperownhostedacceptancepending; fullgate/localarchivepassed.
 LocalbuildusesCARGO_TARGET_DIR=/home/marshall/src/s3drive/target to reuseexisting
 buildcache; do notstartanotherlocalS3Drivecargo job while57146is live. Controller
-CI runsremotely andisindependent. Next awaithelpergate andcurrent474Windows,
-acceptsourceboundevidence withoutborrowingcohorts, thenprepareintegration.
+CI runsremotely andisindependent. OwnhelperCI39167583915 attempt1 LIVE:book117793654818,Linux117793655088,
+Windows117793655137. Watch43951 /tmp/s3drive-pinned-related-fef-watch.log. Its
+252map/ROOT areisolatedworktree, notprimary253. 474controllerisaccepted above.
+Next accepthelperowncohort thenmergecodewithcontroller andimplementfullreader;
+fullcontract/budgets alreadydocumented. Primaryruntime253stillunchanged.

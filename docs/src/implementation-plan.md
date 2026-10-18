@@ -1740,8 +1740,9 @@ cohort, raw review and independent artifact comparison. Controller methods and
 four additional real-SDK integration scenarios are implemented on
 `codex/chunk-source-controller`. Focused tests and the full local gate passed:
 12 integration controls, 365 state tests / 1 ignored and 253 frozen hashes
-unchanged. Its own hosted cohort is still required; no mounted chunk activation
-follows from either library slice.
+unchanged. Its own hosted cohort passed all three jobs; raw review and
+independent 21/14 artifact plus 35 raw-record comparisons passed. No mounted
+chunk activation follows from either library slice.
 
 Hold one controller-family operation permit across root recovery/publication
 and local source acknowledgment. Refactor the existing publisher body into a

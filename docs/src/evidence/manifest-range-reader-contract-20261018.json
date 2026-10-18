@@ -3,7 +3,7 @@
   "status": "read-only design; no implementation",
   "document": "implementation-plan.md",
   "prerequisite_source": "474601edd5582ebed9316d04cf4524db6d72694b",
-  "prerequisite_cohort_pending": true,
+  "prerequisite_cohort_pending": false,
   "runtime_changes": 0,
   "frozen_253_hashes_unchanged": true,
   "findings": [
@@ -37,5 +37,14 @@
     "published_empty_manifest": "real root requires HEAD/GET/bothhashchecks at open",
     "missing_payload_on_kind_file": "integrity error",
     "legacy_one_object_payload": "explicit unsupported content in new reader"
+  },
+  "controller_prerequisite_accepted": true,
+  "related_helper": {
+    "source": "fef944268c89d2c0b1d859a6a86d0f6761c24361",
+    "branch": "codex/pinned-related-reads",
+    "run_id": 39167583915,
+    "full_local_gate_passed": true,
+    "hosted_acceptance_pending": true,
+    "managed_reader_implemented": false
   }
 }
