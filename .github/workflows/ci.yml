@@ -40,7 +40,7 @@ jobs:
       - name: Verify Windows metadata body-poll controls
         if: runner.os == 'Windows'
         timeout-minutes: 3
-        run: cargo test -p s3drive-authority --test remote --locked -- --nocapture
+        run: cargo test -p s3drive-authority --tests --locked -- --nocapture
       # The preceding real CLI/TLS test already builds this same executable and
       # fixture worker. Exercise snapshots/console in the ordinary account
       # before native lifecycle failures can skip their independent acceptance.

@@ -540,3 +540,16 @@ the full-success artifact driver was not run against this failed cohort. The
 next [body-poll diagnostic](remote-authority.md#client-body-poll-observation-candidate-2026-10-18)
 uses a verified public body wrapper and records no request contents. A body poll
 is not a socket write or commit, and false cannot authorize mutation replay.
+
+At a14ffa3, [CI39106656359](https://github.com/marshallr12/s3drive/actions/runs/39106656359)
+passed Linux/book and all nine Linux native cases. Windows passed six raw TLS
+controls and standalone coordinator/snapshot/console checks, then failed the
+new native burst on step3, its fourth flush: Apply/Request/UnexpectedEof,
+body_frame_polled=false, native1117. The marker's true/false controls had run on
+Windows first. Nearby socket32 timed out at5105ms with read0/write0/flush1 and
+dispatch=false, without direct RPC correlation. The failure-only CLI control
+received OriginalVolume in152ms with mount/coordinator alive. Later Windows
+gates were skipped. Main remains f8c4f58; full acceptance is false. The next
+[runtime-owned dispatch candidate](remote-authority.md#runtime-owned-request-execution-candidate-2026-10-18)
+preserves exact inputs, cancellation uncertainty and bounded work; it is not
+evidence that the failed Apply was unsent or that any earlier mutation rolled back.

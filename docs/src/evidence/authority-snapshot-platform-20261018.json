@@ -1,5 +1,5 @@
 {
-  "recorded_at_utc": "2026-10-18T06:53:08.316973+00:00",
+  "recorded_at_utc": "2026-10-18T07:43:31.826994+00:00",
   "overall_acceptance": false,
   "main_unchanged": "f8c4f5832e399c6c54567c122c875e2a438ce681",
   "snapshot_component": {
@@ -306,5 +306,108 @@
     },
     "no_real_provider_mutation": true,
     "not_a_windows_root_cause_claim": true
+  },
+  "a14_acceptance": {
+    "source_commit": "a14ffa37b8e3c18a353c19c724bfe438b365ec6a",
+    "run": 39106656359,
+    "run_conclusion": "failure",
+    "overall_acceptance": false,
+    "linux_job": 117613851099,
+    "linux_conclusion": "success",
+    "linux_native_cases_passed": 9,
+    "linux_native_flush32_passed": true,
+    "book_job": 117613850947,
+    "book_conclusion": "success",
+    "windows_job": 117613851164,
+    "windows_conclusion": "failure",
+    "windows_tls_controls": {
+      "passed": 6,
+      "failed": 0,
+      "completed_at_utc": "2026-10-18T07:16:02Z",
+      "meaning": "Independent received-body true and failed-trust false assertions passed on Windows"
+    },
+    "windows_standalone_snapshot_console_passed": true,
+    "windows_cancel_to_exit_ms_single_observation": 5,
+    "windows_burst": {
+      "completed_steps": [
+        0,
+        1,
+        2
+      ],
+      "failed_step": 3,
+      "failed_native_operation": "file.sync_all()",
+      "location": "support/managed.rs:1709",
+      "at_utc": "2026-10-18T07:19:16Z",
+      "native_error": 1117,
+      "request": "Apply",
+      "phase": "Request",
+      "timed_out": false,
+      "io_kind": "UnexpectedEof",
+      "body_frame_polled": false,
+      "marker_limit": "Snapshot at classification only; does not prove no past/future send or no mutation effect",
+      "nearby_server": "HttpTimeout connection32,http_ms5105,read0/write0,flush1,dispatched=false",
+      "exact_rpc_socket_correlation": false,
+      "fresh_control": {
+        "mount_running": true,
+        "coordinator_running": true,
+        "fresh_cli": "OriginalVolume",
+        "elapsed_ms": 152,
+        "original_panic_preserved": true
+      },
+      "later_windows_gates": "skipped"
+    },
+    "raw_log_sha256": {
+      "linux": "b475acd586d01694c340cf5257bfc2b3660d1a50f60a2b3a8909fcf90782b959",
+      "windows": "e644eb4ba89b113931e578613531f143fb50f1aaddd079522b17cc0bb8ba57b1",
+      "book": "1dcb9a94f5ac48238b5c7a21aa9c8fda2485da9377798953c6385eaf1c905872"
+    },
+    "main_unchanged": "f8c4f5832e399c6c54567c122c875e2a438ce681",
+    "strict_artifacts_accepted": false,
+    "next_candidate": "Worker-owned RPC dispatch with caller-scoped cancellation and an absolute cooperative10-second queue+RPC deadline; no mutation retry"
+  },
+  "runtime_owned_candidate": {
+    "base_commit": "a14ffa37b8e3c18a353c19c724bfe438b365ec6a",
+    "hosted_acceptance": "pending",
+    "behavior": "One caller-scoped JoinSet task per exact cloned metadata request on the current Tokio runtime; no transport retry/new operation identity",
+    "deadline": "Absolute cooperative10 seconds including queue and RPC, existing connect2 seconds and reqwest10 seconds retained",
+    "cancellation": "Drop aborts owned tasks; already accepted remote commands can still finish, so preserve original unknown request/receipt",
+    "errors": "Fixed Execution category for missing runtime/local job failure; timeout phase uses response-header observation, no private dependency/panic details",
+    "focused_command": "cargo test -p s3drive-authority --tests --locked",
+    "focused_exit_code": 0,
+    "focused_cases": {
+      "hyper_io": 2,
+      "connection_lifetime": 2,
+      "execution": 1,
+      "http": 10,
+      "tls": 8
+    },
+    "focused_log_sha256": "a5bb1bfbd2cf3238ce747992e3275f5201192b5e3300448c1099205706f761b5",
+    "full_local_gate": {
+      "command": "bash scripts/gate.sh",
+      "exit_code": 0,
+      "log_sha256": "d89ad97493b4aba5dd4a98e548f4af3e3e508a6e204fe9c856e6fc1087668b8a"
+    },
+    "source_sha256": {
+      "crates/s3drive-authority/src/wire.rs": "00a61eb66f912e9696962fb21a19c49d072dad87edc00f890c739f586feef57f",
+      "crates/s3drive-authority/tests/execution.rs": "8d6dec78616619a8ed5856bdc588d9dbbeca83df7d56fdc893cad43be64febad",
+      "crates/s3drive-authority/tests/remote.rs": "cc0fb2e2eac13ba8d4b2c5f4a78b823a65b8de9d6d388ac2a3c653a4c4e7492d",
+      ".github/workflows/ci.yml": "26c5a9e3767c5c121cc48eb9c3acbb92aa36e57a172f5f1a12fb10d56a87ede8"
+    },
+    "resolved_tokio_source_sha256": {
+      "task/join_set.rs": "421b2f5af3e877a85fdd8920688f10e05e62cd75d2149c7db997277ffbf3074e",
+      "runtime/handle.rs": "10b061b357b706d725affb3053b6d2b34107123a6a332392fd3b003cbeabc4c6",
+      "runtime/metrics/runtime.rs": "d9160d3bfa15bc56578e5d25758952346ef4f9d53d2b7b78e2f08bf55ca3963e",
+      "time/timeout.rs": "5b1b20cb77de63fb5071b696ac644706a9749e0aeb6dbea57220834cba6dc953",
+      "net/tcp/listener.rs": "7deb1f8a9b64b02178e07e2d9b93acc36d743b5216d6ad17d09cacaceeb94f4b",
+      "runtime/builder.rs": "352db30f01ecd4c5b80ad03780124c6d7241fa1538e3f83497f024f253d957d5"
+    },
+    "native_gate_unchanged": true,
+    "windows_failure_root_cause_or_fix_proven": false,
+    "controls": [
+      "Single-thread queued job canceled before execution: task count returns to baseline, no accepted TCP connection, same client subsequently completes real Info",
+      "Foreign thread Handle::block_on:6 metadata commits, original operation lookups/exact replays and final sequence unchanged by replay",
+      "Caller aborted after actual SQLite commit with reply withheld: original receipt remains queryable and sequence advances once, no second request",
+      "Original privacy, framing, trust, request/body timeout and no-redirect/no-replay controls retained"
+    ]
   }
 }

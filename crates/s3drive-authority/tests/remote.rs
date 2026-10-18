@@ -623,3 +623,176 @@ fn tls_setup_and_urls_refuse_invalid_material_without_disclosing_it() {
         .is_err()
     );
 }
+
+// Exercise the native-callback calling context without requiring an OS mount.
+// This is not a reproducer of the intermittent WinFsp failure.
+#[tokio::test]
+async fn tls_foreign_thread_calls_preserve_exact_operations_and_receipts() {
+    let tmp = tempfile::tempdir().unwrap();
+    let authority = Authority::open(tmp.path().join("authority")).await.unwrap();
+    let cert = Certificate::new("127.0.0.1", false);
+    let server = Server::start(&authority, &cert).await;
+    let client = cert.client(&server.url);
+    let runtime = tokio::runtime::Handle::current();
+    let caller = std::thread::spawn(move || {
+        runtime.block_on(async move {
+            let Reply::Info(volume) = client.request(&Request::Info {}).await.unwrap() else {
+                panic!("missing volume")
+            };
+            let deadline = std::time::Instant::now() + Duration::from_secs(25);
+            for step in 0..6u64 {
+                assert!(
+                    std::time::Instant::now() < deadline,
+                    "foreign caller budget"
+                );
+                let operation = format!("{:032x}", step + 1);
+                let request = Request::Apply {
+                    request: Apply {
+                        volume: volume.id.clone(),
+                        operation: operation.clone(),
+                        expected_sequence: volume.sequence + step,
+                        mutation: Mutation::Create {
+                            parent: ROOT.into(),
+                            name: format!("foreign caller café 🦀 {step}"),
+                            node_kind: Kind::Directory,
+                        },
+                    },
+                };
+                let Reply::Applied(receipt) = client.request(&request).await.unwrap() else {
+                    panic!("mutation refused")
+                };
+                assert_eq!(receipt.sequence, volume.sequence + step + 1);
+                assert_eq!(
+                    client
+                        .request(&Request::Operation {
+                            volume: volume.id.clone(),
+                            operation
+                        })
+                        .await
+                        .unwrap(),
+                    Reply::Operation(Some(Ok(receipt.clone())))
+                );
+                // Deliberate exact idempotent replay, not a transport retry.
+                assert_eq!(
+                    client.request(&request).await.unwrap(),
+                    Reply::Applied(receipt)
+                );
+            }
+            let Reply::Info(after) = client.request(&Request::Info {}).await.unwrap() else {
+                panic!("missing final volume")
+            };
+            assert_eq!(after.id, volume.id);
+            assert_eq!(after.sequence, volume.sequence + 6);
+        });
+    });
+    // Join on a blocking worker so the test runtime keeps serving TLS/SQLite.
+    let joined = tokio::task::spawn_blocking(move || caller.join()).await;
+    server.stop().await;
+    authority.shutdown().await.unwrap();
+    assert!(matches!(joined, Ok(Ok(()))), "foreign caller failed");
+}
+
+#[tokio::test]
+async fn tls_cancel_after_commit_keeps_original_receipt_without_another_request() {
+    let tmp = tempfile::tempdir().unwrap();
+    let authority = Authority::open(tmp.path().join("authority")).await.unwrap();
+    let cert = Certificate::new("127.0.0.1", false);
+    let live = Server::start(&authority, &cert).await;
+    let recovery = cert.client(&live.url);
+    let Reply::Info(volume) = recovery.request(&Request::Info {}).await.unwrap() else {
+        panic!("missing volume")
+    };
+    let request = Request::Apply {
+        request: Apply {
+            volume: volume.id.clone(),
+            operation: "3".repeat(32),
+            expected_sequence: volume.sequence,
+            mutation: Mutation::Create {
+                parent: ROOT.into(),
+                name: "canceled reply café 🦀".into(),
+                node_kind: Kind::Directory,
+            },
+        },
+    };
+    let expected = serde_json::to_vec(&request).unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let endpoint = format!("https://{}/v1/namespace", listener.local_addr().unwrap());
+    let client = cert.client(&endpoint);
+    let acceptor = cert.acceptor();
+    let backend = authority.client();
+    let (committed, proof) = oneshot::channel();
+    let (release, released) = oneshot::channel();
+    let mut peer = tokio::spawn(async move {
+        let (tcp, _) = listener.accept().await.unwrap();
+        let mut stream = acceptor.accept(tcp).await.unwrap();
+        let mut headers = Vec::new();
+        while !headers.ends_with(b"\r\n\r\n") {
+            assert!(headers.len() < 8192);
+            headers.push(stream.read_u8().await.unwrap());
+        }
+        let length = std::str::from_utf8(&headers)
+            .unwrap()
+            .lines()
+            .find_map(|line| {
+                line.to_ascii_lowercase()
+                    .strip_prefix("content-length: ")
+                    .and_then(|n| n.parse::<usize>().ok())
+            })
+            .unwrap();
+        assert!(length < 4096);
+        let mut body = vec![0; length];
+        stream.read_exact(&mut body).await.unwrap();
+        assert_eq!(body, expected);
+        let Reply::Applied(receipt) = backend
+            .request(serde_json::from_slice(&body).unwrap())
+            .await
+        else {
+            panic!("fixture mutation refused")
+        };
+        committed.send(receipt).unwrap();
+        // The caller cancels only after the actual SQLite authority committed,
+        // while this peer deliberately withholds every response byte.
+        let _ = released.await;
+        drop(stream);
+        assert!(
+            tokio::time::timeout(Duration::from_millis(500), listener.accept())
+                .await
+                .is_err(),
+            "cancellation replayed the mutation"
+        );
+    });
+    let mut call = tokio::spawn(async move { client.request(&request).await });
+    let committed = tokio::time::timeout(Duration::from_secs(5), proof).await;
+    call.abort();
+    let canceled = tokio::time::timeout(Duration::from_secs(3), &mut call).await;
+    let _ = release.send(());
+    let stopped = tokio::time::timeout(Duration::from_secs(3), &mut peer).await;
+    if stopped.is_err() {
+        peer.abort();
+        let _ = peer.await;
+    }
+    let recovered = recovery
+        .request(&Request::Operation {
+            volume: volume.id.clone(),
+            operation: "3".repeat(32),
+        })
+        .await;
+    let after = recovery.request(&Request::Info {}).await;
+    live.stop().await;
+    authority.shutdown().await.unwrap();
+    assert!(
+        matches!(canceled, Ok(Err(ref error)) if error.is_cancelled()),
+        "caller was not canceled"
+    );
+    assert!(
+        matches!(stopped, Ok(Ok(()))),
+        "controlled peer did not finish"
+    );
+    let receipt = committed.unwrap().unwrap();
+    assert_eq!(recovered.unwrap(), Reply::Operation(Some(Ok(receipt))));
+    let Reply::Info(after) = after.unwrap() else {
+        panic!("missing final volume")
+    };
+    assert_eq!(after.id, volume.id);
+    assert_eq!(after.sequence, volume.sequence + 1);
+}

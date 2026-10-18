@@ -149,6 +149,45 @@ native suite includes the same fixture. Local compilation/workflow parsing
 cannot establish either native result; this workstation's FUSE restriction is
 preserved, and new hosted acceptance is required.
 
+## Runtime-owned request execution (candidate, 2026-10-18)
+
+At a14ffa3, [CI39106656359](https://github.com/marshallr12/s3drive/actions/runs/39106656359)
+passed Linux's nine native cases, including32 flushes, and the Windows six raw
+TLS controls and standalone snapshot/console workflow. Windows's fourth flush
+failed an Apply request with UnexpectedEof/native1117 and
+`body_frame_polled=false`. A nearby empty TLS socket timed out; there is still
+no exact socket/RPC correlation. The fresh CLI reached the original volume in
+152ms afterward, with both processes alive. No candidate was promoted. The
+false observation does not authorize discarding the original uncertain input.
+
+Native adapters call asynchronous filesystem code from callback threads using
+their runtime handle. The next candidate executes each metadata RPC in one
+owned Tokio task on that current runtime. It clones the exact request once;
+it creates no new operation identity, retries no request and changes no trust,
+encoding or connection policy. This tests an execution-context hypothesis,
+not an identified Tokio/reqwest/WinFsp defect or a proven Windows correction.
+
+A caller-scoped JoinSet aborts its job when the caller disappears. An absolute,
+cooperative10-second deadline covers both queuing and RPC work; the existing
+two-second connect and ten-second reqwest deadlines remain. Outer timeout
+classification uses whether response headers were observed, preserving request
+versus response-body phases. Missing runtime/task failures return a fixed
+Execution category without formatting dependency/panic details. Any accepted
+remote mutation may still finish after cancellation: retain the same unknown
+operation and reconcile its original receipt. Abort is not rollback.
+
+The resolved Tokio1.53.3 JoinSet spawn/join/drop, runtime-handle and timeout
+contracts were inspected locally. Local controls passed: cancel a queued job
+before the single-thread runtime can run it, observe no surviving task or TCP
+connection, then complete a real request with the same client; execute mutations
+from a foreign thread with exact receipt lookup/replay and unchanged identities;
+and cancel after an actual SQLite commit while response bytes are withheld,
+recovering its original receipt without a second request or sequence advance.
+Existing byte-framing, privacy, trust and timeout controls remain. These are
+execution/uncertainty checks, not a native Windows failure reproducer. Windows
+now runs all authority wire/execution controls before the unchanged32-flush
+native gate, followed by every prior acceptance gate.
+
 ## Bounded failure diagnostics (2026-10-17)
 
 The [same-source Windows failure investigation](authority-startup.md#same-source-repeat-failure-2026-10-17)

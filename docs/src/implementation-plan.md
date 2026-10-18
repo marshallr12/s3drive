@@ -864,6 +864,15 @@ case. Compilation and workflow structure checks passed; actual OS results remain
 pending. The body diagnostic alone was checkpointed after its full local gate;
 the combined source requires its own full gate and exact-source hosted cohort.
 
+That combined source a14ffa3 passed Linux9 native cases, but Windows's fourth
+flush failed Apply/UnexpectedEof/native1117 with body_frame_polled=false after
+six Windows raw controls passed. The next candidate runs metadata requests in
+caller-scoped Tokio tasks, with an absolute cooperative10-second queue/RPC
+deadline and no identity/retry changes. Queue cancellation, foreign-thread exact
+receipts and lost caller after actual commit passed local controls. Require the
+[runtime execution contract](remote-authority.md#runtime-owned-request-execution-candidate-2026-10-18)
+and new exact-source hosted acceptance before attributing a cause or promoting.
+
 Require exclusive existing-authority ownership and explicit volume/policy pin;
 read supported legacy/current state without migrations or namespace changes.
 Produce a new private artifact outside mounted trees, with a database filename

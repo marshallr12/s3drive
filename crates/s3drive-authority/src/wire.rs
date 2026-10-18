@@ -12,6 +12,7 @@ use std::{
     task::{Context, Poll},
     time::Duration,
 };
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Low-cardinality diagnostics only. Never retains a URL, token, request,
 /// response body, certificate, or the underlying dependency error.
@@ -33,6 +34,10 @@ pub enum WireError {
     HttpStatus(u16),
     ResponseTooLarge,
     InvalidReply,
+    /// Local RPC task/runtime failure. Mutation outcome remains unknown.
+    Execution {
+        request: WireRequest,
+    },
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WirePhase {
@@ -113,7 +118,12 @@ impl WireError {
 // retain a boolean when its HTTP consumer actually polls a data frame.
 struct ObservedBody {
     inner: reqwest::Body,
-    polled: Arc<AtomicBool>,
+    progress: Arc<Progress>,
+}
+#[derive(Default)]
+struct Progress {
+    body_frame_polled: AtomicBool,
+    response_headers: AtomicBool,
 }
 impl HttpBody for ObservedBody {
     type Data = Bytes;
@@ -125,7 +135,9 @@ impl HttpBody for ObservedBody {
     ) -> Poll<Option<Result<Frame<Bytes>, Self::Error>>> {
         let frame = Pin::new(&mut self.inner).poll_frame(cx);
         if matches!(&frame, Poll::Ready(Some(Ok(frame))) if frame.data_ref().is_some()) {
-            self.polled.store(true, Ordering::Release);
+            self.progress
+                .body_frame_polled
+                .store(true, Ordering::Release);
         }
         frame
     }
@@ -219,7 +231,7 @@ impl WireClient {
             .redirect(reqwest::redirect::Policy::none())
             .retry(reqwest::retry::never())
             .connect_timeout(Duration::from_secs(2))
-            .timeout(Duration::from_secs(10));
+            .timeout(REQUEST_TIMEOUT);
         if let Some(roots) = roots {
             if roots.is_empty() || roots.len() > 65_536 {
                 return Err(WireError::Configuration);
@@ -240,7 +252,46 @@ impl WireClient {
     pub async fn request(&self, request: &Request) -> Result<Reply, WireError> {
         request.validate().map_err(|_| WireError::InvalidRequest)?;
         let kind = WireRequest::from(request);
-        let polled = Arc::new(AtomicBool::new(false));
+        let runtime = tokio::runtime::Handle::try_current()
+            .map_err(|_| WireError::Execution { request: kind })?;
+        // Native callback threads wait on this future. Drive HTTP itself in an
+        // owned Tokio task, with one deadline covering both queuing and I/O.
+        let deadline = tokio::time::Instant::now() + REQUEST_TIMEOUT;
+        let progress = Arc::new(Progress::default());
+        let observed = progress.clone();
+        let client = self.clone();
+        let request = request.clone();
+        // JoinSet aborts owned work on drop, including caller cancellation.
+        // A canceled/lost reply never makes a mutation safe to replay.
+        let mut tasks = tokio::task::JoinSet::new();
+        tasks.spawn_on(
+            async move { client.request_inner(&request, observed).await },
+            &runtime,
+        );
+        match tokio::time::timeout_at(deadline, tasks.join_next()).await {
+            Ok(Some(Ok(result))) => result,
+            Ok(Some(Err(_))) | Ok(None) => Err(WireError::Execution { request: kind }),
+            Err(_) => Err(WireError::Transport {
+                request: kind,
+                phase: if progress.response_headers.load(Ordering::Acquire) {
+                    WirePhase::ResponseBody
+                } else {
+                    WirePhase::Request
+                },
+                timed_out: true,
+                io_kind: None,
+                incomplete_message: false,
+                connection_closed: false,
+                body_frame_polled: progress.body_frame_polled.load(Ordering::Acquire),
+            }),
+        }
+    }
+    async fn request_inner(
+        &self,
+        request: &Request,
+        progress: Arc<Progress>,
+    ) -> Result<Reply, WireError> {
+        let kind = WireRequest::from(request);
         let mut built = self
             .http
             .post(self.url.clone())
@@ -254,11 +305,17 @@ impl WireClient {
         let inner = built.body_mut().take().ok_or(WireError::InvalidRequest)?;
         *built.body_mut() = Some(reqwest::Body::wrap(ObservedBody {
             inner,
-            polled: polled.clone(),
+            progress: progress.clone(),
         }));
         let mut response = self.http.execute(built).await.map_err(|e| {
-            WireError::transport(e, WirePhase::Request, kind, polled.load(Ordering::Acquire))
+            WireError::transport(
+                e,
+                WirePhase::Request,
+                kind,
+                progress.body_frame_polled.load(Ordering::Acquire),
+            )
         })?;
+        progress.response_headers.store(true, Ordering::Release);
         if !response.status().is_success() {
             return Err(WireError::HttpStatus(response.status().as_u16()));
         }
@@ -274,7 +331,7 @@ impl WireClient {
                 e,
                 WirePhase::ResponseBody,
                 kind,
-                polled.load(Ordering::Acquire),
+                progress.body_frame_polled.load(Ordering::Acquire),
             )
         })? {
             if bytes.len() + chunk.len() > 8 * 1024 * 1024 {
