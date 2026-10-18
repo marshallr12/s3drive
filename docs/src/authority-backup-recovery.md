@@ -183,7 +183,8 @@ Defaults are512MiB maximum standalone database bytes and30 seconds cooperative
 work; `--max-bytes` permits4KiB through8GiB and `--timeout-seconds`1–300. Work
 runs on a blocking worker. Ctrl+C requests cooperative cancellation and waits
 for that worker; a stalled kernel I/O call is not interruptible by this deadline.
-Actual console-signal behavior on Linux/Windows remains a separate check.
+One real Linux SIGINT check passed below; Windows console-control behavior
+remains a separate check.
 
 Success prints only the validated manifest and explicit false continuity/restore
 authorization flags. It does not print namespace records or input file contents.
@@ -195,3 +196,26 @@ active/wrong/missing/client sources, size/deadline argument bounds, nested outpu
 and a private corrupt-manifest marker, without real credentials or S3 operations.
 The full local gate passed (274 state tests plus CLI/lint/build/book); actual
 platform acceptance and deployment drills remain.
+
+
+## Linux cooperative cancellation evidence (2026-10-18)
+
+The [dated CLI observation](evidence/authority-snapshot-sigint-20261018.json)
+used the locally built, unpublished defc8b9 prototype. Its
+[Linux-only reproducer](evidence/authority-snapshot-sigint.py) creates/stops a
+private loopback fixture authority, then creates/drops disposable zero-filled
+padding so the original valid namespace has128MiB of free pages. The fixture
+contains no user configuration or S3 data. Caller must supply and verify the
+executable; the evidence binds binary and Rust/input source hashes.
+
+After the snapshot directory appeared, the test sent SIGINT to its own unreaped
+child process. The CLI reported cancellation with no success stdout, left no
+completion manifest, and exited2.919ms after the signal in this single observation.
+The source database SHA-256 stayed identical, partial inspection refused, and
+a retry at that same destination refused without replacing it. All owned
+processes were reaped before disposable-fixture cleanup.
+
+This validates one real Linux cancellation path. It does not guarantee latency,
+prove Windows Ctrl+C, interrupted kernel I/O, physical power-loss durability,
+restore continuity or actual provider/mount recovery. The source gate had already
+passed; this heavy manual fixture is separate from the portable gate.

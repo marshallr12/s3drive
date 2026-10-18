@@ -1,0 +1,36 @@
+{
+  "scope": "Linux CLI SIGINT; disposable private SQLite and loopback fixtures; no S3",
+  "binary_sha256": "482cd54620219b57447721aa5d8a30c8c30a52bcb641560964af5c74292a5416",
+  "source_database_bytes": 134737920,
+  "freelist_pages": 32801,
+  "signal": "SIGINT",
+  "cooperative_cancel_observed": true,
+  "cancel_to_exit_seconds": 0.002919,
+  "success_stdout": false,
+  "completion_manifest_absent": true,
+  "partial_inspection_refused": true,
+  "same_destination_retry_refused": true,
+  "source_sha256_preserved": true,
+  "restore_authorized": false,
+  "research_date_local": "2026-10-18",
+  "recorded_at_utc": "2026-10-18T04:33:40Z",
+  "source_commit": "defc8b9933b9edf3e63713a8e4e09ba7231918c6",
+  "publication": "local unpublished prototype; no Windows or restore acceptance",
+  "executable_build_command": "cargo build -p s3drive-cli --locked",
+  "reproducible_command": "python3 docs/src/evidence/authority-snapshot-sigint.py VERIFIED_S3DRIVE_BINARY",
+  "limits": [
+    "One Linux SIGINT fixture observation, not a performance guarantee",
+    "Not Windows console-signal acceptance",
+    "Not physical power-loss, restore freshness, native mount or provider acceptance"
+  ],
+  "source_files_sha256": {
+    "Cargo.toml": "e7da897466f4cb5995b716736acf9ab2c96b9d2ec7140d0fed3b1ea5e38b9cbe",
+    "Cargo.lock": "be0715c7cbf6820bc161fe7b39f652ab2315e8ffdc3695b7e523a92f68145533",
+    "crates/s3drive-cli/src/main.rs": "8a57f2f740dcde8b7094b3a82c5b353341d87d3e5fa2c898061445fde267d7ed",
+    "crates/s3drive-cli/src/snapshot.rs": "667ad6182879428b170246794a7d816d5e6c323b70388308cb1084ebe5748153",
+    "crates/s3drive-state/src/authority_snapshot.rs": "8022d86ac38999bf14fb6a1354cb8d9af7c4ffd686e723609a6602d3e4738be0",
+    "crates/s3drive-state/src/authority_snapshot/native.rs": "fbc2c04245f73a9b695a098255788e231f5476a23a65333df283eb7530bd8dd3",
+    "crates/s3drive-state/src/directory.rs": "e49a5f47269d9b2b53a336fb0219469605a636bb391cd92b81a701779888d2da",
+    "crates/s3drive-state/src/directory/linux.rs": "41e9620c6c78e90b2bbf1e21f4a415b0b7d173a13545fc418200ba5649d41991"
+  }
+}

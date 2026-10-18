@@ -800,7 +800,11 @@ reports neither history continuity nor restore authorization. Process crashes
 are not power-loss proof. Two real local CLI round-trip/refusal cases passed,
 with explicit identity, new output, private errors and no restore authorization.
 The full local gate passed (274 state plus CLI/lint/build/57-doc checks);
-Windows ACL/native acceptance remains.
+Windows ACL/native acceptance remains. A separate real Linux CLI SIGINT
+fixture passed at defc8b9: source bytes stayed identical, no success/manifest
+was published, partial inspection refused and the original destination could
+not be replaced. See the [dated cancellation proof](evidence/authority-snapshot-sigint-20261018.json);
+no Windows-console or physical power-loss inference.
 
 Require exclusive existing-authority ownership and explicit volume/policy pin;
 read supported legacy/current state without migrations or namespace changes.
