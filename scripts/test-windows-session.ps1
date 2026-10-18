@@ -202,6 +202,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $AuthorityFixture 'cert.pem'),(Join-Path $AuthorityFixture 'key.pem'),(Join-Path $AuthorityFixture 'authority-worker.exe') -Destination $root
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'test-windows-authority-worker.ps1') -Destination (Join-Path $root 'authority-worker.ps1')
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'test-windows-snapshot-worker.ps1') -Destination (Join-Path $root 'snapshot-worker.ps1')
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'test-windows-snapshot-console.cs') -Destination (Join-Path $root 'snapshot-console.cs')
         [IO.File]::WriteAllText((Join-Path $root 'snapshot-fixture.marker'),$account.SID.Value,[Text.UTF8Encoding]::new($false))
     }
     if ($ManagedFixture) {
@@ -308,7 +309,7 @@ try {
             # Fixture disposal only: application removal preserves local data.
             # This protected directory grants its owning account and SYSTEM
             # access. Remove it as its owner before deleting that account.
-            foreach ($directory in @($databaseState,$cacheState,(Join-Path $root 'authority-state'),(Join-Path $root 'authority-inputs'),(Join-Path $root 'authority-snapshot'),(Join-Path $root 'snapshot-alias-output'),(Join-Path $root 'managed-write-state'),(Join-Path $root 'producer-first'),(Join-Path $root 'producer-second'),(Join-Path $root 'bootstrap-200'),(Join-Path $root 'bootstrap-201'),(Join-Path $root 'bootstrap-write'))) {
+            foreach ($directory in @($databaseState,$cacheState,(Join-Path $root 'authority-state'),(Join-Path $root 'authority-inputs'),(Join-Path $root 'authority-snapshot'),(Join-Path $root 'authority-snapshot-cancel'),(Join-Path $root 'snapshot-alias-output'),(Join-Path $root 'managed-write-state'),(Join-Path $root 'producer-first'),(Join-Path $root 'producer-second'),(Join-Path $root 'bootstrap-200'),(Join-Path $root 'bootstrap-201'),(Join-Path $root 'bootstrap-write'))) {
                 if ([IO.Directory]::Exists($directory)) {
                     Remove-Item -LiteralPath $directory -Recurse -Force
                 }

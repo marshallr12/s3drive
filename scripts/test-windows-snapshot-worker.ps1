@@ -1,7 +1,7 @@
 #requires -Version 5.1
 # Only the newly created ordinary account in test-windows-session.ps1.
 # No real user state, service installation, provider access or restoration.
-param([Parameter(Mandatory)][ValidateSet('Active','Stopped')][string]$Phase)
+param([Parameter(Mandatory)][ValidateSet('Active','Stopped','Cancel')][string]$Phase)
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 $root=$PSScriptRoot
@@ -53,6 +53,42 @@ function Parsed($Result) {
         $value.manifest.format -cne 's3drive-authority-snapshot' -or
         $value.manifest.schema_version -ne 23) { throw 'Snapshot identity/validation contract changed' }
     return $value
+}
+if ($Phase -eq 'Cancel') {
+    # This actor is Windows PowerShell5.1; compile a test-only .NET console
+    # helper here, not inside the product or the runner's shared console.
+    $helper=Join-Path $root 'snapshot-console.exe'
+    if ([IO.File]::Exists($helper)) { throw 'Console helper already exists' }
+    Add-Type -Path (Join-Path $root 'snapshot-console.cs') -OutputAssembly $helper -OutputType ConsoleApplication
+    $info=[Diagnostics.ProcessStartInfo]::new()
+    $info.FileName=$helper
+    $info.Arguments=(Quote $root)+' '+(Quote $pin.volume)
+    $info.UseShellExecute=$false
+    $info.CreateNoWindow=$true
+    $info.RedirectStandardInput=$true
+    $info.RedirectStandardOutput=$true
+    $info.RedirectStandardError=$true
+    $child=[Diagnostics.Process]::Start($info)
+    try {
+        $child.StandardInput.Close()
+        $stdout=$child.StandardOutput.ReadToEndAsync()
+        $stderr=$child.StandardError.ReadToEndAsync()
+        if (-not $child.WaitForExit(90000)) { $child.Kill();$child.WaitForExit();throw 'Private-console helper deadline; fixture must fail and reap owned account processes' }
+        $text=$stdout.GetAwaiter().GetResult()
+        $errorText=$stderr.GetAwaiter().GetResult()
+        $result=Get-Content -LiteralPath (Join-Path $root 'snapshot-console-result.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($child.ExitCode -ne 0) { throw ('Private-console snapshot fixture failed: '+($result|ConvertTo-Json -Compress)) }
+        if ($text.Length -ne 0 -or $errorText.Length -ne 0) { throw 'Unexpected helper output' }
+        foreach($field in @('private_console_verified','cooperative_cancel_observed','completion_manifest_absent','source_sha256_preserved','partial_inspection_refused','same_destination_retry_refused')) {
+            if ($result.$field -isnot [bool] -or -not $result.$field) { throw 'Missing positive console assertion' }
+        }
+        foreach($field in @('success_stdout','restore_authorized')) {
+            if ($result.$field -isnot [bool] -or $result.$field) { throw 'Unsafe console result' }
+        }
+        if (($result.cancel_to_exit_ms -isnot [int] -and $result.cancel_to_exit_ms -isnot [long]) -or $result.cancel_to_exit_ms -lt 0 -or $result.cancel_to_exit_ms -gt 20000) { throw 'Invalid cancellation observation' }
+        Write-Output ('PASS: ordinary-account Windows private-console Ctrl+C, source bytes/partial output preserved, no completion or replacement: '+($result|ConvertTo-Json -Compress))
+    } finally { $child.Dispose() }
+    exit 0
 }
 if ($Phase -eq 'Active') {
     Refused (Invoke-Snapshot create $db $snapshot)

@@ -223,6 +223,11 @@ try {
             if ($LASTEXITCODE -ne 0) { throw 'Removed coordinator database no longer matches original identity' }
             & (Join-Path $root 'snapshot-worker.ps1') -Phase Stopped
             if ($LASTEXITCODE -ne 0) { throw 'Ordinary-account offline snapshot acceptance failed' }
+            Check-Worker SnapshotPad
+            & (Join-Path $root 'snapshot-worker.ps1') -Phase Cancel
+            if ($LASTEXITCODE -ne 0) { throw 'Ordinary-account console cancellation acceptance failed' }
+            & $exe authority-check --directory $db --expect-volume $pin.volume --name-policy portable-collision-v1 --token-file (Join-Path $inputs 'authority.token') --listen ([uri]$pin.endpoint).Authority --tls-cert (Join-Path $inputs 'cert.pem') --tls-key (Join-Path $inputs 'key.pem')
+            if ($LASTEXITCODE -ne 0) { throw 'Cancelled snapshot left the original authority unavailable' }
         }
         'ManagedInstall' {
             $reader=[IO.StreamReader]::new([Console]::OpenStandardInput(),[Text.Encoding]::UTF8,$true)

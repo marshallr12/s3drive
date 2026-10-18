@@ -20,16 +20,22 @@ Research, decisions, acceptance and plans belong in docs/src/.
   Backup ref codex/authority-snapshots-before-transport retains old history.
   Config/plan/report private hashes stayed identical through rebase. Rust
   snapshot code and all f8 diagnostics were preserved; only docs conflicted.
-- Current local changes record f8 acceptance and update source status. Snapshot
-  code is NOT yet in main or pushed. Combined-source gate PASSED exit0 at
+- Snapshot candidate f9a52e2d4fcd575ea4ae73fd4e4a6e6ce75e9566 is now pushed to
+  private origin/codex/authority-snapshots; exact remote SHA/privacy verified.
+  CI39100010372 is LIVE: book117594176266/Linux117594176389 success,
+  Windows117594176311 lifecycle at last observation. Raw Linux/book logs
+  /tmp/s3drive-snapshot-f9-{linux,book}.log: snapshot CLI2/state274, all8
+  native cases, paired PASS05:22:17UTC, ordinary no-systemd and HTTP/TLS
+  authority startup passed. No snapshot main promotion.
+  Combined-source gate PASSED exit0 at
   /tmp/s3drive-snapshot-integrated-gate1.log (274 state, snapshot CLI2,
   Hyper2/HTTP10/TLS6/SDK17/managed7 plus lint/build/57-doc).
 - Both checkouts share /home/marshall/src/s3drive/target. Builds replace its CLI,
-  so verify/rebuild the intended source before experiments. The last CLI was
-  old defc8b9 for the SIGINT/busy checks; a new integrated build will replace it.
+  so verify/rebuild the intended source before experiments. The integrated gate
+  rebuilt the CLI; historical SIGINT/busy proofs remain bound to old defc8b9.
 
-Next: inspect main-repeat CI, validate/checkpoint/push the prepared ordinary-
-account Windows snapshot acceptance candidate, then inspect actual runtime and unchanged
+Next: monitor main-repeat CI39099187117 and snapshot candidateCI39100010372,
+then inspect actual ordinary-account snapshot runtime and unchanged
 native/reference/startup gates before any snapshot main promotion. Keep restore
 unsupported. No new provider/user startup/root/hosting mutations authorized.
 Publication always requires exact-source all-three terminal CI, raw native/
@@ -99,7 +105,7 @@ Rebased local f4c37bb (old defc8b9) implements crates/s3drive-state/src/authorit
 /native.rs}, additive SnapshotDirectory platform helpers, and CLI
 crates/s3drive-cli/src/snapshot.rs plus tests/authority_snapshots.rs. Root
 Cargo.toml adds rusqlite backup/hooks/limits features; versions remain pinned.
-No snapshot changes are in private main or the diagnostic candidate.
+Snapshot code is on private topic f9a52e2, not main or the diagnostic worktree.
 
 The create|inspect CLI requires explicit volume/policy and offline exclusive
 ownership. It performs no migration, credentials lookup, provider I/O, listener
@@ -157,6 +163,37 @@ Actual Windows CLI/ACL/reparse/sharing and native/reference/startup gates remain
 Windows console cancellation is also separate. Remaining snapshot gaps include
 broader permission/destination-busy faults and writer-version field validation (currently
 nonempty/length only). Do not mark snapshot phase or overall goal complete.
+
+## Live observations and prepared verification
+
+- Main repeatCI39099187117 is LIVE: Linux/book success, Windows117591756871
+  paired startup; workspace/standalone/replacement/lifecycle checks passed so far.
+- Existing gh-watch sessions63097 (main) and94801 (snapshot) are live. Logs
+  /tmp/s3drive-main-f8-repeat-watch.log and snapshot-f9-watch.log.
+- Independent /tmp/s3drive-check-native-artifacts.py reads reference fixtures
+  via exact git-show source; strict duplicate/nonfinite JSON, exact field/type/
+  value checks,21/14 records, source/OS/driver and four legacy cases. Passed
+  known-good f8 artifacts; rejected bool-as-int/missing/extra/duplicate faults.
+  Use it on the NEW candidate artifacts, never substitute old success.
+- NEW follow-up adds scripts/test-windows-snapshot-console.cs and
+  Cancel phase/owned cleanup to the three Windows fixture PS files. It uses
+  only a freshly allocated verified private console (no AttachConsole), checks
+  helper/child membership, requires Cancelled/no stdout/no manifest, compares
+  source bytes and refuses partial/replacement. No actual Windows signal proof.
+  The Rust authority_restart fixture adds SnapshotPad before managed dispatch:
+  production owner lock plus separate SQLite connection,128MiB free pages,
+  connections closed before hashing. Portable8MiB exact receipt-byte control
+  passed /tmp/s3drive-snapshot-console-padding2.log. New C# compiles with mcs
+  -warnaserror; fresh PS/embedded AST passed snapshot-console-ast1.log.
+  Full local gate PASSED exit0 /tmp/s3drive-snapshot-console-gate1.log:
+  274 state, eight restart/worker (new portable fixture), two snapshot CLI,
+  Hyper2/HTTP10/TLS6/SDK17/managed7 plus lint/build/57-doc. Later PS-only
+  original-identity control and numeric-type validation passed fresh AST at
+  /tmp/s3drive-snapshot-console-final-ast2.log; C#5/.NET4.5 mcs compilation
+  with warnings-as-errors passed. f9 CI tests the previous immutable source.
+- Publish this substantive console follow-up normally after final doc checks.
+  Existing workflow has no cancel-on-push group; preserve both live runs.
+  Never push a docs-only native CI cycle or promote before exact-source gates.
 
 ## Requirements, invariants and authorization
 

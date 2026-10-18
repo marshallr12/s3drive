@@ -823,6 +823,16 @@ refused without destination creation or source-byte changes, then succeeded
 after the independent writer released its lock. Destination contention and
 actual Windows locking/ACL behavior still require acceptance.
 
+The subsequent topic follow-up prepares an isolated Windows console Ctrl+C helper
+and an ordinary-account padding mode. A portable fixture checks original
+identity/sequence and byte-identical operation rows after temporary padding.
+Local compilation/parsing is not Windows cancellation acceptance; require the
+[isolated-console runtime contract](authority-backup-recovery.md#windows-console-cancellation-follow-up-prepared-runtime-pending-2026-10-18)
+and source-bound Windows acceptance. The follow-up local gate passed, along
+with final PS AST and C#5/.NET4.5 compilation; Windows runtime remains pending.
+Never signal a shared runner console or substitute
+forced termination for cooperative cleanup.
+
 Require exclusive existing-authority ownership and explicit volume/policy pin;
 read supported legacy/current state without migrations or namespace changes.
 Produce a new private artifact outside mounted trees, with a database filename

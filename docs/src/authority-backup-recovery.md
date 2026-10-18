@@ -267,3 +267,66 @@ behavior. [Microsoft New-Item documentation](https://learn.microsoft.com/en-us/p
 startup regressions, and source-bound logs are required before acceptance.
 Windows console cancellation, physical power loss and target Windows10/11
 remain separate evidence requirements.
+
+
+## Windows console cancellation follow-up (prepared; runtime pending, 2026-10-18)
+
+The resolved Tokio1.53.3 `ctrl_c` implementation registers a Windows Ctrl+C
+listener; the Linux SIGINT experiment does not exercise it. A future actual
+Windows fixture must isolate its console before generating a control event.
+Microsoft documents that `CTRL_C_EVENT` cannot be targeted to a nonzero process
+group; a zero group broadcasts to processes sharing the caller's console.
+`CTRL_BREAK_EVENT` has different delivery semantics and would not test this
+CLI's Ctrl+C path. [GenerateConsoleCtrlEvent](https://learn.microsoft.com/en-us/windows/console/generateconsolectrlevent)
+(read2026-10-18).
+
+The prepared fixture creates a new console owned only by a disposable helper and
+its snapshot child, install a helper-local handler, and signal only that
+isolated console after output creation. Never attach to or broadcast into the
+runner's existing console. Do not set the inheritable ignore-Ctrl+C attribute: a
+child would inherit it and the test could measure forced termination instead
+of cooperative cleanup. Changing console attachment resets handlers, so the
+helper must register after creating/attaching its private console.
+[SetConsoleCtrlHandler](https://learn.microsoft.com/en-us/windows/console/setconsolectrlhandler)
+(read2026-10-18).
+
+Use a valid stopped authority with sufficiently many disposable pages, assert
+non-success and no completion manifest, preserve source bytes and partial
+output, refuse same-destination replacement, and reap every owned process
+before cleanup. A helper deadline must fail, never become a cancellation PASS.
+The source cannot be padded through a raw file while SQLite is active. This is
+a prepared acceptance design only; no console helper or Windows Ctrl+C result
+is included in candidate f9a52e2. The follow-up files now exist locally but
+remain unverified on Windows.
+
+
+The prepared helper is `scripts/test-windows-snapshot-console.cs`. Windows
+PowerShell5.1 compiles it as a console application inside the existing
+disposable ordinary account. This compiler path is intentional: current
+PowerShell7 no longer supports the executable output types.
+[PowerShell output assembly types](https://learn.microsoft.com/en-us/dotnet/api/microsoft.powershell.commands.outputassemblytype?view=pscore-6.0.0),
+[Add-Type executable-output limitation](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/add-type?view=powershell-7.3)
+(read2026-10-18). The helper detaches only itself, calls `AllocConsole`, and
+checks `GetConsoleProcessList` for exactly itself before launch and itself plus
+its retained child before any signal. Unexpected membership fails; it never
+uses `AttachConsole`. [AllocConsole](https://learn.microsoft.com/en-us/windows/console/allocconsole),
+[GetConsoleProcessList](https://learn.microsoft.com/en-us/windows/console/getconsoleprocesslist)
+(read2026-10-18).
+
+The test-only Rust padding mode retains the production directory-owner lock
+while a separate SQLite connection creates/drops128MiB of zero-filled scratch
+pages. All connections close before source hashing. It does not add namespace
+operations. A local8MiB positive fixture passed, preserving the original
+identity/sequence and byte-identical operation input/outcome; the C# source
+compiles with warnings treated as errors under the installed Mono compiler,
+and changed PowerShell scripts parse locally. The parent must also pass an
+offline original-identity authority check after cancellation, proving source
+ownership can be reacquired. These checks establish fixture
+preconditions and syntax only. The new code is outside the still-running
+f9a52e2 candidate. Its full local gate subsequently passed with274 state tests,
+eight restart/worker cases and the existing snapshot CLI/HTTP/TLS/SDK/managed/
+lint/build/book checks; the final changed PS scripts passed fresh AST parsing,
+and the helper compiled as C#5 against .NET4.5 with warnings treated as errors.
+Exact-source hosted Windows execution is still required. Helper or child deadline, forced termination, lost membership,
+completion before the observation boundary, or missing cancellation error must
+fail acceptance. Owned-account cleanup remains mandatory on failure.

@@ -706,6 +706,138 @@ async fn supervised_linux_coordinator_http_and_tls_with_private_ca() {
     }
 }
 
+// Test fixture only. A separate connection leaves disposable free pages while
+// the production owner lock stays held; all SQLite handles close before hashing.
+fn pad_snapshot_console_fixture(root: &Path, bytes: u32) {
+    // Only the existing disposable ordinary-account fixture after removal.
+    // Keep production directory ownership while a separate SQLite connection
+    // grows free pages. Never raw-open/hash the database during SQLite use.
+    assert!(root.join("snapshot-fixture.marker").is_file());
+    let pin: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(root.join("authority-identity.json")).unwrap())
+            .unwrap();
+    let volume = pin["volume"].as_str().unwrap();
+    let directory = root.join("authority-state");
+    let owner =
+        s3drive_state::State::open_existing_authority(&directory, volume, "portable-collision-v1")
+            .unwrap();
+    let before = owner.namespace_volume().unwrap();
+    let padding = rusqlite::Connection::open_with_flags(
+        directory.join("metadata.sqlite3"),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE | rusqlite::OpenFlags::SQLITE_OPEN_NOFOLLOW,
+    )
+    .unwrap();
+    padding.busy_timeout(Duration::from_secs(5)).unwrap();
+    let auto_vacuum: i32 = padding
+        .pragma_query_value(None, "auto_vacuum", |row| row.get(0))
+        .unwrap();
+    assert_eq!(auto_vacuum, 0);
+    assert!((8 * 1024 * 1024..=128 * 1024 * 1024).contains(&bytes));
+    padding
+        .execute_batch("BEGIN IMMEDIATE; CREATE TABLE snapshot_console_fixture_padding(data BLOB);")
+        .unwrap();
+    padding
+        .execute(
+            "INSERT INTO snapshot_console_fixture_padding VALUES(zeroblob(?1))",
+            [bytes],
+        )
+        .unwrap();
+    padding
+        .execute_batch("COMMIT; DROP TABLE snapshot_console_fixture_padding;")
+        .unwrap();
+    let free: i64 = padding
+        .pragma_query_value(None, "freelist_count", |row| row.get(0))
+        .unwrap();
+    assert!(free > 32, "console fixture needs observable copy work");
+    let integrity: String = padding
+        .pragma_query_value(None, "integrity_check", |row| row.get(0))
+        .unwrap();
+    assert_eq!(integrity, "ok");
+    padding.close().unwrap();
+    assert_eq!(owner.namespace_volume().unwrap(), before);
+    drop(owner); // Last SQLite close checkpoints WAL before external hashing.
+    let observed = s3drive_state::State::inspect_existing_authority(
+        &directory,
+        volume,
+        "portable-collision-v1",
+    )
+    .unwrap();
+    assert_eq!(observed, before);
+}
+
+#[test]
+fn stopped_console_fixture_padding_preserves_authority_identity_and_exact_receipts() {
+    use s3drive_state::{State, namespace};
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path();
+    let directory = root.join("authority-state");
+    let mut state = State::open_managed(&directory).unwrap();
+    let volume = state
+        .namespace_initialize_with_policy("portable-collision-v1")
+        .unwrap();
+    let operation = "1".repeat(32);
+    let receipt = state
+        .namespace_apply(&namespace::Apply {
+            volume: volume.id.clone(),
+            operation: operation.clone(),
+            expected_sequence: 0,
+            mutation: namespace::Mutation::Create {
+                parent: namespace::ROOT.into(),
+                name: "console fixture 資料 🦀".into(),
+                node_kind: namespace::Kind::Directory,
+            },
+        })
+        .unwrap();
+    let before = state.namespace_volume().unwrap();
+    drop(state);
+    std::fs::write(
+        root.join("snapshot-fixture.marker"),
+        "owned temporary portable fixture",
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("authority-identity.json"),
+        serde_json::to_vec(&serde_json::json!({"volume":volume.id})).unwrap(),
+    )
+    .unwrap();
+    fn operation_bytes(directory: &Path) -> (Vec<u8>, Vec<u8>) {
+        let connection = rusqlite::Connection::open_with_flags(
+            directory.join("metadata.sqlite3"),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NOFOLLOW,
+        )
+        .unwrap();
+        let bytes = connection
+            .query_row(
+                "SELECT request,outcome FROM namespace_operations",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        connection.close().unwrap();
+        bytes
+    }
+    let original_bytes = operation_bytes(&directory);
+    pad_snapshot_console_fixture(root, 8 * 1024 * 1024);
+    assert_eq!(operation_bytes(&directory), original_bytes);
+    assert!(
+        std::fs::metadata(directory.join("metadata.sqlite3"))
+            .unwrap()
+            .len()
+            >= 8 * 1024 * 1024
+    );
+    let state =
+        State::open_existing_authority(&directory, &volume.id, "portable-collision-v1").unwrap();
+    assert_eq!(state.namespace_volume().unwrap(), before);
+    assert_eq!(
+        state
+            .namespace_operation(&volume.id, &operation)
+            .unwrap()
+            .unwrap()
+            .unwrap(),
+        receipt
+    );
+}
+
 // A subprocess test worker lets the disposable ordinary Windows account use
 // the production Rust TLS client. No machine certificate-store changes or
 // certificate-verification callbacks are involved.
@@ -728,6 +860,14 @@ async fn windows_authority_fixture_worker() {
         if root.join("managed-fixture.json").exists() {
             managed::windows_session_initialize(&root);
         }
+        return;
+    }
+    #[cfg(windows)]
+    if mode == "SnapshotPad" {
+        pad_snapshot_console_fixture(&root, 128 * 1024 * 1024);
+        eprintln!(
+            "console fixture: stopped original authority,128MiB disposable free pages, unchanged namespace identity/sequence"
+        );
         return;
     }
     if root.join("managed-fixture.json").exists() {
