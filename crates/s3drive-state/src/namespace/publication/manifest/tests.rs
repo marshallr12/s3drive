@@ -527,11 +527,14 @@ fn schema_twenty_five_marker_upgrade_preserves_exact_legacy_request_and_payload_
         )
         .unwrap();
     s.connection
+        .execute_batch("DROP TABLE chunk_publications; DROP TABLE chunk_client_role")
+        .unwrap();
+    s.connection
         .pragma_update(None, "user_version", 25)
         .unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
-    assert_eq!(s.info().unwrap().schema_version, 26);
+    assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
     assert_eq!(rows(&s), before);
     let after: Vec<u8> = s
         .connection

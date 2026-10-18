@@ -73,7 +73,9 @@ fixtures. See the [dated evidence](evidence/chunk-tree-receipts-20261018.json)
 for archived logs and source binding. The full local gate passed with 334 state
 tests, 59 S3 tests, 34 core and 50 authority tests, all 18 managed publication
 contracts, formatting/Clippy/build, 63 doc-link files and 59 book chapters.
-Native/provider acceptance and the source-bound hosted cohort remain separate.
+Its own hosted cohort also passed on Ubuntu24.04.5 and Windows Server2025, with
+strict source-bound artifacts. Native chunk-format and provider acceptance remain
+separate.
 
 The next publication journal needs durable exact reserve/publish requests and
 mutual exclusion with namespace/open/logical admission. A one-time absence check

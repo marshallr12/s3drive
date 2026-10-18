@@ -208,6 +208,7 @@ impl<'a> Journal<'a> {
     }
     pub fn with_options(state: &'a mut State, options: crate::journal::Options) -> Result<Self> {
         state.verify_staging_storage()?;
+        crate::chunk_publication::require_legacy(&state.connection)?;
         Ok(Self { state, options })
     }
     pub fn get(&self, id: &str) -> Result<Record> {

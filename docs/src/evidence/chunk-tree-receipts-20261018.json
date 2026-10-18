@@ -1,6 +1,6 @@
 {
   "implementation_date": "2026-10-18",
-  "status": "full local gate passed; own source-bound hosted acceptance pending",
+  "status": "local gate and own-source hosted acceptance passed",
   "branch": "codex/chunk-tree-receipts",
   "parent_commit": "259e0f84cd1dd06ca896b69d530bf8874e3aab28",
   "schema_version": 26,
@@ -443,33 +443,80 @@
     "run_id": 39150996811,
     "run_attempt": 1,
     "url": "https://github.com/marshallr12/s3drive/actions/runs/39150996811",
-    "status": "in_progress",
+    "status": "completed",
     "jobs": [
       {
         "id": 117744444907,
         "name": "rust (windows-latest)",
-        "status": "in_progress"
+        "status": "completed",
+        "conclusion": "success"
       },
       {
         "id": 117744444680,
         "name": "book",
-        "status": "in_progress"
+        "status": "completed",
+        "conclusion": "success"
       },
       {
         "id": 117744444873,
         "name": "rust (ubuntu-latest)",
-        "status": "in_progress"
+        "status": "completed",
+        "conclusion": "success"
       }
     ],
     "watch_session": 79516,
     "watch_log": "/tmp/s3drive-tree-receipts-3e5-watch.log",
     "checker_script": "/tmp/s3drive-check-tree-receipts-3e5.py",
-    "checker_compiled_only": true,
-    "checker_executed": false,
-    "all_raw_reviews_closed": false,
+    "checker_compiled_only": false,
+    "checker_executed": true,
+    "all_raw_reviews_closed": true,
     "new_artifact_output": "/tmp/s3drive-tree-receipts-3e5-artifacts",
-    "own_native_cohort_accepted": false,
-    "chunked_native_large_file_or_provider_acceptance": false
+    "own_native_cohort_accepted": true,
+    "chunked_native_large_file_or_provider_acceptance": false,
+    "conclusion": "success",
+    "checker_exit_code": 0,
+    "watch_exit_code": 0,
+    "artifacts": [
+      {
+        "kind": "replacement",
+        "id": 12145416969,
+        "source": "3e55fe78f6112d817a2ea131bcb4602aa7212410",
+        "run_id": 39150996811,
+        "run_attempt": 1,
+        "windows_job": 117744444907,
+        "zip_sha256": "2886955c54acdebf22a200347e43b6f566db5fa933ba5d21f1e1cc34b8c6f230",
+        "json_sha256": "33a274a58c8ff98e7ac7a02425a52531a6733bdc2f0aa2afd6c7fbe17dbf43e5",
+        "primary_artifact_reused": false
+      },
+      {
+        "kind": "disposition",
+        "id": 12145194101,
+        "source": "3e55fe78f6112d817a2ea131bcb4602aa7212410",
+        "run_id": 39150996811,
+        "run_attempt": 1,
+        "windows_job": 117744444907,
+        "zip_sha256": "e435e96cb1a9237c44fe3f547b7d1c3abbbf005b2811a567b6985e907aa7434a",
+        "json_sha256": "01c2f39b347301c44b011047500da739df41a3672cb65b869a1de1d991fe545c",
+        "primary_artifact_reused": false
+      }
+    ],
+    "typed21_14_and_project_oracles_passed": true,
+    "all35_raw_records_match_every_field_and_type": true,
+    "archive": {
+      "path": "chunk-tree-receipts-3e5-hosted-20261018.tar.gz",
+      "sha256": "3e1627fa1629bf04d00750901d71024eb12efe164017ad416a8398ae74de8566",
+      "bytes": 96029,
+      "members": 21,
+      "all_member_hashes_verified": true
+    },
+    "notices": [
+      "hosted WindowsServer2025/WinFsp2.1.25156; Ubuntu24.04.5",
+      "Node/cache deprecations and forced Node24",
+      "one unused WinFsp delay-import linker diagnostic across9CLI targets",
+      "3locked disposable profiles, dummy credentials removed",
+      "long Windows supervision/snapshot/retirement tests passed"
+    ],
+    "limitations": "legacy-format native regression only; no chunked mount, provider capability, physical reboot or historical NoWrite cause claim"
   },
   "diagram_review": {
     "xml_parse": true,

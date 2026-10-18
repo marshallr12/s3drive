@@ -220,7 +220,7 @@ fn schema_eighteen_migration_preserves_closed_history_and_refuses_conflicting_ta
     let old = load(&f.client.connection, &i.id).unwrap().unwrap().0;
     f.client
         .connection
-        .execute_batch("DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans; DROP TABLE recovered_windows_opens; DROP TABLE windows_session_recoveries; DROP TABLE windows_mount_sessions; DROP TABLE retired_windows_opens; PRAGMA user_version=18")
+        .execute_batch("DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans; DROP TABLE recovered_windows_opens; DROP TABLE windows_session_recoveries; DROP TABLE windows_mount_sessions; DROP TABLE retired_windows_opens; PRAGMA user_version=18")
         .unwrap();
     f.reopen();
     assert_eq!(
@@ -232,7 +232,7 @@ fn schema_eighteen_migration_preserves_closed_history_and_refuses_conflicting_ta
         Journal::new(&mut f.client).unwrap().get(&i.id).unwrap(),
         closed
     );
-    f.client.connection.execute_batch("DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans; DROP TABLE recovered_windows_opens; DROP TABLE windows_session_recoveries; DROP TABLE windows_mount_sessions; DROP TABLE retired_windows_opens; CREATE TABLE retired_windows_opens(keep TEXT); INSERT INTO retired_windows_opens VALUES('untouched'); PRAGMA user_version=18").unwrap();
+    f.client.connection.execute_batch("DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans; DROP TABLE recovered_windows_opens; DROP TABLE windows_session_recoveries; DROP TABLE windows_mount_sessions; DROP TABLE retired_windows_opens; CREATE TABLE retired_windows_opens(keep TEXT); INSERT INTO retired_windows_opens VALUES('untouched'); PRAGMA user_version=18").unwrap();
     let path = f.tmp.path().join("client");
     drop(f.client);
     assert!(State::open_managed(&path).is_err());

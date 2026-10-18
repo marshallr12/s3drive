@@ -351,6 +351,7 @@ pub struct Journal<'a> {
 impl<'a> Journal<'a> {
     pub fn new(state: &'a mut State, options: journal::Options) -> Result<Self> {
         state.verify_staging_storage()?;
+        crate::chunk_publication::require_legacy(&state.connection)?;
         Ok(Self {
             state,
             options: options.validate()?,

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="660" viewBox="0 0 1080 660" role="img" aria-labelledby="title desc">
+<title id="title">Durable chunk root publication boundaries</title>
+<desc id="desc">A dedicated SQLite owner persists exact requests and historical receipts. A future controller sends them to the Rust authority and uploads immutable chunks and manifest pages through the policy-bound S3 client. Legacy lifecycle APIs are excluded until integration.</desc>
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="none" stroke="#47617c" stroke-width="1.5"/></marker></defs>
+<rect width="1080" height="660" fill="#f4f7fb"/>
+<g font-family="sans-serif" fill="#172b42">
+<text x="30" y="40" font-size="24" font-weight="bold">Preserve each request before crossing a network boundary</text>
+<text x="30" y="69" font-size="16">Implemented local journal • transport controller is the next phase</text>
+<rect x="30" y="95" width="510" height="465" rx="12" fill="#e8eafa" stroke="#7477a3"/>
+<text x="50" y="126" font-size="20" font-weight="bold">Dedicated local SQLite owner</text>
+<rect x="50" y="147" width="470" height="66" rx="7" fill="white" stroke="#7477a3"/>
+<text x="65" y="173" font-size="17">Frozen source snapshot + chunk plan</text>
+<text x="65" y="196" font-size="15">Original guard, store, manifest and operation IDs</text>
+<rect x="50" y="232" width="470" height="67" rx="7" fill="white" stroke="#7477a3"/>
+<text x="65" y="259" font-size="17">Exact ReserveManifest request + receipt</text>
+<text x="65" y="282" font-size="15">A lost reply keeps the same request and UUID</text>
+<rect x="50" y="318" width="470" height="67" rx="7" fill="white" stroke="#7477a3"/>
+<text x="65" y="345" font-size="17">Complete historical tree acknowledgment proof</text>
+<text x="65" y="368" font-size="15">All chunks/pages; distinct physical root generation</text>
+<rect x="50" y="404" width="470" height="67" rx="7" fill="white" stroke="#7477a3"/>
+<text x="65" y="431" font-size="17">Exact Publish request + authority receipt</text>
+<text x="65" y="454" font-size="15">Root committed; original source still pending</text>
+<text x="50" y="505" font-size="16">Permanent role + retained admission count</text>
+<text x="50" y="531" font-size="16">Reload and validate after the final SQL write</text>
+<rect x="630" y="95" width="420" height="112" rx="10" fill="#e8f5ed" stroke="#4d8b65"/>
+<text x="650" y="126" font-size="20" font-weight="bold">Rust metadata authority</text>
+<text x="650" y="153" font-size="16">Namespace, reservations and content CAS</text>
+<text x="650" y="180" font-size="16">SQLite authority / optional future backend</text>
+<rect x="630" y="245" width="420" height="96" rx="10" fill="white" stroke="#47617c" stroke-dasharray="6 4"/>
+<text x="650" y="277" font-size="20">Future controller + policy-bound S3 client</text>
+<text x="650" y="308" font-size="16">Replay saved requests; children before parents</text>
+<rect x="630" y="400" width="420" height="112" rx="10" fill="#e5f1ff" stroke="#5585ac"/>
+<text x="650" y="432" font-size="20" font-weight="bold">S3-compatible storage service</text>
+<text x="650" y="460" font-size="16">Immutable data chunks + manifest pages</text>
+<text x="650" y="487" font-size="16">Create-only objects; no overwrite fallback</text>
+<path d="M540 270 H620" fill="none" stroke="#47617c" marker-end="url(#a)"/>
+<path d="M840 245 V217" fill="none" stroke="#47617c" marker-end="url(#a)"/>
+<path d="M840 341 V390" fill="none" stroke="#47617c" marker-end="url(#a)"/>
+<rect x="30" y="585" width="1020" height="50" rx="9" fill="#fff2dd" stroke="#c39340"/>
+<text x="50" y="616" font-size="17">Legacy managed / logical / namespace / open APIs refuse this role. Native integration remains unfinished.</text>
+</g></svg>

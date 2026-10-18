@@ -107,52 +107,7 @@ impl Journal<'_> {
     /// proof must never escape this command or cross a mutation/await.
     pub fn tree_receipt(&mut self, id: [u8; 32]) -> Result<TreeReceipt> {
         self.state.verify_staging_storage()?;
-        let plan = self.info(id)?;
-        let root = plan.root.clone().ok_or(Failure::Invalid)?;
-        let snapshot = plan.generation.ok_or(Failure::Corrupt)?;
-        let snapshot_manifest = plan.manifest.ok_or(Failure::Corrupt)?;
-        let checked =
-            remote::Journal::new(self.state, remote::Options::default())?.checked_flushes()?;
-        let mut root_receipt = None;
-        let mut verified_objects = 0u32;
-        let mut planned_hole_chunks = 0u32;
-        for level in -1..=plan.root_level() {
-            for slot in 0..plan.object_slots(level)? {
-                let Some(transfer) = self.transfer_inner(&plan, level, slot)? else {
-                    if level != -1 {
-                        return Err(Failure::Corrupt.into());
-                    }
-                    planned_hole_chunks =
-                        planned_hole_chunks.checked_add(1).ok_or(Failure::Corrupt)?;
-                    continue;
-                };
-                let receipt = checked
-                    .receipt(
-                        &self.state.connection,
-                        transfer.generation.ok_or(Failure::Conflict)?,
-                    )?
-                    .ok_or(Failure::Conflict)?;
-                if !transfer.receipt_matches(&receipt) {
-                    return Err(Failure::Corrupt.into());
-                }
-                verified_objects = verified_objects.checked_add(1).ok_or(Failure::Corrupt)?;
-                if level == plan.root_level() && slot == 0 {
-                    if transfer.reference() != root.page() {
-                        return Err(Failure::Corrupt.into());
-                    }
-                    root_receipt = Some(receipt);
-                }
-            }
-        }
-        Ok(TreeReceipt {
-            plan: Box::new(plan),
-            snapshot,
-            snapshot_manifest,
-            root,
-            root_receipt: root_receipt.ok_or(Failure::Conflict)?,
-            verified_objects,
-            planned_hole_chunks,
-        })
+        inspect_tree_receipt(&self.state.connection, id)
     }
     /// Metadata-only lookup. None means an explicit hole, never a missing row.
     /// Requires a complete validated graph; does not authorize a network send.
@@ -165,51 +120,7 @@ impl Journal<'_> {
         self.transfer_inner(&i, level, slot)
     }
     fn transfer_inner(&self, i: &Info, level: i8, slot: u64) -> Result<Option<Transfer>> {
-        let o = object(&self.state.connection, &i.input, level, slot)?;
-        if o.hole {
-            return Ok(None);
-        }
-        let reference = o.reference(&i.input)?;
-        let role = if level == -1 { Role::Data } else { Role::Page };
-        let key = i.input.namespace()?.key(role, &reference)?;
-        let payload_sha256 = o.body.as_ref().map_or(o.sha, |b| Sha256::digest(b).into());
-        let size = o.body.as_ref().map_or(o.length, |b| b.len() as u64);
-        let operation = hash(
-            b"s3drive-chunk-object-staging-v1\0",
-            &(
-                i.input.input_hash()?,
-                i.generation.ok_or(Failure::Corrupt)?,
-                i.manifest.ok_or(Failure::Corrupt)?,
-                o.hash(&i.input)?,
-                payload_sha256,
-            ),
-        )?;
-        let mapped: Option<i64> = self
-            .state
-            .connection
-            .query_row(
-                "SELECT generation_id FROM staged_operations WHERE operation_key=?1",
-                [operation.as_slice()],
-                |r| r.get(0),
-            )
-            .optional()?;
-        let t = Transfer {
-            target: Target::new(i.input.source, &i.input.fingerprint, key.as_str())?,
-            reference,
-            role,
-            size,
-            payload_sha256,
-            operation,
-            generation: mapped.map(GenerationId::from_database).transpose()?,
-        };
-        if let Some(g) = t.generation {
-            let g = journal::load(&self.state.connection, g)?;
-            if !t.matches(&g) {
-                return Err(Failure::Conflict.into());
-            }
-            journal::validate_manifest(&self.state.connection, &g, false)?;
-        }
-        Ok(Some(t))
+        inspect_transfer(&self.state.connection, i, level, slot)
     }
     /// Direct dependencies must have exact, committed historical receipts.
     /// This is inductive publication ordering, not a current remote-existence
@@ -634,3 +545,99 @@ mod tests {
 
 #[cfg(test)]
 mod receipt_tests;
+
+// Reload inside the final immutable section of an owner transaction; never
+// accept an Info captured before SQL writes (including trigger effects).
+pub(crate) fn inspect_tree_receipt(db: &Connection, id: [u8; 32]) -> Result<TreeReceipt> {
+    let plan = inspect_info(db, id)?;
+    let root = plan.root.clone().ok_or(Failure::Invalid)?;
+    let snapshot = plan.generation.ok_or(Failure::Corrupt)?;
+    let snapshot_manifest = plan.manifest.ok_or(Failure::Corrupt)?;
+    let checked = remote::checked_flushes(db)?;
+    let mut root_receipt = None;
+    let mut verified_objects = 0u32;
+    let mut planned_hole_chunks = 0u32;
+    for level in -1..=plan.root_level() {
+        for slot in 0..plan.object_slots(level)? {
+            let Some(transfer) = inspect_transfer(db, &plan, level, slot)? else {
+                if level != -1 {
+                    return Err(Failure::Corrupt.into());
+                }
+                planned_hole_chunks = planned_hole_chunks.checked_add(1).ok_or(Failure::Corrupt)?;
+                continue;
+            };
+            let receipt = checked
+                .receipt(db, transfer.generation.ok_or(Failure::Conflict)?)?
+                .ok_or(Failure::Conflict)?;
+            if !transfer.receipt_matches(&receipt) {
+                return Err(Failure::Corrupt.into());
+            }
+            verified_objects = verified_objects.checked_add(1).ok_or(Failure::Corrupt)?;
+            if level == plan.root_level() && slot == 0 {
+                if transfer.reference() != root.page() {
+                    return Err(Failure::Corrupt.into());
+                }
+                root_receipt = Some(receipt);
+            }
+        }
+    }
+    Ok(TreeReceipt {
+        plan: Box::new(plan),
+        snapshot,
+        snapshot_manifest,
+        root,
+        root_receipt: root_receipt.ok_or(Failure::Conflict)?,
+        verified_objects,
+        planned_hole_chunks,
+    })
+}
+pub(crate) fn inspect_transfer(
+    db: &Connection,
+    i: &Info,
+    level: i8,
+    slot: u64,
+) -> Result<Option<Transfer>> {
+    let o = object(db, &i.input, level, slot)?;
+    if o.hole {
+        return Ok(None);
+    }
+    let reference = o.reference(&i.input)?;
+    let role = if level == -1 { Role::Data } else { Role::Page };
+    let key = i.input.namespace()?.key(role, &reference)?;
+    let payload_sha256 = o.body.as_ref().map_or(o.sha, |b| Sha256::digest(b).into());
+    let size = o.body.as_ref().map_or(o.length, |b| b.len() as u64);
+    let operation = hash(
+        b"s3drive-chunk-object-staging-v1\0",
+        &(
+            i.input.input_hash()?,
+            i.generation.ok_or(Failure::Corrupt)?,
+            i.manifest.ok_or(Failure::Corrupt)?,
+            o.hash(&i.input)?,
+            payload_sha256,
+        ),
+    )?;
+    let mapped: Option<i64> = db
+        .query_row(
+            "SELECT generation_id FROM staged_operations WHERE operation_key=?1",
+            [operation.as_slice()],
+            |r| r.get(0),
+        )
+        .optional()?;
+    let t = Transfer {
+        target: Target::new(i.input.source, &i.input.fingerprint, key.as_str())?,
+        reference,
+        role,
+        size,
+        payload_sha256,
+        operation,
+        generation: mapped.map(GenerationId::from_database).transpose()?,
+    };
+    if let Some(g) = t.generation {
+        let g = journal::load(db, g)?;
+        if !t.matches(&g) {
+            return Err(Failure::Conflict.into());
+        }
+        journal::validate_manifest(db, &g, false)?;
+    }
+    Ok(Some(t))
+}

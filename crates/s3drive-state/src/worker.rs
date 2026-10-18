@@ -146,6 +146,10 @@ impl Storage {
     pub fn chunked(&self, options: crate::chunked::Options) -> Result<crate::chunked::Planner> {
         crate::chunked::Planner::new(self.owner.clone(), options, self.staging_options)
     }
+    /// Isolated root commit journal; no network or original-file settlement.
+    pub fn chunk_publications(&self) -> crate::chunk_publication::Client {
+        crate::chunk_publication::Client::new(self.owner.clone())
+    }
     pub fn uploads(&self) -> Uploads {
         Uploads {
             owner: self.owner.clone(),

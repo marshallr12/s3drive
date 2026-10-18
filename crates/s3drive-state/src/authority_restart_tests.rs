@@ -89,7 +89,7 @@ fn existing_authority_wrong_identity_does_not_migrate_or_change_operation_bytes(
     let (v, request, receipt) = seed(&path);
     {
         let db = Connection::open(path.join("metadata.sqlite3")).unwrap();
-        db.execute_batch("DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans")
+        db.execute_batch("DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans")
             .unwrap();
         db.pragma_update(None, "user_version", 22).unwrap();
     }
@@ -158,7 +158,7 @@ fn existing_authority_rechecks_identity_inside_migration_transaction() {
     let (other, _, _) = seed(&replacement);
     assert_ne!(other.id, v.id);
     let db = Connection::open(replacement.join("metadata.sqlite3")).unwrap();
-    db.execute_batch("DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans").unwrap();
+    db.execute_batch("DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans").unwrap();
     db.pragma_update(None, "user_version", 22).unwrap();
     drop(db);
     // Simulate a noncooperating external replacement AFTER the read-only

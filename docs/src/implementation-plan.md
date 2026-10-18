@@ -1465,7 +1465,9 @@ closing barriers remain the subsequent phase.
 ### Publication journal constraints from legacy review (2026-10-18)
 
 The prerequisite report is a historical value; reacquire owner validation before
-a publication transition. Keep CheckedFlushes internal to one read-only command.
+a publication transition. Keep CheckedFlushes within one immutable validation
+section of the synchronous exclusive-owner command, after its final write and
+with no further mutation or await before commit.
 For later request recovery, resend the complete frozen Apply: bare operation
 lookup alone does not validate request ownership. Preserve all unknown requests
 and sequences. Initially classify only exact authority Conflict as a terminal
@@ -1498,3 +1500,63 @@ authority tests, all 18 managed publication contracts, formatting/Clippy/build,
 hashes match. Independent final delta review found no blockers. See
 [complete historical tree receipts](chunk-tree-receipts.md) and dated evidence.
 No schema/RPC/native/provider or logical-settlement acceptance follows.
+
+### Active bounded slice: isolated client root journal (2026-10-18)
+
+Implement the persistence boundary first; the network controller is the next
+independent slice. Schema27 adds a permanent client-role marker with a hash-bound
+admission count and a bounded separate publication log. Freeze the Ready plan,
+attached source manifest, authenticated base/store, original content guard and
+exact reserve/publish identities. Retain complete requests and receipts. Never
+modify the legacy journal serialization or acknowledge the original source.
+
+Legacy managed/logical/namespace/open constructors must refuse this role even
+after publication. Conversely, admission and every transition reject retained
+legacy or authority state. No detached/removal guards are admitted. Each SQL
+transaction reloads the exact record, role/count, plan and graph after its last
+write; stages with a prepared Publish also require a freshly checked complete
+historical tree receipt. The compact receipt proof exists only in the final
+immutable validation section, with no writes or awaits before commit.
+
+Done criteria: exact request recovery/reopen; historical success after a newer
+authority publication; content-conflict retention; reciprocal lifecycle isolation;
+cross-column operation-ID ownership; ignored/deleted/rewritten SQL effects and
+post-write plan/receipt/isolation damage roll back; actual SQLITE_FULL preserves
+the pending identity. Migrations retain old rows/bytes and reject damaged new
+records. Run the full local gate and request this source's hosted regression.
+No transport controller, mounted activation, source settlement or provider
+mutation is included in this persistence slice.
+
+Journal result: 15 focused tests pass; full local gate passes with 349 state/
+1 ignored, 59 S3, 34 core and 50 authority tests, all 18 managed publication
+contracts, formatting/Clippy/build, 64 doc-link files and 60 book chapters.
+All 247 frozen hashes match, and independent final review found no blockers.
+Own-source hosted regression remains pending. See the
+[isolated journal contract](chunk-root-journal.md) and its archived evidence.
+
+### Following slice: policy-bound chunk publisher (proposal, 2026-10-18)
+
+Build an explicit library controller over the isolated journal, existing chunk
+uploader and authenticated authority client. Acquire base metadata directly from
+that client; the legacy managed Reader intentionally rejects manifest bases.
+Bind Store.route to the SDK reader's storage fingerprint, and independently bind
+source/configuration fingerprint through the exact recovery target. Persist the
+journal's full ReserveManifest before Apply; retain its complete matching reply.
+Upload only through the current policy-bound tree executor, then freeze Publish
+through fresh owner validation and send exactly that saved request.
+
+Recovery must branch on saved stage. A prepared Publish is replayed directly,
+with its historical tree proof, even if upload policy subsequently expires or
+current source bytes are damaged. Do not rerun upload_tree, rebase sequence,
+replace UUIDs or use bare operation lookup for that unknown CAS. A new upload
+still needs fresh policy checks. Return an explicitly named root-commit result;
+keep the original source snapshot pending and preserve exact authority Conflict.
+
+Done criteria: real authenticated coordinator and real SDK loopback S3; lost
+reserve/PUT/publish replies across controller reconstruction; exact request bytes
+and operation IDs; no additional PUT after unknown metadata commit; recovery
+with expired upload authorization/damaged current local bytes; rival publishers;
+missing grandchild proof; wrong route/source/guard refusal; durable local failures
+before a metadata send. Run full local gate and its own Linux/Windows cohort.
+This phase still does not enable mounted chunk format, logical settlement,
+detached/removal modes, provider writes or new native file-size limits.

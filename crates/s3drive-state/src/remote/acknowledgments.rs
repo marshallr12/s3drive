@@ -131,10 +131,7 @@ impl Journal<'_> {
             .receipt(&self.state.connection, generation)
     }
     pub(crate) fn checked_flushes(&self) -> Result<CheckedFlushes> {
-        // Validate every root, settlement, manifest and ancestry interval before
-        // any result can suppress work. Retain only bounded compact roots.
-        let all = validate(&self.state.connection)?;
-        Ok(CheckedFlushes { roots: all.roots })
+        checked_flushes(&self.state.connection)
     }
     pub fn settlement(&self, generation: GenerationId) -> Result<Option<Settlement>> {
         let all = validate(&self.state.connection)?;
@@ -176,11 +173,16 @@ struct Validated {
     roots: BTreeMap<[u8; 32], Root>,
     nodes: BTreeMap<GenerationId, Node>,
 }
-/// Private proof for one synchronous read command on the exclusive State owner.
-/// Never cache this across commands, mutations or awaits. It is deliberately
+/// Private proof for one immutable validation section in a synchronous exclusive-
+/// owner command. Construct after its final write; drop before commit. Never
+/// cache this across commands, mutations or awaits. It is deliberately
 /// neither Clone nor public, and contains no payloads or complete Info records.
 pub(crate) struct CheckedFlushes {
     roots: BTreeMap<[u8; 32], Root>,
+}
+pub(crate) fn checked_flushes(connection: &Connection) -> Result<CheckedFlushes> {
+    let all = validate(connection)?;
+    Ok(CheckedFlushes { roots: all.roots })
 }
 impl CheckedFlushes {
     pub(crate) fn receipt(

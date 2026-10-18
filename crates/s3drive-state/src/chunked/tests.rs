@@ -511,7 +511,7 @@ fn schema_twenty_four_upgrade_keeps_legacy_state_and_collision_rolls_back() {
         let before = journal::load(&s.connection, g).unwrap().manifest_hash;
         s.connection
             .execute_batch(
-                "DROP TABLE chunk_objects; DROP TABLE chunk_plans; PRAGMA user_version=24",
+                "DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; PRAGMA user_version=24",
             )
             .unwrap();
         if conflict {

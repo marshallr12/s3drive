@@ -183,6 +183,8 @@ fn identity(
         "multipart_parts",
         "chunk_plans",
         "chunk_objects",
+        "chunk_client_role",
+        "chunk_publications",
     ];
     if tables.len() > 64 {
         return Err(Error::Validation);

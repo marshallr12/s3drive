@@ -60,7 +60,50 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Current phase: complete historical chunk-tree receipt (2026-10-18)
+## Active work: isolated chunk-root journal (2026-10-18)
+
+Branch codex/chunk-root-publication fromceef8e1. Implemented schema27 isolated
+client journal with exact full reserve/publish requests, complete historical
+receipts, retained Conflict, permanent role/count, reciprocal legacy lifecycle
+exclusion, cross-column operation ownership and bounded restart enumeration.
+New chunk_publication.rs uses freshly reloaded post-write plan/source/graph,
+exact saved row, role/isolation and stage-dependent complete tree proof. Its
+CheckedFlushes lives only in the final immutable validation section. Separate
+role/log tables preserve all legacy JSON/hashes; downgrade fixtures drop them,
+both Windows native schema fixtures expect27. No detached/removal mode or role
+release; generic staging/remote/chunk APIs remain usable. Authority restart and
+snapshot preflight reject populated new tables, including old-schema paths.
+
+15focused state tests PASS; full gate42218 CLOSED EXIT0:
+349state/1ignored,59S3,34core,50authority,18managed-publication; format/Clippy/build,
+64doclinks and60book chapters. All247 frozen hashes match
+/tmp/s3drive-chunk-publication-frozen.json. Log
+/tmp/s3drive-chunk-publication-gate.log. State tests229.12s; existing retirement/
+obsolete-full-open/migration-spawn tests exceeded60s then passed. No cause claim.
+Independent final review: no blockers,247/247 hashes match; all37changed runtime/
+fixture files covered. No tests/provider calls by reviewer. Durable9member local
+archive docs/src/evidence/chunk-root-journal-local-20261018.tar.gz,
+SHA25656e38f7a54e2001b55c55a058171cf3e7f238fb862c50f0e91c5c245388af8c0
+(32185bytes), all indexed members verified. Evidence JSON and reviewed SVG in
+new chunk-root-journal.md; XML/librsvg/visual and HTTP preview33767 passed.
+
+Review corrected separate route/configuration fingerprints and general exact-
+name validation; fault controls now insert valid two-column identity rows.
+Initial fixture/FromSql/Clippy failures fixed without suppressions. Controls
+cover lost replies/restart, newer roots/dirty heads, manifest bases, exact names,
+Unicode, content races, missing recursive receipts, post-write trigger damage,
+actual SQLITE_FULL and schema26 collision rollback. Historical prepared recovery
+works after current payload corruption while source remains pending.
+
+Own source-bound hosted regression is pending publication; do not borrow the
+preceding3e5 cohort. Network controller is the next independent slice: read the
+following proposal in implementation-plan.md. Acquire authenticated metadata
+directly (legacy Reader rejects manifest bases), bind both fingerprints, repeat
+exact saved Apply, and recover prepared Publish without fresh upload work/grant
+or source-byte reads. Native chunk activation, logical settlement, range reader,
+provider and physical startup acceptance remain unfinished. Goal ACTIVE.
+
+## Preceding complete historical chunk-tree receipt (2026-10-18)
 
 Branch codex/chunk-tree-receipts from259e0f8 (status child of91db06b).
 Published runtime3e55fe78f6112d817a2ea131bcb4602aa7212410.
@@ -90,23 +133,27 @@ all244frozen hashes/PUBLIC before-after, main1a93b5f unchanged; proof
 /tmp/s3drive-tree-receipts-publication.json. Preview33767/chunk-tree-receipts.html
 and exactSVG HTTP, XML/librsvg/visual review all passed.
 
-Own CI39150996811 attempt1 at3e55fe7 LIVE: Windows117744444907, book117744444680,
-Linux117744444873. Watch79516 LIVE /tmp/s3drive-tree-receipts-3e5-watch.log;
-track same run/handle, do not rerun on observation timeout. Prepared checker
-/tmp/s3drive-check-tree-receipts-3e5.py compiled only, NOT executed; require all3
-terminal success and own completed raw review marker
-/tmp/s3drive-tree-receipts-3e5-raw-reviewed.json. Output must be fresh
-/tmp/s3drive-tree-receipts-3e5-artifacts; source/run/attempt/finalized artifact IDs/
-API digest/time and strict typed21/14/all raw fields plus project oracles must
-match. Reject prior IDs, including91d12144981486/12144507996. Do not borrow
-parent acceptance; do not run success checker on failure.
+Own CI39150996811 attempt1 at3e55fe7 CLOSED SUCCESS all3: Windows117744444907,
+book117744444680, Linux117744444873. Watch79516 and checker38202 CLOSED EXIT0.
+All3 raw logs reviewed; own fresh replacement12145416969/disposition12145194101
+artifacts pass strict typed21/14 and project oracles; all35 raw records match
+all fields/types with duplicate/nonfinite JSON refusal. Durable indexed21member
+archive docs/src/evidence/chunk-tree-receipts-3e5-hosted-20261018.tar.gz
+SHA2563e1627fa1629bf04d00750901d71024eb12efe164017ad416a8398ae74de8566 (96029bytes), all members verified.
+Hosted Ubuntu24.04.5/WindowsServer2025/WinFsp2.1.25156. Existing9FUSE/7WinFsp,
+32HTTPS, paired/snapshot/cross-logon/no-systemd regressions passed. Windows329state/
+1ignored; all5new receipt controls PASS. Node/cache/unused delay-import notices,
+3locked disposable profiles(dummy credentials removed) and passing long Windows
+supervision/snapshot/retirement tests retained. This does not accept journal
+source, chunked native drives, provider behavior or physical reboot; historical
+NoWrite cause remains unresolved.
 
 Required legacy review agreed metadata-only proof scope and future journal
 barriers. model-select: reused gpt-6-astra/xhigh (local8:spec1 blast2 depth2
 verify1 cost2; persistence/security override), no additional agents spawned.
 Read final implementation-plan prerequisites/constraints before next work.
 Preceding91d cohort is now closed SUCCESS with own fresh strict artifacts;
-this does not accept current3e5 source. Next work is the client root publication
+own3e5 cohort also closed. Next work is the client root publication
 journal with persistent lifecycle exclusion, then logical settlement/range reader.
 No real provider mutations are authorized by these local/hosted phases.
 

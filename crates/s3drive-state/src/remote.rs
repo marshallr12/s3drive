@@ -5,8 +5,8 @@ use crate::{
     Result, State,
     journal::{self, Base, GenerationId, Target},
 };
-pub(crate) use acknowledgments::CheckedFlushes;
 pub(crate) use acknowledgments::validate_all as validate_acknowledgments;
+pub(crate) use acknowledgments::{CheckedFlushes, checked_flushes};
 pub use acknowledgments::{FlushReceipt, Settlement};
 use rusqlite::{Connection, TransactionBehavior, params};
 use sha2::{Digest, Sha256};

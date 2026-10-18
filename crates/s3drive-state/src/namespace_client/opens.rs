@@ -581,6 +581,7 @@ pub struct Journal<'a> {
 impl<'a> Journal<'a> {
     pub fn new(state: &'a mut State) -> Result<Self> {
         state.verify_staging_storage()?;
+        crate::chunk_publication::require_legacy(&state.connection)?;
         Ok(Self { state })
     }
     pub fn prepare(&mut self, input: OpenInput) -> Result<OpenRecord> {

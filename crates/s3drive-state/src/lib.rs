@@ -3,6 +3,7 @@
 
 pub mod authority_snapshot;
 pub mod cache;
+pub mod chunk_publication;
 pub mod chunked;
 mod directory;
 pub use directory::{create_private_document, create_private_secret, read_private_secret};
@@ -23,7 +24,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 26;
+pub const SCHEMA_VERSION: i32 = 27;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
@@ -273,6 +274,11 @@ impl State {
             if version <= 25 {
                 tx.execute_batch(include_str!("../migrations/026.sql"))?;
             }
+            if version <= 26 {
+                tx.execute_batch(include_str!("../migrations/027.sql"))?;
+            }
+            chunk_publication::check_schema(&tx)?;
+            chunk_publication::validate_all(&tx)?;
             chunked::check_schema(&tx)?;
             chunked::validate_all(&tx)?;
             multipart::check_schema(&tx)?;

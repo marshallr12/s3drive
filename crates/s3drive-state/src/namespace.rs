@@ -462,6 +462,24 @@ pub(crate) fn existing_identity(db: &Connection, id: &str, policy: &str) -> Resu
     if !valid_id(id) || id == ROOT || !names::supported(policy) {
         return Err(Error::Invalid);
     }
+    // Compatible with older authority schemas where these tables are absent.
+    for table in ["chunk_client_role", "chunk_publications"] {
+        let exists: bool = sql(db.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='table' AND name=?1)",
+            [table],
+            |r| r.get(0),
+        ))?;
+        if exists {
+            let used: bool = sql(db.query_row(
+                &format!("SELECT EXISTS(SELECT 1 FROM {table})"),
+                [],
+                |r| r.get(0),
+            ))?;
+            if used {
+                return Err(Error::Invalid);
+            }
+        }
+    }
     let v = check_volume(db, id)?;
     let count: i64 = sql(db.query_row("SELECT count(*) FROM namespace_volume", [], |r| r.get(0)))?;
     let root: (Option<String>, String, String, bool, i64) = sql(db.query_row(
@@ -678,6 +696,7 @@ impl State {
         let tx = sql(self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate))?;
+        crate::chunk_publication::require_legacy(&tx).map_err(|_| Error::Invalid)?;
         let count: i64 =
             sql(tx.query_row("SELECT count(*) FROM namespace_volume", [], |r| r.get(0)))?;
         if count == 0 {
@@ -698,7 +717,9 @@ impl State {
                         (SELECT count(*) FROM multipart_plans) +
                         (SELECT count(*) FROM multipart_parts) +
                         (SELECT count(*) FROM chunk_plans) +
-                        (SELECT count(*) FROM chunk_objects)",
+                        (SELECT count(*) FROM chunk_objects) +
+                        (SELECT count(*) FROM chunk_client_role) +
+                        (SELECT count(*) FROM chunk_publications)",
                 [],
                 |r| r.get(0),
             ))?;

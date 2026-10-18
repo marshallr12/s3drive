@@ -12,6 +12,7 @@ use sha2::{Digest, Sha256};
 use std::fmt;
 mod transfers;
 pub use transfers::{Transfer, TreeReceipt};
+pub(crate) use transfers::{inspect_transfer, inspect_tree_receipt};
 
 const MAX_CHUNKS: u64 = 65_536;
 const MAX_OBJECTS: u64 = 262_144;
@@ -193,6 +194,9 @@ impl Info {
     }
     pub fn generation(&self) -> Option<GenerationId> {
         self.generation
+    }
+    pub(crate) fn snapshot_manifest(&self) -> Option<[u8; 32]> {
+        self.manifest
     }
     /// Offline geometry only; callers must still require a Ready root.
     pub fn object_slots(&self, level: i8) -> Result<u64> {
@@ -511,9 +515,7 @@ impl<'a> Journal<'a> {
         })
     }
     pub fn info(&self, id: [u8; 32]) -> Result<Info> {
-        let i = load(&self.state.connection, id)?;
-        validate_objects(&self.state.connection, &i)?;
-        Ok(i)
+        inspect_info(&self.state.connection, id)
     }
     pub fn freeze(&mut self, input: Input) -> Result<Info> {
         self.state.verify_staging_storage()?;
@@ -835,3 +837,9 @@ impl Planner {
 }
 #[cfg(test)]
 mod tests;
+
+pub(crate) fn inspect_info(db: &Connection, id: [u8; 32]) -> Result<Info> {
+    let i = load(db, id)?;
+    validate_objects(db, &i)?;
+    Ok(i)
+}
