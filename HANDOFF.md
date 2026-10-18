@@ -62,7 +62,8 @@ P0 table now reflects D040 public policy instead of stale privacy requirement.
 
 ## Current phase: chunk object upload bridge (2026-10-18)
 
-Working branch codex/chunk-object-uploads frome2f0709. State Transfer/materialize
+Working branch codex/chunk-object-uploads frome2f0709. Published runtime source
+2524573c2bd476e609daae529e6c3d1fcb32cb80. State Transfer/materialize
 bind exact physical operations via existing staged_operations; no schema change.
 Planner inherits Storage's exact staging quotas. New policy-bound
 s3drive-s3::uploads::chunks::Uploader uses that same owner, checks binding/policy,
@@ -91,6 +92,27 @@ and visual review passed. Sequential uploads; repeated graph/retained-history
 scans can amplify work; no scalable-throughput/native-limit claim. No S3 provider
 requests, authority wire changes, credential installs or repository visibility
 mutations. Existing mounted representation and main remain unchanged.
+
+Published normally: clean/exact remote/all230 frozen hashes/PUBLIC before-after;
+main1a93b5f unchanged. Proof /tmp/s3drive-chunk-upload-publication.json. Final
+book/link checks and preview33767/chunk-object-uploads.html passed. Own CI
+39145482478 attempt1 at2524573 is LIVE: Windows117728329566, book117728329702,
+Linux117728329705. Watch59922 LIVE /tmp/s3drive-chunk-upload-252-watch.log; track
+same handle/run, never rerun on observation timeout. Prepared checker
+/tmp/s3drive-check-chunk-upload-252.py compiled only, NOT executed. Require all3
+terminal successes plus own completed raw reviews in
+/tmp/s3drive-chunk-upload-252-raw-reviewed.json. New output must be
+/tmp/s3drive-chunk-upload-252-artifacts; use own finalized Windows IDs/API
+source/run/digest/times, strict21/14 typed fields plus both project oracles.
+Refuse all previous IDs, including bdb12142621547/12142503573. On failure retain
+evidence and do not run the success checker. New chunked native format is still
+inactive; even passing regressions cannot certify a mounted large-file path.
+Next phase: authenticate/reserve chunk root identities and original content CAS,
+publish UploadedTree through authority and settle the exact logical edit; then
+verified range reads/native integration and authenticated remote-reference reuse.
+Read namespace/publication.rs (Reservation/Payload currently one-object <=8MiB),
+managed.rs and managed/lib.rs. Preserve legacy serialized bytes/content hashes,
+unknown operations and rollback; use a separately versioned format/capability.
 
 ## Preceding implementation: durable offline chunk plans (2026-10-18)
 

@@ -1,6 +1,6 @@
 {
   "implementation_date": "2026-10-18",
-  "status": "full local gate accepted; unpublished source, own hosted cohort not yet started",
+  "status": "full local gate passed and source pushed; own hosted cohort in progress",
   "branch": "codex/chunk-object-uploads",
   "parent_commit": "e2f0709126a0ff9f54e2d303655bb0abe079ba07",
   "schema_version": 25,
@@ -292,7 +292,49 @@
   },
   "parent_bdb_hosted_acceptance_is_this_source_acceptance": false,
   "hosted": {
-    "status": "not_started",
-    "source": null
+    "source": "2524573c2bd476e609daae529e6c3d1fcb32cb80",
+    "run_id": 39145482478,
+    "run_attempt": 1,
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39145482478",
+    "status": "in_progress",
+    "jobs": [
+      {
+        "id": 117728329566,
+        "name": "rust (windows-latest)",
+        "status": "in_progress",
+        "conclusion": null
+      },
+      {
+        "id": 117728329702,
+        "name": "book",
+        "status": "in_progress",
+        "conclusion": null
+      },
+      {
+        "id": 117728329705,
+        "name": "rust (ubuntu-latest)",
+        "status": "in_progress",
+        "conclusion": null
+      }
+    ],
+    "watch_session": 59922,
+    "watch_log": "/tmp/s3drive-chunk-upload-252-watch.log",
+    "checker_script": "/tmp/s3drive-check-chunk-upload-252.py",
+    "checker_compiled_only": true,
+    "checker_executed": false,
+    "all_raw_reviews_closed": false,
+    "new_artifact_output": "/tmp/s3drive-chunk-upload-252-artifacts",
+    "own_native_cohort_accepted": false,
+    "chunked_native_large_file_or_provider_acceptance": false
+  },
+  "publication": {
+    "source": "2524573c2bd476e609daae529e6c3d1fcb32cb80",
+    "branch": "codex/chunk-object-uploads",
+    "remote": "2524573c2bd476e609daae529e6c3d1fcb32cb80",
+    "clean": true,
+    "public_before_after": true,
+    "visibility_mutations": 0,
+    "all230_frozen_hashes_match": true,
+    "main_unchanged": "1a93b5f7248892fec96dc8da4438ee7967692e77"
   }
 }
