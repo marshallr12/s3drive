@@ -373,5 +373,60 @@
     "members": 12,
     "all_indexed_members_verified": true,
     "scope": "local gate/controller fixture evidence; no own hosted/native chunk/provider acceptance"
+  },
+  "runtime_commit": "474601edd5582ebed9316d04cf4524db6d72694b",
+  "publication": {
+    "source": "474601edd5582ebed9316d04cf4524db6d72694b",
+    "parent": "20706cd521b984a50d7aecd08026a72019ef2e4f",
+    "branch": "codex/chunk-source-controller",
+    "clean_exact_remote_tip": true,
+    "all_253_frozen_hashes_match": true,
+    "full_local_gate_session": 80848,
+    "full_local_gate_exit_code": 0,
+    "local_archive_sha256": "9289080295e870ccf68f1915aba328e5e69c60353190da7e0516604aa2589228",
+    "visibility": {
+      "nameWithOwner": "marshallr12/s3drive",
+      "visibility": "PUBLIC"
+    },
+    "visibility_mutations": 0,
+    "main_unchanged": "1a93b5f7248892fec96dc8da4438ee7967692e77",
+    "docs": {
+      "links_files": 66,
+      "book_chapters": 62,
+      "html_build": true,
+      "http_chapter_svg_archive": true
+    },
+    "hosted_acceptance": false,
+    "run_id": 39165918104,
+    "next": "own source-bound hosted cohort; then verified manifest range reader"
+  },
+  "hosted_cohort": {
+    "source": "474601edd5582ebed9316d04cf4524db6d72694b",
+    "run_id": 39165918104,
+    "run_attempt": 1,
+    "status": "in_progress",
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39165918104",
+    "jobs": {
+      "windows": 117788707767,
+      "linux": 117788707913,
+      "book": 117788707918
+    },
+    "watch_session": 79476,
+    "watch_log": "/tmp/s3drive-chunk-source-controller-474-watch.log",
+    "checker": "/tmp/s3drive-check-chunk-source-controller-474.py",
+    "checker_prepared_not_executed": true,
+    "raw_comparator_prepared_not_executed": true,
+    "archive_builder_prepared_not_executed": true,
+    "fresh_output_absent": true,
+    "fresh_review_marker_absent": true,
+    "requires_all_three_terminal_success_and_own_raw_review": true,
+    "requires_all_four_new_scenarios_in_both_os_logs": true,
+    "rejected_preceding_artifact_ids": [
+      12149243457,
+      12149814008,
+      12147997314,
+      12147329360
+    ],
+    "scope": "not yet acceptance; own exact source/jobs/artifacts/raw review required"
   }
 }

@@ -154,7 +154,10 @@ The [12-member indexed local archive](evidence/chunk-source-controller-local-202
 retains the complete log, focused controls, exact source, implementation
 self-review and frozen map. This was self-review, not independent review. One
 existing retained-session quota test exceeded a minute and then passed; times
-are gate observations, not a benchmark. Its own hosted cohort is still required.
+are gate observations, not a benchmark. Tested source `474601e` is pushed on
+`codex/chunk-source-controller`, with the clean exact remote and all 253 hashes
+verified. Its [own hosted cohort](https://github.com/marshallr12/s3drive/actions/runs/39165918104)
+is running; earlier state artifacts cannot certify these controller methods.
 See the
 [controller evidence](evidence/chunk-source-controller-20261018.json).
 

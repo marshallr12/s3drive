@@ -93,7 +93,28 @@ PASS; no benchmark/regressioncause claim. 253hashes unchanged. ResultJSON
 12memberlocalarchive chunk-source-controller-local-20261018.tar.gz,53154bytes,
 SHA9289080295e870ccf68f1915aba328e5e69c60353190da7e0516604aa2589228,
 allindexedmembersverified. Implementation self-review only, noindependentreviewer.
-Next finaldocs/source publication andownhostedcohort. No newruntime edits needed. Nativechunklifecycle/rangereader remainlater. Concrete subsequent verified-range
+Published testedsource474601edd5582ebed9316d04cf4524db6d72694b,8files, clean
+exactremote/all253hashes/PUBLIC/main1a93b5funchanged; normalnewbranchpush. Proof
+/tmp/s3drive-chunk-source-controller-publication.json. Publication21576 EXIT0.
+Own CI39165918104 attempt1 LIVE:Windows117788707767,Linux117788707913,
+book117788707918. Watch79476 LIVE, log
+/tmp/s3drive-chunk-source-controller-474-watch.log. Resume SAME run/handle;
+observationtimeout is not reason to rerun. No new runtime edits needed.
+Prepared/compiled ONLY, NOTexecuted:
+/tmp/s3drive-check-chunk-source-controller-474.py,
+/tmp/s3drive-chunk-source-controller-474-reference-check.ps1,
+/tmp/s3drive-chunk-source-controller-474-raw-compare.py,
+/tmp/s3drive-chunk-source-controller-474-archive.py.
+Freshoutput /tmp/s3drive-chunk-source-controller-474-artifacts and combinedmarker
+/tmp/s3drive-chunk-source-controller-474-raw-reviewed.json absent. Require all3
+terminalSUCCESS + own3completedrawreview beforeoneusechecker. Checker binds253
+hashes/ownrunattemptjobs/finalizedartifactIDs/APIdigests/times/4unchangedoracles,
+plus all4newsourcecasespassed inbothOSrawlogs; strict21/14+projectoracles then
+raw35field/typecomparison. Rejectolder41b IDs12149243457/12149814008 andall32d/
+cf9oldercohorts. Do notrun successchecker onfailedcohort; archivefailureinstead.
+Hostedarchivebuilder already pointsown474checker/exactchunks.rs and253map;
+execute onlyafterallacceptancechecks. No priorpayloads reusable. FullgoalACTIVE.
+ Nativechunklifecycle/rangereader remainlater. Concrete subsequent verified-range
 reader contract now inimplementation-plan.md; preserveslegacyrefusal, pinnedroot,
 separatephysical/pagehashes, boundedauthenticatedpath/chunkfetches andcurrentS3
 authorization. Plan only, no reader implementation yet.
