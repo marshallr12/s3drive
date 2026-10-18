@@ -85,17 +85,34 @@ Linux authority CI step is installed and passed at source be0d996 in job
 TLS supervisor PASS lines and existing native managed HTTPS acceptance. Windows
 and the complete run are still live at this checkpoint; do not restart them.
 
-New native-harness full local gate is running in exec session61312, log
-/tmp/s3drive-authority-startup-native-gate1.log. Clippy and the three ordinary
-restart/client CLI cases have passed in this run; state tests are still running
-at checkpoint creation. Focused worker log has three passing cases (the earlier
-worker-local1 log was subsequently extended by the full gate). The first native
-Clippy attempt had a test Listing.entries/children typo, corrected before this
-gate. All three PowerShell files and extracted embedded worker parse. No new
-production dependency or API change. Architecture prose now reflects the
-implemented Rust HTTPS service and bootstrap rather than calling HTTPS future.
-Full local gate, then exact-final-tip hosted all-three/native/reference/startup
-gates and source-bound artifacts are still required before phase publication.
+Native-harness source8ce3ddcb5b76f8e41f75c6465e539d6a2a235b54 was pushed
+privately; local gate /tmp/s3drive-authority-startup-native-gate1.log completed
+exit0 (including265 state and three ordinary restart/worker CLI tests). Its
+hosted run39083840521 is live; Linux117546160897, Windows117546161016,
+book117546161268. Proof /tmp/s3drive-authority-startup-native-checkpoint.json.
+The older run39083244133 is also live on Windows; do not restart either on a
+poll timeout. Main stays712882e; no promotion is allowed for either checkpoint.
+
+New WIP paired Linux case lives in tests/support/managed/startup.rs and
+scripts/test-linux-managed-startup.py, called by linux_mount's actual managed
+supervised coordinator/drive recovery case. It bootstraps/seeds HTTPS, stops the
+foreground owner, then installs both supervisors in disposable XDG/profile
+paths. Gio/login/tmux loss, duplicates, native Unicode/binary/empty reads, lost
+PUT/hidden observation, exact remote attempt IDs/hash/key retention while an
+open handle survives coordinator crash, no repeated PUT after pinned recovery,
+drive restart, rival conflict and independent removal are required assertions.
+All process control is piped to a controller started before native handles;
+do not introduce fork/exec in the native parent while descriptors are open.
+Test-only SQLite reads inspect exact attempts; production API unchanged.
+Local all-target Clippy passed both /tmp/s3drive-authority-paired-clippy1.log
+and clippy2.log; the second includes added logical publication/reservation
+identity and actual immutable fixture-object body assertions. Python3.11 syntax
+passed. /tmp/s3drive-authority-paired-gate1.log is running in exec72043; its
+Rust test compile preceded those additional ignored-native assertions, so a
+final complete gate remains required after platform work. Native outcome still
+pending; NoNewPrivs1 reverified.
+Require final full local gate and exact-source hosted/native/reference/startup
+checks before phase publication, including new paired Windows acceptance.
 No user startup installation, host/account provisioning or new Wasabi mutation.
 Keep complete phase acceptance criteria in the book; the Rust preflight alone
 is not completed coordinator supervision. Development checkpoint on codex/authority-startup; no phase publication.

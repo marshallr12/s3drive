@@ -1,6 +1,9 @@
 //! Actual CLI authority, SDK fixture and native adapters; no live cloud writes.
 #[path = "managed/lifecycle.rs"]
 mod lifecycle;
+#[cfg(target_os = "linux")]
+#[path = "managed/startup.rs"]
+mod startup;
 use super::{fixture::Fixture, writes};
 use s3drive_authority::{Apply, Kind, Mutation, Reply, Request, Token, WireClient};
 use s3drive_managed::Publisher;
@@ -2464,4 +2467,9 @@ pub async fn portable_lifecycle() {
 #[cfg(windows)]
 pub async fn native_lifecycle() {
     lifecycle::native().await;
+}
+
+#[cfg(target_os = "linux")]
+pub async fn native_supervised_startup() {
+    startup::native().await;
 }

@@ -724,3 +724,12 @@ The new CI step invokes that wrapper after Linux acceptance tools are installed.
 A private development branch may run existing Windows regressions, but those do
 not replace the required new Authority-component and paired native tests; do
 not promote this checkpoint merely because existing CI is green.
+
+
+The paired Linux native candidate now starts both disposable login supervisors
+with real FUSE/SDK/HTTPS and retains an open descriptor through coordinator
+failure. It compares exact uncertain attempt IDs/hashes/keys and PUT counts,
+checks dirty bytes and rival conflicts, and proves independent removal. Its
+controller starts before descriptors exist to avoid test-induced Unix-fork flush
+callbacks. Local compile/lint passed; hosted native execution and paired Windows
+acceptance are pending. This adds acceptance coverage, not a completed phase.

@@ -250,3 +250,38 @@ desktop/profile hooks for both components and destroy their launching tmux
 terminal; keep the current workstation's NoNewPrivs restriction intact and use
 hosted FUSE acceptance for the paired drive test. Native Windows testing remains
 on the hosted Server2025 VM; neither syntax checks nor portable tests replace it.
+
+
+## Paired Linux native candidate
+
+A new `linux_mount::actual_managed_supervised_coordinator_and_drive_recovery`
+case runs the real FUSE adapter, managed publisher and SDK fixture with **both**
+Linux login supervisors. It bootstraps and seeds a private-CA HTTPS authority,
+stops the original foreground process, and registers the original volume/port.
+Disposable desktop and shell hooks launch the coordinator and writable drive;
+the launching tmux server exits and duplicate starts must keep both owners.
+
+The candidate verifies actual Unicode/binary/empty and second-bucket reads,
+then deliberately loses an immutable PUT response and hides observation. With
+the native descriptor still open, it kills the exact pidfd-verified coordinator,
+requires the offline flush to fail without changing the retained operation ID,
+intent hash or physical key, and verifies local dirty bytes. Supervisor recovery
+must use the same volume, settle that exact attempt, preserve the logical
+publication request/reservation and never repeat the PUT. The fixture compares
+the actual immutable S3 object body with the expected binary bytes.
+A drive crash/restart checks the persisted bytes; a rival publisher then wins
+while local edits remain dirty. A second coordinator restart must preserve that
+explicit conflict and all local bytes, including subsequent journal reopening.
+Drive removal must leave the independent coordinator online; final removal
+preserves metadata, config, token, credential fixture and original profile mode.
+
+Process control runs in a Python fixture child started **before** any native
+file descriptors open. Later commands use pipes, avoiding a Unix fork in the
+native test that could itself trigger FUSE flushes through inherited descriptors.
+Only read-only SQLite inspection observes the active fixture's exact attempt
+identity. Production ownership, migration and recovery paths are unchanged.
+
+Local all-target Clippy and Python syntax checks passed. Native outcome remains
+pending on hosted Linux: this workstation still has `NoNewPrivs: 1`, which must
+not be bypassed. Neither this candidate nor the standalone Windows coordinator
+test replaces the required paired native Windows acceptance.

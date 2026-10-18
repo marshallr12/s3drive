@@ -412,3 +412,9 @@ async fn actual_managed_rename_replace_and_retained_handles() {
 async fn managed_lifecycle_engine_contract() {
     managed::portable_lifecycle().await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "paired native startup acceptance: real FUSE, tmux and gio"]
+async fn actual_managed_supervised_coordinator_and_drive_recovery() {
+    managed::native_supervised_startup().await;
+}
