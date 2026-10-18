@@ -212,6 +212,8 @@ try {
         }
         'AuthorityRemove' {
             Check-Worker Verify
+            & (Join-Path $root 'snapshot-worker.ps1') -Phase Active
+            if ($LASTEXITCODE -ne 0) { throw 'Active-owner snapshot acceptance failed' }
             $null=Manage Remove
             foreach ($path in @((Join-Path $db 'metadata.sqlite3'),(Join-Path $inputs 'authority.token'),(Join-Path $inputs 'cert.pem'),(Join-Path $inputs 'key.pem'),$identityFile)) {
                 if (-not [IO.File]::Exists($path)) { throw 'Removal deleted coordinator metadata or private inputs' }
@@ -219,6 +221,8 @@ try {
             $pin=Get-Content -LiteralPath $identityFile -Raw | ConvertFrom-Json
             & $exe authority-check --directory $db --expect-volume $pin.volume --name-policy portable-collision-v1 --token-file (Join-Path $inputs 'authority.token') --listen ([uri]$pin.endpoint).Authority --tls-cert (Join-Path $inputs 'cert.pem') --tls-key (Join-Path $inputs 'key.pem')
             if ($LASTEXITCODE -ne 0) { throw 'Removed coordinator database no longer matches original identity' }
+            & (Join-Path $root 'snapshot-worker.ps1') -Phase Stopped
+            if ($LASTEXITCODE -ne 0) { throw 'Ordinary-account offline snapshot acceptance failed' }
         }
         'ManagedInstall' {
             $reader=[IO.StreamReader]::new([Console]::OpenStandardInput(),[Text.Encoding]::UTF8,$true)

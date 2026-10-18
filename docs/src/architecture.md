@@ -13,11 +13,11 @@ SQLite, its HTTP API and the real S3 SDK. Managed native writes and the explicit
 [Shared HTTPS transport](remote-authority.md) and the explicit
 [store/configuration bootstrap](managed-bootstrap.md) are implemented and tested
 with private-CA fixtures. [Pinned coordinator supervision](authority-startup.md)
-and paired native recovery passed at a7994e6 in CI39090568625, but unchanged
-main repeat CI39092631904 failed Windows store-registration setup before mounting.
-The coordinator remained running; the transport cause and commit outcome are
-unknown. Windows reliability investigation is the current priority. Remote
-deployment, backup/failover and Turso acceptance remain outstanding.
+and paired native recovery passed again at f8c4f58 in terminal all-green
+CI39097275707, with source/platform-bound21/14 reference artifacts. The older
+timeout's cause remains unproven. An unpublished offline snapshot/inspection
+prototype passed local tests; Windows/platform and restore acceptance remain.
+Remote deployment and optional Turso are still unprovisioned.
 No bucket migration or Turso service is enabled.
 
 The existing direct-layout implementation below has native read/cache, explicit

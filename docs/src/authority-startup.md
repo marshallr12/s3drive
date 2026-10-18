@@ -1,12 +1,13 @@
 # Coordinator startup and pinned restarts
 
-Design/research date: **2026-10-17**, America/New_York. **Accepted at private
-main `a7994e6203ccb082c1b441d19806cfb6ed6d3929`**, terminal all-green
-[CI39090568625](https://github.com/marshallr12/s3drive/actions/runs/39090568625).
-[Acceptance record](evidence/authority-startup-20261017.json). Scope is hosted
-Linux and Windows Server2025/WinFsp2.1.25156.ddca7bd, not physical reboot/PAM/SSH
-or Windows10/11. No startup registration in the workstation user's real account
-or remote metadata host was installed. Tests use disposable registrations.
+Design/research dates: **2026-10-17–18**, America/New_York. Current private main
+`f8c4f5832e399c6c54567c122c875e2a438ce681` passed all-three terminal
+[CI39097275707](https://github.com/marshallr12/s3drive/actions/runs/39097275707).
+[Diagnostic acceptance record](evidence/authority-transport-20261018.json).
+Hosted Linux and Windows Server2025/WinFsp2.1.25156.ddca7bd passed native and
+paired recovery; physical reboot/PAM/actual SSH and Windows10/11 remain separate.
+The original timeout/older failures remain unexplained. No startup entry in the
+workstation user's real account or hosted metadata deployment was installed.
 
 The designated coordinator host runs the shared Rust service
 `s3drive authority-serve` and owns authoritative SQLite metadata. Other machines
@@ -19,7 +20,7 @@ payloads if its authoritative database is missing.
 
 ![Separate per-account supervisors start the pinned Rust coordinator and local drive. The coordinator owns its existing SQLite namespace; the drive keeps its own journal and sends file bytes directly to S3.](images/authority-startup.svg)
 
-## Accepted evidence
+## Earlier a7994e6 accepted evidence
 
 | Requirement or check | Accepted result | Evidence and limit |
 | --- | --- | --- |
@@ -174,6 +175,30 @@ classes after launch. Getter errors produce a fixed unavailable marker without
 changing child ownership or retry behavior. It does not set priorities, alter
 Task Scheduler policy or change network deadlines. Use the next hosted record
 with connection counters before deciding whether a scheduling test is warranted.
+
+## Diagnostic checkpoint accepted (2026-10-18)
+
+At f8c4f58, Linux117586223366, Windows117586223172 and book117586223439 all
+completed successfully. Linux passed all8 native cases and both no-systemd
+HTTP/TLS coordinator profiles. Windows passed standalone recovery04:55:30UTC,
+full managed pair04:56:52UTC, lifecycle and seven broad native cases. Independent
+AuthenticationIds, original volume/receipts, exact uncertain IDs without another
+PUT, Unicode/binary/empty data, retained dirty conflict and independent removal
+all passed. Strict21/14 artifacts12124529619/12125676595 matched source, platform
+and every typed field; the four pinned upstream legacy cases also passed.
+
+A current managed-engine event was precisely HttpShutdown after1ms, with224
+bytes read,247 written, four flushes and dispatch=true, while caller tests passed.
+This validates the added distinction; it does not retrospectively attribute the
+older untyped event or the separate header timeout. The read-only suite's later
+Connect timeout follows an explicit coordinator stop and is expected refusal.
+No actual process priority values were printed in the accepted job, so scheduling
+remains an unmeasured hypothesis. No priority/deadline/retry/TLS policy changed.
+
+Private main was fast-forwarded from a7994e6 after terminal CI, raw logs and strict
+artifacts were checked. [Source-bound record](evidence/authority-transport-20261018.json).
+The main push automatically starts a same-source repeat; a new failure remains
+new evidence and must not be dismissed by citing this successful run.
 
 ## Required restart behavior
 

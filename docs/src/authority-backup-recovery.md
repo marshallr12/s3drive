@@ -1,8 +1,9 @@
 # Coordinator backups and recovery
 
-Research/design date: **2026-10-17**, America/New_York. **Proposal, not an
-implemented backup/restore or failover facility.** Pinned startup is accepted
-at a7994e6; see [its scoped evidence](authority-startup.md). No real database,
+Research/design dates: **2026-10-17–18**, America/New_York. **Offline snapshot
+prototype; Windows acceptance pending. Restoration and failover remain proposals.**
+Pinned startup and subsequent transport diagnostics are accepted through f8c4f58;
+see [their scoped evidence](authority-startup.md). No real database,
 account, bucket or hosted service was changed for this research.
 
 The authoritative SQLite database contains names, node identities, store
@@ -70,8 +71,9 @@ The locked rusqlite0.40.2 source was inspected locally on2026-10-17. Its
 `Backup::new` borrows source and destination connections; `step` distinguishes
 completion from busy/locked/more work. `run_to_completion` has no overall retry
 deadline. Cleanup calls SQLite's finish function from `Drop` and discards its
-return value; this version has no public `finish` method. The workspace enables
-bundled SQLite but not the backup feature.
+return value; this version has no public `finish` method. At that research
+checkpoint the workspace enabled bundled SQLite without the backup feature;
+the unpublished prototype now also enables backup, hooks and limits.
 [Recorded API/source fingerprint](evidence/rusqlite-backup-api-20261017.json).
 
 The online docs.rs source endpoint could not be retrieved during this check;
@@ -79,7 +81,8 @@ these are observations of the actual resolved build input. Before choosing a
 snapshot mechanism, inspect SQLite's completion guarantees and determine how
 safe APIs establish completion, validation and close/sync errors. Do not invent
 a wrapper method, use an unbounded convenience loop or bypass this question
-with raw FFI. No backup feature or command is enabled by this research.
+with raw FFI. The prototype below uses checked `step` completion and subsequent
+independent validation; the initial API research alone enabled no feature.
 
 ## Proposed delivery contract
 
@@ -88,8 +91,8 @@ with raw FFI. No backup feature or command is enabled by this research.
    the owning service. Do not expose arbitrary host output paths to ordinary
    namespace clients. Keep database ownership while SQLite reads; do not make
    an independent raw-file copier bypass it. Inspect resolved rusqlite backup
-   APIs/features before implementation; the workspace currently enables only
-   its bundled SQLite feature.
+   APIs/features before implementation; the prototype uses the resolved safe API
+   and explicitly enables its required features.
 2. **Publish a complete private artifact.** Create a new owner-private staging
    location outside all mounted trees. Never overwrite an existing backup.
    Include the complete authoritative database and an inventory with volume,
@@ -142,7 +145,8 @@ backup schedule, retention store, credential or recovery service was provisioned
 ## Next implementation stage
 
 [P6m4d1](implementation-plan.md#p6m4d1--private-offline-snapshots-and-inspection-prototype-acceptance-pending)
-is an unpublished library prototype from a7994e6 on `codex/authority-snapshots`;
+is an unpublished library prototype on `codex/authority-snapshots`, now rebased
+from a7994e6 onto accepted diagnostic main f8c4f58;
 experimental offline snapshot/inspection CLI commands are now present locally;
 no restore/promotion command exists. These changes remain unpublished.
 The artifact uses distinct snapshot filenames so ordinary startup refuses it.
@@ -150,7 +154,10 @@ Local2026-10-18 state check/Clippy and nine filtered tests passed, including
 WAL-only data, exact schema8 receipts, full disk, cancellation and eight actual
 killed-process boundaries. This is Linux fixture evidence, with no source-data
 loss or automatic promotion. Two real local CLI round-trip/refusal cases also passed. Windows/ACL,
-full-gate and native acceptance remain. Windows transport RCA is the current priority.
+native acceptance remain. The combined f8c4f58-plus-snapshot local gate passed
+on2026-10-18 with274 state tests, two snapshot CLI cases, two Hyper I/O, ten
+HTTP, six TLS,17 SDK and seven managed cases plus lint/build/book checks.
+Actual Windows snapshot acceptance is next.
 
 The source is opened read-only under the existing owner's cooperative lock,
 without migrations or namespace changes. Ordinary WAL/SHM bookkeeping can occur;
@@ -237,3 +244,26 @@ private loopback/SQLite fixture. It does not prove Windows locking, backup
 contention at the destination, interrupted kernel I/O or a universal latency
 bound. As in the implementation, its checksum file descriptors are opened only
 when its own SQLite connections are closed, preserving POSIX lock behavior.
+
+
+## Prepared Windows acceptance (runtime pending, 2026-10-18)
+
+The existing disposable ordinary-account coordinator workflow now includes
+`scripts/test-windows-snapshot-worker.ps1`. It first checks that a live
+coordinator refuses snapshot creation without creating output. After normal
+coordinator removal and a successful original-identity check, the same account
+must create and inspect the artifact, preserve the source database's SHA-256,
+refuse replacement and report both continuity and restore authorization false.
+The fixture tests a readable concurrent file handle, temporarily widened
+Everyone-read ACL with exact descriptor restoration, an owned hard link, a
+source junction and a case-alias nested output. Positive inspection controls
+follow reversible faults. It uses the existing fresh test account and fixtures;
+no real user account, credentials, provider, startup entry or restore is involved.
+
+PowerShell5.1 lists `HardLink` and `Junction` among filesystem `New-Item` types.
+This API check and local PowerShell parsing do not establish Windows filesystem
+behavior. [Microsoft New-Item documentation](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/new-item?view=powershell-5.1)
+(read2026-10-18). Actual hosted Windows execution, existing native/reference/
+startup regressions, and source-bound logs are required before acceptance.
+Windows console cancellation, physical power loss and target Windows10/11
+remain separate evidence requirements.

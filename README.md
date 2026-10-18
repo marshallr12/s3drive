@@ -15,23 +15,20 @@ have accepted Linux/Windows checkpoints. Windows deletion uses the explicit
 [version7/POSIX lifecycle profile](docs/src/native-windows-lifecycle.md), with
 measured WinFsp limitations. [HTTPS](docs/src/remote-authority.md) and
 [store/configuration bootstrap](docs/src/managed-bootstrap.md) are accepted
-through main `a7994e6`. Existing direct mounts remain available without
+through main `f8c4f58`. Existing direct mounts remain available without
 implicit migration. Multipart/large files, reclamation, full application
 compatibility and real remote deployment remain work.
 
-**Accepted checkpoint:** [pinned coordinator startup](docs/src/authority-startup.md)
-and paired native drive recovery passed on hosted Linux and Windows
-Server2025/WinFsp2.1 at `a7994e6`,
-[CI39090568625](https://github.com/marshallr12/s3drive/actions/runs/39090568625).
-Real binary/Unicode/empty reads, same-supervisor restart, exact uncertain IDs,
-dirty rival conflicts and independent removal passed. Earlier unexplained
-transport failures remain open; this is not a claim that they were fixed.
+**Current main checkpoint:** [coordinator supervision and TLS diagnostics](docs/src/authority-startup.md)
+passed hosted Linux/Windows native, paired recovery and strict reference gates
+at `f8c4f58`, [CI39097275707](https://github.com/marshallr12/s3drive/actions/runs/39097275707).
+Exact uncertain identities, dirty conflicts, Unicode/binary/empty reads and
+same-supervisor child replacement passed. Earlier timeout causes remain open.
 
-**Current priority:** a same-source Windows repeat failed paired setup during
-store registration, before mounting. [The investigation](docs/src/authority-startup.md#same-source-repeat-failure-2026-10-17) preserves
-unknown outcomes and adds bounded diagnostics; repeatable Windows reliability
-is not established. Private snapshot/restore work remains incomplete. No real
-user startup registration or remote hosting/Turso backend has been installed.
+**Current work:** [offline snapshots and inspection](docs/src/authority-backup-recovery.md)
+have a locally tested unpublished prototype. Windows/platform acceptance and
+restoration remain incomplete. No real user startup, remote hosting or Turso
+backend has been installed.
 
 The shared engine preserves uncertain/conflicting bytes and exact operation
 identities. Direct and managed writes require explicit source/prefix policy and

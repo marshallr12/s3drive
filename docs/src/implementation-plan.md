@@ -726,6 +726,13 @@ reboot/PAM/SSH, Windows10/11, real independent hosts/partitions, backup/failover
 managed Wasabi write acceptance, large files and product packaging remain work.
 No real user startup registration, cloud account or provider mutation occurred.
 
+Latest diagnostic main checkpoint f8c4f58 passed terminal all-three
+[CI39097275707](https://github.com/marshallr12/s3drive/actions/runs/39097275707):
+265/261 state, two Hyper I/O cases, ten HTTP, six TLS,17 SDK, seven restart/worker,
+Linux8 and Windows1+7 native cases, both paired recoveries and strict21/14
+source/platform artifacts. See the [dated record](evidence/authority-transport-20261018.json).
+The original timeout remains unproven; this acceptance does not attribute it.
+
 ### P6m4d — coordinator snapshots and recovery (proposal, 2026-10-17)
 
 After pinned-startup acceptance, follow the [backup/recovery research contract](authority-backup-recovery.md).
@@ -785,11 +792,12 @@ new exact-source Windows evidence before attributing the old event or promoting.
 
 #### P6m4d1 — private offline snapshots and inspection (prototype; acceptance pending)
 
-Unpublished branch `codex/authority-snapshots`, based on a7994e6, now has an
+Unpublished branch `codex/authority-snapshots` is rebased onto accepted f8c4f58
+and has an
 experimental library and platform directory helpers. This is the first stage
 of the full recovery contract, not writable restoration/failover. Experimental
 `authority-snapshot create|inspect` commands now exist locally; no restore is
-implemented. Windows transport RCA takes publication priority.
+implemented. Combined-source local/Windows acceptance is required before publication.
 
 Local2026-10-18 evidence: state check/Clippy passed; nine filtered tests passed
 (eight cases plus a guarded worker), covering actual WAL-only data, schema8
@@ -799,8 +807,13 @@ Partials refuse inspection; complete bytes remain non-bootable and inspection
 reports neither history continuity nor restore authorization. Process crashes
 are not power-loss proof. Two real local CLI round-trip/refusal cases passed,
 with explicit identity, new output, private errors and no restore authorization.
-The full local gate passed (274 state plus CLI/lint/build/57-doc checks);
-Windows ACL/native acceptance remains. A separate real Linux CLI SIGINT
+The full local gate passed, including the combined f8c4f58-plus-snapshot source
+(274 state plus CLI/lint/build/57-doc checks). Windows ACL/native acceptance
+remains. The existing disposable ordinary-account startup workflows now
+include prepared live-owner refusal and stopped create/inspect checks, exact
+source bytes, duplicate-output preservation, widened-ACL/hardlink/junction/
+case-alias refusal and concurrent read-handle sharing. Actual Windows execution
+is pending; see the [fixture contract](authority-backup-recovery.md#prepared-windows-acceptance-runtime-pending-2026-10-18). A separate real Linux CLI SIGINT
 fixture passed at defc8b9: source bytes stayed identical, no success/manifest
 was published, partial inspection refused and the original destination could
 not be replaced. See the [dated cancellation proof](evidence/authority-snapshot-sigint-20261018.json);

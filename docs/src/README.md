@@ -22,21 +22,19 @@ and retained handles are implemented; Windows deletion uses the explicit
 [version7/POSIX lifecycle profile](native-windows-lifecycle.md), with its measured
 WinFsp limitations. [HTTPS transport](remote-authority.md) and
 [store/configuration bootstrap](managed-bootstrap.md) are accepted through main
-`a7994e6`. This is still a research/development filesystem with incomplete
+`f8c4f58`. This is still a research/development filesystem with incomplete
 application, platform and provider acceptance.
 
-**Accepted checkpoint:** [pinned coordinator startup](authority-startup.md) and
-paired native drive recovery passed on hosted Linux and Windows
-Server2025/WinFsp2.1 at `a7994e6`,
-[CI39090568625](https://github.com/marshallr12/s3drive/actions/runs/39090568625).
-Both platforms retained exact uncertain operations and dirty conflicts through
-coordinator loss. The older unexplained transport failures are not claimed fixed.
+**Current main checkpoint:** [coordinator supervision and TLS diagnostics](authority-startup.md)
+passed hosted Linux/Windows native, paired recovery and strict reference gates
+at `f8c4f58`, [CI39097275707](https://github.com/marshallr12/s3drive/actions/runs/39097275707).
+Exact uncertain identities, dirty conflicts, Unicode/binary/empty reads and
+same-supervisor child replacement passed. Earlier timeout causes remain open.
 
-**Current priority:** a same-source Windows repeat failed paired setup during
-store registration, before mounting. [The investigation](authority-startup.md#same-source-repeat-failure-2026-10-17) preserves
-unknown outcomes and adds bounded diagnostics; repeatable Windows reliability
-is not established. Private snapshot/restore work remains incomplete. No real
-user startup registration or remote hosting/Turso backend has been installed.
+**Current work:** [offline snapshots and inspection](authority-backup-recovery.md)
+have a locally tested unpublished prototype. Windows/platform acceptance and
+restoration remain incomplete. No real user startup, remote hosting or Turso
+backend has been installed.
 
 ## Recommendation
 

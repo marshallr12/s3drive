@@ -1,0 +1,92 @@
+{
+  "recorded_at_utc": "2026-10-18T05:06:06.319338+00:00",
+  "source_commit": "f8c4f5832e399c6c54567c122c875e2a438ce681",
+  "previous_main": "a7994e6203ccb082c1b441d19806cfb6ed6d3929",
+  "ci_id": 39097275707,
+  "ci_url": "https://github.com/marshallr12/s3drive/actions/runs/39097275707",
+  "jobs": [
+    {
+      "id": 117586223172,
+      "name": "rust (windows-latest)",
+      "conclusion": "success"
+    },
+    {
+      "id": 117586223366,
+      "name": "rust (ubuntu-latest)",
+      "conclusion": "success"
+    },
+    {
+      "id": 117586223439,
+      "name": "book",
+      "conclusion": "success"
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": 12124529619,
+      "records": 21,
+      "source": "f8c4f5832e399c6c54567c122c875e2a438ce681",
+      "sha256": "35e28d66231c8d6fb273e4bf5627c56d6760f1aaac28c1eb8b201132dee6407b",
+      "strict_types_and_all_fields_match": true
+    },
+    {
+      "artifact_id": 12125676595,
+      "records": 14,
+      "source": "f8c4f5832e399c6c54567c122c875e2a438ce681",
+      "sha256": "1fde0c6468d23b80cefd89f55138c99feb9ef245332b5efca565d48933f16655",
+      "strict_types_and_all_fields_match": true
+    }
+  ],
+  "project_typed_oracles_passed": true,
+  "local_gate": "bash scripts/gate.sh; final Rust full gate exit0, separately verified subsequent read-only PS diagnostics and book checks",
+  "scope": {
+    "state_cases_linux": 265,
+    "state_cases_windows": 261,
+    "hyper_io_cases": 2,
+    "http_cases": 10,
+    "tls_cases": 6,
+    "sdk_cases": 17,
+    "restart_worker_cases": 7,
+    "linux_native_cases": 8,
+    "windows_native_cases": "one lifecycle plus seven broader cases",
+    "windows_standalone_pass_utc": "2026-10-18T04:55:30Z",
+    "windows_pair_pass_utc": "2026-10-18T04:56:52Z",
+    "linux_pair_pass_utc": "2026-10-18T04:37:25Z",
+    "operating_system": "Microsoft Windows Server 2025 Datacenter",
+    "winfsp_file_version": "2.1.25156.ddca7bd",
+    "supervisor_child_replacement": {
+      "standalone": {
+        "supervisor": 9176,
+        "before": 4740,
+        "after": 7124
+      },
+      "paired": {
+        "supervisor": 5032,
+        "before": 5460,
+        "after": 4692
+      }
+    },
+    "independent_logons": true,
+    "exact_uncertain_ids_and_dirty_conflicts_preserved": true
+  },
+  "observations": {
+    "current_http_shutdown_event": "managed engine; connection260,1ms,224 read,247 written,four flushes,dispatch=true",
+    "earlier_untyped_event_attributed": false,
+    "original_timeout_cause": "unproven",
+    "actual_priority_classes_recorded": false,
+    "deliberate_outage_connect_timeout": "expected native read-only new-open refusal after explicit authority stop"
+  },
+  "publication": {
+    "main_fast_forwarded": true,
+    "private_before": true,
+    "private_after": true
+  },
+  "limits": [
+    "No user startup or remote hosting installed",
+    "No new real Wasabi writes",
+    "No physical reboot/PAM/actual SSH or Windows10/11 acceptance",
+    "No snapshot/restore/large-file acceptance",
+    "Successful ephemeral VM fixture profile cleanup may defer locked profiles only after all assertions and dummy credential removal",
+    "Original timeout/older rename failures remain unexplained"
+  ]
+}

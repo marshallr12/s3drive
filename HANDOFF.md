@@ -6,27 +6,35 @@ Research, decisions, acceptance and plans belong in docs/src/.
 
 ## Checkouts and immediate next action
 
-- Private local/remote main: a7994e6203ccb082c1b441d19806cfb6ed6d3929.
-- Clean diagnostic worktree: /home/marshall/src/s3drive-windows-transport,
-  branch codex/windows-transport-followup, privately pushed
-  f8c4f5832e399c6c54567c122c875e2a438ce681.
-- Exact-source CI39097275707 is IN_PROGRESS at the latest live check.
-  Windows117586223172 passed early TLS/replacement/lifecycle, workspace and
-  build and is active in supervisor/native startup checks; Linux117586223366 and book117586223439 succeeded. Revalidate the same handles; never cancel/restart on observer
-  timeout or a live job's log404.
-- Root /home/marshall/src/s3drive is codex/authority-snapshots, with UNPUSHED
-  implementation defc8b9 and cancellation evidence/handoff archive43bfd46.
-  Preserve both checkpoints and later local handoff changes.
-- Both checkouts share /home/marshall/src/s3drive/target. Builds replace its CLI
-  binary, so rebuild/verify the intended source before experiments. No local
-  Cargo/gate jobs remain live. The most recent CLI build was root defc8b9 for
-  the Linux SIGINT check.
+- Private local/remote main is now accepted diagnostic f8c4f5832e399c6c54567c122c875e2a438ce681.
+  Topic CI39097275707 is terminal all-three SUCCESS, raw Linux/Windows native/
+  startup logs and strict21/14 artifacts checked before guarded FF from a7994e6.
+  Remote/main SHA and repository PRIVATE verified after push.
+- Diagnostic worktree /home/marshall/src/s3drive-windows-transport remains clean
+  at f8, branch codex/windows-transport-followup.
+- Main publication automatically triggered same-source CI39099187117. Revalidate
+  that exact live handle; a repeat failure is new evidence, not erased by the
+  accepted topic run. Never restart live jobs on observer timeout/log404.
+- Root codex/authority-snapshots was safely rebased onto f8. Current local commits
+  f4c37bb/e218381/01af668 correspond to the old UNPUSHED defc8b9/43bfd46/e0a4353.
+  Backup ref codex/authority-snapshots-before-transport retains old history.
+  Config/plan/report private hashes stayed identical through rebase. Rust
+  snapshot code and all f8 diagnostics were preserved; only docs conflicted.
+- Current local changes record f8 acceptance and update source status. Snapshot
+  code is NOT yet in main or pushed. Combined-source gate PASSED exit0 at
+  /tmp/s3drive-snapshot-integrated-gate1.log (274 state, snapshot CLI2,
+  Hyper2/HTTP10/TLS6/SDK17/managed7 plus lint/build/57-doc).
+- Both checkouts share /home/marshall/src/s3drive/target. Builds replace its CLI,
+  so verify/rebuild the intended source before experiments. The last CLI was
+  old defc8b9 for the SIGINT/busy checks; a new integrated build will replace it.
 
-First poll CI39097275707 and read completed native/startup job logs. Require
-terminal exact-tip all-three success, raw native/startup proof and strict typed
-21/14 source/platform artifacts before a guarded private main fast-forward from
-a7994e6. Verify repository privacy before/after push; it was PRIVATE after f8.
-No force push. Do not call diagnostics an attributed transport fix.
+Next: inspect main-repeat CI, validate/checkpoint/push the prepared ordinary-
+account Windows snapshot acceptance candidate, then inspect actual runtime and unchanged
+native/reference/startup gates before any snapshot main promotion. Keep restore
+unsupported. No new provider/user startup/root/hosting mutations authorized.
+Publication always requires exact-source all-three terminal CI, raw native/
+startup and strict21/14 artifacts, guarded private FF and post-push SHA/privacy.
+No force push or native shortcuts.
 
 ## Windows investigation and evidence
 
@@ -52,38 +60,42 @@ connection214 logged2ms,321 bytes read,481 written, five flushes, dispatch=true.
 Raw /tmp/s3drive-transport-windows1.log. Later startup/pair/broad steps were
 SKIPPED. The original header timeout remains a separate unexplained failure.
 
-Current f8 adds the precise Hyper is_shutdown category, permitting ONLY that
-phase with positive read/write/flush and dispatch counters AFTER all caller
-reply/receipt assertions pass. Generic transport, truncation and timeout still
-fail. The deterministic Hyper driver injected shutdown error only after a full
-Content-Length reply was independently read. Do not retrospectively label the
-old untyped event shutdown without classified runtime evidence.
+Accepted f8 adds precise Hyper is_shutdown categorization, permitting ONLY
+that phase with positive counters AFTER all caller reply/receipt assertions.
+Generic transport, truncation and timeout still fail. The deterministic driver
+independently read a complete Content-Length reply before injected shutdown error.
 
-f8 also observes current supervisor/child process priority on Windows, without
-changing it. Getter/log failures cannot fail the launch. Task Scheduler default
-priority/inheritance is only an unmeasured starvation hypothesis; primary
-Microsoft links and limits are in docs/src/authority-startup.md. Root-only
-upstream research in evidence/windows-tls-upstream-20261018.json records EOF
-semantics and the already-present Hyper4143 flush guard; neither proves cause.
+Topic CI39097275707 completed Linux117586223366, Windows117586223172 and
+book117586223439 successfully. Raw /tmp/s3drive-transport-f8-{linux,windows}.log:
+Linux8 native/pair PASS04:37:25UTC and both no-systemd HTTP/TLS coordinator profiles;
+Windows standalone PASS04:55:30, pair04:56:52, lifecycle plus seven broad cases.
+Supervisor9176 held child4740→7124; paired supervisor5032 held5460→4692. Original
+volume/receipts, independent AuthenticationIds, exact unknown IDs/no repeated
+PUT, Unicode/binary/empty data, dirty conflict and independent removal passed.
+Locked disposable profiles deferred only after all assertions/owned-process and
+dummy-credential cleanup, under explicit VM-destruction policy.
 
-Local f8 Rust full gate PASSED exit0:
-/tmp/s3drive-transport-shutdown-gate1.log (265 state, two I/O/Hyper cases, ten
-HTTP, six TLS, seven CLI restart/worker,17 SDK, seven managed, lint/build/57-doc).
-Two focused cases: /tmp/s3drive-transport-shutdown-tests1.log. The subsequent
-PS-only observational logging passed fresh supervisor AST and all four actual
-child policy cases at /tmp/s3drive-transport-priority-policy1.log. Final doc
-links/build/tests passed /tmp/s3drive-transport-shutdown-book{,-tests}.log.
-Native Windows/source-bound acceptance is still pending for f8.
+Current managed-engine event connection260 was HttpShutdown (1ms,224 read,247
+written,four flushes,dispatch=true) while caller tests passed. This is not proof
+of the old untyped event's cause or the separate header timeout. The broader
+native Connect timeout follows its deliberate coordinator stop and is expected.
+No actual priority values were printed; scheduling remains unmeasured.
 
-Linux9b raw /tmp/s3drive-transport-linux1.log confirms all8 native cases, full
-pair PASS04:05:50UTC, ordinary startup and both HTTP/TLS coordinator profiles.
-Current f8 Linux also passed: raw /tmp/s3drive-transport-f8-linux.log confirms
-all8 native cases, paired PASS04:37:25UTC, ordinary startup and both HTTP/TLS
-coordinator profiles. Never reuse an older source's native proof for a new candidate.
+Strict source/platform21/14 artifacts12124529619/12125676595 independently
+matched every typed field. /tmp/s3drive-f8-artifacts/independent-check.json and
+/tmp/s3drive-f8-reference-check.ps1 passed; zips /tmp/s3drive-f8-{replacement,
+disposition}.zip. Four pinned upstream legacy cases passed. Proof
+/tmp/s3drive-f8-publication.json; durable docs/src/evidence/authority-transport-20261018.json.
+
+Local final Rust gate /tmp/s3drive-transport-shutdown-gate1.log passed (265 state,
+two I/O/Hyper,ten HTTP,six TLS,seven CLI restart,17 SDK,seven managed and57-doc).
+Subsequent PS-only read-only priority logging passed fresh AST and four child
+policy cases at /tmp/s3drive-transport-priority-policy1.log; final doc checks
+passed. No priority, retry, deadline or TLS policy changed.
 
 ## Unpublished offline snapshot prototype
 
-Root local defc8b9 implements crates/s3drive-state/src/authority_snapshot{.rs,
+Rebased local f4c37bb (old defc8b9) implements crates/s3drive-state/src/authority_snapshot{.rs,
 /native.rs}, additive SnapshotDirectory platform helpers, and CLI
 crates/s3drive-cli/src/snapshot.rs plus tests/authority_snapshots.rs. Root
 Cargo.toml adds rusqlite backup/hooks/limits features; versions remain pinned.
@@ -110,7 +122,7 @@ raw-open/close a DB file while a SQLite connection in that process is active
 (POSIX locks). Hash/recheck after close. Windows0.61.3 file-identity signatures
 were inspected; actual Windows ACL/reparse/handle acceptance remains pending.
 
-Root full gate PASSED exit0 /tmp/s3drive-snapshot-gate1.log:274 state, two new
+Pre-rebase root full gate PASSED exit0 /tmp/s3drive-snapshot-gate1.log:274 state, two new
 snapshot CLI tests, ten HTTP, six TLS,17 SDK, seven managed, lint/build/57-doc.
 Nine focused cases (eight plus guarded worker) passed snapshot-tests4.log:
 WAL-only commit, exact schema8 pretty-printed receipt bytes, SQLITE_FULL,
@@ -131,12 +143,18 @@ then successful create/inspection after release. Proof/reproducer are
 scope-limited docs/src/evidence/authority-snapshot-busy*. This is not Windows
 locking or destination contention. Latest rebuild log:
 /tmp/s3drive-snapshot-cancel-build1.log. No local Rust source changed after the
-full gate. New57-doc links/build/tests passed at snapshot-cancel-final-book{,-tests}.log.
+full gate. Pre-rebase57-doc links/build/tests passed at snapshot-cancel-final-book{,-tests}.log.
 
-Once f8 permits: carefully rebase/integrate the UNPUSHED snapshot checkpoint onto
-accepted main, preserving the diagnostic changes and latest acceptance facts.
-Then actual Windows/ordinary-account snapshot CLI, ACL/reparse/sharing and
-native/reference/startup gates are required. Remaining snapshot gaps include
+Combined-source gate passed. Prepared scripts/test-windows-snapshot-worker.ps1
+is invoked from the existing ordinary-account AuthorityRemove workflow before
+and after normal removal. Tests live-owner refusal, create/inspect, exact source
+bytes, duplicate output, widened ACL restoration, hardlink/junction/case aliases
+and concurrent read handle. AST validation passed for all three changed scripts and the exact embedded
+worker at /tmp/s3drive-snapshot-windows-ast1.log. Updated57-doc links/build/
+tests passed at /tmp/s3drive-snapshot-prepush-book{,tests}1.log.
+Local parsing is not actual Windows acceptance.
+Actual Windows CLI/ACL/reparse/sharing and native/reference/startup gates remain;
+Windows console cancellation is also separate. Remaining snapshot gaps include
 broader permission/destination-busy faults and writer-version field validation (currently
 nonempty/length only). Do not mark snapshot phase or overall goal complete.
 
