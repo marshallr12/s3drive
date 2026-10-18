@@ -71,6 +71,11 @@ main1a93b5f unchanged. Need own terminal all3/native controls/rawlog review and
 own finalized Windows typed21+14/projectoracles/raw35 artifacts. Do not borrow
 old artifacts. Runtime stays frozen while observing; docs-only children may
 record evidence with skip-ci. Goal ACTIVE; chunk writes remain later work.
+Plan now records W1-W6: opaque inherited-reference provenance, sparse edit
+views, mixed tree proofs, publication, exact-view settlement and actual native
+writes. Existing tree receipts require every local upload receipt; source ack
+requires a full sealed local snapshot. Do not fake either for inherited refs.
+These are source-backed proposals, pending repaired native-read acceptance.
 
 
 Worktree /home/marshall/src/worktrees/s3drive-manifest-snapshot-inodes,

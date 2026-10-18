@@ -2069,6 +2069,57 @@ rename during dirty edits, unknown root replies, killed owners, SQLite-full roll
 local/remote conflict retention and real FUSE/WinFsp flush/read/restart behavior.
 This section records source findings and proposals, not an implemented write API.
 
+### Incremental writes: proof and settlement boundaries (2026-10-18)
+
+Source inspection at `c633d02`, proposal only. Reusing old references needs a
+separate mixed-tree proof, not just an edit overlay. The current
+[`require_dependencies` and `inspect_tree_receipt`](https://github.com/marshallr12/s3drive/blob/c633d02d47ccf2da20cfadd50e0b8e11f6e06811/crates/s3drive-state/src/chunked/transfers.rs)
+require a mapped local generation and exact historical flush receipt for every
+non-hole object. `inspect_transfer` derives that mapping from this complete plan's
+snapshot and object identity. A reference from another machine's authenticated
+manifest has no such local upload history. Do not invent a local receipt, adopt
+an arbitrary bucket object, or weaken the existing full-snapshot verifier.
+
+The current [source settlement validator](https://github.com/marshallr12/s3drive/blob/c633d02d47ccf2da20cfadd50e0b8e11f6e06811/crates/s3drive-state/src/chunk_publication/sources.rs)
+also requires a sealed local journal generation with the complete source size and
+manifest. A sparse view with remote-backed unchanged ranges is not that snapshot.
+It needs its own exact-view acknowledgment, preserving newer dirty heads and
+unknown/conflicting work. A remote root commit alone must not mark a local edit
+view clean. The [reader](https://github.com/marshallr12/s3drive/blob/c633d02d47ccf2da20cfadd50e0b8e11f6e06811/crates/s3drive-managed/src/chunks/reader.rs)
+currently exposes metadata and verified bytes, not an opaque, persistable
+provenance export for inherited references.
+
+Implement after repaired native-read acceptance, in independently green phases:
+
+| Phase | Concrete contract | Required evidence |
+| --- | --- | --- |
+| W1 authenticated base provenance | Export bounded manifest paths from an authorized pinned File; bind inherited data/page references to volume, file, store, role, exact base descriptor and content CAS guard; no arbitrary-reference constructor | Wrong file/store/role, forged/short paths, older valid generations, root-as-child refusal, bounded traversal/cancellation; no data download for unchanged-reference discovery |
+| W2 durable sparse edit views | SQLite stores exact base binding plus immutable local patches/zero ranges, size and view lineage; persist operation keys before changes; retain dirty bytes across restart | 64 GiB sparse growth with bounded memory/disk growth, competing/lost-reply edits, process kills, corrupt rows/media and SQLite-full rollback; bounded read-your-writes composition |
+| W3 incremental tree preparation | New changed objects plus tagged inherited references; persist bounded preparation cursor and new/mixed proof format; retain old full-snapshot planner/verifier | Measured one-byte edit reuses unchanged data, authenticated path coverage, final partial-chunk truncate/growth, 127/128 chunk boundary, tree-height growth and holes; no manufactured flush receipts |
+| W4 mixed-tree publication | Upload new dependencies before pages/root; inherited dependencies require validated base provenance; persist exact original CAS and operation identities; recover unknown results without unconditional PUT | Two-machine base conflict, lost reserve/PUT/root replies, renamed/deleted base, restart and quota failure; unchanged chunks produce zero PUTs and no full-file download |
+| W5 exact edit-view settlement | Separate root commitment from acknowledgment of one immutable sparse view; preserve ancestors/newer drafts according to explicit coverage rules; no generic full-snapshot acknowledgment substitution | Kill/response-loss around both acknowledgments, newer dirty head, corrupt proof, disk-full rollback; repeat acknowledgment recovers the same result and cannot clear another view |
+| W6 native chunk writes | Explicitly activate shared engine and FUSE/WinFsp write/truncate/append/flush through the accepted mixed-tree controller; keep one-object compatibility | Actual mounted Unicode, large/sparse/random edits, application save/replace, open-unlinked/rename, restart/conflict/uncertainty, measured reuse; separately authorized Wasabi conformance and sign-in/reboot/session checks |
+
+For W3/W4, inherited proof establishes reachability from the authenticated frozen
+base, not current object availability or permission to reclaim it. Missing/denied
+objects remain explicit errors; reference retention and future garbage collection
+must honor pinned bases and dirty views. A prior root must be re-materialized as
+a page-role object before use as a child if the tree grows; its root-role key
+cannot be substituted. Shrinking/growing a partial data object changes its length
+and hash, so verify the complete old chunk and prepare new bytes. Preserve the
+existing root/page and whole-payload/page-digest distinctions.
+
+On restart, never rebase a dirty view onto the coordinator's latest payload.
+Retain its original binding and CAS guard; a different current payload is a
+conflict. Define and test authorized re-opening of the persisted historical base
+in W1/W2, including revoked/rotated credentials, missing root and changed source
+route. Persist no credentials. An inherited-reference proof is not a network
+send permit; W4 still requires the configured, source-bound provider write policy.
+
+These phases are a proposed implementation sequence, not implemented APIs,
+schema migrations, mounted write support or provider acceptance. W1-W5 must
+converge on W6; library-only milestones do not complete the drive goal.
+
 ### Native snapshot identity repair (2026-10-18)
 
 Actual source d98 Linux CI reached the real FUSE test and failed after a new
