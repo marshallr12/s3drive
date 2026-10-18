@@ -60,7 +60,73 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Current checkpoint: TLS fixture accepted; chunk settlement next (2026-10-18)
+## Active work: exact chunk source settlement state (2026-10-18)
+
+Previous goal turn PROGRESS: corrected32d CI all3SUCCESS, own strict21/14+raw35
+PASS,22member hosted archive verified, reviewed state contract/docs pushed at
+96b644110525d80e9d45d3e021bf745ee4f11a06. Clean exact remote and PUBLIC; proof
+/tmp/s3drive-chunk-source-contract-publication.json. No current CI wait remains.
+
+Branch codex/chunk-source-settlement from96b6441. Implemented schema28 separate
+chunk_source_role/chunk_source_settlements, opaque exact SourceReceipt/SourceStatus,
+same-owner source facade, recursive final postwrite proof, source lineage and
+mixed-physical-intent refusal. Generic pending/physical flushes unchanged. No
+ancestor suppression, source payload reclamation, role release, native activation,
+new S3/wire format, detached/removal mode or new controller integration. Historical
+metadata-only semantics explicit; same-length damaged payload is not freshly hashed.
+Added lineage bounds4096generations/1mextents; not total validator latency bounds.
+Journal inherited allocation gap fixed: phase byte shape before String; digest
+length+substr32 before Vec, valid digest/NULL-hole hash bytes unchanged.
+
+Authority preflight/init/snapshot allowlists and reciprocal guards cover newtables.
+21 schema-rewind fixture files only drop newtables first; two Windows fixture
+expectations now28. No legacy serialized vectors/domains intentionally changed.
+Resolvedrusqlite0.40.2 transaction/commit/query/Optional APIs andTokio1.53.3join
+inspected. Full local gate now PASS. No current source publication/hosted
+acceptance. Existing32d artifacts cannot certify schema28.
+
+Focused4 session17100 CLOSED EXIT0,31pass (15existing+16new),54.76s; log
+/tmp/s3drive-chunk-source-focus4.log. Includes unknown/conflict refusal, first old
+settlement after newer root/head+draft, newer settlement leaves ancestor pending,
+concurrent first admission/replay/lost reply, actual SQLite-full rollback, all
+trigger effects, missing grandchild, 2MiB corrupt cells, orphan exclusions,
+migration collision, actual killedowner Role/Row/Committed (unsuccessful exit
+asserted),4096lineage boundary. Earlier compile issues corrected; no runtime
+assertion failure in focused2(26PASS31.81s) or4. Do not repeat by default.
+
+Existing legacy reviewer reused gpt-6-astra/xhigh, local rubric8(spec1 blast2
+depth2 verify1 cost2), persistence/security override. No production false-ack
+blocker; transitive metadata bounds fixed; first-settlement/concurrency evidence
+refined. Last two fixture suggestions (non-success killed exit and narrow oversize
+testname) applied before focused4. No reviewer tests/network/credential calls.
+
+Frozen252 runtime/fixture map /tmp/s3drive-chunk-source-frozen.json,
+SHA babdf6487875da1630e35b98fab9d2d0697f640e8d9f8cb15e76189068afea42.
+Production sources.rs988c53cce8ba073bc2f61e57856c10920b2bcd33abc3cdc7d09719d07b63acd8;
+journal.rs9afe7a1363af8d2e796d679033ed4354af10a0ad4aef07f696dc8c2d1172e5e1;
+newtests eb09b12eb14688f147639d72ed28c6ed803a55fb492b206157f0582052677999.
+Do not edit runtime during full gate. New chapter/SVG distinguish source/root and
+newer pending head. SVG XML/text extents/render and visual review passed after
+shortening overflowing labels; librsvg render_cairo deprecation retained. Need
+final doc links/build/test/HTTP check and publication. Durable14member local
+archive chunk-source-settlement-local-20261018.tar.gz,90271bytes,SHA
+a1193c2f2a2876cf0a78436fccd1a6a236c09426574a0bd241514f02094d7180;
+all indexed members verified. Builder /tmp/s3drive-archive-chunk-source-local.py
+executed EXIT0; gate-result /tmp/s3drive-chunk-source-gate-result.json.
+
+Fullgate93252 CLOSED EXIT0:365state/1ignored,16new source controls,59S3,34core,
+50authority,18existing managedpublication,8chunk,10TLSrestart/3ignored,
+66docfiles/62chapters;252frozen hashes unchanged. State562.46s;12long-test
+notices eventually passed, retained in resultJSON/log; not a benchmark or
+established regression cause. Log /tmp/s3drive-chunk-source-gate.log,
+SHA487be3ec765e156c2c7b053d4fe85e02ec50dfa7b604256c370d8f39f5f013b3.
+Final reviewer verified both last test refinements/hash, no remaining scoped
+blocker and no reviewer execution. Do not repeat the local gate without a new
+change/failure. Next publish this frozen state slice and inspect its own new
+Linux/Windows/book cohort;32d artifacts cannot substitute. Controller integration
+follows that accepted baseline, with realSDK/authenticatedloopback controls.
+
+## Preceding checkpoint: TLS fixture accepted (2026-10-18)
 
 Previous goal turn was PROGRESS: publisher runtime cf9d972 and status b70717a
 pushed with full local gate. Its own CI39156593000 attempt1 failed Linux job

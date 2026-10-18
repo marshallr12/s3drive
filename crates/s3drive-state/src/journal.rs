@@ -724,7 +724,7 @@ fn digest32(value: Vec<u8>) -> Result<[u8; 32]> {
 }
 pub(crate) fn load(connection: &Connection, id: GenerationId) -> Result<Generation> {
     // Bound metadata allocation even when a damaged DB bypasses its CHECKs.
-    let shape:bool=connection.query_row("SELECT length(g.source_id)=32 AND length(b.config_fingerprint)=64 AND length(CAST(g.object_key AS BLOB)) BETWEEN 1 AND 1024 AND (g.base_etag IS NULL OR length(CAST(g.base_etag AS BLOB)) BETWEEN 1 AND 8192) AND (g.base_version IS NULL OR length(CAST(g.base_version AS BLOB)) BETWEEN 1 AND 8192) AND (g.manifest_hash IS NULL OR length(g.manifest_hash)=32) FROM staged_generations g JOIN source_bindings b ON b.source_id=g.source_id WHERE g.generation_id=?1",[id.0],|r|r.get(0))?;
+    let shape:bool=connection.query_row("SELECT length(g.source_id)=32 AND length(b.config_fingerprint)=64 AND length(CAST(g.object_key AS BLOB)) BETWEEN 1 AND 1024 AND (g.base_etag IS NULL OR length(CAST(g.base_etag AS BLOB)) BETWEEN 1 AND 8192) AND (g.base_version IS NULL OR length(CAST(g.base_version AS BLOB)) BETWEEN 1 AND 8192) AND (g.manifest_hash IS NULL OR length(g.manifest_hash)=32) AND length(CAST(g.phase AS BLOB)) BETWEEN 6 AND 8 FROM staged_generations g JOIN source_bindings b ON b.source_id=g.source_id WHERE g.generation_id=?1",[id.0],|r|r.get(0))?;
     if !shape {
         return Err("invalid staged metadata shape; data was preserved".into());
     }
@@ -833,7 +833,7 @@ pub(crate) fn validate_manifest(
     field(&mut hash, etag.map(str::as_bytes));
     field(&mut hash, version.map(str::as_bytes));
     hash.update(generation.size.to_be_bytes());
-    let mut statement=connection.prepare("SELECT e.offset_bytes,e.length_bytes,e.chunk_hash,length(c.data),r.chunk_hash IS NOT NULL FROM staged_extents e LEFT JOIN staged_chunks c ON c.chunk_hash=e.chunk_hash LEFT JOIN retained_staged_chunks r ON r.chunk_hash=e.chunk_hash WHERE e.generation_id=?1 ORDER BY e.offset_bytes")?;
+    let mut statement=connection.prepare("SELECT e.offset_bytes,e.length_bytes,length(e.chunk_hash),substr(e.chunk_hash,1,32),length(c.data),r.chunk_hash IS NOT NULL FROM staged_extents e LEFT JOIN staged_chunks c ON c.chunk_hash=e.chunk_hash LEFT JOIN retained_staged_chunks r ON r.chunk_hash=e.chunk_hash WHERE e.generation_id=?1 ORDER BY e.offset_bytes")?;
     let mut rows = statement.query([generation.id.0])?;
     let mut cursor = 0u64;
     let mut count = 0u64;
@@ -851,13 +851,19 @@ pub(crate) fn validate_manifest(
         if count > u64::from(generation.extents) {
             return Err("staged manifest extent count mismatch".into());
         }
-        let digest: Option<Vec<u8>> = row.get(2)?;
+        let digest_length: Option<i64> = row.get(2)?;
+        let digest: Option<Vec<u8>> = row.get(3)?;
+        if digest_length.is_some_and(|length| length != 32)
+            || digest_length.is_some() != digest.is_some()
+        {
+            return Err("invalid staged chunk digest shape; data was preserved".into());
+        }
         hash.update(offset.to_be_bytes());
         hash.update(length.to_be_bytes());
         if let Some(digest) = digest {
             let digest = digest32(digest)?;
-            let stored: Option<i64> = row.get(3)?;
-            let retained: Option<bool> = row.get(4)?;
+            let stored: Option<i64> = row.get(4)?;
+            let retained: Option<bool> = row.get(5)?;
             if length > CHUNK_BYTES as u64
                 || stored != Some(length as i64)
                 || (generation.phase == Phase::Sealed && retained != Some(true))

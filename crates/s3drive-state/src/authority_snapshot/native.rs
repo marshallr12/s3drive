@@ -185,6 +185,8 @@ fn identity(
         "chunk_objects",
         "chunk_client_role",
         "chunk_publications",
+        "chunk_source_role",
+        "chunk_source_settlements",
     ];
     if tables.len() > 64 {
         return Err(Error::Validation);

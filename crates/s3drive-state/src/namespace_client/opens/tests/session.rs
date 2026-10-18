@@ -60,7 +60,7 @@ fn native_posix_profile_is_session_bound_and_cannot_mix_with_legacy_file_objects
     let before = load(&f.client.connection, &old.id).unwrap().unwrap();
     f.client
         .connection
-        .execute_batch("DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans")
+        .execute_batch("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans")
         .unwrap();
     f.client
         .connection
@@ -270,7 +270,7 @@ fn observed_close_without_cleanup_can_be_abandoned_without_fabricating_either_co
     let old_hash = load(&f.client.connection, &i.id).unwrap().unwrap().0;
     f.client
         .connection
-        .execute_batch("DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans")
+        .execute_batch("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans")
         .unwrap();
     f.client
         .connection
@@ -576,7 +576,7 @@ fn schema_nineteen_migration_preserves_hashes_and_session_table_conflict_is_non_
     let mut f = Fixture::new();
     let i = f.active();
     let old = load(&f.client.connection, &i.id).unwrap().unwrap().0;
-    f.client.connection.execute_batch("DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans; DROP TABLE recovered_windows_opens;DROP TABLE windows_session_recoveries;DROP TABLE windows_mount_sessions;PRAGMA user_version=19").unwrap();
+    f.client.connection.execute_batch("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans; DROP TABLE recovered_windows_opens;DROP TABLE windows_session_recoveries;DROP TABLE windows_mount_sessions;PRAGMA user_version=19").unwrap();
     f.reopen();
     assert_eq!(
         f.client.info().unwrap().schema_version,
@@ -584,7 +584,7 @@ fn schema_nineteen_migration_preserves_hashes_and_session_table_conflict_is_non_
     );
     assert!(load(&f.client.connection, &i.id).unwrap().unwrap().0 == old);
     assert!(!serde_json::to_string(&i).unwrap().contains("session_bound"));
-    f.client.connection.execute_batch("DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans; DROP TABLE recovered_windows_opens;DROP TABLE windows_session_recoveries;DROP TABLE windows_mount_sessions;CREATE TABLE windows_mount_sessions(keep TEXT);INSERT INTO windows_mount_sessions VALUES('untouched');PRAGMA user_version=19").unwrap();
+    f.client.connection.execute_batch("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans; DROP TABLE recovered_windows_opens;DROP TABLE windows_session_recoveries;DROP TABLE windows_mount_sessions;CREATE TABLE windows_mount_sessions(keep TEXT);INSERT INTO windows_mount_sessions VALUES('untouched');PRAGMA user_version=19").unwrap();
     let path = f.tmp.path().join("client");
     drop(f.client);
     assert!(State::open_managed(&path).is_err());

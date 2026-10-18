@@ -116,6 +116,9 @@ the TLS fixture. Acceptance is bound to `32d`, never retroactively to failed `cf
 
 The controller is library-only and requires the journal's permanent dedicated
 client role. It cannot combine with legacy logical/namespace/open lifecycle state.
+The separate [source acknowledgment facade](chunk-source-settlement.md) now has
+an implementation under local verification. The publisher does not invoke it yet;
+`RootCommit` retains its original historical root-only meaning.
 There is no detached or removal mode, logical source acknowledgment, verified
 manifest range reader or native chunk callback. Old APIs and explicit unsupported
 paths remain. No new provider mutation was attempted; Wasabi tree acceptance

@@ -630,7 +630,7 @@ fn schema_twenty_three_migration_keeps_exact_legacy_hashes_and_conflicts_roll_ba
     let original = rows(&s.connection);
     s.connection
         .execute_batch(
-            "DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans; PRAGMA user_version=23",
+            "DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans; PRAGMA user_version=23",
         )
         .unwrap();
     drop(s);
@@ -641,7 +641,7 @@ fn schema_twenty_three_migration_keeps_exact_legacy_hashes_and_conflicts_roll_ba
     let input = freeze(&mut s, Id::new([13; 32]), child, 3);
     assert_eq!(input.guard(), &remote::Guard::Match("\"legacy\"".into()));
     // A preexisting conflicting table is not adopted with IF NOT EXISTS.
-    s.connection.execute_batch("DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans; CREATE TABLE multipart_plans(keep TEXT); INSERT INTO multipart_plans VALUES('untouched'); PRAGMA user_version=23").unwrap();
+    s.connection.execute_batch("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans; CREATE TABLE multipart_plans(keep TEXT); INSERT INTO multipart_plans VALUES('untouched'); PRAGMA user_version=23").unwrap();
     drop(s);
     assert!(State::open_managed(&path).is_err());
     let db = Connection::open(path.join("metadata.sqlite3")).unwrap();

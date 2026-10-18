@@ -511,7 +511,7 @@ fn schema_twenty_four_upgrade_keeps_legacy_state_and_collision_rolls_back() {
         let before = journal::load(&s.connection, g).unwrap().manifest_hash;
         s.connection
             .execute_batch(
-                "DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; PRAGMA user_version=24",
+                "DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; PRAGMA user_version=24",
             )
             .unwrap();
         if conflict {
@@ -664,6 +664,14 @@ fn process_death_recovers_committed_chunk_cursor_without_new_ids() {
 #[test]
 fn every_chunk_table_is_refused_by_authority_roles_and_snapshot_preflight() {
     for (table, sql) in [
+        (
+            "chunk_source_role",
+            "INSERT INTO chunk_source_role VALUES(1,1,zeroblob(32))",
+        ),
+        (
+            "chunk_source_settlements",
+            "INSERT INTO chunk_source_settlements VALUES(zeroblob(32),1,x'7b7d',zeroblob(32))",
+        ),
         (
             "chunk_plans",
             "INSERT INTO chunk_plans VALUES(zeroblob(32),zeroblob(32),x'7b7d',zeroblob(32),1,NULL,NULL,0,-1,0,NULL,zeroblob(32))",

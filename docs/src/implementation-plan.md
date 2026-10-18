@@ -1716,8 +1716,14 @@ controls include repeated/concurrent settlement, a newer dirty local head,
 a newer remote root, metadata-only historical recovery after local payload
 damage, generic pending unchanged and all legacy hashes unchanged. A lost local
 reply must recover the identical receipt, not create a second settlement.
-Read-only legacy review is complete; runtime implementation and acceptance are
-still pending, after the corrected TLS fixture cohort is accepted.
+Read-only legacy review is complete. The corrected TLS fixture cohort has passed.
+The state persistence slice is now implemented on `codex/chunk-source-settlement`;
+31 focused controls passed, including 16 new controls. Full local verification
+also passed: 365 state tests / 1 ignored, unchanged 252-file frozen map, existing
+integration suites and 62 book chapters. This source's own hosted cohort remains
+pending. See
+[exact source acknowledgments](chunk-source-settlement.md). Controller integration
+still follows as a separate phase; no mounted chunk activation follows here.
 
 ### Current acceptance repair: TLS budget fixture (2026-10-18)
 

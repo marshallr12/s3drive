@@ -463,7 +463,12 @@ pub(crate) fn existing_identity(db: &Connection, id: &str, policy: &str) -> Resu
         return Err(Error::Invalid);
     }
     // Compatible with older authority schemas where these tables are absent.
-    for table in ["chunk_client_role", "chunk_publications"] {
+    for table in [
+        "chunk_client_role",
+        "chunk_publications",
+        "chunk_source_role",
+        "chunk_source_settlements",
+    ] {
         let exists: bool = sql(db.query_row(
             "SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='table' AND name=?1)",
             [table],
@@ -719,7 +724,9 @@ impl State {
                         (SELECT count(*) FROM chunk_plans) +
                         (SELECT count(*) FROM chunk_objects) +
                         (SELECT count(*) FROM chunk_client_role) +
-                        (SELECT count(*) FROM chunk_publications)",
+                        (SELECT count(*) FROM chunk_publications) +
+                        (SELECT count(*) FROM chunk_source_role) +
+                        (SELECT count(*) FROM chunk_source_settlements)",
                 [],
                 |r| r.get(0),
             ))?;

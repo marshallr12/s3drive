@@ -527,7 +527,7 @@ fn schema_twenty_five_marker_upgrade_preserves_exact_legacy_request_and_payload_
         )
         .unwrap();
     s.connection
-        .execute_batch("DROP TABLE chunk_publications; DROP TABLE chunk_client_role")
+        .execute_batch("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role")
         .unwrap();
     s.connection
         .pragma_update(None, "user_version", 25)

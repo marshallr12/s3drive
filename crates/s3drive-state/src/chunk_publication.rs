@@ -1,4 +1,4 @@
-//! Isolated client root-publication journal. No network, source settlement,
+//! Isolated client root-publication journal. Separate exact source settlement;
 //! detached/removal publication, legacy migration or native activation.
 use crate::{
     Result, State, chunked,
@@ -15,6 +15,7 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 const MAX_RECORDS: u32 = 256;
 const MAX_BYTES: usize = 65536;
+pub mod sources;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Failure {
@@ -105,13 +106,14 @@ fn isolation(db: &Connection) -> Result<()> {
 }
 /// Reciprocal constructor guard; never put this in generic staging validation.
 pub(crate) fn require_legacy(db: &Connection) -> Result<()> {
-    let used: bool = db.query_row("SELECT EXISTS(SELECT 1 FROM chunk_client_role) OR EXISTS(SELECT 1 FROM chunk_publications)", [], |r| r.get(0))?;
+    let used: bool = db.query_row("SELECT EXISTS(SELECT 1 FROM chunk_client_role) OR EXISTS(SELECT 1 FROM chunk_publications) OR EXISTS(SELECT 1 FROM chunk_source_role) OR EXISTS(SELECT 1 FROM chunk_source_settlements)", [], |r| r.get(0))?;
     if used {
         return Err(Failure::Isolated.into());
     }
     Ok(())
 }
 pub(crate) fn check_schema(db: &Connection) -> Result<()> {
+    sources::check_schema(db)?;
     db.prepare("SELECT singleton,admitted,state_hash FROM chunk_client_role LIMIT 0")?;
     db.prepare(
         "SELECT plan_id,reserve_id,publish_id,record,state_hash FROM chunk_publications LIMIT 0",
@@ -438,6 +440,10 @@ fn raw_load(db: &Connection, plan: [u8; 32]) -> Result<Option<Record>> {
     Ok(Some(r))
 }
 pub(crate) fn validate_all(db: &Connection) -> Result<()> {
+    validate_publications(db)?;
+    sources::validate_all(db)
+}
+fn validate_publications(db: &Connection) -> Result<()> {
     let row = db.query_row("SELECT admitted,length(state_hash),substr(state_hash,1,32) FROM chunk_client_role WHERE singleton=1", [], |r| Ok((r.get::<_,u32>(0)?,r.get::<_,i64>(1)?,r.get::<_,Vec<u8>>(2)?))).optional()?;
     let mut q = db
         .prepare("SELECT length(plan_id),substr(plan_id,1,32) FROM chunk_publications LIMIT 257")?;
@@ -702,6 +708,10 @@ pub struct Client {
     owner: Owner,
 }
 impl Client {
+    /// Same private owner; separate historical source status, never generic flush.
+    pub fn sources(&self) -> sources::Client {
+        sources::Client::new(self.owner.clone())
+    }
     pub(crate) fn new(owner: Owner) -> Self {
         Self { owner }
     }
