@@ -2,8 +2,8 @@
 
 Implementation and source review date: **2026-10-18**. The managed library now
 has a bounded manifest reader. Its five focused integration controls passed;
-the combined full local gate passed. Source-bound hosted acceptance remains
-pending. Mounted chunked files, editing and migration remain later work.
+the combined full local gate passed. Its source-bound Linux/Windows/book cohort
+has also passed. Mounted chunked files, editing and migration remain later work.
 
 ![Authenticated metadata pins a root; bounded traversal verifies pages and complete chunks before returning a range.](images/manifest-range-reader.svg)
 
@@ -124,10 +124,10 @@ the second focused run and focused Clippy passed.
 
 Accepted prerequisites are controller source `474601e` and related-read source
 `fef9442`, each with its own Linux/Windows/book cohort. They are combined in this
-reader branch before its full gate. The reader needs **its own** hosted cohort;
-prerequisite artifacts cannot certify its changed source. Native chunk lifecycle,
+reader branch before its full gate. Its acceptance uses its own hosted cohort;
+prerequisite artifacts do not certify its changed source. Native chunk lifecycle,
 write/recovery integration, migration, real provider behavior and physical reboot
-acceptance remain separate phases. See the [implementation plan](implementation-plan.md)
+acceptance remain separate phases. See the [implementation plan](implementation-plan.md),
 [dated implementation evidence](evidence/manifest-range-reader-20261018.json)
 and [contract audit](evidence/manifest-range-reader-contract-20261018.json).
 
@@ -142,7 +142,18 @@ SHA-256 is `a1737729817e21d78c356c699987e1d4129f128172c71363007b04d9bb4a2ffd`.
 
 Published source `88d02f7` is on `codex/manifest-range-reader`. Its
 [own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39171113280)
-is running. The clean exact remote and all 256 runtime hashes were verified;
-repository visibility remains PUBLIC and main was not changed. Hosted acceptance
-requires the exact source's completed jobs, reviewed logs and own native-reference
-artifacts before the next integration phase.
+completed successfully. The clean exact remote and all 256 runtime hashes were verified;
+repository visibility remains PUBLIC and main was not changed. All three raw
+logs were reviewed; its own finalized reference artifacts passed
+independent strict 21/14 records, project oracles and all 35 raw field/type
+comparisons. The [22-member hosted archive](evidence/manifest-reader-88d-hosted-20261018.tar.gz)
+retains the exact source, logs, payloads and checks. Every indexed member was
+verified. Archive SHA-256:
+`994942870840d5efd3082d61dd3533e89dbf0bd154844f5b3d2d93b7b37428ac`.
+
+Both platforms passed all five reader controls and 62 S3 tests. Existing native
+regression also passed, including Linux no-systemd startup and independent
+Windows logons. Those controls use the existing mounted format. They do not
+activate or certify mounted manifests. Windows retained three locked disposable
+fixture profiles until VM destruction after dummy credential removal; delay-import
+and Node notices remain in the logs. Native manifest integration follows separately.

@@ -2018,5 +2018,7 @@ source-inspection plan, not mounted acceptance or a finalized public API.
 
 Reader result: combined full local gate84960 EXIT0, all256 frozen hashes
 unchanged, 12 publication/source +5 reader +62 S3 +365state/1ignored,64chapters.
-The 14-member local archive is indexed and verified. Own hosted acceptance is
-next; portable controls do not activate native chunk reads or writes.
+The 14-member local archive is indexed and verified. Own hosted cohort
+39171113280 passed all3 jobs, reviewed raw logs and strict21/14 + raw35 checks.
+The indexed22-member hosted archive is verified. Native integration follows
+in codex/native-manifest-reads; portable controls do not activate native chunks.
