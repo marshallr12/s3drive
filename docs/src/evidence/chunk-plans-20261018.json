@@ -1,6 +1,6 @@
 {
   "research_date": "2026-10-18",
-  "status": "offline full-snapshot chunk plans locally accepted; own hosted acceptance not yet run",
+  "status": "offline plans locally accepted and pushed; own hosted run in progress",
   "branch": "codex/chunk-plan-journal",
   "parent_commit": "fa0a91dc482fde50e3238bbc29c6e5abc2f72900",
   "module": "s3drive-state::chunked",
@@ -199,5 +199,74 @@
       "inside_transaction_identity": 0
     },
     "assertions_weakened": false
+  },
+  "publication": {
+    "source": "bdb220c69b187d3b3d764f4b3832d95f01d11e07",
+    "branch": "codex/chunk-plan-journal",
+    "all56_frozen_hashes_match": true,
+    "clean": true,
+    "public_before_after": true,
+    "visibility_mutations": 0,
+    "main_unchanged": true
+  },
+  "hosted": {
+    "source": "bdb220c69b187d3b3d764f4b3832d95f01d11e07",
+    "run_id": 39142749429,
+    "run_attempt": 1,
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39142749429",
+    "status": "in_progress",
+    "conclusion": null,
+    "jobs": [
+      {
+        "id": 117720340366,
+        "name": "book",
+        "status": "completed",
+        "conclusion": "success",
+        "html_url": "https://github.com/marshallr12/s3drive/actions/runs/39142749429/job/117720340366"
+      },
+      {
+        "id": 117720340529,
+        "name": "rust (windows-latest)",
+        "status": "in_progress",
+        "conclusion": null,
+        "html_url": "https://github.com/marshallr12/s3drive/actions/runs/39142749429/job/117720340529"
+      },
+      {
+        "id": 117720340601,
+        "name": "rust (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "html_url": "https://github.com/marshallr12/s3drive/actions/runs/39142749429/job/117720340601"
+      }
+    ],
+    "book_completed_raw_review": {
+      "source": "bdb220c69b187d3b3d764f4b3832d95f01d11e07",
+      "run_id": 39142749429,
+      "run_attempt": 1,
+      "job_id": 117720340366,
+      "status": "completed",
+      "conclusion": "success",
+      "reviewed": true,
+      "log": "/tmp/s3drive-chunk-plan-bdb-book.log",
+      "sha256": "05acd48e5c7a95b9d5be3916d3b2a4bb2cb7339f6a1f2fa09cd383e986cc11b0",
+      "scope": "schema25 strict preflight,60doclink files,56mdBook chapters",
+      "routine_download_compile_lines_compacted": 382,
+      "notices": [
+        "Git default branch advice",
+        "pinned Rust override during mdBook install",
+        "checkout Node20 forced24"
+      ],
+      "native_or_provider_acceptance": false
+    },
+    "watch_log": "/tmp/s3drive-chunk-plan-bdb-watch.log",
+    "success_checker_script": "/tmp/s3drive-check-chunk-plan-bdb.py",
+    "checker_compiled_only": true,
+    "success_checker_executed": false,
+    "success_checker_eligible": false,
+    "all_raw_reviews_closed": false,
+    "new_output": "/tmp/s3drive-chunk-plan-bdb-artifacts",
+    "own_native_cohort_accepted": false,
+    "native_large_file_or_provider_acceptance": false,
+    "watch_session": 33001
   }
 }

@@ -62,7 +62,8 @@ P0 table now reflects D040 public policy instead of stale privacy requirement.
 
 ## Current implementation: durable offline chunk plans (2026-10-18)
 
-Branch codex/chunk-plan-journal from fa0a91d; implemented work is ready for publication after final docs checks.
+Branch codex/chunk-plan-journal from fa0a91d; published runtime source
+bdb220c69b187d3b3d764f4b3832d95f01d11e07.
 Schema25 adds local chunk_plans/chunk_objects, frozen input before data hashing,
 exact staging-operation attachment, durable cursor/hash/page preparation and an
 offline Ready root. New worker handle uses the existing private owner. No upload
@@ -105,8 +106,20 @@ Source audit: journal::read_data verifies whole stored chunks per intersecting
 extent. A logical1MiB slice does NOT cap total physical I/O/checksum work on a
 fragmented snapshot. Metadata and final graph validation also scan admitted
 records. Limits are documented; no constant-latency or native large-file claim.
-After gate2, publish ordinary feature branch with PUBLIC read-only checks and
-own source-bound CI; never borrow parent52's now-closed native/artifact cohort.
+Published normally, clean/exact remote/all56 frozen hashes/PUBLIC before-after,
+main1a93b5f unchanged. Proof /tmp/s3drive-chunk-plan-publication.json. Final status
+doc links/build/56chapter checks passed; preview33767 serves new chapter/image.
+Own CI39142749429 attempt1 at bdb220c: book117720340366 SUCCESS with completed
+raw review; Linux117720340601 and Windows117720340529 LIVE. Track same run;
+never rerun on observation timeout. Watch33001 is LIVE, log
+/tmp/s3drive-chunk-plan-bdb-watch.log; poll that same handle/run.
+Prepared /tmp/s3drive-check-chunk-plan-bdb.py compiled only, NOT executed. Require
+all3 terminal successes and own completed raw reviews with job/source/log hashes
+in /tmp/s3drive-chunk-plan-bdb-raw-reviewed.json before success checker. New
+output /tmp/s3drive-chunk-plan-bdb-artifacts. Select own Windows finalized upload
+IDs, API digests/timestamps/source and strict21/14 typed/project oracles; refuse
+all old artifact IDs. No borrowing of parent52/e48/257 cohorts. On failure retain
+it and do not run success checker. Provider/large-file acceptance remains absent.
 Next integration still needs bounded physical publication/unknown recovery,
 authority root capability/CAS, verified range readers, native adapters, remote
 reference reuse and separately authorized provider acceptance.
