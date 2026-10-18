@@ -60,38 +60,38 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Active native draft; accepted reader (2026-10-18)
+## Native manifest reads published; own OS gates live (2026-10-18)
 
-Reader88d is accepted, all3 ownCI39171113280 SUCCESS, rawlogsreviewed and own
-replacement12152741226/disposition12153275892 strict21/14+raw35 PASS.
-22member archive118459bytes SHA
-994942870840d5efd3082d61dd3533e89dbf0bd154844f5b3d2d93b7b37428ac.
-Reader checkpoint7c2b45435cd4aa3999e63ee16ccb6b03f5985c76 pushed, cleanexactremote.
+Continue in /home/marshall/src/worktrees/s3drive-native-manifest-reads,
+codex/native-manifest-reads. Source d98ea2ff2ec9cc72b55458190d657bb53642d227,
+status74a1dfb pushed. All257 runtime hashes frozen in
+/tmp/s3drive-native-manifest-v3-frozen.json. Own run39176574738 attempt1:
+Windows117820371735, Linux117820371839, book117820371587.
+Watch24055 -> /tmp/s3drive-native-manifest-d98-watch.log. All initially live;
+book has since SUCCESS. Resume same handle/own cohort, do not rerun or reuse
+older native artifacts. Both rust jobs have explicit native manifest ranges and
+remount step. Own rawlog/artifact/native acceptance is pending. Read that
+checkout's HANDOFF and implementation plan before implementation.
 
-CURRENT checkout for implementation:
-/home/marshall/src/worktrees/s3drive-native-manifest-reads,
-codex/native-manifest-reads, uncommitted draft fromb3e30f0. Read its HANDOFF and
-native-manifest-reads.md. Adds version3 read-only mixedlegacy/chunknamespace,
-logical64GiB metadata, bounded range handles, engine/native controls andCIstep.
-6focused portable controls/1native ignored passed5.74s; Clippy3 EXIT0.
-Explicit local native attempt failed FUSEreadiness OperationNotPermitted,
-NoNewPrivs1, ownedchildreaped/noFUSEleft; no native success or privilege bypass.
-First fullgate22825 CLOSED EXIT101 in existing paired-startup fixture setup:
-seed CLI managed store-plan InfoTLSConnecttimeout2.09s beforeHTTP/bodypoll,
-not changed filesystem path. Other7suitecontrols passed,257sourcehashes unchanged.
-HighCPUpressure observed; causeunproven. Unchanged focusedcase39166 EXIT0,2.69s.
-Gate2 session46929 LIVE, log /tmp/s3drive-native-manifest-gate2.log,
-RUST_TEST_THREADS=1 + shared CARGO_TARGET_DIR=/home/marshall/src/s3drive/target;
-same script/source/deadlines/innerconcurrency, only top-leveltests serialized.
-Resume samehandle. Do not publish native source or claim fullgate/native PASS
-before actual results. Runtime257 frozen in/tmp/s3drive-native-manifest-frozen.json.
-Preserve firstfailedlog /tmp/s3drive-native-manifest-gate.log andfailureJSON.
+Full localgate3 58981 CLOSED EXIT0, RUST_TEST_THREADS2,257 hashes unchanged:
+12publication+6reader/1nativeignored+62S3+365state/1ignored+69docfiles/65chapters,
+fmt/clippy/build. Indexed27member local archive114301bytes SHA
+138761972263bdf707c249fccf8954a4766a1e4497153ff2b796fd4e71f2a2a6, allverified.
+Firstgate setupTLSInfoConnecttimeout causeunproven. Secondgate serial-libtest
+marker timeout reproduced; negativecontrol proved prefixedENGINE_READY.
+Leadingnewlines before ENGINE_READY/PRODUCER_READY fixed fixture framing;
+exactmatching/deadlines/recovery assertions unchanged. Paired andproducer
+fullworkspace serial positives passed4.60s/2.16s. Earlier failed logs retained.
+Explicit local native attempt failed FUSEreadiness OperationNotPermitted under
+NoNewPrivs1; ownedchildreaped/noFUSEleft. No privilege bypass or provider mutation.
+Native OS success still requires own CI. Source d98's local gate cannot certify it.
 
-After gate2 PASS: finalize evidence/archive, commitdraft then merge acceptedreader
-7c2b454 doccheckpoint preserving257runtime, push ownnative branch for actual
-FUSE/WinFspCI. If failure, diagnose first; no blind reruns. Primary253 andreader256
-runtime unchanged. No main or visibility mutation; PUBLIC and goalACTIVE.
-Historical pending reader sections below are superseded by this current state.
+Reader88d prerequisite accepted all3 own39171113280/strict21+14/raw35; checkpoint
+7c2b454 and22member hosted archive verified. Native branch merged this evidence.
+Chunk writes remain next; source audit in its plan finds legacylogical8MiB/
+rejectedmanifestbase and full-snapshot planner. Raising8MiB is insufficient.
+Primary253 andreader256 runtime unchanged. No main/visibility mutation; PUBLIC.
+GoalACTIVE; current section supersedes historical gate2/pending reader notes.
 
 ## Current work: controller accepted; verified reader preparation (2026-10-18)
 

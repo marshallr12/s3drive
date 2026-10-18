@@ -1994,3 +1994,15 @@ failed an existing setup Info TLS connect timeout; its unchanged isolated case
 passed. The second complete gate is running with top-level tests serialized and
 all production timeouts/inside-test concurrency unchanged. No fullgate/native
 acceptance or draft publication is claimed yet. Read that checkout's handoff.
+
+
+Native read publication checkpoint (2026-10-18): source `d98ea2f` is pushed on
+codex/native-manifest-reads after the full local gate passed with257 unchanged
+source hashes,69documentationfiles/65chapters. Two fixture first-line markers
+were repaired after serial-libtest framing was reproduced, without relaxing any
+production deadline or assertion. The
+[own hosted OS cohort](https://github.com/marshallr12/s3drive/actions/runs/39176574738)
+is running; both Rust jobs explicitly execute real native manifest reads/remount.
+No native success is inferred from the portable gate. Primary runtime stays at
+its accepted controller source until the native phase is accepted. Chunk-write
+integration remains later work; continue in the native branch's isolated checkout.
