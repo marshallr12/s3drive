@@ -1816,3 +1816,22 @@ and its dated evidence; the captured prior CI category remains unknown. The
 next implementation work is the separately scoped source-settlement persistence
 contract above, followed by controller integration. Existing native regression
 does not activate mounted chunks or establish physical reboot/provider acceptance.
+
+### Independent preparation: pinned related-object reads (2026-10-18)
+
+Source settlement is accepted at checkpoint `20706cd`; controller work proceeds
+separately on `codex/chunk-source-controller`. Read-only design inspection for
+the future manifest reader identified an independent S3 API gap. Add
+`ReadHandle::open_related(key)` on the captured credential generation, with fresh
+online HEAD, existing scope/deadline/revision checks and no exposed credentials.
+Keep the primary controller checkout frozen while this preparation is tested in
+an isolated checkout from the accepted S3 baseline. No managed reader or native
+activation follows from this helper. See [contract and controls](pinned-related-reads.md).
+
+Done criteria: injected rotation through chained root/child/data operations,
+independent new generation, exact scope and GET preconditions, fresh denial and
+absence refusal, invalid input before requests and bounded future layout; then
+the full local gate and this source's own hosted cohort before integration.
+The focused S3 suite passed 62 controls. The full local gate passed with
+252 frozen hashes unchanged, 62 S3 / 365 state tests and 63 book chapters.
+Its own hosted acceptance remains pending; no managed/native activation follows.

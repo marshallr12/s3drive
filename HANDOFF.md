@@ -60,7 +60,46 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Active work: exact chunk source settlement state (2026-10-18)
+## Active work: independent pinned related-object reads (2026-10-18)
+
+Checkout /home/marshall/src/worktrees/s3drive-pinned-related-reads,
+branch codex/pinned-related-reads, from accepted20706cd. The primary checkout
+/home/marshall/src/s3drive stays oncodex/chunk-source-controller with253frozen
+sourcefiles and liveCI39165918104/watch79476. Do not edit its runtime or borrow
+its acceptance for this branch. RootcontrollerLinux/book passed; Windows LIVE.
+This helper is independent prep for the future managed manifest range reader;
+that reader still follows controller acceptance.
+
+Only productiondelta: S3reader.rs ReadHandle.open_related delegatesboxed to the
+captured reader.open, preserving source/credentialgeneration but requiringfresh
+onlineHEAD. Tests reader/tests.rs addrotation(root/child/grandchild/GET), new
+independentgeneration, exactscope/IfMatch, freshHEADdenial/missing, invalidinput
+norequest, futureinlinebudget. No schema/wire/native/write change.
+Focused1 95205 EXIT101:2pass/1fail onfixturetargetsubstring; lockedSDK1.152.0
+get_object.rs402 addsx-id=GetObject. FixedexactparsedURLpath (notproduction),
+alsoextendedchainedopen. Focused2 64173 EXIT0,62S3pass21.04s, log
+/tmp/s3drive-pinned-related-focus2.log. Existingrotatingprovider reusesdummykeys,
+no realcredentials/provider calls. Resolvedaws-config1.12.0 andcredential-types
+1.3.0 inspected; profilefilescachedperSDKdocs, nothotreloadpromise.
+Fullgate57146 CLOSED EXIT0, /tmp/s3drive-pinned-related-gate.log;252sourcefiles frozen
+in/tmp/s3drive-pinned-related-frozen.json, onlytwoS3deltasvsacceptedbase.
+Selfreview/audit/runtimepatch retained in/tmp/s3drive-pinned-related-{review,
+dependency-audit}.json andruntime.patch. Noindependentreviewer/noagentdispatch.
+Full local gatePASS:62S3/3new20.40s,365state/1ignored171.38s,34core,50authority,
+18existingpublication,8existingchunk,10TLS/3ignored,67docfiles/63chapters;fmt/clippy/
+build. Oneoldretainedsessionquota longnotice thenPASS; nobenchmarkclaim.
+LogSHAe1305a09ed2f1b688ccb56e3888013c38927937da48ad42e23086e696eb7be71;
+mapSHAf03483401f4c8d911f12d8bcb084b781a6e042a1c6b45441f15ab80123abf6bb.
+12memberlocalarchive pinned-related-reads-local-20261018.tar.gz,49869bytes,SHA
+387f5d110ae830aa896bbe1d12c8700ee34cab27dcf818206cd0634a1bc155db;allindex
+membersverified. /tmp/s3drive-pinned-related-gate-result.json andarchive-proof.json.
+No runtime edits needed. Next finaldocs/sourcepublication/ownhostedcohort before
+integration. Controller474evidence remainsindependent inprimarycheckout.
+Use CARGO_TARGET_DIR=/home/marshall/src/s3drive/target forlocalbuildreuse; no
+otherlocalS3Drive cargo job was live when selecting it. Sources remainisolated.
+Main visibilitypolicyPUBLIC applies unchanged. GoalACTIVE, no newagentdispatch.
+
+## Accepted prerequisite: exact chunk source settlement state (2026-10-18)
 
 Accepted prerequisite: corrected32d CI all3SUCCESS, own strict21/14+raw35 PASS,
 22member hosted archive verified; state contract/docs pushed at96b6441. Schema28 source41b's own cohort is now accepted below; no CI wait remains.

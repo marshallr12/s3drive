@@ -525,6 +525,121 @@ async fn rotation_changes_new_opens_but_preserves_existing_handle_credentials() 
 }
 
 #[tokio::test]
+async fn related_opens_pin_root_credentials_while_independent_opens_rotate() {
+    let server = Server::start(vec![
+        Response::head(3, Some("\"root\"")),
+        Response::head(3, Some("\"part\"")),
+        Response::head(3, Some("\"data\"")),
+        Response::range("one", "bytes 0-2/3", "\"data\""),
+        Response::head(3, Some("\"root\"")),
+        Response::head(3, Some("\"part\"")),
+        Response::range("two", "bytes 0-2/3", "\"part\""),
+    ])
+    .await;
+    let provider = RotatingCredentials(Arc::new(std::sync::Mutex::new(fixture_credentials(
+        "FIRSTACCESS",
+        "FIRSTSECRET",
+        Some("FIRSTTOKEN"),
+    ))));
+    let reader = S3Reader::with_credentials(
+        source(&server.endpoint),
+        SharedCredentialsProvider::new(provider.clone()),
+        Duration::from_secs(3),
+        1,
+    )
+    .unwrap();
+    let root = reader.open("tree/root").await.unwrap();
+    *provider.0.lock().unwrap() =
+        fixture_credentials("SECONDACCESS", "SECONDSECRET", Some("SECONDTOKEN"));
+    let part = root.open_related("tree/part").await.unwrap();
+    assert_eq!(root.cache_identity(), part.cache_identity());
+    assert_eq!(
+        root.configuration_fingerprint(),
+        part.configuration_fingerprint()
+    );
+    assert_eq!(part.metadata().key, "tree/part");
+    let nested = part.open_related("tree/data").await.unwrap();
+    assert_eq!(root.cache_identity(), nested.cache_identity());
+    assert_eq!(nested.read_range(0, 3).await.unwrap(), b"one");
+    let new_root = reader.open("tree/root").await.unwrap();
+    let new_part = new_root.open_related("tree/part").await.unwrap();
+    assert_ne!(root.cache_identity(), new_root.cache_identity());
+    assert_eq!(new_root.cache_identity(), new_part.cache_identity());
+    assert_eq!(new_part.read_range(0, 3).await.unwrap(), b"two");
+    let requests = server.finish().await;
+    assert_eq!(requests.len(), 7);
+    for (index, request) in requests.iter().enumerate() {
+        let (access, token) = if index < 4 {
+            ("FIRSTACCESS", "FIRSTTOKEN")
+        } else {
+            ("SECONDACCESS", "SECONDTOKEN")
+        };
+        assert!(request.contains(&format!("Credential={access}/")));
+        assert!(request.contains(&format!("x-amz-security-token: {token}")));
+    }
+    for (index, path) in [
+        (1, "part"),
+        (2, "data"),
+        (3, "data"),
+        (5, "part"),
+        (6, "part"),
+    ] {
+        let target = requests[index].split_whitespace().nth(1).unwrap();
+        let url = url::Url::parse(&format!("http://fixture{target}")).unwrap();
+        assert_eq!(url.path(), format!("/fixture-bucket/root/tree/{path}"));
+    }
+    assert!(requests[3].contains("if-match: \"data\""));
+    assert!(requests[6].contains("if-match: \"part\""));
+}
+
+#[tokio::test]
+async fn related_opens_require_fresh_head_and_preserve_scope_and_failures() {
+    let server = Server::start(vec![
+        Response::head(3, Some("\"root\"")),
+        Response::head(3, Some("\"part\"")),
+        Response::range("one", "bytes 0-2/3", "\"part\""),
+        Response::new(403, ""),
+        Response::new(404, ""),
+    ])
+    .await;
+    let root = server.reader().open("tree/root").await.unwrap();
+    assert_eq!(
+        root.open_related("").await.err().unwrap().kind,
+        ErrorKind::InvalidInput
+    );
+    let part = root.open_related("tree/part").await.unwrap();
+    assert_eq!(part.read_range(0, 3).await.unwrap(), b"one");
+    assert_eq!(
+        root.open_related("tree/part").await.err().unwrap().kind,
+        ErrorKind::PermissionDenied
+    );
+    assert_eq!(
+        root.open_related("tree/missing").await.err().unwrap().kind,
+        ErrorKind::NotFound
+    );
+    let requests = server.finish().await;
+    assert_eq!(requests.len(), 5, "invalid key must not make a request");
+    for index in [1, 3] {
+        assert!(requests[index].starts_with("HEAD "));
+        assert!(
+            requests[index]
+                .lines()
+                .next()
+                .unwrap()
+                .contains("/tree/part ")
+        );
+    }
+    assert!(requests[4].starts_with("HEAD "));
+    assert!(
+        requests[4]
+            .lines()
+            .next()
+            .unwrap()
+            .contains("/tree/missing ")
+    );
+}
+
+#[tokio::test]
 async fn binding_survives_reader_recreation_and_is_not_an_object_identifier() {
     let server = Server::start(vec![
         Response::head(3, Some("\"v1\"")),
@@ -556,6 +671,20 @@ fn open_future_fits_native_callback_stack_budget() {
     let future = reader.open("not-polled");
     let bytes = std::mem::size_of_val(&future);
     assert!(bytes <= 4096, "open future uses {bytes} inline bytes");
+}
+
+#[tokio::test]
+async fn related_open_future_fits_native_callback_stack_budget() {
+    let server = Server::start(vec![Response::head(3, Some("\"root\""))]).await;
+    let root = server.reader().open("tree/root").await.unwrap();
+    let future = root.open_related("not-polled");
+    let bytes = std::mem::size_of_val(&future);
+    assert!(
+        bytes <= 4096,
+        "related open future uses {bytes} inline bytes"
+    );
+    drop(future);
+    assert_eq!(server.finish().await.len(), 1);
 }
 
 #[test]
