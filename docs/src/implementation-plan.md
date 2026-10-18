@@ -1725,6 +1725,67 @@ pending. See
 [exact source acknowledgments](chunk-source-settlement.md). Controller integration
 still follows as a separate phase; no mounted chunk activation follows here.
 
+#### Next controller slice: explicit source acknowledgment (proposal, 2026-10-18)
+
+Implement after the schema-28 state cohort is accepted. Add
+`Publisher::resume_source(plan)` and `Recovery::resume_source(plan)`, returning
+the state's opaque `SourceReceipt`. Keep `resume()` returning `RootCommit`
+with its existing root-only semantics. Neither result declares every ancestor,
+building draft or current file clean. This extends the existing
+[chunk controller](https://github.com/marshallr12/s3drive/blob/41b759aeb09511f2e27956c8c6a0110bfe283dcb/crates/s3drive-managed/src/chunks.rs)
+and uses the implemented [source-state facade](chunk-source-settlement.md).
+
+Hold one controller-family operation permit across root recovery/publication
+and local source acknowledgment. Refactor the existing publisher body into a
+private helper called under that permit; calling public `resume()` from another
+permit-holding method would fail its own Busy check. Cloned controllers share
+the permit, while independent recovery controllers still rely on the SQLite
+owner's transaction and idempotence checks. The acknowledgment must reload the
+exact durable plan through the same owner's source facade. A returned
+`RootCommit` alone is not sufficient proof.
+
+`Recovery::resume_source` takes no S3 source, SDK executor, reader, credentials
+or write policy. Scope the saved record to the expected volume/store first.
+For an already committed root, perform zero metadata RPCs and zero S3 requests;
+for a prepared unknown root, resend only the complete saved Apply, persist its
+complete receipt, then acknowledge locally. Do not fetch fresh Features, Info,
+Node or Store, replace operation IDs, rebase a sequence, or prepare new work.
+The publisher's prepared/committed recovery branch must precede current S3
+binding, policy admission, upload and fresh metadata reads as it does today.
+
+Missing, unprepared, rejected, damaged or wrong-scope records must not yield a
+source receipt. If root publication succeeds but local acknowledgment fails,
+retain the root receipt and all source bytes so recovery can finish locally.
+Retain unknown requests on transport or local receipt-save failure. No new
+wire/schema/object format, payload reclamation, ancestor suppression, role
+release or native callback activation belongs in this controller slice.
+
+Use the existing real SDK/dummy loopback S3 and authenticated Rust authority
+harness. Add end-to-end controls for:
+
+- Binary/Unicode, sparse and empty sources; old root-only calls leave source
+  status unsettled. A later source acknowledgment does not settle ancestors;
+  first acknowledgment of an older root after a newer root/head stays historical.
+- Lost Publish reply followed by actual killed-owner restart, unavailable dummy
+  credentials/policy and damaged current payload. Recovery sends the exact saved
+  Apply and performs no S3 requests, preserving a newer local head and remote root.
+- Root receipt saved but source-row insertion refused, followed by killed-owner
+  restart. Recovery of that known root performs no RPC or S3 request and returns
+  the same historical receipt while preserving newer work.
+- Expired/narrowed policy recovery, local publication-receipt-save failure,
+  same-family Busy refusal while a request is held at an explicit barrier, and
+  concurrent first source acknowledgment through independent recovery controllers.
+  Compare complete requests/receipts and count unique object PUTs.
+
+Reuse the existing subprocess fixture and add a small child test module rather
+than copy its server and credential setup. Bound every observation and reap
+owned children on failure; a killed child must have an unsuccessful exit status.
+State-level SQLite-full, recursive grandchild damage and postcommit lost-reply
+controls remain separate evidence, not claims of new controller fault coverage.
+Accept the slice only after focused integration tests, the full local gate and
+its own source-bound Linux/Windows/book cohort. Mounted chunk lifecycle and
+verified manifest-range reads remain subsequent phases.
+
 ### Current acceptance repair: TLS budget fixture (2026-10-18)
 
 Own publisher CI39156593000 failed Linux before the chunk tests, in the existing

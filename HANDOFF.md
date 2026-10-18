@@ -62,10 +62,9 @@ P0 table now reflects D040 public policy instead of stale privacy requirement.
 
 ## Active work: exact chunk source settlement state (2026-10-18)
 
-Previous goal turn PROGRESS: corrected32d CI all3SUCCESS, own strict21/14+raw35
-PASS,22member hosted archive verified, reviewed state contract/docs pushed at
-96b644110525d80e9d45d3e021bf745ee4f11a06. Clean exact remote and PUBLIC; proof
-/tmp/s3drive-chunk-source-contract-publication.json. No current CI wait remains.
+Accepted prerequisite: corrected32d CI all3SUCCESS, own strict21/14+raw35 PASS,
+22member hosted archive verified; state contract/docs pushed at96b6441. Current
+wait is schema28 source41b's own cohort below, not that older prerequisite.
 
 Branch codex/chunk-source-settlement from96b6441. Implemented schema28 separate
 chunk_source_role/chunk_source_settlements, opaque exact SourceReceipt/SourceStatus,
@@ -144,9 +143,35 @@ failed cohort; archive failed logs separately instead. This handoff is a docs-on
 status child; runtime remains frozen. Full goal ACTIVE; repository PUBLIC.
 Book117780950315 now SUCCESS/raw reviewed:own41b/schema28,66docfiles/62chapters,
 Ubuntu24.04 image20261012.334.1; pinnedRust/defaultbranch/Node20forced24 notices.
-Marker /tmp/s3drive-chunk-source-41b-book-reviewed.json. Windows and Linux still
-LIVE. Hosted archive builder /tmp/s3drive-chunk-source-41b-archive.py prepared/
-compiled ONLY; execute after own3raw review + all3SUCCESS + checkerEXIT0 + raw35.
+Marker /tmp/s3drive-chunk-source-41b-book-reviewed.json. Linux117780950360 also
+SUCCESS/raw reviewed:365state/1ignored/all16sourcecontrols; separate9FUSE native
+controls PASS63.33s, no-systemd desktop/SSH/terminal-loss supervisor and pinned
+HTTP/private-CA HTTPS coordinator recovery PASS. These mounted tests exercise
+existing format, not mounted chunks; no physical reboot/Wasabi acceptance.
+ExpectedHEAD403/stopped-authorityConnectionRefused/removedstartup.json refusal,
+Node/cachedeprecations retained. Linux rawmarker
+/tmp/s3drive-chunk-source-41b-linux-reviewed.json,logSHA
+d788aabbd53cfaccb428000f663cd47211b3ca193d52097b9688f1d35f4c5b9f.
+Windows117780950165 still LIVE atworkspace tests; watch28386 samehandle. No
+new runtime edits or repeated gate. Hosted archive builder
+/tmp/s3drive-chunk-source-41b-archive.py prepared/compiled ONLY; corrected its
+checker-member path to own41b, not older32d. Execute only after own3raw review +
+all3SUCCESS + checkerEXIT0 + raw35. Fresh successoutput/combinedmarker absent.
+
+Next controller contract now concrete in implementation-plan.md under
+"Next controller slice: explicit source acknowledgment" (2026-10-18 proposal).
+Read complete current chunks.rs and existing realSDK/authenticatedauthority
+subprocess fixture. AddPublisher/Recovery.resume_source returningopaqueSourceReceipt,
+onefamilypermit throughroot+ack via privateunlockedpublisherhelper; preserveold
+resume.RootCommit. Knownroot recoveryzeroRPC/S3; preparedunknown onlyexactApply,
+thenlocalack; scopefirst,nofreshmetadata/policy/rebase/IDs. Sameprivateownerreloads
+proof. Proposedfourcontrols:Unicode/binary/sparse/empty historicalflow; killed
+unknownreply withnewerremote/localhead; killedknownroot afterfailedsourceinsert;
+expired/narrowpolicy/localreceiptsavefailure/explicitbarrierBusy/concurrentfirstack.
+Reuseparentharness+smallchildmodule; actualkilledstatusunsuccessful/reap, countall
+S3+uniquePUTs+completeApplys. No implementation yet; followsaccepted41b. Native
+chunklifecycle/verifiedrange reader remainlater. StateFULL/grandchild/postcommit
+faults remainstateevidence, not newcontrollerclaims. No newagentsdispatched.
 
 ## Preceding checkpoint: TLS fixture accepted (2026-10-18)
 

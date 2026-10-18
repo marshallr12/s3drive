@@ -458,6 +458,37 @@
     ],
     "scope": "not yet acceptance; exact own source/jobs/artifacts/raw review required",
     "book_raw_reviewed": true,
-    "book_review_marker": "/tmp/s3drive-chunk-source-41b-book-reviewed.json"
+    "book_review_marker": "/tmp/s3drive-chunk-source-41b-book-reviewed.json",
+    "linux_raw_reviewed": true,
+    "linux_review_marker": "/tmp/s3drive-chunk-source-41b-linux-reviewed.json",
+    "linux_log_sha256": "d788aabbd53cfaccb428000f663cd47211b3ca193d52097b9688f1d35f4c5b9f",
+    "linux_conclusion": "success",
+    "book_conclusion": "success",
+    "windows_status": "in_progress",
+    "linux_native_existing_format": {
+      "tests_passed": 9,
+      "elapsed_seconds": 63.33,
+      "no_systemd_desktop_ssh_supervisor": true,
+      "coordinator_http_private_ca_https_recovery": true,
+      "mounted_chunks": false,
+      "physical_reboot_acceptance": false
+    },
+    "archive_builder_prepared_not_executed": true,
+    "archive_checker_member_points_to_own41b": true
+  },
+  "next_controller_contract": {
+    "status": "proposal; no runtime implementation yet",
+    "document": "implementation-plan.md",
+    "apis": [
+      "Publisher::resume_source(plan)",
+      "Recovery::resume_source(plan)"
+    ],
+    "scope": "one operation permit through durable root and exact-source acknowledgment; root-only resume semantics preserved",
+    "required_tests": [
+      "Unicode/binary/sparse/empty historical sources",
+      "killed unknown Publish recovery without credentials/policy/S3",
+      "killed known-root recovery after failed source insertion; zero RPC and S3",
+      "expired/narrowed policy, local receipt-save failure, barrier Busy, concurrent first acknowledgment"
+    ]
   }
 }

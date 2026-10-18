@@ -99,12 +99,18 @@ implementation and runtime delta. Source `41b759a` is pushed on
 `codex/chunk-source-settlement`, with all 252 hashes and the clean exact remote
 tip verified. Public visibility was checked read-only before and after; main is
 unchanged. Its [own hosted cohort](https://github.com/marshallr12/s3drive/actions/runs/39163298774)
-is running. Earlier artifacts cannot substitute for this source's acceptance. See
+is running. Linux and book jobs have passed and their raw logs were reviewed;
+Windows is still running. Linux's separate nine FUSE mount controls and
+no-systemd desktop/SSH supervisor recovery checks also passed for the existing
+mounted format. They do not activate mounted chunks or prove a physical reboot.
+Earlier artifacts cannot substitute for this source's acceptance. See
 the [dated evidence](evidence/chunk-source-settlement-20261018.json).
 
 No payload eviction/reclamation, role release, implicit migration, detached or
 removal-owner publication, native chunk activation, fresh provider-health claim
 or physical reboot acceptance follows. The next controller slice must connect
 root publication/recovery to this facade and prove it with the real SDK and
-authenticated loopback authority. Verified manifest range reads and native
+authenticated loopback authority. The [next controller contract](implementation-plan.md#next-controller-slice-explicit-source-acknowledgment-proposal-2026-10-18)
+defines the distinct API, operation permit and subprocess recovery controls.
+Verified manifest range reads and native
 lifecycle barriers remain later requirements.
