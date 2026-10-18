@@ -827,9 +827,11 @@ The subsequent topic follow-up prepares an isolated Windows console Ctrl+C helpe
 and an ordinary-account padding mode. A portable fixture checks original
 identity/sequence and byte-identical operation rows after temporary padding.
 Local compilation/parsing is not Windows cancellation acceptance; require the
-[isolated-console runtime contract](authority-backup-recovery.md#windows-console-cancellation-follow-up-prepared-runtime-pending-2026-10-18)
+[isolated-console runtime contract](authority-backup-recovery.md#windows-console-cancellation-observation-2026-10-18)
 and source-bound Windows acceptance. The follow-up local gate passed, along
-with final PS AST and C#5/.NET4.5 compilation; Windows runtime remains pending.
+with final PS AST and C#5/.NET4.5 compilation. Hosted d6d8bd9 passed the isolated
+Ctrl+C component (one16ms cancellation observation), but failed later native
+HTTP lifecycle operations. Full snapshot acceptance remains pending.
 Never signal a shared runner console or substitute
 forced termination for cooperative cleanup.
 
@@ -839,9 +841,12 @@ recovery. Its overall CI failed in later native TLS operations. Follow-up33ddfe1
 failed the earlier native lifecycle HTTP case before reaching console acceptance.
 Both Linux/book jobs succeeded. No main promotion; see the
 [dated platform record](evidence/authority-snapshot-platform-20261018.json).
-A failure-only independent CLI metadata probe is now being tested locally to
-separate coordinator liveness from the failed native client's runtime/pool.
-It preserves the failed assertion and performs no mutation retry.
+A failure-only independent CLI metadata probe passed portable live/stopped
+controls. At d6d8bd9 it received the original volume in28ms after the native
+failure, with both owned processes alive. It preserves the original assertion;
+post-failure availability does not establish the timed-out operation's outcome.
+The next candidate declares finite metadata connection lifetime explicitly;
+see the [transport contract and limits](remote-authority.md#explicit-metadata-connection-lifetime-candidate-2026-10-18).
 
 Require exclusive existing-authority ownership and explicit volume/policy pin;
 read supported legacy/current state without migrations or namespace changes.

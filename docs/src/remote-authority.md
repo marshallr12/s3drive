@@ -69,6 +69,36 @@ effect; do not rebind, overwrite, or manufacture a new ID. On shutdown the liste
 closes and connections drain; accepted database commands retain their worker
 ownership even if the requesting socket disappears.
 
+## Explicit metadata connection lifetime (candidate, 2026-10-18)
+
+The snapshot-topic candidate sends `Connection: close` on every HTTP/1.1
+metadata request, for both HTTPS and numeric-loopback HTTP. This makes the
+client choose a finite connection lifetime, matching the TLS listener's
+existing one-request policy. RFC9112 permits this choice; once the client
+declares it, the connection must not carry another request, and the client
+closes after the final response. Persistent clients are also allowed by the
+standard; the earlier default was not itself a protocol violation.
+[RFC9112 sections9.3 and9.6](https://www.rfc-editor.org/rfc/rfc9112.html#section-9.6)
+(read2026-10-18).
+
+The resolved reqwest0.13.5 public `RequestBuilder::header` and `http::header`
+re-export were inspected locally before use. Dependency versions, timeouts,
+TLS trust, request serialization, automatic retries and pool-builder options
+remain unchanged.
+The cost is a new connection per metadata exchange, including a new TLS
+handshake for HTTPS. This is not a throughput improvement or an S3 setting.
+
+Two bounded local wire tests observe actual sockets and complete replies. With
+the prior client, sixteen sequential Info calls used one keep-alive socket;
+with the candidate, all sixteen receive the expected volume through sixteen
+connections declaring `close`. A separate raw peer omits its own close header
+and leaves the socket open; the client still returns the complete reply and
+closes its side. Fixture tasks are stopped/reaped before assertions. These
+tests establish the lifetime policy, **not a reproducer or explanation of the
+intermittent Windows failures**. Existing HTTP/TLS fault, native, startup and
+strict reference gates remain required. The main branch remains f8c4f58 until
+new exact-source acceptance; see the [dated record](evidence/authority-snapshot-platform-20261018.json).
+
 ## Bounded failure diagnostics (2026-10-17)
 
 The [same-source Windows failure investigation](authority-startup.md#same-source-repeat-failure-2026-10-17)

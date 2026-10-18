@@ -1,5 +1,5 @@
 {
-  "recorded_at_utc": "2026-10-18T05:58:36.266917+00:00",
+  "recorded_at_utc": "2026-10-18T06:18:39.917170+00:00",
   "overall_acceptance": false,
   "main_unchanged": "f8c4f5832e399c6c54567c122c875e2a438ce681",
   "snapshot_component": {
@@ -67,7 +67,8 @@
   },
   "raw_windows_log_sha256": {
     "f9a52e2": "a8c7706d2f1fa361ad3e5fbf913dd871c8e3683466fdeccbb32353d1ba2e7edc",
-    "33ddfe1": "c079781c51fbce509eb3bf5dd7a7f6a2611712eb889081eb83ddb2181958a4d7"
+    "33ddfe1": "c079781c51fbce509eb3bf5dd7a7f6a2611712eb889081eb83ddb2181958a4d7",
+    "d6d8bd9": "6a086c7a4452ba08181b9fdacc71522a4f8a59797fb3f533644a00cd1d6c121b"
   },
   "rejected_capture_experiment": {
     "included_in_candidate": false,
@@ -82,12 +83,77 @@
       "hyper-util-0.1.21/src/client/legacy/client.rs": "bc854508f0bee926f93adf5c00b0ecd4387d3047d8f748b3571a2a72dcbbb8a1"
     }
   },
-  "next_diagnostic": "failure-only fresh CLI Info control and owned-process liveness; preserve original panic, no mutation replay; portable live/stopped test passed, full gate and Windows pending",
+  "next_diagnostic": "Explicit Connection: close policy, with bounded physical-transport and peer-omits-close tests; not a Windows failure reproducer; full local and exact-source hosted acceptance required",
   "limitations": [
     "No attribution to scheduler, dependency bug, provider or snapshot implementation",
     "No direct correlation between server connection ordinal and failed client RPC",
-    "No change to client/server deadlines, retry, pooling, TLS validation or request serialization",
+    "At d6d8bd9 no deadline, retry, pooling, TLS validation or request serialization changes; later lifetime candidate explicitly declares Connection: close, with independent acceptance still required",
     "No new live Wasabi writes or workstation startup/root/credential changes",
     "Hosted Windows Server2025 results do not establish Windows10/11 or physical reboot acceptance"
-  ]
+  ],
+  "console_runtime_component": {
+    "source_commit": "d6d8bd915d7c04764013071f152076740959fd68",
+    "run": 39102804077,
+    "windows_job": 117602351510,
+    "run_conclusion": "failure",
+    "linux_and_book": "success",
+    "component_pass_at_utc": "2026-10-18T06:10:14Z",
+    "ordinary_account_offline_checks_passed": true,
+    "private_console_verified": true,
+    "cooperative_cancel_observed": true,
+    "success_stdout": false,
+    "completion_manifest_absent": true,
+    "source_sha256_preserved": true,
+    "partial_inspection_refused": true,
+    "same_destination_retry_refused": true,
+    "restore_authorized": false,
+    "offline_original_identity_check_after_cancel_passed": true,
+    "cancel_to_exit_ms_single_observation": 16,
+    "late_native_failure": {
+      "test": "actual_managed_windows_disposition_lifecycle",
+      "transport": "numeric-loopback HTTP",
+      "request": "PendingRemoval",
+      "phase": "Request",
+      "timed_out": true,
+      "error_at_utc": "2026-10-18T06:13:32Z",
+      "native_error": 5,
+      "native_location": "support/managed/lifecycle.rs:364 source-to-target replacement loop",
+      "server_phase_and_commit_outcome": "unproven",
+      "failure_control_at_utc": "2026-10-18T06:13:37Z",
+      "mount_running": true,
+      "coordinator_running": true,
+      "fresh_cli": "OriginalVolume",
+      "control_elapsed_ms": 28,
+      "original_failure_preserved": true,
+      "later_windows_steps": "skipped",
+      "availability_during_original_request_established": false
+    }
+  },
+  "connection_lifetime_candidate": {
+    "base_commit": "d6d8bd915d7c04764013071f152076740959fd68",
+    "policy": "Connection: close on each HTTP/1.1 metadata RPC; existing TLS listener already disables keep-alive",
+    "baseline": "16 sequential valid Info replies over 1 physical connection; new policy assertion failed as expected",
+    "candidate": "16 sequential valid Info replies over 16 physical connections with close headers; raw peer omitting close sees client EOF after complete reply",
+    "focused_local_result": "2 passed, 0 failed",
+    "windows_cause_or_fix_established": false,
+    "source_sha256": {
+      "crates/s3drive-authority/src/wire.rs": "712ccc9c8dc9739804817b5b72f17c2cb06a3ebf8b44b3efb200762821a653e8",
+      "crates/s3drive-authority/tests/connection_lifetime.rs": "5c3fd48a1beb2929b8f191be654a548bc0e3fdd510dba046b4064f0645a9df33"
+    },
+    "local_log_sha256": {
+      "/tmp/s3drive-connection-lifetime-before1.log": "123d5752f3381b4044ebef94537bb3c4d1a8410ee7ed68e76d3f20a44aa2aaed",
+      "/tmp/s3drive-connection-lifetime-after2.log": "dea5bca1201b8270566b0b161cf5b96d35d68ee60404f5b21c3003582e13a8d5"
+    },
+    "reference": "https://www.rfc-editor.org/rfc/rfc9112.html#section-9.6",
+    "research_date": "2026-10-18",
+    "cost": "new TCP connection per metadata exchange, plus TLS handshake for HTTPS",
+    "unchanged": "no dependency, deadline, retry, TLS trust, serialization or pool-builder changes",
+    "full_local_gate": {
+      "command": "bash scripts/gate.sh",
+      "exit_code": 0,
+      "log_sha256": "c84237baa8f1bdeb36a1d16ee4e7c7e8841b92b8f5f782bb7567b8e3fa251ead",
+      "os": "Linux workstation; native FUSE not run here",
+      "hosted_candidate_acceptance": "pending"
+    }
+  }
 }

@@ -512,3 +512,15 @@ A later successful control does not prove availability at the instant of the
 original failure or establish any earlier mutation outcome. It is additional
 diagnostic evidence, not a successful native test or a fix for the production
 failure. Existing native and full candidate gates still apply.
+
+At d6d8bd9, [CI39102804077](https://github.com/marshallr12/s3drive/actions/runs/39102804077)
+passed Linux/book and the early Windows standalone coordinator/offline-snapshot/
+private-console cancellation components. The later HTTP lifecycle test failed
+at same-store source-to-target replacement (`lifecycle.rs:364`), with a
+PendingRemoval request timeout. The failure-only control found the mount and
+coordinator processes alive and received the original volume from a fresh CLI
+in28ms. That is evidence after the failure, not proof of availability during
+the timed-out request, its database outcome, or a particular pool/runtime cause.
+The original failure remains fatal; later Windows gates were skipped. Main
+remains f8c4f58. The next candidate's [explicit connection lifetime](remote-authority.md#explicit-metadata-connection-lifetime-candidate-2026-10-18)
+is a deliberate transport policy with local socket tests, not a claimed fix.

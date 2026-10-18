@@ -196,6 +196,9 @@ impl WireClient {
         let mut response = self
             .http
             .post(self.url.clone())
+            // One RPC per transport matches the TLS listener's finite lifetime.
+            // This also makes loopback HTTP independent of peer keep-alive.
+            .header(reqwest::header::CONNECTION, "close")
             .bearer_auth(&self.token.0)
             .json(request)
             .send()

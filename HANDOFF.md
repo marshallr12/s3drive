@@ -6,6 +6,27 @@ Research, decisions, acceptance and plans belong in docs/src/.
 
 ## Checkouts and immediate next action
 
+- Latest pushed topic is d6d8bd915d7c04764013071f152076740959fd68.
+  CI39102804077 is TERMINAL FAILURE: Linux117602351415/book117602351527
+  succeeded; Windows117602351510 passed early standalone snapshot and private
+  console Ctrl+C, then failed HTTP native lifecycle. Raw
+  /tmp/s3drive-native-failure-probe-d6-windows.log. Cancel16ms is one observation:
+  no success/manifest, source bytes preserved, partial/replacement refused,
+  offline original-identity control passed. Later PendingRemoval request timeout
+  caused native5 at lifecycle.rs364. Failure-only fresh CLI got OriginalVolume
+  in28ms with both processes alive; not proof of earlier availability/outcome.
+  Later Windows gates skipped. Main stays f8; no snapshot acceptance.
+- Current uncommitted candidate declares Connection: close per metadata RPC.
+  Only production change is that header in WireClient; no retry/deadline/TLS/
+  dependency/pool-builder change. Two bounded socket tests passed:16 distinct
+  transports versus baseline1, and client EOF after complete reply even when
+  peer omits close. This proves policy, NOT a Windows reproducer/root cause.
+  /tmp/s3drive-connection-lifetime-after2.log. Full local gate PASSED exit0:
+  /tmp/s3drive-connection-lifetime-gate1.log (274 state, connection-lifetime2,
+  Hyper2/HTTP10/TLS6, snapshot CLI2, restart/worker8, SDK17, managed8, lint/
+  build/57-doc). Rust stayed frozen. Ready for private topic checkpoint;
+  new exact-source hosted acceptance is required, not a claimed timeout fix.
+
 - Private local/remote main is now accepted diagnostic f8c4f5832e399c6c54567c122c875e2a438ce681.
   Topic CI39097275707 is terminal all-three SUCCESS, raw Linux/Windows native/
   startup logs and strict21/14 artifacts checked before guarded FF from a7994e6.
@@ -51,15 +72,16 @@ Research, decisions, acceptance and plans belong in docs/src/.
   replacement. Numeric-loopback HTTP (NOT TLS); Info/Request timeout, then
   PendingRemoval timeout and native5. No server-side commit/phase proof.
   C# console fixture and later Windows gates SKIPPED. Raw
-  /tmp/s3drive-snapshot-console-33-windows.log. Windows signal remains unverified.
+  /tmp/s3drive-snapshot-console-33-windows.log. Later d6 signal component passed.
 
 - New clean detached worktree /home/marshall/src/s3drive-snapshot-acceptance
   stays at failed33 for source inspection; no builds there. Prepared (NOT RUN)
   /tmp/s3drive-snapshot-console-33-reference-check.ps1 must not be treated as
   proof.33 has only replacement artifact; disposition step never ran.
 
-Next: push the locally gated failure-only fresh CLI diagnostic, then inspect new
-exact-source Windows failure or success evidence before any promotion. Require
+Next: publish the gated finite-connection policy topic checkpoint, then inspect
+new exact-source hosted acceptance. Require terminal Windows/native/reference/
+startup evidence before any promotion. Require
 native/reference/startup gates before any snapshot main promotion. Keep restore
 unsupported. No new provider/user startup/root/hosting mutations authorized.
 Publication always requires exact-source all-three terminal CI, raw native/
@@ -150,7 +172,8 @@ Resolved rusqlite0.40.2/libsqlite3-sys0.38.2 source inspected: checked backup DO
 follows destination commit; finish maps DONE to OK. No raw SQLite FFI. Never
 raw-open/close a DB file while a SQLite connection in that process is active
 (POSIX locks). Hash/recheck after close. Windows0.61.3 file-identity signatures
-were inspected; actual Windows ACL/reparse/handle acceptance remains pending.
+were inspected; Windows ACL/reparse/handle component checks later passed at f9/d6;
+full candidate native acceptance remains pending.
 
 Pre-rebase root full gate PASSED exit0 /tmp/s3drive-snapshot-gate1.log:274 state, two new
 snapshot CLI tests, ten HTTP, six TLS,17 SDK, seven managed, lint/build/57-doc.
@@ -185,7 +208,7 @@ tests passed at /tmp/s3drive-snapshot-prepush-book{,tests}1.log.
 Local parsing is not actual Windows acceptance.
 Actual Windows CLI/ACL/reparse/sharing checks passed in the scoped f9 component
 workflows, but full candidate native gates failed as above. Windows console
-cancellation is separate and still unverified. Remaining snapshot gaps include
+cancellation subsequently passed the d6 component; full native acceptance remains. Remaining snapshot gaps include
 broader permission/destination-busy faults and writer-version field validation (currently
 nonempty/length only). Do not mark snapshot phase or overall goal complete.
 
@@ -208,7 +231,7 @@ nonempty/length only). Do not mark snapshot phase or overall goal complete.
   Cancel phase/owned cleanup to the three Windows fixture PS files. It uses
   only a freshly allocated verified private console (no AttachConsole), checks
   helper/child membership, requires Cancelled/no stdout/no manifest, compares
-  source bytes and refuses partial/replacement. No actual Windows signal proof.
+  source bytes and refuses partial/replacement. Actual Windows signal component passed later at d6.
   The Rust authority_restart fixture adds SnapshotPad before managed dispatch:
   production owner lock plus separate SQLite connection,128MiB free pages,
   connections closed before hashing. Portable8MiB exact receipt-byte control
@@ -223,7 +246,7 @@ nonempty/length only). Do not mark snapshot phase or overall goal complete.
 - Console follow-up33 was pushed after full local gate, final PS AST/C#5
   compilation and final57-doc links/build/tests. Rust stayed frozen during gate;
   the subsequent PS-only positive-control/type checks passed fresh AST.
-- UNCOMMITTED follow-up: failure_probe/report_native_failure helpers in
+- Pushed ind6d8bd9: failure_probe/report_native_failure helpers in
   support/managed.rs, Windows lifecycle catch/report/reap/resume-original-panic,
   and a managed_native.rs portable positive/negative probe. Fresh actual CLI
   Info uses a separate client/runtime, bounded pipes/waits and owned handles;
@@ -244,13 +267,13 @@ nonempty/length only). Do not mark snapshot phase or overall goal complete.
   /tmp/s3drive-wire-selection-remote1.log. ALL authority code/Cargo/test edits
   restored exactly toHEAD33; no false flag shipped and no assertion weakened.
   Exact resolved source0.1.21/0.13.5 fingerprints in the dated platform record.
-- UNCOMMITTED docs: refresh historical managed layout/publication/write/mutation/
+- Pushed ind6d8bd9: refreshed historical managed layout/publication/write/mutation/
   Windows-plan descriptions to distinguish old config phases from current main;
   links/build/test passed historical-status-book{,tests}1.log before latest
   platform records. New record authority-snapshot-platform-20261018.json and
   authority-startup/snapshot/implementation-plan explain partial component PASS,
   both overall failures and the failed capture experiment. Main-repeat record
-  is also pending. Bundle with substantive probe source; no docs-only native CI.
+  was committed with d6. Bundle with substantive probe source; no docs-only native CI.
 
 ## Requirements, invariants and authorization
 
