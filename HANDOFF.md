@@ -60,6 +60,38 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
+## Current native-read publication / hosted gate (2026-10-18)
+
+Source d98ea2ff2ec9cc72b55458190d657bb53642d227 pushed on
+codex/native-manifest-reads from local feature9ed5765 + accepted reader7c2b454.
+Clean exactremote/all257 committed/runtime hashes verified; PUBLIC retained and
+main1a93b5f unchanged. Own run39176574738 attempt1 currently in progress:
+Windows117820371735, Linux117820371839, book117820371587.
+Watch24055 -> /tmp/s3drive-native-manifest-d98-watch.log; resume same handle.
+Both rust jobs explicitly include Verify native manifest ranges and remount.
+Do not borrow older native artifacts or claim mounted chunks before own controls
+pass. On success: all3 terminal source-bound jobs, own rawlog review, own finalized
+Windows reference artifactIDs/API digests/typed21+14/projectoracles/raw35, plus
+new named native test success on BOTH platforms. On failure preserve cohort and
+diagnose before fresh source. No own rawreview/hosted acceptance yet.
+Runtime257 remains frozen in/tmp/s3drive-native-manifest-v3-frozen.json.
+
+Local fullgate3 session58981 CLOSED EXIT0, RUST_TEST_THREADS2, all257 unchanged:
+12publication+6reader/1nativeignored+62S3+365state/1ignored+69docfiles/65chapters,
+fmt/clippy/build. 27member local archive114301bytes SHA
+138761972263bdf707c249fccf8954a4766a1e4497153ff2b796fd4e71f2a2a6;
+all indexed members verified. Gate1TLSsetupcause stillunproven; gate2serial-libtest
+marker framing proven withnegative/positivecontrols and repaired fixture newlines,
+without relaxed deadlines/assertions or productiontransport/writer changes.
+Explicit local native attempt failed FUSEreadiness OperationNotPermitted under
+NoNewPrivs1; ownedchildreaped/noFUSEleft. No root bypass or provider mutation.
+
+After native acceptance, chunk writes remain: implementation-plan.md records
+legacylogical8MiB/rejectedmanifestbase and full-snapshot planner boundaries.
+Do not pretend raising8MiB enables bounded/reusing writes. No such API implemented.
+Primary253controller and acceptedreader256 remain unchanged. GoalACTIVE/PUBLIC.
+This current section supersedes historical pending/publication notes below.
+
 ## Native local gate passed; publication next (2026-10-18)
 
 Worktree /home/marshall/src/worktrees/s3drive-native-manifest-reads,

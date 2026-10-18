@@ -207,5 +207,36 @@
     "members": 27,
     "all_indexed_members_verified": true,
     "acceptance": "portable local gate only; explicit local native attempt failed at FUSE readiness"
-  }
+  },
+  "publication": {
+    "source": "d98ea2ff2ec9cc72b55458190d657bb53642d227",
+    "clean": true,
+    "remote": "d98ea2ff2ec9cc72b55458190d657bb53642d227",
+    "visibility": "PUBLIC",
+    "main_unchanged": "1a93b5f7248892fec96dc8da4438ee7967692e77",
+    "run_id": 39176574738,
+    "run_attempt": 1,
+    "jobs": [
+      {
+        "id": 117820371587,
+        "name": "book",
+        "status": "in_progress",
+        "conclusion": null
+      },
+      {
+        "id": 117820371735,
+        "name": "rust (windows-latest)",
+        "status": "in_progress",
+        "conclusion": null
+      },
+      {
+        "id": 117820371839,
+        "name": "rust (ubuntu-latest)",
+        "status": "in_progress",
+        "conclusion": null
+      }
+    ],
+    "explicit_native_step_in_both_rust_jobs": true
+  },
+  "hosted_acceptance": "pending; own real native manifest steps present on both platforms"
 }

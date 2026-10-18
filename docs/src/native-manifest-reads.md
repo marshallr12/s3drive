@@ -97,3 +97,11 @@ The [27-member indexed local archive](evidence/native-manifest-reads-local-20261
 retains the final gate, both earlier failures, marker proof, exact source and
 self-review. Every indexed member was verified. Archive SHA-256:
 `138761972263bdf707c249fccf8954a4766a1e4497153ff2b796fd4e71f2a2a6`.
+
+
+Published source `d98ea2f` is on `codex/native-manifest-reads`. Its
+[own Linux/Windows/book run](https://github.com/marshallr12/s3drive/actions/runs/39176574738)
+is running, with the real native manifest control explicitly present in both
+Rust jobs. The clean exact remote and all 257 source hashes were verified;
+repository visibility remains PUBLIC and main is unchanged. No own hosted/native
+acceptance is claimed until its logs and source-bound artifacts are reviewed.
