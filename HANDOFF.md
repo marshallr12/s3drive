@@ -25,164 +25,164 @@ Two CLI tests and nine filtered state cases passed. Full root gate PASSED exit0
 at /tmp/s3drive-snapshot-gate1.log:274 state, two new CLI, ten HTTP, six TLS,
 17 SDK, seven managed cases and lint/build/57-doc checks. No Windows/snapshot
 platform acceptance yet. Diagnostic focused two I/O/Hyper shutdown cases PASSED
-/tmp/s3drive-transport-shutdown-tests1.log. Final diagnostic full gate PASSED exit0 at
-/tmp/s3drive-transport-shutdown-gate1.log:265 state, two I/O/Hyper cases, ten HTTP,
-six TLS, seven restart/worker,17 SDK, seven managed and lint/build/57-doc checks.
-Later PS-only read-only priority logging has AST/policy verification separately;
-no priority setting, deadline, retry or TLS behavior changed. The book records
-Microsoft's default-priority/inheritance contracts only as an unmeasured hypothesis.
-Root snapshot prototype is local unpushed defc8b9; do not reset or publish it before
-its own platform acceptance. Next privately push this locally green diagnostic
-checkpoint and inspect exact-source Windows classification/native/startup results. Require local full gate, exact-source hosted native/startup logs and
+/tmp/s3drive-transport-shutdown-tests1.log. The final diagnostic full gate is next
+at /tmp/s3drive-transport-shutdown-gate1.log; preserve its live handle if yielded. Require local full gate, exact-source hosted native/startup logs and
 strict21/14 artifacts before any guarded main fast-forward. Repo remains PRIVATE.
 No provider/user startup/root/hosting changes authorized.
 
 RCA worktree /home/marshall/src/s3drive-windows-transport is based exactly on
 main, branch codex/windows-transport-followup. Root codex/authority-snapshots
-retains unpublished snapshot prototype and accepted-status docs. Seven snapshot
-library tests and cargo check passed; Clippy found two test-only style issues
-(corrected, recheck pending). No snapshot CLI/full gate/Windows acceptance yet.
+retains unpublished snapshot prototype and accepted-status docs. Nine filtered
+snapshot tests passed (eight cases plus a guarded worker), including eight real
+killed-process boundaries and exact schema8 receipt bytes. State Clippy passed.
+Experimental snapshot CLI/two integration cases now pass; full gate/Windows
+acceptance remain. Root57-doc links/build/tests
+passed in /tmp/s3drive-snapshot-prototype-book{,-tests}.log; final upstream
+research paragraph links/build passed in prototype-book2.log.
 No provider, real user startup, root or hosting mutations authorized.
 
-The diagnostic candidate implements bounded plaintext byte/flush/header-dispatch
-observations and fixed client request categories, plus early real CLI/TLS churn.
-The final local gate passed; next privately push and observe exact-source CI. Require exact-source full local/hosted gates,
-raw native/startup logs and strict21/14 artifacts before any new main promotion.
-Do not report the transport regression fixed without causal evidence.
+Diagnostic checkpoint9b403bb5cb3f7398934d074d12bde5068215350d is privately pushed
+from the clean RCA worktree. Final full local gate PASSED exit0 at
+/tmp/s3drive-transport-gate1.log:265 state, ten HTTP, six TLS, one I/O wrapper,
+seven restart/worker,17 SDK, seven managed cases and lint/build/57-doc checks.
+Focused /tmp/s3drive-transport-cli1.log passed both real CLI/TLS cases. No
+production timeout/retry/TLS changes. CI39095464132 is terminal FAILED as recorded above. Book117580869021 and Linux
+117580869237 are terminal SUCCESS. Raw /tmp/s3drive-transport-linux1.log confirms
+all8 native cases, paired PASS04:05:50UTC, ordinary startup and both HTTP/TLS
+coordinator profiles. Windows117580869114 passed early TLS/replacement/native lifecycle, then failed
+workspace's blanket no-server-error assertion after all client validations.
+Later startup/pair/broad steps were skipped; full acceptance remains pending.
+Main stays a7994e6; no promotion. Follow up with typed shutdown diagnostics as
+recorded above, not an unchanged rerun. Repository PRIVATE verified after push.
+No claim that the diagnostic checkpoint fixes the unexplained transport issue.
+The root-only upstream cross-check in docs/src/authority-startup.md and dated
+windows-tls-upstream-20261018.json records Rustls EOF semantics and the already
+present Hyper4143 flush guard; neither establishes cause. Keep for the next
+substantive checkpoint, with no docs-only native CI cycle.
 
-## Independent backup research while CI runs
 
-See docs/src/authority-backup-recovery.md. Primary SQLite backup/API/VACUUM/
-WAL/corruption sources were checked2026-10-17. The isolated CLI/SQLite experiment
-at7962058 observed a valid sequence0 snapshot accepting the original volume pin
-after sequence1 had been acknowledged; that operation was absent in the older
-copy. Only one authority ran at a time, no S3 or actual user state was touched.
-Dated JSON and Linux-only historical reproducer are in docs/src/evidence; the
-reproducer was rerun successfully, not added to the gate as an oracle requiring
-unsafe behavior. Runtime proof /tmp/s3drive-backup-boundary-research.json.
+## Accepted coordinator-startup checkpoint
 
-This establishes a boundary, not an implemented restore feature. The proposal
-requires private complete snapshots, quarantine, then separately proved history
-continuity and external fencing before writable restore/failover. Generations
-alone do not recover lost acknowledged metadata. No real backups, hosting or
-accounts provisioned. Security page's obsolete loopback-only claim was corrected
-to implemented HTTPS/one-owner volume token and remaining deployment gaps.
+Private local/remote main was fast-forwarded from712882e to a7994e6 only after
+terminal all-green CI39090568625, raw log inspection and strict typed21/14
+artifact verification. Privacy and exact main SHA were verified after push.
+Linux117566235370, Windows117566235393, book117566235255. This is the accepted
+source, not an unpushed candidate. Proof /tmp/s3drive-authority-startup-publication.json;
+durable record docs/src/evidence/authority-startup-20261017.json (currently local,
+with accepted-status documentation, for the next substantive diagnostic commit).
 
-## Current implementation and invariants
+Raw logs: /tmp/s3drive-wire-fixture-{linux,windows,book}.log. Local full gate
+/tmp/s3drive-wire-fixture-gate1.log exit0:265 state, ten HTTP, six TLS,17 SDK,
+five CLI restart/worker, seven managed cases and lint/build/57-doc checks.
+Hosted state counts265/261. Native Linux8 and Windows lifecycle1+broader7 passed.
 
-- Schema23/config7, no dependency/protocol changes. Existing-only ownership
-  refuses absent directory/lock/DB; inspect validates app/schema8..23, original
-  volume/policy/root in ordinary WAL. It does not assert immutable URI state.
-  Operational WAL/SHM may change. Recheck inside migration transaction before
-  migrations or intent recovery; omit SQLite CREATE and namespace initialization.
-- CLI authority-check is offline/exclusive, stable nonzero port, no provider
-  access; authority-serve --expect-volume pins supervised restart. Explicit
-  unpinned bootstrap remains separate. Preserve exact operation bytes/IDs,
-  dirty data and explicit conflicts; never fall back to fresh volume/overwrite.
-- Separate per-account Mount v1 and Authority v2 startup registrations. Linux
-  no-systemd desktop/profile hooks and private atomic runtime hints for both
-  roles. PID files are hints only; production signals its own Popen child.
-- Windows Run-Child is under one Run-Mount supervisor/lock for four attempts,
- 10-second interruptible backoff. Stop/normal exit terminates. Only own Process
-  handles receive stdin close; no hard kill/PID signalling. Task Scheduler
-  restart properties remain secondary, unverified launcher policy.
-- Windows recovery test requires fresh child under SAME supervisor, unchanged
-  original volume and exact receipts, without Start. Bounded runtime-hint poll
-  avoids reading a partially updated hint. Caller/client profiles are explicit;
-  S3DRIVE_NATIVE_MANAGED_EXECUTABLE points to copied test binary, no Rust env
-  mutation. Credentials are known dummy values created by the disposable user.
-- Paired Windows helper copies only config/policy/plan/report, rebases local
-  paths, privately seeds both stores via real CLI/publisher, generates config6,
-  tracks both mountpoints/all task actions and disposes private DBs as owner.
-  Live FileStream uncertainty/recovery/rival conflict/removal are full required
-  assertions. CheckConflict proves head!=settled and actual staged conflict
-  bytes, not fabricated logical_conflicts retention acknowledgment.
-- Existing rename diagnostics log typed error and relevant test request/outcome/
-  node context, no config/credentials. No retries/weaker native assertions.
+Both no-systemd Linux HTTP/TLS supervisor profiles passed; paired FUSE PASS at
+02:42:05UTC. Windows standalone coordinator PASS02:55:22UTC and full managed pair
+PASS02:56:55UTC. Raw output shows supervisor4568 retained while child7768→8416,
+original volume/receipt and different logon AuthenticationIds. Managed pair kept
+supervisor6004 while authority child3648→8828, real FileStream Unicode/binary/
+empty reads, lost-response/offline flush, exact physical/logical unknown IDs,
+no repeated PUT, dirty rival conflict and independent removal. Private staged
+bytes were reopened via production journal checks. No fabricated retention ack.
 
-## Earlier startup evidence (historical)
+Artifacts12123120389(replacement21)/12123325993(disposition14) matched source
+and platform and every typed field, plus four pinned upstream legacy cases.
+Local copies /tmp/s3drive-a799-artifacts; checker /tmp/s3drive-a799-reference-check.ps1
+passed project oracles and independent recursive typed comparison. Windows is
+Server2025/WinFsp2.1.25156.ddca7bd. Locked fixture profiles were deferred ONLY
+after all assertions/no owned processes/dummy credential removal under the
+explicit ephemeral-VM rule. No workstation profile/startup was installed.
 
-Accepted main baseline: terminal all-green CI39079281204; Linux117532750921,
-Windows117532751106, book117532751123, strict21/14 source/platform artifacts
-12118596192/12118656792. Proof /tmp/s3drive-bootstrap-publication.json.
+Main publication's same-source duplicate CI39092631904 is now terminal FAILED
+in paired Windows seed before mounting; see current priority above. Do not
+confuse this with accepted terminal39090568625 or claim repeatable reliability.
+The accepted-status record now includes both results.
 
-Full local gate /tmp/s3drive-windows-paired-gate1.log completed exit0 before
-PS-only child-loop correction:265 state,10 HTTP,5 TLS,17 SDK,5 restart/worker
-CLI,7 managed cases, format/Clippy/build/56-doc checks. This is parent evidence;
-the current diagnostic follow-up changed shared Rust TLS/wire code.
-Four real-child policy/lock/budget/Stop cases passed
-/tmp/s3drive-windows-supervisor-policy1.log. AST of PS files and extracted account
-worker passed. Portable live CLI/SDK/TLS/killed-authority/unknown-request/conflict
-fixture passed /tmp/s3drive-windows-paired-portable2.log (portable1 failed only
-an incorrect assumption that logical_conflicts is automatically populated).
-Linux HTTP/private-CA TLS supervisor regression passed again25.74sec at
-/tmp/s3drive-windows-paired-linux-helper.log.
+## What is and is not established
 
-**Paired Linux native passed** at e48cb099d087ab1d15d629905200e5b44e11fcf3,
-job117553539182/run39086319069. Raw /tmp/s3drive-paired-linux-accepted1.log
-explicitly records full paired FUSE PASS, eight native cases and both HTTP/TLS
-supervisor profiles. Both login hooks, tmux launcher loss, exact physical/logical
-unknown IDs/no repeated PUT, actual binary/Unicode/empty/second-store bytes,
-coordinator crashes, dirty rival conflict, journal reopening and independent
-removal passed. Runtime file fix and all Linux code are unchanged in ce784;
-the current ce784 Linux117555117517 also completed SUCCESS: all8 native
-cases, paired PASS at01:39:46UTC and both HTTP/TLS supervisor profiles. Raw
-/tmp/s3drive-paired-linux-ce784.log. The e48 Windows117553539419 job is now
-terminal FAILED: the same100-second killed-child recovery timeout under
-Scheduler-only supervision, after working TLS/independent logons/duplicates.
-Raw /tmp/s3drive-windows-e48-runtime.log confirms exit-1/action4294967295.
-It predates ce784's child-loop correction; do not promote e48.
+Schema23/config7; source dependencies/protocol unchanged by this phase.
+Existing-only Rust ownership/inspection refuses missing, wrong, client, corrupt
+or future/foreign state before migrations/recovery/listening. It validates WAL
+and schema8..23 root/identity, rechecks inside the write transaction and never
+initializes a replacement namespace. authority-check is offline/exclusive;
+authority-serve --expect-volume pins restart, not history freshness.
 
-## Failure history that still matters
+Separate Mountv1/Authorityv2 per-account supervisors preserve original state.
+Linux private detached ownership/runtime hints require no systemd. Windows
+holds one supervisor/lock through four child attempts with10-second interruptible
+backoff; signals its own Process only. Scheduler retry settings remain secondary,
+unverified launcher behavior. Status/lock/PID hints are not provider health.
 
-- be0d996 /39083244133 terminal all-green (old Windows Mount tests only).
-  Raw /tmp/s3drive-authority-startup-checkpoint-{linux,windows}.log.
-- 8ce3ddc /39083840521 terminal failed: Windows117546161016 native1117 on
-  cross-store rename. /tmp/s3drive-windows-authority-native1.log.
-- d67a17d /39084297874 terminal failed: Linux117547531601 exact naming rejected
-  writable bootstrap (fixed portable+guarded rename, portable prep passed);
-  Windows117547531749 dirty-source replacement native1117 plus authority
-  transport failure. /tmp/s3drive-authority-paired-linux1.log and
-  /tmp/s3drive-windows-authority-native2.log. Both rename failures remain
-  unexplained; later passing native suite is not a reason to label them flaky.
-- 56a2abe /39084754318 terminal failed: Linux117548875680 Mount runtime.json
-  missing (fixed; subsequent paired native passed). Windows117548875636 passed
-  broad native suite plus Authority install/TLS/independent logons/duplicates,
-  but failed child restart in100s. Log /tmp/s3drive-windows-authority-runtime1.log
-  shows exit-1, Scheduler events201/102 completed with4294967295 and no retry;
-  later profile sharing violation was cleanup, NOT the primary failure. This
-  directly caused ce784 bounded-child-loop correction. Native rerun pending.
+Earlier transport failures are NOT claimed fixed. ce784e4/39086854659 failed
+AuthorityProbe Info while its supervisor stayed running; raw
+/tmp/s3drive-windows-ce784-runtime.log. 8ce3ddc/39083840521 and
+d67a17d/39084297874 failed distinct native renames with1117; raw
+/tmp/s3drive-windows-authority-native{1,2}.log. 7962058/39089283961 failed the new
+TLS TruncatedBody fixture with a request timeout/unlabeled header EOF; raw
+/tmp/s3drive-wire-diagnostics-windows.log. a7994e6 prebuilds synchronous setup
+on blocking workers before any deadlines, retaining six concurrent exchanges,
+all expectations/deadlines, per-case stage/timing/header counts and joined
+fixture completion. Its matrix passed both OSes, without attributing a root
+cause to the old failures. Safe WireError/server categories exclude private
+input and retain no dependency error strings; server events are capped16+notice.
+The accepted native read-only suite's ConnectTimeout is deliberate after its
+coordinator stop (support/managed.rs); pinned old data remains readable.
 
-## Next actions and publication
+Physical reboot/PAM/SSH, Windows10/11, real multi-host partitions, managed Wasabi
+write acceptance, backup/restore/failover, large files and packaging remain work.
+The goal is NOT complete. Keep SQLite-host and optional Turso choices open.
+No hosting/credentials/root/real user startup changes or new Wasabi mutations
+are authorized by this checkpoint. Prior exact provider approvals were consumed
+and cleaned. Workstation NoNewPrivs1 must not be bypassed for FUSE.
 
-Current diagnostic source is in this clean worktree. State check passed and
-focused authority tests passed (one I/O pass-through, ten HTTP, six TLS). Two
-real CLI/TLS cases passed: idle/partial header/partial body classifications and
-16 registrations/64 exact-plan observations/128 concurrent Info requests. Logs:
-/tmp/s3drive-transport-{check1,authority1,cli1}.log. Final full local gate PASSED exit0 at /tmp/s3drive-transport-gate1.log:
-265 state, one I/O pass-through, ten HTTP, six TLS, seven restart/worker,
-17 SDK, seven managed cases, format/Clippy/build and57-doc checks.
+## Unpublished snapshot prototype (parked while Windows RCA runs)
 
-Privately push the diagnostic candidate and observe the new
-exact-source Windows early focus test and unchanged full native/startup gates.
-Classify any failure by request kind, plaintext byte counts and dispatch flag.
-Do not treat an unexplained passing run as proof of a production fix. Keep full
-paired Linux/Windows native recovery, exact unknown IDs, dirty bytes/conflicts
-and all existing assertions. Retrieve completed job logs via
-`gh api --allow-escape-sequences repos/marshallr12/s3drive/actions/jobs/JOB/logs`.
-A live job log404 or observer timeout is not a stopped job; re-poll that handle.
+Root codex/authority-snapshots retains source/evidence/docs edits; do not reset
+or merge these into the clean diagnostic candidate. Current library prototype
+is crates/s3drive-state/src/authority_snapshot{.rs,/native.rs}, with additive
+SnapshotDirectory helpers in directory.rs and Linux/Windows boundary modules.
+Root Cargo.toml enables rusqlite backup/hooks/limits in addition to bundled;
+no dependency versions changed. Experimental authority-snapshot create|inspect CLI is now present locally;
+no restore CLI is exposed.
 
-Main is a7994e6. Require terminal exact-tip all-three CI, raw native/startup logs
-and strict typed21/14 source/platform artifacts before another guarded private
-fast-forward. Privacy has drifted before; verify before and after publication.
-No force pushes. Preserve root snapshot prototype, dirty user configuration,
-original operation plans and journals. No new Wasabi mutations, actual user
-startup, credentials/hosting/Turso setup or root/workstation changes authorized.
-Earlier provider fixture approvals were consumed/cleaned. NoNewPrivs=1 on the
-workstation must not be bypassed; native Windows is hosted Server2025/WinFsp2.1.
-The full goal still requires physical reboot/PAM/SSH, Windows10/11, independent
-hosts/partitions, backup/failover, managed provider acceptance, large files and
-packaging. Hosting stays undecided with SQLite-host/optional Turso open.
+The prototype uses safe incremental32-page Backup steps under an existing-only
+exclusive source owner and read transaction, bounded SQL/copy/hash work, size/
+time/cancellation controls, destination reopen/integrity/identity checks and
+manifest-last publication. Snapshot filenames differ from live state; integrity
+never grants freshness/restore. No raw SQLite FFI. Resolved libsqlite3-sys0.38.2
+sqlite3.c85230–85345 establishes checked DONE after commit and finish maps DONE
+to OK; the dated source fingerprints are in the book/evidence. Never raw-open/
+close a DB file while its SQLite connection is live (POSIX locks). Destination
+identity rechecks/hash occur before opening or after closing SQLite.
+
+Latest focused proof /tmp/s3drive-snapshot-tests4.log: nine filtered tests passed
+(eight cases plus a guarded subprocess worker), including WAL-only commit,
+current and actual schema8 with byte-identical pretty-printed receipts, real
+SQLITE_FULL, eight injected cancellations and eight killed-process boundaries,
+private modes/links/nested aliases and strict manifest/digest checks. Process
+death does not prove power-loss durability. Latest state all-target Clippy
+PASSED /tmp/s3drive-snapshot-clippy3.log; state check passed earlier. The deadline
+fault now uses public-entry normalization, so slow pre-hook validation remains
+classified Deadline. Resolved Windows0.61.3 file identity signature inspected.
+
+Experimental CLI module crates/s3drive-cli/src/snapshot.rs adds bounded offline
+create/inspect with mandatory volume/policy, no provider/token inputs and no
+restore command. It runs on spawn_blocking; Ctrl+C sets cooperative cancellation
+and awaits completion (actual console-signal tests pending). Initial CLI check
+passed with a field-only warning, corrected by reading the typed error in
+Display. Two actual subprocess round-trip/refusal tests PASSED
+/tmp/s3drive-snapshot-cli-tests1.log. They cover Unicode private paths, exact
+receipts, active/wrong/missing/client sources, limits, non-replacing/nested output,
+corrupt manifests, redaction and non-bootable artifact role. Full root gate passed as recorded above; platform acceptance remains.
+
+Required next once RCA permits: broader failure/
+busy/permission and actual ordinary-account Windows ACL/reparse/handle checks;
+full gate and source-bound native/reference/startup acceptance. Writer-version
+field currently has only nonempty/length validation. Snapshots lack full semantic
+history audit, external freshness witness, restore/failover and independent-host
+acceptance. Do not call this phase complete or automatically enable restoration.
+The historical sequence0 rollback experiment remains evidence that the volume
+pin alone cannot recover lost acknowledged history. No real state/S3 touched.
 
 ## Prior owned-target replacement checkpoint
 

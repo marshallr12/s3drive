@@ -1,0 +1,24 @@
+{
+  "research_date": "2026-10-17 America/New_York",
+  "package": "rusqlite",
+  "version": "0.40.2",
+  "source_file": "src/backup.rs",
+  "source_sha256": "595d5bc77e3a720791760a3ea61a8cd246a0ad134a317e03030a259ef069eb20",
+  "cargo_package_checksum": "23f2a97da3e3873c73cb2a2e71b35c40ff95e0b1eefa8d72d8499a6928c3b5b3",
+  "public_backup_methods": [
+    "new",
+    "new_with_names",
+    "progress",
+    "step",
+    "run_to_completion"
+  ],
+  "observations": [
+    "Backup::new borrows source &Connection and destination &mut Connection",
+    "step exposes More, Busy, Locked and Done separately from permanent errors",
+    "run_to_completion retries and sleeps without an overall deadline",
+    "Drop calls sqlite3_backup_finish and discards its return code; no public finish method in this version",
+    "Current workspace enables bundled but not backup feature"
+  ],
+  "documentation_lookup": "docs.rs source endpoint was unavailable to the web tool; these observations come from the resolved local Cargo source",
+  "implementation_status": "No snapshot mechanism chosen or implemented; inspect SQLite completion guarantees before relying on wrapper cleanup"
+}

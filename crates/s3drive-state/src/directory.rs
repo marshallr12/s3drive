@@ -146,6 +146,13 @@ impl OwnedDirectory {
     }
 
     #[cfg(any(target_os = "linux", windows))]
+    fn root_file(&self) -> Result<&File> {
+        self._directories
+            .last()
+            .ok_or_else(|| "missing owned root".into())
+    }
+
+    #[cfg(any(target_os = "linux", windows))]
     pub(crate) fn finish_initialization(&self) -> Result<()> {
         // Recheck SQLite-created sidecars as well as preexisting files. The
         // connection has now established application/schema ownership.
@@ -167,6 +174,143 @@ impl OwnedDirectory {
     #[cfg(not(any(target_os = "linux", windows)))]
     pub(crate) fn finish_initialization(&self) -> Result<()> {
         Err("managed local state is supported on Linux and Windows only".into())
+    }
+}
+
+/// A separate, non-bootable artifact role. Creation NEVER adopts an existing
+/// directory; inspection requires its existing marker and completed manifest.
+#[cfg(any(target_os = "linux", windows))]
+pub(crate) struct SnapshotDirectory {
+    path: PathBuf,
+    pub(crate) database: File,
+    _lock: DirectoryLock,
+    _directories: Vec<File>,
+}
+#[cfg(any(target_os = "linux", windows))]
+impl SnapshotDirectory {
+    pub(crate) const DATABASE: &'static str = "snapshot.sqlite3";
+    const LOCK: &'static str = "snapshot.lock";
+    const MANIFEST: &'static str = "snapshot.json";
+
+    pub(crate) fn create(path: &Path, source: &OwnedDirectory) -> Result<Self> {
+        Self::acquire(path, Some(source))
+    }
+    pub(crate) fn inspect(path: &Path) -> Result<Self> {
+        Self::acquire(path, None)
+    }
+    fn acquire(path: &Path, source: Option<&OwnedDirectory>) -> Result<Self> {
+        if path.as_os_str().as_encoded_bytes().contains(&0)
+            || path.components().any(|c| matches!(c, Component::ParentDir))
+        {
+            return Err("invalid snapshot path".into());
+        }
+        let path = std::path::absolute(path)?;
+        let parent = path.parent().ok_or("missing snapshot parent")?;
+        let mut directories = platform::hold_parents(parent)?;
+        platform::verify_local(directories.last().ok_or("missing snapshot parent")?, parent)?;
+        if let Some(source) = source {
+            // Compare actual handles, including Windows case/short-name aliases.
+            for ancestor in &directories {
+                if platform::same_file(ancestor, source.root_file()?)? {
+                    return Err("snapshot output must be outside authority state".into());
+                }
+            }
+            platform::create_new_directory(&path)?;
+        }
+        let root = platform::open_directory(&path)?;
+        platform::verify_private(&root, true)?;
+        platform::verify_local(&root, &path)?;
+        #[cfg(target_os = "linux")]
+        platform::verify_persistent(&root)?;
+        directories.push(root);
+        for entry in fs::read_dir(&path)? {
+            let name = entry?.file_name();
+            if ![Self::LOCK, Self::DATABASE, Self::MANIFEST]
+                .iter()
+                .any(|n| name == *n)
+            {
+                return Err("snapshot contains an unexpected or recovery entry".into());
+            }
+        }
+        let lock = if source.is_some() {
+            platform::open_new_file(&path.join(Self::LOCK))?
+        } else {
+            platform::open_file(&path.join(Self::LOCK), false)?
+        };
+        Self::strict_file(&lock)?;
+        lock.try_lock()?;
+        let lock = DirectoryLock(lock);
+        let database = if source.is_some() {
+            platform::open_new_file(&path.join(Self::DATABASE))?
+        } else {
+            let manifest = platform::open_read_file(&path.join(Self::MANIFEST))?;
+            Self::strict_file(&manifest)?;
+            platform::open_read_file(&path.join(Self::DATABASE))?
+        };
+        Self::strict_file(&database)?;
+        Ok(Self {
+            path,
+            database,
+            _lock: lock,
+            _directories: directories,
+        })
+    }
+    fn strict_file(file: &File) -> Result<()> {
+        platform::verify_private(file, false)?;
+        #[cfg(target_os = "linux")]
+        {
+            use std::os::unix::fs::MetadataExt;
+            if file.metadata()?.mode() & 0o077 != 0 {
+                return Err("snapshot file permits access by another account".into());
+            }
+        }
+        Ok(())
+    }
+    pub(crate) fn database_path(&self) -> PathBuf {
+        self.path.join(Self::DATABASE)
+    }
+    pub(crate) fn recheck_database(&self) -> Result<()> {
+        let file = platform::open_read_file(&self.database_path())?;
+        Self::strict_file(&file)?;
+        if !platform::same_file(&file, &self.database)? {
+            return Err("snapshot database identity changed".into());
+        }
+        Ok(())
+    }
+    pub(crate) fn read_manifest(&self) -> Result<Vec<u8>> {
+        use std::io::Read;
+        let mut file = platform::open_read_file(&self.path.join(Self::MANIFEST))?;
+        Self::strict_file(&file)?;
+        let mut bytes = Vec::new();
+        Read::by_ref(&mut file)
+            .take(65_537)
+            .read_to_end(&mut bytes)?;
+        if bytes.len() > 65_536 {
+            return Err("snapshot manifest exceeds limit".into());
+        }
+        Ok(bytes)
+    }
+    pub(crate) fn write_manifest(
+        &self,
+        bytes: &[u8],
+        written: impl FnOnce() -> Result<()>,
+    ) -> Result<()> {
+        use std::io::Write;
+        if bytes.len() > 65_536 {
+            return Err("snapshot manifest exceeds limit".into());
+        }
+        let mut file = platform::open_new_file(&self.path.join(Self::MANIFEST))?;
+        Self::strict_file(&file)?;
+        file.write_all(bytes)?;
+        written()?;
+        file.sync_all()?;
+        #[cfg(target_os = "linux")]
+        {
+            for directory in self._directories.iter().rev().take(2) {
+                directory.sync_all()?;
+            }
+        }
+        Ok(())
     }
 }
 

@@ -37,6 +37,32 @@ pub(super) fn create_directory(path: &Path) -> Result<()> {
     }
 }
 
+pub(super) fn create_new_directory(path: &Path) -> Result<()> {
+    Ok(fs::DirBuilder::new().mode(0o700).create(path)?)
+}
+
+pub(super) fn open_new_file(path: &Path) -> Result<File> {
+    Ok(OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK)
+        .open(path)?)
+}
+pub(super) fn open_read_file(path: &Path) -> Result<File> {
+    Ok(OpenOptions::new()
+        .read(true)
+        .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK)
+        .open(path)?)
+}
+
+pub(super) fn same_file(left: &File, right: &File) -> Result<bool> {
+    let a = left.metadata()?;
+    let b = right.metadata()?;
+    Ok(a.dev() == b.dev() && a.ino() == b.ino())
+}
+
 pub(super) fn open_directory(path: &Path) -> Result<File> {
     Ok(OpenOptions::new()
         .read(true)

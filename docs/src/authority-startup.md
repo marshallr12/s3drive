@@ -120,6 +120,22 @@ The transport error seen in the accepted read-only native suite occurs after
 its deliberate coordinator stop; it proves new opens fail while an existing
 verified handle remains readable, not an unexplained healthy-service failure.
 
+## Upstream cross-check (2026-10-18)
+
+The [Rustls0.23.46 manual](https://github.com/rustls/rustls/blob/v/0.23.46/rustls/src/manual/howto.rs)
+explains that TCP EOF without TLS close-notify may appear as UnexpectedEof.
+That error alone cannot locate the original stall or prove a mutation's outcome.
+Treating it as successful application completion would require complete framing
+and a valid reply; the failed store-apply has neither established. This is an
+interpretation of the observed error, not an attributed root cause.
+
+[Hyper4143](https://github.com/hyperium/hyper/pull/4143) fixed a historical
+HTTP/1 chunk-terminator flush race. The resolved Hyper1.12.0 dispatch source
+already contains the buffered-write flush before yielding. Its described
+response-body stall is not evidence explaining this request/header timeout.
+No dependency, retry, deadline or TLS changes follow from this cross-check.
+Primary sources read2026-10-18; [resolved-source fingerprints](evidence/windows-tls-upstream-20261018.json).
+
 ## Diagnostic candidate9b403bb result (2026-10-18)
 
 [CI39095464132](https://github.com/marshallr12/s3drive/actions/runs/39095464132)

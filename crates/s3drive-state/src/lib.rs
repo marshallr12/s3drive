@@ -1,6 +1,7 @@
 //! Private SQLite state, clean cache and local staged-generation journal.
 //! Never place this database on the S3-backed mount.
 
+pub mod authority_snapshot;
 pub mod cache;
 mod directory;
 pub use directory::{create_private_document, create_private_secret, read_private_secret};

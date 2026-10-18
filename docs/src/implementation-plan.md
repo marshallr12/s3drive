@@ -782,3 +782,47 @@ category and permits only that phase after independent complete replies, with
 positive exchange counters. A deterministic Hyper-driver fault test covers the
 boundary; no deadlines, retries, native assertions or TLS policy change. Require
 new exact-source Windows evidence before attributing the old event or promoting.
+
+#### P6m4d1 — private offline snapshots and inspection (prototype; acceptance pending)
+
+Unpublished branch `codex/authority-snapshots`, based on a7994e6, now has an
+experimental library and platform directory helpers. This is the first stage
+of the full recovery contract, not writable restoration/failover. Experimental
+`authority-snapshot create|inspect` commands now exist locally; no restore is
+implemented. Windows transport RCA takes publication priority.
+
+Local2026-10-18 evidence: state check/Clippy passed; nine filtered tests passed
+(eight cases plus a guarded worker), covering actual WAL-only data, schema8
+byte-identical operation/receipt blobs, real SQLITE_FULL, cancellation and eight
+killed-process boundaries through copying/validation/data/manifest publication.
+Partials refuse inspection; complete bytes remain non-bootable and inspection
+reports neither history continuity nor restore authorization. Process crashes
+are not power-loss proof. Two real local CLI round-trip/refusal cases passed,
+with explicit identity, new output, private errors and no restore authorization.
+The full local gate passed (274 state plus CLI/lint/build/57-doc checks);
+Windows ACL/native acceptance remains.
+
+Require exclusive existing-authority ownership and explicit volume/policy pin;
+read supported legacy/current state without migrations or namespace changes.
+Produce a new private artifact outside mounted trees, with a database filename
+and manifest distinct from live authority state. Never overwrite an existing
+artifact or source. Read inventory/sequence from the completed destination;
+bind complete bytes to strict versioned metadata, then publish success only
+after validation and required synchronization. Failures leave recognizable
+partial output and preserve the original database and previous snapshots.
+
+An offline inspector must verify ownership/links, format, digest/length,
+application/schema, original identity/policy/root and standalone SQLite
+integrity without modifying originals, starting listeners, reading credentials
+or granting permission to serve. Snapshot integrity is not freshness proof.
+Keep restoration/promotion unsupported until continuity and fencing pass.
+
+Inspect the actual SQLite/rusqlite snapshot and completion contracts before
+choosing the mechanism; use bounded work/cancellation and no raw FFI workaround.
+Test WAL-only commits/receipts, schema8 and current state, competing/live owners,
+corruption/foreign/client/future schemas, Unicode paths, retained exact operation
+bytes and private ACL/link/path refusal. Force failure/crash at creation, copy,
+validation, synchronization and completion publication; no false success or
+replacement. Require real CLI round trips, the full local gate, actual Windows
+file/ACL behavior and existing native/reference/startup regressions before
+publication. Real deployment restore drills remain separate.

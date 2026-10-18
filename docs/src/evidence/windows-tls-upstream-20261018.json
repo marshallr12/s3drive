@@ -1,0 +1,31 @@
+{
+  "research_date_local": "2026-10-18",
+  "candidate": "9b403bb5cb3f7398934d074d12bde5068215350d",
+  "context": "Classified Windows investigation; not proof of a fix",
+  "sources": [
+    {
+      "url": "https://github.com/rustls/rustls/blob/v/0.23.46/rustls/src/manual/howto.rs",
+      "finding": "UnexpectedEof can mean TCP EOF without TLS close_notify; it does not locate the original stall or prove a request/commit."
+    },
+    {
+      "url": "https://github.com/hyperium/hyper/pull/4143",
+      "finding": "Historical HTTP/1 chunk terminator flush regression; the resolved Hyper source already has the buffered-write flush before yielding. Not a demonstrated cause of this header timeout."
+    }
+  ],
+  "resolved_sources": [
+    {
+      "path": "rustls-0.23.46/src/manual/howto.rs",
+      "sha256": "df03dcc9abd0e8c11c13573680d43c84fd92876e4b128fb8bd881a58e07a0ae2",
+      "line_start": 42,
+      "line_end": 54
+    },
+    {
+      "path": "hyper-1.12.0/src/proto/h1/dispatch.rs",
+      "sha256": "9cd6638c59ae4857ae43ee58857abf585cc6a52dfda616c3631e2e48c02eaba2",
+      "line_start": 199,
+      "line_end": 218
+    }
+  ],
+  "changes_to_retries_deadlines_tls_or_dependencies": false,
+  "interpretation": "Wait for request category, byte counts and dispatch evidence. Do not turn an unknown mutation into success or replay under a new operation ID."
+}

@@ -114,6 +114,14 @@ pub(crate) fn hold_parents(path: &Path) -> Result<Vec<File>> {
 }
 
 pub(crate) fn create_directory(path: &Path) -> Result<()> {
+    create_directory_mode(path, true)
+}
+
+pub(crate) fn create_new_directory(path: &Path) -> Result<()> {
+    create_directory_mode(path, false)
+}
+
+fn create_directory_mode(path: &Path, allow_existing: bool) -> Result<()> {
     let sid = current_sid()?;
     // Protected DACL, with inheritable full control for this account and SYSTEM.
     let sddl = HSTRING::from(format!(
@@ -133,9 +141,44 @@ pub(crate) fn create_directory(path: &Path) -> Result<()> {
     // SAFETY: the path, descriptor and attributes live throughout this call.
     match unsafe { CreateDirectoryW(&HSTRING::from(path.as_os_str()), Some(&attributes)) } {
         Ok(()) => Ok(()),
-        Err(e) if e.code() == HRESULT::from_win32(ERROR_ALREADY_EXISTS.0) => Ok(()),
+        Err(e) if allow_existing && e.code() == HRESULT::from_win32(ERROR_ALREADY_EXISTS.0) => {
+            Ok(())
+        }
         Err(e) => Err(e.into()),
     }
+}
+
+pub(crate) fn open_new_file(path: &Path) -> Result<File> {
+    Ok(OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create_new(true)
+        .share_mode(FILE_SHARE_READ.0 | FILE_SHARE_WRITE.0)
+        .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT.0)
+        .open(path)?)
+}
+pub(crate) fn open_read_file(path: &Path) -> Result<File> {
+    Ok(OpenOptions::new()
+        .read(true)
+        .share_mode(FILE_SHARE_READ.0 | FILE_SHARE_WRITE.0)
+        .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT.0)
+        .open(path)?)
+}
+
+pub(crate) fn same_file(left: &File, right: &File) -> Result<bool> {
+    fn identity(file: &File) -> Result<(u32, u32, u32)> {
+        let mut information = BY_HANDLE_FILE_INFORMATION::default();
+        // SAFETY: File owns the live handle; information is initialized/writable.
+        unsafe {
+            GetFileInformationByHandle(HANDLE(file.as_raw_handle()), &mut information)?;
+        }
+        Ok((
+            information.dwVolumeSerialNumber,
+            information.nFileIndexHigh,
+            information.nFileIndexLow,
+        ))
+    }
+    Ok(identity(left)? == identity(right)?)
 }
 
 pub(crate) fn open_directory(path: &Path) -> Result<File> {

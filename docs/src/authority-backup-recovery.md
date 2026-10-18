@@ -1,8 +1,8 @@
 # Coordinator backups and recovery
 
 Research/design date: **2026-10-17**, America/New_York. **Proposal, not an
-implemented backup/restore or failover facility.** Startup acceptance remains
-in progress; see [pinned restarts](authority-startup.md). No real database,
+implemented backup/restore or failover facility.** Pinned startup is accepted
+at a7994e6; see [its scoped evidence](authority-startup.md). No real database,
 account, bucket or hosted service was changed for this research.
 
 The authoritative SQLite database contains names, node identities, store
@@ -64,6 +64,23 @@ Committed state can still reside in the WAL rather than the main file.
 These sources were read2026-10-17. They establish SQLite copying behavior;
 they do not establish S3Drive history continuity or deployment fencing.
 
+## Resolved Rust API constraints
+
+The locked rusqlite0.40.2 source was inspected locally on2026-10-17. Its
+`Backup::new` borrows source and destination connections; `step` distinguishes
+completion from busy/locked/more work. `run_to_completion` has no overall retry
+deadline. Cleanup calls SQLite's finish function from `Drop` and discards its
+return value; this version has no public `finish` method. The workspace enables
+bundled SQLite but not the backup feature.
+[Recorded API/source fingerprint](evidence/rusqlite-backup-api-20261017.json).
+
+The online docs.rs source endpoint could not be retrieved during this check;
+these are observations of the actual resolved build input. Before choosing a
+snapshot mechanism, inspect SQLite's completion guarantees and determine how
+safe APIs establish completion, validation and close/sync errors. Do not invent
+a wrapper method, use an unbounded convenience loop or bypass this question
+with raw FFI. No backup feature or command is enabled by this research.
+
 ## Proposed delivery contract
 
 1. **Snapshot and inspect.** First implement an explicit maintenance snapshot
@@ -120,3 +137,61 @@ to solve the application's rollback or uncertain-operation contract.
 Physical reboot, independent hosts, actual target Windows versions, provider
 acceptance and operational restore drills remain separate gates. No production
 backup schedule, retention store, credential or recovery service was provisioned.
+
+
+## Next implementation stage
+
+[P6m4d1](implementation-plan.md#p6m4d1--private-offline-snapshots-and-inspection-prototype-acceptance-pending)
+is an unpublished library prototype from a7994e6 on `codex/authority-snapshots`;
+experimental offline snapshot/inspection CLI commands are now present locally;
+no restore/promotion command exists. These changes remain unpublished.
+The artifact uses distinct snapshot filenames so ordinary startup refuses it.
+Local2026-10-18 state check/Clippy and nine filtered tests passed, including
+WAL-only data, exact schema8 receipts, full disk, cancellation and eight actual
+killed-process boundaries. This is Linux fixture evidence, with no source-data
+loss or automatic promotion. Two real local CLI round-trip/refusal cases also passed. Windows/ACL,
+full-gate and native acceptance remain. Windows transport RCA is the current priority.
+
+The source is opened read-only under the existing owner's cooperative lock,
+without migrations or namespace changes. Ordinary WAL/SHM bookkeeping can occur;
+source operation/receipt bytes remain identical. The prototype's validation
+profile checks SQLite integrity and authority identity, not complete semantic
+history or freshness. Inspecting a complete snapshot always reports continuity
+unproven and restore unauthorized. No real provider or user metadata was copied.
+
+
+## Experimental offline CLI (unpublished, 2026-10-18)
+
+The local prototype exposes `s3drive authority-snapshot create` and `inspect`.
+Both require an explicit `--expect-volume` and `--name-policy`; creation also
+requires the stopped authority's `--directory` and a new `--output` directory.
+The output parent must exist. An active owner, wrong identity, missing state,
+nested destination or existing artifact refuses; the command never stops a
+coordinator, replaces output or starts a listener. Neither command accepts an
+S3 configuration, provider credential or authorization token.
+
+For example, after stopping an owned test coordinator, a Linux invocation is:
+
+```sh
+s3drive authority-snapshot create --directory /private/authority --output /private/snapshots/new-copy --expect-volume ORIGINAL_VOLUME_ID --name-policy portable-collision-v1
+s3drive authority-snapshot inspect --directory /private/snapshots/new-copy --expect-volume ORIGINAL_VOLUME_ID --name-policy portable-collision-v1
+```
+
+Replace `ORIGINAL_VOLUME_ID` with the original32-character volume ID. These
+examples do not create a hosting account or install/stop a real user service.
+Defaults are512MiB maximum standalone database bytes and30 seconds cooperative
+work; `--max-bytes` permits4KiB through8GiB and `--timeout-seconds`1–300. Work
+runs on a blocking worker. Ctrl+C requests cooperative cancellation and waits
+for that worker; a stalled kernel I/O call is not interruptible by this deadline.
+Actual console-signal behavior on Linux/Windows remains a separate check.
+
+Success prints only the validated manifest and explicit false continuity/restore
+authorization flags. It does not print namespace records or input file contents.
+A cancellation/error after marker publication may be CompletionUnknown; retain
+the original source and partial output and inspect that exact artifact. There
+is no automatic retry, new destination selection or cleanup of uncertain output.
+CLI tests use Unicode private paths, exact receipts, duplicate-output refusal,
+active/wrong/missing/client sources, size/deadline argument bounds, nested output
+and a private corrupt-manifest marker, without real credentials or S3 operations.
+The full local gate passed (274 state tests plus CLI/lint/build/book); actual
+platform acceptance and deployment drills remain.
