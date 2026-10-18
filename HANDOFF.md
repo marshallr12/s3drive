@@ -60,7 +60,49 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Active work: policy-bound chunk-root publisher (2026-10-18)
+## Active work: diagnose TLS budget fixture failure (2026-10-18)
+
+Previous goal turn PROGRESS: cf9d972 runtime and b70717a docs status pushed,
+full localgate50472 PASS. Current branch codex/tls-budget-fixture fromb70717a,
+initial tree clean. Revalidated ownCI39156593000: book117760980164 SUCCESS;
+Linux117760980367 terminalFAIL in existing authority_restart.rs719
+pinned_cli_http_tls_restart_recovers_original_volume_and_unread_operation.
+8pass/1fail/3ignored; exact17diagnostics but first16 were not all HandshakeRejected.
+The old assertion omitted actual categories, so the failed event class is UNKNOWN.
+New chunk tests/native Linux acceptance were not reached. Windows117760980265
+stillLIVE in same run; watch5878 remains the same handle. No rerun/successchecker.
+Linux raw /tmp/s3drive-chunk-publisher-cf9-linux.log. Book raw reviewed separately
+/tmp/s3drive-chunk-publisher-cf9-book-reviewed.json; no consolidated review marker.
+
+Hypothesis: earlier valid TLS exchanges in this same listener can consume shared
+budget with HttpShutdown, a category already explicitly checked elsewhere. First
+add privacy-safe failure categories and reproduce; then isolate malformed flood
+on a fresh listener if evidence supports it. Keep exact16events+one suppression,
+post-overflow authenticated service and private-input refusal. Never silence
+production diagnostics or relax connection classification/retry/timeout behavior.
+Reuse existing reviewer gpt6-astra/xhigh, local rubric7/spec1 blast1 depth2 verify1
+cost2/security-verification override; no new agents. No provider calls. Reproduced no historical failure in32instrumentedlocalruns;
+actualcapturedcategory remainsUNKNOWN. Implemented freshpinnedlistener +bounded
+stderr collector +first17 exact stderr completionbarriers;24malformedtotal,
+Infoafterobservedsuppressionchecksvolume/seq2;strict16+1andbothlogsprivacyretain.
+Review found CRLF rawcapfalsepass; negativecontrol14171 EXIT101 reproduced it;
+fixed via underlyingTake.limit()==0refusal. Latestfocused97165 CLOSED0:10pass/3ignored,10.81s. Finalreview no blockers,
+249/249hashes checked; onlyauthority_restartchanged, productionunchanged;
+SHA60ef013f; no reviewerexecution. Frozen249
+files /tmp/s3drive-tls-budget-frozen.json; solechangedtestauthority_restart.rs,
+production/wire/schema/native unchanged. Fullgate68896 CLOSED EXIT0, log
+/tmp/s3drive-tls-budget-gate.log; all249hashes unchanged;349state/1ignored,59S3,34core,50authority,18existing
+publication/8chunk/10TLScontrols,65docfiles/61chapters;state195.62s.
+Durable11member archive tls-budget-fixture-local-20261018.tar.gz,47322bytes,
+SHA98608b40264e05a6b0cc37eee8d10c37a24b2d8391cfed9c516730e67ed8c0b0;
+allindexedmembersverified. Tested candidate ready for normal branch publication;
+record exact source/newCI after push.
+New datedevidence +owned-authority-client
+section recordunknowncause/structuralfix. A failed
+baseline is current work; defer source-settlement implementation until corrected
+source passes its full gate and own hosted cohort. Goal ACTIVE, PUBLIC unchanged.
+
+## Preceding policy-bound chunk-root publisher (2026-10-18)
 
 Branch codex/chunk-root-publisher from00a8829. Implemented separate
 s3drive-managed::chunks Publisher, S3-independent Recovery, opaque historical
@@ -101,12 +143,14 @@ review matched249/249; corrected sparsefixture description to128MiB+64bytes.
 Published tested runtime cf9d972173b0b0709c08f3c65ec102fa44fa5a6e, clean/exact
 remote tip/all249hashes/PUBLICbefore-after; no visibilitymutations/mainunchanged.
 Proof /tmp/s3drive-chunk-publisher-publication.json. OwnCI39156593000 attempt1
-LIVE: Windows117760980265,book117760980164,Linux117760980367. Watch5878 LIVE,
+Linux117760980367 FAILED before chunk tests;book117760980164 SUCCESS;
+Windows117760980265 stillLIVE. This cohort is NOTaccepted. Watch5878 LIVE,
 /tmp/s3drive-chunk-publisher-cf9-watch.log. Resume the same handle/run; do not
 rerun on observation timeout. Checker /tmp/s3drive-check-chunk-publisher-cf9.py
 and rawcompare /tmp/s3drive-chunk-publisher-cf9-raw-compare.py prepared/compiled
 only, NOTexecuted. Fresh output /tmp/s3drive-chunk-publisher-cf9-artifacts absent;
-require all3 terminal success and own rawreview marker
+Linuxfailed, so never execute its successchecker or make a successreview marker.
+The original checker required all3 terminal success and own rawreview marker
 /tmp/s3drive-chunk-publisher-cf9-raw-reviewed.json before checker. Bind source/run/
 attempt/jobs/finalizedartifactIDs/APIdigest/time; stricttyped21/14+projectoracles,
 then all35rawfields/types. RejectpriorIDs including parent12146631312/12146506974.

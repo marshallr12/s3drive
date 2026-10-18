@@ -306,3 +306,52 @@ cohort simply because its JSON matches.
 [GitHub rerun semantics](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs),
 [workflow-run attempt API](https://docs.github.com/en/rest/actions/workflow-runs#get-a-workflow-run-attempt),
 [artifact client contract](https://github.com/actions/toolkit/blob/main/packages/artifact/src/internal/client.ts).
+
+
+## TLS budget fixture isolation — 2026-10-18
+
+Publisher source`cf9d972` [CI39156593000](https://github.com/marshallr12/s3drive/actions/runs/39156593000)
+failed Linux in the existing pinned CLI restart test before the new chunk tests.
+Exactly17 diagnostics were captured; the first16 were not all the expected fixed
+handshake-rejection line. The original assertion printed no actual categories.
+The historical event class and failure cause therefore remain **unknown**.
+An instrumented local control passed32 bounded attempts; that is not causal proof.
+
+The source audit found two fixture confounders: the listener's budget was already
+shared with four completed authenticated RPCs, and TCP EOF did not prove that a
+failed-handshake diagnostic had been written. The resolved dependency returns a
+failed accept after dropping its IO; production reserves a diagnostic slot before
+locking stderr. Audit paths, versions and hashes are retained in the
+[dated evidence](evidence/tls-budget-fixture-20261018.json). No production
+transport, logger, retry, timeout, schema or chunk-format behavior changes.
+
+The repaired fixture finishes its restart/receipt assertions, then starts a fresh
+listener on the same pinned database and volume. Readiness is stdout-only, with
+no network probe. Its first17 malformed peers each wait for the exact expected
+stderr line before the next peer; it still sends24 in total. The first16 must be
+HandshakeRejected, followed by one suppression notice. Only after observing that
+notice does an authenticated Info request verify the original volume and sequence.
+Both listener logs retain the privacy checks, and assertion output uses a fixed
+category allowlist. No line filtering, budget increase or arbitrary sleep hides
+an unexpected event.
+
+A bounded collector initially had a separate truncation flaw: CRLF stripping
+could make its retained string shorter than its exhausted raw input allowance,
+allowing later stderr to be omitted. Review identified this gap; a negative
+control with17 diagnostics, CRLF padding and a private tail failed before the raw
+exhaustion check. Exhausting that allowance now returns an error. This control
+establishes the collector guard, not the cause of the captured CI failure.
+
+Final focused controls passed10/3ignored. The full local gate passed with all249
+frozen hashes unchanged:349state/1ignored,59S3,34core,50authority, all18 existing
+managed-publication tests,8chunk-publication controls and10TLS/restart controls,
+formatting/Clippy/build,65documentation files and61book chapters. Independent
+review matched all249hashes, confirmed the sole test-file delta and found no
+remaining blockers. State tests took195.62s; two old quota controls and the sparse
+chunk test exceeded60s then passed. The
+[11-member indexed local archive](evidence/tls-budget-fixture-local-20261018.tar.gz)
+retains focused/red/full results, the frozen map, review and exact fixture source.
+
+Corrected-source hosted acceptance is still pending. The old publisher cohort
+cannot substitute, and this repair establishes no historical Windows NoWrite
+cause, mounted chunk support, source settlement or real-provider acceptance.

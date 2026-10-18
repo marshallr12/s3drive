@@ -307,6 +307,65 @@ async fn tls_cli_fresh_processes_and_reused_clients_preserve_exact_receipts() {
     );
 }
 
+async fn collect_budget_diagnostics(
+    reader: impl tokio::io::AsyncRead + Unpin,
+    arrivals: tokio::sync::mpsc::Sender<String>,
+) -> Result<String, &'static str> {
+    let mut lines = BufReader::new(reader.take(64 * 1024 + 1)).lines();
+    let mut log = String::new();
+    while let Some(line) = lines.next_line().await.map_err(|_| "stderr read failed")? {
+        if log.len().saturating_add(line.len() + 1) > 64 * 1024 {
+            return Err("stderr exceeded fixture limit");
+        }
+        if line.starts_with("authority TLS") {
+            arrivals
+                .try_send(line.clone())
+                .map_err(|_| "diagnostic observation overflow")?;
+        }
+        log.push_str(&line);
+        log.push('\n');
+    }
+    // Lines removes CRLF bytes. Its retained length alone cannot distinguish
+    // true EOF from a raw-byte cap that omitted later private output.
+    if lines.into_inner().into_inner().limit() == 0 {
+        return Err("stderr raw byte limit exhausted");
+    }
+    Ok(log)
+}
+
+#[tokio::test]
+async fn diagnostic_collector_refuses_truncated_crlf_log_before_private_tail() {
+    let mut input = "authority TLS connection failure: HandshakeRejected\r\n".repeat(16);
+    input.push_str("authority TLS: further connection diagnostics suppressed\r\n");
+    input.push_str(&"\r\n".repeat(32 * 1024));
+    input.push_str("private-tail-must-not-be-silently-omitted");
+    let (arrivals, mut observed) = tokio::sync::mpsc::channel(32);
+    let result = collect_budget_diagnostics(input.as_bytes(), arrivals).await;
+    let mut count = 0;
+    while observed.try_recv().is_ok() {
+        count += 1;
+    }
+    assert_eq!(count, 17);
+    assert!(matches!(result, Err("stderr raw byte limit exhausted")));
+}
+
+fn diagnostic_category(event: &str) -> &'static str {
+    if event == "authority TLS: further connection diagnostics suppressed" {
+        return "Suppressed";
+    }
+    match event.split_whitespace().nth(4) {
+        Some("HandshakeRejected") => "HandshakeRejected",
+        Some("HttpShutdown") => "HttpShutdown",
+        Some("Capacity") => "Capacity",
+        Some("HandshakeTimeout") => "HandshakeTimeout",
+        Some("HttpTimeout") => "HttpTimeout",
+        Some("IncompleteHttp") => "IncompleteHttp",
+        Some("HttpTransport") => "HttpTransport",
+        Some("Lifetime") => "Lifetime",
+        _ => "Unknown",
+    }
+}
+
 // Only the two complete Info calls in the isolated fault fixture can occupy
 // connection ordinals 4/5. This is fixture-order attribution, not independently
 // observed success-path client socket identity. Never use this as replay proof.
@@ -695,10 +754,28 @@ async fn pinned_cli_http_tls_restart_recovers_original_volume_and_unread_operati
         Reply::Applied(_)
     ));
     assert_eq!(info(&w).await.sequence, 2);
-    // Unauthenticated garbage must not disclose its contents or flood logs,
-    // and hitting the diagnostic budget must not stop authenticated service.
+    let restart_endpoint = server.endpoint.clone();
+    let restart_log = server.stop().await;
+    // The budget belongs to a listener. Completed RPC shutdowns above can also
+    // use it, so malformed-input accounting needs a fresh listener with no
+    // preceding connections. Readiness comes from stdout, not a TLS probe.
+    let mut server = Server::start(command(
+        &db,
+        &secret,
+        Some(&volume),
+        Some((&cert_file, &key_file)),
+        "127.0.0.1:0",
+    ))
+    .await;
+    assert_eq!(server.volume, volume);
+    let stderr = server.child.stderr.take().unwrap();
+    let (arrivals, mut observed) = tokio::sync::mpsc::channel(32);
+    let collector = tokio::spawn(collect_budget_diagnostics(stderr, arrivals));
+    // EOF precedes diagnostic recording in the failed-handshake dependency
+    // path. Observe each of the first17 log writes before making another peer;
+    // this is an explicit completion barrier, not a sleep or a looser budget.
     let address = url::Url::parse(&server.endpoint).unwrap();
-    for _ in 0..24 {
+    for index in 0..24 {
         let mut peer = tokio::net::TcpStream::connect(("127.0.0.1", address.port().unwrap()))
             .await
             .unwrap();
@@ -707,10 +784,37 @@ async fn pinned_cli_http_tls_restart_recovers_original_volume_and_unread_operati
         let _ = tokio::time::timeout(Duration::from_secs(3), peer.read_to_end(&mut alert))
             .await
             .expect("malformed handshake did not close");
+        if index < 17 {
+            let event = tokio::time::timeout(Duration::from_secs(3), observed.recv())
+                .await
+                .expect("diagnostic observation deadline")
+                .expect("diagnostic collector ended before expected event");
+            let expected = if index < 16 {
+                "authority TLS connection failure: HandshakeRejected"
+            } else {
+                "authority TLS: further connection diagnostics suppressed"
+            };
+            assert!(
+                event == expected,
+                "diagnostic position {index}: expected {}, observed {}",
+                diagnostic_category(expected),
+                diagnostic_category(&event)
+            );
+        }
     }
-    assert_eq!(info(&w).await.sequence, 2);
+    // This is the first authenticated request on the new listener, after the
+    // suppression line has actually been written. The service must still work.
+    let w = wire(&server.endpoint, Some(cert.pem().as_bytes()));
+    let after_overflow = info(&w).await;
+    assert_eq!(after_overflow.id, volume);
+    assert_eq!(after_overflow.sequence, 2);
     let original_endpoint = server.endpoint.clone();
-    let log = server.stop().await;
+    assert!(server.stop().await.is_empty());
+    let log = tokio::time::timeout(Duration::from_secs(20), collector)
+        .await
+        .expect("diagnostic collector exit deadline")
+        .expect("diagnostic collector panicked")
+        .expect("diagnostic collection failed");
     let events: Vec<_> = log
         .lines()
         .filter(|line| line.starts_with("authority TLS"))
@@ -719,21 +823,28 @@ async fn pinned_cli_http_tls_restart_recovers_original_volume_and_unread_operati
     assert!(
         events[..16]
             .iter()
-            .all(|line| *line == "authority TLS connection failure: HandshakeRejected")
+            .all(|line| *line == "authority TLS connection failure: HandshakeRejected"),
+        "budgeted diagnostic categories: {:?}",
+        events[..16]
+            .iter()
+            .map(|line| diagnostic_category(line))
+            .collect::<Vec<_>>()
     );
-    assert_eq!(
-        events[16],
-        "authority TLS: further connection diagnostics suppressed"
+    assert!(
+        events[16] == "authority TLS: further connection diagnostics suppressed",
+        "unexpected final category: {}",
+        diagnostic_category(events[16])
     );
     for private in [
         "private-handshake-marker",
         &original_endpoint,
+        &restart_endpoint,
         &"a".repeat(64),
         &cert.pem(),
         &signing_key.serialize_pem(),
     ] {
         assert!(
-            !log.contains(private),
+            !log.contains(private) && !restart_log.contains(private),
             "server diagnostic disclosed private input"
         );
     }

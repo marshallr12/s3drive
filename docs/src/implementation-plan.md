@@ -1626,3 +1626,29 @@ receipt damage, SQLite-full and post-write trigger controls. Then real SDK plus
 authenticated-authority recovery through the new controller, full local gate and
 its own source-bound hosted cohort. Verified manifest range reads and native
 lifecycle barriers remain later independently tested phases.
+
+
+### Current acceptance repair: TLS budget fixture (2026-10-18)
+
+Own publisher CI39156593000 failed Linux before the chunk tests, in the existing
+pinned CLI restart test's assertion that all16 budgeted diagnostics are malformed
+handshake failures. The log proves the category assertion failed after exactly17
+events, but omits actual categories; the cause remains unproven. Windows is still
+running and the book job passed. Do not rerun the cohort or treat old artifacts
+as publisher acceptance. Diagnose the fixture first. Earlier valid TLS exchanges
+share its diagnostic budget; completed-response shutdown events are a hypothesis.
+Retain strict16+1 budget, healthy authenticated service after overflow and private-
+input refusal. If isolating the malformed flood, use a fresh listener and keep
+restart/identity/receipt tests intact. Production diagnostics/retry/scheduling and
+chunk format remain unchanged. Full local gate and own fresh hosted cohort are
+required after any source correction. Settlement work follows this repair.
+
+
+Repair result: final focused10/3ignored PASS; fullgate68896 EXIT0 with249frozen
+hashes unchanged,349state/1ignored,59S3,34core,50authority,18existing managed
+publication tests,8chunk controls,10TLS/restart controls,65docfiles/61chapters.
+Independent review matched249/249 and closed the raw-cap truncation gap, whose
+negative control failed before the guard. Sole test-file delta; production,
+schema, wire and native paths unchanged. Corrected-source hosted cohort remains
+pending. See [fixture contract](owned-authority-client.md#tls-budget-fixture-isolation--2026-10-18)
+and its dated evidence; the captured prior CI category remains unknown.

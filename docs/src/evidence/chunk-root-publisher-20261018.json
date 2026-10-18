@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "full local gate passed; own-source hosted cohort pending",
+  "status": "full local gate passed; own hosted Linux failed before new chunk controls; Windows pending",
   "branch": "codex/chunk-root-publisher",
   "parent_commit": "00a882941088e5814697b2c1cc4f5d3b8df6fabf",
   "schema_version": 27,
@@ -58,7 +58,18 @@
       12146631312,
       12146506974
     ],
-    "scope": "not yet acceptance; require own completed raw review and fresh source-bound artifacts"
+    "scope": "not yet acceptance; require own completed raw review and fresh source-bound artifacts",
+    "acceptance": "not established; Linux workspace job failed",
+    "linux_failure": {
+      "job_id": 117760980367,
+      "test": "pinned_cli_http_tls_restart_recovers_original_volume_and_unread_operation",
+      "location": "crates/s3drive-cli/tests/authority_restart.rs:719",
+      "assertion": "first16 of exactly17 TLS diagnostics were not all HandshakeRejected",
+      "actual_categories": "not printed; unknown",
+      "new_chunk_tests_reached": false,
+      "repair_branch": "codex/tls-budget-fixture",
+      "success_checker_executed": false
+    }
   },
   "source_sha256": {
     ".github/workflows/ci.yml": "ad8a598db786dfde8d5fd016b4f4306e1e08f8533b1a2851066d3422731cbe13",
