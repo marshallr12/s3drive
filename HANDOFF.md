@@ -23,15 +23,59 @@ No visibility or credential mutation was performed during this investigation.
 Do not reuse stale private-only publication guards as current policy. The active
 repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
-include main's policy commit; current HEAD9c14c996 already includes that rule.
+include main's policy commit; current HEADc7fca789 already includes that rule.
+
+## Current candidate: dispatch observations (P6m4i)
+
+Working branch is now codex/dispatch-progress, still based atc7fca789. That
+exact source's Windows CI is terminal FAILURE (stale schema23 fixture), below. Previous candidate branch remains pushed
+atc7; main is unchanged/public. Dirty observations/research carried intact.
+Plan appended to implementation-plan.md. The observational delta is implemented
+in wire.rs, wire/owned.rs, wire/progress.rs and wire/tests.rs; no schema/dependency
+or scheduling/policy change. Five compact public fields track initial readiness,
+body descriptor access and aggregate before/after driver budget exhaustion.
+Legacy dispatch_contract_review is read-only before touching first-send behavior;
+preliminary finding: first buffered send is explicitly supported, ready() wait is
+optional and must be co-polled with the driver. Thus this phase adds observation
+flags only; no readiness wait, poll-order/retry/deadline/schema/dependency change.
+model-select: dispatch reviewer → gpt-6-astra/xhigh (score7:spec0,blast2,depth2,
+verify1,cost2; overrides:none; assessment:local). No external assessment used.
+Read-only preimplementation/final-delta review found no blocker. Focused2 EXIT0
+session41120 /tmp/s3drive-dispatch-progress-focused2.log:9wire controls pass.
+Initial focused1 compile errors were test-only try_accept/extra unwrap; fixed with
+inspected poll_accept after workers are reaped and correct Result depth.
+Baseline and actual production-exchange bounded budget-gated Pending-reader
+control, empty/Unicode body hints, EOF/failed-write and existing exact TLS/SQLite
+reply controls passed. Positive exhausted-before is not separately tested; do
+not claim it. Error staysCopy<=128bytes. New hints cannot prove delivery/cause.
+Frozen7 source/manifest hashes /tmp/s3drive-dispatch-progress-frozen-source.json.
+Evidence docs/src/evidence/dispatch-progress-20261018.json.
+Gate1 EXIT0 session71299 /tmp/s3drive-dispatch-progress-gate1.log on unchanged
+Rust sources, but SUPERSEDED after adding the schema fixture/check/gate/workflow
+correction below. Final12 hashes frozen at
+/tmp/s3drive-dispatch-progress-frozen-final-source.json.
+Final extended gate2 EXIT0 session50715:
+/tmp/s3drive-dispatch-progress-gate2.log. Schema fixture preflight,50authority
+(15unit),292state/1ignored,17core,51S3 and workspace/build/lint/book passed;
+all12 frozen hashes unchanged, no warnings/errors. Proof
+/tmp/s3drive-dispatch-progress-gate2-result.json.
+NEXT: record final result, run docs checks, inspect/stage explicit17-file scope
+/tmp/s3drive-dispatch-progress-publication-plan.json, normal commit/push on
+codex/dispatch-progress with PUBLIC read-only identity checks. Main remains1a93b5f.
+Then require own hosted acceptance; no transport correction claim or main promotion. Keep c7 CI/artifacts
+separate and preserve all carried dirty research/acceptance docs. No runtime
+promotion or provider requests.
 
 ## Current work: offline immutable multipart plans (2026-10-18)
 
-Branch codex/multipart-plans, HEAD9c14c996ca476304731a8ab3de072fd33862f77a,
-merges public-policy main1a93b5f into candidate64aa073. Main/origin-main remain
-1a93b5f (runtimebf9509 plus policy only). No owned-client runtime promotion.
-Implementation and carried observation/research docs are dirty and uncommitted;
-preserve them. The policy files are committed through the merge, not dirty copies.
+Branch codex/multipart-plans, HEADc7fca789a394a1bde63f90154bb261396fb68c8b,
+normally pushed with all40 scoped files after final gate3. Parent9c14c996 merges
+public-policy main1a93b5f into candidate64aa073. Main/origin-main remain1a93b5f
+(runtimebf9509 plus policy only). No owned-client runtime promotion. Publication
+proof /tmp/s3drive-multipart-plan-publication.json: clean immediately after push,
+all29 frozen sources unchanged, repository PUBLIC before/after;0visibility changes.
+Post-push HANDOFF/evidence observations are intentionally dirty; preserve them
+for the next substantive phase rather than triggering docs-only native CI.
 
 New multipart.rs/tests and migration024 implement OFFLINE Frozen→Ready plans.
 Caller-supplied ID freezes exact sealed manifest, target/config/credential binding,
@@ -68,13 +112,59 @@ no warnings/errors and all29 frozen source hashes still match. Log SHA256
 13e970aaaafccefc03b300d20b8b9dfbef29c653f045270e7aa3332d83289634.
 Result /tmp/s3drive-multipart-plan-gate3-result.json. This supersedes gate2.
 
-NEXT: record final result in docs, run their link/build/test checks, inspect scope,
-commit/push codex/multipart-plans normally with PUBLIC read-only checks. Prepared
-explicit40-file scope /tmp/s3drive-multipart-plan-publication-plan.json.
-Require source-bound hosted acceptance; never borrow64/90 artifacts. Do not
+Final result docs links/build/test also EXIT0, normal commit/push EXIT0 session93646.
+CI39130994866 is terminal FAILURE at exactc7fca78. Windows117685945192,
+Linux117685945294, book117685945066. Watch25319 redirects to
+/tmp/s3drive-multipart-plans-hosted-watch.log. Latest complete metadata
+/tmp/s3drive-multipart-plans-hosted-observed.json. Watch25319 closed EXIT1; do not poll/restart that terminal handle. Require completed own raw logs and
+review all transport/native warnings before acceptance. Only after all3 terminal
+success and actual raw review, write
+/tmp/s3drive-multipart-plans-c7-raw-reviewed.json then run prepared
+/tmp/s3drive-check-multipart-plans-c7.py and its PowerShell oracle. Their new
+output directory must be /tmp/s3drive-multipart-plans-c7-artifacts. Checker
+prepared/compiled only, NOT executed; INELIGIBLE because the whole run failed. On any
+failure, do not run it or borrow64/90 artifacts; inspect exact failed source.
+No runtime main promotion is planned from this offline candidate alone.
+Book117685945066 is terminal SUCCESS; completed raw log via jobs REST endpoint
+reviewed at /tmp/s3drive-multipart-plans-c7-book.log, marker
+/tmp/s3drive-multipart-plans-c7-book-reviewed.json.58 documentation files links,
+mdBook build/54 chapter tests; only Git initial-branch advice, pinned Rust override
+and pinned-checkout Node20→24 notice. Windows failed as described below. `gh run view --log`
+refuses logs until whole run completes; `gh api --allow-escape-sequences` can
+retrieve an already completed job's log (save raw; strip ANSI only for display). Do not
 promote runtime to main while transport reliability remains unresolved.
+Linux117685945294 is terminal SUCCESS; own completed raw log reviewed and hashed
+/tmp/s3drive-multipart-plans-c7-linux.log, marker
+/tmp/s3drive-multipart-plans-c7-linux-reviewed.json.292state/1ignored,48authority,
+9 real native/32 HTTPS flushes, paired recovery, schema24 and both no-systemd
+coordinator protocols passed. Only deliberate TLS/HEAD403/stopped Node Connect
+refusals, missing startup.json after uninstall and standard Git/Node action
+notices. No physical MX reboot/provider or Windows acceptance inferred.
 Book: docs/src/multipart-plan.md and implementation-plan.md.
 Evidence: docs/src/evidence/multipart-plans-20261018.json.
+
+## c7 Windows failure and concrete schema fixture correction
+
+Windows117685945192 FAILED broad actual_windows_drive_names_reads_security_and_teardown
+in disposable-user Install: generic private-local-state initialization/reopen error.
+Raw /tmp/s3drive-multipart-plans-c7-windows.log failure section/result summaries
+reviewed.287state/1ignored,all16 new planning tests,32HTTPS flushes,standalone
+snapshots/startup/lifecycle, paired recovery passed; broad native6PASS/1FAIL.
+This is NOT a fully accepted cohort, no success-marker/artifact checker or main
+promotion. The two uploaded reference artifacts cannot turn the failed run green.
+
+Source shows scripts/test-windows-session.ps1:242 still matched schema=23 while
+Rust SCHEMA_VERSION=24. It deterministically rejects successful24 output; raw
+logs do not independently expose init-state's exit status. Corrected exact24,
+not a generic match or bypass. New scripts/check-schema-fixtures.py ties the
+session and snapshot worker expectations to the Rust constant, in local gate
+and early book CI. Isolated stale-session and stale-snapshot controls EXIT1;
+fixed EXIT0, proof /tmp/s3drive-schema-fixture-negative-controls.json. PowerShell
+outer+embedded AST/current-pattern check oldc7 EXIT1/fixed EXIT0,23/25 refused.
+No Windows execution is claimed by these portable checks. New source must pass
+its own native acceptance. Historical empty-header transport failure remains
+unresolved; this correction is separate. Full final extended gate2 passed after the superseded
+gate1 definition; the corrected fixture still requires its own hosted acceptance.
 
 ## Previous64 acceptance: primary passed, exact repeat FAILED
 
@@ -115,6 +205,21 @@ Its final test source/log/Clippy archive is
  docs/src/evidence/staged-range-study-20261018.tar.gz,
 SHA2564d19af5c5c5da8389a315ef54eb6c07f7966172d49d54f2575e40d6de3797b88.
 Payload step bounds do not remove repeated manifest or global catalog scans.
+
+## Read-only transport audit while c7 CI runs
+
+Five inspected Hyper1.12.0 and three Tokio1.53.3 files match their cached crate
+members; both archives match Cargo.lock SHA256. No local extraction modifications
+were found in this scope. New dirty evidence
+ docs/src/evidence/transport-dependency-origin-20261018.json and discussion in
+owned-authority-client.md. No dependency or production changes/provider calls.
+Hyper1.12 already contains readiness fix4208; master post-release4222 drains
+in-progress sends on dispatcher shutdown. Neither is established as this fresh
+owned no-write failure's cause. Synchronous send_request enqueues before this
+same task polls its driver. Next investigate sender readiness/body descriptor/
+cooperative-budget states before claiming a behavioral fix. Keep exact identity,
+one send/original deadlines/known reply retention; require native+repeat proof.
+Carry these observations with the next substantive phase, not a docs-only CI push.
 
 ## Remaining full-goal requirements
 

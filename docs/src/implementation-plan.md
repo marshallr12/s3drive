@@ -1113,3 +1113,55 @@ all8MiB bounds and unknown outcomes. Further phases in the
 [multipart contract](multipart-plan.md) remain required, together with resolution
 of the failed unchanged64 Windows paired-startup repeat. No new provider requests
 or permissions arise from this offline work.
+
+
+### P6m4i — dispatch-boundary observations (candidate, 2026-10-18)
+
+The unchanged64 Windows repeat had469 active driver polls with no plaintext write
+or body frame. The offline multipart candidatec7 retains that transport. Its Linux/book and
+Windows planning tests passed, but its broad Windows startup fixture failed
+because it still expected schema23 instead of24. Before selecting a scheduling correction, add only
+bounded content-free observations: sender readiness immediately before the one
+enqueue, whether Hyper queried body end-of-stream/size hints, and whether task
+cooperative budget was exhausted immediately before/after a driver poll. These
+are hints/observations, never request delivery, mutation or causal evidence.
+
+Preserve exact public body hint/frame delegation, first-request buffering, biased
+work/driver poll order, one send, all original absolute deadlines and complete
+known-reply retention. Do not await readiness in this observational phase; the
+pinned Hyper source explicitly supports buffering its first request. No extra
+network operation, runtime, retry, dependency or schema change is allowed.
+
+Done criteria: a deterministic production-exchange control reproduces active
+polls plus no write/body inspection by draining budget inside a gated Pending
+reader; releasing that gate must complete exactly one original request. An
+independent EOF/failed-first-write control must distinguish body descriptor
+access, and transparent existing I/O/body/deadline/TLS/SQLite/parity checks must
+remain intact. Keep the sanitized error Copy and bounded, with no identifiers,
+headers, bytes or URLs in new fields. Full local gate plus its own exact-source
+native Windows/Linux evidence and later unchanged-source repeat remain required.
+Read-only legacy review precedes implementation. This phase observes dispatch;
+it cannot be reported as correcting the historical failure or enabling uploads.
+
+
+The observational delta is implemented. Read-only legacy and final-delta reviews
+found no blocker. Nine focused wire controls passed, including normal and gated
+budget cases, body hint/frame parity and preserved exact TLS/SQLite replies.
+The fixture bounds budget draining to4,096 iterations rather than assuming the
+runtime budget size. It proves positive exhausted-after and negative exhausted-
+before paths; positive exhausted-before is not separately covered. Frozen source,
+actual results and the separate full/native acceptance status are in the
+[dated evidence](evidence/dispatch-progress-20261018.json).
+
+
+The c7 failure exposed a concrete fixture-version mismatch, not proof that the
+private database failed to open. This candidate also corrects that one exact
+assertion to24 and adds `scripts/check-schema-fixtures.py` to the local gate and
+the beginning of the book CI job. The check binds both current-schema PowerShell
+fixture assertions to the Rust constant; restoring either stale assertion makes
+it fail. A separate PowerShell AST check parses the outer/embedded worker and
+accepts24 while rejecting23/25. Preserve the native checks; no generic-version
+match, retry or bypass replaces them. The first local gate passed unchanged
+Rust sources under its old definition. The final extended gate2 then passed
+schema preflight,50 authority/292 state and workspace/build/lint/book checks on
+unchanged12 frozen source/contract files. Own native CI remains required.

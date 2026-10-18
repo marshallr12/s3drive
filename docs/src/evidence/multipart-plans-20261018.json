@@ -6,7 +6,7 @@
   "main_policy_checkpoint": "1a93b5f7248892fec96dc8da4438ee7967692e77",
   "main_runtime_checkpoint": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
   "repository_visibility": "public by user decision; read-only checks only",
-  "status": "final local gate passed on frozen source; hosted acceptance pending; no runtime promotion",
+  "status": "local/Linux/book and Windows portable planning tests passed; whole Windows native job FAILED stale schema fixture; no full hosted acceptance or runtime promotion",
   "schema": {
     "from": 23,
     "to": 24,
@@ -287,5 +287,146 @@
     "before_lines": 511,
     "after_lines_before_gate_result": 468,
     "historical_live_or_private_notes_are_superseded": true
+  },
+  "source_commit": "c7fca789a394a1bde63f90154bb261396fb68c8b",
+  "publication": {
+    "source": "c7fca789a394a1bde63f90154bb261396fb68c8b",
+    "branch": "codex/multipart-plans",
+    "repository_before": {
+      "nameWithOwner": "marshallr12/s3drive",
+      "url": "https://github.com/marshallr12/s3drive",
+      "visibility": "PUBLIC"
+    },
+    "repository_after": {
+      "nameWithOwner": "marshallr12/s3drive",
+      "url": "https://github.com/marshallr12/s3drive",
+      "visibility": "PUBLIC"
+    },
+    "remote_refs": {
+      "refs/heads/codex/multipart-plans": "c7fca789a394a1bde63f90154bb261396fb68c8b",
+      "refs/heads/main": "1a93b5f7248892fec96dc8da4438ee7967692e77"
+    },
+    "normal_push_exit_code": 0,
+    "visibility_mutations": 0,
+    "main_runtime_promoted": false,
+    "working_tree_clean": true,
+    "frozen_sources_match": true
+  },
+  "hosted": {
+    "source": "c7fca789a394a1bde63f90154bb261396fb68c8b",
+    "run_id": 39130994866,
+    "status": "completed",
+    "conclusion": "failure",
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39130994866",
+    "jobs": [
+      {
+        "databaseId": 117685945066,
+        "name": "book",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/marshallr12/s3drive/actions/runs/39130994866/job/117685945066"
+      },
+      {
+        "databaseId": 117685945192,
+        "name": "rust (windows-latest)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/marshallr12/s3drive/actions/runs/39130994866/job/117685945192"
+      },
+      {
+        "databaseId": 117685945294,
+        "name": "rust (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/marshallr12/s3drive/actions/runs/39130994866/job/117685945294"
+      }
+    ],
+    "acceptance": false,
+    "success_checker_executed": false,
+    "success_checker": "/tmp/s3drive-check-multipart-plans-c7.py",
+    "raw_review_prerequisite": "/tmp/s3drive-multipart-plans-c7-raw-reviewed.json",
+    "book_completed_raw_review": {
+      "job_id": 117685945066,
+      "source": "c7fca789a394a1bde63f90154bb261396fb68c8b",
+      "status": "completed",
+      "conclusion": "success",
+      "log": "/tmp/s3drive-multipart-plans-c7-book.log",
+      "sha256": "c3c9c12a53a10a6f42d532468e98cad17395ad843bef66a029bc80a5d82190b9",
+      "reviewed": true,
+      "scope": "58 documentation files links, mdBook build and 54 chapter tests",
+      "notices": [
+        "rustup default toolchain overridden by the pinned repository toolchain",
+        "Git initial-branch naming advice",
+        "pinned checkout Node20 forced to Node24 notice"
+      ],
+      "does_not_accept_native_or_provider": true
+    },
+    "linux_completed_raw_review": {
+      "job_id": 117685945294,
+      "source": "c7fca789a394a1bde63f90154bb261396fb68c8b",
+      "status": "completed",
+      "conclusion": "success",
+      "log": "/tmp/s3drive-multipart-plans-c7-linux.log",
+      "sha256": "237794b8570469d9e30a881f3df60586e2ca9407dfaf517f0aa634c95c406586",
+      "reviewed": true,
+      "scope": {
+        "state_passed": 292,
+        "state_ignored": 1,
+        "authority_passed": 48,
+        "real_linux_native_passed": 9,
+        "https_flush_iterations": 32,
+        "schema": 24,
+        "paired_recovery": true,
+        "standalone_no_systemd_coordinator_protocols": [
+          "HTTP",
+          "HTTPS/private CA"
+        ],
+        "unicode_file_names": 11
+      },
+      "expected_faults": [
+        "controlled TLS handshake/partial-header/lifetime failures in negative tests",
+        "managed HEAD403 preserves dirty conflict",
+        "stopped-authority Node Connect/ConnectionRefused with Unopened owned socket and no HTTP I/O",
+        "missing startup.json after explicit uninstall"
+      ],
+      "notices": [
+        "Git initial-branch advice",
+        "Node punycode/url.parse deprecation in pinned cache actions",
+        "pinned actions Node20 forced to Node24"
+      ],
+      "physical_mx_reboot_or_real_provider_acceptance": false
+    },
+    "windows_failure": {
+      "job_id": 117685945192,
+      "step": "Verify real Windows drive and teardown",
+      "test": "actual_windows_drive_names_reads_security_and_teardown",
+      "fixture_operation": "Install",
+      "message": "Private local state initialization/reopen failed",
+      "log": "/tmp/s3drive-multipart-plans-c7-windows.log",
+      "sha256": "e6df965bf944ba93e578e32b34d092c0e80abc927531d2f96b731db50942a56b",
+      "reviewed_failure_section_and_result_summary": true,
+      "concrete_schema_mismatch": {
+        "rust_schema": 24,
+        "fixture_expected_schema": 23,
+        "file": "scripts/test-windows-session.ps1",
+        "line": 242,
+        "scope": "stale assertion deterministically rejects successful schema24 output; raw failure does not independently disclose init-state exit code"
+      },
+      "workspace_state": {
+        "passed": 287,
+        "failed": 0,
+        "ignored": 1
+      },
+      "offline_multipart_tests_passed": 16,
+      "earlier_paired_recovery_passed": true,
+      "earlier_https_flushes_passed": 32,
+      "broad_native": {
+        "passed": 6,
+        "failed": 1
+      },
+      "artifact_checker_eligible": false,
+      "historical_transport_failure_resolved": false
+    },
+    "success_checker_eligible": false
   }
 }

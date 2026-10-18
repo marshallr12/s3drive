@@ -195,6 +195,17 @@ platform acceptance remains a separate requirement, recorded in the
 The unchanged64aa073 Windows repeat failed paired startup; this offline feature
 does not correct that transport failure. No real provider requests occurred.
 
+Exact-sourcec7fca78 CI39130994866 passed Linux/book and all16 new offline planning
+tests on Windows, but the Windows job failed its broader ordinary-account startup
+fixture. That fixture still required `schema=23` while the binary reports24; the
+stale assertion rejects successful initialization output. The next candidate
+corrects the expected version and adds a local/early-book contract check tying
+both native schema expectations to the Rust constant. This does not replace a
+new source-bound Windows acceptance run, prove another failure is absent or fix
+the separate historical transport issue. The failed run's success artifact
+checker is ineligible; no runtime promotion follows.
+
+
 ## Next journal and streaming phases (proposal, 2026-10-18)
 
 Current source inspection found independent8MiB boundaries in

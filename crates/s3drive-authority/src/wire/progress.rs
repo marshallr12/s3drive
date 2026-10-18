@@ -6,7 +6,7 @@ use std::{
     pin::Pin,
     sync::{
         Arc, OnceLock,
-        atomic::{AtomicU8, AtomicU64, Ordering},
+        atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering},
     },
     task::{Context, Poll},
     time::Instant,
@@ -38,6 +38,16 @@ pub struct ExchangeObservation {
     pub written_bytes: u32,
     pub flush_polls: u32,
     pub shutdown_polls: u32,
+    /// A hint sampled before the single enqueue. On the fresh, never-polled
+    /// driver this is normally Some(false); buffering the first send is valid.
+    pub sender_ready_before_enqueue: Option<bool>,
+    /// Existing body-descriptor delegations were called, not proof of writes.
+    pub body_end_stream_queried: bool,
+    pub body_size_hint_queried: bool,
+    /// At least one driver poll observed exhaustion at this boundary. These
+    /// aggregate flags cannot pair two samples or identify what used budget.
+    pub driver_budget_exhausted_before: bool,
+    pub driver_budget_exhausted_after: bool,
 }
 
 pub(super) struct ExchangeProgress {
@@ -58,6 +68,11 @@ pub(super) struct ExchangeProgress {
     written_bytes: AtomicU64,
     flush_polls: AtomicU64,
     shutdown_polls: AtomicU64,
+    sender_ready_before_enqueue: OnceLock<bool>,
+    body_end_stream_queried: AtomicBool,
+    body_size_hint_queried: AtomicBool,
+    driver_budget_exhausted_before: AtomicBool,
+    driver_budget_exhausted_after: AtomicBool,
 }
 impl Default for ExchangeProgress {
     fn default() -> Self {
@@ -79,6 +94,11 @@ impl Default for ExchangeProgress {
             written_bytes: AtomicU64::new(0),
             flush_polls: AtomicU64::new(0),
             shutdown_polls: AtomicU64::new(0),
+            sender_ready_before_enqueue: OnceLock::new(),
+            body_end_stream_queried: AtomicBool::new(false),
+            body_size_hint_queried: AtomicBool::new(false),
+            driver_budget_exhausted_before: AtomicBool::new(false),
+            driver_budget_exhausted_after: AtomicBool::new(false),
         }
     }
 }
@@ -105,13 +125,32 @@ impl ExchangeProgress {
     pub fn request_queued(&self) {
         let _ = self.request_queued.set(self.elapsed());
     }
+    pub fn sender_readiness(&self, ready: bool) {
+        let _ = self.sender_ready_before_enqueue.set(ready);
+    }
+    pub fn body_end_stream_queried(&self) {
+        self.body_end_stream_queried.store(true, Ordering::Relaxed);
+    }
+    pub fn body_size_hint_queried(&self) {
+        self.body_size_hint_queried.store(true, Ordering::Relaxed);
+    }
     pub fn driver_polled(&self) {
+        if !tokio::task::coop::has_budget_remaining() {
+            self.driver_budget_exhausted_before
+                .store(true, Ordering::Relaxed);
+        }
         let now = self.elapsed();
         let _ = self.first_driver_poll.set(now);
         let previous = self.last_driver_poll.swap(now, Ordering::Relaxed);
         if add(&self.driver_polls, 1) != 0 {
             self.max_driver_poll_gap
                 .fetch_max(now.saturating_sub(previous), Ordering::Relaxed);
+        }
+    }
+    pub fn driver_returned(&self) {
+        if !tokio::task::coop::has_budget_remaining() {
+            self.driver_budget_exhausted_after
+                .store(true, Ordering::Relaxed);
         }
     }
     pub fn driver_finished(&self, success: bool) {
@@ -143,6 +182,15 @@ impl ExchangeProgress {
             written_bytes: bounded(self.written_bytes.load(Ordering::Relaxed)),
             flush_polls: bounded(self.flush_polls.load(Ordering::Relaxed)),
             shutdown_polls: bounded(self.shutdown_polls.load(Ordering::Relaxed)),
+            sender_ready_before_enqueue: self.sender_ready_before_enqueue.get().copied(),
+            body_end_stream_queried: self.body_end_stream_queried.load(Ordering::Relaxed),
+            body_size_hint_queried: self.body_size_hint_queried.load(Ordering::Relaxed),
+            driver_budget_exhausted_before: self
+                .driver_budget_exhausted_before
+                .load(Ordering::Relaxed),
+            driver_budget_exhausted_after: self
+                .driver_budget_exhausted_after
+                .load(Ordering::Relaxed),
         }
     }
 }

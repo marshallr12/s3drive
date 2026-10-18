@@ -181,6 +181,86 @@ HTTP or SQLite cause. The failed run cannot supply repeat acceptance or a full
 strict21/14 artifact cohort. The optimization reduces redundant journal checks;
 it does not change HTTP polling/deadlines or establish a causal transport fix.
 
+## Dependency-origin and upstream audit (2026-10-18)
+
+For the fresh-connection Windows failure with469 driver polls and no plaintext
+write polls, a read-only audit compared five inspected Hyper1.12.0 files and three
+Tokio1.53.3 files with their cached crate members. Every byte matched, and both
+crate archives matched Cargo.lock SHA-256 checksums. This rules out modified
+local extractions for those inspected files. Exact hashes and scope are in the
+[dependency-origin evidence](evidence/transport-dependency-origin-20261018.json).
+No production or dependency source was changed by the audit.
+
+The pinned release already includes the stale-want readiness correction4208.
+That report concerned a busy connection being advertised as ready to a pool;
+it is not evidence that the present fresh owned connection will send correctly.
+[Hyper1.12.0 release](https://github.com/hyperium/hyper/releases/tag/v1.12.0),
+[upstream readiness correction](https://github.com/hyperium/hyper/pull/4208).
+
+A later master change4222 drains the closed dispatch receiver before shutdown
+completes, retaining its original result while in-progress senders finish.
+That is relevant to a response-retention audit, but it does not establish the
+cause of our no-write timeout. In the owned path, synchronous `send_request`
+returns before this same task first polls the connection driver; an overlapping
+send-versus-close race has not been demonstrated. This is a source-based
+inference, not native acceptance or a reason to upgrade blindly.
+[Upstream shutdown correction](https://github.com/hyperium/hyper/pull/4222).
+
+Before changing scheduling or transport policy, distinguish sender readiness,
+first body-descriptor access and cooperative budget at driver polls. Preserve
+one send, exact operation identity, original deadlines and the known-reply
+retention contract. Any resulting correction still needs controlled negative
+cases, the local gate, its own native Windows evidence and an unchanged-source
+repeat. No retry, provider write or runtime promotion is authorized by this audit.
+
+## Dispatch-boundary observations (candidate, 2026-10-18)
+
+`ExchangeObservation` gains five compact public fields while retaining `Copy`
+and the at-most128-byte sanitized error bound:
+
+| Field | Observation and limit |
+| --- | --- |
+| `sender_ready_before_enqueue` | One `is_ready()` hint immediately before the existing synchronous send; `None` means unobserved, and `Some(false)` is expected for the fresh unpolled driver. It is not later readiness or an error |
+| `body_end_stream_queried` / `body_size_hint_queried` | The existing HTTP body descriptor calls occurred; each inner call still delegates once with its return unchanged. Access is not body consumption, a write or delivery |
+| `driver_budget_exhausted_before` / `driver_budget_exhausted_after` | Monotonic flags when a sampled boundary had no cooperative budget. They do not pair samples, locate the responsible operation, measure starvation duration or prove cause |
+
+The implementation reads budget without consuming it and retains first-request
+buffering, the biased work/driver order, one send, original deadlines and exact
+known-result/cleanup behavior. It adds no readiness wait, yield, retry, network
+operation or dependency change.
+[Hyper readiness hint](https://docs.rs/hyper/1.12.0/hyper/client/conn/http1/struct.SendRequest.html#method.is_ready),
+[Tokio budget observation](https://docs.rs/tokio/1.53.3/tokio/task/coop/fn.has_budget_remaining.html).
+Both resolved sources were inspected before use. These online API pages were
+unavailable through the research tool during this refresh; the claims were
+checked against the resolved local files.
+
+The controlled test drives the actual production exchange and completion path
+against an ephemeral TCP peer and file-backed authority. A test-only reader
+exhausts cooperative budget and returns Pending; several driver/read/flush polls
+then occur with no body descriptor/frame or write. Releasing the gate completes
+exactly the original request and reply. A baseline without drain also completes.
+The fixture bounds its drain loop, uses a bounded observation predicate and
+reaps workers before asserting. This demonstrates one possible mechanism;
+it does not reproduce or establish the Windows failure's cause. Positive
+exhausted-after and negative exhausted-before are covered; positive exhausted-
+before is not separately exercised. Empty/Unicode bodies and pre-write EOF versus
+failed-first-write controls preserve framing and distinguish descriptor access.
+
+The parentc7 Windows run later failed a separate startup fixture's stale
+schema23 assertion against a schema24 binary, after its paired recovery passed.
+This candidate corrects that exact assertion and adds an early source-contract
+check; it preserves strict version refusal and every native acceptance case.
+That fixture correction does not identify or fix the earlier no-write timeout.
+
+Nine focused wire tests passed. The final extended local gate then passed its
+schema preflight,50 authority tests (15 unit),292 state tests (one diagnostic
+study ignored), workspace/build/lint and book checks on unchanged frozen source.
+Own source-bound native acceptance remains required and is recorded in the
+[dated evidence](evidence/dispatch-progress-20261018.json). A future readiness
+wait would need a separate contract: immediate peer EOF before enqueue can
+change which error retains the concrete I/O cause. Do not turn this observation
+phase into a retry, an inferred reliability fix or runtime promotion.
+
 ## Resolved implementation sources
 
 The local resolved package sources were inspected before API use; exact hashes

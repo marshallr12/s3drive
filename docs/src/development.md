@@ -539,3 +539,16 @@ helper's strict `schema=12` expectation. The binary correctly reports schema 13.
 The helper now expects exactly schema 13; its initialization/reopen and WAL
 assertions remain. Corrected terminal native/startup CI is required before
 publication. This failure is not classified as a flaky test or waived.
+
+
+## Native fixture schema contract (2026-10-18)
+
+The local gate begins with `python3 scripts/check-schema-fixtures.py`; the book
+CI job also runs it before tool installation. It compares the Rust state schema
+constant with the exact current-schema expectations in the Windows session and
+snapshot workers. It fails closed for missing, duplicate or stale assertions.
+This catches the concrete c7 Windows fixture regression where successful schema24
+initialization was rejected by a remaining schema23 string. Isolated negative
+controls restoring either stale expectation fail; the corrected expectations
+pass. This is a source-contract check, not execution of Windows startup, ACLs,
+snapshots or mounts. Those native acceptance gates remain mandatory.

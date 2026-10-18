@@ -35,7 +35,12 @@ same-supervisor child replacement have scoped hosted acceptance. This does not
 establish actual workstation reboot, restore/failover or elimination of the
 historical intermittent Windows transport failures.
 
-**Current work:** [offline immutable multipart plans](multipart-plan.md#offline-immutable-plans-candidate-implementation-2026-10-18)
+**Current work:** bounded [dispatch-boundary observations](owned-authority-client.md#dispatch-boundary-observations-candidate-2026-10-18)
+add sender/body/budget hints to distinguish an active driver from body/header
+progress. Focused controls pass; this candidate changes no scheduling or retry
+policy and does not establish the historical Windows cause.
+
+[Offline immutable multipart plans](multipart-plan.md#offline-immutable-plans-candidate-implementation-2026-10-18)
 freeze original bindings and hash verified staged bytes in bounded owner commands.
 The candidate adds schema24 and preserves the existing8MiB upload/edit limits;
 no multipart network execution is enabled. Local and source-bound platform

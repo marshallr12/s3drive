@@ -1,0 +1,339 @@
+{
+  "format": "s3drive-dispatch-progress-evidence-v1",
+  "date": "2026-10-18",
+  "branch": "codex/dispatch-progress",
+  "parent": "c7fca789a394a1bde63f90154bb261396fb68c8b",
+  "status": "final extended local gate passed on frozen source; exact-schema fixture corrected; own hosted native acceptance pending; no runtime promotion",
+  "source_sha256": {
+    "crates/s3drive-authority/src/wire.rs": "bda87761e8bc65dfc3d28d790b68970ef7d93186c9a7e094b29915908451dbe3",
+    "crates/s3drive-authority/src/wire/owned.rs": "c91aa9167f764076edbe4f60b2de11b0562fa52729e0b137f1002dd8ec3c3374",
+    "crates/s3drive-authority/src/wire/progress.rs": "86ad3af6a95720562aaa2ffc42ba3fb49cd04c7b576bf06dff23e414fc4a6aea",
+    "crates/s3drive-authority/src/wire/tests.rs": "fb837a4971f16ebd52c0d68d6da7c122aac3ad1fa6810dae056376f73fe96956",
+    "crates/s3drive-authority/Cargo.toml": "e2be73af5c2c2c45519eedeadb3bd1cc367df9a30bded3a5453b58535a503c06",
+    "Cargo.toml": "03e8f88c622328e53d02083c18c721293dbcc3c0d423b95bc318c3f6f81e8936",
+    "Cargo.lock": "ca1be721c031390b235be520cae431dcb5321d6a5711f11751db3aa58cc66616",
+    "scripts/test-windows-session.ps1": "54c551e527799af7fe63ad8a389df473700a8f125848757ac5bf625cfaffe8e8",
+    "scripts/test-windows-snapshot-worker.ps1": "d9e0c89e6d86617627cd150c3b5693c4418d97de3bc9c0840a3eaaca964bf694",
+    "scripts/check-schema-fixtures.py": "aef6f7bfd6d9dcd81f300bee8e29475b2ed04d404c1dc6e8e3e4461ff8900d66",
+    "scripts/gate.sh": "9f5b6a2fc4d096697999469ebd709bb5a430b31ade27a3e64071b6e6764d1ae7",
+    ".github/workflows/ci.yml": "ad8a598db786dfde8d5fd016b4f4306e1e08f8533b1a2851066d3422731cbe13"
+  },
+  "baseline_source_sha256": {
+    "crates/s3drive-authority/src/wire.rs": "8182e2eb216f0b667c21ceffcdfdb724a8114373a42336a6863f95e97fd06b7f",
+    "crates/s3drive-authority/src/wire/owned.rs": "aea6ffe6029ae857c106b6144c13a39855f86449fd3251076ce297157594370e",
+    "crates/s3drive-authority/src/wire/progress.rs": "8cf15ffbea6f08d8693defa7a333b511fdb6a5713f6cfabec3b8adfd3df35ff5",
+    "crates/s3drive-authority/src/wire/tests.rs": "937cb45e7f9aad87d0d7f41b5b60caee7ba3591a015ef27b1bf35bd60fffe343",
+    "crates/s3drive-authority/Cargo.toml": "e2be73af5c2c2c45519eedeadb3bd1cc367df9a30bded3a5453b58535a503c06",
+    "Cargo.toml": "03e8f88c622328e53d02083c18c721293dbcc3c0d423b95bc318c3f6f81e8936",
+    "Cargo.lock": "ca1be721c031390b235be520cae431dcb5321d6a5711f11751db3aa58cc66616"
+  },
+  "public_api_added_fields": [
+    "sender_ready_before_enqueue",
+    "body_end_stream_queried",
+    "body_size_hint_queried",
+    "driver_budget_exhausted_before",
+    "driver_budget_exhausted_after"
+  ],
+  "schema_changed": false,
+  "dependencies_changed": false,
+  "provider_requests": 0,
+  "network_policy_or_retry_changed": false,
+  "readiness_wait_added": false,
+  "historical_windows_cause_fixed": false,
+  "review": {
+    "agent": "dispatch_contract_review",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "assessment": "local",
+    "score": {
+      "spec": 0,
+      "blast": 2,
+      "depth": 2,
+      "verify": 1,
+      "cost": 2
+    },
+    "read_only": true,
+    "preimplementation": "first buffered send supported; readiness is optional; preserve known replies, single send, original deadlines, framing/cancellation/cleanup",
+    "final_delta": "No concrete blocker before final gate; descriptor calls transparent; no scheduling/policy/deadline change; fixture reaps children before assertions"
+  },
+  "focused": {
+    "command": "cargo test -p s3drive-authority --lib wire:: --locked -- --nocapture",
+    "log": "/tmp/s3drive-dispatch-progress-focused2.log",
+    "sha256": "a0b4b9ba763e870e6c51a80bd64bbf3e4617b7ddfb4c12074a0440f261cd6694",
+    "exit_code": 0,
+    "passed": 9,
+    "failed": 0,
+    "filtered": 6
+  },
+  "initial_check": {
+    "log": "/tmp/s3drive-dispatch-progress-focused1.log",
+    "exit_code": 101,
+    "reason": "test-only compile errors: nonexistent TcpListener.try_accept and extra unwrap",
+    "resolution": "inspected resolved poll_accept; poll once only after caller/peer finish; correct nested Result handling"
+  },
+  "full_local_gate": {
+    "status": "passed",
+    "command": "bash scripts/gate.sh",
+    "log": "/tmp/s3drive-dispatch-progress-gate2.log",
+    "sha256": "315ca5bd5c0e2711a659a77b8b5e2bee282d94062583dcbc5a1d79b58e5d1b04",
+    "exit_code": 0,
+    "source_hashes_unchanged": true,
+    "source_files": 12,
+    "schema_fixture_preflight_passed": true,
+    "state": {
+      "passed": 292,
+      "failed": 0,
+      "ignored": 1
+    },
+    "authority_tests_passed": 50,
+    "authority_unit_tests_passed": 15,
+    "core_tests_passed": 17,
+    "s3_tests_passed": 51,
+    "format_lint_build_docs_passed": true,
+    "native_or_provider_acceptance": false,
+    "results": [
+      {
+        "section": "Running unittests src/lib.rs (target/debug/deps/s3drive_authority-acf173ab6b0184a7)",
+        "result": "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.24s"
+      },
+      {
+        "section": "Running tests/connection_lifetime.rs (target/debug/deps/connection_lifetime-901afd7bfe4955a0)",
+        "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      },
+      {
+        "section": "Running tests/execution.rs (target/debug/deps/execution-5db262be858f7fe1)",
+        "result": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Running tests/namespace.rs (target/debug/deps/namespace-1e14b317c27b3f82)",
+        "result": "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.74s"
+      },
+      {
+        "section": "Running tests/owned_exchange.rs (target/debug/deps/owned_exchange-67d53c1d63715381)",
+        "result": "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 20.62s"
+      },
+      {
+        "section": "Running tests/remote.rs (target/debug/deps/remote-35821a8c79883e12)",
+        "result": "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.20s"
+      },
+      {
+        "section": "Running tests/wire_parity.rs (target/debug/deps/wire_parity-afb0066852efa342)",
+        "result": "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.55s"
+      },
+      {
+        "section": "Running unittests src/main.rs (target/debug/deps/s3drive-34330810c301c2e2)",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Running tests/authority_restart.rs (target/debug/deps/authority_restart-b645edb08c3ebfad)",
+        "result": "test result: ok. 9 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 10.53s"
+      },
+      {
+        "section": "Running tests/authority_snapshots.rs (target/debug/deps/authority_snapshots-e16240e45fb20956)",
+        "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s"
+      },
+      {
+        "section": "Running tests/cli.rs (target/debug/deps/cli-40718b7be6343ee7)",
+        "result": "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s"
+      },
+      {
+        "section": "Running tests/creation_engine.rs (target/debug/deps/creation_engine-8f135989c1defe48)",
+        "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.23s"
+      },
+      {
+        "section": "Running tests/linux_mount.rs (target/debug/deps/linux_mount-77f6bf34b6144c85)",
+        "result": "test result: ok. 2 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 8.13s"
+      },
+      {
+        "section": "Running tests/managed_bootstrap.rs (target/debug/deps/managed_bootstrap-90048eb08c466600)",
+        "result": "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.70s"
+      },
+      {
+        "section": "Running tests/managed_native.rs (target/debug/deps/managed_native-981634de161487b5)",
+        "result": "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.57s"
+      },
+      {
+        "section": "Running tests/managed_publication.rs (target/debug/deps/managed_publication-0f3b004a14ebe5e8)",
+        "result": "test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.08s"
+      },
+      {
+        "section": "Running tests/probe_cli.rs (target/debug/deps/probe_cli-3969d972efa466cf)",
+        "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s"
+      },
+      {
+        "section": "Running tests/staged_edits.rs (target/debug/deps/staged_edits-3741ce13cb1f9ef4)",
+        "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s"
+      },
+      {
+        "section": "Running tests/windows_mount.rs (target/debug/deps/windows_mount-b2d450420c5e06f2)",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Running tests/writable_engine.rs (target/debug/deps/writable_engine-0f3d7182165f1074)",
+        "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.08s"
+      },
+      {
+        "section": "Running unittests src/lib.rs (target/debug/deps/s3drive_core-046c66f461d072f9)",
+        "result": "test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s"
+      },
+      {
+        "section": "Running unittests src/lib.rs (target/debug/deps/s3drive_fs-6990081aa6e2432d)",
+        "result": "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.30s"
+      },
+      {
+        "section": "Running unittests src/lib.rs (target/debug/deps/s3drive_fuse-999ed9e7f7cf725c)",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Running unittests src/lib.rs (target/debug/deps/s3drive_managed-06d246333719e644)",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Running unittests src/lib.rs (target/debug/deps/s3drive_s3-e2fed0030b668749)",
+        "result": "test result: ok. 51 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.22s"
+      },
+      {
+        "section": "Running unittests src/lib.rs (target/debug/deps/s3drive_state-6e55562b43f7bb8c)",
+        "result": "test result: ok. 292 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 134.08s"
+      },
+      {
+        "section": "Running unittests src/lib.rs (target/debug/deps/s3drive_winfsp-8e53f823a65b7c94)",
+        "result": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Doc-tests s3drive_authority",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Doc-tests s3drive_core",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Doc-tests s3drive_fs",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Doc-tests s3drive_fuse",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Doc-tests s3drive_managed",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Doc-tests s3drive_s3",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Doc-tests s3drive_state",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      },
+      {
+        "section": "Doc-tests s3drive_winfsp",
+        "result": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      }
+    ]
+  },
+  "controls": [
+    "baseline without injected budget drain",
+    "actual production exchange and finish_request under bounded gated Pending-read budget drain",
+    "multiple driver/read/flush polls with no body descriptors/frame/writes before releasing gate",
+    "same original bytes and exact authority reply; no extra bytes or accepted connection after completion",
+    "EOF before body inspection versus descriptors/frame consumed before failed first write",
+    "empty and Unicode body hints and frames preserved",
+    "Copy error size remains at most128bytes",
+    "existing real TLS/SQLite receipt preservation for clean/failed/expired shutdown"
+  ],
+  "limitations": [
+    "Initial readiness false is expected on the fresh unpolled driver; no inference about later readiness",
+    "Aggregate exhaustion flags cannot identify the responsible suboperation or pair samples from a particular poll",
+    "Controlled budget drain demonstrates a possible mechanism only, not the Windows cause",
+    "Positive exhausted_after and negative exhausted_before paths are exercised; positive exhausted_before path is not separately covered",
+    "Snapshots remain best-effort and may precede cleanup; no delivery/commit inference",
+    "Full local and own source-bound hosted native acceptance remain required; no runtime main promotion"
+  ],
+  "api_documentation_refresh": {
+    "status": "docs.rs URLs unavailable through web tool; locally resolved source inspected",
+    "urls": [
+      "https://docs.rs/hyper/1.12.0/hyper/client/conn/http1/struct.SendRequest.html#method.is_ready",
+      "https://docs.rs/tokio/1.53.3/tokio/task/coop/fn.has_budget_remaining.html"
+    ]
+  },
+  "baseline_hosted_failure": {
+    "job_id": 117685945192,
+    "step": "Verify real Windows drive and teardown",
+    "test": "actual_windows_drive_names_reads_security_and_teardown",
+    "fixture_operation": "Install",
+    "message": "Private local state initialization/reopen failed",
+    "log": "/tmp/s3drive-multipart-plans-c7-windows.log",
+    "sha256": "e6df965bf944ba93e578e32b34d092c0e80abc927531d2f96b731db50942a56b",
+    "reviewed_failure_section_and_result_summary": true,
+    "concrete_schema_mismatch": {
+      "rust_schema": 24,
+      "fixture_expected_schema": 23,
+      "file": "scripts/test-windows-session.ps1",
+      "line": 242,
+      "scope": "stale assertion deterministically rejects successful schema24 output; raw failure does not independently disclose init-state exit code"
+    },
+    "workspace_state": {
+      "passed": 287,
+      "failed": 0,
+      "ignored": 1
+    },
+    "offline_multipart_tests_passed": 16,
+    "earlier_paired_recovery_passed": true,
+    "earlier_https_flushes_passed": 32,
+    "broad_native": {
+      "passed": 6,
+      "failed": 1
+    },
+    "artifact_checker_eligible": false,
+    "historical_transport_failure_resolved": false
+  },
+  "schema_fixture_correction": {
+    "file": "scripts/test-windows-session.ps1",
+    "from": 23,
+    "to": 24,
+    "weakening_or_bypass": false,
+    "powershell_parse_and_assertion_check": {
+      "script": "/tmp/s3drive-check-session-schema.ps1",
+      "old_fixture_exit_code": 1,
+      "fixed_fixture_exit_code": 0,
+      "fixed_log": "/tmp/s3drive-dispatch-progress-schema-fixed.log",
+      "scope": "parse outer and embedded worker AST, compare actual schema assertion with Rust constant, accept24/reject23and25; no Windows execution"
+    },
+    "new_gate_check": "scripts/check-schema-fixtures.py",
+    "native_assertions_checked": [
+      "scripts/test-windows-session.ps1",
+      "scripts/test-windows-snapshot-worker.ps1"
+    ],
+    "negative_controls": [
+      {
+        "case": "stale-session",
+        "exit_code": 1,
+        "output": "scripts/test-windows-session.ps1: expected exactly one assertion for state schema 24"
+      },
+      {
+        "case": "stale-snapshot",
+        "exit_code": 1,
+        "output": "scripts/test-windows-snapshot-worker.ps1: expected exactly one assertion for state schema 24"
+      },
+      {
+        "case": "fixed",
+        "exit_code": 0,
+        "output": "Native fixture schema expectations OK (24; 2 fixtures)."
+      }
+    ],
+    "hosted_native_verification": "pending at next source; do not reuse failedc7 acceptance"
+  },
+  "prior_gate": {
+    "log": "/tmp/s3drive-dispatch-progress-gate1.log",
+    "exit_code": 0,
+    "status": "superseded",
+    "reason": "new schema-fixture gate leg/workflow and fixture correction were added while this older gate definition ran; frozen Rust source unchanged",
+    "sha256": "526546596e68117016d2db3ccbe200283f24d735f14b96becb76c32cd577417f",
+    "state_passed": 292,
+    "authority_tests_passed": 50,
+    "final_extended_gate_acceptance": false
+  }
+}

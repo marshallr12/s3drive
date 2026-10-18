@@ -1,0 +1,101 @@
+{
+  "format": "s3drive-transport-dependency-origin-v1",
+  "date": "2026-10-18",
+  "application_source": "c7fca789a394a1bde63f90154bb261396fb68c8b",
+  "inspected_sources": [
+    {
+      "package": "hyper-1.12.0",
+      "file": "src/client/dispatch.rs",
+      "matches_crate_archive": true,
+      "extracted_sha256": "cce049418dcd9e1700b87701d6e78a4a021ba0e9912e9b669fec3d3f037d4e29",
+      "archive_member_sha256": "cce049418dcd9e1700b87701d6e78a4a021ba0e9912e9b669fec3d3f037d4e29",
+      "crate_archive_matches_cargo_lock": true,
+      "crate_archive_sha256": "2c3e324da4c95177d6291d4c8730197c0d1822f8a9766814a4a44fa5ab797c9c"
+    },
+    {
+      "package": "hyper-1.12.0",
+      "file": "src/proto/h1/dispatch.rs",
+      "matches_crate_archive": true,
+      "extracted_sha256": "9cd6638c59ae4857ae43ee58857abf585cc6a52dfda616c3631e2e48c02eaba2",
+      "archive_member_sha256": "9cd6638c59ae4857ae43ee58857abf585cc6a52dfda616c3631e2e48c02eaba2",
+      "crate_archive_matches_cargo_lock": true,
+      "crate_archive_sha256": "2c3e324da4c95177d6291d4c8730197c0d1822f8a9766814a4a44fa5ab797c9c"
+    },
+    {
+      "package": "hyper-1.12.0",
+      "file": "src/proto/h1/conn.rs",
+      "matches_crate_archive": true,
+      "extracted_sha256": "59a6db81bd098c126d7929e1996a3a6bf9d6e997da76b47d88178fd8206ad44a",
+      "archive_member_sha256": "59a6db81bd098c126d7929e1996a3a6bf9d6e997da76b47d88178fd8206ad44a",
+      "crate_archive_matches_cargo_lock": true,
+      "crate_archive_sha256": "2c3e324da4c95177d6291d4c8730197c0d1822f8a9766814a4a44fa5ab797c9c"
+    },
+    {
+      "package": "hyper-1.12.0",
+      "file": "src/proto/h1/io.rs",
+      "matches_crate_archive": true,
+      "extracted_sha256": "27287bec2aeb9d23fbf3440b5eea5186a1826301f7de2d855e78fcfce465c745",
+      "archive_member_sha256": "27287bec2aeb9d23fbf3440b5eea5186a1826301f7de2d855e78fcfce465c745",
+      "crate_archive_matches_cargo_lock": true,
+      "crate_archive_sha256": "2c3e324da4c95177d6291d4c8730197c0d1822f8a9766814a4a44fa5ab797c9c"
+    },
+    {
+      "package": "hyper-1.12.0",
+      "file": "src/client/conn/http1.rs",
+      "matches_crate_archive": true,
+      "extracted_sha256": "6ec8124f5dc3f176baae99d9528d467e976e2522912d5bab13603a792fecb203",
+      "archive_member_sha256": "6ec8124f5dc3f176baae99d9528d467e976e2522912d5bab13603a792fecb203",
+      "crate_archive_matches_cargo_lock": true,
+      "crate_archive_sha256": "2c3e324da4c95177d6291d4c8730197c0d1822f8a9766814a4a44fa5ab797c9c"
+    },
+    {
+      "package": "tokio-1.53.3",
+      "file": "src/sync/oneshot.rs",
+      "matches_crate_archive": true,
+      "extracted_sha256": "c9b2824053358a147ff59784a63472bea8b078010e912633998b3ac7992a2d78",
+      "archive_member_sha256": "c9b2824053358a147ff59784a63472bea8b078010e912633998b3ac7992a2d78",
+      "crate_archive_matches_cargo_lock": true,
+      "crate_archive_sha256": "ce3335fa71841cda333a58d7615b03901380ecf09d59b3296d21f8bbac0dde4e"
+    },
+    {
+      "package": "tokio-1.53.3",
+      "file": "src/sync/mpsc/chan.rs",
+      "matches_crate_archive": true,
+      "extracted_sha256": "cbc283b9f4a824e33ec3b137b155dd7044ce296596685070c1acb306a1660542",
+      "archive_member_sha256": "cbc283b9f4a824e33ec3b137b155dd7044ce296596685070c1acb306a1660542",
+      "crate_archive_matches_cargo_lock": true,
+      "crate_archive_sha256": "ce3335fa71841cda333a58d7615b03901380ecf09d59b3296d21f8bbac0dde4e"
+    },
+    {
+      "package": "tokio-1.53.3",
+      "file": "src/task/coop/mod.rs",
+      "matches_crate_archive": true,
+      "extracted_sha256": "e6efc19435559c8621d30aab8e37e0ad652857f8eefc170f73bf8dac653729de",
+      "archive_member_sha256": "e6efc19435559c8621d30aab8e37e0ad652857f8eefc170f73bf8dac653729de",
+      "crate_archive_matches_cargo_lock": true,
+      "crate_archive_sha256": "ce3335fa71841cda333a58d7615b03901380ecf09d59b3296d21f8bbac0dde4e"
+    }
+  ],
+  "production_changes": false,
+  "dependency_changes": false,
+  "provider_requests": 0,
+  "upstream": [
+    {
+      "url": "https://github.com/hyperium/hyper/releases/tag/v1.12.0",
+      "fact": "Pinned Hyper1.12.0 release includes the stale-want readiness fix4208"
+    },
+    {
+      "url": "https://github.com/hyperium/hyper/pull/4208",
+      "fact": "Fix withdraws stale readiness when dispatch receives a request; pooled busy connections motivated the report",
+      "interpretation": "Already present; does not demonstrate a fix for a fresh owned connection that never writes"
+    },
+    {
+      "url": "https://github.com/hyperium/hyper/pull/4222",
+      "merge_commit": "97fff93e53f9e6a993f2d6a25d50883b7b8752a7",
+      "fact": "Post-release master drains the closed request receiver before completing shutdown, retaining original result across polls",
+      "interpretation": "Relevant response-retention audit, but its send-versus-close race is not established for the owned single-task path, which calls synchronous send_request before polling its driver"
+    }
+  ],
+  "conclusion": "Inspected local sources exactly match lock-checked crate archives. Neither a modified local extraction nor the already included stale-want fix explains the observed Windows active-poll/no-write failure. Root cause unverified.",
+  "next_evidence": "Separate first sender readiness, body-descriptor access and per-driver cooperative budget observations before selecting a behavioral fix; keep one send and original deadline/operation identity. Validate a concrete correction on native Windows plus an unchanged-source repeat."
+}

@@ -127,6 +127,7 @@ impl WireClient {
         let work = async move {
             // The pinned channel permits the first request to be buffered
             // before its driver is polled. There is exactly one send_request.
+            observed.exchange.sender_readiness(sender.is_ready());
             let response = sender.send_request(request);
             // Enqueued locally by the pinned synchronous send_request call;
             // this is not evidence that the driver consumed or sent it.
@@ -168,6 +169,7 @@ impl WireClient {
         let mut driver = Box::pin(std::future::poll_fn(|cx| {
             progress.exchange.driver_polled();
             let result = connection.as_mut().poll(cx);
+            progress.exchange.driver_returned();
             if let Poll::Ready(result) = &result {
                 progress.exchange.driver_finished(result.is_ok());
             }

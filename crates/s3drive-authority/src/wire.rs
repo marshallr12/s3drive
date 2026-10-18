@@ -204,9 +204,11 @@ impl HttpBody for ObservedBody {
         frame
     }
     fn size_hint(&self) -> SizeHint {
+        self.progress.exchange.body_size_hint_queried();
         self.inner.size_hint()
     }
     fn is_end_stream(&self) -> bool {
+        self.progress.exchange.body_end_stream_queried();
         self.inner.is_end_stream()
     }
 }
