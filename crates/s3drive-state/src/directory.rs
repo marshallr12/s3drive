@@ -59,6 +59,16 @@ impl OwnedDirectory {
     }
     #[cfg(any(target_os = "linux", windows))]
     pub(crate) fn acquire(path: &Path) -> Result<Self> {
+        Self::acquire_mode(path, true)
+    }
+
+    #[cfg(any(target_os = "linux", windows))]
+    pub(crate) fn acquire_existing(path: &Path) -> Result<Self> {
+        Self::acquire_mode(path, false)
+    }
+
+    #[cfg(any(target_os = "linux", windows))]
+    fn acquire_mode(path: &Path, create: bool) -> Result<Self> {
         // Native Windows creation APIs use NUL-terminated strings; reject a
         // public API caller's embedded NUL before it can create a prefix path.
         if path.as_os_str().as_encoded_bytes().contains(&0) {
@@ -77,7 +87,9 @@ impl OwnedDirectory {
             directories.last().ok_or("missing parent directory")?,
             parent,
         )?;
-        platform::create_directory(&path)?;
+        if create {
+            platform::create_directory(&path)?;
+        }
         let root = platform::open_directory(&path)?;
         platform::verify_private(&root, true)?;
         platform::verify_local(&root, &path)?;
@@ -90,7 +102,7 @@ impl OwnedDirectory {
                 return Err("state directory contains an unmanaged entry".into());
             }
         }
-        let lock = platform::open_file(&path.join(LOCK), true)?;
+        let lock = platform::open_file(&path.join(LOCK), create)?;
         platform::verify_private(&lock, false)?;
         match lock.try_lock() {
             Ok(()) => (),
@@ -108,7 +120,7 @@ impl OwnedDirectory {
                 Err(e) => return Err(e.into()),
             };
             if *name == DATABASE || exists {
-                let file = platform::open_file(&file_path, *name == DATABASE)?;
+                let file = platform::open_file(&file_path, create && *name == DATABASE)?;
                 platform::verify_private(&file, false)?;
             }
         }
@@ -121,6 +133,11 @@ impl OwnedDirectory {
 
     #[cfg(not(any(target_os = "linux", windows)))]
     pub(crate) fn acquire(_: &Path) -> Result<Self> {
+        Err("managed local state is supported on Linux and Windows only".into())
+    }
+
+    #[cfg(not(any(target_os = "linux", windows)))]
+    pub(crate) fn acquire_existing(_: &Path) -> Result<Self> {
         Err("managed local state is supported on Linux and Windows only".into())
     }
 

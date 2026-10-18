@@ -27,24 +27,9 @@ enum Command {
         directory: PathBuf,
     },
     /// Run the metadata authority (HTTP loopback or explicit TLS).
-    AuthorityServe {
-        #[arg(long)]
-        directory: PathBuf,
-        #[arg(long)]
-        token_file: PathBuf,
-        /// Owner-private PEM certificate chain. Required with --tls-key.
-        #[arg(long, requires = "tls_key")]
-        tls_cert: Option<PathBuf>,
-        /// Owner-private unencrypted PEM key. Required with --tls-cert.
-        #[arg(long, requires = "tls_cert")]
-        tls_key: Option<PathBuf>,
-        #[arg(long, default_value = "127.0.0.1:0")]
-        listen: std::net::SocketAddr,
-        #[arg(long)]
-        stop_on_stdin_close: bool,
-        #[arg(long,default_value="exact-utf8-v1",value_parser=["exact-utf8-v1","portable-collision-v1"])]
-        name_policy: String,
-    },
+    AuthorityServe(AuthorityArgs),
+    /// Offline identity/private-input check for an existing pinned authority.
+    AuthorityCheck(AuthorityArgs),
     /// Plan/run an explicit disposable-key conditional-write capability probe.
     ProbeWrites {
         #[command(subcommand)]
@@ -105,6 +90,29 @@ enum Command {
     },
 }
 
+#[derive(clap::Args)]
+struct AuthorityArgs {
+    #[arg(long)]
+    directory: PathBuf,
+    #[arg(long)]
+    token_file: PathBuf,
+    /// Owner-private PEM certificate chain. Required with --tls-key.
+    #[arg(long, requires = "tls_key")]
+    tls_cert: Option<PathBuf>,
+    /// Owner-private unencrypted PEM key. Required with --tls-cert.
+    #[arg(long, requires = "tls_cert")]
+    tls_key: Option<PathBuf>,
+    #[arg(long, default_value = "127.0.0.1:0")]
+    listen: std::net::SocketAddr,
+    #[arg(long)]
+    stop_on_stdin_close: bool,
+    #[arg(long,default_value="exact-utf8-v1",value_parser=["exact-utf8-v1","portable-collision-v1"])]
+    name_policy: String,
+    /// Existing volume ID for restart. Missing metadata is refused, never initialized.
+    #[arg(long)]
+    expect_volume: Option<String>,
+}
+
 #[derive(Subcommand)]
 enum ProbeCommand {
     /// Prepare six random, source-bound fixture keys; no provider connection.
@@ -149,25 +157,8 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
             s3drive_state::create_private_secret(&directory, token.as_bytes())?;
             println!("Created owner-private authority.token; its contents were not printed.");
         }
-        Command::AuthorityServe {
-            directory,
-            token_file,
-            tls_cert,
-            tls_key,
-            listen,
-            stop_on_stdin_close,
-            name_policy,
-        } => {
-            run_authority(
-                directory,
-                token_file,
-                listen,
-                stop_on_stdin_close,
-                name_policy,
-                tls_cert.zip(tls_key),
-            )
-            .await?;
-        }
+        Command::AuthorityServe(args) => run_authority(args).await?,
+        Command::AuthorityCheck(args) => check_authority(args)?,
         // Keep SDK mutation futures out of the existing mount startup envelope.
         Command::ProbeWrites { command } => Box::pin(run_probe(command)).await?,
         Command::UploadPolicyCheck {
@@ -500,28 +491,77 @@ fn check_cache_location(
     Ok(())
 }
 
-async fn run_authority(
-    directory: PathBuf,
-    token_file: PathBuf,
-    listen: std::net::SocketAddr,
-    stdin_close: bool,
-    name_policy: String,
-    tls_files: Option<(PathBuf, PathBuf)>,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
-    use s3drive_authority::{Authority, Reply, Request, Token};
-    if !listen.ip().is_loopback() && tls_files.is_none() {
+fn authority_material(
+    args: &AuthorityArgs,
+) -> Result<
+    (
+        s3drive_authority::Token,
+        Option<s3drive_authority::ServerTls>,
+    ),
+    Box<dyn Error + Send + Sync>,
+> {
+    if !args.listen.ip().is_loopback() && args.tls_cert.is_none() {
         return Err(
             "a nonloopback authority listener requires explicit TLS certificate and key files"
                 .into(),
         );
     }
-    let tls = tls_files
-        .map(|(cert, key)| s3drive_authority::ServerTls::from_private_files(&cert, &key))
+    if args.expect_volume.as_ref().is_some_and(|id| {
+        id.len() != 32
+            || id == s3drive_authority::ROOT
+            || !id
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    }) {
+        return Err(
+                "expected authority volume must identify a nonzero volume with 32 lowercase hexadecimal digits".into(),
+            );
+    }
+    let tls = args
+        .tls_cert
+        .as_ref()
+        .zip(args.tls_key.as_ref())
+        .map(|(cert, key)| s3drive_authority::ServerTls::from_private_files(cert, key))
         .transpose()?;
-    let token=Token::from_private_file(&token_file).map_err(|_|"authority token must be an owner-private local file containing 64 hexadecimal characters")?;
-    let authority = Authority::open_with_policy(directory, name_policy)
-        .await
-        .map_err(|_| "private authority initialization failed")?;
+    let token = s3drive_authority::Token::from_private_file(&args.token_file)
+        .map_err(|_| "authority token must be an owner-private local file containing 64 hexadecimal characters")?;
+    Ok((token, tls))
+}
+fn check_authority(args: AuthorityArgs) -> Result<(), Box<dyn Error + Send + Sync>> {
+    let volume = args
+        .expect_volume
+        .as_deref()
+        .ok_or("authority-check requires --expect-volume; it never initializes metadata")?;
+    if args.listen.port() == 0 || args.stop_on_stdin_close {
+        return Err(
+            "startup checks require a stable nonzero listen port and no stdin lifetime flag".into(),
+        );
+    }
+    let _material = authority_material(&args)?;
+    let info = s3drive_state::State::inspect_existing_authority(
+        &args.directory,
+        volume,
+        &args.name_policy,
+    )
+    .map_err(
+        |_| "existing authority identity/ownership check failed; metadata was not initialized",
+    )?;
+    println!(
+        "{}",
+        serde_json::json!({"volume":info,"running":false,"provider_access_verified":false})
+    );
+    Ok(())
+}
+async fn run_authority(args: AuthorityArgs) -> Result<(), Box<dyn Error + Send + Sync>> {
+    use s3drive_authority::{Authority, Reply, Request};
+    let (token, tls) = authority_material(&args)?;
+    let authority = if let Some(volume) = args.expect_volume {
+        Authority::open_existing(args.directory, volume, args.name_policy).await
+    } else {
+        Authority::open_with_policy(args.directory, args.name_policy).await
+    }.map_err(|_| "private authority initialization/restart failed; inspect existing metadata and pinned identity")?;
+    let listen = args.listen;
+    let stdin_close = args.stop_on_stdin_close;
     let listener = tokio::net::TcpListener::bind(listen).await?;
     let Reply::Info(volume) = authority.client().request(Request::Info {}).await else {
         return Err("authority initialization failed".into());

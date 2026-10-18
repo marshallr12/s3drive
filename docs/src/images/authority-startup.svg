@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="540" viewBox="0 0 1000 540" role="img" aria-labelledby="title desc">
+<title id="title">Managed coordinator and drive startup</title>
+<desc id="desc">A login trigger starts separate coordinator and drive supervisors. Rust refuses missing or different volume metadata. The coordinator owns authoritative SQLite, while the drive owns a private journal and sends payload bytes directly to S3.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8z" fill="#334155"/></marker></defs>
+<rect width="1000" height="540" fill="#f8fafc"/>
+<g font-family="sans-serif" fill="#0f172a">
+<text x="500" y="32" text-anchor="middle" font-size="25" font-weight="bold">Co-located option: coordinator and drive startup</text>
+<rect x="300" y="52" width="400" height="56" rx="10" fill="#dbeafe" stroke="#2563eb"/>
+<text x="500" y="77" text-anchor="middle" font-size="20">Desktop or same-account SSH sign-in</text>
+<text x="500" y="98" text-anchor="middle" font-size="16">MX: XDG + login hook · Windows: Task Scheduler</text>
+<g stroke="#334155" stroke-width="2" fill="none" marker-end="url(#arrow)"><path d="M400 108V127H230V145"/><path d="M600 108V127H770V145"/></g>
+<rect x="40" y="148" width="380" height="76" rx="10" fill="#e0e7ff" stroke="#6366f1"/>
+<text x="230" y="175" text-anchor="middle" font-size="21" font-weight="bold">Coordinator supervisor</text>
+<text x="230" y="200" text-anchor="middle" font-size="18">Own child, process lock, bounded retry</text>
+<rect x="580" y="148" width="380" height="76" rx="10" fill="#dcfce7" stroke="#16a34a"/>
+<text x="770" y="175" text-anchor="middle" font-size="21" font-weight="bold">Drive supervisor</text>
+<text x="770" y="200" text-anchor="middle" font-size="18">FUSE / WinFsp · survives terminal loss</text>
+<g stroke="#334155" stroke-width="2" fill="none" marker-end="url(#arrow)"><path d="M230 224V250"/><path d="M770 224V250"/></g>
+<rect x="40" y="254" width="380" height="96" rx="10" fill="#fff" stroke="#6366f1"/>
+<text x="230" y="281" text-anchor="middle" font-size="21" font-weight="bold">Rust coordinator</text>
+<text x="230" y="306" text-anchor="middle" font-size="18">Pin original volume + naming policy</text>
+<text x="230" y="331" text-anchor="middle" font-size="18">Missing / wrong database → refuse</text>
+<rect x="580" y="254" width="380" height="96" rx="10" fill="#fff" stroke="#16a34a"/>
+<text x="770" y="281" text-anchor="middle" font-size="21" font-weight="bold">Rust filesystem engine + S3 client</text>
+<text x="770" y="306" text-anchor="middle" font-size="18">Authoritative names / exact operation IDs</text>
+<text x="770" y="331" text-anchor="middle" font-size="18">Retain dirty bytes and report conflicts</text>
+<path d="M580 292H424" stroke="#334155" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<text x="500" y="278" text-anchor="middle" font-size="17">HTTPS</text><text x="500" y="315" text-anchor="middle" font-size="16">metadata</text>
+<g stroke="#334155" stroke-width="2" fill="none" marker-end="url(#arrow)"><path d="M230 350V382"/><path d="M700 350V382"/><path d="M855 350V443"/></g>
+<rect x="40" y="386" width="380" height="70" rx="10" fill="#ede9fe" stroke="#6366f1"/>
+<text x="230" y="414" text-anchor="middle" font-size="20" font-weight="bold">Existing authoritative SQLite</text>
+<text x="230" y="440" text-anchor="middle" font-size="18">Private local disk · never recreate silently</text>
+<rect x="480" y="386" width="300" height="70" rx="10" fill="#ecfdf5" stroke="#16a34a"/>
+<text x="630" y="414" text-anchor="middle" font-size="20" font-weight="bold">Private local SQLite</text>
+<text x="630" y="440" text-anchor="middle" font-size="18">Journal + cache outside drive</text>
+<rect x="800" y="447" width="170" height="56" rx="10" fill="#fef3c7" stroke="#d97706"/>
+<text x="885" y="471" text-anchor="middle" font-size="20" font-weight="bold">S3 / Wasabi</text>
+<text x="885" y="492" text-anchor="middle" font-size="16">Immutable payloads</text>
+<text x="872" y="377" text-anchor="start" font-size="16">file bytes</text>
+<text x="40" y="495" font-size="17">Separate lifetimes: removing one drive must not stop the shared coordinator.</text>
+<text x="40" y="522" font-size="16" fill="#475569">Implementation plan · 2026-10-17 · Windows and paired native acceptance pending</text>
+</g></svg>

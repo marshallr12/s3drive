@@ -694,3 +694,32 @@ CLI-generated config7, and save/mutation recovery uses CLI-generated config6
 and HTTPS. Explicit refusal checks preserve existing state and reject an
 out-of-policy default root. Require terminal exact-tip hosted native/reference/
 startup gates before guarded private publication. No real provider mutation.
+
+Bootstrap accepted at `712882e`, terminal all-green CI39079281204:257/253
+state, six setup CLI/six shared-engine cases, Linux7/Windows1+7 native cases,
+both startup gates and strict source-bound21/14 artifacts. Private main is clean.
+
+### P6m4c — pinned coordinator startup (2026-10-17)
+
+Implement the [startup contract](authority-startup.md): existing-only volume-
+pinned Rust restart/check commands before extending per-account Linux/no-systemd
+and Windows launchers. Missing metadata must never become a new volume. Require
+WAL/crash/migration/identity refusal, disposable supervision, paired managed
+native access/recovery and all existing gates before publication. Do not stop at
+a foreground identity check and call supervision complete. Keep separate hosted
+deployment/Turso choices open; no actual user registration or host provisioning.
+
+Pinned-startup local gate passed (265 state, two new real CLI HTTP/TLS restart
+cases plus the existing suites, lint/build/book). The separate Linux coordinator
+supervisor acceptance passed with gio/tmux, killed-child/WAL and unknown-result
+recovery, missing/overlapping metadata refusal and controlled removal. Windows
+helper has AST-only evidence; actual independent-logon coordinator and paired
+native drive acceptance remain required. This is a development checkpoint,
+not publication or completed coordinator supervision.
+
+Linux supervision additionally passed the explicit HTTP and HTTPS/private-CA
+wrapper (after the local gate), with unchanged hostname/certificate validation.
+The new CI step invokes that wrapper after Linux acceptance tools are installed.
+A private development branch may run existing Windows regressions, but those do
+not replace the required new Authority-component and paired native tests; do
+not promote this checkpoint merely because existing CI is green.

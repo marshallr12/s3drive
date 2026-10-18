@@ -1,59 +1,98 @@
 # S3Drive handoff
 
-Updated2026-10-17. Goal ACTIVE. Current phase **managed operator bootstrap** on
-`codex/managed-bootstrap-cli`. Read `docs/src/implementation-plan.md` and
-`docs/src/managed-bootstrap.md` before implementation.
+Updated2026-10-17. Goal ACTIVE. Current phase **pinned coordinator startup** on
+`codex/authority-startup`. Read `docs/src/implementation-plan.md` and
+`docs/src/authority-startup.md` before implementation. Worktree is WIP; do not
+publish this phase or claim Windows coordinator supervision accepted yet.
 
-Accepted private clean baseline/main a87bd0bd3992bf0af838ac0f97c7a4e97687662e,
-terminal all-green CI39075749765: Linux117522425233, Windows117522425371,
-book117522425341. 256/252 state, ten HTTP, five TLS, seventeen SDK, Linux7 and
-Windows1+7 native cases; both startup gates and typed21/14 source-bound artifacts
-12117256367/12117671321 passed. Real Rust HTTPS/private-CA native writers accepted.
-Proof `/tmp/s3drive-remote-publication.json`, logs `/tmp/s3drive-remote-{linux,windows,book}.log`,
-local gate2 exit0. Schema23/config7. WinFsp ON_CLOSE kernel refusal, retained
-fixture profile pending VM teardown and desktop/reboot/PAM/SSH limits remain.
+Accepted private clean baseline/main712882eacd5f15273cd574c1d708b6f99935c1ea,
+terminal all-green CI39079281204: Linux117532750921, Windows117532751106,
+book117532751123. 257/253 state, ten HTTP, five TLS, seventeen SDK, six setup CLI/
+six shared-engine cases, Linux7/Windows1+7 native, both startup gates and typed
+21/14 exact-source artifacts12118596192/12118656792 passed. Proof
+`/tmp/s3drive-bootstrap-publication.json`, logs `/tmp/s3drive-bootstrap-{linux,windows,book}.log`,
+local gate2 exit0. Local/remote main/private/clean verified after guarded FF.
+Bootstrap branch retained. Schema23/config7. Windows locked disposable profile
+was retained for VM teardown after dummy credential removal; explicit WinFsp
+ON_CLOSE refusal and physical/desktop/reboot/PAM/SSH limits remain.
 
-Current CLI adds managed info/store-plan/store-apply/store-status/configure.
-Plans freeze exact RegisterStore ID (also store ID), sequence, route, volume,
-name policy and optional CA-byte hash in flushed create-new private documents.
-No setup S3 requests or credential resolution. Recovery observes exact receipts
-and store descriptors; never rebase or fresh-ID fallback. Root is source-relative,
-not prefixed twice. Configuration supports explicit local alias mapping and
-read-only or explicit policy/evidence-bound writes with fresh separate state.
-No overwrite, provider grant, startup install, host/Turso provisioning or existing
-bucket import. Shared/native fixtures now register via CLI and use generated
-configurations; writable save/mutation setup also uses HTTPS.
+Current changes: OwnedDirectory acquire-existing refuses missing directory,
+lock and database. State inspect_existing_authority holds exclusive ownership,
+opens read-only SQLite and verifies app/schema8..23, original volume/policy/root
+before migration or intent recovery. It honors ordinary WAL, not immutable URI
+shortcuts; operational WAL/SHM files may change. open_existing_authority then
+opens without CREATE, migrates only a matching known DB and rechecks identity.
+Authority::open_existing uses this mode without namespace initialization. CLI
+shared AuthorityArgs now adds --expect-volume and authority-check (offline,
+nonzero stable port, no stdin lifetime flag). Unpinned foreground bootstrap
+stays explicit. No schema/protocol version change or new dependency version.
 
-Final local gate passed exit0 (`/tmp/s3drive-bootstrap-gate2.log`): 257 Linux
-state, ten HTTP, five TLS, seventeen SDK, six bootstrap CLI and six shared-engine
-cases, formatting/Clippy/build and55-document link/mdBook checks. The local
-portable lifecycle uses a generated config7; save/mutation recovery uses CLI
-registration and generated config6 over HTTPS. Refusal checks retain existing
-dirty fixture bytes and reject reused direct state/out-of-scope roots without
-provider mutations. Native mounts remain separate, required hosted gates.
+State focused tests passed (`/tmp/s3drive-authority-startup-state3.log`, eight cases),
+including killed owner with identity and receipt provably only in WAL, migration
+hash/sequence retention, missing files and wrong/client identities. Root preflight now checks revision/payload/placement; actual schema8 upgrades
+and a replacement after preflight are tested. Identity is rechecked inside the
+same write transaction before migrations, so empty/different replacements are
+not initialized or migrated. Existing CLI8 regression tests passed
+`/tmp/s3drive-authority-startup-cli-tests1.log`. Cargo checks passed for authority
+and CLI. Two real CLI HTTP/TLS restart/refusal cases passed
+`/tmp/s3drive-authority-startup-wire1.log`. Full gate3 passed exit0 at
+`/tmp/s3drive-authority-startup-gate3.log`: 265 state, ten HTTP, five TLS,17 SDK,
+two restart CLI cases plus existing suites, lint/build and56-book-file checks.
+Gates1/2 failed type-complexity/collapsible-if lints only; both fixed.
 
-Earlier engine1/2 found old fixture string-spacing and missing-key assumptions;
-engine3 exposed intentional direct/managed state reuse refusal. Parsed-table
-helpers now use a distinct original direct journal. Final engine4 passed.
-Gate1 failed only a useless-vec lint in a new test; fixed before full gate2.
-No existing dependency versions changed; serde became a direct CLI dependency.
-The setup chapter returns HTTP200 in the local book preview.
+Linux session helper adds explicit --component authority with separate v2 private
+manifest/autostart/profile markers and pinned launch fields. Default v1 mounts
+retain their namespace/format. Runtime PID hints are not kill permission; the
+supervisor signals only its Popen child. New `scripts/test-linux-authority.py`
+passed locally at `/tmp/s3drive-authority-startup-linux3.log`: real gio/tmux,
+launching terminal loss, duplicate starts, killed child with unread operation
+reply, exact replay/no sequence increment, Unicode namespace, missing DB refusal,
+restored original DB and removal preserving metadata/token/profile. No FUSE,
+S3 requests, actual account startup entries or systemd used. Test kills only its
+own confirmed fixture child via pidfd, not a stale PID. Python3.11 syntax passed. Authority startup/database overlap is refused before
+creating registration directories or metadata entries; a negative fixture proves
+the directory listing/profile remain unchanged. The new explicit CI step runs
+`authority_restart::supervised_linux_coordinator_http_and_tls_with_private_ca`
+after Linux tmux/gio installation. It passed locally for BOTH HTTP and real
+Rust HTTPS/private CA (`/tmp/s3drive-authority-startup-linux-tls2.log`,25.45sec).
+That ignored wrapper was added after gate3; formatting and full all-target
+Clippy were rerun and passed at `/tmp/s3drive-authority-startup-clippy-final.log`.
+Its two ordinary CLI cases were already in gate3. Final full gate still required
+after Windows/paired native integration. Proxy inheritance is disabled in the
+Python fixture client; hostname/certificate verification stays enabled.
 
-Next push candidate and inspect terminal exact-SHA Linux/Windows/book jobs,
-Linux7 and Windows1+7 native cases, both startup gates and source/platform-bound
-strict21/14 reference artifacts before guarded private main publication. Proof
-will be `/tmp/s3drive-bootstrap-publication.json`; refresh accepted source during
-the next substantive phase rather than start a documentation-only CI cycle.
+Windows helper adds analogous Authority component/v2 manifest and separate
+Task Scheduler registration, stable expected-volume/TLS settings and child stdin
+shutdown. PowerShell AST parsed locally; native Authority runtime is NOT tested.
+Existing test-windows-session.ps1 currently tests only Mount. Must extend/add
+actual disposable non-admin independent-logon TLS coordinator acceptance,
+killed-child/retry and removal, plus paired real managed mounts on both OSes.
+Do not infer coordinator acceptance from baseline mount startup or AST parsing.
 
-Do not bypass workstation NoNewPrivs=1, mutate Wasabi, install real startup,
-rotate credentials or provision accounts/hosting. Earlier disposable provider
-approvals were consumed/cleaned. Windows tests run natively on hosted Server2025,
-not this Linux workstation or an accepted Windows10/11 desktop. Physical reboot,
-PAM/SSH, real multi-host/partitions, authority supervision, backup/failover,
-provider managed acceptance and large-file work remain. User keeps SQLite-host
-and optional Turso options open; Turso pricing citations live in the book.
-Privacy drift happened historically; last live API confirmed private, recheck
-before/after publication. No forced publication or broad credential/config dumps.
+Next: extend disposable Windows startup acceptance and pair both native
+managed drives with supervised coordinator recovery (Unicode bytes, exact
+uncertain IDs, dirty/conflict retention). Add explicit Linux authority CI step
+after tmux/gio availability. Full local gate, then exact-tip hosted all-three/
+native/reference/startup gates and source-bound artifacts before publication.
+No user startup installation, host/account provisioning or new Wasabi mutation.
+Keep complete phase acceptance criteria in the book; the Rust preflight alone
+is not completed coordinator supervision. Development checkpoint on codex/authority-startup; no phase publication.
+A private branch push may run regression CI for this checkpoint, but those
+existing Windows Mount tests DO NOT validate the new Authority component.
+Do not promote this checkpoint to main even if its regression CI is all-green.
+Local evidence manifest: /tmp/s3drive-authority-startup-checkpoint.json.
+New co-located startup SVG was rendered
+with librsvg/Cairo and visually checked at /tmp/s3drive-authority-startup.png.
+The book now clarifies that only a designated host runs the authority; other
+workstations start drives and share that service. Do not clone authority DBs.
+
+Do not bypass workstation NoNewPrivs=1 (reverified), mutate Wasabi, install real
+startup, rotate credentials or provision accounts/hosting. Earlier disposable
+provider approvals were consumed/cleaned. Windows testing is hosted Server2025,
+not this Linux workstation or accepted Windows10/11. Real multi-host/partitions,
+authority backup/failover, managed provider acceptance and large files remain.
+Hosting choice remains open between SQLite-host and optional Turso. Privacy
+previously drifted; current API private; verify before/after publication.
 
 ## Prior owned-target replacement checkpoint
 

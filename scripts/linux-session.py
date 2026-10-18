@@ -23,7 +23,7 @@ def private_directory(path):
     return path
 
 
-def location(name):
+def location(name, component="mount", authority_directory=None):
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,47}", name):
         raise ValueError("Name must contain 1-48 lowercase letters, digits or hyphens")
     installed = Path(__file__).resolve()
@@ -32,14 +32,65 @@ def location(name):
     base = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state"))
     if not base.is_absolute():
         raise ValueError("XDG_STATE_HOME must be absolute")
-    return private_directory(private_directory(base / "s3drive") / name)
+    namespace = "s3drive-authority" if component == "authority" else "s3drive"
+    if authority_directory is not None:
+        data = authority_directory.resolve(strict=True)
+        candidate = (base / namespace / name).resolve()
+        if candidate.is_relative_to(data) or data.is_relative_to(candidate):
+            raise ValueError("Authority database and startup registration must be separate trees")
+    return private_directory(private_directory(base / namespace) / name)
 
 
-def load(root):
+def load(root, component=None):
     value = json.loads((root / "startup.json").read_text())
-    if value.get("version") != 1:
+    kind = "mount" if value.get("version") == 1 else value.get("component")
+    if value.get("version") == 2 and kind == "authority":
+        expected = {"version", "component", "executable", "authority", "autostart", "autostart_text", "profile", "profile_block"}
+        fields = {"directory", "volume", "name_policy", "token_file", "listen", "tls_cert", "tls_key"}
+        authority = value.get("authority")
+        if set(value) != expected or not isinstance(authority, dict) or set(authority) != fields:
+            raise ValueError("Unsupported authority registration fields")
+        if any(not isinstance(authority[k], str) or not authority[k] for k in fields - {"tls_cert", "tls_key"}):
+            raise ValueError("Incomplete pinned authority registration")
+        if any(authority[k] is not None and not isinstance(authority[k], str) for k in ["tls_cert", "tls_key"]):
+            raise ValueError("Invalid authority TLS registration")
+        if bool(authority["tls_cert"]) != bool(authority["tls_key"]):
+            raise ValueError("Incomplete authority TLS pair")
+    elif value.get("version") != 1:
         raise ValueError("Unsupported startup registration")
+    if component is not None and kind != component:
+        raise ValueError("Startup component does not match its registration")
     return value
+
+
+def child_command(value, check=False):
+    if value.get("version") == 1:
+        return [value["executable"], "mount", value["config"], value["mountpoint"]]
+    authority = value["authority"]
+    command = [value["executable"], "authority-check" if check else "authority-serve",
+               "--directory", authority["directory"], "--expect-volume", authority["volume"],
+               "--name-policy", authority["name_policy"], "--token-file", authority["token_file"],
+               "--listen", authority["listen"]]
+    if authority["tls_cert"]:
+        command += ["--tls-cert", authority["tls_cert"], "--tls-key", authority["tls_key"]]
+    return command
+
+
+def record_child(root, value, child):
+    # Operational hints only, never authority to kill a PID from another run.
+    if value.get("component") != "authority":
+        return
+    fd, path = tempfile.mkstemp(prefix=".runtime-", dir=root)
+    temporary = Path(path)
+    try:
+        with os.fdopen(fd, "w") as out:
+            json.dump(dict(supervisor_pid=os.getpid(), child_pid=child.pid,
+                           component="authority", expected_volume=value["authority"]["volume"]), out)
+            out.flush()
+            os.fsync(out.fileno())
+        temporary.replace(root / "runtime.json")
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def lock(root):
@@ -65,6 +116,8 @@ def create_file(path, text, mode=0o600):
     fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, mode)
     with os.fdopen(fd, "w") as output:
         output.write(text)
+        output.flush()
+        os.fsync(output.fileno())
 
 
 def profile_text(path):
@@ -111,27 +164,51 @@ def install(args, root):
     if (root / "startup.json").exists():
         raise ValueError("Registration already exists; remove it before replacing it")
     executable = args.executable.resolve(strict=True)
-    config = args.config.resolve(strict=True)
-    mount = args.mountpoint.absolute()
-    if mount.is_symlink() or not mount.is_dir() or mount.stat().st_uid != os.getuid():
-        raise ValueError("Mountpoint must be an existing owned directory, not a symlink")
-    mount = mount.resolve()
-    if os.path.ismount(mount) or any(mount.iterdir()):
-        raise ValueError("Mountpoint must be empty and unmounted")
-    for path in [executable, config, root.resolve()]:
-        if path.is_relative_to(mount):
-            raise ValueError("Executable, configuration and startup state must be outside the mount")
-    subprocess.run([str(executable), "config-check", str(config)], check=True, timeout=30)
+    authority = None
+    config = None
+    if args.component == "authority":
+        mount = args.authority_directory.absolute()
+        authority = dict(directory=str(mount), volume=args.authority_volume,
+                         name_policy=args.authority_name_policy, token_file=str(args.authority_token_file.absolute()),
+                         listen=args.authority_listen,
+                         tls_cert=str(args.tls_cert.absolute()) if args.tls_cert else None,
+                         tls_key=str(args.tls_key.absolute()) if args.tls_key else None)
+        # Rust validates private paths/ACLs, the existing volume and schema
+        # without initialization or migration. No S3 credentials are involved.
+        subprocess.run(child_command(dict(version=2, executable=str(executable), authority=authority), True), check=True, timeout=30)
+        protected = [executable, root.resolve(), Path(authority["token_file"])]
+        protected += [Path(p) for p in [authority["tls_cert"], authority["tls_key"]] if p]
+    else:
+        config = args.config.resolve(strict=True)
+        mount = args.mountpoint.absolute()
+        if mount.is_symlink() or not mount.is_dir() or mount.stat().st_uid != os.getuid():
+            raise ValueError("Mountpoint must be an existing owned directory, not a symlink")
+        if os.path.ismount(mount) or any(mount.iterdir()):
+            raise ValueError("Mountpoint must be empty and unmounted")
+        subprocess.run([str(executable), "config-check", str(config)], check=True, timeout=30)
+        protected = [executable, config, root.resolve()]
+    mount = mount.resolve(strict=True)
+    for path in protected:
+        if path.resolve().is_relative_to(mount):
+            raise ValueError("Executable, private inputs and startup state must be outside the mounted/data directory")
+    if authority and mount.is_relative_to(root.resolve()):
+        raise ValueError("Authority database and startup registration must be separate trees")
     config_home = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
     if not config_home.is_absolute():
         raise ValueError("XDG_CONFIG_HOME must be absolute")
     autostart = config_home / "autostart"
+    if autostart.resolve().is_relative_to(mount):
+        raise ValueError("Autostart state must be outside the mounted/data directory")
     autostart.mkdir(parents=True, exist_ok=True)
-    entry = autostart / f"s3drive-{args.name}.desktop"
+    prefix = "s3drive-authority" if authority else "s3drive"
+    entry = autostart / f"{prefix}-{args.name}.desktop"
     manager = root / "manager.py"
     command = [sys.executable, str(manager), "start", args.name]
-    begin = f"# BEGIN S3Drive {args.name}\n"
-    end = f"# END S3Drive {args.name}\n"
+    if authority:
+        command += ["--component", "authority"]
+    label = f"authority {args.name}" if authority else args.name
+    begin = f"# BEGIN S3Drive {label}\n"
+    end = f"# END S3Drive {label}\n"
     block = begin + shlex.join(command) + " >/dev/null 2>&1 || :\n" + end
     # Explicit profile selection avoids guessing bash/zsh startup precedence.
     profile = args.shell_profile.expanduser().absolute() if args.shell_profile else None
@@ -146,7 +223,7 @@ def install(args, root):
     try:
         create_file(manager, Path(__file__).read_text())
         made.append(manager)
-        entry_text = "[Desktop Entry]\nType=Application\nName=S3Drive " + args.name \
+        entry_text = "[Desktop Entry]\nType=Application\nName=S3Drive " + label \
             + "\nTerminal=false\nExec=" + " ".join(map(desktop_argument, command)) + "\n"
         create_file(entry, entry_text)
         made.append(entry)
@@ -155,6 +232,9 @@ def install(args, root):
         value = dict(version=1, executable=str(executable), config=str(config), mountpoint=str(mount),
                      autostart=str(entry), autostart_text=entry_text,
                      profile=str(profile) if profile else None, profile_block=profile_block)
+        if authority:
+            value.update(version=2, component="authority", authority=authority)
+            del value["config"], value["mountpoint"]
         create_file(root / "startup.json", json.dumps(value, indent=2) + "\n")
         made.append(root / "startup.json")
         if profile:
@@ -189,8 +269,9 @@ def supervise(root):
             for attempt in range(4):
                 if stopped or (root / "stop").exists():
                     break
-                child = subprocess.Popen([value["executable"], "mount", value["config"], value["mountpoint"]],
+                child = subprocess.Popen(child_command(value),
                                          stdin=subprocess.DEVNULL, close_fds=True)
+                record_child(root, value, child)
                 while child.poll() is None:
                     if stopped or (root / "stop").exists():
                         child.terminate()
@@ -200,7 +281,7 @@ def supervise(root):
                     time.sleep(0.2)
                 if child.returncode == 0:
                     return
-                print(f"Mount exited {child.returncode}; attempt {attempt + 1}/4", flush=True)
+                print(f"{value.get('component', 'mount')} exited {child.returncode}; attempt {attempt + 1}/4", flush=True)
                 for _ in range(50):
                     if stopped or (root / "stop").exists():
                         return
@@ -213,7 +294,7 @@ def supervise(root):
 
 
 def start(root, name):
-    load(root)
+    value = load(root)
     if running(root):
         print("Supervisor already running")
         return
@@ -223,10 +304,13 @@ def start(root, name):
         logfile.replace(root / "session.previous.log")
     fd = os.open(logfile, os.O_CREAT | os.O_APPEND | os.O_WRONLY | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, "a") as output:
-        subprocess.Popen([sys.executable, str(root / "manager.py"), "run", name], cwd="/",
+        command = [sys.executable, str(root / "manager.py"), "run", name]
+        if value.get("component") == "authority":
+            command += ["--component", "authority"]
+        subprocess.Popen(command, cwd="/",
                          stdin=subprocess.DEVNULL, stdout=output, stderr=output,
                          close_fds=True, start_new_session=True)
-    print("Detached supervisor started; use status to check the mount")
+    print("Detached supervisor started; use status and an authenticated operation to check readiness")
 
 
 def stop(root):
@@ -258,7 +342,7 @@ def remove(root):
         replace_profile(profile, original, original.replace(value["profile_block"], "", 1))
     if entry.exists():
         entry.unlink()
-    for name in ["startup.json", "manager.py", "login.sh", "stop"]:
+    for name in ["startup.json", "manager.py", "login.sh", "stop", "runtime.json"]:
         (root / name).unlink(missing_ok=True)
     print("Startup removed; mountpoint, configuration, credentials and logs retained")
 
@@ -271,16 +355,31 @@ def main():
     parser.add_argument("--config", type=Path)
     parser.add_argument("--mountpoint", type=Path)
     parser.add_argument("--shell-profile", type=Path)
+    parser.add_argument("--component", choices=["mount", "authority"], default="mount")
+    parser.add_argument("--authority-directory", type=Path)
+    parser.add_argument("--authority-volume")
+    parser.add_argument("--authority-name-policy", choices=["exact-utf8-v1", "portable-collision-v1"])
+    parser.add_argument("--authority-token-file", type=Path)
+    parser.add_argument("--authority-listen")
+    parser.add_argument("--tls-cert", type=Path)
+    parser.add_argument("--tls-key", type=Path)
     args = parser.parse_args()
     if sys.platform != "linux" or os.getuid() == 0:
         parser.error("Run as the ordinary mounting user on Linux")
     os.umask(0o077)
-    root = location(args.name)
     if args.operation == "install":
-        if not all([args.executable, args.config, args.mountpoint]):
+        authority_options = [args.authority_directory, args.authority_volume, args.authority_name_policy, args.authority_token_file, args.authority_listen]
+        if args.component == "authority":
+            if not all([args.executable, *authority_options]) or args.config or args.mountpoint or bool(args.tls_cert) != bool(args.tls_key):
+                parser.error("authority install requires executable, all authority options, no mount options and a complete optional TLS pair")
+        elif not all([args.executable, args.config, args.mountpoint]) or any(authority_options + [args.tls_cert, args.tls_key]):
             parser.error("install requires --executable, --config and --mountpoint")
+    root = location(args.name, args.component, args.authority_directory if args.operation == "install" else None)
+    if args.operation == "install":
         install(args, root)
-    elif args.operation == "run":
+        return
+    value = load(root, args.component)
+    if args.operation == "run":
         supervise(root)
     elif args.operation == "start":
         start(root, args.name)
@@ -289,9 +388,13 @@ def main():
     elif args.operation == "remove":
         remove(root)
     else:
-        value = load(root)
-        print(json.dumps(dict(supervisor_running=running(root), mounted=os.path.ismount(value["mountpoint"]),
-                              mountpoint=value["mountpoint"], log=str(root / "session.log"))))
+        status = dict(supervisor_running=running(root), log=str(root / "session.log"))
+        if value.get("component") == "authority":
+            status.update(component="authority", expected_volume=value["authority"]["volume"],
+                          listen=value["authority"]["listen"], provider_access_verified=False)
+        else:
+            status.update(mounted=os.path.ismount(value["mountpoint"]), mountpoint=value["mountpoint"])
+        print(json.dumps(status))
 
 
 if __name__ == "__main__":

@@ -429,6 +429,55 @@ fn check_volume(db: &Connection, id: &str) -> Result<Volume> {
     }
     Ok(v)
 }
+/// Read-only identity preflight, compatible with namespace schemas8 onward.
+/// Do not initialize a missing volume or rewrite rejected database contents.
+pub(crate) fn existing_identity(db: &Connection, id: &str, policy: &str) -> Result<Volume> {
+    if !valid_id(id) || id == ROOT || !names::supported(policy) {
+        return Err(Error::Invalid);
+    }
+    let v = check_volume(db, id)?;
+    let count: i64 = sql(db.query_row("SELECT count(*) FROM namespace_volume", [], |r| r.get(0)))?;
+    let root: (Option<String>, String, String, bool, i64) = sql(db.query_row(
+        "SELECT parent_id,name,kind,deleted,revision FROM namespace_nodes WHERE node_id=?1",
+        [ROOT],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+    ))?;
+    if count != 1
+        || v.name_policy != policy
+        || root.0.is_some()
+        || !root.1.is_empty()
+        || root.2 != "directory"
+        || root.3
+        || root.4 < 0
+        || root.4 as u64 > v.sequence
+    {
+        return Err(Error::Invalid);
+    }
+    // Older recognized namespace schemas predate these optional columns. A
+    // root never has file content or placement, regardless of schema age.
+    let mut columns = sql(db.prepare("PRAGMA table_info(namespace_nodes)"))?;
+    let columns = sql(columns.query_map([], |r| r.get::<_, String>(1)))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(|_| Error::Internal)?;
+    for (column, query) in [
+        (
+            "payload",
+            "SELECT payload FROM namespace_nodes WHERE node_id=?1",
+        ),
+        (
+            "placement",
+            "SELECT placement FROM namespace_nodes WHERE node_id=?1",
+        ),
+    ] {
+        if columns.iter().any(|c| c == column) {
+            let value: Option<Vec<u8>> = sql(db.query_row(query, [ROOT], |r| r.get(0)))?;
+            if value.is_some() {
+                return Err(Error::Invalid);
+            }
+        }
+    }
+    Ok(v)
+}
 fn nonnegative(r: &rusqlite::Row<'_>, index: usize) -> rusqlite::Result<u64> {
     u64::try_from(r.get::<_, i64>(index)?).map_err(|_| rusqlite::Error::InvalidQuery)
 }

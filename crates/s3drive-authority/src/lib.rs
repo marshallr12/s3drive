@@ -143,17 +143,38 @@ impl Authority {
         Self::open_with_policy(directory, s3drive_core::names::EXACT.into()).await
     }
     pub async fn open_with_policy(directory: PathBuf, policy: String) -> namespace::Result<Self> {
+        Self::open_mode(directory, policy, None).await
+    }
+    /// Supervised restarts must pin the existing volume; initialization remains
+    /// an explicit operator bootstrap, never a missing-database recovery policy.
+    pub async fn open_existing(
+        directory: PathBuf,
+        volume: String,
+        policy: String,
+    ) -> namespace::Result<Self> {
+        Self::open_mode(directory, policy, Some(volume)).await
+    }
+    async fn open_mode(
+        directory: PathBuf,
+        policy: String,
+        expected: Option<String>,
+    ) -> namespace::Result<Self> {
         let (sender, mut receiver) = mpsc::channel(QUEUE);
         let (ready, started) = oneshot::channel();
         let thread = thread::Builder::new()
             .name("s3drive-authority".into())
             .spawn(move || {
-                let state = State::open_managed(&directory)
-                    .map_err(|_| Error::Internal)
-                    .and_then(|mut state| {
-                        state.namespace_initialize_with_policy(&policy)?;
-                        Ok(state)
-                    });
+                let state = if let Some(volume) = expected {
+                    State::open_existing_authority(&directory, &volume, &policy)
+                        .map_err(|_| Error::Invalid)
+                } else {
+                    State::open_managed(&directory)
+                        .map_err(|_| Error::Internal)
+                        .and_then(|mut state| {
+                            state.namespace_initialize_with_policy(&policy)?;
+                            Ok(state)
+                        })
+                };
                 let mut state = match state {
                     Ok(state) => {
                         let _ = ready.send(Ok(()));

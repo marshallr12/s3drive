@@ -95,6 +95,10 @@ jobs:
         if: runner.os == 'Linux'
         timeout-minutes: 5
         run: python3 scripts/test-linux-session.py
+      - name: Verify Linux coordinator startup without systemd
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        run: cargo test -p s3drive-cli --test authority_restart supervised_linux_coordinator_http_and_tls_with_private_ca --locked -- --ignored --nocapture
       - name: Save Rust build cache
         if: success()
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4

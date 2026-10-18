@@ -22,6 +22,8 @@ use std::{error::Error, path::Path, time::Duration};
 const APPLICATION_ID: i32 = 0x5333_4452;
 pub const SCHEMA_VERSION: i32 = 23;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
+#[cfg(test)]
+mod authority_restart_tests;
 
 pub struct State {
     // Drop the connection before releasing exclusive directory ownership.
@@ -59,7 +61,65 @@ impl State {
     /// needed. The parent must exist. Ownership is held until this State drops.
     pub fn open_managed(directory: &Path) -> Result<Self> {
         let owner = directory::OwnedDirectory::acquire(directory)?;
-        let mut state = Self::open(&owner.database_path())?;
+        Self::open_owned(owner, None)
+    }
+
+    /// Restart only an existing, pinned authority. Refuse missing files, local
+    /// client state and different identities before migrations or intent recovery.
+    pub fn open_existing_authority(directory: &Path, volume: &str, policy: &str) -> Result<Self> {
+        let owner = directory::OwnedDirectory::acquire_existing(directory)?;
+        Self::inspect_authority(&owner, volume, policy)?;
+        let state = Self::open_owned(owner, Some((volume, policy)))?;
+        namespace::existing_identity(&state.connection, volume, policy)
+            .map_err(|_| "existing authority identity changed during opening")?;
+        Ok(state)
+    }
+
+    /// Offline, exclusive read-only identity check. Does not migrate schemas or
+    /// recover attempts. SQLite may maintain operational WAL/shared-memory files.
+    pub fn inspect_existing_authority(
+        directory: &Path,
+        volume: &str,
+        policy: &str,
+    ) -> Result<namespace::Volume> {
+        let owner = directory::OwnedDirectory::acquire_existing(directory)?;
+        Self::inspect_authority(&owner, volume, policy)
+    }
+
+    fn inspect_authority(
+        owner: &directory::OwnedDirectory,
+        volume: &str,
+        policy: &str,
+    ) -> Result<namespace::Volume> {
+        use rusqlite::OpenFlags;
+        owner.verify_staging_storage()?;
+        let mut db = Connection::open_with_flags(
+            owner.database_path(),
+            OpenFlags::SQLITE_OPEN_READ_ONLY
+                | OpenFlags::SQLITE_OPEN_NO_MUTEX
+                | OpenFlags::SQLITE_OPEN_NOFOLLOW,
+        )?;
+        db.busy_timeout(Duration::from_secs(5))?;
+        let tx = db.transaction_with_behavior(TransactionBehavior::Deferred)?;
+        let app: i32 = tx.pragma_query_value(None, "application_id", |r| r.get(0))?;
+        let version: i32 = tx.pragma_query_value(None, "user_version", |r| r.get(0))?;
+        if app != APPLICATION_ID || !(8..=SCHEMA_VERSION).contains(&version) {
+            return Err("existing authority requires a recognized namespace database".into());
+        }
+        let info = namespace::existing_identity(&tx, volume, policy)
+            .map_err(|_| "existing authority volume, name policy or root does not match")?;
+        tx.commit()?;
+        Ok(info)
+    }
+
+    fn open_owned(
+        owner: directory::OwnedDirectory,
+        expected: Option<(&str, &str)>,
+    ) -> Result<Self> {
+        let mut state = match expected {
+            None => Self::open(&owner.database_path())?,
+            Some(_) => Self::open_mode(&owner.database_path(), expected)?,
+        };
         // Only tighten legacy file modes after confirming this is our DB.
         owner.finish_initialization()?;
         state._directory = Some(owner);
@@ -77,12 +137,34 @@ impl State {
     /// Initialize, migrate known older schemas, or reopen; refuse unknown DBs.
     /// Internal schema helper; public callers must acquire directory ownership.
     fn open(path: &Path) -> Result<Self> {
-        let mut connection = Connection::open(path)?;
+        Self::open_mode(path, None)
+    }
+    fn open_mode(path: &Path, expected: Option<(&str, &str)>) -> Result<Self> {
+        let mut connection = if expected.is_none() {
+            Connection::open(path)?
+        } else {
+            Connection::open_with_flags(
+                path,
+                rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE
+                    | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX
+                    | rusqlite::OpenFlags::SQLITE_OPEN_NOFOLLOW,
+            )?
+        };
         connection.busy_timeout(Duration::from_secs(5))?;
         {
             let tx = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
             let app: i32 = tx.pragma_query_value(None, "application_id", |r| r.get(0))?;
             let mut version: i32 = tx.pragma_query_value(None, "user_version", |r| r.get(0))?;
+            if let Some((volume, policy)) = expected {
+                // Recheck under the SAME transaction that may migrate. Even an
+                // external replacement after preflight must not be initialized,
+                // migrated or admitted as a different authority.
+                if app != APPLICATION_ID || !(8..=SCHEMA_VERSION).contains(&version) {
+                    return Err("existing authority schema changed after inspection".into());
+                }
+                namespace::existing_identity(&tx, volume, policy)
+                    .map_err(|_| "existing authority identity changed after inspection")?;
+            }
             if app == 0 && version == 0 {
                 let tables: i64 = tx.query_row(
                     "SELECT count(*) FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'",
