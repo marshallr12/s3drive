@@ -325,3 +325,62 @@ setup regressions without claiming OS-mount acceptance. Source inspection also
 corrected the actual-object assertion: the journal key is relative, so fixture
 lookup must prepend the configured bucket and source prefix. Native rerun is
 still required; the first failed run proves no paired mount or recovery success.
+
+
+## Paired Windows candidate implementation
+
+Implementation checkpoint, 2026-10-17: the disposable Windows harness now has a
+separate `managed` mount task alongside its pinned Authority task. The ordinary
+account rebases copied source policy/report/plan paths, creates its own dummy
+profile and private TLS inputs, seeds both stores with the production publisher,
+and generates a writable managed config through the CLI. Root fixture endpoints
+must be numeric loopback HTTP; no hosted provider is contacted.
+
+Independent secondary logons check Unicode/binary/empty/second-store data and
+duplicate startup ownership. A native FileStream deliberately receives a lost
+PUT response, freezes physical and logical request identities, keeps dirty bytes
+through a verified coordinator-child kill, and waits for actual scheduler retry.
+Recovery must settle those same identities without another PUT. A rival payload
+must then produce a failed flush and keep local edits. Removing the drive must
+leave authenticated coordinator access working; reopening the private journal
+must still find a dirty head distinct from its settled generation and read the
+actual staged `dirty conflict` bytes through the production journal reader.
+The explicit `logical_conflicts` table represents a later operator retention
+acknowledgment, so this test must not fabricate that acknowledgment automatically.
+
+A small file protocol controls only the Rust-owned S3 fixture's reply/observation
+faults and counts. It contains command IDs and counters, not credentials. Profile
+credentials are known disposable dummy values created inside the new account;
+source credentials are never copied. Cleanup tracks both mountpoints and all
+owned task actions before disposing of the account. The new Windows pair is an
+explicit CI step before broad native regressions; every previous gate remains.
+
+The portable `authority_restart::paired_windows_fixture_sdk_tls_recovery_and_conflict_preparation`
+test passed locally with the real CLI, SDK, private-CA TLS, SQLite owner/journal
+and killed coordinator. It catches fixture setup/replay/dirty-byte errors without
+substituting for native WinFsp or Task Scheduler acceptance. PowerShell AST,
+including the extracted embedded account worker, passed. Native outcome remains
+pending; the full phase is not accepted.
+
+## Further native findings
+
+At `56a2abe`, [Linux job117548875680](https://github.com/marshallr12/s3drive/actions/runs/39084754318/job/117548875680)
+reached an actual mounted path but failed because the Mount component did not
+write the `runtime.json` expected by the paired controller. It now writes private
+atomic PID hints for both components. These hints never authorize production
+PID-based termination; supervisors still signal only their own Popen child, and
+the fixture verifies a pidfd's actual argv/pin before injected termination. The
+controller also waits for both records and detaches its own mount during failure
+cleanup even when a record is missing. The standalone HTTP and HTTPS coordinator
+supervision test passed locally after this change; paired FUSE rerun is pending.
+
+Two older Windows jobs failed existing managed rename acceptance before reaching
+the new coordinator step: [job117546161016](https://github.com/marshallr12/s3drive/actions/runs/39083840521/job/117546161016)
+at a cross-store metadata move, and [job117547531749](https://github.com/marshallr12/s3drive/actions/runs/39084297874/job/117547531749)
+at dirty-source replacement. Both returned native error1117; the second also
+logged an authority transport failure. These are unresolved failures, not flaky
+passes. Rename callbacks now log the existing typed filesystem error, and the
+owned native fixture captures relevant namespace requests/outcomes and node
+metadata on failure. No retries, fresh IDs or weaker assertions were added. The
+new authority tests run earlier to obtain independent evidence while all native
+regressions remain mandatory before publication.

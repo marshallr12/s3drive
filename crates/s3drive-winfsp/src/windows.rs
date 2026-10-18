@@ -46,6 +46,11 @@ struct Adapter {
     handles: Arc<Semaphore>,
     entries: Arc<Semaphore>,
 }
+fn rename_error(error: Error) -> FspError {
+    use std::io::Write;
+    let _ = writeln!(std::io::stderr().lock(), "Namespace rename failed: {error}");
+    storage_error(error)
+}
 fn storage_error(error: Error) -> FspError {
     if let Error::Managed(detail) = &error {
         use std::io::Write;
@@ -477,7 +482,7 @@ impl FileSystemContext for Adapter {
                         native::name_key(a) == native::name_key(b)
                     })
                     .await
-                    .map_err(storage_error)?;
+                    .map_err(rename_error)?;
                 return Ok(());
             }
             let old = file_name
@@ -519,7 +524,7 @@ impl FileSystemContext for Adapter {
                     |a, b| native::name_key(a) == native::name_key(b),
                 )
                 .await
-                .map_err(storage_error)?;
+                .map_err(rename_error)?;
             Ok(())
         })
     }

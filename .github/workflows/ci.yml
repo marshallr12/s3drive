@@ -55,6 +55,18 @@ jobs:
         run: cargo test -p s3drive-cli --test windows_mount actual_managed_windows_disposition_lifecycle --locked -- --ignored --nocapture --test-threads=1
       - run: cargo test --workspace --locked
       - run: cargo build --workspace --locked
+      - name: Verify Windows coordinator startup and recovery
+        if: runner.os == 'Windows'
+        timeout-minutes: 10
+        env:
+          S3DRIVE_DISPOSABLE_WINDOWS_VM: '1'
+        run: cargo test -p s3drive-cli --test authority_restart supervised_windows_coordinator_tls_independent_logons_and_recovery --locked -- --ignored --nocapture --exact
+      - name: Verify paired Windows managed startup and recovery
+        if: runner.os == 'Windows'
+        timeout-minutes: 16
+        env:
+          S3DRIVE_DISPOSABLE_WINDOWS_VM: '1'
+        run: cargo test -p s3drive-cli --test authority_restart supervised_windows_managed_drive_and_coordinator_recovery --locked -- --ignored --nocapture --exact
       - name: Prepare Linux FUSE acceptance
         if: runner.os == 'Linux'
         run: |
@@ -99,12 +111,6 @@ jobs:
         if: runner.os == 'Linux'
         timeout-minutes: 5
         run: cargo test -p s3drive-cli --test authority_restart supervised_linux_coordinator_http_and_tls_with_private_ca --locked -- --ignored --nocapture
-      - name: Verify Windows coordinator startup and recovery
-        if: runner.os == 'Windows'
-        timeout-minutes: 10
-        env:
-          S3DRIVE_DISPOSABLE_WINDOWS_VM: '1'
-        run: cargo test -p s3drive-cli --test authority_restart supervised_windows_coordinator_tls_independent_logons_and_recovery --locked -- --ignored --nocapture --exact
       - name: Save Rust build cache
         if: success()
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4

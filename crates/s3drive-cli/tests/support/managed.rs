@@ -4,6 +4,8 @@ mod lifecycle;
 #[cfg(target_os = "linux")]
 #[path = "managed/startup.rs"]
 mod startup;
+#[path = "managed/windows_session.rs"]
+mod windows_session;
 use super::{fixture::Fixture, writes};
 use s3drive_authority::{Apply, Kind, Mutation, Reply, Request, Token, WireClient};
 use s3drive_managed::Publisher;
@@ -23,6 +25,11 @@ use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     process::{Child, Command},
 };
+fn test_cli() -> PathBuf {
+    std::env::var_os("S3DRIVE_NATIVE_MANAGED_EXECUTABLE")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| env!("CARGO_BIN_EXE_s3drive").into())
+}
 const DIR: &str = "資料 café 🦀";
 const FILE: &str = "日本語 %2F + café.bin";
 const MOVED: &str = "renamed 日本語.bin";
@@ -191,7 +198,7 @@ impl Service {
         Self::start_options(root, policy, Some((cert_file, key_file))).await
     }
     async fn start_options(root: &Path, policy: &str, tls: Option<(PathBuf, PathBuf)>) -> Self {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_s3drive"));
+        let mut command = Command::new(test_cli());
         command
             .arg("authority-serve")
             .args(["--name-policy", policy])
@@ -282,7 +289,7 @@ impl Harness {
             mount: root.join("managed-mount"),
         };
         std::fs::write(&h.credentials, "[fixture]\naws_access_key_id=TESTPROFILE\naws_secret_access_key=TESTPROFILESECRET\n[fixture-alt]\naws_access_key_id=TESTPROFILE\naws_secret_access_key=TESTPROFILESECRET\n").unwrap();
-        let out = Command::new(env!("CARGO_BIN_EXE_s3drive"))
+        let out = Command::new(test_cli())
             .arg("authority-token")
             .arg("--directory")
             .arg(root.join("secrets"))
@@ -297,7 +304,7 @@ impl Harness {
         assert!(out.stdout.len() < 150);
         // A second invocation must fail rather than rotate an in-use token.
         assert!(
-            !Command::new(env!("CARGO_BIN_EXE_s3drive"))
+            !Command::new(test_cli())
                 .arg("authority-token")
                 .arg("--directory")
                 .arg(root.join("secrets"))
@@ -346,7 +353,7 @@ impl Harness {
                 direct.writes.unwrap().directory.to_str().unwrap().into();
         }
         std::fs::write(&input, toml::to_string(&value).unwrap()).unwrap();
-        let mut command = Command::new(env!("CARGO_BIN_EXE_s3drive"));
+        let mut command = Command::new(test_cli());
         command
             .args(["managed", "configure"])
             .arg(&input)
@@ -393,13 +400,29 @@ impl Harness {
         );
     }
     fn configure(&self, s: &Service, f: &Fixture) {
+        self.configure_connection(
+            &s.endpoint,
+            &s.volume,
+            &self.root.join("secrets/authority.token"),
+            s.ca_file.as_deref(),
+            &f.endpoint,
+        );
+    }
+    fn configure_connection(
+        &self,
+        endpoint: &str,
+        volume: &str,
+        token: &Path,
+        ca: Option<&Path>,
+        s3: &str,
+    ) {
         let mut text = format!(
             "version=3\nmode='read-only'\n[managed]\nauthority={:?}\nvolume={:?}\ntoken_file={:?}\n",
-            s.endpoint,
-            s.volume,
-            self.root.join("secrets/authority.token").to_str().unwrap()
+            endpoint,
+            volume,
+            token.to_str().unwrap()
         );
-        if let Some(ca) = &s.ca_file {
+        if let Some(ca) = ca {
             text += &format!("authority_ca_file={:?}\n", ca.to_str().unwrap());
         }
         for (n, alias) in [(200, "viewer-first"), (201, "viewer-second")] {
@@ -411,7 +434,7 @@ impl Harness {
         ] {
             text += &format!(
                 "[[sources]]\nalias={alias:?}\nbucket={bucket:?}\nprofile={profile:?}\nprefix='desktop/'\nregion='us-east-1'\nendpoint={:?}\npath_style=true\nallow_http_loopback=true\n",
-                f.endpoint
+                s3
             );
         }
         std::fs::write(&self.config, text).unwrap();
@@ -504,7 +527,7 @@ impl Harness {
         if !self.mount.exists() {
             std::fs::create_dir(&self.mount).unwrap();
         }
-        let mut c = Command::new(env!("CARGO_BIN_EXE_s3drive"));
+        let mut c = Command::new(test_cli());
         c.arg("mount")
             .arg(&self.config)
             .arg(&self.mount)
@@ -812,7 +835,7 @@ pub async fn child() {
                 let input = root.join(which).join("drive.toml");
                 let local = cfg(&input);
                 let m = c.managed.as_ref().unwrap();
-                let mut command = Command::new(env!("CARGO_BIN_EXE_s3drive"));
+                let mut command = Command::new(test_cli());
                 command
                     .args(["managed", "store-plan"])
                     .arg(&input)
@@ -841,7 +864,7 @@ pub async fn child() {
                     String::from_utf8_lossy(&out.stderr)
                 );
                 let plan: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
-                let mut command = Command::new(env!("CARGO_BIN_EXE_s3drive"));
+                let mut command = Command::new(test_cli());
                 command
                     .args(["managed", "store-apply"])
                     .arg(&input)
@@ -1425,7 +1448,7 @@ pub async fn bootstrap_write_refusals() {
     let sequence = info(&wire(&cfg(&h.config))).await.sequence;
     let mutations_before = mutations(&f);
     for state in [&dirty, &input.writes.as_ref().unwrap().directory] {
-        let out = Command::new(env!("CARGO_BIN_EXE_s3drive"))
+        let out = Command::new(test_cli())
             .args(["managed", "configure"])
             .arg(&source)
             .arg("--plan")
@@ -1450,7 +1473,7 @@ pub async fn bootstrap_write_refusals() {
         text.replace("writable_prefix='writable/'", "writable_prefix='denied/'"),
     )
     .unwrap();
-    let out = Command::new(env!("CARGO_BIN_EXE_s3drive"))
+    let out = Command::new(test_cli())
         .args(["managed", "configure"])
         .arg(&source)
         .arg("--plan")
@@ -1980,7 +2003,10 @@ pub async fn native_mutations() {
         old
     };
     let before = puts(&f);
-    std::fs::rename(&source, &target).unwrap();
+    if let Err(error) = std::fs::rename(&source, &target) {
+        native_namespace_failure(&h).await;
+        panic!("native dirty-source replacement failed: {error:?}");
+    }
     assert_eq!(
         puts(&f),
         before + 1,
@@ -2046,11 +2072,13 @@ pub async fn native_mutations() {
     assert!(renamed.join("report 日本語.bin").exists());
     // Rename changes metadata only, including files placed in the other bucket.
     let before = puts(&f);
-    std::fs::rename(
+    if let Err(error) = std::fs::rename(
         h.mount.join("other bucket.txt"),
         renamed.join("other bucket.txt"),
-    )
-    .unwrap();
+    ) {
+        native_namespace_failure(&h).await;
+        panic!("native cross-store metadata rename failed: {error:?}");
+    }
     assert_eq!(puts(&f), before);
     assert_eq!(
         std::fs::read(renamed.join("other bucket.txt")).unwrap(),
@@ -2540,4 +2568,74 @@ pub async fn portable_supervised_startup_preparation() {
     assert_eq!(puts(&f), before, "guarded metadata rename moved S3 bytes");
     producer.stop().await;
     service.stop().await;
+}
+
+pub fn windows_session_initialize(root: &Path) {
+    windows_session::initialize(root);
+}
+pub async fn windows_session_worker(root: &Path, mode: &str) {
+    windows_session::worker(root, mode).await;
+}
+
+async fn native_namespace_failure(h: &Harness) {
+    // Only owned fixture IDs and typed namespace requests/outcomes are logged;
+    // never configuration source, tokens, credentials or TLS material.
+    let w = wire(&cfg(&h.config));
+    let volume = match w.request(&Request::Info {}).await {
+        Ok(Reply::Info(v)) => {
+            eprintln!("native rename failure volume: {v:?}");
+            v.id
+        }
+        other => {
+            eprintln!("native rename failure metadata unavailable: {other:?}");
+            return;
+        }
+    };
+    for node in [id(0), id(12)] {
+        eprintln!(
+            "native rename failure node: {:?}",
+            w.request(&Request::Node {
+                volume: volume.clone(),
+                node
+            })
+            .await
+        );
+    }
+    eprintln!(
+        "native rename failure root listing: {:?}",
+        w.request(&Request::List {
+            volume,
+            parent: id(0)
+        })
+        .await
+    );
+    let c = cfg(&h.config);
+    let path = c.writes.unwrap().directory.join("metadata.sqlite3");
+    let Ok(db) = rusqlite::Connection::open_with_flags(
+        path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NOFOLLOW,
+    ) else {
+        return;
+    };
+    let Ok(mut statement) = db.prepare(
+        "SELECT operation_id,input,outcome FROM namespace_intents ORDER BY rowid DESC LIMIT 8",
+    ) else {
+        return;
+    };
+    let Ok(rows) = statement.query_map([], |r| {
+        Ok((
+            r.get::<_, String>(0)?,
+            r.get::<_, Vec<u8>>(1)?,
+            r.get::<_, Option<Vec<u8>>>(2)?,
+        ))
+    }) else {
+        return;
+    };
+    for (id, input, outcome) in rows.flatten() {
+        let input = serde_json::from_slice::<serde_json::Value>(&input).ok();
+        let request = input.as_ref().and_then(|v| v.get("request"));
+        let outcome =
+            outcome.and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok());
+        eprintln!("native rename failure intent {id}: request={request:?}, outcome={outcome:?}");
+    }
 }

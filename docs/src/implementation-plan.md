@@ -738,3 +738,13 @@ The first paired Linux native attempt failed during writable bootstrap because
 the fixture selected exact naming. It now uses the required portable naming and
 a guarded producer rename; an ordinary live HTTPS preparation test passed.
 Native startup/recovery remains unverified until the corrected case runs.
+
+The paired Windows candidate is now implemented in the disposable-account
+harness, using real CLI/SDK seeding, private CA, two startup tasks, FileStream
+uncertain flush/retry, exact identity snapshots, rival conflict and independent
+removal. Its portable live preparation test passed; native execution is pending.
+Linux now records private runtime hints for both components after its paired
+native run found the Mount record missing. Local HTTP/TLS supervisor regression
+passed. Two existing Windows rename gates failed at distinct operations and
+remain unresolved; typed callback and namespace diagnostics were added without
+retrying or weakening the operations. All native/reference gates remain required.

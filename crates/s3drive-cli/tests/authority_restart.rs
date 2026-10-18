@@ -10,6 +10,19 @@ use tokio::{
     process::{Child, Command},
 };
 
+#[path = "support/fixture.rs"]
+pub mod fixture;
+#[path = "support/managed.rs"]
+#[allow(dead_code)]
+mod managed;
+#[path = "support/writes.rs"]
+#[allow(dead_code)]
+mod writes;
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn managed_native_child() {
+    managed::child().await;
+}
+
 struct Server {
     child: Child,
     endpoint: String,
@@ -357,6 +370,13 @@ async fn windows_authority_fixture_worker() {
             )
             .unwrap();
         }
+        if root.join("managed-fixture.json").exists() {
+            managed::windows_session_initialize(&root);
+        }
+        return;
+    }
+    if root.join("managed-fixture.json").exists() {
+        managed::windows_session_worker(&root, &mode).await;
         return;
     }
     assert!(matches!(mode.as_str(), "Seed" | "Verify" | "Recover"));
@@ -557,4 +577,386 @@ async fn disposable_account_worker_uses_private_tls_inputs_and_exact_restart_rec
     write_identity(&second);
     run_worker(root, "Recover").await;
     second.stop().await;
+}
+
+#[cfg(windows)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "paired native Windows startup: disposable elevated runner and WinFsp"]
+async fn supervised_windows_managed_drive_and_coordinator_recovery() {
+    use std::sync::atomic::Ordering;
+    let mut f = fixture::Fixture::start().await;
+    let tmp = tempfile::tempdir().unwrap();
+    for which in ["first", "second"] {
+        std::fs::create_dir(tmp.path().join(which)).unwrap();
+    }
+    writes::setup(&f, &tmp.path().join("first")).await;
+    writes::setup_source(
+        &f,
+        &tmp.path().join("second"),
+        "other-bucket",
+        "docs2",
+        "fixture-alt",
+    )
+    .await;
+    let rcgen::CertifiedKey { cert, signing_key } =
+        rcgen::generate_simple_self_signed(vec!["127.0.0.1".into()]).unwrap();
+    std::fs::write(tmp.path().join("cert.pem"), cert.pem()).unwrap();
+    std::fs::write(tmp.path().join("key.pem"), signing_key.serialize_pem()).unwrap();
+    std::fs::copy(
+        std::env::current_exe().unwrap(),
+        tmp.path().join("authority-worker.exe"),
+    )
+    .unwrap();
+    std::fs::write(
+        tmp.path().join("managed-fixture.json"),
+        serde_json::to_vec(&serde_json::json!({"endpoint":f.endpoint})).unwrap(),
+    )
+    .unwrap();
+    let root_file = tmp.path().join("control-root.txt");
+    let hidden = f.hide_committed.clone();
+    let head = f.deny_head.clone();
+    let get = f.deny_get.clone();
+    let requests = f.requests.clone();
+    let control = tokio::spawn(async move {
+        let mut previous = String::new();
+        loop {
+            if let Ok(root) = std::fs::read_to_string(&root_file) {
+                let root = PathBuf::from(root);
+                if let Ok(bytes) = std::fs::read(root.join("control-request.json"))
+                    && let Ok(request) = serde_json::from_slice::<serde_json::Value>(&bytes)
+                    && let Some(id) = request["id"].as_str()
+                    && id != previous
+                {
+                    match request["action"].as_str().unwrap() {
+                        "hide" => hidden.store(true, Ordering::SeqCst),
+                        "restore" => {
+                            head.store(false, Ordering::SeqCst);
+                            get.store(false, Ordering::SeqCst);
+                        }
+                        "count" => {}
+                        _ => panic!("unknown owned fixture control"),
+                    }
+                    let puts = requests
+                        .lock()
+                        .unwrap()
+                        .iter()
+                        .filter(|r| r.starts_with("PUT ") && r.contains("/writable/.s3drive/"))
+                        .count();
+                    std::fs::write(
+                        root.join("control-reply.json"),
+                        serde_json::to_vec(&serde_json::json!({"id":id,"puts":puts})).unwrap(),
+                    )
+                    .unwrap();
+                    previous = id.into();
+                }
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    });
+    let out = tokio::time::timeout(
+        Duration::from_secs(900),
+        Command::new("powershell.exe")
+            .env_remove("PSModulePath")
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+            ])
+            .arg(
+                Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../scripts/test-windows-session.ps1"),
+            )
+            .arg("-Executable")
+            .arg(env!("CARGO_BIN_EXE_s3drive"))
+            .arg("-AuthorityOnly")
+            .arg("-AuthorityFixture")
+            .arg(tmp.path())
+            .arg("-ManagedFixture")
+            .arg(tmp.path())
+            .kill_on_drop(true)
+            .output(),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    control.abort();
+    let _ = control.await;
+    eprintln!("{}", String::from_utf8_lossy(&out.stdout));
+    assert!(
+        out.status.success(),
+        "Windows paired startup: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&out.stdout)
+            .contains("PASS: paired Windows TLS coordinator and managed drive")
+    );
+    assert_eq!(
+        f.requests
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|r| r.starts_with("PUT ") && r.contains("/writable/.s3drive/"))
+            .count(),
+        4,
+        "seed, recovered payload and rival must not repeat PUT"
+    );
+    assert_eq!(
+        f.objects
+            .lock()
+            .unwrap()
+            .values()
+            .filter(|(body, _)| body.as_slice() == b"paired Windows binary\0\xff")
+            .count(),
+        1,
+        "actual immutable binary object missing"
+    );
+    assert!(!f.server.is_finished());
+    f.server.abort();
+    let _ = (&mut f.server).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn paired_windows_fixture_sdk_tls_recovery_and_conflict_preparation() {
+    use std::sync::atomic::Ordering;
+    let f = fixture::Fixture::start().await;
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path();
+    for which in ["first", "second"] {
+        std::fs::create_dir(root.join(which)).unwrap();
+    }
+    writes::setup(&f, &root.join("first")).await;
+    writes::setup_source(
+        &f,
+        &root.join("second"),
+        "other-bucket",
+        "docs2",
+        "fixture-alt",
+    )
+    .await;
+    let profile = root.join("ordinary-profile");
+    std::fs::create_dir(&profile).unwrap();
+    std::fs::write(root.join("profile-path.txt"), profile.to_str().unwrap()).unwrap();
+    std::fs::write(
+        root.join("managed-fixture.json"),
+        serde_json::to_vec(&serde_json::json!({"endpoint":f.endpoint})).unwrap(),
+    )
+    .unwrap();
+    std::fs::copy(env!("CARGO_BIN_EXE_s3drive"), root.join("s3drive.exe")).unwrap();
+    let rcgen::CertifiedKey { cert, signing_key } =
+        rcgen::generate_simple_self_signed(vec!["127.0.0.1".into()]).unwrap();
+    std::fs::write(root.join("cert.pem"), cert.pem()).unwrap();
+    std::fs::write(root.join("key.pem"), signing_key.serialize_pem()).unwrap();
+    async fn run(root: &Path, mode: &str) {
+        let profile = std::fs::read_to_string(root.join("profile-path.txt")).unwrap();
+        let out = tokio::time::timeout(
+            Duration::from_secs(100),
+            Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--ignored",
+                    "--exact",
+                    "windows_authority_fixture_worker",
+                    "--nocapture",
+                ])
+                .env("S3DRIVE_AUTHORITY_FIXTURE_ROOT", root)
+                .env("S3DRIVE_AUTHORITY_FIXTURE_MODE", mode)
+                .env(
+                    "S3DRIVE_NATIVE_MANAGED_EXECUTABLE",
+                    root.join("s3drive.exe"),
+                )
+                .env(
+                    "AWS_SHARED_CREDENTIALS_FILE",
+                    Path::new(&profile).join(".aws/credentials"),
+                )
+                .env("AWS_CONFIG_FILE", Path::new(&profile).join(".aws/config"))
+                .env("AWS_EC2_METADATA_DISABLED", "true")
+                .kill_on_drop(true)
+                .output(),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert!(
+            out.status.success(),
+            "session worker {mode}: {}\n{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+    run(root, "Init").await;
+    let db = root.join("authority-state");
+    let secret = root.join("authority-inputs/authority.token");
+    let cert = root.join("authority-inputs/cert.pem");
+    let key = root.join("authority-inputs/key.pem");
+    let server = Server::start(command(
+        &db,
+        &secret,
+        None,
+        Some((&cert, &key)),
+        "127.0.0.1:0",
+    ))
+    .await;
+    let volume = server.volume.clone();
+    let endpoint = server.endpoint.clone();
+    std::fs::write(
+        root.join("authority-identity.json"),
+        serde_json::to_vec(&serde_json::json!({"endpoint":endpoint,"volume":volume})).unwrap(),
+    )
+    .unwrap();
+    run(root, "Seed").await;
+    run(root, "Verify").await;
+    // Use an explicit child for edits too: SDK credential discovery is process
+    // global, so no mutation of this test process's environment is permitted.
+    let first = Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--ignored",
+            "--exact",
+            "paired_windows_fixture_engine_child",
+            "--nocapture",
+        ])
+        .env("S3DRIVE_WINDOWS_ENGINE_ROOT", root)
+        .env(
+            "AWS_SHARED_CREDENTIALS_FILE",
+            profile.join(".aws/credentials"),
+        )
+        .env("AWS_CONFIG_FILE", profile.join(".aws/config"))
+        .env("AWS_EC2_METADATA_DISABLED", "true")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .kill_on_drop(true)
+        .spawn()
+        .unwrap();
+    let mut first = Server {
+        child: first,
+        endpoint: endpoint.clone(),
+        volume: volume.clone(),
+    };
+    let mut lines = BufReader::new(first.child.stdout.take().unwrap()).lines();
+    async fn until(
+        lines: &mut tokio::io::Lines<BufReader<tokio::process::ChildStdout>>,
+        expected: &str,
+    ) {
+        tokio::time::timeout(Duration::from_secs(30), async {
+            while let Some(line) = lines.next_line().await.unwrap() {
+                if line == expected {
+                    return;
+                }
+            }
+            panic!("engine worker exited before {expected}")
+        })
+        .await
+        .unwrap();
+    }
+    until(&mut lines, "ENGINE_READY").await;
+    f.hide_committed.store(true, Ordering::SeqCst);
+    first
+        .child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(b"dirty\n")
+        .await
+        .unwrap();
+    until(&mut lines, "ENGINE_UNKNOWN").await;
+    run(root, "Snapshot").await;
+    server.kill().await;
+    let address = url::Url::parse(&endpoint).unwrap();
+    let listen = format!("127.0.0.1:{}", address.port().unwrap());
+    let server = Server::start(command(
+        &db,
+        &secret,
+        Some(&volume),
+        Some((&cert, &key)),
+        &listen,
+    ))
+    .await;
+    writes::restore_observation(&f);
+    first
+        .child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(b"recover\n")
+        .await
+        .unwrap();
+    until(&mut lines, "ENGINE_RECOVERED").await;
+    run(root, "CheckRecovered").await;
+    first
+        .child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(b"edit\n")
+        .await
+        .unwrap();
+    until(&mut lines, "ENGINE_DIRTY").await;
+    run(root, "Rival").await;
+    first
+        .child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(b"conflict\n")
+        .await
+        .unwrap();
+    until(&mut lines, "ENGINE_CONFLICT").await;
+    first.stop().await;
+    run(root, "CheckConflict").await;
+    server.stop().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "paired fixture engine subprocess only"]
+async fn paired_windows_fixture_engine_child() {
+    use std::io::{BufRead, Write};
+    use std::sync::Arc;
+    let root = PathBuf::from(std::env::var_os("S3DRIVE_WINDOWS_ENGINE_ROOT").unwrap());
+    let c =
+        s3drive_core::Config::parse(&std::fs::read_to_string(root.join("managed.toml")).unwrap())
+            .unwrap();
+    let fs = s3drive_fs::ReadOnlyFs::new(&c).await.unwrap();
+    let dir = fs.lookup(s3drive_fs::ROOT, "資料 café 🦀").await.unwrap();
+    let node = fs.lookup(dir.id, "日本語 %2F + café.bin").await.unwrap();
+    let file = fs.open_write(node.id).await.unwrap();
+    println!("ENGINE_READY");
+    std::io::stdout().flush().unwrap();
+    for line in std::io::stdin().lock().lines() {
+        match line.unwrap().as_str() {
+            "dirty" => {
+                file.truncate(0).await.unwrap();
+                file.write(
+                    0,
+                    Arc::from(&b"paired Windows binary\0\xff"[..]),
+                    false,
+                    false,
+                )
+                .await
+                .unwrap();
+                assert!(file.flush().await.is_err());
+                println!("ENGINE_UNKNOWN");
+            }
+            "recover" => {
+                file.flush().await.unwrap();
+                println!("ENGINE_RECOVERED");
+            }
+            "edit" => {
+                file.write(0, Arc::from(&b"dirty conflict"[..]), false, false)
+                    .await
+                    .unwrap();
+                println!("ENGINE_DIRTY");
+            }
+            "conflict" => {
+                assert!(file.flush().await.is_err());
+                assert_eq!(&file.read(0, 14).await.unwrap(), b"dirty conflict");
+                println!("ENGINE_CONFLICT");
+            }
+            _ => panic!("unknown engine fixture command"),
+        }
+        std::io::stdout().flush().unwrap();
+    }
+    drop(file);
+    fs.cache_control().unwrap().close().await.unwrap();
 }

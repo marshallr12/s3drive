@@ -2,12 +2,13 @@
 # Explicit disposable-runner acceptance. Never run this against an existing
 # user account: it creates and removes its own non-administrator local user.
 param([Parameter(Mandatory)][string]$Executable, [string]$Config,
-    [switch]$AuthorityOnly, [string]$AuthorityFixture)
+    [switch]$AuthorityOnly, [string]$AuthorityFixture, [string]$ManagedFixture)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if (($AuthorityOnly -and -not $AuthorityFixture) -or (-not $AuthorityOnly -and -not $Config)) {
     throw 'Fixture requires Config for mounts, or AuthorityOnly with AuthorityFixture'
 }
+if ($ManagedFixture -and (-not $AuthorityOnly -or -not $AuthorityFixture)) { throw 'ManagedFixture requires AuthorityOnly and AuthorityFixture' }
 $runner = [Security.Principal.WindowsIdentity]::GetCurrent()
 if (-not ([Security.Principal.WindowsPrincipal]::new($runner)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     throw 'Native session acceptance requires an elevated disposable Windows runner'
@@ -154,17 +155,17 @@ function User-Action([string]$Operation) {
         $authenticationId = [S3DriveFixtureNative]::AuthenticationId($process.Handle)
         $output = $process.StandardOutput.ReadToEndAsync()
         $errors = $process.StandardError.ReadToEndAsync()
-        if ($Operation -in @('Install','AuthorityInstall')) {
+        if ($Operation -in @('Install','AuthorityInstall','ManagedInstall')) {
             # The receiving StreamReader recognizes the encoding preamble from
             # Windows PowerShell's console-derived StandardInput writer.
             $process.StandardInput.WriteLine($plainPassword)
         }
         $process.StandardInput.Close()
-        if (-not $process.WaitForExit(150000)) { $process.Kill(); throw "Timed out in disposable-user $Operation" }
+        if (-not $process.WaitForExit($(if($Operation -eq 'ManagedExercise'){240000}else{150000}))) { $process.Kill(); throw "Timed out in disposable-user $Operation" }
         $text = $output.GetAwaiter().GetResult()
         $errorText = $errors.GetAwaiter().GetResult()
         if ($process.ExitCode -ne 0) { throw "Disposable-user $Operation failed: $errorText $text" }
-        if ($Operation -in @('Probe','AuthorityProbe','AuthorityRecover')) {
+        if ($Operation -in @('Probe','AuthorityProbe','AuthorityRecover','ManagedProbe')) {
             $probe = $text | ConvertFrom-Json
             $probe | Add-Member -NotePropertyName authentication_id -NotePropertyValue $authenticationId
             return ($probe | ConvertTo-Json -Compress)
@@ -185,6 +186,7 @@ try {
     $taskName = "S3Drive-$($account.SID.Value)-acceptance"
     $authorityTaskName = "S3DriveAuthority-$($account.SID.Value)-acceptance"
     $taskNames = @($taskName,$authorityTaskName)
+    if ($ManagedFixture) { $taskNames += "S3Drive-$($account.SID.Value)-managed" }
     $null = [IO.Directory]::CreateDirectory($root)
     $acl = [Security.AccessControl.DirectorySecurity]::new()
     $acl.SetOwner($runner.User)
@@ -199,6 +201,16 @@ try {
     if ($AuthorityFixture) {
         Copy-Item -LiteralPath (Join-Path $AuthorityFixture 'cert.pem'),(Join-Path $AuthorityFixture 'key.pem'),(Join-Path $AuthorityFixture 'authority-worker.exe') -Destination $root
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'test-windows-authority-worker.ps1') -Destination (Join-Path $root 'authority-worker.ps1')
+    }
+    if ($ManagedFixture) {
+        foreach ($which in @('first','second')) {
+            $null=[IO.Directory]::CreateDirectory((Join-Path $root $which))
+            foreach ($file in @('drive.toml','plan.toml','report.toml','policy.toml')) {
+                Copy-Item -LiteralPath (Join-Path $ManagedFixture "$which\$file") -Destination (Join-Path $root "$which\$file")
+            }
+        }
+        Copy-Item -LiteralPath (Join-Path $ManagedFixture 'managed-fixture.json') -Destination $root
+        [IO.File]::WriteAllText((Join-Path $ManagedFixture 'control-root.txt'),$root,[Text.UTF8Encoding]::new($false))
     }
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'windows-session.ps1') -Destination (Join-Path $root 'source-manager.ps1')
     # All worker paths are derived from its own private directory. The account
@@ -229,7 +241,7 @@ function Initialize-LocalState([string]$Directory=$databaseState) {
     }
 }
 try {
-    if ($Operation.StartsWith('Authority')) {
+    if ($Operation.StartsWith('Authority') -or $Operation.StartsWith('Managed')) {
         & (Join-Path $root 'authority-worker.ps1') -Operation $Operation
         exit $LASTEXITCODE
     }
@@ -294,7 +306,7 @@ try {
             # Fixture disposal only: application removal preserves local data.
             # This protected directory grants its owning account and SYSTEM
             # access. Remove it as its owner before deleting that account.
-            foreach ($directory in @($databaseState,$cacheState,(Join-Path $root 'authority-state'),(Join-Path $root 'authority-inputs'))) {
+            foreach ($directory in @($databaseState,$cacheState,(Join-Path $root 'authority-state'),(Join-Path $root 'authority-inputs'),(Join-Path $root 'managed-write-state'),(Join-Path $root 'producer-first'),(Join-Path $root 'producer-second'),(Join-Path $root 'bootstrap-200'),(Join-Path $root 'bootstrap-201'),(Join-Path $root 'bootstrap-write'))) {
                 if ([IO.Directory]::Exists($directory)) {
                     Remove-Item -LiteralPath $directory -Recurse -Force
                 }
@@ -360,8 +372,24 @@ exit 0
         $forbidden=$false
         try { $null=[IO.File]::ReadAllBytes((Join-Path $root 'authority-inputs\key.pem')); $forbidden=$true } catch {}
         if ($forbidden) { throw 'Other account could read TLS key' }
-        Write-Output (User-Action AuthorityCrash)
-        Write-Output (User-Action AuthorityRecover)
+        if ($ManagedFixture) {
+            Write-Output (User-Action ManagedInstall)
+            $managedTask=$service.GetFolder('\').GetTask("S3Drive-$($account.SID.Value)-managed")
+            if ($managedTask.Xml.Contains($plainPassword)) { throw 'Password leaked into managed task' }
+            $driveFirst=User-Action ManagedProbe | ConvertFrom-Json
+            $driveSecond=User-Action ManagedProbe | ConvertFrom-Json
+            if ($driveFirst.authentication_id -eq $driveSecond.authentication_id -or $driveFirst.child_pid -ne $driveSecond.child_pid) { throw 'Managed drive not shared across independent logons' }
+            Write-Output ('Managed first login: '+($driveFirst | ConvertTo-Json -Compress))
+            Write-Output ('Managed second login: '+($driveSecond | ConvertTo-Json -Compress))
+            $forbidden=$false
+            try { $null=[IO.File]::ReadAllBytes((Join-Path $root ('managed-mounted\empty '+[char]::ConvertFromUtf32(0x1F980)))); $forbidden=$true } catch {}
+            if ($forbidden) { throw 'Another account accessed the managed mount' }
+            Write-Output (User-Action ManagedExercise)
+            Write-Output (User-Action ManagedRemove)
+        } else {
+            Write-Output (User-Action AuthorityCrash)
+            Write-Output (User-Action AuthorityRecover)
+        }
         Write-Output (User-Action AuthorityRemove)
         $removed=$false
         try { $null=$service.GetFolder('\').GetTask($authorityTaskName) }
@@ -405,13 +433,19 @@ exit 0
         }
     }
     $unmounted=$false
+    $mounts=@($mount)
+    if ($ManagedFixture) { $mounts += (Join-Path $root 'managed-mounted') }
     $deadline=[DateTime]::UtcNow.AddSeconds(15)
     while ([DateTime]::UtcNow -lt $deadline) {
-        try { $null=[IO.File]::GetAttributes($mount) }
-        catch {
-            if ($_.Exception.GetBaseException() -is [IO.FileNotFoundException] -or
-                $_.Exception.GetBaseException() -is [IO.DirectoryNotFoundException]) { $unmounted=$true; break }
+        $remaining=0
+        foreach ($ownedMount in $mounts) {
+            try { $null=[IO.File]::GetAttributes($ownedMount); $remaining++ }
+            catch {
+                if ($_.Exception.GetBaseException() -isnot [IO.FileNotFoundException] -and
+                    $_.Exception.GetBaseException() -isnot [IO.DirectoryNotFoundException]) { $remaining++ }
+            }
         }
+        if ($remaining -eq 0) { $unmounted=$true; break }
         Start-Sleep -Milliseconds 100
     }
     if (-not $unmounted) { $cleanupFailures.Add('Mountpoint still exists; preserving the isolated test directory') }
@@ -492,5 +526,6 @@ exit 0
     $password.Dispose()
     if ($cleanupFailures.Count) { throw ($cleanupFailures -join '; ') }
 }
+if ($ManagedFixture) { Write-Output 'PASS: paired Windows TLS coordinator and managed drive, separate logons, exact unknown recovery, Unicode binary empty data, retained conflict and independent removal' }
 if ($AuthorityFixture) { Write-Output 'PASS: non-admin TLS coordinator, independent logons, duplicate starts, scheduled crash recovery, exact receipts and controlled removal' }
 if (-not $AuthorityOnly) { Write-Output 'PASS: non-admin registration, independent same-account logons, exact S3 and Unicode reads, duplicate starts, retained mount and removal' }

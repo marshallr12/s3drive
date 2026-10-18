@@ -78,14 +78,15 @@ def child_command(value, check=False):
 
 def record_child(root, value, child):
     # Operational hints only, never authority to kill a PID from another run.
-    if value.get("component") != "authority":
-        return
     fd, path = tempfile.mkstemp(prefix=".runtime-", dir=root)
     temporary = Path(path)
     try:
         with os.fdopen(fd, "w") as out:
-            json.dump(dict(supervisor_pid=os.getpid(), child_pid=child.pid,
-                           component="authority", expected_volume=value["authority"]["volume"]), out)
+            runtime = dict(supervisor_pid=os.getpid(), child_pid=child.pid,
+                           component=value.get("component", "mount"))
+            if runtime["component"] == "authority":
+                runtime["expected_volume"] = value["authority"]["volume"]
+            json.dump(runtime, out)
             out.flush()
             os.fsync(out.fileno())
         temporary.replace(root / "runtime.json")

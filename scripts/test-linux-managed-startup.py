@@ -120,6 +120,8 @@ def main():
         command = shlex.join(["sh", str(profile)]) + "; exec sleep 600"
         run("tmux", "-L", session, "new-session", "-d", "-s", session, command, env=login_env, cwd="/")
         wait_for(lambda: os.path.ismount(mount), "login hook did not create actual native mount")
+        wait_for(lambda: all((directory / "runtime.json").exists() for directory in [auth_root, mount_root]),
+                 "supervisors did not record their owned fixture children")
         run("tmux", "-L", session, "kill-server", env=env)
         before = {c: runtime(c) for c in ["mount", "authority"]}
         for component in before:
@@ -168,7 +170,13 @@ def main():
                     # cleanup. Kill only our verified fixture mount so a dirty
                     # descriptor cannot hold detached supervisors indefinitely.
                     if component == "mount" and os.path.ismount(mount):
-                        kill_owned("mount")
+                        if (mount_root / "runtime.json").exists():
+                            kill_owned("mount")
+                        else:
+                            run("fusermount3", "-uz", mount, env=env)
+                except Exception as error:
+                    failures.append(f"Fixture {component} detach failed: {error}")
+                try:
                     control("stop", component)
                 except Exception as error:
                     failures.append(f"Fixture {component} shutdown failed: {error}")
