@@ -219,3 +219,21 @@ This validates one real Linux cancellation path. It does not guarantee latency,
 prove Windows Ctrl+C, interrupted kernel I/O, physical power-loss durability,
 restore continuity or actual provider/mount recovery. The source gate had already
 passed; this heavy manual fixture is separate from the portable gate.
+
+
+## Locked-source refusal evidence (2026-10-18)
+
+The [separate Linux CLI experiment](evidence/authority-snapshot-busy-20261018.json)
+held an independent raw SQLite EXCLUSIVE writer on the stopped fixture
+authority in DELETE journal mode. The snapshot command refused in109.197ms
+within its configured2-second cooperative budget, printed no success and
+created no destination. Source SHA-256 stayed unchanged. After the lock was
+released, an explicit control invocation using the same arguments succeeded,
+and offline inspection matched creation with both restore/continuity flags false.
+
+The [reproducer](evidence/authority-snapshot-busy.py) tests SQL source locking
+beyond the cooperative application owner lock. It uses only a disposable
+private loopback/SQLite fixture. It does not prove Windows locking, backup
+contention at the destination, interrupted kernel I/O or a universal latency
+bound. As in the implementation, its checksum file descriptors are opened only
+when its own SQLite connections are closed, preserving POSIX lock behavior.

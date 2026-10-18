@@ -804,7 +804,11 @@ Windows ACL/native acceptance remains. A separate real Linux CLI SIGINT
 fixture passed at defc8b9: source bytes stayed identical, no success/manifest
 was published, partial inspection refused and the original destination could
 not be replaced. See the [dated cancellation proof](evidence/authority-snapshot-sigint-20261018.json);
-no Windows-console or physical power-loss inference.
+no Windows-console or physical power-loss inference. A separate local
+[locked-source CLI check](evidence/authority-snapshot-busy-20261018.json)
+refused without destination creation or source-byte changes, then succeeded
+after the independent writer released its lock. Destination contention and
+actual Windows locking/ACL behavior still require acceptance.
 
 Require exclusive existing-authority ownership and explicit volume/policy pin;
 read supported legacy/current state without migrations or namespace changes.

@@ -11,12 +11,12 @@ Research, decisions, acceptance and plans belong in docs/src/.
   branch codex/windows-transport-followup, privately pushed
   f8c4f5832e399c6c54567c122c875e2a438ce681.
 - Exact-source CI39097275707 is IN_PROGRESS at the latest live check.
-  Windows117586223172 remains active in early TLS focus; Linux117586223366
-  and book117586223439 succeeded. Revalidate the same handles; never cancel/restart on observer
+  Windows117586223172 passed early TLS/replacement/lifecycle, workspace and
+  build and is active in supervisor/native startup checks; Linux117586223366 and book117586223439 succeeded. Revalidate the same handles; never cancel/restart on observer
   timeout or a live job's log404.
-- Root /home/marshall/src/s3drive is codex/authority-snapshots at local,
-  UNPUSHED defc8b9. It adds the snapshot library and CLI. Current local changes
-  add cancellation evidence/docs and this handoff refresh; preserve them.
+- Root /home/marshall/src/s3drive is codex/authority-snapshots, with UNPUSHED
+  implementation defc8b9 and cancellation evidence/handoff archive43bfd46.
+  Preserve both checkpoints and later local handoff changes.
 - Both checkouts share /home/marshall/src/s3drive/target. Builds replace its CLI
   binary, so rebuild/verify the intended source before experiments. No local
   Cargo/gate jobs remain live. The most recent CLI build was root defc8b9 for
@@ -125,7 +125,11 @@ or completion manifest. Source SHA-256 stayed identical; partial inspection and
 same-destination retry refused. Owned processes were reaped before fixture
 cleanup. Dated proof/reproducer: docs/src/evidence/authority-snapshot-sigint*
 with binary and source hashes. This is not Windows console, physical power-cut,
-restoration, mount or provider acceptance. Latest rebuild log:
+restoration, mount or provider acceptance. A separate source-busy CLI check passed at the same binary/source:109.197ms
+refusal under an independent SQLite EXCLUSIVE writer, no output/source changes,
+then successful create/inspection after release. Proof/reproducer are
+scope-limited docs/src/evidence/authority-snapshot-busy*. This is not Windows
+locking or destination contention. Latest rebuild log:
 /tmp/s3drive-snapshot-cancel-build1.log. No local Rust source changed after the
 full gate. New57-doc links/build/tests passed at snapshot-cancel-final-book{,-tests}.log.
 
@@ -133,7 +137,7 @@ Once f8 permits: carefully rebase/integrate the UNPUSHED snapshot checkpoint ont
 accepted main, preserving the diagnostic changes and latest acceptance facts.
 Then actual Windows/ordinary-account snapshot CLI, ACL/reparse/sharing and
 native/reference/startup gates are required. Remaining snapshot gaps include
-broader permission/busy faults and writer-version field validation (currently
+broader permission/destination-busy faults and writer-version field validation (currently
 nonempty/length only). Do not mark snapshot phase or overall goal complete.
 
 ## Requirements, invariants and authorization
