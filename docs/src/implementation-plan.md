@@ -701,58 +701,39 @@ both startup gates and strict source-bound21/14 artifacts. Private main is clean
 
 ### P6m4c — pinned coordinator startup (2026-10-17)
 
-Implement the [startup contract](authority-startup.md): existing-only volume-
-pinned Rust restart/check commands before extending per-account Linux/no-systemd
-and Windows launchers. Missing metadata must never become a new volume. Require
-WAL/crash/migration/identity refusal, disposable supervision, paired managed
-native access/recovery and all existing gates before publication. Do not stop at
-a foreground identity check and call supervision complete. Keep separate hosted
-deployment/Turso choices open; no actual user registration or host provisioning.
+Implement the [startup contract](authority-startup.md): existing-only Rust
+restart/check commands, per-account Linux/no-systemd and Windows launchers, and
+paired managed native recovery. Missing metadata must never become a replacement
+volume. The foreground identity check alone does not complete supervision.
+Keep SQLite-host and optional Turso deployment choices open; no real user
+registration or host provisioning occurs during disposable acceptance.
 
-Pinned-startup local gate passed (265 state, two new real CLI HTTP/TLS restart
-cases plus the existing suites, lint/build/book). The separate Linux coordinator
-supervisor acceptance passed with gio/tmux, killed-child/WAL and unknown-result
-recovery, missing/overlapping metadata refusal and controlled removal. Windows
-helper and new disposable-account coordinator harness have local AST evidence.
-The Rust subprocess fixture passed live TLS/crash/exact-replay locally; hosted
-Task Scheduler acceptance and paired native drive acceptance remain required. This is a development checkpoint,
-not publication or completed coordinator supervision.
+Diagnostic follow-up to `ce784e4` on `codex/authority-startup`; main remains the accepted
+bootstrap baseline `712882e`. Existing-only paths validate original app/schema,
+volume, naming policy/root and WAL before migration/recovery, and recheck identity
+inside the migration transaction. Missing/client/foreign metadata refuses before
+listening. Exact operation records and dirty bytes remain intact.
 
-Linux supervision additionally passed the explicit HTTP and HTTPS/private-CA
-wrapper (after the local gate), with unchanged hostname/certificate validation.
-The new CI step invokes that wrapper after Linux acceptance tools are installed.
-A private development branch may run existing Windows regressions, but those do
-not replace the required new Authority-component and paired native tests; do
-not promote this checkpoint merely because existing CI is green.
+| Acceptance | Current evidence |
+| --- | --- |
+| Rust state/CLI/TLS/SDK and full local gate | Passed for the diagnostic follow-up:265 state, ten HTTP, six TLS,17 SDK, five restart/worker and seven managed cases, including schema8/WAL identity and bounded private diagnostics |
+| Linux coordinator supervision | Passed local and hosted HTTP/private-CA HTTPS desktop/login, terminal-loss and exact-replay checks |
+| Paired Linux real FUSE recovery | Passed at `e48cb09` and current `ce784e4`, job117555117517/run39086854659: all eight native cases, original volume, unchanged uncertain IDs/no repeated PUT, binary/Unicode/empty files, dirty rival conflict and independent removal |
+| Windows Authority runtime | Install/TLS/independent-logon/duplicate subset worked at `56a2abe`; full test failed killed-child recovery under Scheduler-only retry settings |
+| Windows retry correction | `ce784e4` keeps one owner through four child attempts,10-second interruptible delays; four portable policy checks passed; its native test failed an Info request before the child kill |
+| Paired Windows real WinFsp recovery | Implemented with two scheduled tasks, owned S3 fixture, actual FileStream uncertainty/conflict workflow and independent removal; portable CLI/SDK/TLS preparation passed; native result pending |
+| Broader Windows native/reference regression | Required; two older rename failures at distinct operations remain unresolved and have new typed/request diagnostics, without retries or weaker assertions |
+| Exact final-source publication | Pending all-three hosted jobs, native/startup logs and strict21/14 source/platform artifacts; no promotion on partial/regression-only success |
 
+The [startup chapter](authority-startup.md) records source/job links, failure
+history, commands and the full eight acceptance criteria. Physical workstation
+reboot/PAM/SSH, Windows10/11, real multi-host partitions, backup/failover, live
+managed Wasabi acceptance and large-file support remain later requirements.
 
-The paired Linux native candidate now starts both disposable login supervisors
-with real FUSE/SDK/HTTPS and retains an open descriptor through coordinator
-failure. It compares exact uncertain attempt IDs/hashes/keys and PUT counts,
-checks dirty bytes and rival conflicts, and proves independent removal. Its
-controller starts before descriptors exist to avoid test-induced Unix-fork flush
-callbacks. Local compile/lint passed; hosted native execution and paired Windows
-acceptance are pending. This adds acceptance coverage, not a completed phase.
-
-The first paired Linux native attempt failed during writable bootstrap because
-the fixture selected exact naming. It now uses the required portable naming and
-a guarded producer rename; an ordinary live HTTPS preparation test passed.
-Native startup/recovery remains unverified until the corrected case runs.
-
-The paired Windows candidate is now implemented in the disposable-account
-harness, using real CLI/SDK seeding, private CA, two startup tasks, FileStream
-uncertain flush/retry, exact identity snapshots, rival conflict and independent
-removal. Its portable live preparation test passed; native execution is pending.
-Linux now records private runtime hints for both components after its paired
-native run found the Mount record missing. Local HTTP/TLS supervisor regression
-passed. Two existing Windows rename gates failed at distinct operations and
-remain unresolved; typed callback and namespace diagnostics were added without
-retrying or weakening the operations. All native/reference gates remain required.
-
-The first Windows Authority runtime passed TLS/separate-logon/duplicate checks
-but did not restart its killed child under Scheduler-only retry settings. Native
-artifact events and the100-second failed recovery are recorded in the book.
-The supervisor now retains one owner through four child attempts with10-second
-interruptible delays; the native test requires a fresh child under that same
-supervisor with unchanged volume/receipts. Scheduler properties are no substitute
-for measured recovery. Corrected native acceptance remains required.
+The `ce784e4` run is terminal failed: Windows117555117545 lost a metadata
+Info response while the supervisor remained running; paired Windows and later
+native steps were skipped. The follow-up adds redacted typed transport stages,
+timeout/status/socket/framing diagnostics, bounded fixed server events and a
+real TLS fault matrix without
+changing deadlines, TLS verification or replay policy. Root cause remains
+unproven until a classified native failure or other direct evidence explains it.

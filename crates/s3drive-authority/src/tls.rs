@@ -9,13 +9,73 @@ use rustls::{
     ServerConfig,
     pki_types::{CertificateDer, PrivateKeyDer, pem::PemObject},
 };
-use std::{fmt, path::Path, sync::Arc, time::Duration};
+use std::{
+    fmt,
+    path::Path,
+    sync::{
+        Arc,
+        atomic::{AtomicU8, Ordering},
+    },
+    time::Duration,
+};
 use tokio::{
     net::TcpListener,
     sync::{Semaphore, watch},
     task::JoinSet,
 };
 use tokio_rustls::TlsAcceptor;
+
+// Unauthenticated peers can trigger these paths. Emit at most sixteen fixed
+// categories per listener lifetime, then one suppression notice. Never format
+// dependency errors, peer addresses, headers, bodies or certificate material.
+#[derive(Debug)]
+enum ConnectionFailure {
+    Capacity,
+    HandshakeRejected,
+    HandshakeTimeout,
+    HttpTimeout,
+    IncompleteHttp,
+    HttpTransport,
+    Lifetime,
+}
+#[derive(Default)]
+struct Diagnostics(AtomicU8);
+impl Diagnostics {
+    fn record(&self, failure: ConnectionFailure) {
+        let previous = self
+            .0
+            .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
+                (n < 17).then_some(n + 1)
+            });
+        use std::io::Write;
+        match previous {
+            Ok(16) => {
+                let _ = writeln!(
+                    std::io::stderr().lock(),
+                    "authority TLS: further connection diagnostics suppressed"
+                );
+            }
+            Ok(_) => {
+                let _ = writeln!(
+                    std::io::stderr().lock(),
+                    "authority TLS connection failure: {failure:?}"
+                );
+            }
+            Err(_) => {}
+        }
+    }
+    fn http(&self, result: Result<(), hyper::Error>) {
+        if let Err(error) = result {
+            self.record(if error.is_timeout() {
+                ConnectionFailure::HttpTimeout
+            } else if error.is_incomplete_message() {
+                ConnectionFailure::IncompleteHttp
+            } else {
+                ConnectionFailure::HttpTransport
+            });
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct TlsError;
@@ -76,6 +136,7 @@ where
     let app = crate::router(client, token);
     let acceptor = TlsAcceptor::from(tls.0);
     let slots = Arc::new(Semaphore::new(32));
+    let diagnostics = Arc::new(Diagnostics::default());
     let (stopping, stopped) = watch::channel(false);
     let mut tasks = JoinSet::new();
     tokio::pin!(shutdown);
@@ -95,8 +156,13 @@ where
                     Ok(value) => value,
                     Err(error) => { failure = Some(error); break; }
                 };
-                let Ok(slot) = slots.clone().try_acquire_owned() else { drop(stream); continue; };
+                let Ok(slot) = slots.clone().try_acquire_owned() else {
+                    diagnostics.record(ConnectionFailure::Capacity);
+                    drop(stream);
+                    continue;
+                };
                 let acceptor = acceptor.clone();
+                let diagnostics = diagnostics.clone();
                 let app = app.clone();
                 let mut stopped = stopped.clone();
                 tasks.spawn(async move {
@@ -104,8 +170,11 @@ where
                     let stream = tokio::select! {
                         _ = stopped.changed() => return,
                         result = tokio::time::timeout(Duration::from_secs(5), acceptor.accept(stream)) => {
-                            let Ok(Ok(stream)) = result else { return; };
-                            stream
+                            match result {
+                                Ok(Ok(stream)) => stream,
+                                Ok(Err(_)) => { diagnostics.record(ConnectionFailure::HandshakeRejected); return; },
+                                Err(_) => { diagnostics.record(ConnectionFailure::HandshakeTimeout); return; },
+                            }
                         }
                     };
                     let mut http = hyper::server::conn::http1::Builder::new();
@@ -116,11 +185,14 @@ where
                     let deadline = tokio::time::sleep(Duration::from_secs(10));
                     tokio::pin!(deadline);
                     tokio::select! {
-                        _ = &mut connection => {},
-                        _ = &mut deadline => {},
+                        result = &mut connection => diagnostics.http(result),
+                        _ = &mut deadline => diagnostics.record(ConnectionFailure::Lifetime),
                         _ = stopped.changed() => {
                             connection.as_mut().graceful_shutdown();
-                            tokio::select! { _ = &mut connection => {}, _ = &mut deadline => {} }
+                            tokio::select! {
+                                result = &mut connection => diagnostics.http(result),
+                                _ = &mut deadline => diagnostics.record(ConnectionFailure::Lifetime),
+                            }
                         }
                     }
                 });

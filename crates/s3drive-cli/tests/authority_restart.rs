@@ -6,7 +6,7 @@ use std::{
     time::Duration,
 };
 use tokio::{
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     process::{Child, Command},
 };
 
@@ -73,15 +73,14 @@ impl Server {
             volume: v["volume"].as_str().unwrap().into(),
         }
     }
-    async fn stop(mut self) {
+    async fn stop(mut self) -> String {
         drop(self.child.stdin.take());
-        assert!(
-            tokio::time::timeout(Duration::from_secs(20), self.child.wait())
-                .await
-                .unwrap()
-                .unwrap()
-                .success()
-        );
+        let out = tokio::time::timeout(Duration::from_secs(20), self.child.wait_with_output())
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(out.status.success(), "coordinator shutdown failed");
+        String::from_utf8(out.stderr).unwrap()
     }
     async fn kill(mut self) {
         self.child.kill().await.unwrap();
@@ -255,7 +254,48 @@ async fn pinned_cli_http_tls_restart_recovers_original_volume_and_unread_operati
         Reply::Applied(_)
     ));
     assert_eq!(info(&w).await.sequence, 2);
-    server.stop().await;
+    // Unauthenticated garbage must not disclose its contents or flood logs,
+    // and hitting the diagnostic budget must not stop authenticated service.
+    let address = url::Url::parse(&server.endpoint).unwrap();
+    for _ in 0..24 {
+        let mut peer = tokio::net::TcpStream::connect(("127.0.0.1", address.port().unwrap()))
+            .await
+            .unwrap();
+        peer.write_all(b"private-handshake-marker").await.unwrap();
+        let mut alert = Vec::new();
+        let _ = tokio::time::timeout(Duration::from_secs(3), peer.read_to_end(&mut alert))
+            .await
+            .expect("malformed handshake did not close");
+    }
+    assert_eq!(info(&w).await.sequence, 2);
+    let original_endpoint = server.endpoint.clone();
+    let log = server.stop().await;
+    let events: Vec<_> = log
+        .lines()
+        .filter(|line| line.starts_with("authority TLS"))
+        .collect();
+    assert_eq!(events.len(), 17, "connection diagnostic budget");
+    assert!(
+        events[..16]
+            .iter()
+            .all(|line| *line == "authority TLS connection failure: HandshakeRejected")
+    );
+    assert_eq!(
+        events[16],
+        "authority TLS: further connection diagnostics suppressed"
+    );
+    for private in [
+        "private-handshake-marker",
+        &original_endpoint,
+        &"a".repeat(64),
+        &cert.pem(),
+        &signing_key.serialize_pem(),
+    ] {
+        assert!(
+            !log.contains(private),
+            "server diagnostic disclosed private input"
+        );
+    }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -387,17 +427,23 @@ async fn windows_authority_fixture_worker() {
     let cert = std::fs::read(root.join("authority-inputs/cert.pem")).unwrap();
     let w = wire(identity["endpoint"].as_str().unwrap(), Some(&cert));
     let deadline = Duration::from_secs(if mode == "Recover" { 100 } else { 20 });
+    let mut last_failure = None;
     let v = tokio::time::timeout(deadline, async {
         loop {
-            if let Ok(Reply::Info(v)) = w.request(&Request::Info {}).await {
-                break v;
+            match w.request(&Request::Info {}).await {
+                Ok(Reply::Info(v)) => break v,
+                Ok(_) => panic!("coordinator readiness returned an unexpected reply"),
+                Err(error) => last_failure = Some(error),
             }
             tokio::time::sleep(Duration::from_millis(150)).await;
         }
     })
     .await
-    .expect("authenticated pinned TLS coordinator not available");
+    .unwrap_or_else(|_| {
+        panic!("authenticated pinned TLS coordinator not available: {last_failure:?}")
+    });
     assert_eq!(v.id, volume);
+    eprintln!("coordinator fixture {mode}: authenticated original volume");
     let request = Apply {
         volume: volume.into(),
         operation: "c".repeat(32),
@@ -429,10 +475,12 @@ async fn windows_authority_fixture_worker() {
             .unwrap(),
             Reply::Operation(Some(Ok(receipt.clone())))
         );
+        eprintln!("coordinator fixture {mode}: original operation verified");
         assert_eq!(
             w.request(&Request::Apply { request }).await.unwrap(),
             original
         );
+        eprintln!("coordinator fixture {mode}: exact replay verified");
     }
     assert_eq!(
         info(&w).await.sequence,

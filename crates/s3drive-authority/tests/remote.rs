@@ -2,7 +2,7 @@
 //! not evidence of remote hosting, multiple physical hosts or Turso behavior.
 use s3drive_authority::{
     Apply, Authority, Error, Kind, Mutation, ROOT, Reply, Request, ServerTls, Token, WireClient,
-    serve_tls,
+    WireError, WirePhase, serve_tls,
 };
 use std::{sync::Arc, time::Duration};
 use tokio::{
@@ -146,11 +146,116 @@ async fn tls_neither_follows_redirects_nor_replays_a_dropped_reply() {
             },
         };
         let error = cert.client(&url).request(&request).await.unwrap_err();
-        assert!(!error.to_string().contains(SECRET));
+        if redirect {
+            assert_eq!(error, WireError::HttpStatus(307));
+        } else {
+            assert!(
+                matches!(
+                    error,
+                    WireError::Transport {
+                        phase: WirePhase::Request,
+                        timed_out: false,
+                        ..
+                    }
+                ),
+                "{error:?}"
+            );
+        }
+        assert_redacted(&error, &[SECRET, &url]);
         tokio::time::timeout(Duration::from_secs(3), task)
             .await
             .unwrap()
             .unwrap();
+    }
+}
+
+fn assert_redacted(error: &WireError, secrets: &[&str]) {
+    let diagnostic = format!("{error:?} {error}");
+    for secret in secrets {
+        assert!(
+            !diagnostic.contains(secret),
+            "wire error disclosed private input"
+        );
+    }
+    assert!(std::error::Error::source(error).is_none());
+    assert!(diagnostic.contains("inspect the durable operation"));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn tls_wire_diagnostics_distinguish_failure_stages_without_disclosing_inputs() {
+    #[derive(Clone, Copy)]
+    enum Fault {
+        Status,
+        Oversize,
+        InvalidReply,
+        TruncatedBody,
+        RequestTimeout,
+        BodyTimeout,
+    }
+    let mut cases = tokio::task::JoinSet::new();
+    for fault in [
+        Fault::Status,
+        Fault::Oversize,
+        Fault::InvalidReply,
+        Fault::TruncatedBody,
+        Fault::RequestTimeout,
+        Fault::BodyTimeout,
+    ] {
+        cases.spawn(async move {
+            const PRIVATE_BODY: &str = "private-response-marker";
+            let cert = Certificate::new("127.0.0.1", false);
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let url = format!("https://{}/v1/namespace", listener.local_addr().unwrap());
+            let acceptor = cert.acceptor();
+            let (finished, done) = oneshot::channel();
+            let server = tokio::spawn(async move {
+                let (tcp, _) = listener.accept().await.unwrap();
+                let mut stream = acceptor.accept(tcp).await.unwrap();
+                let mut header = Vec::new();
+                while !header.ends_with(b"\r\n\r\n") {
+                    assert!(header.len() < 8192);
+                    header.push(stream.read_u8().await.unwrap());
+                }
+                let length = std::str::from_utf8(&header).unwrap().lines().find_map(|line| {
+                    line.to_ascii_lowercase().strip_prefix("content-length: ")
+                        .and_then(|n| n.parse::<usize>().ok())
+                }).unwrap();
+                assert!(length < 4096);
+                let mut body = vec![0; length];
+                stream.read_exact(&mut body).await.unwrap();
+                assert!(matches!(serde_json::from_slice::<Request>(&body).unwrap(), Request::Info {}));
+                let response = match fault {
+                    Fault::Status => format!("HTTP/1.1 503 Service Unavailable\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{PRIVATE_BODY}", PRIVATE_BODY.len()),
+                    Fault::Oversize => "HTTP/1.1 200 OK\r\nContent-Length: 8388609\r\nConnection: close\r\n\r\n".into(),
+                    Fault::InvalidReply => format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{PRIVATE_BODY}", PRIVATE_BODY.len()),
+                    Fault::TruncatedBody | Fault::BodyTimeout => format!("HTTP/1.1 200 OK\r\nContent-Length: 4096\r\nConnection: close\r\n\r\n{PRIVATE_BODY}"),
+                    Fault::RequestTimeout => String::new(),
+                };
+                stream.write_all(response.as_bytes()).await.unwrap();
+                stream.flush().await.unwrap();
+                if matches!(fault, Fault::RequestTimeout | Fault::BodyTimeout) {
+                    done.await.unwrap();
+                }
+                drop(stream);
+                assert!(tokio::time::timeout(Duration::from_millis(500), listener.accept()).await.is_err(), "diagnostic path retried request");
+            });
+            let error = tokio::time::timeout(Duration::from_secs(13), cert.client(&url).request(&Request::Info {}))
+                .await.unwrap().unwrap_err();
+            assert_redacted(&error, &[SECRET, &url, &cert.cert, PRIVATE_BODY]);
+            match fault {
+                Fault::Status => assert_eq!(error, WireError::HttpStatus(503)),
+                Fault::Oversize => assert_eq!(error, WireError::ResponseTooLarge),
+                Fault::InvalidReply => assert_eq!(error, WireError::InvalidReply),
+                Fault::TruncatedBody => assert!(matches!(error, WireError::Transport { phase: WirePhase::ResponseBody, timed_out: false, .. }), "{error:?}"),
+                Fault::RequestTimeout => assert!(matches!(error, WireError::Transport { phase: WirePhase::Request, timed_out: true, .. }), "{error:?}"),
+                Fault::BodyTimeout => assert!(matches!(error, WireError::Transport { phase: WirePhase::ResponseBody, timed_out: true, .. }), "{error:?}"),
+            }
+            let _ = finished.send(());
+            server.await.unwrap();
+        });
+    }
+    while let Some(result) = cases.join_next().await {
+        result.unwrap();
     }
 }
 struct Server {
@@ -208,25 +313,35 @@ async fn tls_requires_correct_trust_hostname_token_and_volume() {
         Reply::Error(_)
     ));
     assert_eq!(v.sequence, 0);
-    assert!(
-        WireClient::https(
-            &server.url,
-            Token::new("a".repeat(64)).unwrap(),
-            Some(cert.cert.as_bytes())
-        )
-        .unwrap()
+    let denied = WireClient::https(
+        &server.url,
+        Token::new("a".repeat(64)).unwrap(),
+        Some(cert.cert.as_bytes()),
+    )
+    .unwrap()
+    .request(&Request::Info {})
+    .await
+    .unwrap_err();
+    assert_eq!(denied, WireError::HttpStatus(401));
+    assert_redacted(&denied, &[SECRET, &server.url]);
+    let wrong = Certificate::new("127.0.0.1", false);
+    let trust = wrong
+        .client(&server.url)
         .request(&Request::Info {})
         .await
-        .is_err()
-    );
-    let wrong = Certificate::new("127.0.0.1", false);
+        .unwrap_err();
     assert!(
-        wrong
-            .client(&server.url)
-            .request(&Request::Info {})
-            .await
-            .is_err()
+        matches!(
+            trust,
+            WireError::Transport {
+                phase: WirePhase::Connect,
+                timed_out: false,
+                ..
+            }
+        ),
+        "{trust:?}"
     );
+    assert_redacted(&trust, &[SECRET, &server.url, &wrong.cert]);
     assert!(
         WireClient::https(&server.url, Token::new(SECRET.into()).unwrap(), None)
             .unwrap()

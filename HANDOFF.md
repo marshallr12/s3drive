@@ -1,147 +1,154 @@
 # S3Drive handoff
 
-Updated2026-10-17. Goal ACTIVE. Phase **pinned coordinator startup**, branch
-`codex/authority-startup`. Read docs/src/implementation-plan.md and
-[authority startup](docs/src/authority-startup.md). Worktree WIP; no promotion.
+Updated2026-10-17. Goal ACTIVE. Current phase **pinned coordinator startup**,
+branch `codex/authority-startup`. Read docs/src/implementation-plan.md and
+[authority startup](docs/src/authority-startup.md). Main stays the accepted
+private712882eacd5f15273cd574c1d708b6f99935c1ea; no promotion yet.
 
-Accepted main is712882eacd5f15273cd574c1d708b6f99935c1ea, private and clean at
-phase start. All-green accepted CI39079281204, Linux117532750921,
-Windows117532751106, book117532751123; source-bound21/14 artifacts
+Latest pushed parent is ce784e4c3475a47637adb499ac41d413646b787e.
+CI39086854659 is terminal FAILED: book117555117307 and Linux117555117517
+succeeded; Windows117555117545 failed AuthorityProbe before the injected kill.
+The coordinator/supervisor stayed running. Rust Info failed with an opaque
+WireError after exact operation lookup/replay; no root cause or corrected
+child-loop runtime acceptance is established. Raw evidence:
+/tmp/s3drive-windows-ce784-runtime.log. Paired Windows and later broad native
+steps were skipped, not passed. Do not retry unchanged or promote this parent.
+
+Current follow-up adds redacted typed WireError stages/status/timeout/socket
+and framing predicates, with no retained dependency error, URL, token,
+certificate, request or response body. A six-case real TLS fault matrix tests
+status, advertised oversize, invalid JSON, truncation and request/body timeouts;
+existing redirect/drop tests still prove no mutation retry/follow. Startup
+worker logs only safe mode/verified stages and its last typed readiness failure.
+Server-side fixed categories are capped at16 plus one suppression line per
+listener lifetime. The CLI test sends24 bad handshakes, verifies capped/private
+stderr and continued authenticated service. No deadline, retry, TLS verification,
+schema or protocol behavior changes.
+Resolved reqwest0.13.5/hyper1.12.0 error APIs were inspected locally.
+
+The existing dirty documentation consolidation is included with this substantive
+follow-up: root/book overview, architecture, startup/plan and handoff. It corrects
+stale schema15/Windows-unsupported/loopback-only claims and records Linux paired
+acceptance. Current overview matches schema23, HTTPS/bootstrap and explicit
+version7 Windows lifecycle. The first follow-up gate exited0 at
+/tmp/s3drive-wire-diagnostics-gate1.log but began before the server-log change.
+The final-source gate PASSED exit0 at /tmp/s3drive-wire-diagnostics-gate2.log:
+265 state, ten HTTP, six TLS,17 SDK, five CLI restart/worker and seven managed
+cases; format, Clippy, workspace build, book links/build/tests all passed.
+Six TLS cases passed at /tmp/s3drive-wire-diagnostics-tests1.log; expanded
+CLI malformed-handshake/privacy/budget/service-continuity test passed at
+/tmp/s3drive-wire-server-diagnostics-tests1.log. A deprecated atomic API warning
+was corrected using inspected toolchain1.99.1 core source before the final gate.
+Do not claim this is the Windows fix;
+the diagnostic candidate still needs exact-source native evidence.
+
+## Current implementation and invariants
+
+- Schema23/config7, no dependency/protocol changes. Existing-only ownership
+  refuses absent directory/lock/DB; inspect validates app/schema8..23, original
+  volume/policy/root in ordinary WAL. It does not assert immutable URI state.
+  Operational WAL/SHM may change. Recheck inside migration transaction before
+  migrations or intent recovery; omit SQLite CREATE and namespace initialization.
+- CLI authority-check is offline/exclusive, stable nonzero port, no provider
+  access; authority-serve --expect-volume pins supervised restart. Explicit
+  unpinned bootstrap remains separate. Preserve exact operation bytes/IDs,
+  dirty data and explicit conflicts; never fall back to fresh volume/overwrite.
+- Separate per-account Mount v1 and Authority v2 startup registrations. Linux
+  no-systemd desktop/profile hooks and private atomic runtime hints for both
+  roles. PID files are hints only; production signals its own Popen child.
+- Windows Run-Child is under one Run-Mount supervisor/lock for four attempts,
+ 10-second interruptible backoff. Stop/normal exit terminates. Only own Process
+  handles receive stdin close; no hard kill/PID signalling. Task Scheduler
+  restart properties remain secondary, unverified launcher policy.
+- Windows recovery test requires fresh child under SAME supervisor, unchanged
+  original volume and exact receipts, without Start. Bounded runtime-hint poll
+  avoids reading a partially updated hint. Caller/client profiles are explicit;
+  S3DRIVE_NATIVE_MANAGED_EXECUTABLE points to copied test binary, no Rust env
+  mutation. Credentials are known dummy values created by the disposable user.
+- Paired Windows helper copies only config/policy/plan/report, rebases local
+  paths, privately seeds both stores via real CLI/publisher, generates config6,
+  tracks both mountpoints/all task actions and disposes private DBs as owner.
+  Live FileStream uncertainty/recovery/rival conflict/removal are full required
+  assertions. CheckConflict proves head!=settled and actual staged conflict
+  bytes, not fabricated logical_conflicts retention acknowledgment.
+- Existing rename diagnostics log typed error and relevant test request/outcome/
+  node context, no config/credentials. No retries/weaker native assertions.
+
+## Evidence
+
+Accepted main baseline: terminal all-green CI39079281204; Linux117532750921,
+Windows117532751106, book117532751123, strict21/14 source/platform artifacts
 12118596192/12118656792. Proof /tmp/s3drive-bootstrap-publication.json.
-Schema23/config7. No final coordinator-startup publication is authorized by
-existing evidence, even if a partial/regression run is green.
 
-Production candidate: existing-only directory/lock/database acquisition;
-State inspect/open_existing_authority validates app/schema8..23, original
-volume/policy/root, honors WAL, omits CREATE and rechecks identity inside the
-migration transaction. Authority::open_existing never initializes a namespace.
-CLI authority-check is offline/exclusive and authority-serve --expect-volume
-pins restarts; explicit unpinned bootstrap stays separate. Missing metadata,
-wrong identity/client state/corrupt root and future schemas refuse before
-listening/migration. Existing exact operation bytes and dirty data survive.
-No dependency/schema/protocol version change. Windows/Linux supervisors have
-separate Authority registrations and stable listen/TLS/pin fields.
+Full local gate /tmp/s3drive-windows-paired-gate1.log completed exit0 before
+PS-only child-loop correction:265 state,10 HTTP,5 TLS,17 SDK,5 restart/worker
+CLI,7 managed cases, format/Clippy/build/56-doc checks. No Rust changed since.
+Four real-child policy/lock/budget/Stop cases passed
+/tmp/s3drive-windows-supervisor-policy1.log. AST of PS files and extracted account
+worker passed. Portable live CLI/SDK/TLS/killed-authority/unknown-request/conflict
+fixture passed /tmp/s3drive-windows-paired-portable2.log (portable1 failed only
+an incorrect assumption that logical_conflicts is automatically populated).
+Linux HTTP/private-CA TLS supervisor regression passed again25.74sec at
+/tmp/s3drive-windows-paired-linux-helper.log.
 
-Local state8, CLI HTTP/TLS2 and original full gate3 passed. Later full local
-gates /tmp/s3drive-authority-startup-native-gate1.log and
-/tmp/s3drive-authority-paired-gate2.log completed exit0, with265 state,10 HTTP,
-5 TLS,17 SDK,7 managed engine/setup cases and the CLI restart tests. Source
-56a2abe6e1b197305b439cd8e0719d7d942ddb51 was privately pushed; its native CI is
-39084754318. New WIP below requires a new full gate and exact-source native CI.
+**Paired Linux native passed** at e48cb099d087ab1d15d629905200e5b44e11fcf3,
+job117553539182/run39086319069. Raw /tmp/s3drive-paired-linux-accepted1.log
+explicitly records full paired FUSE PASS, eight native cases and both HTTP/TLS
+supervisor profiles. Both login hooks, tmux launcher loss, exact physical/logical
+unknown IDs/no repeated PUT, actual binary/Unicode/empty/second-store bytes,
+coordinator crashes, dirty rival conflict, journal reopening and independent
+removal passed. Runtime file fix and all Linux code are unchanged in ce784;
+the current ce784 Linux117555117517 also completed SUCCESS: all8 native
+cases, paired PASS at01:39:46UTC and both HTTP/TLS supervisor profiles. Raw
+/tmp/s3drive-paired-linux-ce784.log. The e48 Windows117553539419 job is now
+terminal FAILED: the same100-second killed-child recovery timeout under
+Scheduler-only supervision, after working TLS/independent logons/duplicates.
+Raw /tmp/s3drive-windows-e48-runtime.log confirms exit-1/action4294967295.
+It predates ce784's child-loop correction; do not promote e48.
 
-Evidence and unresolved runs:
-- be0d996 /39083244133 terminal all-green. Linux117544391821,
-  Windows117544391973, book117544392020. Raw logs
-  /tmp/s3drive-authority-startup-checkpoint-{linux,windows}.log. This source
-  tests new Linux HTTP/TLS coordinator supervision and previous Windows Mount
-  regressions, NOT the new Windows Authority component or paired drives.
-- 8ce3ddc /39083840521 terminal failed. Windows117546161016 failed existing
-  managed cross-bucket rename (native1117), before Authority tests. Linux/book
-  passed. Log /tmp/s3drive-windows-authority-native1.log.
-- d67a17d /39084297874 terminal failed: Linux117547531601 rejected exact naming
-  during writable bootstrap (fixed to portable +guarded producer rename;
-  portable preparation passed). Windows117547531749 failed existing dirty-source
-  replacement (native1117 plus authority transport failure). Logs
-  /tmp/s3drive-authority-paired-linux1.log and
-  /tmp/s3drive-windows-authority-native2.log. Do not call either a flaky pass.
-- 56a2abe /39084754318: Linux117548875680 failed paired startup because Mount
-  did not record runtime.json; seven previous native cases passed. Log
-  /tmp/s3drive-authority-paired-linux2.log. Windows117548875636 is still live
-  at checkpoint creation; do not restart on timeout. Book117548875774 passed.
+## Failure history that still matters
 
-New WIP Windows pair:
-- tests/support/managed/windows_session.rs reuses Harness/production CLI and
-  publisher. Ordinary account rebases copied local paths, creates its own dummy
-  profile/private TLS/SQLite, seeds both stores, generates config6/own journal,
-  freezes exact original metadata replay and unknown physical/logical IDs.
-- authority_restart has a new native supervised_windows_managed_drive_and_coordinator_recovery
-  wrapper, plus the portable paired_windows_fixture_sdk_tls_recovery_and_conflict_preparation
-  and its explicit engine child. Native wrapper owns S3 fixture faults via a
-  command/counter file protocol. Only loopback source endpoints allowed.
-- test-windows-session.ps1 adds ManagedFixture; tracks both mountpoints/three
-  task names, copies policy evidence WITHOUT credentials, checks independent
-  logons, PID ownership and other-account denial. Shared authority worker adds
-  managed install/probe/FileStream exercise/removal. Actual scheduler retry,
-  exact unknown recovery/no repeated PUT, dirty rival conflict and independent
-  removal are REQUIRED assertions, not yet accepted outcomes.
-- Fixture worker opens remain process-specific: set
-  S3DRIVE_NATIVE_MANAGED_EXECUTABLE to the copied binary and explicit dummy
-  AWS profile paths in each secondary-logon client. No Rust env mutation.
-- CheckConflict originally assumed logical_conflicts is automatic; that table
-  is explicit retention acknowledgment, so it now proves refused fresh opens/
-  flush plus reopened head!=settled and production staged-read bytes instead.
-- Portable full SDK/TLS/killed-coordinator/unknown-replay/conflict preparation
-  passed /tmp/s3drive-windows-paired-portable2.log. Earlier portable1 failed
-  only that incorrect table assumption. All PS files and extracted embedded
-  worker passed AST. Clippy3 passed after test fixture visibility adjustment;
-  a first attempt had unused shared fixture fields. Native result pending.
+- be0d996 /39083244133 terminal all-green (old Windows Mount tests only).
+  Raw /tmp/s3drive-authority-startup-checkpoint-{linux,windows}.log.
+- 8ce3ddc /39083840521 terminal failed: Windows117546161016 native1117 on
+  cross-store rename. /tmp/s3drive-windows-authority-native1.log.
+- d67a17d /39084297874 terminal failed: Linux117547531601 exact naming rejected
+  writable bootstrap (fixed portable+guarded rename, portable prep passed);
+  Windows117547531749 dirty-source replacement native1117 plus authority
+  transport failure. /tmp/s3drive-authority-paired-linux1.log and
+  /tmp/s3drive-windows-authority-native2.log. Both rename failures remain
+  unexplained; later passing native suite is not a reason to label them flaky.
+- 56a2abe /39084754318 terminal failed: Linux117548875680 Mount runtime.json
+  missing (fixed; subsequent paired native passed). Windows117548875636 passed
+  broad native suite plus Authority install/TLS/independent logons/duplicates,
+  but failed child restart in100s. Log /tmp/s3drive-windows-authority-runtime1.log
+  shows exit-1, Scheduler events201/102 completed with4294967295 and no retry;
+  later profile sharing violation was cleanup, NOT the primary failure. This
+  directly caused ce784 bounded-child-loop correction. Native rerun pending.
 
-New Linux fix: record_child writes private atomic runtime hints for BOTH
-components; no production PID signalling added. Paired Python waits for both
-records and always attempts stop after failure detach. Production supervisor
-still signals only its own Popen child; injected kills verify owned pidfds/argv.
-The ordinary HTTP+private-CA TLS supervisor test passed again (25.74sec) at
-/tmp/s3drive-windows-paired-linux-helper.log. Syntax uses compile(), no pycache.
-Actual paired FUSE execution remains pending. Native control is piped to a
-prestarted child; NEVER fork in the native parent with FUSE descriptors open.
+## Next actions and publication
 
-Existing Windows native rename failures remain unresolved. Windows callback
-now reports the typed error for rename; test captures safe request/outcome/node
-context at dirty-source and cross-store failure without retries or fresh IDs.
-Authority/native pair CI steps now run before broad native regressions to get
-independent evidence; every previous native/reference/startup gate is retained.
-No production semantics changed for rename beyond diagnostics.
+Privately push the locally green substantive diagnostic follow-up, then inspect
+the new exact-source Windows job for a classified transport cause.
+Keep corrected child-loop, full paired Windows and every existing native/
+reference/startup assertion. Retrieve completed job logs via
+`gh api --allow-escape-sequences repos/marshallr12/s3drive/actions/jobs/JOB/logs`.
+Do not restart live jobs on observation timeout or transient404 logs.
 
-Current WIP full local gate /tmp/s3drive-windows-paired-gate1.log completed
-exit0:265 state,10 HTTP,5 TLS,17 SDK,5 CLI restart/worker and7 managed cases,
-formatting/Clippy/build and56-doc checks. Final PS parameter guard was added
-after gate start and its AST was separately checked. No final native acceptance.
-56a2abe Windows117548875636 has now reached its Authority startup step after
-its broad native tests; poll that exact job for the first runtime evidence.
+Fix measured failures and include local docs in the next substantive checkpoint.
+Require terminal exact-tip all-three CI, raw native/startup logs and typed21/14
+source/platform artifacts BEFORE guarded private FF main from712882e. No
+metadata-only/empty mounts in place of full pair, unknown identities, dirty data
+and conflicts. AST/policy/portable SDK tests cannot prove Windows native startup.
+Do not mark the overall goal complete after this phase: physical reboot/PAM/SSH,
+Windows10/11, real multi-host/partitions, backup/failover, live managed Wasabi
+acceptance and large files remain. Hosting undecided: keep SQLite-host/Turso open.
 
-Checkpoint e48cb099d087ab1d15d629905200e5b44e11fcf3 was privately pushed;
-run39086319069 is live (Linux117553539182, Windows117553539419,
-book117553539561). It predates the retry correction below and may fail that
-known assertion; do not restart a live job simply because observation times out.
-
-New measured Windows Authority failure: 56a2abe run39084754318 is terminal FAILED.
-Windows117548875636 passed TLS/install/independent logons/duplicates, but after
-child kill logged exit-1 and Scheduler events201/102 completed with code4294967295.
-No replacement child during100s; profile cleanup sharing violation also occurred
-because acceptance was not complete. Primary failure is visible in
-/tmp/s3drive-windows-authority-runtime1.log, not merely cleanup. Its broad native
-Windows cases passed in this run; prior two rename failures remain unresolved.
-
-New uncommitted correction: windows-session.ps1 factors Run-Child and holds one
-exclusive supervisor lock through four child attempts,10-second interruptible
-backoff; explicit Stop/normal exit terminates. Only own Process handles receive
-stdin close, no PID hint signalling or hard-kill added. Task restart properties
-remain secondary/unverified. AuthorityRecover now requires changed child under
-same supervisor +original pin/receipts without Start, with bounded runtime-hint
-polling. Portable test-windows-supervisor-policy.ps1 extracts actual loop and
-uses real child exit codes/owner lock, budget and Stop during backoff. Native
-acceptance still required. Docs/source citations reflect measured failure.
-All four portable policy cases passed at /tmp/s3drive-windows-supervisor-policy1.log.
-The policy script now runs in Windows CI before native startup. Final AST for
-all changed PS scripts passed; no Rust changes after the full local gate.
-
-Next: finish policy/AST/docs checks and commit/push this retry correction, then
-inspect current native CI (do not promote e48). Continue private development
-checkpoint, inspect new Windows Authority/pair gates and corrected Linux FUSE
-case. Fix measured failures; require terminal exact-tip all-three jobs, raw
-native/startup logs and strict source/platform21/14 artifacts BEFORE guarded FF
-main from712882e. Do not substitute metadata-only/empty mounts for full paired
-writes, unknown identities, dirty data and conflict retention. Standalone tests,
-AST or portable SDK tests cannot prove native Windows acceptance.
-
-No Wasabi mutations/new credentials, actual user startup, hosting/Turso
-provisioning or root/workstation state changes. Earlier provider fixture
-approvals were consumed/cleaned. Workstation NoNewPrivs1 must not be bypassed.
-Windows runs are hosted Server2025/WinFsp2.1.25156.ddca7bd, not Win10/11 or this
-Linux host. Physical reboot/PAM/SSH, real multi-host/partitions, backup/failover,
-live managed provider acceptance and large files remain. Hosting undecided;
-keep SQLite-host and optional Turso open. Privacy historically drifted; verify
-live before/after pushes. Separate co-located startup SVG was visually checked.
+No new Wasabi mutations, actual user startup, credentials/hosting/Turso setup or
+root/workstation changes authorized. Earlier provider fixture approvals were
+consumed/cleaned. Workstation NoNewPrivs1 must not be bypassed. Windows is hosted
+Server2025/WinFsp2.1.25156.ddca7bd. Privacy previously drifted; verify live before/
+after pushes. The separate co-located startup SVG was rendered/visually checked.
 
 ## Prior owned-target replacement checkpoint
 

@@ -5,17 +5,33 @@ on Linux and Windows, using Rust. Files should remain remotely stored while
 ordinary desktop applications access them through familiar filesystem paths.
 One drive may expose several buckets or prefixes.
 
-**Research date: 2026-10-16.** This book is the durable record of research,
-proposed behavior, implementation phases, and discussions. External technical
-facts have primary-source links. Architectural choices are our recommendations,
-not promises made by the cited projects.
+**Research dates: 2026-10-16–17.** This book records research, design,
+implementation contracts and scoped acceptance evidence. External technical
+claims have primary-source links; recommendations and unverified behavior are
+labelled.
 
 **Selected target:** [managed layout with stronger coordination](managed-layout.md),
-chosen by the user on 2026-10-16. A shared authority owns the namespace; immutable
-S3 objects hold file generations. Existing direct mounts stay available without
-automatic conversion. The SQLite authority and [immutable publication library](managed-publication.md)
-are implemented. [Managed read-only integration](managed-native.md) now connects
-the native adapters and passed Linux/Windows native acceptance; [managed existing-file editing](managed-write-plan.md) has a verified Linux/Windows native checkpoint, with exact-tip publication gates recorded separately. [Managed creation/directories](managed-namespace-plan.md) passed real FUSE/WinFsp acceptance; [version-6 rename/replacement and Linux removal](managed-native-mutations.md) now add retained-handle recovery. Windows deletion, full application compatibility and remote deployment remain work.
+chosen2026-10-16. One shared Rust authority owns SQLite namespace metadata;
+immutable S3 objects hold file generations. Each computer has a separate private
+SQLite cache/journal. Existing direct-key mounts remain available without an
+automatic conversion.
+
+Managed native reads, existing-file writes, directory/file creation and
+rename/save replacement have accepted Linux/Windows checkpoints. Linux removal
+and retained handles are implemented; Windows deletion uses the explicit
+[version7/POSIX lifecycle profile](native-windows-lifecycle.md), with its measured
+WinFsp limitations. [HTTPS transport](remote-authority.md) and
+[store/configuration bootstrap](managed-bootstrap.md) are accepted through main
+`712882e`. This is still a research/development filesystem with incomplete
+application, platform and provider acceptance.
+
+**Current work:** [pinned coordinator startup](authority-startup.md) on
+`codex/authority-startup`. The paired Linux FUSE/login/coordinator recovery test
+passed on hosted Linux at `e48cb09`. Windows child retries were corrected at
+`ce784e4`, but that run failed a metadata read before the injected kill.
+Redacted transport diagnostics are under verification; native Windows
+coordinator/pairing and final exact-source gates remain pending. No startup registration is installed in the workstation user's
+real account, no hosting is provisioned and no Turso backend is enabled.
 
 ## Recommendation
 
@@ -29,7 +45,7 @@ against local HTTP fixtures; its [explicit write policy](write-policy.md) binds
 construction to source configuration and recorded evidence. An [explicit write-capability probe](conditional-uploads.md)
 reserves disposable keys and records provider evidence without enabling mounted writes.
 Store small clean snapshots in SQLite; bulk cache files remain future work.
-Begin with explicit, read-only bucket roots such as:
+The direct compatibility layout exposes explicit bucket roots such as:
 
 ```text
 Linux:   ~/S3Drive/documents/report.pdf
@@ -41,10 +57,10 @@ photos    -> another endpoint / another bucket / image.jpg
 
 Linux and Windows now implement this namespace; native acceptance is recorded
 separately for each adapter.
-Preserve native object names and content in the initial design, accepting a
-documented subset of filesystem semantics. Random writes, durable upload,
-conflict handling and rename are separate milestones. The managed target now uses an authoritative metadata service for atomic
-namespace edits; direct-key behavior below describes the existing compatibility implementation.
+The managed target uses authoritative metadata for atomic namespace edits and
+immutable S3 generations for content. The direct-key example describes the
+compatibility layout. Supported behavior, explicit refusal paths and remaining
+application limits are recorded in the [filesystem contract](filesystem-contract.md).
 
 ## What this repository implements
 
@@ -53,18 +69,18 @@ namespace edits; direct-key behavior below describes the existing compatibility 
 | Rust workspace and CLI | Implemented |
 | TOML parsing and source/namespace validation | Implemented; no network checks |
 | Alias + prefix + file-path resolution | Implemented as a planning utility |
-| Local SQLite state | Schema 15; retained publication conflicts, durable client identity and owned disposition receipts, reversible pending-removal reservations plus logical managed edits, namespace intents, portable collision keys, authoritative empty-file placement and publication/authority tables plus bindings, clean BLOBs, staged generations, remote attempts, flush receipts and private process ownership |
+| Local SQLite state | Schema23; separate authoritative namespace and client databases, immutable staged bytes, exact operation/receipt recovery, private ownership, publication/disposition/open-session journals and cache |
 | mdBook research, design and acceptance plan | Implemented |
 | S3 transport and credentials | Implemented; [Wasabi read acceptance](wasabi.md) passed; broader conformance pending |
-| Linux filesystem mount | Implemented read-only FUSE; see [mount contract](linux-mount.md) and native evidence in handoff |
-| Windows drive mount | Implemented WinFsp adapter; [native read-only acceptance passed](windows-mount.md) |
+| Linux filesystem mount | FUSE reads and explicit policy-bound writes/creation/managed mutation; [initial mount contract](linux-mount.md) and later managed acceptance |
+| Windows drive mount | WinFsp reads, policy-bound writes and managed mutations; [initial acceptance](windows-mount.md) and explicit [version7 lifecycle](native-windows-lifecycle.md) |
 | Linux sign-in startup, including MX without systemd | [Detached launcher implemented](startup-and-sessions.md); native desktop/login-hook/terminal-loss checks passed |
 | Windows startup across login sessions | [Scheduled task and shared NTFS folder implemented](startup-and-sessions.md); native cross-logon reads/removal passed; workstation reboot/SSH authentication pending |
 | Managed local edits | [Durable logical heads and settlement](managed-edits.md); storage/SDK library; [native integration](managed-write-plan.md) adds version-4 existing-file edits |
 | Managed file publication | [Real SDK/HTTP/SQLite library](managed-publication.md); existing-file edits and creation passed native acceptance; remote deployment/live managed-provider acceptance pending |
-| Managed namespace authority | [SQLite and authenticated loopback development service](managed-layout.md); private token CLI and explicit version-3 read-only mounts |
+| Managed namespace authority | [Rust/SQLite service](managed-layout.md), authenticated [HTTPS](remote-authority.md), exact replay and explicit [store/configuration setup](managed-bootstrap.md); real remote deployment pending |
 | Managed native reads | [Authority namespace and verified immutable payloads](managed-native.md); real FUSE/WinFsp acceptance passed |
-| Managed rename/replacement and Linux removal | [Version-6 contract and acceptance](managed-native-mutations.md); retained handles and exact recovery; Windows deletion remains unsupported |
+| Managed rename/replacement and Linux removal | [Version6 contract](managed-native-mutations.md), retained handles and exact recovery; versions1–6 retain unsupported Windows deletion, version7 selects the measured lifecycle profile |
 | Cross-machine coordination with Turso | [Research and design proposal](turso-coordination.md); no dependency or cloud service enabled |
 | Clean-cache storage library | Bounded worker, checksums, LRU/pins and recovery tests |
 | Mounted caching | Opt-in; online HEAD on new opens, revision snapshots, restart and integrity checks |
@@ -76,12 +92,14 @@ namespace edits; direct-key behavior below describes the existing compatibility 
 | Existing-file write mounts | [Version-2 opt-in implementation](native-writes.md), native Linux/Windows acceptance passed; no real writable configuration installed |
 | Regular-file creation in existing writable directories | [Guarded creation and durable rediscovery](native-creation.md); native Linux/Windows acceptance passed |
 | Managed file/directory creation | [Version-5 portable volumes](managed-namespace-plan.md); native Linux/Windows creation and recovery passed |
-| Rename/delete, complete save replacement, new offline opens, tray UI | Planned |
+| Coordinator startup and paired managed drive | [Pinned startup contract](authority-startup.md); hosted Linux pair passed; corrected Windows native acceptance pending |
+| New offline opens, multipart/large files, reclamation, tray UI, backup/failover and full application compatibility | Remain work; no unverified path is enabled implicitly |
 
-The initial research/scaffold delivery is complete. Work has advanced to the
-[read-only provider adapter](provider-contract.md). The overall product goal
-remains open until both OS adapters and the
-agreed filesystem contract have passed their acceptance tests.
+The initial research/scaffold delivery is complete. The overall product goal
+remains active: native startup/recovery, broader target-machine/provider checks,
+remote deployment and the remaining filesystem contract must be verified.
+Main and the current candidate branch have different acceptance scopes; use the
+linked evidence rather than assuming every candidate feature is published.
 
 ## Assumptions for planning
 

@@ -13,7 +13,8 @@ SQLite, its HTTP API and the real S3 SDK. Managed native writes and the explicit
 [Shared HTTPS transport](remote-authority.md) and the explicit
 [store/configuration bootstrap](managed-bootstrap.md) are implemented and tested
 with private-CA fixtures. [Pinned coordinator supervision](authority-startup.md)
-is under implementation; remote deployment, paired startup acceptance,
+is under implementation. Paired Linux FUSE/login/coordinator recovery passed
+hosted acceptance at `e48cb09`; corrected Windows pairing, remote deployment,
 backup/failover and Turso acceptance remain outstanding.
 No bucket migration or Turso service is enabled.
 

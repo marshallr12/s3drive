@@ -4,45 +4,43 @@ Research and Rust workspace for making one or more S3-compatible buckets appear
 as a local filesystem on Linux and Windows.
 
 **Target selected: [managed layout with stronger coordination](docs/src/managed-layout.md).**
-The new SQLite namespace authority prototype supports atomic metadata operations
-and durable operation recovery. The [managed publisher library](docs/src/managed-publication.md)
-now verifies immutable S3 blobs before metadata CAS and local acknowledgment;
-[managed read-only native integration](docs/src/managed-native.md) passed real FUSE/WinFsp acceptance,
-and [managed existing-file editing](docs/src/managed-write-plan.md) is accepted.
-[Managed creation and directories](docs/src/managed-namespace-plan.md) also passed
-both native drivers. [Managed version-6 rename/replacement and Linux removal](docs/src/managed-native-mutations.md) add retained-handle recovery. Windows deletion,
-complete application compatibility and remote deployment remain unfinished.
-Existing direct mounts are retained without automatic migration.
+A shared Rust metadata service owns the authoritative SQLite namespace; each
+client keeps its own private SQLite cache/journal and transfers immutable file
+generations directly to S3. The [publication library](docs/src/managed-publication.md)
+verifies blobs before metadata CAS and local acknowledgment.
 
-**Status: native read-only drives work on Linux and Windows.** Optional
-[mounted caching](docs/src/storage-and-recovery.md) uses bounded SQLite snapshots;
-new opens still authorize online. A separate version-2 configuration now connects
-[existing-file writes](docs/src/native-writes.md) to both adapters, with native
-Linux/Windows acceptance. It requires explicit source/prefix policies and full provider evidence.
-No real writable user configuration is installed. [Guarded file creation](docs/src/native-creation.md)
-also passed native Linux/Windows acceptance. Managed version-5 volumes now
-support directory creation as well. Version 6 adds managed rename/replacement
-and Linux unlink/rmdir. Windows deletion, multipart and staging
-reclamation remain subsequent work; this is not yet a
-complete editable desktop drive.
+Managed native reads, policy-bound writes, directory/file creation and
+[version6 rename/replacement and Linux removal](docs/src/managed-native-mutations.md)
+have accepted Linux/Windows checkpoints. Windows deletion uses the explicit
+[version7/POSIX lifecycle profile](docs/src/native-windows-lifecycle.md), with
+measured WinFsp limitations. [HTTPS](docs/src/remote-authority.md) and
+[store/configuration bootstrap](docs/src/managed-bootstrap.md) are accepted
+through main `712882e`. Existing direct mounts remain available without
+implicit migration. Multipart/large files, reclamation, full application
+compatibility and real remote deployment remain work.
 
-The shared Rust engine uses immutable local generations, conditional PUT and
-[generation-specific remote flush](docs/src/flush-receipts.md), preserving
-uncertain/conflicting bytes. The [scoped write probe](docs/src/conditional-uploads.md)
-is separate from ordinary file editing; it never enables writes automatically.
-[Linux sign-in startup](docs/src/startup-and-sessions.md) works without systemd,
-including MX Linux, and has a native terminal-disconnect acceptance test.
-Windows startup uses a per-user scheduled task and an NTFS folder shared across
-logins; native cross-logon reads and removal passed on the hosted Windows VM.
-Actual workstation reboot, sign-out policy and SSH authentication remain separate checks.
-[Wasabi read acceptance](docs/src/wasabi.md) passed against isolated test
-objects, including a real Linux mount. Broader provider conformance is pending.
-The separately authorized [Wasabi single-PUT probe](docs/src/wasabi.md#conditional-put-acceptance--2026-10-16)
-also passed ten checks; all six disposable fixtures were removed. No further cloud mutations are authorized by that completed probe.
+**Current candidate:** [pinned coordinator startup](docs/src/authority-startup.md)
+on `codex/authority-startup`. The paired Linux FUSE/login/coordinator recovery
+case passed on hosted Linux at `e48cb09`, including uncertain uploads and dirty
+conflict retention. The Windows `ce784e4` run failed a metadata read before
+testing child recovery; redacted transport diagnostics are under verification.
+Native Windows coordinator/pairing acceptance and all final gates remain required. No startup entry is
+installed in the workstation user's real account and no hosting/Turso account
+has been provisioned.
 
-The proposed architecture uses **FUSE on Linux**, **WinFsp on Windows**, a shared
-Rust engine, and **SQLite on local disk** for cache, staged generations and recovery state.
-Explicitly named bucket roots preserve the source namespace. Windows Cloud Files is a separately evaluated sync-folder alternative.
+The shared engine preserves uncertain/conflicting bytes and exact operation
+identities. Direct and managed writes require explicit source/prefix policy and
+provider evidence; the [scoped probe](docs/src/conditional-uploads.md) never enables
+writes automatically. [Wasabi read acceptance](docs/src/wasabi.md), including
+Unicode fixtures, and the separately authorized
+[single-PUT probe](docs/src/wasabi.md#conditional-put-acceptance--2026-10-16)
+passed. Its disposable objects were removed; live managed-provider acceptance
+requires a separate scope. No real writable user configuration is installed.
+
+The adapters use **Linux FUSE** and **Windows WinFsp**. Linux sign-in startup
+supports MX without systemd. Windows uses an account-owned scheduled supervisor
+and NTFS folder path shared across logons. Physical workstation reboot/PAM/SSH,
+Windows10/11, multi-host partitions and backup/failover remain separate checks.
 
 ## Read the research
 
@@ -51,7 +49,7 @@ The [mdBook](docs/src/README.md) contains the [technology comparison](docs/src/l
 [recovery design](docs/src/storage-and-recovery.md), and [primary sources](docs/src/sources.md).
 It also includes architecture images and an evaluation of
 [Turso for cross-machine coordination](docs/src/turso-coordination.md).
-Findings were researched on **2026-10-16**. Recommendations and untested assumptions
+Findings were researched on **2026-10-16–17**. Recommendations and untested assumptions
 are distinguished from implemented behavior.
 
 ```bash
@@ -106,11 +104,13 @@ On Windows with WinFsp installed, choose an unused letter:
 | --- | --- |
 | `s3drive-core` | Validate TOML and resolve virtual paths to bucket/key pairs |
 | `s3drive-s3` | S3 reads, scoped probes and policy-bound single-PUT library executor |
-| `s3drive-state` | Private SQLite state, bounded clean cache and local staged-generation journal |
+| `s3drive-state` | Private SQLite authority/client state, cache, generations, namespace/publication/open-session journals and exact recovery |
+| `s3drive-authority` | Shared Rust metadata service, authenticated HTTP/HTTPS and serialized SQLite transactions |
+| `s3drive-managed` | Immutable payload publication, namespace control and durable client reconciliation |
 | `s3drive-fs` | Shared namespace, journal-backed file I/O and optional clean cache |
 | `s3drive-fuse` | Linux FUSE callbacks and signal-driven unmount |
 | `s3drive-winfsp` | Windows WinFsp callbacks, native naming/security and teardown |
-| `s3drive-cli` | Local commands, read-only S3 tools and foreground OS mounting |
+| `s3drive-cli` | Local/S3 tools, explicit managed setup, foreground coordinator and OS mounting |
 
 See [development](docs/src/development.md) for verification scope and
 [HANDOFF.md](HANDOFF.md) for the next phase. All crates have `publish = false`.
