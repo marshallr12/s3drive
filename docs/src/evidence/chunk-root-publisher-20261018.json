@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "full local gate passed; original hosted cohort failed Linux; corrected-source cohort in progress",
+  "status": "full local gate passed; original cf9 cohort failed; corrected32d cohort passed all three jobs and own strict artifacts",
   "branch": "codex/chunk-root-publisher",
   "parent_commit": "00a882941088e5814697b2c1cc4f5d3b8df6fabf",
   "schema_version": 27,
@@ -405,9 +405,23 @@
   "corrected_source_cohort": {
     "source": "32d7cc7700797c0471e51c69904873d23b9c3889",
     "run_id": 39158147595,
-    "status": "in_progress",
+    "status": "completed",
     "library_unchanged": true,
     "sole_test_delta": "crates/s3drive-cli/tests/authority_restart.rs",
-    "evidence": "tls-budget-fixture-20261018.json"
+    "evidence": "tls-budget-fixture-20261018.json",
+    "conclusion": "success",
+    "run_attempt": 1,
+    "all_three_jobs_success": true,
+    "all_raw_logs_reviewed": true,
+    "own_strict_reference_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true,
+    "artifact_ids": {
+      "replacement": 12147997314,
+      "disposition": 12147329360
+    },
+    "scope": "publisher production unchanged; acceptance bound to corrected32d cohort, never the failedcf9 cohort"
   }
 }

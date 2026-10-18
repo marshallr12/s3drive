@@ -1628,13 +1628,104 @@ its own source-bound hosted cohort. Verified manifest range reads and native
 lifecycle barriers remain later independently tested phases.
 
 
+#### Concrete source-settlement contract (reviewed proposal, 2026-10-18)
+
+The first slice settles **one exact frozen snapshot**. It does not suppress
+ancestor generations or declare a whole file clean. This is a phase boundary,
+not the final native flush contract: later lifecycle work must explicitly handle
+superseded ancestors, unknown operations and retained conflicts before deciding
+that any file has no outstanding work.
+
+Use a separate owner-bound facade, provisionally
+`Storage::chunk_publications().sources()`, with `settle_source(plan_id)` and
+`source_status(plan_id)`. The caller supplies only the admitted plan ID. The
+owner reloads the committed publication; a caller-supplied `RootCommit`,
+`TreeReceipt` or authority receipt is never sufficient evidence. The new opaque
+`SourceReceipt` has its own format/domain and binds the full committed record
+hash, source target, source generation/manifest and physical root proof. It
+preserves the complete historical authority receipt through that linkage.
+Existing publication JSON and role hashes retain their current meanings.
+
+Status must distinguish the requested snapshot's pending/settled state from its
+publication phase (unprepared, prepared, committed or rejected), and report its
+relationship to the current sealed local head. A settled older snapshot does
+not settle that head. Matching the sealed head also says nothing about building
+drafts; it is never a file-clean result. Unknown/rejected publication records remain inspectable;
+no status API filters them out as a side effect of settling another snapshot.
+An absent or corrupt plan is an error, not an empty clean result. There is no
+new global file-clean or payload-deletion API in this slice.
+
+Settlement is **historical metadata acknowledgment**. It does not rehash current
+local payloads or query current S3 objects. Existing complete-tree receipts can
+remain valid after local payload damage; that property supports recovery after
+an upload and metadata commit. The new API must say this explicitly rather than
+promise a fresh integrity check. It retains all payloads and does not authorize
+eviction, reclamation or role release. Future bounded integrity checking and
+verified range reads are separate requirements. Do not perform an unbounded
+whole-file scan in one SQLite-owner command.
+
+The transaction contract is:
+
+1. Begin an immediate transaction on the same private SQLite owner. Reload and
+   validate the complete frozen publication and exact source mapping. Require
+   its durable complete successful authority receipt, attached guard and no
+   rejection. Prepared/unknown publication cannot be settled.
+2. Validate the source manifest and bounded same-target lineage to the current
+   sealed head. Use `Input::local_target()`; generation order alone cannot prove
+   ancestry. Preserve every newer sealed head and building generation. Reject
+   generic physical remote intents, flushes or settlements on the exact source
+   snapshot; a chunk-source receipt cannot mix those meanings.
+3. Insert a separately versioned settlement and retained count/integrity state,
+   or require byte-for-byte equality for an existing historical settlement.
+   Keep the original `write_journal.status`, `remote_flushes` and
+   `write_settlements` untouched. Consequently the generic staging pending API
+   remains conservative; callers must use explicit chunk-source status.
+4. After the final write, reload exact intended effects, the committed
+   publication, source lineage, isolation and **every recursive tree receipt**.
+   Refuse ignored, deleted or rewritten effects and damaged grandchildren. No
+   write, callback or network await may intervene between this final proof and
+   commit. Transaction failure leaves the previous settlement state intact.
+
+This follows the existing
+[publication validator](https://github.com/marshallr12/s3drive/blob/32d7cc7700797c0471e51c69904873d23b9c3889/crates/s3drive-state/src/chunk_publication.rs),
+[source target/plan mapping](https://github.com/marshallr12/s3drive/blob/32d7cc7700797c0471e51c69904873d23b9c3889/crates/s3drive-state/src/chunked.rs)
+and [staging invariants](https://github.com/marshallr12/s3drive/blob/32d7cc7700797c0471e51c69904873d23b9c3889/crates/s3drive-state/src/journal.rs).
+The legacy
+[logical receipt checks](https://github.com/marshallr12/s3drive/blob/32d7cc7700797c0471e51c69904873d23b9c3889/crates/s3drive-state/src/logical.rs)
+and [physical ancestor acknowledgments](https://github.com/marshallr12/s3drive/blob/32d7cc7700797c0471e51c69904873d23b9c3889/crates/s3drive-state/src/remote/acknowledgments.rs)
+remain unchanged. They are evidence for the design boundary, not APIs to relax.
+
+Expected implementation footprint: schema 28 migration and schema validation;
+new source-settlement child module under `chunk_publication`; reciprocal legacy
+constructor guards; authority initialization/preflight; authority snapshot table
+classification; migration/rewind fixtures; focused state controls. Validate
+settlements through a nonrecursive helper: do not create a cycle between the
+publication and settlement validators. Retained counts/hashes must detect lost
+rows, including an orphan settlement with a missing role. Bound history by the
+existing 256-publication limit; declare and test a separate finite lineage bound.
+No wire, S3 object format, legacy hash vector or native callback change belongs
+in that persistence slice. A later controller slice must invoke the facade
+after durable root publication/recovery and prove restart/unknown-reply behavior
+with the real SDK and authenticated loopback authority.
+
+Required negative controls include missing root/child/grandchild receipts,
+wrong source or manifest, mixed generic source intent, unknown/rejected Publish,
+lost settlement/role rows, post-write trigger corruption and isolation injection,
+actual SQLite-full rollback, and process death around commit/reply. Positive
+controls include repeated/concurrent settlement, a newer dirty local head,
+a newer remote root, metadata-only historical recovery after local payload
+damage, generic pending unchanged and all legacy hashes unchanged. A lost local
+reply must recover the identical receipt, not create a second settlement.
+Read-only legacy review is complete; runtime implementation and acceptance are
+still pending, after the corrected TLS fixture cohort is accepted.
+
 ### Current acceptance repair: TLS budget fixture (2026-10-18)
 
 Own publisher CI39156593000 failed Linux before the chunk tests, in the existing
 pinned CLI restart test's assertion that all16 budgeted diagnostics are malformed
 handshake failures. The log proves the category assertion failed after exactly17
-events, but omits actual categories; the cause remains unproven. Windows is still
-running and the book job passed. Do not rerun the cohort or treat old artifacts
+events, but omits actual categories; the cause remains unproven. Windows and the
+book job ultimately passed; the overall cohort failed. Do not rerun it or treat old artifacts
 as publisher acceptance. Diagnose the fixture first. Earlier valid TLS exchanges
 share its diagnostic budget; completed-response shutdown events are a hypothesis.
 Retain strict16+1 budget, healthy authenticated service after overflow and private-
@@ -1649,6 +1740,12 @@ hashes unchanged,349state/1ignored,59S3,34core,50authority,18existing managed
 publication tests,8chunk controls,10TLS/restart controls,65docfiles/61chapters.
 Independent review matched249/249 and closed the raw-cap truncation gap, whose
 negative control failed before the guard. Sole test-file delta; production,
-schema, wire and native paths unchanged. Corrected-source hosted cohort remains
-pending. See [fixture contract](owned-authority-client.md#tls-budget-fixture-isolation--2026-10-18)
-and its dated evidence; the captured prior CI category remains unknown.
+schema, wire and native paths unchanged. Corrected source `32d` hosted cohort
+39158147595 passed Linux, Windows and book checks; all 3 raw logs were reviewed.
+Its own 21/14 typed artifacts and all 35 raw field/type comparisons passed. The indexed 22-member
+hosted archive retains its exact evidence. See
+[fixture contract](owned-authority-client.md#tls-budget-fixture-isolation--2026-10-18)
+and its dated evidence; the captured prior CI category remains unknown. The
+next implementation work is the separately scoped source-settlement persistence
+contract above, followed by controller integration. Existing native regression
+does not activate mounted chunks or establish physical reboot/provider acceptance.

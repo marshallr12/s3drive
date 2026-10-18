@@ -60,7 +60,7 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Active work: TLS budget fixture repair (2026-10-18)
+## Current checkpoint: TLS fixture accepted; chunk settlement next (2026-10-18)
 
 Previous goal turn was PROGRESS: publisher runtime cf9d972 and status b70717a
 pushed with full local gate. Its own CI39156593000 attempt1 failed Linux job
@@ -116,30 +116,58 @@ all indexed members verified. No reviewer execution/provider calls.
 
 Publication clean/exact remote/all249hashes/PUBLIC before-after, main1a93b5f
 unchanged; proof /tmp/s3drive-tls-budget-publication.json. Own corrected CI
-39158147595 attempt1 LIVE: Windows117765563031,book117765563156,
-Linux117765562837. Book117765563156 SUCCESS/raw reviewed at
-/tmp/s3drive-tls-budget-32d-book-reviewed.json; Ubuntu24.04.5,65docfiles/61chapters,
-pinnedRust override/defaultbranch/Node20forced24 notices retained. CorrectedLinux
-has reached nativeFUSE;WindowsstillLIVE. Watch39440 LIVE
-/tmp/s3drive-tls-budget-32d-watch.log.
-Resume this SAME run/handle; observation timeout is not a reason to rerun.
-Checker /tmp/s3drive-check-tls-budget-32d.py and raw compare
-/tmp/s3drive-tls-budget-32d-raw-compare.py prepared/compiled only, NOTexecuted.
-Fresh output /tmp/s3drive-tls-budget-32d-artifacts absent. Require all3 terminal
-success and own raw review marker /tmp/s3drive-tls-budget-32d-raw-reviewed.json
-before checker. Bind exact source/run/attempt/job IDs, own finalized artifact
-IDs/API digest/times, strict typed21/14+project oracles, then all35 raw fields/types.
-Reject prior IDs includingcf9 12147331157/12147209844. Review every own completed
-raw log before making marker; no successchecker on failure and no borrowed cohort.
+39158147595 attempt1 COMPLETE SUCCESS, exact32d7cc7 source: Windows117765563031,
+book117765563156,Linux117765562837. Watch39440 CLOSED EXIT0; do not rerun.
+All3raw logs reviewed and hashed in
+/tmp/s3drive-tls-budget-32d-raw-reviewed.json. Book:Ubuntu24.04.5,65docfiles/
+61chapters,pinnedRust override/defaultbranch/Node20forced24 notices retained.
+Checker /tmp/s3drive-check-tls-budget-32d.py executed ONCE,74397 CLOSED EXIT0.
+Own finalized artifact IDs replacement12147997314/disposition12147329360;
+API digests/source/timestamps verified, strict21/14+project oracles PASS.
+/tmp/s3drive-tls-budget-32d-raw-compare.py EXIT0:all35 raw record fields/types
+match downloadedJSON; no borrowed payloads. Output
+/tmp/s3drive-tls-budget-32d-artifacts. Previous cf9 IDs remain rejected.
+Archive builder91040 CLOSED EXIT0; durable22member
+ tls-budget-fixture-32d-hosted-20261018.tar.gz,125072bytes,SHA
+ af77e96c872616afc688fca14742035054b45035c7e6ac35680ef809245a6097.
+All indexed members verified, plus all249source hashes throughgitshow32d.
 
-New chapter section owned-authority-client.md and dated tls-budget-fixture JSON
-record unknown cause, source audit, red/green guard and exact scope. This handoff
-is a docs-only status child of32d7cc7; final doc checks/normal push preserve249
-hashes/PUBLIC. First revalidate git status and same live corrected32d CI; cf9failurearchive is
-closed, so do not repeat its success checks. Source-settlement implementation
-follows the corrected baseline; no historical Windows NoWrite fix, logical flush,
-mounted chunks, real-provider or physical startup/reboot acceptance is claimed.
-Full goal ACTIVE and unbounded. Repository must remain PUBLIC.
+Chapter owned-authority-client.md and both dated fixture/publisher JSON records
+now distinguish accepted32d from failedcf9. This is a docs-only status child of
+32d7cc7; runtime/native/schema hashes unchanged. First revalidate git status.
+Corrected baseline is accepted; next implement the reviewed source-settlement
+persistence slice, then its controller integration. No historical Windows
+NoWrite fix, logical flush, mounted chunks, real-provider tree or physical
+startup/reboot acceptance is claimed. Full goal ACTIVE and unbounded; PUBLIC.
+
+Read-only source-settlement design review is complete against32d7cc7. The
+implementation-plan now contains a concrete reviewed PROPOSAL, not runtime
+acceptance: exact-snapshot settlement only, explicit publication/status and
+newer-head relationship, separate schema28 rows/domain/retained integrity,
+same-owner final post-write recursive proof, generic pending unchanged. Choose
+historical metadata acknowledgment (no fresh payload/provider-health claim),
+retaining all payloads. Do not infer ancestor coverage, clean-file state or
+reclamation permission; these remain native lifecycle work. Reject mixed generic
+physical intent on the exact source snapshot. Existing legacy reviewer performed
+static review only; no tests/network/provider calls. No runtime files changed.
+The next implementation phase is the separate state persistence slice; the
+corrected-source hosted prerequisite now passed. A separately gated controller
+slice follows. Contract includes SQLite-full, process-death, lost-reply, post-write trigger,
+recursive damage, newer-head/root and legacy-vector controls.
+
+Corrected Linux117765562837 terminalSUCCESS/raw-reviewed:8chunk controls
+PASS24.51s,349state/1ignored,59S3,34core,50authority,18existing publication,
+9realFUSE/32HTTPSflushes and paired no-systemd drive/coordinator startup.
+Windows117765563031 terminalSUCCESS/raw-reviewed:8chunk controls85.06s,
+344state/1ignored262.24s,7existingWinFsp99.24s,32HTTPSflushes,complete disposition,
+paired non-admin coordinator/drive logons/recovery and snapshot cancellation.
+Fixed pinned CLI/CRLF guard passed both platforms;11Unicode names+directory on
+Windows. Expected faults:TLSHandshakeRejected/partial-headerHttpTimeout/Lifetime,
+HEAD403,dirtycontentconflict,stoppedauthorityListConnecttimeout. Warnings retained:
+unusedWinFspdelayimport LNK4199+10CLItest warnings(9duplicates),Node/cache notices,
+3lockeddisposableprofiles(dummycredentialsremoved,VMdestructioncleansprofile).
+Sparse chunk and two old quota controls exceeded60s then passed. Own raw markers
+/tmp/s3drive-tls-budget-32d-{linux,windows}-reviewed.json. No new provider calls.
 
 ## Preceding policy-bound chunk-root publisher (2026-10-18)
 

@@ -356,6 +356,26 @@ Corrected source`32d7cc7` is pushed on `codex/tls-budget-fixture`, with a clean
 exact remote tip and all249 frozen hashes verified. Public visibility was checked
 read-only before/after; main is unchanged. Its
 [own hosted cohort](https://github.com/marshallr12/s3drive/actions/runs/39158147595)
-is running. Corrected-source hosted acceptance is still pending. The old publisher cohort
-cannot substitute, and this repair establishes no historical Windows NoWrite
-cause, mounted chunk support, source settlement or real-provider acceptance.
+completed successfully on Linux, Windows and the book job. All three raw logs
+were reviewed. Both platforms passed the repaired CLI and CRLF controls and all 8
+chunk-publication controls (Linux 24.51 s, Windows 85.06 s). Existing real FUSE/WinFsp,
+32-HTTPS-flush and paired startup/recovery checks passed. Windows also verified 11
+Unicode filenames and a Unicode directory. This is hosted regression evidence;
+the new chunk layout is not yet mounted.
+
+The independent checker downloaded only this cohort's finalized replacement
+artifact 12147997314 and disposition artifact 12147329360, checked their API
+digests/source/timestamps, and passed all 21/14 typed reference records plus the
+project oracles. A separate comparison matched every raw-log record field and
+type to the downloaded JSON. No earlier cohort's payload was reused. The
+[22-member indexed hosted archive](evidence/tls-budget-fixture-32d-hosted-20261018.tar.gz)
+retains raw logs, source/API metadata, ZIPs, reports, checkers and the exact fixture.
+
+Windows retained the unused WinFsp delay-import linker warning, Node/cache
+deprecations and three locked disposable profiles whose dummy credentials were
+removed before VM destruction. Expected TLS refusals/timeouts, HEAD403, content
+conflict and stopped-authority failure controls passed. Long sparse/quota tests
+eventually passed. The failed older cohort stays a failure; its historical event
+category remains unknown. This repair establishes no historical Windows NoWrite
+cause, mounted chunk support, source settlement, physical reboot or real-provider
+tree acceptance.

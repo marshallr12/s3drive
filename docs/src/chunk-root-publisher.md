@@ -104,9 +104,13 @@ cohort. Hosted publisher acceptance is not established by it.
 
 The separate fixture repair leaves every production file unchanged, isolates the
 flood listener and observes stderr completion. Corrected source`32d7cc7` has its
-[own running cohort](https://github.com/marshallr12/s3drive/actions/runs/39158147595);
-see [repair evidence](evidence/tls-budget-fixture-20261018.json). Previous cohorts
-cannot substitute for its completed source-bound checks.
+[own successful cohort](https://github.com/marshallr12/s3drive/actions/runs/39158147595).
+All three jobs and all 8 chunk controls on each platform passed; its own 21/14
+Windows artifact records passed independent typed checks, project oracles and
+complete raw-field comparison. See [repair evidence](evidence/tls-budget-fixture-20261018.json)
+and the [indexed hosted archive](evidence/tls-budget-fixture-32d-hosted-20261018.tar.gz).
+The publisher library is byte-identical to `cf9`; the sole test-file correction is
+the TLS fixture. Acceptance is bound to `32d`, never retroactively to failed `cf9`.
 
 ## Remaining work
 

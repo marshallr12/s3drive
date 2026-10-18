@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "full local gate passed; corrected-source hosted cohort pending",
+  "status": "full local gate and own corrected-source Linux/Windows/book cohort passed; source settlement remains proposed",
   "branch": "codex/tls-budget-fixture",
   "parent_commit": "b70717af6d75d6ff8096cbd82a37aca369da9e69",
   "failed_source": "cf9d972173b0b0709c08f3c65ec102fa44fa5a6e",
@@ -67,7 +67,7 @@
     "run_id": 39158147595,
     "run_attempt": 1,
     "url": "https://github.com/marshallr12/s3drive/actions/runs/39158147595",
-    "status": "in_progress",
+    "status": "completed",
     "jobs": {
       "rust (ubuntu-latest)": 117765562837,
       "rust (windows-latest)": 117765563031,
@@ -76,17 +76,135 @@
     "watch_session": 39440,
     "watch_log": "/tmp/s3drive-tls-budget-32d-watch.log",
     "checker": "/tmp/s3drive-check-tls-budget-32d.py",
-    "checker_prepared_not_executed": true,
+    "checker_prepared_not_executed": false,
     "fresh_output": "/tmp/s3drive-tls-budget-32d-artifacts",
-    "fresh_output_absent": true,
+    "fresh_output_absent": false,
     "raw_review_required_before_checker": true,
     "rejected_preceding_artifact_ids": [
       12147331157,
       12147209844
     ],
-    "scope": "no hosted acceptance yet; require own completed raw review and fresh source-bound artifacts",
+    "scope": "corrected-source publisher/control regression, existing native mount/startup gates and own strict21/14 artifacts passed; no source settlement, mounted chunk format, physical reboot, real-provider tree or historical NoWrite cause established",
     "book_raw_reviewed": true,
-    "book_review_marker": "/tmp/s3drive-tls-budget-32d-book-reviewed.json"
+    "book_review_marker": "/tmp/s3drive-tls-budget-32d-book-reviewed.json",
+    "conclusion": "success",
+    "job_results": {
+      "linux": "success",
+      "windows": "success",
+      "book": "success"
+    },
+    "watch_exit_code": 0,
+    "checker_executed_once": true,
+    "checker_session": 74397,
+    "checker_exit_code": 0,
+    "raw_logs_reviewed": true,
+    "linux_review_marker": "/tmp/s3drive-tls-budget-32d-linux-reviewed.json",
+    "windows_review_marker": "/tmp/s3drive-tls-budget-32d-windows-reviewed.json",
+    "all_job_review_marker": "/tmp/s3drive-tls-budget-32d-raw-reviewed.json",
+    "artifact_download_proof": [
+      {
+        "kind": "replacement",
+        "id": 12147997314,
+        "source": "32d7cc7700797c0471e51c69904873d23b9c3889",
+        "run_id": 39158147595,
+        "run_attempt": 1,
+        "windows_job": 117765563031,
+        "zip_sha256": "eb3dcc6c1ab96895232e659ad2b42def2e889a6e4d0d2695da6829f384a19e0d",
+        "json_sha256": "501db1646fe7fbab1cf7e21685af526c5fbd324c5ef76c1d1a80028d6fe08023",
+        "primary_artifact_reused": false
+      },
+      {
+        "kind": "disposition",
+        "id": 12147329360,
+        "source": "32d7cc7700797c0471e51c69904873d23b9c3889",
+        "run_id": 39158147595,
+        "run_attempt": 1,
+        "windows_job": 117765563031,
+        "zip_sha256": "5607703fc75e009604c284fd7eda1c083a977b616a984d57b92cda38860ede33",
+        "json_sha256": "184f042eb6fe3ff6e1a0dedb2413fa0f398d6cb314cb2eadb85a24b7c36eaf39",
+        "primary_artifact_reused": false
+      }
+    ],
+    "independent_check": [
+      {
+        "kind": "replacement",
+        "records": 21,
+        "source": "32d7cc7700797c0471e51c69904873d23b9c3889",
+        "sha256": "501db1646fe7fbab1cf7e21685af526c5fbd324c5ef76c1d1a80028d6fe08023",
+        "strict_types_and_all_fields_match": true
+      },
+      {
+        "kind": "disposition",
+        "records": 14,
+        "source": "32d7cc7700797c0471e51c69904873d23b9c3889",
+        "sha256": "184f042eb6fe3ff6e1a0dedb2413fa0f398d6cb314cb2eadb85a24b7c36eaf39",
+        "strict_types_and_all_fields_match": true
+      }
+    ],
+    "strict_raw_comparison": [
+      {
+        "kind": "replacement",
+        "records": 21,
+        "all_fields_and_types_equal": true,
+        "duplicate_keys_or_nonfinite_json_rejected": true
+      },
+      {
+        "kind": "disposition",
+        "records": 14,
+        "all_fields_and_types_equal": true,
+        "duplicate_keys_or_nonfinite_json_rejected": true
+      }
+    ],
+    "hosted_archive": {
+      "path": "evidence/tls-budget-fixture-32d-hosted-20261018.tar.gz",
+      "sha256": "af77e96c872616afc688fca14742035054b45035c7e6ac35680ef809245a6097",
+      "bytes": 125072,
+      "members": 22,
+      "all_indexed_members_verified": true,
+      "source": "32d7cc7700797c0471e51c69904873d23b9c3889",
+      "run_id": 39158147595,
+      "run_attempt": 1,
+      "independent_typed_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "all_raw_fields_and_types_equal": true
+    },
+    "windows_raw_review": {
+      "source": "32d7cc7700797c0471e51c69904873d23b9c3889",
+      "run_id": 39158147595,
+      "run_attempt": 1,
+      "job_id": 117765563031,
+      "reviewed": true,
+      "log": "/tmp/s3drive-tls-budget-32d-windows.log",
+      "sha256": "fe33ab05050dc28e734de739a654a3bc73bdd87455d850612238ff2d11c06c3c",
+      "review_notes": [
+        "Terminal success on Windows Server2025 build26100,image20261007.264.1; checkout exact32d source",
+        "Pinned CLI repair and CRLF guard pass;10restart/4ignored;8chunk controls pass85.06s",
+        "344state/1ignored262.24s,59S3,34core,50authority,18existingpublication controls",
+        "7existingWinFsp controls99.24s,32HTTPSflushes,complete disposition and paired non-admin startup/recovery pass;11Unicode names and directory verified",
+        "All35 raw reference records retained for strict type/field comparison; own finalized IDs replacement12147997314,disposition12147329360",
+        "LNK4199unusedWinFspdelayimport and10CLI-test warnings incl9duplicates;Node20forced24,punycode/url.parse notices retained",
+        "3lockeddisposableWindowsprofiles:dummycredentialsremoved,deletiondeferredtoVMdestruction",
+        "Expected TLSHandshakeRejected,29bytepartialheaderHttpTimeout,189byteLifetime,HEAD403,dirtycontentconflict,stoppedauthorityListConnecttimeout controls",
+        "Two existing full-open/retirement controls and sparse new chunk control exceeded60s then passed",
+        "No historicalNoWritecause,mountedchunkformat,physicalreboot or realprovideracceptance inferred"
+      ]
+    },
+    "checker_log_sha256": "600ff5c54d5b79311a632dd0fb8ae2418f648e14a551058b368c6248b383a785",
+    "linux_chunk_tests": {
+      "passed": 8,
+      "elapsed_seconds": 24.51
+    },
+    "windows_chunk_tests": {
+      "passed": 8,
+      "elapsed_seconds": 85.06
+    },
+    "windows_state_tests": {
+      "passed": 344,
+      "ignored": 1,
+      "elapsed_seconds": 262.24
+    }
   },
   "source_sha256": {
     ".github/workflows/ci.yml": "ad8a598db786dfde8d5fd016b4f4306e1e08f8533b1a2851066d3422731cbe13",
@@ -430,5 +548,17 @@
     "linux": "failure",
     "windows": "success",
     "book": "success"
+  },
+  "source_settlement_contract_review": {
+    "status": "reviewed proposal only; implementation pending",
+    "date": "2026-10-18",
+    "source": "32d7cc7700797c0471e51c69904873d23b9c3889",
+    "scope": "exact-snapshot historical acknowledgment, separate status and schema28 persistence; no implicit ancestor coverage or fresh payload/provider check",
+    "reviewer": "existing legacy-impl-reviewer",
+    "tests_run": false,
+    "network_calls": 0,
+    "generic_pending_unchanged": true,
+    "native_activation": false,
+    "reference": "implementation-plan.md#concrete-source-settlement-contract-reviewed-proposal-2026-10-18"
   }
 }
