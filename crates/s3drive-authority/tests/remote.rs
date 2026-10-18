@@ -97,6 +97,19 @@ impl Certificate {
 #[tokio::test]
 async fn tls_neither_follows_redirects_nor_replays_a_dropped_reply() {
     for redirect in [false, true] {
+        let request = Request::Apply {
+            request: Apply {
+                volume: "1".repeat(32),
+                operation: "2".repeat(32),
+                expected_sequence: 0,
+                mutation: Mutation::Create {
+                    parent: ROOT.into(),
+                    name: "never replay".into(),
+                    node_kind: Kind::Directory,
+                },
+            },
+        };
+        let expected_body = serde_json::to_vec(&request).unwrap();
         let cert = Certificate::new("127.0.0.1", false);
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let target = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -112,6 +125,11 @@ async fn tls_neither_follows_redirects_nor_replays_a_dropped_reply() {
                 header.push(stream.read_u8().await.unwrap());
             }
             let text = std::str::from_utf8(&header).unwrap();
+            assert!(
+                text.to_ascii_lowercase()
+                    .contains("content-type: application/json\r\n")
+            );
+            assert!(!text.to_ascii_lowercase().contains("transfer-encoding:"));
             let length = text
                 .lines()
                 .find_map(|line| {
@@ -123,10 +141,10 @@ async fn tls_neither_follows_redirects_nor_replays_a_dropped_reply() {
             assert!(length < 4096);
             let mut body = vec![0; length];
             stream.read_exact(&mut body).await.unwrap();
-            assert!(matches!(
-                serde_json::from_slice::<Request>(&body).unwrap(),
-                Request::Apply { .. }
-            ));
+            assert_eq!(
+                body, expected_body,
+                "diagnostic changed serialized request bytes"
+            );
             if redirect {
                 stream.write_all(format!("HTTP/1.1 307 Temporary Redirect\r\nLocation: {location}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").as_bytes()).await.unwrap();
                 stream.flush().await.unwrap();
@@ -139,18 +157,6 @@ async fn tls_neither_follows_redirects_nor_replays_a_dropped_reply() {
             assert!(retry.is_err(), "failed mutation was replayed by transport");
             assert!(follow.is_err(), "transport followed redirect");
         });
-        let request = Request::Apply {
-            request: Apply {
-                volume: "1".repeat(32),
-                operation: "2".repeat(32),
-                expected_sequence: 0,
-                mutation: Mutation::Create {
-                    parent: ROOT.into(),
-                    name: "never replay".into(),
-                    node_kind: Kind::Directory,
-                },
-            },
-        };
         let error = cert.client(&url).request(&request).await.unwrap_err();
         if redirect {
             assert_eq!(error, WireError::HttpStatus(307));
@@ -162,6 +168,7 @@ async fn tls_neither_follows_redirects_nor_replays_a_dropped_reply() {
                         request: WireRequest::Apply,
                         phase: WirePhase::Request,
                         timed_out: false,
+                        body_frame_polled: true,
                         ..
                     }
                 ),
@@ -299,9 +306,9 @@ async fn tls_wire_diagnostics_distinguish_failure_stages_without_disclosing_inpu
                 Fault::Status => assert_eq!(error, WireError::HttpStatus(503), "{context}"),
                 Fault::Oversize => assert_eq!(error, WireError::ResponseTooLarge, "{context}"),
                 Fault::InvalidReply => assert_eq!(error, WireError::InvalidReply, "{context}"),
-                Fault::TruncatedBody => assert!(matches!(error, WireError::Transport { request: WireRequest::Info, phase: WirePhase::ResponseBody, timed_out: false, .. }), "{context}"),
-                Fault::RequestTimeout => assert!(matches!(error, WireError::Transport { request: WireRequest::Info, phase: WirePhase::Request, timed_out: true, .. }), "{context}"),
-                Fault::BodyTimeout => assert!(matches!(error, WireError::Transport { request: WireRequest::Info, phase: WirePhase::ResponseBody, timed_out: true, .. }), "{context}"),
+                Fault::TruncatedBody => assert!(matches!(error, WireError::Transport { request: WireRequest::Info, phase: WirePhase::ResponseBody, timed_out: false, body_frame_polled: true, .. }), "{context}"),
+                Fault::RequestTimeout => assert!(matches!(error, WireError::Transport { request: WireRequest::Info, phase: WirePhase::Request, timed_out: true, body_frame_polled: true, .. }), "{context}"),
+                Fault::BodyTimeout => assert!(matches!(error, WireError::Transport { request: WireRequest::Info, phase: WirePhase::ResponseBody, timed_out: true, body_frame_polled: true, .. }), "{context}"),
             }
         });
     }
@@ -391,6 +398,7 @@ async fn tls_requires_correct_trust_hostname_token_and_volume() {
             WireError::Transport {
                 phase: WirePhase::Connect,
                 timed_out: false,
+                body_frame_polled: false,
                 ..
             }
         ),

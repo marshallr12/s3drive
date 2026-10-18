@@ -99,6 +99,38 @@ intermittent Windows failures**. Existing HTTP/TLS fault, native, startup and
 strict reference gates remain required. The main branch remains f8c4f58 until
 new exact-source acceptance; see the [dated record](evidence/authority-snapshot-platform-20261018.json).
 
+At e51f737, [CI39103791947](https://github.com/marshallr12/s3drive/actions/runs/39103791947)
+passed Linux/book and the Windows workspace, lifecycle and paired startup checks.
+The later Windows broad suite failed an existing-file flush with
+Info/UnexpectedEof and native1117. Six other broad cases passed. The lifetime
+policy did **not** eliminate the failure, and this source was not promoted.
+
+## Client body-poll observation (candidate, 2026-10-18)
+
+The next diagnostic snapshots one `body_frame_polled` boolean when classifying a
+client transport failure. It means the HTTP consumer polled a data frame by
+that instant. It does not measure a socket write, identify a selected connection,
+establish server receipt or prove authentication/commit. False is not a safe
+unsent result: preserve the original unknown operation and its guards.
+
+The implementation wraps reqwest's original `.json()` body through the public
+`Body` interface, forwarding frames, length/end hints and errors. Resolved
+reqwest0.13.5, Hyper1.12.0 and http-body1.1.0 sources were inspected; no arbitrary
+request extension or private dependency field is used. The earlier rejected
+connection-capture experiment remains separate. No dependency, deadline, retry,
+trust or connection-policy changes are part of this diagnostic.
+The wrapped body is not cloneable, unlike reqwest's original buffered variant;
+redirects and retries remain disabled. This is instrumentation with a different
+body representation, not proof that every scheduling detail is unchanged.
+
+Local controls passed: a TLS peer received byte-identical serialized mutation
+JSON with application/json, the original Content-Length and no chunked transfer;
+dropped/truncated/stalled replies report a polled frame, while failed certificate
+trust reports false before HTTP. Redirect refusal, absence of a second mutation
+and private-error redaction remain required. These observations validate the
+marker's meaning, not a correction of the Windows failure. Full local and new
+exact-source native/reference/startup gates remain required before publication.
+
 ## Bounded failure diagnostics (2026-10-17)
 
 The [same-source Windows failure investigation](authority-startup.md#same-source-repeat-failure-2026-10-17)

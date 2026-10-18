@@ -1,7 +1,17 @@
 //! Bounded authenticated authority client. No redirects, proxy or
 //! automatic retry. Transport failures leave mutation outcomes unknown.
 use crate::{Reply, Request, Token};
-use std::{fmt, io, time::Duration};
+use hyper::body::{Body as HttpBody, Bytes, Frame, SizeHint};
+use std::{
+    fmt, io,
+    pin::Pin,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    task::{Context, Poll},
+    time::Duration,
+};
 
 /// Low-cardinality diagnostics only. Never retains a URL, token, request,
 /// response body, certificate, or the underlying dependency error.
@@ -16,6 +26,9 @@ pub enum WireError {
         io_kind: Option<io::ErrorKind>,
         incomplete_message: bool,
         connection_closed: bool,
+        /// The HTTP consumer polled a data frame. This does not prove a
+        /// socket write, server receipt, authentication or database commit.
+        body_frame_polled: bool,
     },
     HttpStatus(u16),
     ResponseTooLarge,
@@ -56,7 +69,12 @@ impl From<&Request> for WireRequest {
     }
 }
 impl WireError {
-    fn transport(error: reqwest::Error, phase: WirePhase, request: WireRequest) -> Self {
+    fn transport(
+        error: reqwest::Error,
+        phase: WirePhase,
+        request: WireRequest,
+        body_frame_polled: bool,
+    ) -> Self {
         let phase = if error.is_connect() {
             WirePhase::Connect
         } else {
@@ -86,7 +104,36 @@ impl WireError {
             io_kind,
             incomplete_message,
             connection_closed,
+            body_frame_polled,
         }
+    }
+}
+
+// Preserve reqwest's original serialized body, framing hints and errors. Only
+// retain a boolean when its HTTP consumer actually polls a data frame.
+struct ObservedBody {
+    inner: reqwest::Body,
+    polled: Arc<AtomicBool>,
+}
+impl HttpBody for ObservedBody {
+    type Data = Bytes;
+    type Error = reqwest::Error;
+
+    fn poll_frame(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Frame<Bytes>, Self::Error>>> {
+        let frame = Pin::new(&mut self.inner).poll_frame(cx);
+        if matches!(&frame, Poll::Ready(Some(Ok(frame))) if frame.data_ref().is_some()) {
+            self.polled.store(true, Ordering::Release);
+        }
+        frame
+    }
+    fn size_hint(&self) -> SizeHint {
+        self.inner.size_hint()
+    }
+    fn is_end_stream(&self) -> bool {
+        self.inner.is_end_stream()
     }
 }
 impl fmt::Display for WireError {
@@ -193,7 +240,8 @@ impl WireClient {
     pub async fn request(&self, request: &Request) -> Result<Reply, WireError> {
         request.validate().map_err(|_| WireError::InvalidRequest)?;
         let kind = WireRequest::from(request);
-        let mut response = self
+        let polled = Arc::new(AtomicBool::new(false));
+        let mut built = self
             .http
             .post(self.url.clone())
             // One RPC per transport matches the TLS listener's finite lifetime.
@@ -201,9 +249,16 @@ impl WireClient {
             .header(reqwest::header::CONNECTION, "close")
             .bearer_auth(&self.token.0)
             .json(request)
-            .send()
-            .await
-            .map_err(|e| WireError::transport(e, WirePhase::Request, kind))?;
+            .build()
+            .map_err(|e| WireError::transport(e, WirePhase::Request, kind, false))?;
+        let inner = built.body_mut().take().ok_or(WireError::InvalidRequest)?;
+        *built.body_mut() = Some(reqwest::Body::wrap(ObservedBody {
+            inner,
+            polled: polled.clone(),
+        }));
+        let mut response = self.http.execute(built).await.map_err(|e| {
+            WireError::transport(e, WirePhase::Request, kind, polled.load(Ordering::Acquire))
+        })?;
         if !response.status().is_success() {
             return Err(WireError::HttpStatus(response.status().as_u16()));
         }
@@ -214,11 +269,14 @@ impl WireClient {
             return Err(WireError::ResponseTooLarge);
         }
         let mut bytes = Vec::new();
-        while let Some(chunk) = response
-            .chunk()
-            .await
-            .map_err(|e| WireError::transport(e, WirePhase::ResponseBody, kind))?
-        {
+        while let Some(chunk) = response.chunk().await.map_err(|e| {
+            WireError::transport(
+                e,
+                WirePhase::ResponseBody,
+                kind,
+                polled.load(Ordering::Acquire),
+            )
+        })? {
             if bytes.len() + chunk.len() > 8 * 1024 * 1024 {
                 return Err(WireError::ResponseTooLarge);
             }

@@ -524,3 +524,19 @@ the timed-out request, its database outcome, or a particular pool/runtime cause.
 The original failure remains fatal; later Windows gates were skipped. Main
 remains f8c4f58. The next candidate's [explicit connection lifetime](remote-authority.md#explicit-metadata-connection-lifetime-candidate-2026-10-18)
 is a deliberate transport policy with local socket tests, not a claimed fix.
+
+At e51f737, [CI39103791947](https://github.com/marshallr12/s3drive/actions/runs/39103791947)
+passed Linux/book, the Windows workspace, standalone/paired startup and both
+ordinary-account snapshot/console workflows. Windows native lifecycle passed,
+but the later broad suite finished with six passes and one failure: `native_writes` at `managed.rs:1708`,
+`file.sync_all()`, native1117, metadata Info/Request/UnexpectedEof. The nearby
+TLS socket24 had read0/write0/flush1/dispatched=false and a5015ms header timeout;
+it is still not bound to the failed RPC. A second List/UnexpectedEof near an
+empty socket228 occurred inside a passing mutation case. Its cause/intent is
+not established and must not be silently treated as an expected outage.
+
+The finite-connection policy did not eliminate the failure. Main remains f8c4f58;
+the full-success artifact driver was not run against this failed cohort. The
+next [body-poll diagnostic](remote-authority.md#client-body-poll-observation-candidate-2026-10-18)
+uses a verified public body wrapper and records no request contents. A body poll
+is not a socket write or commit, and false cannot authorize mutation replay.

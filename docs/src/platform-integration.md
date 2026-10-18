@@ -77,6 +77,24 @@ makes it a weaker initial match for internet object storage.
 
 ## Distribution dependency decision
 
+### Linux runtime baseline (observed 2026-10-18; packaging proposal)
+
+The development environment reports Debian12 and glibc2.36. The rebuilt e51f737
+debug executable runs `--version`; ELF inspection reports a highest required
+glibc symbol version of2.34. See the [source/binary-bound observation](evidence/linux-runtime-baseline-20261018.json).
+This is a local executable check, not a packaged-release or actual MX reboot
+acceptance result. The user's MX/no-systemd requirement remains unchanged.
+
+Proposed release gate: build and execute each Linux artifact against a baseline
+compatible with Debian12/glibc2.36, record its actual loader/library/symbol
+requirements, and retain the separate native FUSE and no-systemd session gates.
+Validate the eventual artifact on the target workstation before claiming MX
+support. Rust's [platform support table](https://doc.rust-lang.org/rustc/platform-support.html)
+(read2026-10-18) describes toolchain support; treating the target triple alone
+as proof for the complete application would exceed that evidence.
+
+### Windows distribution terms
+
 WinFsp is GPLv3 with a stated FLOSS linking/distribution exception and commercial
 licensing options. The `winfsp-rs` repository has its own GPLv3 license. Review
 the exact binding and runtime terms separately when selecting the application's

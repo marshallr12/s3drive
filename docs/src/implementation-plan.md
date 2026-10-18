@@ -848,6 +848,13 @@ post-failure availability does not establish the timed-out operation's outcome.
 The next candidate declares finite metadata connection lifetime explicitly;
 see the [transport contract and limits](remote-authority.md#explicit-metadata-connection-lifetime-candidate-2026-10-18).
 
+The explicit-close candidate e51f737 passed Linux/book, Windows workspace,
+lifecycle and paired recovery, but failed a later broad native flush with
+Info/UnexpectedEof/native1117. Main remains f8c4f58. The next diagnostic observes
+request-body polling with independently received-byte and failed-trust controls;
+it does not establish a socket write or resolve an unknown operation. See the
+[scoped diagnostic contract](remote-authority.md#client-body-poll-observation-candidate-2026-10-18).
+
 Require exclusive existing-authority ownership and explicit volume/policy pin;
 read supported legacy/current state without migrations or namespace changes.
 Produce a new private artifact outside mounted trees, with a database filename

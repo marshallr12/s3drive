@@ -1,0 +1,53 @@
+{
+  "observed_at_utc": "2026-10-18T06:44:14.165084+00:00",
+  "source_commit": "e51f7371dd9a4f0ce0ccdb91332ab1218cad50ac",
+  "scope": "Local debug executable metadata and --version smoke only; no mount, release-artifact or provider acceptance",
+  "os_release": {
+    "PRETTY_NAME": "\"Debian GNU/Linux 12 (bookworm)\"",
+    "NAME": "\"Debian GNU/Linux\"",
+    "VERSION_ID": "\"12\"",
+    "VERSION": "\"12 (bookworm)\"",
+    "VERSION_CODENAME": "bookworm",
+    "ID": "debian",
+    "HOME_URL": "\"https://www.debian.org/\"",
+    "SUPPORT_URL": "\"https://www.debian.org/support\"",
+    "BUG_REPORT_URL": "\"https://bugs.debian.org/\""
+  },
+  "libc": "glibc 2.36",
+  "binary_sha256": "fca6f0e893bfe85365bd2121e05cd64cb73b2bcbb361880a41b7448c4e377e86",
+  "cli_version_output": "s3drive-cli 0.1.0",
+  "elf_needed_libraries": [
+    "libgcc_s.so.1",
+    "libm.so.6",
+    "libc.so.6",
+    "ld-linux-x86-64.so.2"
+  ],
+  "elf_glibc_versions": [
+    "GLIBC_2.2.5",
+    "GLIBC_2.3",
+    "GLIBC_2.3.2",
+    "GLIBC_2.3.4",
+    "GLIBC_2.4",
+    "GLIBC_2.5",
+    "GLIBC_2.6",
+    "GLIBC_2.7",
+    "GLIBC_2.9",
+    "GLIBC_2.10",
+    "GLIBC_2.14",
+    "GLIBC_2.15",
+    "GLIBC_2.16",
+    "GLIBC_2.17",
+    "GLIBC_2.18",
+    "GLIBC_2.25",
+    "GLIBC_2.27",
+    "GLIBC_2.28",
+    "GLIBC_2.29",
+    "GLIBC_2.30",
+    "GLIBC_2.32",
+    "GLIBC_2.33",
+    "GLIBC_2.34"
+  ],
+  "readelf_version_info_sha256": "cf02054f678660a49d6583b4b2d8e4255ad5e12ce065b9a9c10b7e4c157e6bd2",
+  "proposal": "Build/test distributable Linux artifacts against the observed Debian12/glibc2.36 baseline, retain no-systemd supervisor acceptance, and separately prove actual MX reboot/SSH/mount behavior",
+  "release_compatibility_proven": false
+}

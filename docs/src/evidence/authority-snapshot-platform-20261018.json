@@ -1,5 +1,5 @@
 {
-  "recorded_at_utc": "2026-10-18T06:18:39.917170+00:00",
+  "recorded_at_utc": "2026-10-18T06:53:08.316973+00:00",
   "overall_acceptance": false,
   "main_unchanged": "f8c4f5832e399c6c54567c122c875e2a438ce681",
   "snapshot_component": {
@@ -83,7 +83,7 @@
       "hyper-util-0.1.21/src/client/legacy/client.rs": "bc854508f0bee926f93adf5c00b0ecd4387d3047d8f748b3571a2a72dcbbb8a1"
     }
   },
-  "next_diagnostic": "Explicit Connection: close policy, with bounded physical-transport and peer-omits-close tests; not a Windows failure reproducer; full local and exact-source hosted acceptance required",
+  "next_diagnostic": "Observe actual request-body frame polling through a public HttpBody wrapper, with independent received-byte and failed-trust controls; false is not proof of no connection and true is not proof of a socket write or commit",
   "limitations": [
     "No attribution to scheduler, dependency bug, provider or snapshot implementation",
     "No direct correlation between server connection ordinal and failed client RPC",
@@ -155,5 +155,124 @@
       "os": "Linux workstation; native FUSE not run here",
       "hosted_candidate_acceptance": "pending"
     }
+  },
+  "candidate_acceptance": {
+    "source_commit": "e51f7371dd9a4f0ce0ccdb91332ab1218cad50ac",
+    "run": 39103791947,
+    "overall_acceptance": false,
+    "windows_job": 117605270355,
+    "windows_status": "completed",
+    "linux_job": 117605270625,
+    "linux_conclusion": "success",
+    "book_job": 117605270620,
+    "book_conclusion": "success",
+    "linux_native_cases_passed": 8,
+    "linux_paired_no_systemd_recovery_pass_utc": "2026-10-18T06:28:05Z",
+    "linux_coordinator_http_and_tls_supervision_passed": true,
+    "linux_cli_snapshot_checks": {
+      "sigint": {
+        "scope": "Linux CLI SIGINT; disposable private SQLite and loopback fixtures; no S3",
+        "binary_sha256": "fca6f0e893bfe85365bd2121e05cd64cb73b2bcbb361880a41b7448c4e377e86",
+        "source_database_bytes": 134737920,
+        "freelist_pages": 32801,
+        "signal": "SIGINT",
+        "cooperative_cancel_observed": true,
+        "cancel_to_exit_seconds": 0.001995,
+        "success_stdout": false,
+        "completion_manifest_absent": true,
+        "partial_inspection_refused": true,
+        "same_destination_retry_refused": true,
+        "source_sha256_preserved": true,
+        "restore_authorized": false
+      },
+      "busy": {
+        "scope": "Linux CLI with an independent SQLite EXCLUSIVE source writer; private disposable fixtures; no S3",
+        "binary_sha256": "fca6f0e893bfe85365bd2121e05cd64cb73b2bcbb361880a41b7448c4e377e86",
+        "cooperative_budget_seconds": 2,
+        "source_lock_refused_seconds": 0.112498,
+        "locked_source_refused": true,
+        "no_destination_on_lock_refusal": true,
+        "create_after_release_succeeded": true,
+        "inspection_matches_creation": true,
+        "source_sha256_preserved": true,
+        "restore_authorized": false,
+        "history_continuity_proven": false
+      }
+    },
+    "raw_log_sha256": {
+      "linux": "1f3a2185700bc7dfa026dfb0dfc5cb5f3af7e163259a54ae86777525bd342404",
+      "book": "836eb9f66d4252dc9a22f9935ded3d34a7d6766efea15241fded2e08691a6a4c",
+      "windows": "3e27f8efab491d79b6d4cf4ead9473ad4c6a6d6f0522358b28e3d7fa7cca39f2"
+    },
+    "independent_artifact_oracles": "not run; full-success cohort driver refuses terminal-failed source; no acceptance or promotion",
+    "limitations": [
+      "Linux timing values are single observations, not guarantees",
+      "No restore authorization, power-cut, Windows10/11, real reboot or new provider-write acceptance",
+      "Do not promote on partial Windows step results or old artifacts"
+    ],
+    "run_conclusion": "failure",
+    "windows_conclusion": "failure",
+    "windows_standalone_console_cancel_ms_single_observation": 15,
+    "windows_paired_console_cancel_ms_single_observation": 6,
+    "windows_component_passes": [
+      "standalone coordinator and offline snapshot/console workflow",
+      "native disposition lifecycle",
+      "workspace suite including socket lifetime tests",
+      "supervisor retry policy",
+      "paired coordinator/drive recovery and offline snapshot/console workflow",
+      "reference fixture checks in CI; independent downloaded21/14 not checked"
+    ],
+    "windows_native_broad_result": {
+      "passed": 6,
+      "failed": 1,
+      "failed_case": "actual_managed_existing_file_writes_and_recovery",
+      "at_utc": "2026-10-18T06:45:00Z",
+      "native_location": "support/managed.rs:1708 file.sync_all()",
+      "native_error": 1117,
+      "metadata_request": "Info",
+      "client_phase": "Request",
+      "client_io_kind": "UnexpectedEof",
+      "client_timed_out": false,
+      "nearby_server_event": "HttpTimeout connection24,http_ms5015,read0/write0,flush1,dispatched=false",
+      "server_event_bound_to_failed_request": false,
+      "additional_unclassified_event": "List/UnexpectedEof near connection228 empty-header timeout at06:45:26, within a passing mutation case; cause/intent not established"
+    },
+    "explicit_close_eliminated_failure": false
+  },
+  "body_poll_candidate": {
+    "base_commit": "e51f7371dd9a4f0ce0ccdb91332ab1218cad50ac",
+    "hosted_acceptance": "pending; not yet pushed",
+    "purpose": "Snapshot data-frame polling on a metadata transport failure; not socket-written/server-received/commit proof or replay permission",
+    "implementation": "Public reqwest original JSON Body wrapped with forwarded frames/size/end hints; no request extensions or private dependency state",
+    "controls_passed": [
+      "real TLS peer independently receives byte-identical serialized Apply JSON, Content-Length and application/json; no chunked framing",
+      "lost mutation reply: body_frame_polled=true and no second request or redirect",
+      "truncated/stalled response: body_frame_polled=true and original fault classes retained",
+      "failed certificate trust: body_frame_polled=false before HTTP",
+      "existing error redaction tests"
+    ],
+    "focused_command": "cargo test -p s3drive-authority --tests --locked",
+    "focused_exit_code": 0,
+    "focused_log_sha256": "8e21dea3f95c01ee98d1721a959632ee2eb59e32e478ff5717475f4bfe36f587",
+    "source_sha256": {
+      "crates/s3drive-authority/src/wire.rs": "12693f066a1158e54ac0bafa53bc45c9688ad8491c4a34b8810851ee9c38d13b",
+      "crates/s3drive-authority/tests/remote.rs": "f6025dce1864ca560603e0324717283f7cbcda4c3f77fdcdc497906a7b5a2d36"
+    },
+    "resolved_public_source_sha256": {
+      "reqwest-0.13.5/src/async_impl/body.rs": "5f817e5c8713fc08aa410057540c6ffa37a1595340bddd2c2f39479b5c0103e9",
+      "reqwest-0.13.5/src/async_impl/request.rs": "997fdd44c27a25df909f0ea93dcae94a6bf07bf57d63b5901b68ddebba2e3a90",
+      "reqwest-0.13.5/src/async_impl/client.rs": "5b7e2556d122a75cd8d3ef62a33d45e430c8eff229a33bc3f53fc7e9af2d97de",
+      "hyper-1.12.0/src/body/mod.rs": "5296424f2f8148925c8cf18992e4d59b827b9fa84eb8b3a8dad040c532ce04ef",
+      "http-body-1.1.0/src/lib.rs": "125d4c7dfbc608130435fad85e5ce9a244eb8388383a6006370c6ab8d3e35300"
+    },
+    "unchanged": "No dependency, timeout, retry, trust or connection-policy changes",
+    "failure_snapshot_limit": "A false observation cannot prove that no body data was or will be delivered; preserve exact unknown operation",
+    "full_local_gate": {
+      "command": "bash scripts/gate.sh",
+      "exit_code": 0,
+      "log_sha256": "6386686c2803fa92a9d2e07773f414d11e9c3f2322e240e687fe9ef985ca0732",
+      "scope": "Linux portable gate; no local native FUSE or Windows runtime acceptance"
+    },
+    "body_representation_limit": "Public wrapped streaming body cannot be cloned; retries/redirects remain disabled and controlled wire framing matches; no claim that scheduling is identical"
   }
 }

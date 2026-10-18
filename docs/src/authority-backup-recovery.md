@@ -355,3 +355,10 @@ post-failure CLI control received the original volume in28ms while both owned
 processes were alive. This does not establish the earlier request's outcome or
 availability during it. Linux/book succeeded, later Windows gates were skipped,
 and no candidate was promoted. See the [dated platform record](evidence/authority-snapshot-platform-20261018.json).
+
+The later e51f737 source passed those snapshot/console components after both
+standalone and paired recovery (15ms and6ms cancellation observations). Fresh
+source-bound Linux CLI SIGINT and independent-source-lock checks also passed;
+see the candidate section of the same record. Its Windows workspace and native
+lifecycle passed, but a later broad flush failed with Info/UnexpectedEof and
+native1117. Full acceptance remains false; the snapshot phase was not promoted.

@@ -6,7 +6,33 @@ Research, decisions, acceptance and plans belong in docs/src/.
 
 ## Checkouts and immediate next action
 
-- Latest pushed topic is d6d8bd915d7c04764013071f152076740959fd68.
+- Latest pushed topic is e51f7371dd9a4f0ce0ccdb91332ab1218cad50ac. Normal
+  private FF push and exact remote/main SHA/privacy verified. CI39103791947 is
+  TERMINAL FAILURE: Linux117605270625/book117605270620 passed; Windows117605270355
+  passed early standalone snapshot/console, lifecycle, workspace, paired startup/
+  snapshot/console and CI reference checks, then broad native6passed/1failed.
+  Raw /tmp/s3drive-connection-lifetime-e51-{linux,windows,book}.log.
+  Existing writes failed at managed.rs1708 file.sync_all(), native1117,
+  Info/Request/UnexpectedEof (not client timeout); nearby empty HTTP TLS socket24
+  timed out after5015ms. No exact RPC/socket correlation. Another List/EOF near
+  socket228 occurred inside a passing mutation case; do NOT assume intended.
+  Explicit Connection: close did NOT eliminate the failure. Main stays f8.
+  Console cancellation observed15ms standalone/6ms paired, source bytes intact,
+  no success/manifest, partial/replacement refused; one observation each.
+  Watch68564 is obsolete/terminal; do not rerun old jobs. Prepared full-success
+  /tmp/s3drive-check-e51-cohort.py and /tmp/s3drive-e51-reference-check.ps1 NOT RUN;
+  new21/14 are not independently accepted. No promotion of failed e51.
+  NEW uncommitted diagnostic: public request-body frame polling, independently
+  controlled received bytes versus failed trust. No socket-written/commit
+  inference. wire.rs + remote.rs focused authority tests passed at
+  /tmp/s3drive-body-poll-focused1.log (Hyper2/lifetime2/HTTP10/TLS6).
+  Full local gate PASSED exit0 /tmp/s3drive-body-poll-gate1.log:274 state,
+  Hyper2/lifetime2/HTTP10/TLS6, snapshot CLI2, restart8, SDK17, managed8,
+  lint/build/57-doc. Rust stayed frozen. Ready for local diagnostic checkpoint.
+  Do not push yet: next add an early bounded native flush-burst gate so the
+  request-body observation can be exercised before the long Windows workspace.
+  Keep all prior native/reference/startup checks, then full-gate the new fixture.
+- Previous pushed topic d6d8bd915d7c04764013071f152076740959fd68:
   CI39102804077 is TERMINAL FAILURE: Linux117602351415/book117602351527
   succeeded; Windows117602351510 passed early standalone snapshot and private
   console Ctrl+C, then failed HTTP native lifecycle. Raw
@@ -16,7 +42,7 @@ Research, decisions, acceptance and plans belong in docs/src/.
   caused native5 at lifecycle.rs364. Failure-only fresh CLI got OriginalVolume
   in28ms with both processes alive; not proof of earlier availability/outcome.
   Later Windows gates skipped. Main stays f8; no snapshot acceptance.
-- Current uncommitted candidate declares Connection: close per metadata RPC.
+- Current pushed candidate declares Connection: close per metadata RPC.
   Only production change is that header in WireClient; no retry/deadline/TLS/
   dependency/pool-builder change. Two bounded socket tests passed:16 distinct
   transports versus baseline1, and client EOF after complete reply even when
@@ -24,8 +50,17 @@ Research, decisions, acceptance and plans belong in docs/src/.
   /tmp/s3drive-connection-lifetime-after2.log. Full local gate PASSED exit0:
   /tmp/s3drive-connection-lifetime-gate1.log (274 state, connection-lifetime2,
   Hyper2/HTTP10/TLS6, snapshot CLI2, restart/worker8, SDK17, managed8, lint/
-  build/57-doc). Rust stayed frozen. Ready for private topic checkpoint;
+  build/57-doc). Rust stayed frozen. Published as e51f737;
   new exact-source hosted acceptance is required, not a claimed timeout fix.
+  Post-push HANDOFF/platform JSON and Linux packaging-baseline research are uncommitted; bundle
+  with later substantive source rather than docs-only native CI. Fresh e51
+  source-bound CLI SIGINT/busy checks passed; shared binary rebuilt from e51.
+  /tmp/s3drive-e51-snapshot-{sigint,busy}.{json,stderr}; one1.995ms cancel and
+  112.498ms busy refusal observation, source SHA preserved, no restore grant.
+  Independent artifact validator now checks exact root fields as well as typed
+  records. Known-good f8 passed; four controlled faults refused at
+  /tmp/s3drive-artifact-envelope-controls1.log. Prepared (NOT RUN) full download/
+  source/digest/oracle driver /tmp/s3drive-check-e51-cohort.py.
 
 - Private local/remote main is now accepted diagnostic f8c4f5832e399c6c54567c122c875e2a438ce681.
   Topic CI39097275707 is terminal all-three SUCCESS, raw Linux/Windows native/
@@ -79,8 +114,9 @@ Research, decisions, acceptance and plans belong in docs/src/.
   /tmp/s3drive-snapshot-console-33-reference-check.ps1 must not be treated as
   proof.33 has only replacement artifact; disposition step never ran.
 
-Next: publish the gated finite-connection policy topic checkpoint, then inspect
-new exact-source hosted acceptance. Require terminal Windows/native/reference/
+Next: checkpoint the green body-frame diagnostic locally, add/gate an early
+native32-flush HTTPS fixture (real mounted Unicode path, exact bytes/PUT count,
+no retries), then push both substantive phases once for new hosted evidence. CI39103791947 is failed, not live. Require terminal Windows/native/reference/
 startup evidence before any promotion. Require
 native/reference/startup gates before any snapshot main promotion. Keep restore
 unsupported. No new provider/user startup/root/hosting mutations authorized.
@@ -274,6 +310,15 @@ nonempty/length only). Do not mark snapshot phase or overall goal complete.
   authority-startup/snapshot/implementation-plan explain partial component PASS,
   both overall failures and the failed capture experiment. Main-repeat record
   was committed with d6. Bundle with substantive probe source; no docs-only native CI.
+
+## Packaging research observation
+
+New docs/src/evidence/linux-runtime-baseline-20261018.json binds e51 debug binary
+fca6f0e893bfe85365bd2121e05cd64cb73b2bcbb361880a41b7448c4e377e86 to observed
+Debian12/glibc2.36, highest ELF requirementGLIBC_2.34, and actual --version smoke.
+This is not release/MX/reboot acceptance. platform-integration.md proposes an
+explicit compatible release baseline;57-doc links/build/test passed at
+/tmp/s3drive-linux-baseline-book{,-tests}.log. Keep with next substantive source.
 
 ## Requirements, invariants and authorization
 
