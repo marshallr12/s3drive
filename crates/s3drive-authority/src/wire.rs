@@ -10,6 +10,7 @@ pub enum WireError {
     Configuration,
     InvalidRequest,
     Transport {
+        request: WireRequest,
         phase: WirePhase,
         timed_out: bool,
         io_kind: Option<io::ErrorKind>,
@@ -26,8 +27,36 @@ pub enum WirePhase {
     Request,
     ResponseBody,
 }
+/// Only the fixed protocol variant; never request fields or identifiers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WireRequest {
+    Features,
+    Info,
+    Store,
+    Reservation,
+    Node,
+    PendingRemoval,
+    List,
+    Operation,
+    Apply,
+}
+impl From<&Request> for WireRequest {
+    fn from(request: &Request) -> Self {
+        match request {
+            Request::Features {} => Self::Features,
+            Request::Info {} => Self::Info,
+            Request::Store { .. } => Self::Store,
+            Request::Reservation { .. } => Self::Reservation,
+            Request::Node { .. } => Self::Node,
+            Request::PendingRemoval { .. } => Self::PendingRemoval,
+            Request::List { .. } => Self::List,
+            Request::Operation { .. } => Self::Operation,
+            Request::Apply { .. } => Self::Apply,
+        }
+    }
+}
 impl WireError {
-    fn transport(error: reqwest::Error, phase: WirePhase) -> Self {
+    fn transport(error: reqwest::Error, phase: WirePhase, request: WireRequest) -> Self {
         let phase = if error.is_connect() {
             WirePhase::Connect
         } else {
@@ -51,6 +80,7 @@ impl WireError {
             source = cause.source();
         }
         Self::Transport {
+            request,
             phase,
             timed_out: error.is_timeout(),
             io_kind,
@@ -162,6 +192,7 @@ impl WireClient {
     }
     pub async fn request(&self, request: &Request) -> Result<Reply, WireError> {
         request.validate().map_err(|_| WireError::InvalidRequest)?;
+        let kind = WireRequest::from(request);
         let mut response = self
             .http
             .post(self.url.clone())
@@ -169,7 +200,7 @@ impl WireClient {
             .json(request)
             .send()
             .await
-            .map_err(|e| WireError::transport(e, WirePhase::Request))?;
+            .map_err(|e| WireError::transport(e, WirePhase::Request, kind))?;
         if !response.status().is_success() {
             return Err(WireError::HttpStatus(response.status().as_u16()));
         }
@@ -183,7 +214,7 @@ impl WireClient {
         while let Some(chunk) = response
             .chunk()
             .await
-            .map_err(|e| WireError::transport(e, WirePhase::ResponseBody))?
+            .map_err(|e| WireError::transport(e, WirePhase::ResponseBody, kind))?
         {
             if bytes.len() + chunk.len() > 8 * 1024 * 1024 {
                 return Err(WireError::ResponseTooLarge);

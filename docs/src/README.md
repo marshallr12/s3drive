@@ -22,17 +22,21 @@ and retained handles are implemented; Windows deletion uses the explicit
 [version7/POSIX lifecycle profile](native-windows-lifecycle.md), with its measured
 WinFsp limitations. [HTTPS transport](remote-authority.md) and
 [store/configuration bootstrap](managed-bootstrap.md) are accepted through main
-`712882e`. This is still a research/development filesystem with incomplete
+`a7994e6`. This is still a research/development filesystem with incomplete
 application, platform and provider acceptance.
 
-**Current work:** [pinned coordinator startup](authority-startup.md) on
-`codex/authority-startup`. The paired Linux FUSE/login/coordinator recovery test
-passed on hosted Linux at `e48cb09`. Windows child retries were corrected at
-`ce784e4`, but that run failed a metadata read before the injected kill.
-The diagnostic run at `7962058` then failed a TLS fault fixture before startup
-tests. Fixture setup/progress and the original transport failure remain under
-investigation; Windows coordinator/pairing and final-source gates are pending. No startup registration is installed in the workstation user's
-real account, no hosting is provisioned and no Turso backend is enabled.
+**Accepted checkpoint:** [pinned coordinator startup](authority-startup.md) and
+paired native drive recovery passed on hosted Linux and Windows
+Server2025/WinFsp2.1 at `a7994e6`,
+[CI39090568625](https://github.com/marshallr12/s3drive/actions/runs/39090568625).
+Both platforms retained exact uncertain operations and dirty conflicts through
+coordinator loss. The older unexplained transport failures are not claimed fixed.
+
+**Current priority:** a same-source Windows repeat failed paired setup during
+store registration, before mounting. [The investigation](authority-startup.md#same-source-repeat-failure-2026-10-17) preserves
+unknown outcomes and adds bounded diagnostics; repeatable Windows reliability
+is not established. Private snapshot/restore work remains incomplete. No real
+user startup registration or remote hosting/Turso backend has been installed.
 
 ## Recommendation
 
@@ -93,7 +97,7 @@ application limits are recorded in the [filesystem contract](filesystem-contract
 | Existing-file write mounts | [Version-2 opt-in implementation](native-writes.md), native Linux/Windows acceptance passed; no real writable configuration installed |
 | Regular-file creation in existing writable directories | [Guarded creation and durable rediscovery](native-creation.md); native Linux/Windows acceptance passed |
 | Managed file/directory creation | [Version-5 portable volumes](managed-namespace-plan.md); native Linux/Windows creation and recovery passed |
-| Coordinator startup and paired managed drive | [Pinned startup contract](authority-startup.md); hosted Linux pair passed; corrected Windows native acceptance pending |
+| Coordinator startup and paired managed drive | [Pinned startup contract](authority-startup.md); hosted Linux/Windows paired recovery accepted at a7994e6; actual reboot remains separate |
 | New offline opens, multipart/large files, reclamation, tray UI, backup/failover and full application compatibility | Remain work; no unverified path is enabled implicitly |
 
 The initial research/scaffold delivery is complete. The overall product goal

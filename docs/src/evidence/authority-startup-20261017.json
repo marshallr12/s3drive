@@ -1,0 +1,93 @@
+{
+  "source_commit": "a7994e6203ccb082c1b441d19806cfb6ed6d3929",
+  "accepted_baseline": "712882eacd5f15273cd574c1d708b6f99935c1ea",
+  "recorded_at_utc": "2026-10-18T03:09:36.034617+00:00",
+  "ci": {
+    "id": 39090568625,
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39090568625",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 117566235255,
+        "name": "book",
+        "conclusion": "success"
+      },
+      {
+        "id": 117566235370,
+        "name": "rust (ubuntu-latest)",
+        "conclusion": "success"
+      },
+      {
+        "id": 117566235393,
+        "name": "rust (windows-latest)",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "local_gate": {
+    "command": "bash scripts/gate.sh",
+    "exit_code": 0,
+    "scope": "source a7994e6; 265 Linux state, ten HTTP, six TLS,17 SDK, five restart/worker and seven managed cases; lint/build/57-doc checks"
+  },
+  "state_counts": {
+    "linux": 265,
+    "windows": 261
+  },
+  "artifacts": [
+    {
+      "id": 12123120389,
+      "name": "windows-replacement-reference-a7994e6203ccb082c1b441d19806cfb6ed6d3929",
+      "records": 21,
+      "sha256": "9e5afa1c65d0b82bc5605671f72195a3e498e867a38230b4a46533bdab59f4e1",
+      "typed_project_oracle_passed": true,
+      "independent_typed_comparison_passed": true
+    },
+    {
+      "id": 12123325993,
+      "name": "windows-disposition-reference-a7994e6203ccb082c1b441d19806cfb6ed6d3929",
+      "records": 14,
+      "sha256": "ee3284e47a92a036ae13228df16f526132cec689b744f9e278d4d0cd26d7c8b0",
+      "typed_project_oracle_passed": true,
+      "independent_typed_comparison_passed": true
+    }
+  ],
+  "windows_profile": {
+    "operating_system": "Microsoft Windows Server 2025 Datacenter",
+    "winfsp_file_version": "2.1.25156.ddca7bd"
+  },
+  "scope": [
+    "pinned existing-only coordinator startup",
+    "Linux no-systemd supervision",
+    "Windows non-admin independent logons and same-supervisor child replacement",
+    "paired real native managed recovery with binary/Unicode/empty data and exact uncertain identities",
+    "dirty rival conflict and independent registration removal"
+  ],
+  "limits": [
+    "No physical reboot/PAM/SSH or Windows10/11 acceptance",
+    "No new managed Wasabi mutations or real user startup installation",
+    "No remote hosting, Turso, backup/failover or large-file acceptance",
+    "Earlier unexplained transport/rename failures are not claimed fixed",
+    "Disposable VM profile cleanup deferred only after successful assertions and dummy credential removal"
+  ],
+  "repository_private_before_push": true,
+  "published_main": true,
+  "repository_private_after_push": true,
+  "publication_verified_at_utc": "2026-10-18T03:11:41.238174+00:00",
+  "raw_log_evidence": "The cited CI job logs contain the paired/native PASS records; local log copies are listed in HANDOFF.md.",
+  "same_source_repeat": {
+    "ci_id": 39092631904,
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39092631904",
+    "conclusion": "failure",
+    "linux_job": 117572408555,
+    "book_job": 117572408389,
+    "windows_job": 117572408577,
+    "failed_stage": "paired initial seed before mount; managed store-apply",
+    "client_error": "Transport(Request, timed_out=false, io_kind=UnexpectedEof)",
+    "server_event": "HttpTimeout",
+    "coordinator_remained_running": true,
+    "commit_outcome": "unknown",
+    "root_cause": "unproven",
+    "reliability_fix_claimed": false
+  }
+}

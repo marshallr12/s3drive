@@ -111,6 +111,303 @@ async fn info(w: &WireClient) -> s3drive_authority::Volume {
     v
 }
 
+// These tests run separately and early in CI as well as in the workspace gate.
+// They use actual CLI processes and the production TLS listener, but no S3 or
+// machine startup registration. Passing is not a Windows reliability fix.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn tls_cli_fresh_processes_and_reused_clients_preserve_exact_receipts() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path();
+    let secret = token(root);
+    let rcgen::CertifiedKey { cert, signing_key } =
+        rcgen::generate_simple_self_signed(vec!["127.0.0.1".into()]).unwrap();
+    let ca = s3drive_state::create_private_document(
+        &root.join("tls"),
+        "cert.pem",
+        cert.pem().as_bytes(),
+    )
+    .unwrap();
+    let key = s3drive_state::create_private_document(
+        ca.parent().unwrap(),
+        "key.pem",
+        signing_key.serialize_pem().as_bytes(),
+    )
+    .unwrap();
+    let server = Server::start(command(
+        &root.join("database"),
+        &secret,
+        None,
+        Some((&ca, &key)),
+        "127.0.0.1:0",
+    ))
+    .await;
+    // No credential resolution or provider connection is needed for bootstrap.
+    let s3 = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let config = root.join("sources.toml");
+    std::fs::write(&config, format!("version=1\nmode='read-only'\n[[sources]]\nalias='docs'\nbucket='test-bucket'\nregion='us-east-1'\nprefix='資料/'\nprofile='unconfigured-fixture-profile'\nendpoint='http://{}'\nallow_http_loopback=true\npath_style=true\n", s3.local_addr().unwrap())).unwrap();
+    let endpoint = server.endpoint.clone();
+    let volume = server.volume.clone();
+    let work = root.to_owned();
+    let mut exercise = tokio::spawn(async move {
+        let cli = |verb: &str| {
+            let mut c = Command::new(env!("CARGO_BIN_EXE_s3drive"));
+            c.args(["managed", verb])
+                .arg("--token-file")
+                .arg(&secret)
+                .arg("--ca-file")
+                .arg(&ca)
+                .env(
+                    "AWS_SHARED_CREDENTIALS_FILE",
+                    work.join("absent-credentials"),
+                )
+                .env("AWS_CONFIG_FILE", work.join("absent-config"))
+                .env("AWS_EC2_METADATA_DISABLED", "true")
+                .kill_on_drop(true);
+            c
+        };
+        async fn checked(c: &mut Command, stage: &str, index: usize) -> serde_json::Value {
+            let out = output(c).await;
+            assert!(
+                out.status.success(),
+                "stage={stage} index={index}: {}",
+                String::from_utf8_lossy(&out.stderr)
+            );
+            serde_json::from_slice(&out.stdout).unwrap()
+        }
+        let w = wire(&endpoint, Some(cert.pem().as_bytes()));
+        let mut plans = Vec::new();
+        let mut receipts = Vec::new();
+        for i in 0..16 {
+            let plan = checked(
+                cli("store-plan")
+                    .arg(&config)
+                    .arg("docs")
+                    .args([
+                        "--authority",
+                        &endpoint,
+                        "--volume",
+                        &volume,
+                        "--root",
+                        "managed/.s3drive/",
+                    ])
+                    .arg("--directory")
+                    .arg(work.join(format!("plan-{i}"))),
+                "plan",
+                i,
+            )
+            .await;
+            let result = checked(
+                cli("store-apply")
+                    .arg(&config)
+                    .arg("docs")
+                    .arg(plan["plan"].as_str().unwrap())
+                    .arg("--confirm")
+                    .arg(plan["plan_sha256"].as_str().unwrap()),
+                "apply",
+                i,
+            )
+            .await;
+            assert_eq!(result["status"], "registered");
+            let receipt = w
+                .request(&Request::Operation {
+                    volume: volume.clone(),
+                    operation: plan["store_id"].as_str().unwrap().into(),
+                })
+                .await
+                .unwrap();
+            assert!(matches!(receipt, Reply::Operation(Some(Ok(_)))));
+            assert_eq!(info(&w).await.sequence, i as u64 + 1);
+            receipts.push(receipt);
+            plans.push(plan);
+        }
+        // Repeated fresh caller processes exercise several consecutive RPCs
+        // on each reqwest client. Exact receipt and sequence must not change.
+        for round in 0..4 {
+            for (i, plan) in plans.iter().enumerate() {
+                let result = checked(
+                    cli("store-apply")
+                        .arg(&config)
+                        .arg("docs")
+                        .arg(plan["plan"].as_str().unwrap())
+                        .arg("--confirm")
+                        .arg(plan["plan_sha256"].as_str().unwrap()),
+                    "observe-exact-plan",
+                    round * 16 + i,
+                )
+                .await;
+                assert_eq!(result["status"], "registered");
+                assert_eq!(
+                    w.request(&Request::Operation {
+                        volume: volume.clone(),
+                        operation: plan["store_id"].as_str().unwrap().into(),
+                    })
+                    .await
+                    .unwrap(),
+                    receipts[i]
+                );
+            }
+        }
+        let mut callers = tokio::task::JoinSet::new();
+        for _ in 0..4 {
+            let w = w.clone();
+            let volume = volume.clone();
+            callers.spawn(async move {
+                for i in 0..32 {
+                    let v = info(&w).await;
+                    assert_eq!(v.id, volume, "concurrent Info {i}");
+                    assert_eq!(v.sequence, 16);
+                }
+            });
+        }
+        while let Some(result) = callers.join_next().await {
+            result.unwrap();
+        }
+        assert_eq!(info(&w).await.sequence, 16);
+    });
+    let result = tokio::time::timeout(Duration::from_secs(180), &mut exercise).await;
+    if result.is_err() {
+        exercise.abort();
+        let _ = exercise.await;
+    }
+    let log = server.stop().await;
+    assert!(
+        matches!(result, Ok(Ok(()))),
+        "TLS/CLI churn failed: {result:?}; coordinator diagnostics:\n{log}"
+    );
+    assert!(
+        !log.contains("authority TLS connection failure"),
+        "healthy exchange produced failures:\n{log}"
+    );
+    assert!(
+        tokio::time::timeout(Duration::from_millis(30), s3.accept())
+            .await
+            .is_err(),
+        "bootstrap contacted S3"
+    );
+    eprintln!(
+        "PASS: TLS/CLI 16 registrations, 64 exact-plan observations and 128 concurrent Info requests, original receipts/sequence intact"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn tls_cli_diagnostics_distinguish_idle_partial_headers_and_partial_body_privately() {
+    use std::sync::Arc;
+    use tokio_rustls::{
+        TlsConnector,
+        rustls::{ClientConfig, RootCertStore, pki_types::ServerName},
+    };
+    let tmp = tempfile::tempdir().unwrap();
+    let secret = token(tmp.path());
+    let rcgen::CertifiedKey { cert, signing_key } =
+        rcgen::generate_simple_self_signed(vec!["127.0.0.1".into()]).unwrap();
+    let ca = s3drive_state::create_private_document(
+        &tmp.path().join("tls"),
+        "cert.pem",
+        cert.pem().as_bytes(),
+    )
+    .unwrap();
+    let key = s3drive_state::create_private_document(
+        ca.parent().unwrap(),
+        "key.pem",
+        signing_key.serialize_pem().as_bytes(),
+    )
+    .unwrap();
+    let server = Server::start(command(
+        &tmp.path().join("database"),
+        &secret,
+        None,
+        Some((&ca, &key)),
+        "127.0.0.1:0",
+    ))
+    .await;
+    let mut roots = RootCertStore::empty();
+    roots.add(cert.der().clone()).unwrap();
+    let config = ClientConfig::builder_with_provider(Arc::new(
+        tokio_rustls::rustls::crypto::aws_lc_rs::default_provider(),
+    ))
+    .with_safe_default_protocol_versions()
+    .unwrap()
+    .with_root_certificates(roots)
+    .with_no_client_auth();
+    let connector = TlsConnector::from(Arc::new(config));
+    let endpoint = url::Url::parse(&server.endpoint).unwrap();
+    let partial_header = b"POST /v1/namespace HTTP/1.1\r\nX-Private: never-log-this";
+    let partial_body = format!(
+        "POST /v1/namespace HTTP/1.1\r\nHost: localhost\r\nAuthorization: Bearer {}\r\nContent-Type: application/json\r\nContent-Length: 4096\r\n\r\n{{\"private\":\"never-log-this\"",
+        "a".repeat(64)
+    );
+    let mut peers = tokio::task::JoinSet::new();
+    for payload in [&b""[..], &partial_header[..], partial_body.as_bytes()] {
+        let tcp = tokio::net::TcpStream::connect(("127.0.0.1", endpoint.port().unwrap()))
+            .await
+            .unwrap();
+        let mut tls = connector
+            .connect(ServerName::try_from("127.0.0.1".to_owned()).unwrap(), tcp)
+            .await
+            .unwrap();
+        tls.write_all(payload).await.unwrap();
+        tls.flush().await.unwrap();
+        peers.spawn(async move {
+            let mut response = Vec::new();
+            let _ = tokio::time::timeout(Duration::from_secs(12), tls.read_to_end(&mut response))
+                .await
+                .expect("incomplete connection deadline");
+            assert!(
+                response.is_empty(),
+                "incomplete request produced application response"
+            );
+        });
+    }
+    let w = wire(&server.endpoint, Some(cert.pem().as_bytes()));
+    assert_eq!(info(&w).await.sequence, 0);
+    let mut peer_failures = Vec::new();
+    while let Some(result) = peers.join_next().await {
+        if let Err(error) = result {
+            peer_failures.push(error);
+        }
+    }
+    assert_eq!(info(&w).await.sequence, 0);
+    let log = server.stop().await;
+    assert!(
+        peer_failures.is_empty(),
+        "{peer_failures:?}; coordinator diagnostics:\n{log}"
+    );
+    let events: Vec<_> = log
+        .lines()
+        .filter(|l| l.starts_with("authority TLS connection failure:"))
+        .collect();
+    assert_eq!(events.len(), 3, "{log}");
+    for (count, dispatched, kind) in [
+        (0, false, "HttpTimeout"),
+        (partial_header.len(), false, "HttpTimeout"),
+        (partial_body.len(), true, "Lifetime"),
+    ] {
+        assert_eq!(
+            events
+                .iter()
+                .filter(|l| l.contains(&format!("failure: {kind} "))
+                    && l.split_whitespace()
+                        .any(|s| s == format!("read_bytes={count}"))
+                    && l.ends_with(&format!("dispatched={dispatched}")))
+                .count(),
+            1,
+            "{log}"
+        );
+    }
+    for private in [
+        "never-log-this",
+        endpoint.as_str(),
+        &"a".repeat(64),
+        &cert.pem(),
+        &signing_key.serialize_pem(),
+    ] {
+        assert!(!log.contains(private), "diagnostic disclosed private input");
+    }
+    eprintln!(
+        "PASS: TLS failed-connection byte counts distinguish idle/partial header/partial body without logging contents"
+    );
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn pinned_cli_http_tls_restart_recovers_original_volume_and_unread_operation() {
     let tmp = tempfile::tempdir().unwrap();

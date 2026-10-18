@@ -69,6 +69,15 @@ effect; do not rebind, overwrite, or manufacture a new ID. On shutdown the liste
 closes and connections drain; accepted database commands retain their worker
 ownership even if the requesting socket disappears.
 
+## Bounded failure diagnostics (2026-10-17)
+
+The [same-source Windows failure investigation](authority-startup.md#same-source-repeat-failure-2026-10-17)
+adds plaintext byte/flush counts, elapsed HTTP milliseconds and a header-dispatch
+flag to established-connection failures. These counters do not establish
+authentication or commit, and retain no contents or peer/operation identities.
+The existing sixteen-event/one-suppression budget remains; client transport
+errors add only a fixed request category. No retry or timeout policy changes.
+
 ## Operator setup example
 
 This illustrates a future operator-owned host. It is not an installed service

@@ -1,11 +1,12 @@
 # Coordinator startup and pinned restarts
 
-Design/research date: **2026-10-17**, America/New_York. Current fixture follow-up to
-`7962058` on `codex/authority-startup`. **Phase acceptance is incomplete.**
-The accepted main baseline is `712882e`,
-[CI39079281204](https://github.com/marshallr12/s3drive/actions/runs/39079281204).
-No startup registration in the workstation user's real account or hosted
-metadata deployment has been installed. Tests use disposable registrations.
+Design/research date: **2026-10-17**, America/New_York. **Accepted at private
+main `a7994e6203ccb082c1b441d19806cfb6ed6d3929`**, terminal all-green
+[CI39090568625](https://github.com/marshallr12/s3drive/actions/runs/39090568625).
+[Acceptance record](evidence/authority-startup-20261017.json). Scope is hosted
+Linux and Windows Server2025/WinFsp2.1.25156.ddca7bd, not physical reboot/PAM/SSH
+or Windows10/11. No startup registration in the workstation user's real account
+or remote metadata host was installed. Tests use disposable registrations.
 
 The designated coordinator host runs the shared Rust service
 `s3drive authority-serve` and owns authoritative SQLite metadata. Other machines
@@ -18,28 +19,52 @@ payloads if its authoritative database is missing.
 
 ![Separate per-account supervisors start the pinned Rust coordinator and local drive. The coordinator owns its existing SQLite namespace; the drive keeps its own journal and sends file bytes directly to S3.](images/authority-startup.svg)
 
-## Current evidence
+## Accepted evidence
 
-| Requirement or check | Current result | Evidence and limit |
+| Requirement or check | Accepted result | Evidence and limit |
 | --- | --- | --- |
-| Existing-only restart, WAL, migration and exact receipts | Passed local Rust/CLI tests | Eight state cases; real HTTP/TLS CLI cases; wrong/missing/client identities refuse before startup |
-| Linux coordinator desktop/login supervision | Passed local and hosted HTTP/HTTPS checks | Real gio/tmux, duplicate starts, killed child, unread reply recovery, missing database refusal; no systemd |
-| Paired Linux native drive and coordinator | Passed on hosted Linux at `e48cb09` and current `ce784e4` | [Current job117555117517](https://github.com/marshallr12/s3drive/actions/runs/39086854659/job/117555117517): all eight native cases, exact uncertain identities/no repeated PUT, dirty rival conflict and independent removal |
-| Windows Authority install/TLS/separate logons/duplicates | Observed working at `56a2abe` | [Job117548875636](https://github.com/marshallr12/s3drive/actions/runs/39084754318/job/117548875636); the same test then failed killed-child recovery, so the full gate did not pass |
-| Corrected Windows child retry | Implemented; native recovery still unverified | `ce784e4` passed all four policy cases but its runtime test failed a metadata read before the child kill |
-| Paired Windows managed drive and coordinator | Implemented; native result pending | Separate scheduled tasks, actual FileStream uncertainty/conflict workflow; portable CLI/SDK/TLS preparation passed |
-| Full local Rust/build/book gate | Passed for the diagnostic follow-up | 265 state, ten HTTP, six TLS,17 SDK, five CLI restart/worker and seven managed cases; format/Clippy/build and book links/build/tests passed |
-| Final exact-source platform acceptance | Failed diagnostic parent; fixture follow-up under verification | [Windows117562340718](https://github.com/marshallr12/s3drive/actions/runs/39089283961/job/117562340718) failed the TLS fault matrix before startup/pairing. Original AuthorityProbe failure remains unexplained. Require all gates and strict21/14 artifacts before promotion |
+| Existing-only restart, WAL, migration and exact receipts | Passed Rust/CLI tests | Actual schema8 migration and WAL-only identity/receipt; missing/wrong/client/foreign inputs refuse before startup |
+| Linux coordinator desktop/login supervision | Passed HTTP/HTTPS checks | Real gio/tmux, duplicate starts, killed child, exact replay, missing-DB refusal and removal; no systemd |
+| Paired Linux native drive/coordinator | Passed all eight native cases | [Linux117566235370](https://github.com/marshallr12/s3drive/actions/runs/39090568625/job/117566235370): paired PASS02:42:05UTC, exact unknown IDs/no repeated PUT, Unicode/binary/empty data, dirty rival conflict and independent removal |
+| Windows non-admin coordinator | Passed standalone and paired checks | [Windows117566235393](https://github.com/marshallr12/s3drive/actions/runs/39090568625/job/117566235393): independent AuthenticationIds, duplicates, same-supervisor child replacement, original volume/receipts and removal |
+| Paired Windows real WinFsp recovery | Passed02:56:55UTC | Actual FileStream uncertainty/offline/rival-conflict assertions; exact physical/logical recovery without another PUT; retained staged bytes and independent tasks |
+| Full local/workspace regression | Passed | 265/261 Linux/Windows state, ten HTTP, six TLS,17 SDK, five CLI restart/worker and seven managed cases; fmt/Clippy/build and57-doc checks |
+| Broader Windows native/reference | Passed | Native lifecycle plus seven broad cases; source/platform-bound21/14 artifacts12123120389/12123325993 matched every typed field and four pinned upstream legacy cases |
+| Private publication | Verified fast-forward to a7994e6 | All-three terminal CI, raw native/startup logs, strict artifacts and private local/remote main verified; no root or real provider mutations |
 
-Both Linux job logs record the full pair; the current `ce784e4` run passed at
-01:39:46 UTC on2026-10-18 (2026-10-17 America/New_York). They record real FUSE reads of Unicode, binary,
-empty and second-store files; tmux launcher loss; original-volume recovery;
-unchanged physical/logical uncertain IDs without another PUT; persisted binary
-bytes; retained dirty conflict after a rival publication and coordinator restart;
-journal reopening; and removal of the drive while the coordinator remains live.
-Its final removal preserves fixture metadata, token, config and profile mode.
-That result is hosted fixture evidence, not physical reboot/PAM/SSH, managed
-Wasabi write acceptance, real multi-host partitions, or Windows10/11 proof.
+Windows fixture cleanup removed owned tasks/mounts/processes and dummy
+credentials. Its locked disposable profiles were retained only under the
+explicit successful-acceptance/ephemeral-VM exception and left for VM destruction.
+That is not evidence of real workstation installation/uninstallation or reboot.
+
+The previous unexplained metadata-read/rename transport failures were not
+reproduced in the accepted run. They remain open; a passing run does not prove
+those causes fixed. Physical reboot/PAM/SSH, Windows10/11, real multi-host
+partitions, managed Wasabi writes, backup/failover and large files remain work.
+
+## Same-source repeat failure (2026-10-17)
+
+After the primary success and private promotion,
+[CI39092631904](https://github.com/marshallr12/s3drive/actions/runs/39092631904)
+repeated unchanged a7994e6. Linux/book passed, but
+[Windows117572408577](https://github.com/marshallr12/s3drive/actions/runs/39092631904/job/117572408577)
+failed paired setup during initial seed, before mounting. The store-apply caller
+returned Request/UnexpectedEof; the still-running authority logged HttpTimeout.
+These observations do not establish the affected RPC, commit outcome or cause.
+The historical success above stands, but repeatable Windows startup reliability
+is not established. This is the current priority; snapshots remain deferred.
+
+The follow-up adds only bounded diagnostic observations and focused TLS tests.
+Established connections count plaintext bytes read/written, completed flushes,
+HTTP elapsed milliseconds and whether parsed headers reached the HTTP service.
+A listener-local ordinal distinguishes events without exposing peer/volume/
+operation IDs. The dispatch flag does not prove authentication, a complete body
+or a database commit. No contents or raw dependency errors are retained.
+Existing sixteen-event/one-suppression bounds, deadlines, TLS validation and
+no-automatic-retry behavior remain. Client transport errors add only the fixed
+request variant. Real CLI tests distinguish idle TLS, partial headers and
+partial body, and exercise fresh caller processes plus concurrent reads while
+checking exact receipts and sequence. A passing diagnostic run is not a fix.
 
 ## Transport failure investigation
 
@@ -88,7 +113,12 @@ still run concurrently with their original expectations and deadlines. Per-case
 progress, header byte counts, setup/request timing and joined fixture completion
 now distinguish a fault that was established from a request that stalled earlier.
 It does not increase production timeouts, add retries or weaken TLS checks.
-Whether blocking setup explains the Windows failure remains unverified.
+Whether blocking setup explains the Windows failure remains unverified. All six
+fault cases passed on both platforms at `a7994e6`. This establishes the revised
+fixture's acceptance, not an attributed cause for the older production failures.
+The transport error seen in the accepted read-only native suite occurs after
+its deliberate coordinator stop; it proves new opens fail while an existing
+verified handle remains readable, not an unexplained healthy-service failure.
 
 ## Required restart behavior
 
@@ -166,10 +196,9 @@ process manager. This phase does not choose a hosting provider, enable Turso,
 clone authority databases, add automatic failover, or claim leader election.
 The user keeps SQLite-host and optional Turso deployment choices open.
 
-## Candidate command interface
+## Command interface
 
-Paired Linux supervision passed hosted FUSE acceptance at `e48cb09`.
-Corrected Windows recovery and paired native acceptance are still pending. Use the volume ID and naming policy printed by the
+Both paired native workflows passed at `a7994e6` on the hosted platforms above. Use the volume ID and naming policy printed by the
 original bootstrap. Stop that foreground process before the exclusive offline
 check or supervisor installation. All parent directories must already exist.
 The following co-located example uses placeholders `VOLUME`, `TOKEN` and
@@ -204,7 +233,7 @@ component explicitly, including when a later SSH shell has no desktop XDG
 environment. Status reports ownership and the expected ID; use the existing
 `managed info` command for a live authenticated metadata request.
 
-The corresponding Windows candidate interface is:
+The corresponding Windows interface is:
 
 ```powershell
 .\scripts\windows-session.ps1 -Action Install -Component Authority -Name shared -Executable C:\S3Drive\s3drive.exe -AuthorityDirectory DATABASE -AuthorityVolume VOLUME -AuthorityNamePolicy portable-collision-v1 -AuthorityTokenFile TOKEN -AuthorityListen 127.0.0.1:43128

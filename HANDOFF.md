@@ -1,80 +1,28 @@
 # S3Drive handoff
 
-Updated2026-10-17. Goal ACTIVE. Current phase **pinned coordinator startup**,
-branch `codex/authority-startup`. Read docs/src/implementation-plan.md and
-[authority startup](docs/src/authority-startup.md). Main stays the accepted
-private712882eacd5f15273cd574c1d708b6f99935c1ea; no promotion yet.
+Updated2026-10-17. Goal ACTIVE. Current priority: Windows TLS transport RCA.
+Private local/remote main is a7994e6203ccb082c1b441d19806cfb6ed6d3929.
+Primary CI39090568625 passed all-three jobs plus native/startup and strict21/14
+source-bound artifacts before promotion. Same-source main repeat CI39092631904
+then FAILED: Linux117572408555/book117572408389 succeeded; Windows117572408577
+failed the paired test during initial seed, before mounting. Store-apply returned
+Request/UnexpectedEof; live authority logged HttpTimeout. No evidence yet ties
+that event to a specific request or proves whether a mutation committed. Preserve
+unknown IDs/plans; no automatic mutation retry or deadline/TLS weakening.
+Raw /tmp/s3drive-main-repeat-windows.log. A passing rerun cannot explain this.
 
-Current code is privately pushed at7962058784da99c67b07273275c7b6c007f68ca5.
-CI39089283961 is terminal FAILED at this exact source: Linux117562340653
-and book117562340567 succeeded; Windows117562340718 passed the early native
-lifecycle then failed the new TLS fault matrix in workspace tests. Raw Windows
-/tmp/s3drive-wire-diagnostics-windows.log: TruncatedBody expected a body error,
-but got Transport(Request,timed_out=true); another server task reported header
-UnexpectedEof, without per-case correlation. All startup/pairing and later broad
-Windows steps were skipped. This does not classify the original AuthorityProbe
-failure or prove a production fix. Do not promote or rerun unchanged.
+RCA worktree /home/marshall/src/s3drive-windows-transport is based exactly on
+main, branch codex/windows-transport-followup. Root codex/authority-snapshots
+retains unpublished snapshot prototype and accepted-status docs. Seven snapshot
+library tests and cargo check passed; Clippy found two test-only style issues
+(corrected, recheck pending). No snapshot CLI/full gate/Windows acceptance yet.
+No provider, real user startup, root or hosting mutations authorized.
 
-Raw /tmp/s3drive-wire-diagnostics-linux.log confirms all8 native cases, paired
-PASS at02:18:18UTC, ordinary startup and both HTTP/TLS coordinator profiles at
-7962058. Private topic/main were verified after push; main stays712882e.
-
-Current test follow-up prebuilds all six cert/client/acceptor sets on blocking
-workers before request deadlines start. The six actual requests still run
-concurrently; all deadlines, expected categories, redaction and no-retry checks
-remain. Atomic per-case progress and setup/request timings plus header byte
-counts identify the next unexpected phase. Cases release/join their fixture
-server before asserting, and collect all case failures instead of aborting
-other cases at the first panic. Final stage is read after joining to avoid a
-response-vs-flush-completion race. No production Rust, retry or TLS changes.
-Focused TLS suite passed /tmp/s3drive-wire-fixture-tests1.log before the last
-context/byte-count refinement; final full gate PASSED exit0 at
-/tmp/s3drive-wire-fixture-gate1.log:265 state, ten HTTP, six TLS,17 SDK,
-five CLI restart/worker and seven managed cases, format/Clippy/build plus57-doc
-links/build/tests. Do not claim blocking setup caused the
-Windows failure until direct evidence supports that conclusion.
-
-Current dirty files include this test and bounded backup research: new chapter,
-SUMMARY/plan/security links, dated JSON and a Linux-only historical reproducer.
-Local57-doc links/build/test and the reproducer passed. Include with the next
-substantive test checkpoint rather than creating a docs-only native cycle.
-
-Latest pushed parent is ce784e4c3475a47637adb499ac41d413646b787e.
-CI39086854659 is terminal FAILED: book117555117307 and Linux117555117517
-succeeded; Windows117555117545 failed AuthorityProbe before the injected kill.
-The coordinator/supervisor stayed running. Rust Info failed with an opaque
-WireError after exact operation lookup/replay; no root cause or corrected
-child-loop runtime acceptance is established. Raw evidence:
-/tmp/s3drive-windows-ce784-runtime.log. Paired Windows and later broad native
-steps were skipped, not passed. Do not retry unchanged or promote this parent.
-
-Current follow-up adds redacted typed WireError stages/status/timeout/socket
-and framing predicates, with no retained dependency error, URL, token,
-certificate, request or response body. A six-case real TLS fault matrix tests
-status, advertised oversize, invalid JSON, truncation and request/body timeouts;
-existing redirect/drop tests still prove no mutation retry/follow. Startup
-worker logs only safe mode/verified stages and its last typed readiness failure.
-Server-side fixed categories are capped at16 plus one suppression line per
-listener lifetime. The CLI test sends24 bad handshakes, verifies capped/private
-stderr and continued authenticated service. No deadline, retry, TLS verification,
-schema or protocol behavior changes.
-Resolved reqwest0.13.5/hyper1.12.0 error APIs were inspected locally.
-
-The existing dirty documentation consolidation is included with this substantive
-follow-up: root/book overview, architecture, startup/plan and handoff. It corrects
-stale schema15/Windows-unsupported/loopback-only claims and records Linux paired
-acceptance. Current overview matches schema23, HTTPS/bootstrap and explicit
-version7 Windows lifecycle. The first follow-up gate exited0 at
-/tmp/s3drive-wire-diagnostics-gate1.log but began before the server-log change.
-The final-source gate PASSED exit0 at /tmp/s3drive-wire-diagnostics-gate2.log:
-265 state, ten HTTP, six TLS,17 SDK, five CLI restart/worker and seven managed
-cases; format, Clippy, workspace build, book links/build/tests all passed.
-Six TLS cases passed at /tmp/s3drive-wire-diagnostics-tests1.log; expanded
-CLI malformed-handshake/privacy/budget/service-continuity test passed at
-/tmp/s3drive-wire-server-diagnostics-tests1.log. A deprecated atomic API warning
-was corrected using inspected toolchain1.99.1 core source before the final gate.
-Do not claim this is the Windows fix;
-the diagnostic candidate still needs exact-source native evidence.
+The diagnostic candidate implements bounded plaintext byte/flush/header-dispatch
+observations and fixed client request categories, plus early real CLI/TLS churn.
+The final local gate passed; next privately push and observe exact-source CI. Require exact-source full local/hosted gates,
+raw native/startup logs and strict21/14 artifacts before any new main promotion.
+Do not report the transport regression fixed without causal evidence.
 
 ## Independent backup research while CI runs
 
@@ -126,7 +74,7 @@ to implemented HTTPS/one-owner volume token and remaining deployment gaps.
 - Existing rename diagnostics log typed error and relevant test request/outcome/
   node context, no config/credentials. No retries/weaker native assertions.
 
-## Evidence
+## Earlier startup evidence (historical)
 
 Accepted main baseline: terminal all-green CI39079281204; Linux117532750921,
 Windows117532751106, book117532751123, strict21/14 source/platform artifacts
@@ -181,28 +129,34 @@ It predates ce784's child-loop correction; do not promote e48.
 
 ## Next actions and publication
 
-Privately push the locally green fixture follow-up, then inspect the new exact-source Windows job for per-case progress and the original
-startup failure with corroborating bounded server events. Do not treat an
-unexplained passing rerun as proof that earlier failures were fixed.
-Keep corrected child-loop, full paired Windows and every existing native/
-reference/startup assertion. Retrieve completed job logs via
+Current diagnostic source is in this clean worktree. State check passed and
+focused authority tests passed (one I/O pass-through, ten HTTP, six TLS). Two
+real CLI/TLS cases passed: idle/partial header/partial body classifications and
+16 registrations/64 exact-plan observations/128 concurrent Info requests. Logs:
+/tmp/s3drive-transport-{check1,authority1,cli1}.log. Final full local gate PASSED exit0 at /tmp/s3drive-transport-gate1.log:
+265 state, one I/O pass-through, ten HTTP, six TLS, seven restart/worker,
+17 SDK, seven managed cases, format/Clippy/build and57-doc checks.
+
+Privately push the diagnostic candidate and observe the new
+exact-source Windows early focus test and unchanged full native/startup gates.
+Classify any failure by request kind, plaintext byte counts and dispatch flag.
+Do not treat an unexplained passing run as proof of a production fix. Keep full
+paired Linux/Windows native recovery, exact unknown IDs, dirty bytes/conflicts
+and all existing assertions. Retrieve completed job logs via
 `gh api --allow-escape-sequences repos/marshallr12/s3drive/actions/jobs/JOB/logs`.
-Do not restart live jobs on observation timeout or transient404 logs.
+A live job log404 or observer timeout is not a stopped job; re-poll that handle.
 
-Fix measured failures and include local docs in the next substantive checkpoint.
-Require terminal exact-tip all-three CI, raw native/startup logs and typed21/14
-source/platform artifacts BEFORE guarded private FF main from712882e. No
-metadata-only/empty mounts in place of full pair, unknown identities, dirty data
-and conflicts. AST/policy/portable SDK tests cannot prove Windows native startup.
-Do not mark the overall goal complete after this phase: physical reboot/PAM/SSH,
-Windows10/11, real multi-host/partitions, backup/failover, live managed Wasabi
-acceptance and large files remain. Hosting undecided: keep SQLite-host/Turso open.
-
-No new Wasabi mutations, actual user startup, credentials/hosting/Turso setup or
-root/workstation changes authorized. Earlier provider fixture approvals were
-consumed/cleaned. Workstation NoNewPrivs1 must not be bypassed. Windows is hosted
-Server2025/WinFsp2.1.25156.ddca7bd. Privacy previously drifted; verify live before/
-after pushes. The separate co-located startup SVG was rendered/visually checked.
+Main is a7994e6. Require terminal exact-tip all-three CI, raw native/startup logs
+and strict typed21/14 source/platform artifacts before another guarded private
+fast-forward. Privacy has drifted before; verify before and after publication.
+No force pushes. Preserve root snapshot prototype, dirty user configuration,
+original operation plans and journals. No new Wasabi mutations, actual user
+startup, credentials/hosting/Turso setup or root/workstation changes authorized.
+Earlier provider fixture approvals were consumed/cleaned. NoNewPrivs=1 on the
+workstation must not be bypassed; native Windows is hosted Server2025/WinFsp2.1.
+The full goal still requires physical reboot/PAM/SSH, Windows10/11, independent
+hosts/partitions, backup/failover, managed provider acceptance, large files and
+packaging. Hosting stays undecided with SQLite-host/optional Turso open.
 
 ## Prior owned-target replacement checkpoint
 

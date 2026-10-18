@@ -2,7 +2,7 @@
 //! not evidence of remote hosting, multiple physical hosts or Turso behavior.
 use s3drive_authority::{
     Apply, Authority, Error, Kind, Mutation, ROOT, Reply, Request, ServerTls, Token, WireClient,
-    WireError, WirePhase, serve_tls,
+    WireError, WirePhase, WireRequest, serve_tls,
 };
 use std::{
     sync::{
@@ -159,6 +159,7 @@ async fn tls_neither_follows_redirects_nor_replays_a_dropped_reply() {
                 matches!(
                     error,
                     WireError::Transport {
+                        request: WireRequest::Apply,
                         phase: WirePhase::Request,
                         timed_out: false,
                         ..
@@ -298,9 +299,9 @@ async fn tls_wire_diagnostics_distinguish_failure_stages_without_disclosing_inpu
                 Fault::Status => assert_eq!(error, WireError::HttpStatus(503), "{context}"),
                 Fault::Oversize => assert_eq!(error, WireError::ResponseTooLarge, "{context}"),
                 Fault::InvalidReply => assert_eq!(error, WireError::InvalidReply, "{context}"),
-                Fault::TruncatedBody => assert!(matches!(error, WireError::Transport { phase: WirePhase::ResponseBody, timed_out: false, .. }), "{context}"),
-                Fault::RequestTimeout => assert!(matches!(error, WireError::Transport { phase: WirePhase::Request, timed_out: true, .. }), "{context}"),
-                Fault::BodyTimeout => assert!(matches!(error, WireError::Transport { phase: WirePhase::ResponseBody, timed_out: true, .. }), "{context}"),
+                Fault::TruncatedBody => assert!(matches!(error, WireError::Transport { request: WireRequest::Info, phase: WirePhase::ResponseBody, timed_out: false, .. }), "{context}"),
+                Fault::RequestTimeout => assert!(matches!(error, WireError::Transport { request: WireRequest::Info, phase: WirePhase::Request, timed_out: true, .. }), "{context}"),
+                Fault::BodyTimeout => assert!(matches!(error, WireError::Transport { request: WireRequest::Info, phase: WirePhase::ResponseBody, timed_out: true, .. }), "{context}"),
             }
         });
     }

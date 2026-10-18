@@ -34,6 +34,9 @@ jobs:
         run: ./scripts/install-winfsp.ps1
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Classify coordinator TLS I/O and exercise fresh CLI connections
+        timeout-minutes: 5
+        run: cargo test -p s3drive-cli --test authority_restart tls_cli_ --locked -- --nocapture
       - name: Verify Windows replacement fixture rejection checks
         if: runner.os == 'Windows'
         run: ./scripts/test-windows-replacement-fixture.ps1

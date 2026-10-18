@@ -699,45 +699,32 @@ Bootstrap accepted at `712882e`, terminal all-green CI39079281204:257/253
 state, six setup CLI/six shared-engine cases, Linux7/Windows1+7 native cases,
 both startup gates and strict source-bound21/14 artifacts. Private main is clean.
 
-### P6m4c — pinned coordinator startup (2026-10-17)
+### P6m4c — pinned coordinator startup (accepted2026-10-17)
 
-Implement the [startup contract](authority-startup.md): existing-only Rust
-restart/check commands, per-account Linux/no-systemd and Windows launchers, and
-paired managed native recovery. Missing metadata must never become a replacement
-volume. The foreground identity check alone does not complete supervision.
-Keep SQLite-host and optional Turso deployment choices open; no real user
-registration or host provisioning occurs during disposable acceptance.
+Accepted at private main `a7994e6203ccb082c1b441d19806cfb6ed6d3929`, terminal
+all-green [CI39090568625](https://github.com/marshallr12/s3drive/actions/runs/39090568625).
+See the [startup contract and scoped evidence](authority-startup.md) and
+[acceptance record](evidence/authority-startup-20261017.json).
 
-Diagnostic follow-up to `ce784e4` on `codex/authority-startup`; main remains the accepted
-bootstrap baseline `712882e`. Existing-only paths validate original app/schema,
-volume, naming policy/root and WAL before migration/recovery, and recheck identity
-inside the migration transaction. Missing/client/foreign metadata refuses before
-listening. Exact operation records and dirty bytes remain intact.
+Existing-only Rust restart/check paths, Linux no-systemd and Windows account
+supervision, and both paired native recovery workflows passed. The Windows
+logs show a replacement child under the same supervisor, independent logon
+AuthenticationIds, original volume/receipts, exact uncertain recovery without
+another PUT, Unicode/binary/empty data, dirty rival conflict and independent
+removal. Linux passed all eight native cases and both HTTP/TLS supervisor
+profiles. Windows passed its lifecycle plus seven broad native cases.
 
-| Acceptance | Current evidence |
-| --- | --- |
-| Rust state/CLI/TLS/SDK and full local gate | Passed for the diagnostic follow-up:265 state, ten HTTP, six TLS,17 SDK, five restart/worker and seven managed cases, including schema8/WAL identity and bounded private diagnostics |
-| Linux coordinator supervision | Passed local and hosted HTTP/private-CA HTTPS desktop/login, terminal-loss and exact-replay checks |
-| Paired Linux real FUSE recovery | Passed at `e48cb09` and current `ce784e4`, job117555117517/run39086854659: all eight native cases, original volume, unchanged uncertain IDs/no repeated PUT, binary/Unicode/empty files, dirty rival conflict and independent removal |
-| Windows Authority runtime | Install/TLS/independent-logon/duplicate subset worked at `56a2abe`; full test failed killed-child recovery under Scheduler-only retry settings |
-| Windows retry correction | `ce784e4` keeps one owner through four child attempts,10-second interruptible delays; four portable policy checks passed; its native test failed an Info request before the child kill |
-| Paired Windows real WinFsp recovery | Implemented with two scheduled tasks, owned S3 fixture, actual FileStream uncertainty/conflict workflow and independent removal; portable CLI/SDK/TLS preparation passed; native result pending |
-| Broader Windows native/reference regression | Required; two older rename failures at distinct operations remain unresolved and have new typed/request diagnostics, without retries or weaker assertions |
-| Exact final-source publication | Pending all-three hosted jobs, native/startup logs and strict21/14 source/platform artifacts; no promotion on partial/regression-only success |
+Local/CI scope includes265/261 Linux/Windows state, ten HTTP, six TLS,17 SDK,
+five restart/worker and seven managed cases, lint/build/57-doc checks and strict
+source/platform-bound21/14 reference artifacts12123120389/12123325993. Private
+main matched the accepted source after fast-forward. Windows is hosted
+Server2025/WinFsp2.1.25156.ddca7bd, not this workstation or Windows10/11.
 
-The [startup chapter](authority-startup.md) records source/job links, failure
-history, commands and the full eight acceptance criteria. Physical workstation
-reboot/PAM/SSH, Windows10/11, real multi-host partitions, backup/failover, live
-managed Wasabi acceptance and large-file support remain later requirements.
-
-The `ce784e4` run is terminal failed: Windows117555117545 lost a metadata
-Info response while the supervisor remained running; paired Windows and later
-native steps were skipped. The follow-up adds redacted typed transport stages,
-timeout/status/socket/framing diagnostics, bounded fixed server events and a
-real TLS fault matrix without
-changing deadlines, TLS verification or replay policy. Root cause remains
-unproven until a classified native failure or other direct evidence explains it.
-
+The earlier unexplained metadata-read/rename transport failures remain open;
+the accepted run does not attribute or claim to fix their causes. Physical
+reboot/PAM/SSH, Windows10/11, real independent hosts/partitions, backup/failover,
+managed Wasabi write acceptance, large files and product packaging remain work.
+No real user startup registration, cloud account or provider mutation occurred.
 
 ### P6m4d — coordinator snapshots and recovery (proposal, 2026-10-17)
 
@@ -756,10 +743,32 @@ independent-host/partition and actual platform recovery requirements. No
 backup/restore feature or cloud guarantee is enabled by the research.
 
 
-Windows job117562340718 at7962058 failed the new TLS fault matrix before startup
-acceptance: TruncatedBody received a request timeout, while a fixture task
-reported unlabeled header EOF. The follow-up prebuilds synchronous setup off
-runtime workers, retains six concurrent exchanges and every deadline/assertion,
-and records per-case fixture progress/timing before deciding what failed.
-This is a harness investigation; the original production transport cause and
-Windows coordinator/pairing acceptance remain unproven.
+Historical Windows job117562340718 at7962058 failed the TLS fault matrix
+before startup: TruncatedBody received a request timeout and a fixture task
+reported unlabeled header EOF. The follow-up prebuilt synchronous setup off
+runtime workers, retaining six concurrent exchanges and every assertion. Its
+per-case progress/timing and full startup pairing later passed at a7994e6 in
+CI39090568625. Neither that pass nor the revised fixture explains the older
+production failure; the same-source repeat below supplies fresh failure evidence.
+
+
+### P6m4c follow-up — classified Windows TLS regression (2026-10-17)
+
+Main a7994e6 passed primary CI39090568625, then same-source repeat
+CI39092631904 failed Windows paired setup during store-apply before mounting.
+Request/UnexpectedEof and server HttpTimeout do not establish commit outcome
+or root cause. Linux/book succeeded. Keep the successful historical result and
+this contradictory reliability evidence; no retry/deadline/TLS weakening.
+
+The diagnostic candidate adds bounded failed-connection plaintext read/write/
+flush counts and a header-dispatch flag, without contents, identities or raw
+dependency errors. Fixed client request categories and early real CLI/TLS
+connection churn check exact operation receipts and volume sequence. Focused
+Linux tests passed, including no/partial headers, partial body, privacy and
+16 registrations/64 exact-plan observations/128 concurrent Info requests. The
+full local gate passed:265 state, one I/O pass-through, ten HTTP, six TLS,
+seven restart/worker,17 SDK and seven managed cases plus lint/build/57-doc
+checks. Exact-source hosted native/reference/startup gates remain required. Do not claim a diagnostic
+checkpoint fixes the production issue; use measured failure phases to choose
+the next correction. Snapshot prototype remains unpublished in the root
+worktree, outside this clean investigation.

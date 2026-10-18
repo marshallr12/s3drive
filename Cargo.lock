@@ -2440,6 +2440,7 @@ dependencies = [
  "sha2",
  "tempfile",
  "tokio",
+ "tokio-rustls 0.26.6",
  "toml",
  "url",
  "winfsp",

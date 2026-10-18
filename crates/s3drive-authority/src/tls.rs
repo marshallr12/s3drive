@@ -24,6 +24,8 @@ use tokio::{
     task::JoinSet,
 };
 use tokio_rustls::TlsAcceptor;
+mod progress;
+use progress::{ObservedIo, Progress};
 
 // Unauthenticated peers can trigger these paths. Emit at most sixteen fixed
 // categories per listener lifetime, then one suppression notice. Never format
@@ -42,6 +44,9 @@ enum ConnectionFailure {
 struct Diagnostics(AtomicU8);
 impl Diagnostics {
     fn record(&self, failure: ConnectionFailure) {
+        self.record_progress(failure, None);
+    }
+    fn record_progress(&self, failure: ConnectionFailure, progress: Option<&Progress>) {
         let previous = self
             .0
             .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
@@ -56,23 +61,37 @@ impl Diagnostics {
                 );
             }
             Ok(_) => {
-                let _ = writeln!(
-                    std::io::stderr().lock(),
-                    "authority TLS connection failure: {failure:?}"
-                );
+                let mut stderr = std::io::stderr().lock();
+                if let Some(p) = progress {
+                    let _ = writeln!(
+                        stderr,
+                        "authority TLS connection failure: {failure:?} connection={} http_ms={} read_bytes={} written_bytes={} flushes={} dispatched={}",
+                        p.connection,
+                        p.started.elapsed().as_millis(),
+                        p.read.load(Ordering::Relaxed),
+                        p.written.load(Ordering::Relaxed),
+                        p.flushed.load(Ordering::Relaxed),
+                        p.dispatched.load(Ordering::Relaxed)
+                    );
+                } else {
+                    let _ = writeln!(stderr, "authority TLS connection failure: {failure:?}");
+                }
             }
             Err(_) => {}
         }
     }
-    fn http(&self, result: Result<(), hyper::Error>) {
+    fn http(&self, result: Result<(), hyper::Error>, progress: &Progress) {
         if let Err(error) = result {
-            self.record(if error.is_timeout() {
-                ConnectionFailure::HttpTimeout
-            } else if error.is_incomplete_message() {
-                ConnectionFailure::IncompleteHttp
-            } else {
-                ConnectionFailure::HttpTransport
-            });
+            self.record_progress(
+                if error.is_timeout() {
+                    ConnectionFailure::HttpTimeout
+                } else if error.is_incomplete_message() {
+                    ConnectionFailure::IncompleteHttp
+                } else {
+                    ConnectionFailure::HttpTransport
+                },
+                Some(progress),
+            );
         }
     }
 }
@@ -141,6 +160,7 @@ where
     let mut tasks = JoinSet::new();
     tokio::pin!(shutdown);
     let mut failure = None;
+    let mut connection_number = 0_u64;
     loop {
         tokio::select! {
             biased;
@@ -162,6 +182,8 @@ where
                     continue;
                 };
                 let acceptor = acceptor.clone();
+                connection_number = connection_number.saturating_add(1);
+                let number = connection_number;
                 let diagnostics = diagnostics.clone();
                 let app = app.clone();
                 let mut stopped = stopped.clone();
@@ -180,18 +202,27 @@ where
                     let mut http = hyper::server::conn::http1::Builder::new();
                     http.timer(TokioTimer::new()).header_read_timeout(Duration::from_secs(5))
                         .max_buf_size(16_384).keep_alive(false);
-                    let connection = http.serve_connection(TokioIo::new(stream), TowerToHyperService::new(app));
+                    let (stream, progress) = ObservedIo::new(stream, number);
+                    let observed = progress.clone();
+                    let service = TowerToHyperService::new(app);
+                    let service = hyper::service::service_fn(move |request| {
+                        // HTTP headers were parsed; this does not mean that
+                        // authentication, a full body or a DB commit succeeded.
+                        observed.dispatched.store(true, Ordering::Relaxed);
+                        hyper::service::Service::call(&service, request)
+                    });
+                    let connection = http.serve_connection(TokioIo::new(stream), service);
                     tokio::pin!(connection);
                     let deadline = tokio::time::sleep(Duration::from_secs(10));
                     tokio::pin!(deadline);
                     tokio::select! {
-                        result = &mut connection => diagnostics.http(result),
-                        _ = &mut deadline => diagnostics.record(ConnectionFailure::Lifetime),
+                        result = &mut connection => diagnostics.http(result, &progress),
+                        _ = &mut deadline => diagnostics.record_progress(ConnectionFailure::Lifetime, Some(&progress)),
                         _ = stopped.changed() => {
                             connection.as_mut().graceful_shutdown();
                             tokio::select! {
-                                result = &mut connection => diagnostics.http(result),
-                                _ = &mut deadline => diagnostics.record(ConnectionFailure::Lifetime),
+                                result = &mut connection => diagnostics.http(result, &progress),
+                                _ = &mut deadline => diagnostics.record_progress(ConnectionFailure::Lifetime, Some(&progress)),
                             }
                         }
                     }

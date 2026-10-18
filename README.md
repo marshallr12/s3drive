@@ -15,19 +15,23 @@ have accepted Linux/Windows checkpoints. Windows deletion uses the explicit
 [version7/POSIX lifecycle profile](docs/src/native-windows-lifecycle.md), with
 measured WinFsp limitations. [HTTPS](docs/src/remote-authority.md) and
 [store/configuration bootstrap](docs/src/managed-bootstrap.md) are accepted
-through main `712882e`. Existing direct mounts remain available without
+through main `a7994e6`. Existing direct mounts remain available without
 implicit migration. Multipart/large files, reclamation, full application
 compatibility and real remote deployment remain work.
 
-**Current candidate:** [pinned coordinator startup](docs/src/authority-startup.md)
-on `codex/authority-startup`. The paired Linux FUSE/login/coordinator recovery
-case passed on hosted Linux at `e48cb09`, including uncertain uploads and dirty
-conflict retention. The Windows diagnostic run at `7962058` failed a TLS fault fixture before
-startup tests. Fixture setup/progress is under investigation; the earlier
-metadata-read failure and child recovery remain unverified.
-Native Windows coordinator/pairing acceptance and all final gates remain required. No startup entry is
-installed in the workstation user's real account and no hosting/Turso account
-has been provisioned.
+**Accepted checkpoint:** [pinned coordinator startup](docs/src/authority-startup.md)
+and paired native drive recovery passed on hosted Linux and Windows
+Server2025/WinFsp2.1 at `a7994e6`,
+[CI39090568625](https://github.com/marshallr12/s3drive/actions/runs/39090568625).
+Real binary/Unicode/empty reads, same-supervisor restart, exact uncertain IDs,
+dirty rival conflicts and independent removal passed. Earlier unexplained
+transport failures remain open; this is not a claim that they were fixed.
+
+**Current priority:** a same-source Windows repeat failed paired setup during
+store registration, before mounting. [The investigation](docs/src/authority-startup.md#same-source-repeat-failure-2026-10-17) preserves
+unknown outcomes and adds bounded diagnostics; repeatable Windows reliability
+is not established. Private snapshot/restore work remains incomplete. No real
+user startup registration or remote hosting/Turso backend has been installed.
 
 The shared engine preserves uncertain/conflicting bytes and exact operation
 identities. Direct and managed writes require explicit source/prefix policy and
