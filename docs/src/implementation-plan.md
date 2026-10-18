@@ -1243,3 +1243,33 @@ full local gate passes on14 unchanged frozen source/fixture hashes:27core,
 50authority,292state/1ignored,51S3 plus format/lint/build/book. This is not a
 large-file native or provider acceptance claim. Exact results and limits are in
 [the dated codec evidence](evidence/managed-manifest-20261018.json).
+
+
+### Manifest object identities and compact roots (offline phase, 2026-10-18)
+
+Next foundation on codex/manifest-object-identity, parent ec43132/runtime e48:
+separate page/data key roles under a new v2 object namespace; bind keys to
+volume, file-node, store, generation and ordinal using canonical lowercase hex.
+Validate the store root structurally and retain the existing v1 key contract.
+Define a fixed120byte explicitly versioned root descriptor carrying volume,
+node, logical length and the page reference. This is an offline format only:
+no authority capability, wire/schema change or network admission follows.
+
+Done criteria: independent Python fixed vectors; exact encoding/decoding with
+unknown/trailing/truncated forms rejected; empty/max-length roots; zero IDs and
+invalid roots rejected; keys separate all identity dimensions and roles;
+store/context mismatch refused; digest changes cannot silently create a new key
+for the same identity. A descriptor is structurally valid, not authenticated
+metadata. Verify its page binding separately and require future authority trust,
+route admission and dependency receipts before publication. Run focused tests
+and the local gate; old e48 native evidence cannot certify new Rust source.
+
+
+Result: seven focused tests pass; both independent vectors reproduce in an
+isolated directory; the full local gate passes on 19 unchanged source/fixture
+hashes (34 core, 50 authority, 292 state/one ignored, 51 S3 plus formatting,
+Clippy, build and book). No dependency, schema or wire change. This phase supplies
+neither object publication nor authority trust. Next implement durable frozen
+edit identities and a bounded dependency journal, preserving unknown operations,
+original guards and every legacy payload/hash. See the
+[object identity evidence](evidence/manifest-objects-20261018.json).

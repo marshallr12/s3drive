@@ -210,6 +210,73 @@ with a matching child digest, maximum fanout/depth/length, overflow, sparse
 holes, empty roots, alignment, roles, EOF and range boundaries. Native large
 files and provider acceptance remain later gates.
 
+## Offline object names and root descriptors (2026-10-18)
+
+The follow-on `s3drive-core::manifest::objects` module defines addresses for the
+future dependency journal. It does not enable a publisher, a new authority
+capability or mounted chunked files. Legacy `v1` keys and payload digests are
+unchanged. New internal addresses have this exact ASCII structure:
+
+```text
+<store-root>v2/<volume>/<file-node>/<store>/<generation>/<role>/<ordinal>
+```
+
+Each identity is a nonzero value of 16 bytes encoded as 32 lowercase hexadecimal
+characters. The ordinal is 16 lowercase hexadecimal characters, including leading
+zeros; it may be zero. Roles are exactly `data` or `page`, so equal ordinals
+cannot alias data and manifest objects. The store root follows the existing
+managed root contract: 1–128 ASCII bytes, trailing slash, nonempty components
+made from letters, digits, dot, underscore or hyphen; `.`/`..` components are
+refused. No URL decoding, path normalization or filename conversion occurs.
+Ordinals span the full unsigned 64-bit range. A future SQLite journal must preserve
+those 8 bytes exactly or explicitly narrow its admitted range; it must not cast
+an ordinal above the signed 64-bit maximum into a SQLite integer.
+Maximum derived key length is 284 bytes. Store-reference mismatch fails;
+root-key derivation also checks the descriptor's volume and file-node.
+
+Keys include generation/ordinal rather than content digests. Changing bytes or
+an expected digest under one operation identity does **not** produce a new key;
+the future create-only journal must preserve that identity and report a conflict.
+No deduplication/adoption, overwrite fallback, parser for arbitrary existing keys
+or deletion authority is provided. A structurally valid mapping is not an
+authenticated store route. Reusing a data reference still requires file ancestry,
+current authorization and retention proofs; a bare Reference does not supply them.
+
+The `RootDescriptor` has a fixed size of 120 bytes and carries a compact page reference:
+
+| Offset | Bytes | Meaning |
+| --- | --- | --- |
+| 0 | 8 | ASCII `S3DROOT1`, selecting the prototype `S3DMAN01` page format |
+| 8 | 16 | Nonzero volume identity |
+| 24 | 16 | Nonzero file-node identity |
+| 40 | 8 | Logical file length, unsigned little endian, at most the signed 64-bit maximum |
+| 48 | 16 | Nonzero page store identity |
+| 64 | 16 | Nonzero page generation identity |
+| 80 | 8 | Page ordinal, unsigned little endian |
+| 88 | 32 | Domain-separated expected page SHA-256 |
+
+Decode requires exactly 120 bytes, rejects unknown versions and allocates no
+heap storage. An empty file still references an authenticated empty leaf page.
+The descriptor's object namespace version (`v2`), descriptor version (`ROOT1`)
+and page version (`MAN01`) are separate explicit contracts. The existing network
+protocol does not advertise any of them yet. 120 bytes could be hex encoded in 240
+characters, but a future authority request must test its complete envelope;
+this is not a wire-format or request-size acceptance claim.
+
+`verify_page` checks page bytes against the descriptor's hash, file identity,
+start zero and length. It does **not** authenticate the descriptor itself. A
+test deliberately alters its generation: the unchanged page bytes still verify,
+while the derived address changes. Thus the eventual authority response must
+authenticate the entire descriptor before its hash is treated as a trusted root.
+Verification alone also supplies no S3 authorization or durable flush receipt.
+
+A separate Python `struct` generator fixes the 120 byte descriptor and both role
+keys without importing Rust. Tests cover exact vectors, every truncated prefix,
+trailing/unknown forms, signed-length bounds, zero IDs, invalid roots, identity
+and role separation, mismatched mappings and the metadata-authentication limit.
+SQLite persistence, object dependencies, builder recovery and root publication
+remain the next integration work.
+
 ## Illustrative workload and Wasabi implications
 
 Run `python3 scripts/study-managed-layout.py` from the repository root. The

@@ -60,6 +60,28 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
+## Current phase: offline object identities/root descriptors (2026-10-18)
+
+Branch codex/manifest-object-identity from ec43132. Pure core module implemented:
+role-separated v2 object keys and120byte root descriptor, independent vectors,
+context/store/length/version/encoding refusal tests. Exact phase contract and
+done criteria in implementation-plan.md. No SQLite/schema/wire/network changes,
+no implicit object adoption, no mount limit increase or provider request.
+Old source e48 CI remains independently live; review it using the same run and
+watch handle below. Its pass cannot certify this new phase.
+Focused7 PASS/27filtered, final source log
+/tmp/s3drive-manifest-objects-focused-final.log. Independent vector regeneration
+matches both files. Frozen19 source/fixture hashes
+/tmp/s3drive-manifest-objects-frozen.json. Full local gate30377 closed EXIT0,
+/tmp/s3drive-manifest-objects-gate.log:34core,50authority,292state/1ignored,51S3,
+format/Clippy/build/book; no warnings/errors and all19 hashes unchanged. Do not
+restart the terminal gate. One long state test ultimately passed. No dependency
+or schema/wire version changed. Ready for ordinary feature-branch publication.
+Evidence docs/src/evidence/manifest-objects-20261018.json. Own future CI must be
+tied to new source, not e48. Next phase needs durable SQLite frozen edit IDs and
+object dependencies before publication; never cast unsigned ordinals to signed
+SQL integers. New code supplies no adoption, write or root-publication permit.
+
 ## Current implementation: offline managed manifest codec (2026-10-18)
 
 Branch codex/managed-manifest, parent e08f607. New core manifest module and tests,
@@ -93,7 +115,13 @@ Published e48f36fdaf05ea73fc69282e5b616630545a13a5 on codex/managed-manifest,
 ordinary push, clean/exact remote/all14 frozen hashes/PUBLIC before-after;
 proof /tmp/s3drive-managed-manifest-publication.json. Main remains1a93b5f.
 Own CI39137161051 attempt1 at e48: book117703908126 SUCCESS with completed raw
-review; Linux117703908277 and Windows117703908294 LIVE at last observation.
+review; Linux117703908277 SUCCESS and its completed raw review closed;
+Windows117703908294 LIVE at last observation. Linux27core/10manifest,292state,
+9FUSE,32HTTPS flushes,11Unicode names and both no-systemd coordinator protocols
+passed. Linux review /tmp/s3drive-managed-manifest-e48-linux-reviewed.json;
+SHA87d3c513dd953d8f96a83d3c880e370c9efb9cd6c0d4346881028166ae0f9630.
+Expected TLS/HEAD403/stopped-authority refusal and post-uninstall missing config
+were reviewed; cache saved normally. One long state test ultimately passed.
 Watch42188 redirects /tmp/s3drive-managed-manifest-e48-watch.log; poll this same
 handle/run, do not restart on timeout. Do not cite257's separate repeat as proof.
 Prepared /tmp/s3drive-check-managed-manifest-e48.py (Python compiled only), own

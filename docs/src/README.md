@@ -56,6 +56,11 @@ core codec now prototypes it. Its full local gate passed; its own
 [source-bound hosted run](https://github.com/marshallr12/s3drive/actions/runs/39137161051)
 is in progress, separately from the earlier runtime repeat. Existing mounted
 formats and limits remain. See the [codec evidence](evidence/managed-manifest-20261018.json).
+The follow-on offline object namespace and compact root descriptor also pass the
+local gate. They separate data/page addresses and preserve file/store/generation
+identity; [their evidence](evidence/manifest-objects-20261018.json) is separate
+from the earlier codec's native run. Durable object dependencies and live root
+publication remain unfinished.
 
 [Offline immutable multipart plans](multipart-plan.md#offline-immutable-plans-candidate-implementation-2026-10-18)
 freeze original bindings and hash verified staged bytes in bounded owner commands.

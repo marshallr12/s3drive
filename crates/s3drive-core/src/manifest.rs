@@ -3,6 +3,8 @@
 use sha2::{Digest, Sha256};
 use std::fmt;
 
+pub mod objects;
+
 pub const CHUNK_BYTES: u64 = 1024 * 1024;
 pub const MAX_ENTRIES: usize = 128;
 pub const MAX_LEVEL: u8 = 7;

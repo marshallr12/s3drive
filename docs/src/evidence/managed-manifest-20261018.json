@@ -141,8 +141,8 @@
       {
         "id": 117703908277,
         "name": "rust (ubuntu-latest)",
-        "status": "in_progress",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "success",
         "html_url": "https://github.com/marshallr12/s3drive/actions/runs/39137161051/job/117703908277"
       },
       {
@@ -179,6 +179,33 @@
     "checker_output_must_be_new": "/tmp/s3drive-managed-manifest-e48-artifacts",
     "own_native_cohort_accepted": false,
     "native_large_files_accepted": false,
-    "provider_acceptance": false
+    "provider_acceptance": false,
+    "linux_completed_raw_review": {
+      "source": "e48f36fdaf05ea73fc69282e5b616630545a13a5",
+      "run_id": 39137161051,
+      "run_attempt": 1,
+      "job_id": 117703908277,
+      "status": "completed",
+      "conclusion": "success",
+      "reviewed": true,
+      "log": "/tmp/s3drive-managed-manifest-e48-linux.log",
+      "sha256": "87d3c513dd953d8f96a83d3c880e370c9efb9cd6c0d4346881028166ae0f9630",
+      "review_view": "/tmp/s3drive-managed-manifest-e48-linux-review.txt",
+      "routine_pass_compile_cache_progress_lines_compacted": 558,
+      "scope": "27core including10manifest;50authority;292state/1ignored;51S3;9realFUSE;32HTTPSflushes;11Unicode filenames;paired recovery;no-systemd desktop/SSH startup;coordinator HTTP and privateCA HTTPS;schema24",
+      "notices": [
+        "Git default branch advice",
+        "cache action Node deprecations and forced Node24",
+        "one state test over60seconds ultimately passed"
+      ],
+      "expected_faults": [
+        "TLS HandshakeRejected/partial-header HttpTimeout29bytes/Lifetime",
+        "HEAD403 refusal",
+        "Node Connect ConnectionRefused after deliberate authority stop",
+        "startup.json absent after uninstall"
+      ],
+      "physical_mx_reboot_or_provider_acceptance": false,
+      "new_object_identity_module_acceptance": false
+    }
   }
 }
