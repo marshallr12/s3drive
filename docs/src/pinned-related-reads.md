@@ -70,7 +70,10 @@ self-review. Every indexed member was verified. Review was not independent.
 See the [dated evidence](evidence/pinned-related-reads-20261018.json).
 
 This phase is developed in a separate checkout from accepted source checkpoint
-`20706cd`. It is independent of the source-controller change currently under
-hosted acceptance. The primary checkout's controller source stays frozen; no
+`20706cd`. It is independent of the source-controller change, whose own hosted
+acceptance has passed. Tested helper source `fef9442`
+is pushed on `codex/pinned-related-reads`; all 252 hashes and its clean exact
+remote were verified. Its [own hosted cohort](https://github.com/marshallr12/s3drive/actions/runs/39167583915)
+is running. The primary checkout's controller source stays frozen; no
 older hosted artifacts certify this helper. Merge/integration, the complete
 verified range reader and native chunk lifecycle remain later work.

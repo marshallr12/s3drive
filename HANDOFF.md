@@ -1369,3 +1369,25 @@ The full previous handoff was archived byte-identically before refresh:
 Archive SHA256: 7e6ea7afa13c681ba9f46f166b0cbcf4a75b1091722fab54f77f820d7877769c. Before: 405 lines; after: 242 lines.
 Previous complete archives before-a14-refresh, before-snapshot-cancel and
 before-flush-receipts remain in docs/archive; no history was discarded.
+
+Published testedsourcefef944268c89d2c0b1d859a6a86d0f6761c24361 on
+codex/pinned-related-reads, normalpush64425 EXIT0,8files,cleanexactremote/252hashes/
+PUBLIC/main1a93b5funchanged. Proof /tmp/s3drive-pinned-related-publication.json.
+OwnCI39167583915attempt1 LIVE:book117793654818,Linux117793655088,
+Windows117793655137. Watch43951LIVE,/tmp/s3drive-pinned-related-fef-watch.log;
+resumeSAMErun/handle. Prepared/compiledONLY notexecuted: /tmp/s3drive-check-
+pinned-related-fef.py and/tmp/s3drive-pinned-related-fef-{reference-check.ps1,
+raw-compare.py,archive.py}. Freshoutput /tmp/s3drive-pinned-related-fef-artifacts
+andmarker /tmp/s3drive-pinned-related-fef-raw-reviewed.json absent. Requireall3
+terminalSUCCESS+own3rawreviews beforeoneusechecker; binds ownsource/runattempt/
+jobs/artifactIDs/APIdigests/times/252hashes/4oracles andall3newS3tests inbothOSlogs;
+strict21/14+projectoracles thenraw35allfield/typecomparison. Rejectold474 IDs
+12150891787/12151260949,41b IDs12149243457/12149814008 andolder. Nooldpayloadreuse.
+Hostedarchivebuilderpoints ownfefchecker/reader.rs/252map; executeonlyafterall
+checks. No successchecker onfailedcohort; archivefailureinstead. Rootcontroller
+474nowall3accepted+ownstrict21/14/raw35/archive; seeprimaryHANDOFF. Thisbranch
+still lackscontroller474source (parent20706cd); integratebothafterhelperacceptance.
+Fullmanagedrangereader/nativelifecycle/provider/physicalreboot remainunfinished.
+
+Book117793654818 SUCCESS/rawreviewed ownfef/schema28/67files/63chapters; marker
+/tmp/s3drive-pinned-related-fef-book-reviewed.json. Linux/WindowsstillLIVE.

@@ -343,5 +343,65 @@
     "aws-config-1.12.0/src/profile/credentials.rs": "e7ef4d27a4d778fe6b996b4ce885648ce7cee1a3e313156a027379784facc2b1",
     "aws-credential-types-1.3.0/src/provider/credentials.rs": "8b19397646d6c77a9c63e197320584b4e83d6dfda09e23f1765141860b147aac",
     "aws-sdk-s3-1.152.0/src/operation/get_object.rs": "d4ea09bccf468c0f728f59c0d6da15937d18984943a53f93792052fb891306cd"
+  },
+  "runtime_commit": "fef944268c89d2c0b1d859a6a86d0f6761c24361",
+  "publication": {
+    "source": "fef944268c89d2c0b1d859a6a86d0f6761c24361",
+    "parent": "20706cd521b984a50d7aecd08026a72019ef2e4f",
+    "branch": "codex/pinned-related-reads",
+    "worktree": "/home/marshall/src/worktrees/s3drive-pinned-related-reads",
+    "clean_exact_remote_tip": true,
+    "all_252_frozen_hashes_match": true,
+    "full_local_gate_session": 57146,
+    "full_local_gate_exit_code": 0,
+    "local_archive_sha256": "387f5d110ae830aa896bbe1d12c8700ee34cab27dcf818206cd0634a1bc155db",
+    "visibility": {
+      "nameWithOwner": "marshallr12/s3drive",
+      "visibility": "PUBLIC"
+    },
+    "visibility_mutations": 0,
+    "main_unchanged": "1a93b5f7248892fec96dc8da4438ee7967692e77",
+    "docs": {
+      "links_files": 67,
+      "book_chapters": 63,
+      "html_build": true
+    },
+    "hosted_acceptance": false,
+    "run_id": 39167583915,
+    "watch_session": 43951,
+    "controller474_not_in_branch": true,
+    "next": "own source-bound hosted cohort; merge with accepted controller and implement verified manifest reader"
+  },
+  "hosted_cohort": {
+    "source": "fef944268c89d2c0b1d859a6a86d0f6761c24361",
+    "run_id": 39167583915,
+    "run_attempt": 1,
+    "status": "in_progress",
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39167583915",
+    "jobs": {
+      "book": 117793654818,
+      "linux": 117793655088,
+      "windows": 117793655137
+    },
+    "watch_session": 43951,
+    "watch_log": "/tmp/s3drive-pinned-related-fef-watch.log",
+    "checker": "/tmp/s3drive-check-pinned-related-fef.py",
+    "checker_prepared_not_executed": true,
+    "raw_comparator_prepared_not_executed": true,
+    "archive_builder_prepared_not_executed": true,
+    "fresh_output_absent": true,
+    "fresh_review_marker_absent": true,
+    "requires_all_three_terminal_success_and_own_raw_review": true,
+    "requires_all_three_new_s3_cases_in_both_os_logs": true,
+    "rejected_previous_artifact_ids": [
+      12150891787,
+      12151260949,
+      12149243457,
+      12149814008
+    ],
+    "scope": "not yet acceptance; own exactsource/jobs/artifacts/rawreview required",
+    "book_raw_reviewed": true,
+    "book_review_marker": "/tmp/s3drive-pinned-related-fef-book-reviewed.json",
+    "book_conclusion": "success"
   }
 }
