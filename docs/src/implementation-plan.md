@@ -2006,3 +2006,15 @@ is running; both Rust jobs explicitly execute real native manifest reads/remount
 No native success is inferred from the portable gate. Primary runtime stays at
 its accepted controller source until the native phase is accepted. Chunk-write
 integration remains later work; continue in the native branch's isolated checkout.
+
+
+Snapshot-inode repair checkpoint (2026-10-18): the earlier `d98ea2f`
+[cohort](https://github.com/marshallr12/s3drive/actions/runs/39176574738) failed
+on Linux: an old130MiB file handle reported4 bytes after publishing a replacement.
+Windows native passed; this does not accept the failed cohort. A read-only
+manifest payload-specific inode/attribute repair is published as `c633d02` on
+codex/manifest-snapshot-inodes. Negative control failed before repair; fresh full
+local gate passed with257 unchanged inputs, including stale and racing open checks.
+Its [own real OS cohort](https://github.com/marshallr12/s3drive/actions/runs/39178517491)
+is running. Continue in that branch's isolated checkout and read its plan/handoff.
+Primary runtime remains unchanged until actual repaired native acceptance.

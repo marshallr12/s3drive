@@ -60,7 +60,34 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Native manifest reads published; own OS gates live (2026-10-18)
+## Snapshot-inode repair published; fresh native gates live (2026-10-18)
+
+Continue in /home/marshall/src/worktrees/s3drive-manifest-snapshot-inodes,
+branch codex/manifest-snapshot-inodes. Runtime c633d02d47ccf2da20cfadd50e0b8e11f6e06811,
+docs checkpoint6c88e95 pushed; clean/exactremote/all257 working+committed hashes
+verified. Own run39178517491 attempt1: Linux117826123544,
+Windows117826123721, book117826123692. Watch30345 ->
+/tmp/s3drive-snapshot-inodes-c633-watch.log; resume same handle/cohort.
+Read that checkout's HANDOFF/plan before implementation. Full gate68406 CLOSED
+EXIT0 (12publication,6reader/1nativeignored,62S3,365state/1ignored,fmt/clippy/build/book).
+Frozen map /tmp/s3drive-snapshot-inodes-frozen.json. Indexed13member local archive
+133937bytes SHAe243742e802539035a8efa36478ce339a6f1ce43646460592bade4feb887a2aa.
+Negative control failed on old code; repaired controls pass stale/open-race checks.
+Read-only manifest payload-specific inode+lookup attributes repair an actual
+Linux failure. Old source d98 cohort39176574738 terminal FAILURE: Linux native
+old130MiB fd stat returned4 after a4byte publication; Windows native passed2.39s,
+book passed. Old watch24055 CLOSED EXIT1. Logs retained; no success checker or
+artifact acceptance for failed cohort. Do not borrow its artifacts for repair.
+Repair keeps old-size assertion and adds same-name publication before rename.
+Need own completed all3/native controls/rawreview and finalized Windows artifacts
+(strict21+14/projectoracles/raw35). Prepared but NOT executed:
+/tmp/s3drive-check-snapshot-inodes-c633.py,
+/tmp/s3drive-snapshot-inodes-c633-reference-check.ps1,
+/tmp/s3drive-snapshot-inodes-c633-raw-compare.py. No own rawreview marker yet.
+Primary runtime unchanged; no main/visibility mutation. PUBLIC remains intentional.
+Chunk writes remain later work, goal ACTIVE. Supersedes the historical live notes below.
+
+## Historical native-read publication (failed cohort, 2026-10-18)
 
 Continue in /home/marshall/src/worktrees/s3drive-native-manifest-reads,
 codex/native-manifest-reads. Source d98ea2ff2ec9cc72b55458190d657bb53642d227,
