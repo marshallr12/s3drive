@@ -1,6 +1,6 @@
 {
   "research_date": "2026-10-18",
-  "status": "offline codec locally accepted; pushed; own hosted run in progress",
+  "status": "offline codec locally and own-source hosted accepted within recorded scope",
   "parent_commit": "e08f607b9f0e27537f022752a40123be52361079",
   "module": "s3drive-core::manifest",
   "format": {
@@ -126,8 +126,8 @@
     "run_id": 39137161051,
     "run_attempt": 1,
     "url": "https://github.com/marshallr12/s3drive/actions/runs/39137161051",
-    "status": "in_progress",
-    "conclusion": null,
+    "status": "completed",
+    "conclusion": "success",
     "watch_session": 42188,
     "watch_log": "/tmp/s3drive-managed-manifest-e48-watch.log",
     "jobs": [
@@ -148,8 +148,8 @@
       {
         "id": 117703908294,
         "name": "rust (windows-latest)",
-        "status": "in_progress",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "success",
         "html_url": "https://github.com/marshallr12/s3drive/actions/runs/39137161051/job/117703908294"
       }
     ],
@@ -171,13 +171,13 @@
       ],
       "native_or_provider_acceptance": false
     },
-    "all_raw_reviews_closed": false,
-    "success_checker_eligible": false,
-    "success_checker_executed": false,
+    "all_raw_reviews_closed": true,
+    "success_checker_eligible": true,
+    "success_checker_executed": true,
     "success_checker_script": "/tmp/s3drive-check-managed-manifest-e48.py",
-    "checker_compiled_only": true,
+    "checker_compiled_only": false,
     "checker_output_must_be_new": "/tmp/s3drive-managed-manifest-e48-artifacts",
-    "own_native_cohort_accepted": false,
+    "own_native_cohort_accepted": true,
     "native_large_files_accepted": false,
     "provider_acceptance": false,
     "linux_completed_raw_review": {
@@ -207,12 +207,92 @@
       "physical_mx_reboot_or_provider_acceptance": false,
       "new_object_identity_module_acceptance": false
     },
-    "windows_last_observation": {
-      "status": "in_progress",
-      "step": "Save Rust build cache",
-      "native_steps_completed_successfully": true,
-      "completed_raw_review": false,
-      "terminal_job_or_artifact_acceptance": false
-    }
+    "watch_exit_code": 0,
+    "success_checker_exit_code": 0,
+    "success_checker_session": 56389,
+    "unchanged_source_repeat_passed": false,
+    "historical_transport_cause_fixed": false,
+    "windows_completed_raw_review": {
+      "source": "e48f36fdaf05ea73fc69282e5b616630545a13a5",
+      "run_id": 39137161051,
+      "run_attempt": 1,
+      "job_id": 117703908294,
+      "status": "completed",
+      "conclusion": "success",
+      "reviewed": true,
+      "log": "/tmp/s3drive-managed-manifest-e48-windows.log",
+      "sha256": "a688a7523da4f35a9e1370b2d36a59b3c55398329ad4ddafa7b0848a0fd32a34",
+      "review_view": "/tmp/s3drive-managed-manifest-e48-windows-review.txt",
+      "routine_pass_compile_cache_lines_compacted": 629,
+      "platform": "WindowsServer2025 Datacenter10.0.26100,WinFsp2.1.25156.ddca7bd",
+      "scope": "27core/10manifest;50authority;287state/1ignored;51S3;32HTTPSflushes;lifecycle;paired startup and snapshots;7broad native;11Unicode names;cross-logon startup;schema24",
+      "notices": [
+        "LNK4199 on9 CLI targets with no WinFsp imports",
+        "three locked disposable fixture profiles: dummy credentials removed, profile deletion deferred to VM destruction",
+        "Node cache/artifact deprecations and forced24",
+        "two state tests over60seconds ultimately pass",
+        "cache save completed normally"
+      ],
+      "expected_faults": [
+        "TLS HandshakeRejected/partial-header HttpTimeout29bytes/Lifetime",
+        "HEAD403 refusal",
+        "dirty rival conflict",
+        "List Connect TimedOut after deliberate authority stop; new opens must fail, old snapshot remains readable"
+      ],
+      "own_artifact_ids": {
+        "replacement": 12139939008,
+        "disposition": 12140403755
+      },
+      "historical_no_write_cause_fixed": false,
+      "new52_object_identity_or_large_file_or_provider_acceptance": false
+    },
+    "artifact_validation": {
+      "log": "/tmp/s3drive-managed-manifest-e48-artifact-check.log",
+      "sha256": "800f422f1cf180fc21109965902c8ba22af4d52527e42b6ce35628551ba7009a",
+      "directory": "/tmp/s3drive-managed-manifest-e48-artifacts",
+      "downloads": [
+        {
+          "kind": "disposition",
+          "id": 12140403755,
+          "source": "e48f36fdaf05ea73fc69282e5b616630545a13a5",
+          "run_id": 39137161051,
+          "run_attempt": 1,
+          "windows_job": 117703908294,
+          "zip_sha256": "b492d94276b8cf5b584a2dab8cc8eb948d81fd9dc83c462ded623d01ad3e0378",
+          "json_sha256": "c66796468344d8e4c7c2ec4188c26844787c4a219708b8ab5a490698fd77bcf6",
+          "primary_artifact_reused": false
+        },
+        {
+          "kind": "replacement",
+          "id": 12139939008,
+          "source": "e48f36fdaf05ea73fc69282e5b616630545a13a5",
+          "run_id": 39137161051,
+          "run_attempt": 1,
+          "windows_job": 117703908294,
+          "zip_sha256": "f2e8f9d85368df1bdcdcdee06c14700da987e9537765dd4a9bf4f187c61c5ba6",
+          "json_sha256": "da2a99a4d48346e7eba2b7a294ca106ce0c9cb93102d3e09d9e6a4e0033cbea7",
+          "primary_artifact_reused": false
+        }
+      ],
+      "strict_types_fields_source": [
+        {
+          "kind": "replacement",
+          "records": 21,
+          "source": "e48f36fdaf05ea73fc69282e5b616630545a13a5",
+          "sha256": "da2a99a4d48346e7eba2b7a294ca106ce0c9cb93102d3e09d9e6a4e0033cbea7",
+          "strict_types_and_all_fields_match": true
+        },
+        {
+          "kind": "disposition",
+          "records": 14,
+          "source": "e48f36fdaf05ea73fc69282e5b616630545a13a5",
+          "sha256": "c66796468344d8e4c7c2ec4188c26844787c4a219708b8ab5a490698fd77bcf6",
+          "strict_types_and_all_fields_match": true
+        }
+      ],
+      "both_project_oracles_passed": true,
+      "earlier_artifacts_reused": false
+    },
+    "acceptance_scope": "One own-source e48 Linux/Windows Server2025/book cohort,10codec tests and fresh strict21/14 artifacts; not new52 object identities, native large files, Windows10/11, physical reboot, Wasabi or historical transport root cause"
   }
 }

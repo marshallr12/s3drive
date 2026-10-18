@@ -67,8 +67,8 @@ role-separated v2 object keys and120byte root descriptor, independent vectors,
 context/store/length/version/encoding refusal tests. Exact phase contract and
 done criteria in implementation-plan.md. No SQLite/schema/wire/network changes,
 no implicit object adoption, no mount limit increase or provider request.
-Old source e48 CI remains independently live; review it using the same run and
-watch handle below. Its pass cannot certify this new phase.
+Old source e48 CI and its own strict21/14 artifacts are now closed PASS, below.
+That earlier-source acceptance cannot certify this new phase.
 Focused7 PASS/27filtered, final source log
 /tmp/s3drive-manifest-objects-focused-final.log. Independent vector regeneration
 matches both files. Frozen19 source/fixture hashes
@@ -84,7 +84,8 @@ tied to new source, not e48. Next phase needs durable SQLite frozen edit IDs and
 object dependencies before publication; never cast unsigned ordinals to signed
 SQL integers. New code supplies no adoption, write or root-publication permit.
 Own CI39138395876 attempt1, source52cd213: book117707557507 SUCCESS with
-own completed review; Linux117707557713 and Windows117707557677 LIVE. Watch65541
+own completed review; Linux117707557713 SUCCESS, completed raw review still
+pending; Windows117707557677 LIVE. Watch65541
 redirects /tmp/s3drive-manifest-objects-52-watch.log; poll same run/handle, never
 restart on observation timeout. Prepared checker
 /tmp/s3drive-check-manifest-objects-52.py compiled only, NOT executed. Require all3
@@ -126,31 +127,29 @@ Final D041/status documentation links, build and55chapter tests passed.
 Published e48f36fdaf05ea73fc69282e5b616630545a13a5 on codex/managed-manifest,
 ordinary push, clean/exact remote/all14 frozen hashes/PUBLIC before-after;
 proof /tmp/s3drive-managed-manifest-publication.json. Main remains1a93b5f.
-Own CI39137161051 attempt1 at e48: book117703908126 SUCCESS with completed raw
-review; Linux117703908277 SUCCESS and its completed raw review closed;
-Windows117703908294 LIVE at last observation. Linux27core/10manifest,292state,
-9FUSE,32HTTPS flushes,11Unicode names and both no-systemd coordinator protocols
-passed. Linux review /tmp/s3drive-managed-manifest-e48-linux-reviewed.json;
-SHA87d3c513dd953d8f96a83d3c880e370c9efb9cd6c0d4346881028166ae0f9630.
-Expected TLS/HEAD403/stopped-authority refusal and post-uninstall missing config
-were reviewed; cache saved normally. One long state test ultimately passed.
-At the latest explicit API check, e48 Windows completed its paired and broad
-native acceptance steps successfully and remains LIVE saving the build cache.
-Do not claim terminal cohort/artifact acceptance before the job is completed
-and its own full raw log is reviewed. Existing watch42188 remains live; no
-rerun requested. Own artifact checker is still ineligible/unexecuted.
-Watch42188 redirects /tmp/s3drive-managed-manifest-e48-watch.log; poll this same
-handle/run, do not restart on timeout. Do not cite257's separate repeat as proof.
-Prepared /tmp/s3drive-check-managed-manifest-e48.py (Python compiled only), own
-PowerShell oracle script and new output /tmp/s3drive-managed-manifest-e48-artifacts.
-Checker MUST wait for all3 terminal-success jobs and own completed raw reviews
-with source/run/attempt/job IDs and log hashes in
-/tmp/s3drive-managed-manifest-e48-raw-reviewed.json. Extract fresh artifact IDs
-from this Windows completed upload log, verify API digests/source/timestamps,
-strict21/14 typed fields and both project oracles. All previous artifact IDs
-are explicitly refused. On any failure preserve it; no success checker or
-success claim. After own closure, update dated evidence and current book status.
-Next implementation is an independently testable offline chunk identity/builder/
+Own CI39137161051 attempt1 at e48 is terminal SUCCESS: book117703908126,
+Linux117703908277, Windows117703908294. Watch42188 closed EXIT0. All completed
+raw reviews closed under /tmp/s3drive-managed-manifest-e48-raw-reviewed.json.
+Own checker /tmp/s3drive-check-managed-manifest-e48.py closed EXIT0 session56389,
+/tmp/s3drive-managed-manifest-e48-artifact-check.log. Own replacement12139939008
+and disposition12140403755 were selected from the Windows finalized uploads;
+API source/run/digests, strict21/14 all-fields/types and both project PowerShell
+oracles passed. Directory /tmp/s3drive-managed-manifest-e48-artifacts is final;
+do not rerun the one-use checker into it or borrow its artifacts for52.
+Linux27core/10manifest,292state,9FUSE,32HTTPS flushes,11Unicode names and both
+no-systemd coordinator protocols passed. Windows27core/10manifest,287state,
+32HTTPS flushes,lifecycle,paired recovery/snapshots,7broad native,Unicode and
+cross-logon startup passed on Server2025/WinFsp2.1.25156. Own Windows raw SHA
+a688a7523da4f35a9e1370b2d36a59b3c55398329ad4ddafa7b0848a0fd32a34.
+Expected TLS faults, HEAD403, rival conflict and stopped-authority List timeout
+were reviewed (fixture intentionally refuses new opens while retaining pinned
+snapshot reads). LNK4199 on9 CLI targets, Node action deprecations/forced24,
+three locked disposable profiles (dummy credentials removed) and long state
+tests were reviewed. Cache saves completed normally. No Win10/11, physical
+MX reboot, Wasabi, new52 module or native large-file acceptance follows. One
+cohort, no e48 exact-source repeat or historical transport cause established.
+No main promotion. All earlier failures remain recorded.
+The object identity phase is implemented above. Next implement an offline builder/
 dependency-journal phase; read the large-file chapter's sequence and inspect
 resolved dependency APIs first. Legacy logical Input currently needs a whole SHA
 before begin: do not simply lift its8MiB limit or reuse a root as that SHA.

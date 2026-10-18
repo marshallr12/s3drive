@@ -112,8 +112,8 @@
       {
         "id": 117707557713,
         "name": "rust (ubuntu-latest)",
-        "status": "in_progress",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "success",
         "html_url": "https://github.com/marshallr12/s3drive/actions/runs/39138395876/job/117707557713"
       }
     ],
@@ -143,6 +143,7 @@
     "success_checker_script": "/tmp/s3drive-check-manifest-objects-52.py",
     "new_output": "/tmp/s3drive-manifest-objects-52-artifacts",
     "own_native_cohort_accepted": false,
-    "large_file_or_provider_acceptance": false
+    "large_file_or_provider_acceptance": false,
+    "linux_completed_raw_review_pending": true
   }
 }
