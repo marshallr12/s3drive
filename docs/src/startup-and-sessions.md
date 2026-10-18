@@ -91,9 +91,14 @@ can remain a convenience inside an individual session.
 registration. Native cross-logon acceptance passed on the hosted Windows VM.
 The scheduled
 process uses the mounting account at least privilege in a separate batch logon,
-has no execution time limit, ignores duplicate starts and retries an unexpected
-failure at most three times. Its private supervisor launches the Rust mount and
-closes stdin for graceful removal. It does not force-kill a delayed unmount.
+has no execution time limit and ignores duplicate starts. Its private supervisor
+launches the Rust child, holds one exclusive owner through at most four attempts
+with ten-second delays, and closes stdin for graceful removal. Stop interrupts
+that delay; normal exit does not restart. It does not force-kill a delayed
+unmount. This bounded retry extension is under native acceptance in the
+[coordinator startup phase](authority-startup.md); original cross-logon mount
+acceptance does not prove it. Scheduler restart settings remain configured but
+are not the contract for a child's nonzero exit.
 
 WinFsp supports directory mounts; their target must **not already exist**.
 Use an absolute local NTFS path whose parent exists, without junction/symlink

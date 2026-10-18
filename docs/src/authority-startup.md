@@ -213,7 +213,7 @@ cargo test -p s3drive-cli --test authority_restart supervised_windows_coordinato
 The candidate checks private TLS inputs and namespace ACLs, independent
 AuthenticationIds, duplicate starts, wrong-volume registration refusal and
 Task Scheduler settings. It kills only an opened, image/parent/pin-verified
-fixture child and waits for the scheduler's configured retry without issuing
+fixture child and waits for its scheduled supervisor's child retry without issuing
 Start. Authenticated Rust clients then recover the original volume and replay
 the exact saved operation receipt before controlled removal. Passwords stay
 in memory/pipes; neither system trust stores nor real user registrations change.
@@ -229,7 +229,7 @@ Extend `scripts/test-windows-session.ps1` and its caller in
 non-admin account, credential pipe, explicit batch-logon right and controlled
 cleanup. Cover a separate Authority registration with private ephemeral TLS
 files, original volume/port, independent same-account metadata clients, duplicate
-starts, actual Task Scheduler child-failure retry and retained exact receipts.
+starts, actual child-failure retry under its scheduled supervisor and retained exact receipts.
 Do not install a certificate into the workstation trust store or disable TLS
 verification for a self-signed fixture; use the Rust client's explicit private CA.
 
@@ -305,7 +305,7 @@ owner before deleting the disposable account. A metadata-only receipt check or
 an empty mounted namespace cannot satisfy the paired-drive criterion.
 
 A native FileStream must keep dirty bytes through an exact-owned-child
-coordinator crash and real scheduler retry. Inject an owned fixture's lost PUT
+coordinator crash and real supervised child retry. Inject an owned fixture's lost PUT
 reply, inspect the original operation/publication identities, restore observation
 and require exact recovery without another PUT. A rival publisher must produce
 an explicit retained conflict, with dirty bytes surviving mount removal and
@@ -339,7 +339,7 @@ must be numeric loopback HTTP; no hosted provider is contacted.
 Independent secondary logons check Unicode/binary/empty/second-store data and
 duplicate startup ownership. A native FileStream deliberately receives a lost
 PUT response, freezes physical and logical request identities, keeps dirty bytes
-through a verified coordinator-child kill, and waits for actual scheduler retry.
+through a verified coordinator-child kill, and waits for the same scheduled supervisor to retry its child.
 Recovery must settle those same identities without another PUT. A rival payload
 must then produce a failed flush and keep local edits. Removing the drive must
 leave authenticated coordinator access working; reopening the private journal
@@ -384,3 +384,36 @@ owned native fixture captures relevant namespace requests/outcomes and node
 metadata on failure. No retries, fresh IDs or weaker assertions were added. The
 new authority tests run earlier to obtain independent evidence while all native
 regressions remain mandatory before publication.
+
+
+## Measured Windows child-retry correction
+
+On 2026-10-17, the first standalone native coordinator runtime at
+[Windows job117548875636](https://github.com/marshallr12/s3drive/actions/runs/39084754318/job/117548875636)
+passed install, private TLS access, independent AuthenticationIds and duplicate
+starts. After the exact fixture child was killed, its supervisor logged exit
+`-1`; Task Scheduler events201/102 recorded the action/task as completed with
+return code4294967295. No replacement child appeared during the client's
+100-second recovery deadline. The test failed. A later profile sharing-violation
+cleanup error also appeared; the raw original recovery failure remains evidence.
+This is an observation on that hosted Server2025 VM, not a claim about every
+Scheduler configuration or Windows version.
+
+Microsoft documents the restart count/interval settings, including a one-minute
+minimum Scheduler interval. Those settings alone did not prove recovery for
+this measured child-death case.
+[RestartOnFailure schema](https://learn.microsoft.com/en-us/windows/win32/taskschd/taskschedulerschema-restartonfailure-settingstype-element),
+[RestartInterval](https://learn.microsoft.com/en-us/windows/win32/taskschd/tasksettings-restartinterval),
+checked2026-10-17. The implementation now keeps one scheduled supervisor and
+exclusive lock through up to four child attempts, ten seconds apart. It invokes
+the same pinned command and private inputs on each attempt; it never initializes
+missing metadata or creates a fresh operation identity. Stop interrupts backoff
+and closes only the owned child's stdin. Normal exit and explicit stop do not
+retry. Scheduler restart settings remain secondary, unverified launcher policy.
+
+The native recovery assertion now requires a fresh child under the **same**
+supervisor, plus original volume and exact receipt recovery, without calling
+Start. The portable policy test extracts the actual loop and uses real child
+exit codes to check success, failure recovery, bounded exhaustion, exclusive
+ownership and Stop during backoff. It does not establish native Task Scheduler,
+ACL, WinFsp or reboot behavior. Native corrected acceptance is still required.

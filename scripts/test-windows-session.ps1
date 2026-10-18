@@ -527,5 +527,5 @@ exit 0
     if ($cleanupFailures.Count) { throw ($cleanupFailures -join '; ') }
 }
 if ($ManagedFixture) { Write-Output 'PASS: paired Windows TLS coordinator and managed drive, separate logons, exact unknown recovery, Unicode binary empty data, retained conflict and independent removal' }
-if ($AuthorityFixture) { Write-Output 'PASS: non-admin TLS coordinator, independent logons, duplicate starts, scheduled crash recovery, exact receipts and controlled removal' }
+if ($AuthorityFixture) { Write-Output 'PASS: non-admin TLS coordinator, independent logons, duplicate starts, supervised crash recovery, exact receipts and controlled removal' }
 if (-not $AuthorityOnly) { Write-Output 'PASS: non-admin registration, independent same-account logons, exact S3 and Unicode reads, duplicate starts, retained mount and removal' }

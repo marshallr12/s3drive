@@ -157,12 +157,7 @@ function Stop-Mount($Task) {
 function Log-Line([string]$Text) {
     [IO.File]::AppendAllText($logFile, ([DateTime]::UtcNow.ToString('o') + ' ' + $Text + [Environment]::NewLine))
 }
-function Run-Mount($Value) {
-    try { $ownership = [IO.File]::Open((Join-Path $root 'supervisor.lock'), 'OpenOrCreate', 'ReadWrite', 'None') }
-    catch [IO.IOException] {
-        if (($_.Exception.GetBaseException().HResult -band 65535) -eq 32) { return 0 }
-        throw
-    }
+function Run-Child($Value) {
     $child = $null
     try {
         if ([IO.File]::Exists($stopFile)) { return 0 }
@@ -222,6 +217,30 @@ function Run-Mount($Value) {
             }
             $child.Dispose()
         }
+    }
+}
+function Run-Mount($Value) {
+    try { $ownership = [IO.File]::Open((Join-Path $root 'supervisor.lock'), 'OpenOrCreate', 'ReadWrite', 'None') }
+    catch [IO.IOException] {
+        if (($_.Exception.GetBaseException().HResult -band 65535) -eq 32) { return 0 }
+        throw
+    }
+    try {
+        # Keep one supervisor/lock through child recovery. Scheduler failure
+        # settings are not evidence that a nonzero child action will restart.
+        for ($attempt=0; $attempt -lt 4; $attempt++) {
+            if ([IO.File]::Exists($stopFile)) { return 0 }
+            try { $code=[int](Run-Child $Value) }
+            catch { Log-Line ("$Component child start failed: "+$_.Exception.Message); $code=1 }
+            if ([IO.File]::Exists($stopFile) -or $code -eq 0) { return 0 }
+            if ($attempt -eq 3) { Log-Line "$Component retry budget exhausted; original state retained"; return $code }
+            Log-Line ("$Component retry "+($attempt+2)+"/4 in 10 seconds; original state retained")
+            for ($pause=0; $pause -lt 50; $pause++) {
+                if ([IO.File]::Exists($stopFile)) { return 0 }
+                Start-Sleep -Milliseconds 200
+            }
+        }
+    } finally {
         Remove-Item -LiteralPath $stopFile -Force -ErrorAction SilentlyContinue
         $ownership.Dispose()
     }

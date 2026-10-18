@@ -748,3 +748,11 @@ native run found the Mount record missing. Local HTTP/TLS supervisor regression
 passed. Two existing Windows rename gates failed at distinct operations and
 remain unresolved; typed callback and namespace diagnostics were added without
 retrying or weakening the operations. All native/reference gates remain required.
+
+The first Windows Authority runtime passed TLS/separate-logon/duplicate checks
+but did not restart its killed child under Scheduler-only retry settings. Native
+artifact events and the100-second failed recovery are recorded in the book.
+The supervisor now retains one owner through four child attempts with10-second
+interruptible delays; the native test requires a fresh child under that same
+supervisor with unchanged volume/receipts. Scheduler properties are no substitute
+for measured recovery. Corrected native acceptance remains required.

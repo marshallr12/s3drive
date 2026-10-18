@@ -99,7 +99,34 @@ after gate start and its AST was separately checked. No final native acceptance.
 56a2abe Windows117548875636 has now reached its Authority startup step after
 its broad native tests; poll that exact job for the first runtime evidence.
 
-Next: commit/push this private development
+Checkpoint e48cb099d087ab1d15d629905200e5b44e11fcf3 was privately pushed;
+run39086319069 is live (Linux117553539182, Windows117553539419,
+book117553539561). It predates the retry correction below and may fail that
+known assertion; do not restart a live job simply because observation times out.
+
+New measured Windows Authority failure: 56a2abe run39084754318 is terminal FAILED.
+Windows117548875636 passed TLS/install/independent logons/duplicates, but after
+child kill logged exit-1 and Scheduler events201/102 completed with code4294967295.
+No replacement child during100s; profile cleanup sharing violation also occurred
+because acceptance was not complete. Primary failure is visible in
+/tmp/s3drive-windows-authority-runtime1.log, not merely cleanup. Its broad native
+Windows cases passed in this run; prior two rename failures remain unresolved.
+
+New uncommitted correction: windows-session.ps1 factors Run-Child and holds one
+exclusive supervisor lock through four child attempts,10-second interruptible
+backoff; explicit Stop/normal exit terminates. Only own Process handles receive
+stdin close, no PID hint signalling or hard-kill added. Task restart properties
+remain secondary/unverified. AuthorityRecover now requires changed child under
+same supervisor +original pin/receipts without Start, with bounded runtime-hint
+polling. Portable test-windows-supervisor-policy.ps1 extracts actual loop and
+uses real child exit codes/owner lock, budget and Stop during backoff. Native
+acceptance still required. Docs/source citations reflect measured failure.
+All four portable policy cases passed at /tmp/s3drive-windows-supervisor-policy1.log.
+The policy script now runs in Windows CI before native startup. Final AST for
+all changed PS scripts passed; no Rust changes after the full local gate.
+
+Next: finish policy/AST/docs checks and commit/push this retry correction, then
+inspect current native CI (do not promote e48). Continue private development
 checkpoint, inspect new Windows Authority/pair gates and corrected Linux FUSE
 case. Fix measured failures; require terminal exact-tip all-three jobs, raw
 native/startup logs and strict source/platform21/14 artifacts BEFORE guarded FF

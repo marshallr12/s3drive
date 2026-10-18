@@ -86,7 +86,15 @@ function Read-StreamBytes([IO.FileStream]$Stream) {
     return ,$bytes
 }
 function Current-Runtime {
-    return (Get-Content -LiteralPath (Join-Path $state 'runtime.json') -Raw -Encoding UTF8 | ConvertFrom-Json)
+    $deadline=[DateTime]::UtcNow.AddSeconds(10)
+    while ($true) {
+        try {
+            $runtime=Get-Content -LiteralPath (Join-Path $state 'runtime.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($runtime -and $runtime.child_pid -gt 0 -and $runtime.supervisor_pid -gt 0) { return $runtime }
+        } catch { if ([DateTime]::UtcNow -gt $deadline) { throw } }
+        if ([DateTime]::UtcNow -gt $deadline) { throw 'Coordinator runtime hints did not become readable' }
+        Start-Sleep -Milliseconds 100
+    }
 }
 function Assert-Settings {
     $scheduler=New-Object -ComObject Schedule.Service
@@ -188,13 +196,18 @@ try {
                 $child.Kill()
                 $child.WaitForExit()
             } finally { $child.Dispose() }
-            # No Start here: recovery must come from Task Scheduler's retry.
+            # No Start here: the same scheduled supervisor must retry its child.
         }
         'AuthorityRecover' {
             Check-Worker Recover
             $before=Get-Content -LiteralPath (Join-Path $root 'authority-before-crash.json') -Raw | ConvertFrom-Json
-            $after=Current-Runtime
-            if ($before.child_pid -eq $after.child_pid -or $before.supervisor_pid -eq $after.supervisor_pid) { throw 'Coordinator did not restart with a fresh supervised process' }
+            $deadline=[DateTime]::UtcNow.AddSeconds(10)
+            while ($true) {
+                $after=Current-Runtime
+                if ($before.child_pid -ne $after.child_pid -and $before.supervisor_pid -eq $after.supervisor_pid) { break }
+                if ([DateTime]::UtcNow -gt $deadline) { throw 'Coordinator child did not recover under the same supervisor' }
+                Start-Sleep -Milliseconds 100
+            }
             @{child_pid=$after.child_pid;supervisor_pid=$after.supervisor_pid;owner_sid=$after.owner_sid;recovered=$true} | ConvertTo-Json -Compress
         }
         'AuthorityRemove' {
