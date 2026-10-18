@@ -60,47 +60,86 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Active work: diagnose TLS budget fixture failure (2026-10-18)
+## Active work: TLS budget fixture repair (2026-10-18)
 
-Previous goal turn PROGRESS: cf9d972 runtime and b70717a docs status pushed,
-full localgate50472 PASS. Current branch codex/tls-budget-fixture fromb70717a,
-initial tree clean. Revalidated ownCI39156593000: book117760980164 SUCCESS;
-Linux117760980367 terminalFAIL in existing authority_restart.rs719
-pinned_cli_http_tls_restart_recovers_original_volume_and_unread_operation.
-8pass/1fail/3ignored; exact17diagnostics but first16 were not all HandshakeRejected.
-The old assertion omitted actual categories, so the failed event class is UNKNOWN.
-New chunk tests/native Linux acceptance were not reached. Windows117760980265
-stillLIVE in same run; watch5878 remains the same handle. No rerun/successchecker.
-Linux raw /tmp/s3drive-chunk-publisher-cf9-linux.log. Book raw reviewed separately
-/tmp/s3drive-chunk-publisher-cf9-book-reviewed.json; no consolidated review marker.
+Previous goal turn was PROGRESS: publisher runtime cf9d972 and status b70717a
+pushed with full local gate. Its own CI39156593000 attempt1 failed Linux job
+117760980367 at authority_restart.rs719 before reaching new chunk tests:
+8 pass/1 fail/3 ignored; exactly17 diagnostics, first16 not all the fixed
+HandshakeRejected line. Actual categories were not printed and remain UNKNOWN.
+Book117760980164 and Windows117760980265 SUCCESS; overall cohort FAILURE.
+Watch5878 CLOSED EXIT1. All3raw logs reviewed;10member failure-only archive
+chunk-root-publisher-cf9-failed-20261018.tar.gz,90889bytes,SHA
+1ce2df69defa2f42d2aef2d896088e150d8259d9cb629ee8d663d4756a9f62fa;
+all indexed members verified, original cf9 test/frozen249map bound throughgitshow.
+Windows8chunk controls PASS66.40s;344state/1ignored,59S3,34core,50authority,
+18publication; existing7WinFsp/32HTTPS/paired/disposition/snapshot controls PASS.
+Warnings retained: unusedWinFspdelayimport+10duplicates,Node/cachedeprecations,
+3lockeddisposableprofiles(dummycredsremoved),expectedHEAD403/contentconflict/
+stoppedauthorityListtimeout. No cf9artifact payload download/independentstrict
+check/successchecker. Fresh cf9successoutput/marker remain absent. Never rerun
+or certify that failed cohort using older artifacts. Raw API metadata retains
+cf9finalizedIDs12147331157/12147209844 only, without payload acceptance.
 
-Hypothesis: earlier valid TLS exchanges in this same listener can consume shared
-budget with HttpShutdown, a category already explicitly checked elsewhere. First
-add privacy-safe failure categories and reproduce; then isolate malformed flood
-on a fresh listener if evidence supports it. Keep exact16events+one suppression,
-post-overflow authenticated service and private-input refusal. Never silence
-production diagnostics or relax connection classification/retry/timeout behavior.
-Reuse existing reviewer gpt6-astra/xhigh, local rubric7/spec1 blast1 depth2 verify1
-cost2/security-verification override; no new agents. No provider calls. Reproduced no historical failure in32instrumentedlocalruns;
-actualcapturedcategory remainsUNKNOWN. Implemented freshpinnedlistener +bounded
-stderr collector +first17 exact stderr completionbarriers;24malformedtotal,
-Infoafterobservedsuppressionchecksvolume/seq2;strict16+1andbothlogsprivacyretain.
-Review found CRLF rawcapfalsepass; negativecontrol14171 EXIT101 reproduced it;
-fixed via underlyingTake.limit()==0refusal. Latestfocused97165 CLOSED0:10pass/3ignored,10.81s. Finalreview no blockers,
-249/249hashes checked; onlyauthority_restartchanged, productionunchanged;
-SHA60ef013f; no reviewerexecution. Frozen249
-files /tmp/s3drive-tls-budget-frozen.json; solechangedtestauthority_restart.rs,
-production/wire/schema/native unchanged. Fullgate68896 CLOSED EXIT0, log
-/tmp/s3drive-tls-budget-gate.log; all249hashes unchanged;349state/1ignored,59S3,34core,50authority,18existing
-publication/8chunk/10TLScontrols,65docfiles/61chapters;state195.62s.
-Durable11member archive tls-budget-fixture-local-20261018.tar.gz,47322bytes,
-SHA98608b40264e05a6b0cc37eee8d10c37a24b2d8391cfed9c516730e67ed8c0b0;
-allindexedmembersverified. Tested candidate ready for normal branch publication;
-record exact source/newCI after push.
-New datedevidence +owned-authority-client
-section recordunknowncause/structuralfix. A failed
-baseline is current work; defer source-settlement implementation until corrected
-source passes its full gate and own hosted cohort. Goal ACTIVE, PUBLIC unchanged.
+Branch codex/tls-budget-fixture fromb70717a. Published tested source
+32d7cc7700797c0471e51c69904873d23b9c3889. Sole test-file delta is
+crates/s3drive-cli/tests/authority_restart.rs; all production, schema27, wire,
+policy, native callbacks and chunk-library code remain byte-identical tocf9.
+The old fixture shared a listener budget with four completed TLS RPCs and used
+socket EOF as a log-completion barrier. Source proves both can confound strict
+budget accounting; neither is established as the captured failure's cause.
+32 instrumented local reproductions passed without a failure; not causal proof.
+
+Repair finishes restart/replay checks, then starts a fresh listener on the same
+pinned database/volume with stdout-only readiness. First17 malformed peers each
+await the exact expected stderr line before the next peer;24 total remain.
+Only after observed suppression does authenticated Info check volume and seq2.
+Exactly16 rejections+one suppression and both logs' private-input checks remain.
+Collector uses bounded channel32 and64KiB raw/retained capture; exhausted raw
+allowance fails closed even when CRLF stripping shortens retained text. A
+negative control failed before that guard (14171 EXIT101) and passes now.
+Assertion output uses only fixed categories/static errors, never arbitrary lines.
+
+model-select: existing legacy reviewer -> gpt-6-astra/xhigh (score7: spec1,
+blast1,depth2,verify1,cost2; override security verification; assessment local).
+No new agents spawned. Final static review found no blockers and matched all249
+frozen hashes; onlyauthority_restart differs from the prior publisher map.
+Test SHA60ef013f0aa501849fdf89f50302015b774178252ad4e287557af720741d7549.
+Focused97165 CLOSED0:10pass/3ignored,10.81s. Fullgate68896 CLOSED EXIT0:
+349state/1ignored,59S3,34core,50authority,18existing publication,8chunk and10TLS
+controls,65docfiles/61chapters;state195.62s. All249 frozen hashes unchanged at
+/tmp/s3drive-tls-budget-frozen.json, SHA169ddf6e8fc9dc41516dc849b36e3016a086d890c79efb0f0d9af9330499cd0c.
+Log /tmp/s3drive-tls-budget-gate.log. Durable11member local archive
+ tls-budget-fixture-local-20261018.tar.gz,47322bytes,SHA
+98608b40264e05a6b0cc37eee8d10c37a24b2d8391cfed9c516730e67ed8c0b0;
+all indexed members verified. No reviewer execution/provider calls.
+
+Publication clean/exact remote/all249hashes/PUBLIC before-after, main1a93b5f
+unchanged; proof /tmp/s3drive-tls-budget-publication.json. Own corrected CI
+39158147595 attempt1 LIVE: Windows117765563031,book117765563156,
+Linux117765562837. Book117765563156 SUCCESS/raw reviewed at
+/tmp/s3drive-tls-budget-32d-book-reviewed.json; Ubuntu24.04.5,65docfiles/61chapters,
+pinnedRust override/defaultbranch/Node20forced24 notices retained. CorrectedLinux
+has reached nativeFUSE;WindowsstillLIVE. Watch39440 LIVE
+/tmp/s3drive-tls-budget-32d-watch.log.
+Resume this SAME run/handle; observation timeout is not a reason to rerun.
+Checker /tmp/s3drive-check-tls-budget-32d.py and raw compare
+/tmp/s3drive-tls-budget-32d-raw-compare.py prepared/compiled only, NOTexecuted.
+Fresh output /tmp/s3drive-tls-budget-32d-artifacts absent. Require all3 terminal
+success and own raw review marker /tmp/s3drive-tls-budget-32d-raw-reviewed.json
+before checker. Bind exact source/run/attempt/job IDs, own finalized artifact
+IDs/API digest/times, strict typed21/14+project oracles, then all35 raw fields/types.
+Reject prior IDs includingcf9 12147331157/12147209844. Review every own completed
+raw log before making marker; no successchecker on failure and no borrowed cohort.
+
+New chapter section owned-authority-client.md and dated tls-budget-fixture JSON
+record unknown cause, source audit, red/green guard and exact scope. This handoff
+is a docs-only status child of32d7cc7; final doc checks/normal push preserve249
+hashes/PUBLIC. First revalidate git status and same live corrected32d CI; cf9failurearchive is
+closed, so do not repeat its success checks. Source-settlement implementation
+follows the corrected baseline; no historical Windows NoWrite fix, logical flush,
+mounted chunks, real-provider or physical startup/reboot acceptance is claimed.
+Full goal ACTIVE and unbounded. Repository must remain PUBLIC.
 
 ## Preceding policy-bound chunk-root publisher (2026-10-18)
 
@@ -143,8 +182,8 @@ review matched249/249; corrected sparsefixture description to128MiB+64bytes.
 Published tested runtime cf9d972173b0b0709c08f3c65ec102fa44fa5a6e, clean/exact
 remote tip/all249hashes/PUBLICbefore-after; no visibilitymutations/mainunchanged.
 Proof /tmp/s3drive-chunk-publisher-publication.json. OwnCI39156593000 attempt1
-Linux117760980367 FAILED before chunk tests;book117760980164 SUCCESS;
-Windows117760980265 stillLIVE. This cohort is NOTaccepted. Watch5878 LIVE,
+Linux117760980367 FAILED before chunk tests;book117760980164 and
+Windows117760980265 SUCCESS. This cohort is NOTaccepted. Watch5878 CLOSED1,
 /tmp/s3drive-chunk-publisher-cf9-watch.log. Resume the same handle/run; do not
 rerun on observation timeout. Checker /tmp/s3drive-check-chunk-publisher-cf9.py
 and rawcompare /tmp/s3drive-chunk-publisher-cf9-raw-compare.py prepared/compiled
@@ -156,9 +195,10 @@ attempt/jobs/finalizedartifactIDs/APIdigest/time; stricttyped21/14+projectoracle
 then all35rawfields/types. RejectpriorIDs including parent12146631312/12146506974.
 Download each own completed job's rawlog, review controls/warnings/expectedfaults
 before making marker. On failure do not run successchecker or borrow oldcohort.
-Archive rawlogs/checkers/artifacts/index aftercomplete. This handoff is a docs-only
-status child ofcf9d972; final docchecks and normal push preserve all249runtime
-hashes andPUBLIC. Main remains1a93b5f; no native activation follows. Logical
+Failure-only archive is now closed/indexed above; cf9checker remains unexecuted.
+Its all-success prerequisites cannot be met by this failedattempt. Corrected32d
+has its own independent cohort and source binding. Main remains1a93b5f; no native
+chunk activation follows. Logical
 settlement, range reader, native chunk activation, provider/physical startup stay
 unfinished. Goal ACTIVE; repository must stay PUBLIC.
 

@@ -95,10 +95,18 @@ read-only before/after; main is unchanged. Its own
 [Windows/Linux/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39156593000)
 failed its Linux workspace job before reaching the new chunk tests. An existing
 TLS budget assertion saw exactly17 diagnostics but did not print the mismatched
-categories, so the captured cause remains unknown. The book job passed; Windows
-is still running. Hosted publisher acceptance is not established. The separate
-`codex/tls-budget-fixture` repair isolates the flood fixture and adds stderr
-completion barriers; previous cohorts cannot establish acceptance of these files.
+categories, so the captured cause remains unknown. Windows and the book passed. Windows ran all8 chunk controls in66.40s and its
+existing native checks, but the overall cohort failed. All three raw logs and
+metadata are retained in the
+[10-member failed-cohort archive](evidence/chunk-root-publisher-cf9-failed-20261018.tar.gz).
+No independent artifact payload checks or success checker ran on that failed
+cohort. Hosted publisher acceptance is not established by it.
+
+The separate fixture repair leaves every production file unchanged, isolates the
+flood listener and observes stderr completion. Corrected source`32d7cc7` has its
+[own running cohort](https://github.com/marshallr12/s3drive/actions/runs/39158147595);
+see [repair evidence](evidence/tls-budget-fixture-20261018.json). Previous cohorts
+cannot substitute for its completed source-bound checks.
 
 ## Remaining work
 

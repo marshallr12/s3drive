@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "full local gate passed; own hosted Linux failed before new chunk controls; Windows pending",
+  "status": "full local gate passed; original hosted cohort failed Linux; corrected-source cohort in progress",
   "branch": "codex/chunk-root-publisher",
   "parent_commit": "00a882941088e5814697b2c1cc4f5d3b8df6fabf",
   "schema_version": 27,
@@ -41,7 +41,7 @@
     "run_attempt": 1,
     "url": "https://github.com/marshallr12/s3drive/actions/runs/39156593000",
     "source": "cf9d972173b0b0709c08f3c65ec102fa44fa5a6e",
-    "status": "in_progress",
+    "status": "completed",
     "jobs": {
       "book": 117760980164,
       "rust (windows-latest)": 117760980265,
@@ -69,6 +69,34 @@
       "new_chunk_tests_reached": false,
       "repair_branch": "codex/tls-budget-fixture",
       "success_checker_executed": false
+    },
+    "conclusion": "failure",
+    "job_results": {
+      "linux": "failure",
+      "windows": "success",
+      "book": "success"
+    },
+    "watch_exit_code": 1,
+    "raw_logs_reviewed": true,
+    "failure_archive": {
+      "path": "evidence/chunk-root-publisher-cf9-failed-20261018.tar.gz",
+      "sha256": "1ce2df69defa2f42d2aef2d896088e150d8259d9cb629ee8d663d4756a9f62fa",
+      "bytes": 90889,
+      "members": 10,
+      "all_indexed_members_verified": true,
+      "acceptance": false,
+      "cohort_result": "failure",
+      "success_checker_executed": false
+    },
+    "artifact_payloads_downloaded": false,
+    "independent_strict_artifact_checks_run": false,
+    "success_checker_forbidden_due_failed_job": true,
+    "windows_chunk_controls": {
+      "passed": 8,
+      "elapsed_seconds": 66.4,
+      "state_passed": 344,
+      "state_ignored": 1,
+      "scope": "Windows job evidence only; overall cohort failed; not mounted chunks"
     }
   },
   "source_sha256": {
@@ -373,5 +401,13 @@
     "visibility_after": "PUBLIC",
     "visibility_mutations": 0,
     "main_unchanged": "1a93b5f7248892fec96dc8da4438ee7967692e77"
+  },
+  "corrected_source_cohort": {
+    "source": "32d7cc7700797c0471e51c69904873d23b9c3889",
+    "run_id": 39158147595,
+    "status": "in_progress",
+    "library_unchanged": true,
+    "sole_test_delta": "crates/s3drive-cli/tests/authority_restart.rs",
+    "evidence": "tls-budget-fixture-20261018.json"
   }
 }

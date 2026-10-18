@@ -62,7 +62,32 @@
     }
   },
   "full_gate_passed": true,
-  "hosted_acceptance": "pending corrected-source cohort",
+  "hosted_acceptance": {
+    "source": "32d7cc7700797c0471e51c69904873d23b9c3889",
+    "run_id": 39158147595,
+    "run_attempt": 1,
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39158147595",
+    "status": "in_progress",
+    "jobs": {
+      "rust (ubuntu-latest)": 117765562837,
+      "rust (windows-latest)": 117765563031,
+      "book": 117765563156
+    },
+    "watch_session": 39440,
+    "watch_log": "/tmp/s3drive-tls-budget-32d-watch.log",
+    "checker": "/tmp/s3drive-check-tls-budget-32d.py",
+    "checker_prepared_not_executed": true,
+    "fresh_output": "/tmp/s3drive-tls-budget-32d-artifacts",
+    "fresh_output_absent": true,
+    "raw_review_required_before_checker": true,
+    "rejected_preceding_artifact_ids": [
+      12147331157,
+      12147209844
+    ],
+    "scope": "no hosted acceptance yet; require own completed raw review and fresh source-bound artifacts",
+    "book_raw_reviewed": true,
+    "book_review_marker": "/tmp/s3drive-tls-budget-32d-book-reviewed.json"
+  },
   "source_sha256": {
     ".github/workflows/ci.yml": "ad8a598db786dfde8d5fd016b4f4306e1e08f8533b1a2851066d3422731cbe13",
     "Cargo.lock": "35e25b8368c88bfd8a5a3d2e94e2858fdc6e5c36a180196adb60345dbe3a1f9f",
@@ -380,5 +405,30 @@
     "bytes": 47322,
     "members": 11,
     "all_indexed_members_verified": true
+  },
+  "runtime_commit": "32d7cc7700797c0471e51c69904873d23b9c3889",
+  "publication": {
+    "proof": "/tmp/s3drive-tls-budget-publication.json",
+    "clean_exact_remote_tip": true,
+    "all_249_hashes_match": true,
+    "visibility_before": "PUBLIC",
+    "visibility_after": "PUBLIC",
+    "visibility_mutations": 0,
+    "main_unchanged": "1a93b5f7248892fec96dc8da4438ee7967692e77"
+  },
+  "failed_cohort_archive": {
+    "path": "evidence/chunk-root-publisher-cf9-failed-20261018.tar.gz",
+    "sha256": "1ce2df69defa2f42d2aef2d896088e150d8259d9cb629ee8d663d4756a9f62fa",
+    "bytes": 90889,
+    "members": 10,
+    "all_indexed_members_verified": true,
+    "acceptance": false,
+    "cohort_result": "failure",
+    "success_checker_executed": false
+  },
+  "failed_cohort_final_jobs": {
+    "linux": "failure",
+    "windows": "success",
+    "book": "success"
   }
 }

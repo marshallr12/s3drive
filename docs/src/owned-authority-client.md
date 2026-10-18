@@ -352,6 +352,10 @@ chunk test exceeded60s then passed. The
 [11-member indexed local archive](evidence/tls-budget-fixture-local-20261018.tar.gz)
 retains focused/red/full results, the frozen map, review and exact fixture source.
 
-Corrected-source hosted acceptance is still pending. The old publisher cohort
+Corrected source`32d7cc7` is pushed on `codex/tls-budget-fixture`, with a clean
+exact remote tip and all249 frozen hashes verified. Public visibility was checked
+read-only before/after; main is unchanged. Its
+[own hosted cohort](https://github.com/marshallr12/s3drive/actions/runs/39158147595)
+is running. Corrected-source hosted acceptance is still pending. The old publisher cohort
 cannot substitute, and this repair establishes no historical Windows NoWrite
 cause, mounted chunk support, source settlement or real-provider acceptance.
