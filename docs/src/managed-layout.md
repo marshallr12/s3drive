@@ -8,7 +8,8 @@ prototypes; no existing bucket or configuration is converted automatically.
 The [large-file representation study](large-managed-files.md) compares extending
 one-object generations with immutable chunks and authenticated manifests.
 Chunked local staging does not currently imply chunked S3 storage. The new
-representation is a proposal pending the user's choice, not an enabled format.
+user selected chunks/manifests on2026-10-18. An offline codec prototypes that
+representation; it is not an enabled storage format or implicit migration.
 
 ![Two computers use their own Rust drive, S3 client and local SQLite, with one shared metadata authority and immutable S3 objects.](images/managed-architecture.png)
 

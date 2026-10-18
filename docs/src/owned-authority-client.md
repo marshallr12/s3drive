@@ -273,3 +273,36 @@ reqwest remains only for its bounded body implementation, not a client/pool.
 - [Rustls platform-verifier builder extension](https://docs.rs/rustls-platform-verifier/0.7.1/rustls_platform_verifier/trait.BuilderVerifierExt.html).
 - [Tokio-rustls client stream](https://docs.rs/tokio-rustls/0.26.6/tokio_rustls/client/struct.TlsStream.html).
 - [Tokio one-shot receive contract](https://docs.rs/tokio/1.53.3/tokio/sync/oneshot/struct.Receiver.html#method.try_recv).
+
+
+### Exact instrumented repeat (2026-10-18)
+
+Primary source2575374 passed run39133178423 **attempt1** with reviewed own raw
+logs and strict21/14 reference artifacts. Before repeating, its complete
+[cohort archive](evidence/dispatch-257-attempt1-20261018.tar.gz) preserved explicit
+attempt metadata, job IDs, raw reviews/logs, original ZIP bytes and both checks.
+SHA-256: `8d0e2c598aa091a54991c51e80b5c3b07912c4723b9a6451e039509f3b248d5b`.
+A latest-run URL may now describe a later attempt; primary evidence is immutable
+in that archive and the [primary record](evidence/dispatch-progress-20261018.json).
+
+Attempt2 repeats the original commit to collect the new observations if the
+historical failure recurs. It changes no scheduling, retry, deadline or provider
+policy. Track its [separate evidence](evidence/dispatch-repeat-20261018.json).
+All three attempt2 jobs completed successfully. Own raw logs were reviewed,
+including expected fault controls and nonfatal cache-reservation warnings. Fresh
+replacement12139721137/disposition12140285720 artifacts passed source/run/API
+hashes, strict21/14 all-field/type checks and both project PowerShell oracles.
+The checker closed EXIT0 and refused primary artifact IDs. The historical
+actively-polled/no-write failure did not recur; its cause remains unresolved.
+This is additional scoped evidence, not acceptance of the newer manifest codec,
+Windows10/11, physical reboot or a live provider. Runtime main is unchanged.
+
+GitHub documents that reruns retain the original commit/ref and exposes
+attempt-specific run/job APIs. Its artifact client also documents that reruns
+can produce artifacts with identical names. Therefore source/name alone cannot
+identify a repeat artifact: require this attempt's own completed Windows upload
+IDs, metadata/digests and strict field/type/oracle checks. Never reuse the prior
+cohort simply because its JSON matches.
+[GitHub rerun semantics](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs),
+[workflow-run attempt API](https://docs.github.com/en/rest/actions/workflow-runs#get-a-workflow-run-attempt),
+[artifact client contract](https://github.com/actions/toolkit/blob/main/packages/artifact/src/internal/client.ts).

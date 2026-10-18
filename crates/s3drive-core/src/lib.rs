@@ -1,5 +1,6 @@
 //! Configuration and a bucket-alias namespace. No filesystem or network I/O.
 
+pub mod manifest;
 pub mod multipart;
 pub mod names;
 use serde::{Deserialize, Serialize};

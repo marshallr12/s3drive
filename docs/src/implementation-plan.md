@@ -1175,9 +1175,9 @@ verification/buffer, native edit buffer, logical prehash and authority payload
 limits. The existing bounded composition library should be reused where its
 contract fits; local chunk staging does not currently imply chunked S3 objects.
 
-A user question is pending: immutable chunks and authenticated paged manifests,
-or one object per file generation. The recommendation is chunked managed
-storage, with explicit legacy compatibility. No format, schema, authority hash,
+The user selected immutable chunks and authenticated paged manifests on
+2026-10-18 (D041), confirming the recommendation with explicit legacy
+compatibility. No format, schema, authority hash,
 8MiB bound, network behavior or provider policy has changed. The study includes
 an architecture image and reproducible hypothetical storage arithmetic, not
 performance or account pricing evidence. Single-object storage can also gain
@@ -1188,7 +1188,7 @@ Done for this investigation: audit actual source2575374 boundaries, compare
 recovery/reads/edits/object-count/retention implications, refresh primary AWS and
 Wasabi sources, record the decision question, and specify the implementation
 and native/provider acceptance sequence. A representation-specific codec or
-publisher implementation depends on that choice. Current source-bound CI review
+publisher integration follows the selected chunked design. Source-bound CI review
 and existing transport investigation can proceed independently.
 
 
@@ -1196,12 +1196,50 @@ and existing transport investigation can proceed independently.
 
 Source `25753746287aa52a36a9ba42d8bf5162f1de07d1`,
 [run39133178423](https://github.com/marshallr12/s3drive/actions/runs/39133178423),
-passed Linux, Windows and book. Completed own raw logs were reviewed before
+attempt1 passed Linux, Windows and book. Completed own raw logs were reviewed before
 checking that run's ZIP digests, strict typed21 replacement/14 disposition
 records and both project PowerShell oracles. The schema24 Windows session
 fixture now passes natively; parentc7's failure remains recorded. See the
 [dated dispatch evidence](evidence/dispatch-progress-20261018.json) for exact
 jobs, hashes, scope and notices, including deferred disposable VM profile cleanup.
-This is one passing observational candidate cohort. The historical actively
-polled/no-write transport failure is unresolved, there is no identical-source
-repeat acceptance, and no runtime promotion or new provider approval follows.
+The exact-source attempt2 also passed Linux/Windows/book, completed own raw
+reviews and fresh strict21/14 artifacts with both project oracles. Its separate
+[repeat record](evidence/dispatch-repeat-20261018.json) binds new job/artifact IDs;
+no primary artifacts were reused. The historical actively polled/no-write failure
+did not recur and remains unexplained. No runtime promotion, new manifest-code
+acceptance or new provider approval follows.
+
+
+### Managed manifest codec foundation (offline candidate, 2026-10-18)
+
+Use chunks/manifests within the user's selected managed layout. Implementation
+began as a provisional offline default after the optional clarification window;
+the user then explicitly selected that option (D041). This does not authorize
+a live migration or expand provider-write approvals. Existing content formats
+and all mounted/provider limits stay intact.
+
+First coherent phase: a pure Rust core module for bounded canonical pages,
+domain-separated SHA-256 page hashes, explicitly tagged holes/data/child pages,
+context-bound root/child verification and allocation-free extent lookup. SHA-256
+chunk bytes retain their ordinary whole-object meaning; a manifest root must
+never replace a legacy payload digest. No SQLite, wire capability, native
+callback, provider operation, deduplication or deletion is added.
+
+Done criteria: independent Python-generated fixed binary/hash vectors; empty,
+sparse and two-level manifests; every-byte tampering and all truncated prefixes
+refused; exact object/length hashes, cross-file/offset/level substitution refused;
+fanout/page/depth/signed-length/overflow/alignment and noncanonical encodings
+refused; exact EOF and boundary lookup. Private validated page state and a
+separate verified-page type prevent accidental data verification from merely
+parsed metadata. Inspect resolved SHA2 APIs, keep existing hashes unchanged,
+run the focused suite and full local gate, then bind any new native CI to its
+own source. The concurrent257 repeat remains an independent earlier-source
+observation and cannot certify this module.
+
+
+Offline codec result: all10 focused tests pass, isolated regeneration matches
+all8 golden files, core all-target Clippy passes with warnings denied, and the
+full local gate passes on14 unchanged frozen source/fixture hashes:27core,
+50authority,292state/1ignored,51S3 plus format/lint/build/book. This is not a
+large-file native or provider acceptance claim. Exact results and limits are in
+[the dated codec evidence](evidence/managed-manifest-20261018.json).

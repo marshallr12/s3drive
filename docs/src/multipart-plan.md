@@ -1,9 +1,13 @@
 # Multipart uploads: research and implementation plan
 
 **Researched 2026-10-16; limits refreshed 2026-10-18. Upload execution remains
-proposed and not live-tested.** Multipart
-support must extend the single-PUT journal before files above its 8 MiB bound
-can upload. A passing `PutObject` probe cannot verify conditional completion.
+proposed and not live-tested.** The current single-PUT journal is bounded to
+8 MiB; multipart is the proposed extension for larger one-object uploads.
+The user subsequently selected [chunks and manifests](large-managed-files.md)
+for large managed files (D041). Multipart is not a prerequisite for that new
+representation; this chapter remains relevant to direct/one-object compatibility,
+export and optional bulk transfer. A passing `PutObject` probe cannot verify
+conditional completion.
 The completed six-object Wasabi approval does not cover multipart operations.
 
 ## Provider limits must remain separate

@@ -1,0 +1,214 @@
+{
+  "research_date": "2026-10-18",
+  "source": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+  "run_id": 39133178423,
+  "run_attempt": 2,
+  "purpose": "Repeat instrumented original source to collect readiness/body/budget evidence if historical Windows no-write recurs; no causal correction claimed",
+  "status": "completed",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "id": 117697477386,
+      "name": "rust (windows-latest)",
+      "run_attempt": 2,
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/marshallr12/s3drive/actions/runs/39133178423/job/117697477386"
+    },
+    {
+      "id": 117697477604,
+      "name": "book",
+      "run_attempt": 2,
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/marshallr12/s3drive/actions/runs/39133178423/job/117697477604"
+    },
+    {
+      "id": 117697477621,
+      "name": "rust (ubuntu-latest)",
+      "run_attempt": 2,
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/marshallr12/s3drive/actions/runs/39133178423/job/117697477621"
+    }
+  ],
+  "primary_attempt": {
+    "attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "archive": {
+      "archive": "docs/src/evidence/dispatch-257-attempt1-20261018.tar.gz",
+      "sha256": "8d0e2c598aa091a54991c51e80b5c3b07912c4723b9a6451e039509f3b248d5b",
+      "bytes": 88090,
+      "members": 17,
+      "run_attempt": 1,
+      "all_bytes_verified": true
+    },
+    "raw_reviews_and_own_strict21_14_artifacts_closed": true
+  },
+  "initial_rerun_observation": {
+    "request_exit_code": 0,
+    "first_get_run_attempt": 1,
+    "first_get_status": "queued",
+    "local_immediate_assertion_failed": true,
+    "next_get_attempt": 2,
+    "next_get_status": "in_progress",
+    "duplicate_rerun_requested": false,
+    "interpretation": "API transition observed; first response preceded attempt counter update; re-polled original run, not restarted"
+  },
+  "watch": {
+    "session_id": 67342,
+    "log": "/tmp/s3drive-dispatch-257-attempt2-watch.log",
+    "exit_code": 0
+  },
+  "success_checker_eligible": true,
+  "success_checker_executed": true,
+  "native_acceptance": true,
+  "historical_transport_failure_resolved": false,
+  "runtime_main_promoted": false,
+  "provider_requests": 0,
+  "repository_visibility_changes": 0,
+  "acceptance_requires": [
+    "All3 attempt2 jobs terminal success at original source",
+    "Review own completed raw logs, including every transport/native warning",
+    "Separate attempt2 raw marker and new output directory",
+    "Select artifact IDs from this attempt Windows completed log; reject primary IDs even if source/name match",
+    "Match API source/run/digest/time and strict21/14 field/type/project oracles",
+    "Retain previous failures regardless of repeat outcome"
+  ],
+  "book_completed_raw_review": {
+    "source": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+    "run_id": 39133178423,
+    "run_attempt": 2,
+    "job_id": 117697477604,
+    "status": "completed",
+    "conclusion": "success",
+    "reviewed": true,
+    "log": "/tmp/s3drive-dispatch-257-attempt2-book.log",
+    "sha256": "d4c8ce7ffc970c738eef36275d99a6e8d6856408c1766148ea90e6af76b104ed",
+    "scope": "schema24 fixture preflight;58 doclink files;mdBook build/54chapter tests",
+    "notices": [
+      "Git default branch advice",
+      "Rust pinned toolchain override",
+      "pinned checkout Node20 forced to Node24"
+    ],
+    "native_or_provider_acceptance": false
+  },
+  "success_checker": {
+    "script": "/tmp/s3drive-check-dispatch-257-attempt2.py",
+    "compiled_only": false,
+    "executed": true,
+    "raw_marker": "/tmp/s3drive-dispatch-257-attempt2-raw-reviewed.json",
+    "new_output": "/tmp/s3drive-dispatch-257-attempt2-artifacts",
+    "primary_ids_must_be_refused": [
+      12139390103,
+      12139435870
+    ],
+    "exit_code": 0,
+    "session_id": 70361,
+    "log": "/tmp/s3drive-dispatch-257-attempt2-artifact-check.log",
+    "log_sha256": "0e09c0a055d4e4033f169f50dc2f4f4a6c03533519998f199a13e17cd8a7ba09",
+    "downloads": [
+      {
+        "kind": "disposition",
+        "id": 12140285720,
+        "source": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+        "run_id": 39133178423,
+        "run_attempt": 2,
+        "windows_job": 117697477386,
+        "zip_sha256": "e1b1dc99672bcfd910f9c004ae33fa9004cc54e657a73585ad22f8247d3993e9",
+        "json_sha256": "d4c339eca8ad5043325251b97a2e73a9a013d4b76e63a06b8d05a70b3f81019b",
+        "primary_artifact_reused": false
+      },
+      {
+        "kind": "replacement",
+        "id": 12139721137,
+        "source": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+        "run_id": 39133178423,
+        "run_attempt": 2,
+        "windows_job": 117697477386,
+        "zip_sha256": "b5656e2276670bdf191897ffa67a40ed912ef5ad93939e4fcec6cfa870706302",
+        "json_sha256": "f0218fc06a80f1039609cdad14a3bfd77498af933da535c061f2cfc8be0af613",
+        "primary_artifact_reused": false
+      }
+    ],
+    "strict_field_type_source_checks": [
+      {
+        "kind": "replacement",
+        "records": 21,
+        "source": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+        "sha256": "f0218fc06a80f1039609cdad14a3bfd77498af933da535c061f2cfc8be0af613",
+        "strict_types_and_all_fields_match": true
+      },
+      {
+        "kind": "disposition",
+        "records": 14,
+        "source": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+        "sha256": "d4c339eca8ad5043325251b97a2e73a9a013d4b76e63a06b8d05a70b3f81019b",
+        "strict_types_and_all_fields_match": true
+      }
+    ],
+    "both_project_oracles_passed": true
+  },
+  "linux_completed_raw_review": {
+    "source": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+    "run_id": 39133178423,
+    "run_attempt": 2,
+    "job_id": 117697477621,
+    "status": "completed",
+    "conclusion": "success",
+    "reviewed": true,
+    "log": "/tmp/s3drive-dispatch-257-attempt2-linux.log",
+    "sha256": "396efd31098080ba70a91f2cca79c9058cdc1e6951f5650a0ce0f90ee0599f7e",
+    "platform": "Ubuntu24.04.5, image20261012.334.1",
+    "scope": "50 authority;292 state passed/1ignored;9realFUSE tests;32HTTPS flushes;11Unicode filenames;paired startup/recovery;schema24;both no-systemd coordinator protocols",
+    "notices": [
+      "Git default-branch advice",
+      "cache/artifact action Node deprecations and forced Node24",
+      "one state test exceeded60seconds then passed",
+      "cache save unable to reserve the unchanged-source key; nonfatal job warning, no native test failure"
+    ],
+    "expected_faults": [
+      "TLS handshake/partial-header/lifetime controls",
+      "HEAD403 refusal",
+      "Node Connect ConnectionRefused after intentional authority stop",
+      "startup.json absent after uninstall"
+    ],
+    "physical_mx_reboot_or_provider_acceptance": false,
+    "new_manifest_module_acceptance": false
+  },
+  "windows_completed_raw_review": {
+    "source": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+    "run_id": 39133178423,
+    "run_attempt": 2,
+    "job_id": 117697477386,
+    "status": "completed",
+    "conclusion": "success",
+    "reviewed": true,
+    "log": "/tmp/s3drive-dispatch-257-attempt2-windows.log",
+    "sha256": "a244e38c0a0a2d02e4626d659450a167ea49742488ee2fb59fe6720556f5e156",
+    "platform": "Windows Server2025 Datacenter10.0.26100, WinFsp2.1.25156.ddca7bd",
+    "scope": "50authority;287state passed/1ignored;16multipart tests;32HTTPS flushes;lifecycle;paired startup/recovery;snapshots;7broad native tests;11Unicode filenames;cross-logon startup;schema24",
+    "notices": [
+      "LNK4199 on9 CLI test targets without WinFsp imports",
+      "three locked disposable profiles retained until VM destruction after dummy credentials removed",
+      "cache/action Node deprecations and forced Node24",
+      "long-running tests ultimately pass",
+      "cache save unable to reserve unchanged-source key; nonfatal warning"
+    ],
+    "expected_faults": [
+      "TLS handshake/partial-header/lifetime controls",
+      "managed HEAD403 refusal",
+      "dirty-head rival conflict",
+      "List Connect TimedOut after deliberate authority stop; fixture asserts new open fails and old snapshot remains readable"
+    ],
+    "own_artifact_ids": {
+      "replacement": 12139721137,
+      "disposition": 12140285720
+    },
+    "historical_actively_polled_no_write_recurred": false,
+    "historical_cause_fixed": false,
+    "new_manifest_codec_or_win10_11_or_physical_reboot_or_provider_acceptance": false
+  },
+  "acceptance_scope": "Own attempt2 Linux/Windows Server2025/book and strict21/14 reference artifacts at source2575374 only; not new manifest code, workstation reboot, Windows10/11, provider acceptance or historical root-cause resolution"
+}

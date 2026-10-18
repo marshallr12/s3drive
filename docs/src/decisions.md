@@ -46,14 +46,10 @@ to the user.
 | D038 | Authority entry CAS implemented, 2026-10-17; native integration pending | Guard source/destination identities and revisions plus both parent revisions; replace by an atomic move and retained target tombstone. Persist exact outcomes with the effect, detect ignored writes and preserve all payload references. Do not enable mounted rename/removal before journal, detached publication and native acceptance |
 | D039 | Library implemented, 2026-10-17; native integration pending | Commit namespace outcome and retained file observations atomically. Preserve original bindings and dirty heads, serialize pending effects against new publication preparation, and publish unlinked content only with an explicit tombstone content guard. Never resurrect a name or silently rebase dirty data |
 | D040 | User decision, 2026-10-18 | `marshallr12/s3drive` is intentionally public. This supersedes the original private-repository request. Agents must not change visibility without a direct request for that specific action; read-only checks must never automatically restore a historical setting. Ordinary implementation, pushes, CI and goal continuations do not authorize visibility changes. Public visibility does not select a distribution license |
+| D041 | User selected, 2026-10-18 | Large managed files use immutable chunks and authenticated manifests. Normal filenames remain in the authority; more internal S3 objects are expected. Preserve the one-object compatibility format and legacy hashes. Offline codec first; no implicit migration, new provider approval, deduplication or collection |
 
 ## Questions to resolve at the relevant phase
 
-- **Before a new large managed-file format:** One object per generation, or
-  immutable chunks plus authenticated paged manifests? The
-  [representation study](large-managed-files.md) recommends chunks; the user's
-  choice is pending. Existing payload hashes and unknown operations keep their
-  original meaning.
 - **Before cache sizing and broader OS acceptance:** Typical file sizes, directory sizes and working
   set? How much local disk may the cache consume? Which Windows/Linux versions
   and CPU architectures need support?

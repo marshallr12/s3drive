@@ -1,11 +1,16 @@
 # Large managed files: storage representation
 
-**Investigated 2026-10-18. Proposal; no new format or large native writes are
-enabled.** The user selected managed storage with stronger coordination. That
-choice permits internal S3 objects, but does not decide whether each file
-generation is one object or a manifest referencing several objects. Both
-representations preserve ordinary filenames and stable file identities in the
-shared authority. Existing configurations and retained data must remain readable.
+**User decision, 2026-10-18:** use immutable chunks and manifests for large
+managed files. Ordinary filenames remain in the shared authority, while S3
+contains internal objects. The one-object representation remains a legacy
+compatibility format; no existing bucket or retained data is converted implicitly.
+The codec below is an offline prototype. Native large files and the new live
+storage format are not enabled.
+
+Implementation began under the surfaced recommendation as a provisional offline
+default; the user subsequently selected that same option during the phase.
+This layout decision does not expand the earlier provider-write approvals or
+activate a migration. Existing on-disk and mounted formats remain unchanged.
 
 ![Proposed large-file architecture: each workstation has a Rust filesystem engine, a private SQLite journal and an S3 client; the Rust authority publishes one manifest root reference, while S3 stores manifests and immutable data chunks.](images/large-managed-files.svg)
 
@@ -58,7 +63,7 @@ it does not by itself share stored bytes between generations. No equivalent
 Wasabi acceptance has been performed here.
 [AWS UploadPartCopy](https://docs.aws.amazon.com/AmazonS3/latest/API/API_UploadPartCopy.html)
 
-**Recommendation, pending the user's representation choice:** prefer immutable
+**Selected design:** use immutable
 chunks and authenticated paged manifests for the managed filesystem. This
 matches random file access, small edits and sparse files. Keep the one-object
 format readable, and retain multipart research for direct objects, export and
@@ -113,6 +118,98 @@ retains its own SQLite journal/cache outside the mount. This changes content
 representation, not namespace ownership, Windows handle semantics, login
 startup or the no-systemd Linux requirement.
 
+## Offline page codec prototype (2026-10-18)
+
+`s3drive-core::manifest` now implements this specification without SQLite or
+network access. It is not wired into authority payloads, native adapters or
+object-key derivation. The existing 8 MiB limits still apply there. This codec
+is the first step toward efficient large managed-file reads and edits, rather
+than an alternative definition of a completed filesystem.
+
+All integers are unsigned, fixed-width **little endian**. The 64-byte header is:
+
+| Byte offset | Width | Meaning |
+| --- | --- | --- |
+| 0 | 8 | ASCII `S3DMAN01`, including the prototype format version |
+| 8 | 1 | Level, 0 for a leaf, 1–7 for an internal page |
+| 9 | 1 | Reserved; must be zero |
+| 10 | 2 | Entry count, 0–128 |
+| 12 | 16 | Nonzero volume identity |
+| 28 | 16 | Nonzero file-node identity |
+| 44 | 8 | Logical start offset |
+| 52 | 8 | Logical byte length covered by this page |
+| 60 | 4 | Chunk size; must equal 1,048,576 in this prototype |
+
+An entry starts with a one-byte tag and an eight-byte positive length. Tags are
+0 for a sparse hole, 1 for a data object and 2 for a child page. Hole entries
+end there (9 bytes). Data/child entries then contain a 72-byte reference:
+nonzero store ID (16), nonzero generation ID (16), ordinal (8), expected digest
+(32). They occupy 81 bytes. Unknown tags, flags, chunk sizes, versions, missing
+fields and trailing bytes fail. The maximum encoded page is therefore
+`64 + 128 * 81 = 10,432` bytes. Counts/input lengths are bounded before allocation.
+
+Leaf pages contain only holes/data. Internal pages contain only children.
+Adjacent holes within one page must be merged. A data object covers at most one
+1 MiB chunk. Every page starts at a chunk boundary; every entry except the
+last ends at a chunk boundary. A final partial chunk can reach EOF. Embedding
+that page requires the parent to authenticate its exact span, so a partial
+child cannot silently become a nonfinal unaligned span. No entry has zero
+length. The only empty page is a leaf at offset zero. All page ends and sums
+fit a signed 64-bit SQLite length; this arithmetic bound is not an admitted
+file-size limit for the unfinished publisher.
+
+These rules define a canonical encoding **of a particular page**. They do not
+imply a unique tree partition for every file: holes may cross page boundaries,
+and the future builder must decide stable partition/reuse rules. The study's
+fanout256 is illustrative; this prototype deliberately uses128. Both illustrate
+bounded paging, not interchangeable serialized formats.
+
+Page hashes are `SHA256("s3drive-manifest-page-v1\0" || encoded_page)`, where
+`\0` denotes one NUL byte, not a backslash and digit. Chunk hashes are the
+ordinary SHA-256 of complete chunk bytes. The hash domains differ deliberately;
+neither root/page hashes nor reference ordinals can replace the legacy
+whole-file `Reservation.sha256` field.
+
+`Page::decode` proves structure only. `Page::verify_root` additionally checks a
+trusted expected hash, volume, file-node, length and start-zero binding and
+returns a distinct `VerifiedPage`. Only that type exposes child/data
+verification. `verify_child` checks its referenced digest, exact file/volume
+and span, and a level exactly one below its parent. Thus a path has at most
+eight pages and cannot accept a repeated same-level page as a cycle.
+`verify_data` checks exact bounded length and the whole expected chunk digest
+before any subrange may be served. `Page::lookup` scans at most128 entries,
+allocates nothing and returns the intersecting extent/offset; outside-page and
+EOF lookups return `None`. A parsed page's lookup result alone is not trusted.
+
+Data verification is a point-in-time check of the supplied bytes, not a durable
+receipt or media pin. The eventual reader must serve that same immutable buffer
+and retain its root identity; it must not retain a boolean verification result
+after mutating/reloading bytes. This phase does not provide a cache or open-file
+handle implementing that lifetime contract.
+
+Expected root identity/hash must eventually come from authenticated authority
+metadata. Hash verification does not establish current S3 authorization, key
+ownership, publication durability or permission to adopt someone else's object.
+The future role-specific object-key builder must distinguish data/page objects
+and bind each reference's store, generation and ordinal. No key builder or
+deduplication adoption exists in this phase.
+
+`scripts/generate-manifest-vectors.py` independently uses Python `struct` and
+`hashlib` to generate fixed empty/leaf/root/data vectors under the core
+manifest test fixtures. It imports no Rust codec. Golden page digests are:
+
+| Vector | Bytes | Domain-separated SHA-256 |
+| --- | --- | --- |
+| Empty | 64 | `6577be00912b4b95f716243622685cb4fa77a32204e5c01f5eb9acb19f0325da` |
+| Leaf | 154 | `0fcbed4452ca3f3f050df52278491f1b394e234f28b287c202e2b3c771329177` |
+| Root | 145 | `f5ce76e1863fc41050e598bca75748323f0f17ee1cc9fe19a16dac007e6fdc10` |
+
+The focused suite checks every-byte tampering, every truncated prefix, appended
+bytes, exact data hashes/lengths, cross-file/position/level substitution even
+with a matching child digest, maximum fanout/depth/length, overflow, sparse
+holes, empty roots, alignment, roles, EOF and range boundaries. Native large
+files and provider acceptance remain later gates.
+
 ## Illustrative workload and Wasabi implications
 
 Run `python3 scripts/study-managed-layout.py` from the repository root. The
@@ -163,9 +260,9 @@ future live acceptance run needs a new concrete plan and authorization.
 
 ## Implementation sequence and acceptance
 
-The representation decision is pending. Independent work can finish the current
-source-bound native CI review and preserve all existing failure evidence.
-If the chunked proposal is selected:
+The user selected the chunked representation. The offline prototype implements
+the codec portion of step1 below; subsequent
+integration must preserve explicit versioning and legacy compatibility:
 
 1. Specify and implement a pure Rust bounded manifest codec, domain-separated
    hashes, sparse range lookup and a format capability. Reject malformed,
@@ -188,8 +285,8 @@ If the chunked proposal is selected:
    tests. Retention-aware garbage collection is a later explicit phase;
    uncertain operations, retained handles and transitive roots must be pinned.
 
-If the one-object representation is selected, retain its multipart execution
-sequence and add authenticated range metadata plus bounded managed edits.
-Either route still requires transport reliability, deployment/recovery,
+The retained one-object compatibility path has a separate multipart execution
+plan; it is not a prerequisite for the selected chunked managed representation.
+The full filesystem still requires transport reliability, deployment/recovery,
 workstation startup and provider acceptance; this design study completes none
 of those gates.

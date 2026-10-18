@@ -25,7 +25,7 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; current HEADc7fca789 already includes that rule.
 
-## Large-file representation study (local, 2026-10-18)
+## Large-file representation study (published, 2026-10-18)
 
 New docs/src/large-managed-files.md, images/large-managed-files.svg and
 scripts/study-managed-layout.py plus dated JSON compare one-object generations
@@ -34,8 +34,9 @@ managed Reader downloads/hashes whole file; native writes buffer whole payload;
 logical Input requires whole SHA before begin; authority reservation caps8MiB.
 Existing fs/edits.rs already has bounded range composition; do not reinvent it.
 Multipart alone does not remove these boundaries. Recommendation is chunked
-managed storage, but the user's asynchronous representation choice is PENDING.
-Do not implement or activate that format before resolving the product choice.
+managed storage. User now explicitly selected chunks/manifests on2026-10-18
+(D041), confirming the provisional offline implementation default. No implicit
+data migration, mounted-format activation or new provider writes follow.
 Keep legacy references/hashes/unknown operations exactly compatible. Alternatives
 include one object plus authenticated range hashes and future multipart copy.
 Study's1GiB/100edits arithmetic is hypothetical, excludes manifests/overhead,
@@ -50,12 +51,72 @@ no pass claimed. Gate2 completed normally. Arithmetic JSON reproduces exactly.
 Diagram XML/text extents checked. ImageMagick renderer unavailable and browser
 screenshot timed out; system librsvg/Cairo rendered successfully and local PNG
 was visually reviewed. Authority pointer was rerouted to avoid the S3 heading.
-Study and reviewed evidence are being published on codex/large-file-representation,
+Study and reviewed evidence were pushed at e08f607b9f0e27537f022752a40123be52361079
+on codex/large-file-representation; proof /tmp/s3drive-large-file-research-publication.json,
+clean, exact remote tip, all12runtime hashes match, PUBLIC before/after. This is
 a documentation-only child of2575374. A [skip ci] commit avoids another identical
 hosted native cycle: full local gate plus final docs checks passed; runtime/native
 evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
+
+## Current implementation: offline managed manifest codec (2026-10-18)
+
+Branch codex/managed-manifest, parent e08f607. New core manifest module and tests,
+eight independent fixed Python vectors plus generator, one existing SHA2
+workspace dependency edge/lockfile entry. No version upgrade. Correct resolved
+sha2 0.11.1/digest0.11.3 APIs inspected before use (initial0.10cache was not the
+resolved dependency and was corrected). No legacy wire/schema/hash changes.
+Implementation began with chunks/manifests as the surfaced provisional offline
+default after the optional clarification window; the user explicitly selected
+that option during this phase (D041). No migration/activation/provider approval
+is inferred. Existing hashes, journals and content references stay compatible.
+
+64byte canonical header, <=128 entries/10432bytes/page, levels0..7, signed64
+length arithmetic,1MiB data objects. Explicit hole/data/child roles; root and
+child identity/span/level binding, raw data SHA vs domain-separated page SHA.
+Page is parsed/validated only; VerifiedPage gates child/data verification.
+Lookup is bounded/no allocation. Role-specific keys, adoption, authority root
+capability, SQLite journal, native large files and live writes remain absent.
+Contract docs/src/large-managed-files.md; evidence managed-manifest-20261018.json.
+Focused10PASS/17filtered and core all-targetClippy-Dwarnings EXIT0. Independent
+vectors fix bytes/hashes; all byte tampers/truncated prefixes and context,
+alignment, overflow/limits and sparse EOF paths covered. Frozen14 source/fixture
+hashes /tmp/s3drive-managed-manifest-frozen.json. Full local gate EXIT0
+session91280 /tmp/s3drive-managed-manifest-gate.log:27core,50authority,292state/
+1ignored,51S3,format/lint/build/book. No warnings/errors, all14 frozen hashes
+match. Isolated Python regeneration matches all8 vectors. Final docs checks
+follow the D041 updates; do not cite the concurrent257 repeat as native
+acceptance of this new module.
+Final D041/status documentation links, build and55chapter tests passed. Ready
+for an ordinary feature-branch push and its own source-bound CI; no main merge.
+
+## Completed exact257 repeat attempt2 (2026-10-18)
+
+OriginalCI39133178423 attempt2 at source25753746287aa52a36a9ba42d8bf5162f1de07d1
+passed all3 jobs: Windows117697477386, Linux117697477621, book117697477604.
+Watch67342 closed EXIT0. Own completed raw reviews closed; checker70361 EXIT0,
+/tmp/s3drive-dispatch-257-attempt2-artifact-check.log. Fresh replacement12139721137
+and disposition12140285720 IDs came from this attempt's Windows upload log;
+API source/run/digests and strict21/14 all-field/type checks plus both project
+PowerShell oracles passed. Separate output
+/tmp/s3drive-dispatch-257-attempt2-artifacts. Primary IDs were explicitly refused.
+No artifact borrowing. Evidence docs/src/evidence/dispatch-repeat-20261018.json.
+This observational repeat did not reproduce the historical actively-polled/
+no-write failure and establishes no cause or causal correction. No main promotion,
+new manifest-code acceptance, workstation reboot or provider acceptance follows.
+Reviewed nonfatal same-key cache-reservation warnings; tests all completed.
+
+Before rerun, attempt1 explicit API run/jobs/artifacts and all reviewed raw logs,
+ZIPs, typed/project checks were frozen in repository archive
+`docs/src/evidence/dispatch-257-attempt1-20261018.tar.gz` (17members/88090bytes),
+SHA2568d0e2c598aa091a54991c51e80b5c3b07912c4723b9a6451e039509f3b248d5b.
+All bytes re-extracted and verified in memory. Primary job/artifact IDs retained.
+Do not rerun the old primary checker against the latest-run endpoint now.
+Initial rerun request EXIT0; immediate GET still showed attempt1/queued, causing
+an assertion failure; subsequent GET confirmed attempt2/in_progress. No duplicate
+rerun was requested. All watch/checker handles are closed; do not restart them.
+The new manifest codec requires its own source-bound CI, independent of257.
 
 ## Current candidate: dispatch observations (P6m4i)
 

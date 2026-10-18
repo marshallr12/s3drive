@@ -40,15 +40,19 @@ add sender/body/budget hints to distinguish an active driver from body/header
 progress. Focused controls pass; this candidate changes no scheduling or retry
 policy and does not establish the historical Windows cause.
 
-Its source2575374 [hosted cohort](https://github.com/marshallr12/s3drive/actions/runs/39133178423)
+Its source2575374 attempt1 [hosted cohort](https://github.com/marshallr12/s3drive/actions/runs/39133178423)
 passed Linux/Windows/book and its own strict21/14 reference artifact checks.
-The corrected schema24 Windows session fixture passed natively. This is one
-passing cohort, without a causal transport fix or identical-source repeat.
+The corrected schema24 Windows session fixture passed natively. Its exact-source
+attempt2 also passed all three jobs, reviewed own logs and fresh strict21/14
+artifacts; see [separate repeat evidence](evidence/dispatch-repeat-20261018.json).
+The historical transport cause remains unresolved. These checks do not certify
+the newer manifest codec or promote runtime main.
 
 The [large managed-file representation study](large-managed-files.md) audits
 the remaining whole-file boundaries and compares one-object generations with
 immutable chunks and authenticated manifests. The recommendation and diagram
-are proposals pending the user's choice; existing formats and limits remain.
+explain the chunked format selected by the user on2026-10-18. An offline bounded
+core codec now prototypes it. Existing mounted formats and limits remain.
 
 [Offline immutable multipart plans](multipart-plan.md#offline-immutable-plans-candidate-implementation-2026-10-18)
 freeze original bindings and hash verified staged bytes in bounded owner commands.

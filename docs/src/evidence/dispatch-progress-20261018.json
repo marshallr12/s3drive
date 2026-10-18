@@ -462,7 +462,7 @@
         "replacement": 21,
         "disposition": 14
       },
-      "artifact_validation_pending": true,
+      "artifact_validation_pending": false,
       "historical_no_write_cause_fixed": false,
       "windows_10_11_or_physical_reboot_or_provider_acceptance": false
     },
@@ -473,7 +473,7 @@
     ],
     "acceptance_scope": "one own-source hosted Linux/Windows/book cohort plus own strict21/14 reference artifacts; no causal transport reliability or workstation/provider acceptance",
     "success_checker_exit_code": 0,
-    "unchanged_source_repeat_passed": false,
+    "unchanged_source_repeat_passed": true,
     "historical_transport_failure_resolved": false,
     "main_runtime_promoted": false,
     "artifact_validation": {
@@ -512,6 +512,16 @@
       ],
       "project_powershell_oracles_passed": true,
       "no_prior_cohort_artifacts_used": true
-    }
+    },
+    "run_attempt": 1,
+    "primary_archive": {
+      "archive": "docs/src/evidence/dispatch-257-attempt1-20261018.tar.gz",
+      "sha256": "8d0e2c598aa091a54991c51e80b5c3b07912c4723b9a6451e039509f3b248d5b",
+      "bytes": 88090,
+      "members": 17,
+      "run_attempt": 1,
+      "all_bytes_verified": true
+    },
+    "repeat_evidence": "dispatch-repeat-20261018.json"
   }
 }
