@@ -22,8 +22,9 @@ compatibility and real remote deployment remain work.
 **Current candidate:** [pinned coordinator startup](docs/src/authority-startup.md)
 on `codex/authority-startup`. The paired Linux FUSE/login/coordinator recovery
 case passed on hosted Linux at `e48cb09`, including uncertain uploads and dirty
-conflict retention. The Windows `ce784e4` run failed a metadata read before
-testing child recovery; redacted transport diagnostics are under verification.
+conflict retention. The Windows diagnostic run at `7962058` failed a TLS fault fixture before
+startup tests. Fixture setup/progress is under investigation; the earlier
+metadata-read failure and child recovery remain unverified.
 Native Windows coordinator/pairing acceptance and all final gates remain required. No startup entry is
 installed in the workstation user's real account and no hosting/Turso account
 has been provisioned.

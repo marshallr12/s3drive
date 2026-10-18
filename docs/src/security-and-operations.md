@@ -32,14 +32,17 @@ An SDK debug dump is not a suitable production log record.
 
 ## Managed authority boundary
 
-The [namespace prototype](managed-layout.md) is loopback-only and accepts an
-explicit high-entropy bearer token. It has no default credential or remote
-service deployment. Do not send S3 credentials to the metadata service. The
-future remote authority must authenticate devices and enforce volume access
-on every operation, use TLS and durable backups, and protect failover against
-two active authorities. A Turso database token belongs to that service, not to
-ordinary drive applications. Offline replicas must not authorize publication.
-This is a planned deployment boundary, not an installed service.
+The [Rust namespace authority](managed-layout.md) supports authenticated
+[HTTPS](remote-authority.md); plaintext HTTP is restricted to numeric loopback.
+Its explicit high-entropy bearer token grants one trusted owner's devices full
+namespace access to one volume. There is no default token, device-specific
+revocation or provisioned remote deployment. Do not send S3 credentials to it.
+[Backup and recovery](authority-backup-recovery.md) remain proposals: a pinned
+volume ID does not establish the freshness of a restored database. Deployment
+must also prevent two writable authorities and retain acknowledged history.
+A future Turso token belongs to the service, not ordinary drive applications.
+Offline replicas must not authorize publication. No hosting or backup service
+has been installed by these tests.
 
 ## Access boundaries
 

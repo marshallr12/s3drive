@@ -29,8 +29,9 @@ application, platform and provider acceptance.
 `codex/authority-startup`. The paired Linux FUSE/login/coordinator recovery test
 passed on hosted Linux at `e48cb09`. Windows child retries were corrected at
 `ce784e4`, but that run failed a metadata read before the injected kill.
-Redacted transport diagnostics are under verification; native Windows
-coordinator/pairing and final exact-source gates remain pending. No startup registration is installed in the workstation user's
+The diagnostic run at `7962058` then failed a TLS fault fixture before startup
+tests. Fixture setup/progress and the original transport failure remain under
+investigation; Windows coordinator/pairing and final-source gates are pending. No startup registration is installed in the workstation user's
 real account, no hosting is provisioned and no Turso backend is enabled.
 
 ## Recommendation

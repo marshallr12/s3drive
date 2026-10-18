@@ -1,7 +1,7 @@
 # Coordinator startup and pinned restarts
 
-Design/research date: **2026-10-17**, America/New_York. Current diagnostic follow-up to
-`ce784e4` on `codex/authority-startup`. **Phase acceptance is incomplete.**
+Design/research date: **2026-10-17**, America/New_York. Current fixture follow-up to
+`7962058` on `codex/authority-startup`. **Phase acceptance is incomplete.**
 The accepted main baseline is `712882e`,
 [CI39079281204](https://github.com/marshallr12/s3drive/actions/runs/39079281204).
 No startup registration in the workstation user's real account or hosted
@@ -29,7 +29,7 @@ payloads if its authoritative database is missing.
 | Corrected Windows child retry | Implemented; native recovery still unverified | `ce784e4` passed all four policy cases but its runtime test failed a metadata read before the child kill |
 | Paired Windows managed drive and coordinator | Implemented; native result pending | Separate scheduled tasks, actual FileStream uncertainty/conflict workflow; portable CLI/SDK/TLS preparation passed |
 | Full local Rust/build/book gate | Passed for the diagnostic follow-up | 265 state, ten HTTP, six TLS,17 SDK, five CLI restart/worker and seven managed cases; format/Clippy/build and book links/build/tests passed |
-| Final exact-source platform acceptance | Failed parent; diagnostic follow-up under verification | [Windows117555117545](https://github.com/marshallr12/s3drive/actions/runs/39086854659/job/117555117545) failed AuthorityProbe; paired Windows and later native steps were skipped. Require all gates and strict21/14 artifacts before promotion |
+| Final exact-source platform acceptance | Failed diagnostic parent; fixture follow-up under verification | [Windows117562340718](https://github.com/marshallr12/s3drive/actions/runs/39089283961/job/117562340718) failed the TLS fault matrix before startup/pairing. Original AuthorityProbe failure remains unexplained. Require all gates and strict21/14 artifacts before promotion |
 
 Both Linux job logs record the full pair; the current `ce784e4` run passed at
 01:39:46 UTC on2026-10-18 (2026-10-17 America/New_York). They record real FUSE reads of Unicode, binary,
@@ -73,6 +73,22 @@ also check redaction and absence of a second request. Wrong trust is classified
 at connect and bad bearer authorization as status401. These are local wire
 checks, not a corrected Windows runtime acceptance claim. The Windows worker
 now reports safe completed stages and the last typed readiness failure.
+
+The diagnostic run at `7962058`,
+[CI39089283961](https://github.com/marshallr12/s3drive/actions/runs/39089283961),
+passed book and the complete Linux native/startup suite. Windows passed its
+early native lifecycle, then failed the new TLS fault matrix: the truncated-body
+case got a request timeout instead of a body error. Another fixture task reported
+header EOF, without a case label. The Windows startup/pairing checks were skipped.
+This result does not establish the cause of the original coordinator probe error.
+
+The test follow-up prepares all synchronous certificate/client/acceptor factories
+on blocking workers before starting any request deadlines. All six network cases
+still run concurrently with their original expectations and deadlines. Per-case
+progress, header byte counts, setup/request timing and joined fixture completion
+now distinguish a fault that was established from a request that stalled earlier.
+It does not increase production timeouts, add retries or weaken TLS checks.
+Whether blocking setup explains the Windows failure remains unverified.
 
 ## Required restart behavior
 

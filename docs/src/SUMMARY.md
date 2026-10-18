@@ -31,6 +31,7 @@
 - [Shared authority over HTTPS](remote-authority.md)
 - [Set up a managed drive](managed-bootstrap.md)
 - [Coordinator startup and pinned restarts](authority-startup.md)
+- [Coordinator backups and recovery](authority-backup-recovery.md)
 - [Filesystem behavior contract](filesystem-contract.md)
 - [Implemented read-only provider contract](provider-contract.md)
 - [Implemented Linux read-only mount](linux-mount.md)

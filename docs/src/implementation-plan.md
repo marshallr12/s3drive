@@ -737,3 +737,29 @@ timeout/status/socket/framing diagnostics, bounded fixed server events and a
 real TLS fault matrix without
 changing deadlines, TLS verification or replay policy. Root cause remains
 unproven until a classified native failure or other direct evidence explains it.
+
+
+### P6m4d — coordinator snapshots and recovery (proposal, 2026-10-17)
+
+After pinned-startup acceptance, follow the [backup/recovery research contract](authority-backup-recovery.md).
+The isolated Linux CLI experiment at7962058 measured a same-ID sequence0
+snapshot accepting a pinned restart after a later sequence1 operation had been
+acknowledged; lookup then forgot that operation. Identity/schema/integrity do
+not establish restored-history freshness. The dated result/reproducer are in
+the chapter; no real state or S3 provider was modified.
+
+Implement private complete snapshots and quarantined inspection first, followed
+by bounded online operation and separately proved continuity/fencing before
+any writable restoration or failover. Preserve originals, exact unknown input
+and dirty journals. This staged plan does not replace the full history-loss,
+independent-host/partition and actual platform recovery requirements. No
+backup/restore feature or cloud guarantee is enabled by the research.
+
+
+Windows job117562340718 at7962058 failed the new TLS fault matrix before startup
+acceptance: TruncatedBody received a request timeout, while a fixture task
+reported unlabeled header EOF. The follow-up prebuilds synchronous setup off
+runtime workers, retains six concurrent exchanges and every deadline/assertion,
+and records per-case fixture progress/timing before deciding what failed.
+This is a harness investigation; the original production transport cause and
+Windows coordinator/pairing acceptance remain unproven.

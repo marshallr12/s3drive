@@ -5,6 +5,40 @@ branch `codex/authority-startup`. Read docs/src/implementation-plan.md and
 [authority startup](docs/src/authority-startup.md). Main stays the accepted
 private712882eacd5f15273cd574c1d708b6f99935c1ea; no promotion yet.
 
+Current code is privately pushed at7962058784da99c67b07273275c7b6c007f68ca5.
+CI39089283961 is terminal FAILED at this exact source: Linux117562340653
+and book117562340567 succeeded; Windows117562340718 passed the early native
+lifecycle then failed the new TLS fault matrix in workspace tests. Raw Windows
+/tmp/s3drive-wire-diagnostics-windows.log: TruncatedBody expected a body error,
+but got Transport(Request,timed_out=true); another server task reported header
+UnexpectedEof, without per-case correlation. All startup/pairing and later broad
+Windows steps were skipped. This does not classify the original AuthorityProbe
+failure or prove a production fix. Do not promote or rerun unchanged.
+
+Raw /tmp/s3drive-wire-diagnostics-linux.log confirms all8 native cases, paired
+PASS at02:18:18UTC, ordinary startup and both HTTP/TLS coordinator profiles at
+7962058. Private topic/main were verified after push; main stays712882e.
+
+Current test follow-up prebuilds all six cert/client/acceptor sets on blocking
+workers before request deadlines start. The six actual requests still run
+concurrently; all deadlines, expected categories, redaction and no-retry checks
+remain. Atomic per-case progress and setup/request timings plus header byte
+counts identify the next unexpected phase. Cases release/join their fixture
+server before asserting, and collect all case failures instead of aborting
+other cases at the first panic. Final stage is read after joining to avoid a
+response-vs-flush-completion race. No production Rust, retry or TLS changes.
+Focused TLS suite passed /tmp/s3drive-wire-fixture-tests1.log before the last
+context/byte-count refinement; final full gate PASSED exit0 at
+/tmp/s3drive-wire-fixture-gate1.log:265 state, ten HTTP, six TLS,17 SDK,
+five CLI restart/worker and seven managed cases, format/Clippy/build plus57-doc
+links/build/tests. Do not claim blocking setup caused the
+Windows failure until direct evidence supports that conclusion.
+
+Current dirty files include this test and bounded backup research: new chapter,
+SUMMARY/plan/security links, dated JSON and a Linux-only historical reproducer.
+Local57-doc links/build/test and the reproducer passed. Include with the next
+substantive test checkpoint rather than creating a docs-only native cycle.
+
 Latest pushed parent is ce784e4c3475a47637adb499ac41d413646b787e.
 CI39086854659 is terminal FAILED: book117555117307 and Linux117555117517
 succeeded; Windows117555117545 failed AuthorityProbe before the injected kill.
@@ -41,6 +75,24 @@ CLI malformed-handshake/privacy/budget/service-continuity test passed at
 was corrected using inspected toolchain1.99.1 core source before the final gate.
 Do not claim this is the Windows fix;
 the diagnostic candidate still needs exact-source native evidence.
+
+## Independent backup research while CI runs
+
+See docs/src/authority-backup-recovery.md. Primary SQLite backup/API/VACUUM/
+WAL/corruption sources were checked2026-10-17. The isolated CLI/SQLite experiment
+at7962058 observed a valid sequence0 snapshot accepting the original volume pin
+after sequence1 had been acknowledged; that operation was absent in the older
+copy. Only one authority ran at a time, no S3 or actual user state was touched.
+Dated JSON and Linux-only historical reproducer are in docs/src/evidence; the
+reproducer was rerun successfully, not added to the gate as an oracle requiring
+unsafe behavior. Runtime proof /tmp/s3drive-backup-boundary-research.json.
+
+This establishes a boundary, not an implemented restore feature. The proposal
+requires private complete snapshots, quarantine, then separately proved history
+continuity and external fencing before writable restore/failover. Generations
+alone do not recover lost acknowledged metadata. No real backups, hosting or
+accounts provisioned. Security page's obsolete loopback-only claim was corrected
+to implemented HTTPS/one-owner volume token and remaining deployment gaps.
 
 ## Current implementation and invariants
 
@@ -82,7 +134,8 @@ Windows117532751106, book117532751123, strict21/14 source/platform artifacts
 
 Full local gate /tmp/s3drive-windows-paired-gate1.log completed exit0 before
 PS-only child-loop correction:265 state,10 HTTP,5 TLS,17 SDK,5 restart/worker
-CLI,7 managed cases, format/Clippy/build/56-doc checks. No Rust changed since.
+CLI,7 managed cases, format/Clippy/build/56-doc checks. This is parent evidence;
+the current diagnostic follow-up changed shared Rust TLS/wire code.
 Four real-child policy/lock/budget/Stop cases passed
 /tmp/s3drive-windows-supervisor-policy1.log. AST of PS files and extracted account
 worker passed. Portable live CLI/SDK/TLS/killed-authority/unknown-request/conflict
@@ -128,8 +181,9 @@ It predates ce784's child-loop correction; do not promote e48.
 
 ## Next actions and publication
 
-Privately push the locally green substantive diagnostic follow-up, then inspect
-the new exact-source Windows job for a classified transport cause.
+Privately push the locally green fixture follow-up, then inspect the new exact-source Windows job for per-case progress and the original
+startup failure with corroborating bounded server events. Do not treat an
+unexplained passing rerun as proof that earlier failures were fixed.
 Keep corrected child-loop, full paired Windows and every existing native/
 reference/startup assertion. Retrieve completed job logs via
 `gh api --allow-escape-sequences repos/marshallr12/s3drive/actions/jobs/JOB/logs`.

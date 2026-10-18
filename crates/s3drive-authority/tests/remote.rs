@@ -4,7 +4,13 @@ use s3drive_authority::{
     Apply, Authority, Error, Kind, Mutation, ROOT, Reply, Request, ServerTls, Token, WireClient,
     WireError, WirePhase, serve_tls,
 };
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicU8, Ordering},
+    },
+    time::{Duration, Instant},
+};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
@@ -183,7 +189,7 @@ fn assert_redacted(error: &WireError, secrets: &[&str]) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tls_wire_diagnostics_distinguish_failure_stages_without_disclosing_inputs() {
-    #[derive(Clone, Copy)]
+    #[derive(Debug, Clone, Copy)]
     enum Fault {
         Status,
         Oversize,
@@ -192,7 +198,10 @@ async fn tls_wire_diagnostics_distinguish_failure_stages_without_disclosing_inpu
         RequestTimeout,
         BodyTimeout,
     }
-    let mut cases = tokio::task::JoinSet::new();
+    // Prepare every synchronous certificate/client factory before any request
+    // deadline starts. Keep blocking trust/crypto setup off runtime workers;
+    // the six network exchanges below still run concurrently.
+    let mut fixtures = Vec::new();
     for fault in [
         Fault::Status,
         Fault::Oversize,
@@ -201,21 +210,50 @@ async fn tls_wire_diagnostics_distinguish_failure_stages_without_disclosing_inpu
         Fault::RequestTimeout,
         Fault::BodyTimeout,
     ] {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("https://{}/v1/namespace", listener.local_addr().unwrap());
+        let endpoint = url.clone();
+        let setup = Instant::now();
+        let (cert, client, acceptor) = tokio::task::spawn_blocking(move || {
+            let cert = Certificate::new("127.0.0.1", false);
+            let client = cert.client(&endpoint);
+            let acceptor = cert.acceptor();
+            (cert, client, acceptor)
+        })
+        .await
+        .unwrap();
+        fixtures.push((
+            fault,
+            listener,
+            url,
+            cert,
+            client,
+            acceptor,
+            setup.elapsed(),
+        ));
+    }
+    let mut cases = tokio::task::JoinSet::new();
+    for (fault, listener, url, cert, client, acceptor, setup) in fixtures {
         cases.spawn(async move {
             const PRIVATE_BODY: &str = "private-response-marker";
-            let cert = Certificate::new("127.0.0.1", false);
-            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-            let url = format!("https://{}/v1/namespace", listener.local_addr().unwrap());
-            let acceptor = cert.acceptor();
+            let stage = Arc::new(AtomicU8::new(0));
+            let progress = stage.clone();
+            let started = Instant::now();
             let (finished, done) = oneshot::channel();
-            let server = tokio::spawn(async move {
+            let mut server = tokio::spawn(async move {
                 let (tcp, _) = listener.accept().await.unwrap();
+                progress.store(1, Ordering::Relaxed);
                 let mut stream = acceptor.accept(tcp).await.unwrap();
+                progress.store(2, Ordering::Relaxed);
                 let mut header = Vec::new();
                 while !header.ends_with(b"\r\n\r\n") {
                     assert!(header.len() < 8192);
-                    header.push(stream.read_u8().await.unwrap());
+                    let byte = stream.read_u8().await.unwrap_or_else(|error| {
+                        panic!("fixture {fault:?} header ended after {} bytes: {:?}", header.len(), error.kind())
+                    });
+                    header.push(byte);
                 }
+                progress.store(3, Ordering::Relaxed);
                 let length = std::str::from_utf8(&header).unwrap().lines().find_map(|line| {
                     line.to_ascii_lowercase().strip_prefix("content-length: ")
                         .and_then(|n| n.parse::<usize>().ok())
@@ -224,6 +262,7 @@ async fn tls_wire_diagnostics_distinguish_failure_stages_without_disclosing_inpu
                 let mut body = vec![0; length];
                 stream.read_exact(&mut body).await.unwrap();
                 assert!(matches!(serde_json::from_slice::<Request>(&body).unwrap(), Request::Info {}));
+                progress.store(4, Ordering::Relaxed);
                 let response = match fault {
                     Fault::Status => format!("HTTP/1.1 503 Service Unavailable\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{PRIVATE_BODY}", PRIVATE_BODY.len()),
                     Fault::Oversize => "HTTP/1.1 200 OK\r\nContent-Length: 8388609\r\nConnection: close\r\n\r\n".into(),
@@ -233,30 +272,45 @@ async fn tls_wire_diagnostics_distinguish_failure_stages_without_disclosing_inpu
                 };
                 stream.write_all(response.as_bytes()).await.unwrap();
                 stream.flush().await.unwrap();
+                progress.store(5, Ordering::Relaxed);
                 if matches!(fault, Fault::RequestTimeout | Fault::BodyTimeout) {
                     done.await.unwrap();
                 }
                 drop(stream);
                 assert!(tokio::time::timeout(Duration::from_millis(500), listener.accept()).await.is_err(), "diagnostic path retried request");
             });
-            let error = tokio::time::timeout(Duration::from_secs(13), cert.client(&url).request(&Request::Info {}))
-                .await.unwrap().unwrap_err();
+            let result = tokio::time::timeout(Duration::from_secs(13), client.request(&Request::Info {})).await;
+            let at_result = stage.load(Ordering::Relaxed);
+            let elapsed = started.elapsed();
+            let _ = finished.send(());
+            let server_result = tokio::time::timeout(Duration::from_secs(3), &mut server).await;
+            if server_result.is_err() {
+                server.abort();
+                let _ = server.await;
+            }
+            let reached = stage.load(Ordering::Relaxed);
+            let context = format!("fault={fault:?}, stage_at_result={at_result}, final_stage={reached} (0=new,1=TCP,2=TLS,3=headers,4=body,5=fault-ready), setup={setup:?}, elapsed={elapsed:?}, result={result:?}");
+            assert!(matches!(server_result, Ok(Ok(()))), "fixture did not complete: {context}; {server_result:?}");
+            assert_eq!(reached, 5, "fault was not established: {context}");
+            let error = result.expect(&context).expect_err(&context);
             assert_redacted(&error, &[SECRET, &url, &cert.cert, PRIVATE_BODY]);
             match fault {
-                Fault::Status => assert_eq!(error, WireError::HttpStatus(503)),
-                Fault::Oversize => assert_eq!(error, WireError::ResponseTooLarge),
-                Fault::InvalidReply => assert_eq!(error, WireError::InvalidReply),
-                Fault::TruncatedBody => assert!(matches!(error, WireError::Transport { phase: WirePhase::ResponseBody, timed_out: false, .. }), "{error:?}"),
-                Fault::RequestTimeout => assert!(matches!(error, WireError::Transport { phase: WirePhase::Request, timed_out: true, .. }), "{error:?}"),
-                Fault::BodyTimeout => assert!(matches!(error, WireError::Transport { phase: WirePhase::ResponseBody, timed_out: true, .. }), "{error:?}"),
+                Fault::Status => assert_eq!(error, WireError::HttpStatus(503), "{context}"),
+                Fault::Oversize => assert_eq!(error, WireError::ResponseTooLarge, "{context}"),
+                Fault::InvalidReply => assert_eq!(error, WireError::InvalidReply, "{context}"),
+                Fault::TruncatedBody => assert!(matches!(error, WireError::Transport { phase: WirePhase::ResponseBody, timed_out: false, .. }), "{context}"),
+                Fault::RequestTimeout => assert!(matches!(error, WireError::Transport { phase: WirePhase::Request, timed_out: true, .. }), "{context}"),
+                Fault::BodyTimeout => assert!(matches!(error, WireError::Transport { phase: WirePhase::ResponseBody, timed_out: true, .. }), "{context}"),
             }
-            let _ = finished.send(());
-            server.await.unwrap();
         });
     }
+    let mut failures = Vec::new();
     while let Some(result) = cases.join_next().await {
-        result.unwrap();
+        if let Err(error) = result {
+            failures.push(error.to_string());
+        }
     }
+    assert!(failures.is_empty(), "wire fault cases failed: {failures:?}");
 }
 struct Server {
     url: String,

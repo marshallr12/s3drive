@@ -1,0 +1,11 @@
+{
+  "source_commit": "7962058784da99c67b07273275c7b6c007f68ca5",
+  "scope": "isolated Linux CLI/SQLite fixture; no S3 or live-user configuration",
+  "snapshot_integrity_ok": true,
+  "pinned_start_accepted_same_volume": true,
+  "acknowledged_sequence_before_restore": 1,
+  "sequence_after_restore": 0,
+  "acknowledged_operation_missing_after_restore": true,
+  "research_date": "2026-10-17 America/New_York",
+  "status": "Observed boundary, not an implemented restore feature or acceptance oracle"
+}
