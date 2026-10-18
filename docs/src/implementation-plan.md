@@ -1835,3 +1835,14 @@ the full local gate and this source's own hosted cohort before integration.
 The focused S3 suite passed 62 controls. The full local gate passed with
 252 frozen hashes unchanged, 62 S3 / 365 state tests and 63 book chapters.
 Its own hosted acceptance remains pending; no managed/native activation follows.
+
+### Draft phase: verified manifest range reader (2026-10-18)
+
+Implement the [reader contract](manifest-range-reader.md) in an isolated draft.
+Controller acceptance is complete; helper hosted acceptance remains pending.
+Do not publish this reader or integrate branches before the helper cohort is
+accepted. Scope: new managed chunk-reader child module/export, dedicated owned
+real-SDK/authenticated-authority read fixture and controls, book/evidence only.
+Keep legacy Reader/FileSnapshot, schemas, wire/codec vectors and native callbacks
+unchanged. Done: all declared range/integrity/authorization/budget/cancellation
+controls, full local gate and its own hosted cohort before native activation.

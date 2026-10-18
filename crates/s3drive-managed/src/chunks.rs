@@ -1,5 +1,7 @@
 //! Isolated immutable-tree publication. Root commits are not logical file
 //! flushes. No native activation, detached/removal mode or source settlement.
+mod reader;
+pub use reader::{File, ReadFailure, ReadOptions, Reader};
 use s3drive_authority::{Apply, Error, Reply, Request, Store, WireClient};
 use s3drive_s3::uploads::{Executor, chunks::Uploader};
 use s3drive_state::{

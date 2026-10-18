@@ -60,7 +60,25 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Active work: independent pinned related-object reads (2026-10-18)
+## Active work: verified manifest reader draft (2026-10-18)
+
+Checkout /home/marshall/src/worktrees/s3drive-manifest-range-reader,
+branch codex/manifest-range-reader from9564a53 (helper fef9442 status child).
+Controller474 accepted all3/ownstrict21/14/raw35; primaryroot /src/s3drive at48d08dd.
+Helperfef CI39167583915/watch43951 stillLIVE, independentcheckout
+/home/marshall/src/worktrees/s3drive-pinned-related-reads muststayfrozen252files.
+Do notpublishreader/integratebranches untilhelperowncohortaccepted. Localdraft
+implementation canprogressagainstlocalgreenhelper; noacceptance/nativeclaim.
+Read manifest-range-reader.md andimplementation-plan.md. Newmodule chunks/reader.rs
+andexport; dedicatedCLIintegrationbinary/readfaultfixture; docs/evidence. Nolegacy
+Reader/schema/wire/codec/native changes. Fixed4active/256snapshots/8MiBoutput/
+1MiBdata/10432page/27pagevisits/9dataobjects, defaultmax30s overalldeadline;
+ReadOptions maychooseshorterpositivedeadline forusers/controlledtimeouttest.
+No runtime acceptance yet. Existinghelperlocalgate57146 CLOSED EXIT0. Sharedlocal
+CARGO_TARGET_DIR=/home/marshall/src/s3drive/target maybereused sequentially; no
+otherlocalS3Drivecargo job islive. No newagentsdispatched. GoalACTIVE/PUBLIC.
+
+## Prerequisite: pinned related-object reads
 
 Checkout /home/marshall/src/worktrees/s3drive-pinned-related-reads,
 branch codex/pinned-related-reads, from accepted20706cd. The primary checkout
