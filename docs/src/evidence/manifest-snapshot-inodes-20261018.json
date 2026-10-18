@@ -108,5 +108,25 @@
     "members": 13,
     "all_indexed_members_verified": true,
     "acceptance": "portable gate only; repaired native acceptance pending"
+  },
+  "publication": {
+    "source": "c633d02d47ccf2da20cfadd50e0b8e11f6e06811",
+    "branch": "codex/manifest-snapshot-inodes",
+    "run_id": 39178517491,
+    "run_attempt": 1,
+    "jobs": {
+      "linux": 117826123544,
+      "windows": 117826123721,
+      "book": 117826123692
+    },
+    "watch_session": 30345,
+    "watch_log": "/tmp/s3drive-snapshot-inodes-c633-watch.log",
+    "clean_exact_remote_verified": true,
+    "frozen_count": 257,
+    "working_and_committed_hashes_match": true,
+    "visibility": "PUBLIC",
+    "visibility_checks_read_only": true,
+    "main": "1a93b5f7248892fec96dc8da4438ee7967692e77",
+    "native_acceptance": "pending own completed and reviewed cohort"
   }
 }

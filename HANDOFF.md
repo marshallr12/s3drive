@@ -62,6 +62,17 @@ P0 table now reflects D040 public policy instead of stale privacy requirement.
 
 ## Current repair: immutable manifest inode identities (2026-10-18)
 
+Published c633d02d47ccf2da20cfadd50e0b8e11f6e06811, clean exactremote with
+all257 working/committed hashes verified. Own run39178517491 attempt1 LIVE:
+Linux117826123544, Windows117826123721, book117826123692. Watch30345 ->
+/tmp/s3drive-snapshot-inodes-c633-watch.log; resume same handle/cohort.
+Publication proof /tmp/s3drive-snapshot-inodes-publication.json. PUBLIC retained,
+main1a93b5f unchanged. Need own terminal all3/native controls/rawlog review and
+own finalized Windows typed21+14/projectoracles/raw35 artifacts. Do not borrow
+old artifacts. Runtime stays frozen while observing; docs-only children may
+record evidence with skip-ci. Goal ACTIVE; chunk writes remain later work.
+
+
 Worktree /home/marshall/src/worktrees/s3drive-manifest-snapshot-inodes,
 branch codex/manifest-snapshot-inodes from755da0f. Source d98's Linux native
 job117820371839 FAILED at native.rs494: old130MiB fd metadata reports4 after

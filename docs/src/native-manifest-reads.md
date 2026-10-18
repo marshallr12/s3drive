@@ -135,3 +135,9 @@ both earlier native job logs. Every indexed member was verified. Archive SHA-256
 `e243742e802539035a8efa36478ce339a6f1ce43646460592bade4feb887a2aa`.
 This establishes portable acceptance only; the corrected source still needs its
 own real FUSE and WinFsp controls.
+
+Repaired source `c633d02` is published on `codex/manifest-snapshot-inodes`.
+Its [own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39178517491)
+is running. Public visibility and the unchanged main tip were verified read-only;
+all 257 working and committed source hashes match. This is a pending native gate,
+not mounted-manifest acceptance.
