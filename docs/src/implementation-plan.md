@@ -1531,10 +1531,11 @@ Journal result: 15 focused tests pass; full local gate passes with 349 state/
 1 ignored, 59 S3, 34 core and 50 authority tests, all 18 managed publication
 contracts, formatting/Clippy/build, 64 doc-link files and 60 book chapters.
 All 247 frozen hashes match, and independent final review found no blockers.
-Own-source hosted regression remains pending. See the
+Own-source hosted regression passed at63164d0/run39153910031, all three jobs;
+fresh21/14 native records and all35 raw fields/types matched. See the
 [isolated journal contract](chunk-root-journal.md) and its archived evidence.
 
-### Following slice: policy-bound chunk publisher (proposal, 2026-10-18)
+### Implemented slice: policy-bound chunk publisher (2026-10-18)
 
 Build an explicit library controller over the isolated journal, existing chunk
 uploader and authenticated authority client. Acquire base metadata directly from
@@ -1560,3 +1561,68 @@ missing grandchild proof; wrong route/source/guard refusal; durable local failur
 before a metadata send. Run full local gate and its own Linux/Windows cohort.
 This phase still does not enable mounted chunk format, logical settlement,
 detached/removal modes, provider writes or new native file-size limits.
+
+
+Pre-implementation review adds a separate metadata-only Recovery factory with
+explicit expected volume/store IDs and the same private Storage. It validates
+retained journal state, needs no Executor/S3 credentials/policy, and can only
+return a recorded result or replay an already-prepared exact Publish. An
+unprepared record is a typed refusal with no RPC. No Features/Info/Node/Store
+request is a prerequisite for that historical replay. The normal Publisher
+retains authenticated metadata and exact Executor/store-route checks for new
+work, and delegates its prepared branch to the same private recovery routine.
+
+Implementation ownership: new s3drive-managed/src/chunks.rs and a separate CLI
+integration-test binary/fixture. Keep old publisher, readers, JSON/hash, schemas,
+wire protocol and native callbacks unchanged. Public API results mean root
+commit only. Library admission remains bounded; no automatic retries or rebasing.
+Test real child-process death after unknown root CAS, then recovery without S3
+credentials/policy and with damaged source bytes; also expired policy, lost
+reserve/PUT replies, independent content races, wrong binding, recursive proof
+loss and local SQL write failure before send. Preserve pending original sources.
+
+
+Publisher result: focused8 controls pass; final full gate50472 EXIT0,
+349state/1ignored,59S3,34core,50authority,18existing publication tests and8new
+controls,65Markdownfiles/61chapters. All249frozenruntime/fixturehashes unchanged;
+independent review found no blockers.13member indexed local evidence retains
+gate/source/review. See [publisher contract](chunk-root-publisher.md). Own-source
+hosted regression remains pending; source settlement/native chunks/provider
+acceptance are not established by this local gate.
+
+
+### Following slice: chunk source settlement contract (proposal, 2026-10-18)
+
+Do not pass the physical root generation to the legacy logical acknowledgment.
+Current logical records bind `managed::Input` and require the physical receipt
+size/SHA to equal the complete logical source; a manifest page has different
+bytes, size and generation identity. The permanent chunk-client role deliberately
+excludes these legacy APIs even after a root commit. Merely relaxing either
+check would fabricate a file flush and reopen namespace/removal races.
+
+First define a separate, versioned local linkage from the exact source snapshot
+and manifest to the chunk plan, physical root, complete historical tree proof and
+full authority receipt. Preserve all legacy JSON and hash vectors. Scope it to
+the dedicated attached-only chunk client, retaining the existing reciprocal
+legacy exclusion. Do not enable legacy namespace/open APIs or mounted callbacks
+as part of this persistence slice. A distinct logical receipt/result must make
+source settlement explicit instead of changing RootCommit's meaning.
+
+The owner must freshly validate the exact frozen record, complete tree proof,
+source lineage and authority receipt in one transaction before advancing a
+versioned settlement marker. Repeated historical acknowledgment is idempotent;
+a newer pending local head must remain pending, and a later remote root must
+not rewrite the old receipt. Missing/corrupt proofs, disk-full, ignored or
+rewritten SQL effects and owner death must not produce partial acknowledgment.
+No payload reclamation, role release, migration of mounted users, detached or
+removal-owner mode follows. Before implementing, review the exact legacy
+logical/remote receipt invariants and choose the narrow linkage API; do not
+silently extend generic remote flush semantics.
+
+Acceptance: dedicated-state migration/isolation, legacy vectors unchanged,
+newer heads/roots, restart at every local boundary, lost local replies,
+concurrent repeated acknowledgment, conflict/unknown metadata refusal, recursive
+receipt damage, SQLite-full and post-write trigger controls. Then real SDK plus
+authenticated-authority recovery through the new controller, full local gate and
+its own source-bound hosted cohort. Verified manifest range reads and native
+lifecycle barriers remain later independently tested phases.

@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "full local gate passed; own-source hosted acceptance pending",
+  "status": "full local gate and exact-source hosted native regression passed",
   "schema_version": 27,
   "provider_requests": 0,
   "native_activation": false,
@@ -33,7 +33,7 @@
       "no source settlement or native chunk activation"
     ]
   },
-  "new_controller_proposal": "implementation-plan.md#following-slice-policy-bound-chunk-publisher-proposal-2026-10-18",
+  "new_controller_proposal": "implementation-plan.md#implemented-slice-policy-bound-chunk-publisher-2026-10-18",
   "branch": "codex/chunk-root-publication",
   "parent_commit": "ceef8e189698f234691bdbf1d7745bf73881c92c",
   "source_sha256": {
@@ -473,37 +473,60 @@
     "svg_http_matches_source": true
   },
   "hosted": {
-    "source": "63164d012bc150fd0f5258afd5466e9efb41bd2e",
     "run_id": 39153910031,
     "run_attempt": 1,
-    "url": "https://github.com/marshallr12/s3drive/actions/runs/39153910031",
-    "status": "in_progress",
-    "jobs": [
+    "jobs": {
+      "windows": 117753033763,
+      "linux": 117753033780,
+      "book": 117753033479
+    },
+    "all_terminal_success": true,
+    "raw_logs_reviewed": true,
+    "fresh_own_artifacts": [
       {
-        "id": 117753033763,
-        "name": "rust (windows-latest)",
-        "status": "in_progress"
+        "kind": "replacement",
+        "id": 12146631312,
+        "source": "63164d012bc150fd0f5258afd5466e9efb41bd2e",
+        "run_id": 39153910031,
+        "run_attempt": 1,
+        "windows_job": 117753033763,
+        "zip_sha256": "64328d8c73fb7de299750a03160a86bb32c97826171f3d47d3a740c539e4fb22",
+        "json_sha256": "2908513f1ef6d49b356db791181a313fc6e4557d5c3b26ef724abece4ab348be",
+        "primary_artifact_reused": false
       },
       {
-        "id": 117753033479,
-        "name": "book",
-        "status": "in_progress"
-      },
-      {
-        "id": 117753033780,
-        "name": "rust (ubuntu-latest)",
-        "status": "in_progress"
+        "kind": "disposition",
+        "id": 12146506974,
+        "source": "63164d012bc150fd0f5258afd5466e9efb41bd2e",
+        "run_id": 39153910031,
+        "run_attempt": 1,
+        "windows_job": 117753033763,
+        "zip_sha256": "ec4e0f85d24e929551266b96253809b8c9a6d183485d9a7a4d8050573fdac1ae",
+        "json_sha256": "b7e269181ac95aad37de17a31adb0e106f37a9c1117e3ddba4bd9812798d534b",
+        "primary_artifact_reused": false
       }
     ],
-    "watch_session": 20504,
-    "watch_log": "/tmp/s3drive-chunk-publication-631-watch.log",
-    "checker_script": "/tmp/s3drive-check-chunk-publication-631.py",
-    "checker_compiled_only": true,
-    "checker_executed": false,
-    "all_raw_reviews_closed": false,
-    "new_artifact_output": "/tmp/s3drive-chunk-publication-631-artifacts",
-    "own_native_cohort_accepted": false,
-    "chunked_native_large_file_or_provider_acceptance": false
+    "strict_typed_21_14_project_oracles": true,
+    "all_35_raw_records_fields_and_types_match": true,
+    "archive": {
+      "path": "evidence/chunk-root-journal-631-hosted-20261018.tar.gz",
+      "sha256": "b43ac8f51c97aa58f7d5dba25307963200def440c6485ab8c1fa98d3697bfeea",
+      "bytes": 100013,
+      "members": 20,
+      "all_indexed_members_verified": true
+    },
+    "scope": "historical journal source only; existing native format, not new publisher or mounted chunks",
+    "windows_state_passed": 344,
+    "linux_state_passed": 349,
+    "state_ignored": 1,
+    "warnings_retained": [
+      "unused WinFsp delay import LNK4199 plus9 duplicates",
+      "three disposable locked profiles retained with dummy credentials removed",
+      "Node/cache deprecations; recovered Cargo download retries",
+      "expected TLS, provider denial and stopped-authority errors; no historical NoWrite cause claim"
+    ],
+    "physical_windows_10_11_or_reboot": false,
+    "real_provider_requests": 0
   },
   "publication": {
     "source": "63164d012bc150fd0f5258afd5466e9efb41bd2e",
@@ -514,5 +537,6 @@
     "public_before_after": true,
     "visibility_mutations": 0,
     "main_unchanged": "1a93b5f7248892fec96dc8da4438ee7967692e77"
-  }
+  },
+  "runtime_commit": "63164d012bc150fd0f5258afd5466e9efb41bd2e"
 }

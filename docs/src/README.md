@@ -66,8 +66,13 @@ prepare restartable chunk/page dependencies from a sealed local snapshot.
 Their own local gate passed (310 state tests; 18 new chunk-plan tests), with
 [separate evidence](evidence/chunk-plans-20261018.json). The [chunk upload bridge](chunk-object-uploads.md) and new
 [manifest authority contract](manifest-root-authority.md) provide physical
-object receipts and versioned metadata CAS separately. Client settlement, remote
-reference reuse and native large files remain unfinished.
+object receipts and versioned metadata CAS separately. The complete historical
+[tree proof](chunk-tree-receipts.md) and [isolated root journal](chunk-root-journal.md)
+have passed their own local and hosted regressions. The new
+[policy-bound publisher and metadata-only recovery](chunk-root-publisher.md)
+pass the full local gate and independent frozen-source review; own-source
+hosted acceptance is tracked in that chapter. Client settlement, verified range reads, remote reference reuse
+and native large files remain unfinished.
 
 [Offline immutable multipart plans](multipart-plan.md#offline-immutable-plans-candidate-implementation-2026-10-18)
 freeze original bindings and hash verified staged bytes in bounded owner commands.

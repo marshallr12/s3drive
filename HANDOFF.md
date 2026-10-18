@@ -60,7 +60,50 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Active work: isolated chunk-root journal (2026-10-18)
+## Active work: policy-bound chunk-root publisher (2026-10-18)
+
+Branch codex/chunk-root-publisher from00a8829. Implemented separate
+s3drive-managed::chunks Publisher, S3-independent Recovery, opaque historical
+RootCommit and separate CLI integration binary. Same private owner; exact SDK
+route + separate source/config binding; authenticated Features/Info/Node/Store
+for new work. Persist full reserve before Apply; policy-bound child-first uploads;
+fresh tree proof then persist full Publish before send. Saved Prepared bypasses
+all S3 binding/policy/metadata refresh. Recovery needs Storage/WireClient/expected
+volume+store only, and never invents IDs/reserves/uploads/reads source bytes.
+RootCommit awaits durable receipt; original source stays pending. Old publisher,
+reader, schema27, wire/hashes/native callbacks unchanged. No provider mutations.
+
+Focused latest8tests PASS65.90s /tmp/s3drive-chunk-publisher-focus4.log. Controls
+retain unknown PUT across controller reconstruction, lost reserve/root replies,
+real child kill then recovery without S3 credentials/policy and with damaged
+source bytes, newer remote root/dirty local head, expired/narrowed policies,
+receipt-save failure after Applied, synchronized same-owner same-plan recovery,
+independent writer conflict, wrong bindings/corrupt admission/ignored SQL, missing
+grandchild proof, empty/sparse/Unicode and EXACT-policy names/rename. All expected
+PUT targets unique. Initial fixture/append_at errors fixed without weakening.
+Clippy first found redundantunit(); removed and fmt awaited. Clippy2 EXIT0.
+
+Required pre-implementation and final delta review reused existing legacy reviewer
+gpt-6-astra/xhigh, local rubric8/spec1 blast2 depth2 verify1 cost2 with persistence/
+security override. No new agents spawned. No blockers. Latest production SHA
+9f4abdc9d1ff185e8b9d51b561e7744f3eec4b9718b50dd745573533e10fccd2;
+test SHA6038916bcacd63f9505b4286337a2f0a6502d6c82a2cae58a3e835d2b6e9d7bf.
+Review verified preceding c7ec5c production differs solely by redundantunit removal.
+No reviewer tests/provider calls. Fullgate50472 CLOSED EXIT0 with249runtime/fixture files
+frozen /tmp/s3drive-chunk-publisher-frozen.json. Log
+/tmp/s3drive-chunk-publisher-gate.log. All249hashes match;349state/1ignored,59S3,34core,50authority,18existing
+publication+8newcontrols,65Markdownfiles/61chapters; state202.17s.
+New chapter/image/evidence chunk-root-publisher.md and matching SVG/dated JSON.
+Durable13member localarchive chunk-root-publisher-local-20261018.tar.gz,
+46976bytes,SHA5d9638bf5e489aced912113346aba42a9d92dd6914a6a25d1a3817bc1b98d591;
+allindexedmembersverified. SVG XML/librsvg/visual and HTTP33767 passed. Final
+review matched249/249; corrected sparsefixture description to128MiB+64bytes.
+This is the tested runtime checkpoint; publication proof and own hosted cohort
+must be recorded after push. Main remains1a93b5f; no native activation follows. Logical
+settlement, range reader, native chunk activation, provider/physical startup stay
+unfinished. Goal ACTIVE; repository must stay PUBLIC.
+
+## Preceding isolated chunk-root journal (2026-10-18)
 
 Branch codex/chunk-root-publication fromceef8e1. Published runtime
 63164d012bc150fd0f5258afd5466e9efb41bd2e. Implemented schema27 isolated
@@ -97,22 +140,21 @@ actual SQLITE_FULL and schema26 collision rollback. Historical prepared recovery
 works after current payload corruption while source remains pending.
 
 Publication clean/exact remote/all247hashes/PUBLIC before-after, main1a93b5f
-unchanged; proof /tmp/s3drive-chunk-publication-publication.json. Own CI39153910031
-attempt1 at63164d0 LIVE: Windows117753033763,book117753033479,Linux117753033780.
-Watch20504 LIVE /tmp/s3drive-chunk-publication-631-watch.log. Track same run/handle;
-do not rerun on observation timeout. Prepared checker
-/tmp/s3drive-check-chunk-publication-631.py compiled only, NOT executed. Require
-all3 terminal success and own completed raw review marker
-/tmp/s3drive-chunk-publication-631-raw-reviewed.json. Output must be fresh
-/tmp/s3drive-chunk-publication-631-artifacts; bind exact source/run/attempt/job IDs,
-finalized artifact IDs/API digest/time, strict typed21/14 and project oracles,
-then all35 raw fields/types. Reject prior IDs including3e512145416969/12145194101.
-No success checker on failure; do not borrow the preceding3e5 cohort. Network controller is the next independent slice: read the
-following proposal in implementation-plan.md. Acquire authenticated metadata
-directly (legacy Reader rejects manifest bases), bind both fingerprints, repeat
-exact saved Apply, and recover prepared Publish without fresh upload work/grant
-or source-byte reads. Native chunk activation, logical settlement, range reader,
-provider and physical startup acceptance remain unfinished. Goal ACTIVE.
+unchanged; proof /tmp/s3drive-chunk-publication-publication.json. Own CI39153910031 attempt1 at63164d0 all3 SUCCESS; watch20504 CLOSED0.
+Windows117753033763,book117753033479,Linux117753033780 raw logs reviewed;
+checker33526 CLOSED0, fresh own artifacts12146631312/12146506974 stricttyped21/14
++projectoracles +all35rawfields/typesPASS. Windows344state/1ignored,Ubuntu349/1;
+all15journalcontrols PASS both. Existing9FUSE/7WinFsp/32HTTPS/paired/nonsystemd/
+cross-logon/snapshotcontrolsPASS; WindowsServer2025/WinFsp2.1.25156,Ubuntu24.04.5.
+No physicalWin10/11/reboot/provider/chunkedmount or historicalNoWritecause claim.
+Warnings retained: unusedWinFspdelayimport+9duplicates,Node/cachedeprecations,
+three disposablelockedprofileswithdummycredentialsremoved,recoveredbooknetwork
+retries,expectedTLS/HEAD403/stoppedauthorityerrors. Durable20memberarchive
+chunk-root-journal-631-hosted-20261018.tar.gz,100013bytes,SHA
+b43ac8f51c97aa58f7d5dba25307963200def440c6485ab8c1fa98d3697bfeea;
+allindexedmembersverified. Exactsourcebound parent evidence; cannot substitute
+for current publisher cohort. Logical settlement, verified range reader, native
+chunk activation and approved provider/physical acceptance remain. Goal ACTIVE.
 
 ## Preceding complete historical chunk-tree receipt (2026-10-18)
 

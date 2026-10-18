@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="760" viewBox="0 0 1120 760" role="img" aria-labelledby="title desc">
+<title id="title">Chunk publisher and metadata-only recovery</title>
+<desc id="desc">A private local SQLite owner retains source snapshots, plans, exact requests and receipts. The publisher uses authenticated metadata and policy-bound S3 upload paths. A separate metadata-only recovery path bypasses the S3 client and replays only a saved prepared request. Source settlement and native chunk integration remain unfinished.</desc>
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="none" stroke="#45617b" stroke-width="1.5"/></marker></defs>
+<rect width="1120" height="760" fill="#f4f7fb"/>
+<g font-family="sans-serif" fill="#172b42">
+<text x="30" y="40" font-size="25" font-weight="bold">Publish immutable chunks; recover the exact saved metadata operation</text>
+<text x="30" y="70" font-size="17">Library implementation • source settlement and native chunk callbacks remain unfinished</text>
+<rect x="25" y="95" width="640" height="565" rx="14" fill="#eaf0f7" stroke="#70879e"/>
+<text x="45" y="128" font-size="21" font-weight="bold">Local computer</text>
+<rect x="45" y="150" width="600" height="125" rx="9" fill="#eeedfa" stroke="#7477a3"/>
+<text x="65" y="179" font-size="20" font-weight="bold">Private SQLite owner</text>
+<text x="65" y="208" font-size="17">Source snapshots + plans + physical tree acknowledgments</text>
+<text x="65" y="238" font-size="17">Exact Reserve / Publish requests + historical receipts</text>
+<rect x="45" y="320" width="280" height="120" rx="9" fill="white" stroke="#45617b"/>
+<text x="65" y="351" font-size="20" font-weight="bold">Rust Publisher</text>
+<text x="65" y="381" font-size="16">New work requires policy</text>
+<text x="65" y="410" font-size="16">Reserve → upload → publish</text>
+<rect x="365" y="320" width="280" height="120" rx="9" fill="#e7f5ed" stroke="#4d8b65"/>
+<text x="385" y="351" font-size="20" font-weight="bold">Rust Recovery</text>
+<text x="385" y="381" font-size="16">Prepared request replay only</text>
+<text x="385" y="410" font-size="16">No S3 credentials or policy</text>
+<path d="M185 275 V309" stroke="#45617b" fill="none" marker-end="url(#arrow)"/>
+<path d="M505 275 V309" stroke="#45617b" fill="none" marker-end="url(#arrow)"/>
+<rect x="45" y="495" width="280" height="130" rx="9" fill="#e5f1ff" stroke="#5585ac"/>
+<text x="65" y="526" font-size="20" font-weight="bold">Policy-bound S3 client</text>
+<text x="65" y="555" font-size="16">Exact source + config binding</text>
+<text x="65" y="583" font-size="16">Children before parents</text>
+<text x="65" y="609" font-size="16">Create-only; verify bytes</text>
+<path d="M185 440 V484" stroke="#45617b" fill="none" marker-end="url(#arrow)"/>
+<rect x="740" y="150" width="350" height="155" rx="11" fill="#e7f5ed" stroke="#4d8b65"/>
+<text x="760" y="183" font-size="21" font-weight="bold">Rust metadata authority</text>
+<text x="760" y="215" font-size="17">Authenticated client transport</text>
+<text x="760" y="245" font-size="17">Namespace + content CAS</text>
+<text x="760" y="275" font-size="17">SQLite; optional future backend</text>
+<path d="M325 355 H345 V295 H690 V225 H729" fill="none" stroke="#45617b" marker-end="url(#arrow)"/>
+<path d="M645 380 H700 V270 H729" fill="none" stroke="#4d8b65" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="740" y="345" font-size="16">Repeat saved full Apply and IDs</text>
+<rect x="740" y="495" width="350" height="130" rx="11" fill="#e5f1ff" stroke="#5585ac"/>
+<text x="760" y="526" font-size="21" font-weight="bold">S3-compatible service</text>
+<text x="760" y="558" font-size="17">Buckets: immutable chunks</text>
+<text x="760" y="588" font-size="17">+ authenticated manifest pages</text>
+<path d="M325 560 H729" fill="none" stroke="#45617b" marker-end="url(#arrow)"/>
+<text x="395" y="543" font-size="16">SDK upload + exact observation</text>
+<text x="385" y="600" font-size="17" font-weight="bold">Recovery never takes this S3 path</text>
+<rect x="25" y="690" width="1065" height="45" rx="9" fill="#fff2dd" stroke="#c39340"/>
+<text x="45" y="719" font-size="17">Historical RootCommit ≠ source flush. Keep pending local data, newer heads, exact conflicts and uncertain requests.</text>
+</g></svg>

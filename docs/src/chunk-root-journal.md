@@ -2,8 +2,8 @@
 
 Implementation date: **2026-10-18**. This persistence slice connects the frozen
 [chunk plan](chunk-plans.md), [complete historical tree receipt](chunk-tree-receipts.md)
-and [authority root contract](manifest-root-authority.md). The transport
-controller remains the next phase. No network requests are made by this journal.
+and [authority root contract](manifest-root-authority.md). The [policy-bound controller](chunk-root-publisher.md) is a separate library
+layer. No network requests are made by this journal.
 
 ![The dedicated local SQLite journal retains the source, exact reserve request, physical tree proof and exact publish request. The future controller talks to the Rust authority and S3, while legacy lifecycle APIs are excluded.](images/chunk-root-journal.svg)
 
@@ -78,11 +78,17 @@ All 15 focused controls and the full local gate passed: 349 state/1 ignored,
 59 S3, 34 core and 50 authority tests, all 18 managed publication contracts,
 formatting/Clippy/build, 64 doc-link files and 60 book chapters. Independent
 review matched all 247 frozen runtime/fixture hashes and found no blockers.
-Own-source hosted native regression remains pending.
+Own-source hosted native regression passed at `63164d0`, run39153910031: all
+three jobs completed successfully. All15 journal controls passed on Windows
+Server2025 and Ubuntu24.04.5. Fresh, source-bound21/14 native reference records
+passed strict typed checks, project oracles and all35 raw-record comparisons.
+The [indexed hosted archive](evidence/chunk-root-journal-631-hosted-20261018.tar.gz)
+retains raw logs, exact artifact metadata and checkers. These are regressions of
+the existing mounted format; no mounted chunk or physical reboot acceptance.
 
 See the [dated evidence](evidence/chunk-root-journal-20261018.json) for completed
-checks and source binding. The policy-bound network controller needs real
-SDK/loopback S3 plus authenticated coordinator tests next. Logical settlement,
+checks and source binding. The separate controller adds real
+SDK/loopback S3 plus authenticated coordinator tests. Logical settlement,
 verified range reads, native chunked writes, approved Wasabi acceptance and
 physical startup/reboot checks remain separate. Whole graph/history validation
 and linear receipt lookup still have substantial cost; no scalable latency or
