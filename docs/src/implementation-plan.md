@@ -1720,8 +1720,8 @@ Read-only legacy review is complete. The corrected TLS fixture cohort has passed
 The state persistence slice is now implemented on `codex/chunk-source-settlement`;
 31 focused controls passed, including 16 new controls. Full local verification
 also passed: 365 state tests / 1 ignored, unchanged 252-file frozen map, existing
-integration suites and 62 book chapters. This source's own hosted cohort remains
-pending. See
+integration suites and 62 book chapters. This source's own hosted cohort passed all three jobs; raw logs and its own
+21/14 Windows artifact records were reviewed and strictly compared. See
 [exact source acknowledgments](chunk-source-settlement.md). Controller integration
 still follows as a separate phase; no mounted chunk activation follows here.
 

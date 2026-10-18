@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "full local gate passed; own hosted cohort pending",
+  "status": "full local gate and own source-bound hosted cohort accepted",
   "parent_commit": "96b644110525d80e9d45d3e021bf745ee4f11a06",
   "branch": "codex/chunk-source-settlement",
   "schema_version": 28,
@@ -359,7 +359,7 @@
   },
   "frozen_map_sha256": "babdf6487875da1630e35b98fab9d2d0697f640e8d9f8cb15e76189068afea42",
   "full_local_gate_passed": true,
-  "own_hosted_acceptance": false,
+  "own_hosted_acceptance": true,
   "preceding32d_cohort_is_not_current_acceptance": true,
   "gate": {
     "session": 93252,
@@ -437,7 +437,7 @@
     "run_id": 39163298774,
     "run_attempt": 1,
     "url": "https://github.com/marshallr12/s3drive/actions/runs/39163298774",
-    "status": "in_progress",
+    "status": "completed",
     "jobs": {
       "rust (windows-latest)": 117780950165,
       "book": 117780950315,
@@ -446,9 +446,9 @@
     "watch_session": 28386,
     "watch_log": "/tmp/s3drive-chunk-source-41b-watch.log",
     "checker": "/tmp/s3drive-check-chunk-source-41b.py",
-    "checker_prepared_not_executed": true,
+    "checker_prepared_not_executed": false,
     "fresh_output_directory": "/tmp/s3drive-chunk-source-41b-artifacts",
-    "fresh_output_absent": true,
+    "fresh_output_absent": false,
     "all_three_raw_logs_required_before_checker": true,
     "rejected_preceding_artifact_ids": [
       12147997314,
@@ -456,7 +456,7 @@
       12147331157,
       12147209844
     ],
-    "scope": "not yet acceptance; exact own source/jobs/artifacts/raw review required",
+    "scope": "own41b hosted state/native regression accepted; existing mounted format only, not mounted chunks or real Wasabi/physical reboot",
     "book_raw_reviewed": true,
     "book_review_marker": "/tmp/s3drive-chunk-source-41b-book-reviewed.json",
     "linux_raw_reviewed": true,
@@ -464,7 +464,7 @@
     "linux_log_sha256": "d788aabbd53cfaccb428000f663cd47211b3ca193d52097b9688f1d35f4c5b9f",
     "linux_conclusion": "success",
     "book_conclusion": "success",
-    "windows_status": "in_progress",
+    "windows_status": "completed",
     "linux_native_existing_format": {
       "tests_passed": 9,
       "elapsed_seconds": 63.33,
@@ -473,8 +473,40 @@
       "mounted_chunks": false,
       "physical_reboot_acceptance": false
     },
-    "archive_builder_prepared_not_executed": true,
-    "archive_checker_member_points_to_own41b": true
+    "archive_builder_prepared_not_executed": false,
+    "archive_checker_member_points_to_own41b": true,
+    "conclusion": "success",
+    "windows_conclusion": "success",
+    "windows_raw_reviewed": true,
+    "checker_exit_code": 0,
+    "all_three_raw_logs_reviewed": true,
+    "raw_35_all_fields_and_types_equal": true,
+    "artifact_ids": {
+      "replacement": 12149243457,
+      "disposition": 12149814008
+    },
+    "watch_exit_code": 0,
+    "windows_log_sha256": "fb798cd3bacef8dd4f44596e513fbf1b30e4977c304e342964ecf6d1050f52be",
+    "windows": {
+      "state_passed": 360,
+      "state_ignored": 1,
+      "source_controls": 16,
+      "chunk_publication_passed": 8,
+      "chunk_publication_seconds": 32.49,
+      "native_tests_passed": 7,
+      "native_seconds": 89.61,
+      "paired_separate_logon_startup": true,
+      "warnings": [
+        "Unused WinFsp delayimport linker warning and9duplicates",
+        "3lockeddisposableprofiles retained forVMdisposal; dummycredentials removed",
+        "Node/cachedeprecations"
+      ],
+      "expected_faults": [
+        "HEAD403",
+        "contentconflict",
+        "stoppedauthorityListtimeout"
+      ]
+    }
   },
   "next_controller_contract": {
     "status": "proposal; no runtime implementation yet",
@@ -490,5 +522,20 @@
       "killed known-root recovery after failed source insertion; zero RPC and S3",
       "expired/narrowed policy, local receipt-save failure, barrier Busy, concurrent first acknowledgment"
     ]
+  },
+  "hosted_archive": {
+    "path": "evidence/chunk-source-settlement-41b-hosted-20261018.tar.gz",
+    "sha256": "7254c8692b7b205b390d4fdd2d35f49f529ee7c5889cc358e2070344a4543214",
+    "bytes": 116143,
+    "members": 22,
+    "all_indexed_members_verified": true,
+    "source": "41b759aeb09511f2e27956c8c6a0110bfe283dcb",
+    "run_id": 39163298774,
+    "run_attempt": 1,
+    "independent_typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true
   }
 }

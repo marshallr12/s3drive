@@ -63,8 +63,7 @@ P0 table now reflects D040 public policy instead of stale privacy requirement.
 ## Active work: exact chunk source settlement state (2026-10-18)
 
 Accepted prerequisite: corrected32d CI all3SUCCESS, own strict21/14+raw35 PASS,
-22member hosted archive verified; state contract/docs pushed at96b6441. Current
-wait is schema28 source41b's own cohort below, not that older prerequisite.
+22member hosted archive verified; state contract/docs pushed at96b6441. Schema28 source41b's own cohort is now accepted below; no CI wait remains.
 
 Branch codex/chunk-source-settlement from96b6441. Implemented schema28 separate
 chunk_source_role/chunk_source_settlements, opaque exact SourceReceipt/SourceStatus,
@@ -82,7 +81,7 @@ Authority preflight/init/snapshot allowlists and reciprocal guards cover newtabl
 expectations now28. No legacy serialized vectors/domains intentionally changed.
 Resolvedrusqlite0.40.2 transaction/commit/query/Optional APIs andTokio1.53.3join
 inspected. Full local gate now PASS; source41b759a pushed, own CI39163298774
-LIVE. Hosted acceptance pending. Existing32d artifacts cannot certify schema28.
+completed SUCCESS. Own41b raw/artifact acceptance passed;32d artifacts not reused.
 
 Focused4 session17100 CLOSED EXIT0,31pass (15existing+16new),54.76s; log
 /tmp/s3drive-chunk-source-focus4.log. Includes unknown/conflict refusal, first old
@@ -128,35 +127,27 @@ follows that accepted baseline, with realSDK/authenticatedloopback controls.
 Published source41b759aeb09511f2e27956c8c6a0110bfe283dcb on
 codex/chunk-source-settlement,39files; clean exactremote/all252frozenhashes/PUBLIC
 before-after and main1a93b5f unchanged. Proof /tmp/s3drive-chunk-source-publication.json.
-Own CI39163298774 attempt1 LIVE:Windows117780950165,book117780950315,
-Linux117780950360. Watch28386 LIVE /tmp/s3drive-chunk-source-41b-watch.log.
-Resume this SAME run/handle; observation timeout is not a reason to rerun.
-Checker /tmp/s3drive-check-chunk-source-41b.py and strict raw comparison
-/tmp/s3drive-chunk-source-41b-raw-compare.py PREPARED/COMPILED ONLY, not executed.
-Fresh output /tmp/s3drive-chunk-source-41b-artifacts and own3raw reviewmarker
-/tmp/s3drive-chunk-source-41b-raw-reviewed.json absent. Require all3terminalSUCCESS
-and own completed raw review before checker. It binds exact source/run/attempt/
-jobs, own finalized artifactIDs/API digests/times, all252sourcehashes and four
-unchanged oracles; strict21/14+project checks then all35raw fields/types. Reject
-previous32d IDs12147997314/12147329360 and oldercf9/etc. No successchecker on a
-failed cohort; archive failed logs separately instead. This handoff is a docs-only
-status child; runtime remains frozen. Full goal ACTIVE; repository PUBLIC.
-Book117780950315 now SUCCESS/raw reviewed:own41b/schema28,66docfiles/62chapters,
-Ubuntu24.04 image20261012.334.1; pinnedRust/defaultbranch/Node20forced24 notices.
-Marker /tmp/s3drive-chunk-source-41b-book-reviewed.json. Linux117780950360 also
-SUCCESS/raw reviewed:365state/1ignored/all16sourcecontrols; separate9FUSE native
-controls PASS63.33s, no-systemd desktop/SSH/terminal-loss supervisor and pinned
-HTTP/private-CA HTTPS coordinator recovery PASS. These mounted tests exercise
-existing format, not mounted chunks; no physical reboot/Wasabi acceptance.
-ExpectedHEAD403/stopped-authorityConnectionRefused/removedstartup.json refusal,
-Node/cachedeprecations retained. Linux rawmarker
-/tmp/s3drive-chunk-source-41b-linux-reviewed.json,logSHA
-d788aabbd53cfaccb428000f663cd47211b3ca193d52097b9688f1d35f4c5b9f.
-Windows117780950165 still LIVE atworkspace tests; watch28386 samehandle. No
-new runtime edits or repeated gate. Hosted archive builder
-/tmp/s3drive-chunk-source-41b-archive.py prepared/compiled ONLY; corrected its
-checker-member path to own41b, not older32d. Execute only after own3raw review +
-all3SUCCESS + checkerEXIT0 + raw35. Fresh successoutput/combinedmarker absent.
+Own CI39163298774 attempt1 all3SUCCESS:Windows117780950165,book117780950315,
+Linux117780950360. Watch28386 CLOSED EXIT0. All3ownraw logs reviewed/sha-bound;
+combinedmarker /tmp/s3drive-chunk-source-41b-raw-reviewed.json. One-usechecker
+/tmp/s3drive-check-chunk-source-41b.py executed71610 EXIT0, strict21/14+project
+oracles PASS. OwnfinalizedIDs12149243457/12149814008, API digests/times checked;
+all35rawrecords match everyfield/type;252frozenhashes and4unchangedoracles match.
+Output /tmp/s3drive-chunk-source-41b-artifacts. No older artifacts reused.
+22memberarchive docs/src/evidence/chunk-source-settlement-41b-hosted-20261018.tar.gz
+116143bytes SHA7254c8692b7b205b390d4fdd2d35f49f529ee7c5889cc358e2070344a4543214;
+all indexedmembersverified, exactsource/logs/checkers/artifacts/map retained.
+Archivebuilderowncheckerpath correctedbeforeexecution; not older32d checker.
+
+Linux365state/1ignored/16sourcecontrols, separate9FUSE63.33s, no-systemd desktop/
+SSH/terminal-loss and pinnedHTTP/private-CA HTTPS coordinator recovery PASS.
+Windows360state/1ignored/16sourcecontrols/8chunk32.49s; separate7native89.61s,
+32HTTPSflushes/disposition/pairedindependentlogonstartup/snapshotconsole PASS.
+ExpectedHEAD403/contentconflict/stoppedauthorityListtimeout; unusedWinFspdelay
+import+9duplicatewarnings,Node/cachedeprecations,3lockeddisposableprofiles with
+removeddummycredentials retained. Existingmountedformat, notmountedchunks,
+physicalreboot ornewWasabi acceptance. Book66files/62chapters PASS. Repository
+PUBLIC; no visibility/credentialmutation. Next implement controller contract.
 
 Next controller contract now concrete in implementation-plan.md under
 "Next controller slice: explicit source acknowledgment" (2026-10-18 proposal).
@@ -169,7 +160,7 @@ proof. Proposedfourcontrols:Unicode/binary/sparse/empty historicalflow; killed
 unknownreply withnewerremote/localhead; killedknownroot afterfailedsourceinsert;
 expired/narrowpolicy/localreceiptsavefailure/explicitbarrierBusy/concurrentfirstack.
 Reuseparentharness+smallchildmodule; actualkilledstatusunsuccessful/reap, countall
-S3+uniquePUTs+completeApplys. No implementation yet; followsaccepted41b. Native
+S3+uniquePUTs+completeApplys. No implementation yet; accepted41b prerequisite now satisfied. Native
 chunklifecycle/verifiedrange reader remainlater. StateFULL/grandchild/postcommit
 faults remainstateevidence, not newcontrollerclaims. No newagentsdispatched.
 

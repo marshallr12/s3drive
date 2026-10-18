@@ -5,7 +5,7 @@ historical acknowledgment for one frozen chunked file snapshot. It follows the
 [root publisher](chunk-root-publisher.md), whose root object and original file
 snapshot have different identities and bytes. Controller integration and mounted
 chunk callbacks remain unfinished. The full local gate passed; this source's
-own hosted acceptance is still pending.
+own source-bound Linux, Windows and book acceptance also passed.
 
 ![An exact snapshot acknowledgment is stored by the same SQLite owner that retains its chunk tree and authority receipt. A newer edit stays pending.](images/chunk-source-settlement.svg)
 
@@ -99,11 +99,24 @@ implementation and runtime delta. Source `41b759a` is pushed on
 `codex/chunk-source-settlement`, with all 252 hashes and the clean exact remote
 tip verified. Public visibility was checked read-only before and after; main is
 unchanged. Its [own hosted cohort](https://github.com/marshallr12/s3drive/actions/runs/39163298774)
-is running. Linux and book jobs have passed and their raw logs were reviewed;
-Windows is still running. Linux's separate nine FUSE mount controls and
-no-systemd desktop/SSH supervisor recovery checks also passed for the existing
-mounted format. They do not activate mounted chunks or prove a physical reboot.
-Earlier artifacts cannot substitute for this source's acceptance. See
+passed all three jobs. All raw logs were reviewed. Its own finalized Windows
+artifacts passed independent strict checks for 21 replacement and 14 disposition
+records; all 35 raw log records matched every artifact field and type. Artifact
+IDs were 12149243457 and 12149814008; no older payload was reused. The
+[22-member indexed hosted archive](evidence/chunk-source-settlement-41b-hosted-20261018.tar.gz)
+retains the exact source, logs, source-bound checker, artifact metadata/payloads,
+strict comparisons and all 252 frozen hashes. Every indexed member was verified.
+
+Linux's separate nine FUSE mount controls and no-systemd desktop/SSH supervisor
+recovery checks passed. Windows passed its seven separate native controls,
+32-flush HTTPS burst, disposition lifecycle, independent-logon coordinator and
+paired drive startup/recovery. Windows state tests passed 360 / 1 ignored,
+including all 16 new source controls. Retained warnings include the unused
+WinFsp delay-import linker warning, Node/cache deprecations and three locked
+fixture profiles left for disposable-VM cleanup after dummy credentials were
+removed. Expected HEAD denial, retained content conflict and stopped-authority
+errors remain in the logs. These checks cover the existing mounted format;
+they do not activate mounted chunks or prove a physical reboot. See
 the [dated evidence](evidence/chunk-source-settlement-20261018.json).
 
 No payload eviction/reclamation, role release, implicit migration, detached or
