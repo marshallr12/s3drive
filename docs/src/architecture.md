@@ -15,8 +15,12 @@ SQLite, its HTTP API and the real S3 SDK. Managed native writes and the explicit
 with private-CA fixtures. [Pinned coordinator supervision](authority-startup.md)
 and paired native recovery passed again at f8c4f58 in terminal all-green
 CI39097275707, with source/platform-bound21/14 reference artifacts. The older
-timeout's cause remains unproven. An unpublished offline snapshot/inspection
-prototype passed local tests; Windows/platform and restore acceptance remain.
+timeout's cause remains unproven. Offline
+[snapshot creation/inspection](authority-backup-recovery.md) subsequently passed
+scoped native acceptance at mainbf9509e; writable restore/failover remain
+unsupported. The newer [owned client](owned-authority-client.md) passed portable
+controls but failed exact-source Windows flush acceptance. Its next diagnostic
+candidate observes HTTP driver and plaintext I/O progress; no fix is established.
 Remote deployment and optional Turso are still unprovisioned.
 No bucket migration or Turso service is enabled.
 

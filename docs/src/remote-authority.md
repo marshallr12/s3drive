@@ -21,6 +21,12 @@ and their contradictory Windows evidence rather than establishing reliability.
 
 ## What runs where
 
+Current transport work: the [owned production client](owned-authority-client.md)
+candidate failed exact-source Windows flush acceptance at47e9dd4; Linux/book
+passed. Follow-up bounded driver/I/O diagnostics are under verification. The
+historical studies/proposals below do not establish a correction; accepted main
+remains bf9509e.
+
 The coordinator is a **Rust service** (`s3drive authority-serve`). It owns one
 shared volume's namespace and authoritative database. SQLite is the implemented
 backend; Turso remains an optional backend proposal requiring separate migration,
@@ -600,7 +606,10 @@ the inspected local package sources, with hashes in the dated study record;
 the prototype does not link or exercise a new verifier path. Actual Linux and
 Windows trust behavior still needs its own production-candidate controls.
 
-### Caller deadline and retained result (production proposal, 2026-10-18)
+### Caller deadline and retained result (historical production proposal, 2026-10-18)
+
+This proposal was implemented in the later owned-client candidate linked above,
+whose native Windows failure remains open. The original proposal follows.
 
 The production audit must include the caller's outer timer, not only the inner
 exchange's timer. `WireClient::request` currently waits on an owned task with

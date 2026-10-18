@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::Arc, thread};
 pub use tls::{ServerTls, TlsError, serve_tls};
 use tokio::sync::{Semaphore, mpsc, oneshot};
-pub use wire::{WireClient, WireError, WirePhase, WireRequest};
+pub use wire::{ExchangeObservation, WireClient, WireError, WirePhase, WireRequest};
 
 pub use namespace::{
     Apply, Artifact, ContentGuard, Error, Kind, Listing, Mutation, Node, NodeGuard, Payload,

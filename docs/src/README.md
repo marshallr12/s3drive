@@ -38,7 +38,9 @@ historical intermittent Windows transport failures.
 **Current work:** the [owned authority client](owned-authority-client.md) replaces
 the production metadata HTTP execution path on a private candidate branch. Its
 portable controls retain complete SQLite receipts through bounded shutdown;
-exact-source native/startup/reference and repeat acceptance remain required.
+its exact-source47e9dd4 Windows burst failed at step22 with an empty-header
+timeout, while Linux/book passed. Current work adds bounded driver/I/O progress
+observations to locate the missing work; this is not an established fix.
 The accepted main still uses the previous client. Multipart/large files,
 writable restoration, real managed-provider acceptance and remote deployment
 remain incomplete. No real user startup, remote hosting or Turso backend has
@@ -89,7 +91,7 @@ application limits are recorded in the [filesystem contract](filesystem-contract
 | Windows startup across login sessions | [Scheduled task and shared NTFS folder implemented](startup-and-sessions.md); native cross-logon reads/removal passed; workstation reboot/SSH authentication pending |
 | Managed local edits | [Durable logical heads and settlement](managed-edits.md); storage/SDK library; [native integration](managed-write-plan.md) adds version-4 existing-file edits |
 | Managed file publication | [Real SDK/HTTP/SQLite library](managed-publication.md); existing-file edits and creation passed native acceptance; remote deployment/live managed-provider acceptance pending |
-| Authority client transport | [Owned TCP/TLS/HTTP execution candidate](owned-authority-client.md); portable fault/receipt controls passed, hosted/native acceptance pending; accepted main retains the previous client |
+| Authority client transport | [Owned TCP/TLS/HTTP execution candidate](owned-authority-client.md); portable controls passed, exact-source Windows burst failed; bounded progress instrumentation under test; accepted main retains the previous client |
 | Private authority snapshots | [Offline creation and inspection](authority-backup-recovery.md) accepted at bf9509e; integrity is not history freshness; writable restore/failover remain unsupported |
 | Managed namespace authority | [Rust/SQLite service](managed-layout.md), authenticated [HTTPS](remote-authority.md), exact replay and explicit [store/configuration setup](managed-bootstrap.md); real remote deployment pending |
 | Managed native reads | [Authority namespace and verified immutable payloads](managed-native.md); real FUSE/WinFsp acceptance passed |

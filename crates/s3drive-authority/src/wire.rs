@@ -15,6 +15,8 @@ use std::{
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 mod owned;
+mod progress;
+pub use progress::ExchangeObservation;
 #[cfg(test)]
 mod tests;
 
@@ -46,6 +48,9 @@ pub enum WireError {
         /// Actual TCP connection owned by this RPC, including TLS rejection.
         /// No address other than canonical loopback ports is representable.
         owned_connection: crate::OwnedConnection,
+        /// Local HTTP driver and plaintext I/O observations, not delivery or
+        /// commit evidence. Timings are relative to this RPC's creation.
+        exchange: ExchangeObservation,
     },
     HttpStatus(u16),
     ResponseTooLarge,
@@ -130,6 +135,7 @@ impl WireError {
             connector_candidate: progress.candidate.snapshot(),
             error_connection: crate::ErrorConnection::Unobserved,
             owned_connection: progress.owned_connection(),
+            exchange: progress.exchange.snapshot(),
         }
     }
     fn deadline(phase: WirePhase, request: WireRequest, progress: &Progress) -> Self {
@@ -147,6 +153,7 @@ impl WireError {
             connector_candidate: progress.candidate.snapshot(),
             error_connection: crate::ErrorConnection::Unobserved,
             owned_connection: progress.owned_connection(),
+            exchange: progress.exchange.snapshot(),
         }
     }
 }
@@ -159,6 +166,7 @@ struct ObservedBody {
 }
 #[derive(Default)]
 struct Progress {
+    exchange: progress::ExchangeProgress,
     body_frame_polled: AtomicBool,
     response_headers: AtomicBool,
     // Monotonic aggregate: 0=unobserved, 1=called, 2=at least one success.

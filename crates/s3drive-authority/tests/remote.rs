@@ -319,8 +319,13 @@ async fn tls_wire_diagnostics_distinguish_failure_stages_without_disclosing_inpu
             assert_eq!(reached, 5, "fault was not established: {context}");
             let error = result.expect(&context).expect_err(&context);
             assert_redacted(&error, &[SECRET, &url, &cert.cert, PRIVATE_BODY]);
-            if let WireError::Transport { connector_started, connector_completed, .. } = error {
+            if let WireError::Transport { connector_started, connector_completed, exchange, .. } = error {
                 assert!(connector_started && connector_completed, "received HTTP body without connector observations: {context}");
+                assert!(exchange.task_started_ms.is_some() && exchange.http_ready_ms.is_some() && exchange.request_queued_ms.is_some() && exchange.first_driver_poll_ms.is_some(), "HTTP exchange milestones missing: {context}");
+                assert!(exchange.driver_polls > 0 && exchange.write_polls > 0 && exchange.written_bytes > 0, "independent peer received request but write not observed: {context}");
+                if matches!(fault, Fault::TruncatedBody | Fault::BodyTimeout) {
+                    assert!(exchange.read_polls > 0 && exchange.read_bytes > 0, "independent response not observed: {context}");
+                }
             }
             match fault {
                 Fault::Status => assert_eq!(error, WireError::HttpStatus(503), "{context}"),

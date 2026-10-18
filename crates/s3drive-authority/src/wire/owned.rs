@@ -24,6 +24,7 @@ impl WireClient {
         deadline: Instant,
         completed: oneshot::Sender<Result<Reply, WireError>>,
     ) -> Result<(), WireError> {
+        progress.exchange.task_started();
         if Instant::now() >= deadline {
             return Err(WireError::deadline(WirePhase::Request, kind, &progress));
         }
@@ -102,11 +103,15 @@ impl WireClient {
     ) -> Result<(), WireError> {
         let (mut sender, connection) = timeout_at(
             deadline,
-            hyper::client::conn::http1::handshake(TokioIo::new(stream)),
+            hyper::client::conn::http1::handshake(TokioIo::new(progress::ObservedIo::new(
+                stream,
+                progress.clone(),
+            ))),
         )
         .await
         .map_err(|_| WireError::deadline(WirePhase::Request, kind, &progress))?
         .map_err(|e| WireError::transport(&e, WirePhase::Request, kind, &progress))?;
+        progress.exchange.http_ready();
         let authority = &self.url[url::Position::BeforeHost..url::Position::AfterPort];
         let request = HttpRequest::post(self.url.path())
             .header(header::HOST, authority)
@@ -122,8 +127,11 @@ impl WireClient {
         let work = async move {
             // The pinned channel permits the first request to be buffered
             // before its driver is polled. There is exactly one send_request.
-            let response = sender
-                .send_request(request)
+            let response = sender.send_request(request);
+            // Enqueued locally by the pinned synchronous send_request call;
+            // this is not evidence that the driver consumed or sent it.
+            observed.exchange.request_queued();
+            let response = response
                 .await
                 .map_err(|e| WireError::transport(&e, WirePhase::Request, kind, &observed))?;
             observed.response_headers.store(true, Ordering::Release);
@@ -157,10 +165,18 @@ impl WireClient {
         };
         let mut work = Box::pin(work);
         let mut connection = Box::pin(connection);
+        let mut driver = Box::pin(std::future::poll_fn(|cx| {
+            progress.exchange.driver_polled();
+            let result = connection.as_mut().poll(cx);
+            if let Poll::Ready(result) = &result {
+                progress.exchange.driver_finished(result.is_ok());
+            }
+            result
+        }));
         let (result, driver_finished) = tokio::select! {
             biased;
             result = &mut work => (result, false),
-            _ = &mut connection => (work.as_mut().await, true),
+            _ = &mut driver => (work.as_mut().await, true),
         };
         let success = result.is_ok();
         // Publish the exact parsed result before cleanup, including a known
@@ -169,8 +185,10 @@ impl WireClient {
         drop(work);
         if success && !driver_finished {
             // Never repoll a completed connection; never reset the deadline.
-            let _ = timeout_at(deadline, connection.as_mut()).await;
-        } else if !success {
+            let _ = timeout_at(deadline, driver.as_mut()).await;
+        }
+        drop(driver);
+        if !success {
             // Stop HTTP/body processing, then attempt TLS close_notify on the
             // owned usable stream even for status, framing and JSON errors.
             let mut stream = (*Pin::into_inner(connection)).into_parts().io.into_inner();

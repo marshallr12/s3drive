@@ -4,7 +4,7 @@
   "branch": "codex/owned-authority-client",
   "parent": "ea9342a78d11d97877a20584622227921e6b52f7",
   "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
-  "status": "final full local gate passed; production candidate pending hosted native and repeat acceptance",
+  "status": "local gate passed; exact-source hosted candidate failed Windows native flush burst; no promotion or repeat eligibility",
   "production_path_replaced": true,
   "native_failure_fixed": false,
   "provider_requests": 0,
@@ -91,7 +91,7 @@
   },
   "acceptance_limits": [
     "no native mount on local NoNewPrivs workstation",
-    "no source-identical hosted candidate/repeat yet",
+    "exact-source hosted candidate failed Windows; no successful repeat or native correction",
     "no actual blackholed-first-family experiment; retained pinned dependency fallback algorithm",
     "no real managed Wasabi or multipart writes",
     "no actual desktop reboot/remote-host/partition/failover acceptance"
@@ -123,5 +123,126 @@
       "/tmp/s3drive-owned-client-final-book.log": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4",
       "/tmp/s3drive-owned-client-final-book-tests.log": "97720c7cb99636bad850ae2bafc0123dc4924ad805a03b456dc108e32f1c6c90"
     }
+  },
+  "publication": {
+    "source": "47e9dd45e5ec4868b71ce94a8a3ad9d8f5615a73",
+    "parent": "ea9342a78d11d97877a20584622227921e6b52f7",
+    "branch": "codex/owned-authority-client",
+    "private_before_and_after": true,
+    "normal_push": true,
+    "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+    "local_gate_exit_code": 0,
+    "production_path_replaced": true,
+    "native_acceptance": false,
+    "native_failure_fixed": false,
+    "at_utc": "2026-10-18T11:11:33.865789+00:00"
+  },
+  "hosted": {
+    "run": 39122239338,
+    "source": "47e9dd45e5ec4868b71ce94a8a3ad9d8f5615a73",
+    "status": "completed",
+    "conclusion": "failure",
+    "jobs": [
+      {
+        "databaseId": 117660011334,
+        "name": "book",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "databaseId": 117660011490,
+        "name": "rust (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "databaseId": 117660011502,
+        "name": "rust (windows-latest)",
+        "status": "completed",
+        "conclusion": "failure"
+      }
+    ],
+    "observed_at_utc": "2026-10-18T11:30:25.587104+00:00",
+    "native_acceptance": false,
+    "repeat_acceptance": false,
+    "native_correction_proven": false,
+    "watch_session": 35571,
+    "watch_log": "/tmp/s3drive-owned-client-hosted-watch.log",
+    "raw_logs": {
+      "linux": {
+        "path": "/tmp/s3drive-owned-client-47-linux.log",
+        "sha256": "3af139986c9cd81f029ec1329e6e430c7faa88fa1efb910421d4f33f0ffd2a3d",
+        "reviewed": true
+      },
+      "windows": {
+        "path": "/tmp/s3drive-owned-client-47-windows.log",
+        "sha256": "704b1c7327299b86097eaad21f27112db1ceb55e04ac0e68d18e954d4a990db9",
+        "reviewed": true
+      },
+      "book": {
+        "path": "/tmp/s3drive-owned-client-47-book.log",
+        "sha256": "0b8f8ca31562f6a739b882ccefdfb27fba521ceba17ab5cfdffdfcfb3c88c74a",
+        "reviewed": true
+      }
+    },
+    "windows_failure": {
+      "test": "actual_managed_metadata_flush_burst",
+      "step": 22,
+      "at": "2026-10-18T11:19:17.818Z",
+      "assertion": "file.sync_all at support/managed.rs:1709",
+      "request": "Info",
+      "phase": "Request",
+      "io_kind": "UnexpectedEof",
+      "body_frame_polled": false,
+      "connector_completed": true,
+      "owned_and_candidate_socket": {
+        "ipv6": false,
+        "client_port": 51322,
+        "server_port": 51021
+      },
+      "matching_server": {
+        "connection": 164,
+        "category": "HttpTimeout",
+        "http_ms": 5196,
+        "read_bytes": 0,
+        "written_bytes": 0,
+        "flushes": 1,
+        "dispatched": false
+      },
+      "fresh_probe": {
+        "mount_running": true,
+        "coordinator_running": true,
+        "fresh_cli": "OriginalVolume",
+        "elapsed_ms": 844
+      },
+      "conclusion": "production replacement did not remove native empty-header failure; fresh later CLI is not original-operation outcome evidence"
+    },
+    "linux_scope": "workspace274 state/46 authority plus9 real native cases,32 flushes, paired recovery, no-systemd mount startup and HTTP/TLS coordinator startup passed; no actual MX/reboot/remote-host acceptance",
+    "timing_observation": "Linux burst steadily grew approximately0.2sec to6.5sec per iteration; Windows reached10sec+ before step22 failure. Cause unproven.",
+    "success_artifact_checker": "not executed; source47 failed and is ineligible for strict success acceptance"
+  },
+  "postpush_docs": {
+    "links": 58,
+    "build_exit_code": 0,
+    "test_exit_code": 0,
+    "log_sha256": {
+      "/tmp/s3drive-owned-client-postpush-book.log": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4",
+      "/tmp/s3drive-owned-client-postpush-book-tests.log": "97720c7cb99636bad850ae2bafc0123dc4924ad805a03b456dc108e32f1c6c90"
+    }
+  },
+  "same_source_repeat_plan": {
+    "status": "ineligible: primary Windows job failed; no repeat branch created",
+    "source": "47e9dd45e5ec4868b71ce94a8a3ad9d8f5615a73",
+    "ref": "refs/heads/codex/owned-authority-client-repeat-47e9dd4",
+    "prerequisites": [
+      "primary terminal all3 success",
+      "completed raw warnings reviewed",
+      "own strict21/14 artifacts and source-bound project oracles passed",
+      "privacy/main/ref/source guards unchanged and new repeat branch absent"
+    ],
+    "method": "normal push of identical candidate commit to a new private development branch; no new commit, main promotion or workflow change",
+    "workflow_evidence": ".github/workflows/ci.yml declares unfiltered push events",
+    "inference_source_read_20261018": "https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow",
+    "inference": "GitHub documents unfiltered push workflows for branches and tags; a new branch at exact SHA should create a fresh source-identical run. Actual run must be inspected before counting it as acceptance."
   }
 }

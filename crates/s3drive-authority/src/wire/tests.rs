@@ -344,3 +344,86 @@ fn owned_diagnostics_distinguish_unopened_and_omitted_without_private_addresses(
     progress.socket.set(None).unwrap();
     assert_eq!(progress.owned_connection(), crate::OwnedConnection::Omitted);
 }
+
+// Independent I/O faults distinguish a peer already at EOF before HTTP starts
+// from an actual attempted first write. Neither establishes a remote outcome.
+struct FirstIoFault {
+    eof: bool,
+}
+impl AsyncRead for FirstIoFault {
+    fn poll_read(
+        self: Pin<&mut Self>,
+        _: &mut Context<'_>,
+        _: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        if self.eof {
+            Poll::Ready(Ok(()))
+        } else {
+            Poll::Pending
+        }
+    }
+}
+impl AsyncWrite for FirstIoFault {
+    fn poll_write(self: Pin<&mut Self>, _: &mut Context<'_>, _: &[u8]) -> Poll<io::Result<usize>> {
+        assert!(!self.eof, "must observe existing peer EOF before writing");
+        Poll::Ready(Err(io::Error::from(io::ErrorKind::BrokenPipe)))
+    }
+    fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
+    }
+    fn poll_shutdown(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
+    }
+}
+#[tokio::test]
+async fn production_progress_distinguishes_first_read_eof_from_failed_first_write() {
+    let client = WireClient::loopback(
+        "http://127.0.0.1:1/v1/namespace",
+        Token::new("a".repeat(64)).unwrap(),
+    )
+    .unwrap();
+    for eof in [true, false] {
+        let progress = Arc::new(Progress::default());
+        let (completed, reply) = oneshot::channel();
+        tokio::time::timeout(
+            Duration::from_secs(2),
+            client.exchange_stream(
+                Box::new(FirstIoFault { eof }),
+                serde_json::to_vec(&Request::Info {}).unwrap(),
+                WireRequest::Info,
+                progress.clone(),
+                tokio::time::Instant::now() + Duration::from_secs(1),
+                completed,
+            ),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        let Err(WireError::Transport {
+            exchange,
+            body_frame_polled,
+            io_kind,
+            ..
+        }) = reply.await.unwrap()
+        else {
+            panic!("expected controlled transport error")
+        };
+        assert!(exchange.http_ready_ms.is_some());
+        assert!(exchange.request_queued_ms.is_some());
+        assert!(exchange.first_driver_poll_ms.is_some());
+        assert!(exchange.driver_polls > 0 && exchange.read_polls > 0);
+        assert_eq!(exchange.read_bytes, 0);
+        assert_eq!(exchange.written_bytes, 0);
+        if eof {
+            assert!(!body_frame_polled);
+            assert_eq!(exchange.write_polls, 0);
+        } else {
+            assert!(body_frame_polled);
+            assert!(exchange.write_polls > 0);
+            assert_eq!(io_kind, Some(io::ErrorKind::BrokenPipe));
+        }
+        // Error snapshot is captured before cleanup; the live observation
+        // separately confirms that error cleanup still attempts shutdown.
+        assert!(progress.exchange.snapshot().shutdown_polls > 0);
+    }
+}

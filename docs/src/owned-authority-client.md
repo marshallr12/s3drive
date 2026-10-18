@@ -2,9 +2,14 @@
 
 Research and implementation date: **2026-10-18**. This is a production-path
 candidate on `codex/owned-authority-client`, based on the reviewed test-only
-checkpoint ea9342a. Native Linux/Windows and unchanged-source repeat acceptance
-remain required. Main's accepted checkpoint remains bf9509. The historical
-Windows empty-header failure is not explained or declared fixed by this design.
+checkpoint ea9342a. Exact-source47e9dd4 run39122239338 passed Linux/book but
+failed Windows flush burst step22: Info/UnexpectedEof, no body consumption,
+actual owned TCP tag matching server164's empty-header timeout5196ms. A fresh
+CLI then returned the original volume in844ms while both processes remained
+alive. This replacement did not remove the failure. No success artifact checker,
+repeat or main promotion is eligible. Main's accepted checkpoint remains bf9509.
+The [dated evidence](evidence/owned-authority-client-20261018.json) preserves the
+completed raw logs and their hashes.
 
 ## Request ownership
 
@@ -98,8 +103,9 @@ The focused suite also keeps all existing HTTP namespace/recovery and TLS fault
 controls, plus the earlier nine-test study. New independent production peers
 exercise all-success-status/strict-JSON behavior, framing failures, trailers,
 exact streamed bounds, DNS/SNI and IPv6. The final full local gate passed:46 authority controls,17 core and274 state
-cases, workspace/build/lint and58-document book checks. Hosted native/startup/
-reference and repeat acceptance remain pending in the [dated evidence](evidence/owned-authority-client-20261018.json).
+cases, workspace/build/lint and58-document book checks. The later exact-source
+hosted cohort failed Windows as recorded above; portable results did not predict
+native acceptance. See the [dated evidence](evidence/owned-authority-client-20261018.json).
 A source-identical hosted repeat is required before any reliability acceptance.
 Passing portable tests does not explain the historical Windows failure.
 
@@ -107,6 +113,55 @@ Large-file/multipart execution, approved real managed Wasabi writes, independent
 hosts/partitions, history continuity/fencing, actual desktop startup/reboot and
 packaging remain full-goal work. This client change performs no real provider
 requests or account/startup/hosting registration.
+
+## Follow-up: locate the missing HTTP work
+
+Investigation date: **2026-10-18**. The [instrumentation evidence](evidence/exchange-progress-20261018.json)
+records checks and limits. The next instrumented candidate adds a fixed
+`ExchangeObservation` to transport errors. It records request-relative task
+start, HTTP-ready, locally queued and first/last driver-poll milliseconds; driver
+poll count/result and largest poll gap; and plaintext read/write polls, Pending
+polls, byte totals, flush polls and shutdown polls. Counts and milliseconds
+saturate at u32::MAX; observations retain no contents, secrets, hostnames or
+nonloopback addresses. The additional public diagnostic field is another source
+compatibility exception for exhaustive `WireError::Transport` construction or
+patterns. The error remains Copy and the summary has fixed size.
+
+The wrapper delegates scalar/vectored writes, vectored capability, reads, flush
+and shutdown exactly once. It sits above TLS, so written bytes mean the TLS I/O
+interface accepted plaintext, not that TCP delivered it or that the authority
+authenticated or committed it. Snapshots are best-effort concurrent observations
+at error creation, before subsequent cleanup. A driver returning Ok can have
+already delivered an error to the response consumer; that result is not an RPC
+success. Poll gaps include legitimate network waits and cannot prove starvation.
+The ten-second RPC/two-second connect budgets, one-send ownership, original
+identities and uncertainty rules remain unchanged.
+
+The pinned Hyper handshake constructs a sender/driver without doing I/O. Its
+first request can be buffered before receiver readiness; the driver checks for
+peer EOF before writing. Thus an existing EOF can yield no body consumption or
+writes even though a request was locally queued. Independent controlled I/O
+tests distinguish this case from a failed first write. They explain why the
+old observations are insufficient, rather than identify the Windows cause.
+[Hyper1.12 HTTP/1 source](https://docs.rs/hyper/1.12.0/src/hyper/client/conn/http1.rs.html),
+[dispatch source](https://docs.rs/hyper/1.12.0/src/hyper/proto/h1/dispatch.rs.html),
+[connection source](https://docs.rs/hyper/1.12.0/src/hyper/proto/h1/conn.rs.html).
+These behaviors were verified against locally resolved source; the online source
+URLs could not be fetched during this investigation. Exact local hashes are in
+the instrumentation evidence.
+
+Source inspection also found that `logical::Journal::pending` validates every
+retained edit and repeatedly walks generation ancestry, including for settled
+history. Both Linux and Windows burst timings grew across iterations. This is
+a scaling concern to measure and address while preserving corruption/lineage
+checks. SQLite runs on dedicated owner threads; no synchronous SQLite execution
+on the Tokio pool was found in these paths. Neither observation establishes the
+empty-header cause. Native source-bound diagnostics remain required.
+
+The final instrumented local gate passed48 authority tests (including13 unit
+controls),274 state and17 core cases, workspace formatting/lint/build and58-page
+book checks. Its own hosted native observations remain pending; no main promotion
+is planned from diagnostics alone.
 
 ## Resolved implementation sources
 

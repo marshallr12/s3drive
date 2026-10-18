@@ -1024,3 +1024,23 @@ gate. Then run exact-source Linux/Windows native/startup/reference acceptance an
 a source-identical repeat, reviewing all warnings and independent strict21/14
 artifacts before promotion. No root-cause or reliability claim follows from the
 portable suite. Keep all larger-file/provider/deployment/recovery requirements.
+
+### P6m4g — owned exchange progress (candidate, 2026-10-18)
+
+P6m4f source47e9dd4 failed actual Windows flush step22 after its owned TCP tag
+matched an empty-header server timeout; Linux/book passed. No main promotion or
+same-source success repeat is eligible. Preserve both source47 and parentea9342a
+terminal failures. Do not infer a Hyper, TLS, SQLite or scheduler cause.
+
+Add bounded content-free task/HTTP/enqueue/driver timings and plaintext I/O
+poll/Pending/byte observations to the owned exchange. Delegate scalar/vectored
+I/O, capability reporting, flush and shutdown without changing polling order,
+deadlines, retry, request identities, result retention or recovery. Keep the error
+Copy and document the added public field. Require independent pre-write EOF vs
+failed-write controls, partial/Pending/vectored/error accounting, existing real
+TLS fault and receipt controls, and the full local gate. Then inspect exact-source
+Windows native output to distinguish missing scheduling/dequeue/write work;
+a portable pass alone cannot establish reliability. No main promotion is planned
+from diagnostics alone, even if the instrumented native cohort passes.
+Separately measure retained
+journal ancestry cost without weakening integrity checks or dropping history.

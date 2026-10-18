@@ -4,7 +4,7 @@
   "branch": "codex/owned-http1-close",
   "parent": "e00b5e7d3c6b84aaedc93bd73b213af969f6d26f",
   "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
-  "status": "final full local gate passed; hosted acceptance pending; production transport unchanged",
+  "status": "local gate passed; hosted Linux/book succeeded, Windows broad existing-file write failed; production transport unchanged",
   "scope": "test-only owned exchange closure correction and independent controls; production WireClient unchanged",
   "source_sha256": {
     "crates/s3drive-authority/tests/owned_exchange.rs": "f715b915d433016e56c501089866b0bdf1ebf0ec48cd8c42786cb926187aae27",
@@ -161,14 +161,14 @@
   "hosted": {
     "run": 39120702390,
     "source": "ea9342a78d11d97877a20584622227921e6b52f7",
-    "status": "in_progress",
-    "conclusion": "",
+    "status": "completed",
+    "conclusion": "failure",
     "jobs": [
       {
         "databaseId": 117655552056,
         "name": "rust (windows-latest)",
-        "status": "in_progress",
-        "conclusion": ""
+        "status": "completed",
+        "conclusion": "failure"
       },
       {
         "databaseId": 117655552179,
@@ -183,7 +183,7 @@
         "conclusion": "success"
       }
     ],
-    "observed_at_utc": "2026-10-18T11:05:26.591372+00:00",
+    "observed_at_utc": "2026-10-18T11:20:43.401616+00:00",
     "acceptance": false,
     "production_transport_replaced": false,
     "native_correction_proven": false,
@@ -199,8 +199,40 @@
         "log": "/tmp/s3drive-owned-close-ea934-book.log",
         "sha256": "45a051c4fbbe216e43c22f41f3025cb7099b024c679d52271e8db235273d1929",
         "scope": "completed book job retained"
+      },
+      "windows": {
+        "log": "/tmp/s3drive-owned-close-ea934-windows.log",
+        "sha256": "4e7809340472e1a5b284e6e96bc088a3f006c25d7504bf18d617543bc4e6d575",
+        "scope": "owned9 passed twice, CLI mixed-fault correction and workspace269state passed; early32-flush, standalone/paired startup/snapshot, lifecycle and reference steps passed; final broad6PASS/1FAIL",
+        "failure": {
+          "test": "actual_managed_existing_file_writes_and_recovery",
+          "call": "empty.sync_all() at managed.rs1744",
+          "request": "Info",
+          "phase": "Request",
+          "io_kind": "UnexpectedEof",
+          "native_error": 1117,
+          "body_frame_polled": false,
+          "connector_started": true,
+          "connector_completed": true,
+          "candidate_and_error_match_server": true,
+          "client_port": 55617,
+          "server_port": 55607,
+          "server_connection": 10,
+          "http_ms": 5120,
+          "read_bytes": 0,
+          "written_bytes": 0,
+          "flushes": 1,
+          "dispatched": false
+        },
+        "other_warnings": "controlled TLS faults and deliberate authority-stop List/Connect/TimedOut",
+        "console_cancel_to_exit_ms_single_observations": [
+          6,
+          5
+        ],
+        "no_success_checker_run": true
       }
-    }
+    },
+    "component_closure_controls_passed_on_hosted_windows": true
   },
   "postpush_docs": {
     "links": 57,

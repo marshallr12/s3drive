@@ -5,74 +5,74 @@ capability was available. Read this and docs/src/implementation-plan.md before
 implementation. Keep research/decisions/status/plans in docs/src/. Run the local
 gate with `bash scripts/gate.sh`; native/provider/recovery gates are separate.
 
-## Current production client candidate and next action
+## Current exchange-progress candidate and next action
 
-Current branch codex/owned-authority-client is based on privately pushed
-ea9342a78d11d97877a20584622227921e6b52f7. The production replacement is locally
-uncommitted; preserve the earlier dirty HANDOFF/closure-evidence observations.
-Main remains bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05. Goal ACTIVE.
+Current branch codex/owned-authority-client, based on privately pushed
+47e9dd45e5ec4868b71ce94a8a3ad9d8f5615a73. Main remains
+bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05. Goal ACTIVE.
+New Rust progress instrumentation, tests and docs passed the full local gate;
+private publication is next. Preserve all
+post-push observations; no provider writes, startup registration or main promotion.
 
-The actual WireClient now co-owns its Hyper HTTP/1 driver/consumer/TCP+Rustls
-stream in one caller-owned task, no HTTP pool/driver task/redirect/retry. Existing
-constructors, private token/CA reads, explicit roots replacing platform trust,
-4KiB validated exact serialized bytes, all2xx then strict8MiB JSON, operation
-identities/guards and2sec/absolute cooperative10sec budgets remain. A private
-one-shot result channel prevents the caller's outer timer from losing a parsed
-receipt while bounded cleanup is pending. Errors attempt owned stream shutdown;
-never claim all-path close_notify, rollback, unsent or safe replay.
+Exact-source47 CI39122239338 is terminal FAILURE: Windows117660011502
+failed native flush burst step22; Linux117660011490 and book117660011334 passed.
+Completed raw /tmp/s3drive-owned-client-47-{windows,linux,book}.log reviewed;
+metadata /tmp/s3drive-owned-client-47-terminal-run.json. Windows Info/Request/
+UnexpectedEof/bodyfalse has owned+candidate TCP client51322/server51021,
+exactly matching server164 HttpTimeout5196ms/read0/write0/flush1/dispatchedfalse.
+Both processes stayed alive; fresh CLI OriginalVolume844ms. The new production
+client did not remove the empty-header failure; no specific cause established.
+DO NOT RUN prepared source47 success artifact checker or repeat branch push.
+No repeat ref was created; no native correction/reliability acceptance.
+Linux passed9 native/32-flush/paired and both coordinator startup protocols.
+Its flush iterations steadily grew from~0.2sec to6.5sec. Windows reached10sec+
+before failure. Timings alone do not establish a cause.
 
-Read-only legacy reviewer found and rejected an initial sequential-DNS-connect
-regression. Final code reuses pinned Hyper-util HttpConnector for DNS/TCP only:
-300ms alternate-family fallback, original connect/nodelay/15sec keepalive settings.
-One winning TCP enters one TLS handshake. No independently blackholed-first-family
-experiment has been run; this retains the existing dependency algorithm.
+Parent ea9342a CI39120702390 is also terminal FAILURE: Linux/book succeeded,
+Windows broad existing-file write failed at empty.sync_all, Info/UnexpectedEof,
+client55617/server55607 matches server10 HttpTimeout5120ms/read0/write0/flush1.
+Earlier32burst/startup/lifecycle/reference/workspace and test-only owned9 twice
+passed in that run; they do not erase the later broad failure. Both failure
+records and exact source/raw hashes are retained in docs/src/evidence/.
 
-New owned_connection diagnostic records actual TCP even if TLS fails, canonical
-loopback ports only. Legacy error_connection remains always Unobserved; no
-invented legacy metadata. The additive field changes public Transport struct
-patterns/construction: explicitly document this source compatibility exception.
-Constructors/request signatures stay unchanged. Old connector observer removed.
-No dependency versions changed; already-resolved platform-verifier0.7.1 is now
-direct. SQLite schema/config/S3 writes/startup registration remain unchanged.
+Scoped legacy reviewer found no handshake/send/select sequencing defect.
+Pinned Hyper's first send buffering is intentional; handshake has no I/O.
+Its read-before-write/idle EOF check can encounter timeout EOF before consuming
+a queued body if processing was delayed. This is a possible path, not a measured
+scheduler diagnosis. Do not insert ready() ahead of driving the connection.
+Callbacks use Handle.block_on; CLI uses default multi-thread Tokio runtime;
+native fixture already uses block_in_place. Both SQLite owners run dedicated
+OS threads. logical::Journal::pending scans all retained edits and repeatedly
+walks ancestry: measure separately without dropping corruption/lineage checks.
 
-Final focused /tmp/s3drive-owned-client-focused4.log completed EXIT0:46 tests,
-including11unit,2 lifetime,1 queued cancellation,10 HTTP namespace,9 original
-study,9 TLS and4 new independent parity controls. Actual SQLite commit/gated
-shutdown controls check retained exact receipts/sequence1 under clean/failure/
-original deadline. Invalid/expired pre-dispatch no-I/O, DNS/SNI/IPv6,201/299/204,
-strict JSON, conflicting lengths, missing chunks, trailers and8MiB boundaries
-passed. Final targeted Clippy /tmp/s3drive-owned-client-clippy3.log EXIT0.
-Read-only final review found no remaining load-bearing issue in this revision.
-The initial new IPv6 fixture equality compile error was fixed with matches;
-Request has no PartialEq. No production weakening was made to pass it.
+P6m4g adds fixed-size ExchangeObservation on Transport errors: relative task,
+HTTP-ready, enqueue, first/last driver timings; polls/result/max-gap; plaintext
+I/O polls/Pending/bytes/flush/shutdown. Counters/times saturateu32. No payload,
+secret, hostname or nonloopback IP. Snapshot at error creation may precede cleanup;
+counts do not prove delivery/commit, and gaps include legitimate network waits.
+Public diagnostic-field addition is a documented API shape exception; Copy kept.
+Driver/work polling order, one-send/ownership/deadlines/receipt channel/recovery
+remain. Transparent wrapper delegates scalar/vectored capabilities and I/O.
+Independent first-read EOF vs first-write BrokenPipe and partial/Pending/vectored
+controls added; real TLS faults require observed successful plaintext writes.
 
-FINAL full local gate completed EXIT0 session5296,
-/tmp/s3drive-owned-client-gate1.log: authority46 (11unit/10HTTP/9TLS/4parity
-plus lifetime/execution/study), core17/state274, workspace/build/lint and58-doc
-book. Frozen /tmp/s3drive-owned-client-frozen-source.json matches. No local
-gate process remains.
+Focused1/2 logs /tmp/s3drive-exchange-progress-focused{1,2}.log completed EXIT0
+on earlier diagnostic layouts; focused1 emitted a deprecated fetch_update warning,
+now replaced with try_update. Initial Clippy1 rejected oversized195-byte Err;
+summary now uses saturatingu32 values; final targeted Clippy2 EXIT0. Full local
+gate1 completed EXIT0 session25385 at /tmp/s3drive-exchange-progress-gate1.log:
+48 authority tests (13unit),274 state,17 core, workspace lint/build and58-doc
+book. Seven frozen source hashes match; no warning or test failure. Evidence docs/src/evidence/exchange-progress-20261018.json.
+Next: normally push the frozen private candidate and inspect its own native Windows failure/success diagnostics. Never
+claim native correction from portable cases, restart on observation timeout, run
+a success checker on failed source, or reuse older21/14 artifacts for acceptance.
+Source-identical repeat and all native/reference/startup gates remain needed
+before a reliability promotion. Larger files/multipart, approved managed Wasabi,
+independent hosts/partitions, continuity/fencing, actual reboot/SSH and packaging
+remain full-goal work.
 
-Next: normally publish this exact locally gated source privately for exact-source Linux/Windows native/startup/
-reference gates and a same-source repeat. Review all transport warnings and
-independent strict21/14 artifacts before promotion. Do not claim a Windows fix
-or historical cause from portable tests. See docs/src/owned-authority-client.md,
-implementation-plan.md and evidence/owned-authority-client-20261018.json.
-
-Parent ea9342a CI39120702390 is still live Windows117655552056 workspace;
-Linux117655552179 and book117655552211 succeeded. Watch97697 writes
-/tmp/s3drive-owned-close-hosted-watch.log. Poll exact source/run, never restart
-solely on observation timeout. Parent evidence is test-only transport plus
-corrected mixed-fault fixture; production client remains old in that run.
-
-Retain failed b793 CI39117793980 Windows native broad Info/UnexpectedEof,
-matching empty-header socket client64582/server64551/server24/5044ms,6PASS/1FAIL;
-no success checker/main promotion. Retain failed e00 CI39119010538 Windows CLI
-fixture count3vs4 (positive/dispatched HttpShutdown after typed replies); that
-fixture is corrected at ea9342a. Both raw records/limits are in dated JSON.
-These distinct failures do not establish one shared cause or a production fix.
-
-The previous current-state section is byte-identically archived at
-docs/archive/HANDOFF-before-owned-client-20261018.md. Older source/recovery history below remains.
+Previous handoff retained byte-identically at
+`docs/archive/HANDOFF-before-exchange-progress-20261018.md`.
 
 ### Historical e00 study checkpoint (superseded closure control)
 
