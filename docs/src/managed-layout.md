@@ -5,6 +5,11 @@ between machines. Ordinary S3 tools will see internal generation objects, not
 the drive's directory tree. Existing direct-layout mounts are compatibility
 prototypes; no existing bucket or configuration is converted automatically.
 
+The [large-file representation study](large-managed-files.md) compares extending
+one-object generations with immutable chunks and authenticated manifests.
+Chunked local staging does not currently imply chunked S3 storage. The new
+representation is a proposal pending the user's choice, not an enabled format.
+
 ![Two computers use their own Rust drive, S3 client and local SQLite, with one shared metadata authority and immutable S3 objects.](images/managed-architecture.png)
 
 ## Storage and authority

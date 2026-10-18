@@ -1,0 +1,44 @@
+{
+  "research_date": "2026-10-18",
+  "kind": "hypothetical arithmetic, not measured performance or pricing",
+  "assumptions": {
+    "file_bytes": 1073741824,
+    "chunk_bytes": 1048576,
+    "patch_bytes": 4096,
+    "saves_after_initial": 100,
+    "all_generations_retained": true,
+    "no_compression_deduplication_or_server_side_copy": true,
+    "manifest_bytes_excluded": true,
+    "aligned_patch_changes_one_chunk": true,
+    "cross_boundary_patch_changes_two_chunks": true
+  },
+  "whole_object": {
+    "new_payload_bytes_per_save": 1073741824,
+    "retained_payload_bytes": 108447924224
+  },
+  "chunked": {
+    "initial_data_objects": 1024,
+    "aligned_patch": {
+      "new_data_objects_per_save": 1,
+      "new_payload_bytes_per_save": 1048576,
+      "retained_payload_bytes": 1178599424
+    },
+    "cross_boundary_patch": {
+      "new_data_objects_per_save": 2,
+      "new_payload_bytes_per_save": 2097152,
+      "retained_payload_bytes": 1283457024
+    },
+    "flat_sha256_table_bytes_before_references_or_encoding": 32768,
+    "proposed_tree_fanout": 256,
+    "leaf_pages": 4,
+    "root_pages": 1,
+    "changed_manifest_pages_per_single_chunk_edit": 2
+  },
+  "limitations": [
+    "Not an implemented storage format, native file limit or upload permission",
+    "No timing, request overhead, read amplification or account billing modeled",
+    "Alternative multipart copy can reduce client upload but needs separate semantics and acceptance",
+    "Worst-case edits rewrite all chunks; no universal saving is promised",
+    "Current code does not collect retained generations"
+  ]
+}

@@ -4,6 +4,15 @@ Primary project/vendor documentation consulted on **2026-10-16**. Live pages
 can change; versioned Rust API links identify the observed release where useful.
 These references support the research, not claims of live integration testing.
 
+**Large-file refresh, 2026-10-18:** the
+[representation study](large-managed-files.md) rechecked AWS GetObject,
+[UploadPartCopy](https://docs.aws.amazon.com/AmazonS3/latest/API/API_UploadPartCopy.html),
+Wasabi multipart behavior,
+[minimum storage duration](https://docs.wasabi.com/docs/how-does-wasabis-minimum-storage-duration-policy-work)
+and [raw/padded storage accounting](https://docs.wasabi.com/apidocs/using-curl-and-jq-utility-with-wasabi-stats-api).
+Provider documentation does not establish this account's billing contract or
+replace separately authorized live conformance tests.
+
 ## Filesystem surfaces and existing implementations
 
 | Source | Why it matters |

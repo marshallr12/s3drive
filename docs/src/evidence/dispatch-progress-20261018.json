@@ -3,7 +3,7 @@
   "date": "2026-10-18",
   "branch": "codex/dispatch-progress",
   "parent": "c7fca789a394a1bde63f90154bb261396fb68c8b",
-  "status": "final extended local gate passed on frozen source; exact-schema fixture corrected; own hosted native acceptance pending; no runtime promotion",
+  "status": "candidate pushed; final extended local gate passed; own hosted schema preflight passed, jobs live; no native acceptance or runtime promotion",
   "source_sha256": {
     "crates/s3drive-authority/src/wire.rs": "bda87761e8bc65dfc3d28d790b68970ef7d93186c9a7e094b29915908451dbe3",
     "crates/s3drive-authority/src/wire/owned.rs": "c91aa9167f764076edbe4f60b2de11b0562fa52729e0b137f1002dd8ec3c3374",
@@ -324,7 +324,7 @@
         "output": "Native fixture schema expectations OK (24; 2 fixtures)."
       }
     ],
-    "hosted_native_verification": "pending at next source; do not reuse failedc7 acceptance"
+    "hosted_native_verification": "Passed own Windows native session fixture at2575374; no historical transport correction claimed"
   },
   "prior_gate": {
     "log": "/tmp/s3drive-dispatch-progress-gate1.log",
@@ -335,5 +335,183 @@
     "state_passed": 292,
     "authority_tests_passed": 50,
     "final_extended_gate_acceptance": false
+  },
+  "source_commit": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+  "publication": {
+    "source": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+    "branch": "codex/dispatch-progress",
+    "repository_before": {
+      "nameWithOwner": "marshallr12/s3drive",
+      "url": "https://github.com/marshallr12/s3drive",
+      "visibility": "PUBLIC"
+    },
+    "repository_after": {
+      "nameWithOwner": "marshallr12/s3drive",
+      "url": "https://github.com/marshallr12/s3drive",
+      "visibility": "PUBLIC"
+    },
+    "remote_refs": {
+      "refs/heads/codex/dispatch-progress": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+      "refs/heads/main": "1a93b5f7248892fec96dc8da4438ee7967692e77"
+    },
+    "push_exit_code": 0,
+    "visibility_mutations": 0,
+    "main_runtime_promoted": false,
+    "working_tree_clean_after_push": true,
+    "all12_frozen_hashes_match": true
+  },
+  "hosted": {
+    "source": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+    "run_id": 39133178423,
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39133178423",
+    "jobs": [
+      {
+        "databaseId": 117692328244,
+        "name": "book",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/marshallr12/s3drive/actions/runs/39133178423/job/117692328244"
+      },
+      {
+        "databaseId": 117692328400,
+        "name": "rust (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/marshallr12/s3drive/actions/runs/39133178423/job/117692328400"
+      },
+      {
+        "databaseId": 117692328597,
+        "name": "rust (windows-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/marshallr12/s3drive/actions/runs/39133178423/job/117692328597"
+      }
+    ],
+    "book_schema_preflight": "passed",
+    "acceptance": true,
+    "success_checker_eligible": true,
+    "success_checker_executed": true,
+    "success_checker": "/tmp/s3drive-check-dispatch-progress-257.py",
+    "raw_review_prerequisite": "/tmp/s3drive-dispatch-progress-257-raw-reviewed.json",
+    "book_completed_raw_review": {
+      "job_id": 117692328244,
+      "source": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+      "status": "completed",
+      "conclusion": "success",
+      "log": "/tmp/s3drive-dispatch-progress-257-book.log",
+      "sha256": "eeefff58ce8ac8d65e807ea6c0b7c2d2037045139fc3475467ee2db3954ac07b",
+      "reviewed": true,
+      "scope": "native schema fixture preflight,58-file documentation link check,mdBook build/54chapter tests",
+      "notices": [
+        "Git initial-branch advice",
+        "pinned Rust toolchain override",
+        "pinned checkout Node20 forced to Node24"
+      ],
+      "does_not_accept_native_or_provider": true
+    },
+    "linux_completed_raw_review": {
+      "job_id": 117692328400,
+      "source": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+      "status": "completed",
+      "conclusion": "success",
+      "log": "/tmp/s3drive-dispatch-progress-257-linux.log",
+      "sha256": "1bbcf0753b4296cc065a95a0bf170e6ea247e7a2793ac5abdbfbf2982ba11452",
+      "reviewed": true,
+      "scope": "50 authority tests;292 state passed/1 ignored;9 real FUSE tests;32 HTTPS flushes;11 distinct Unicode filenames;paired recovery;schema24;Linux startup without systemd and coordinator HTTP/HTTPS",
+      "notices": [
+        "Git initial-branch advice",
+        "cache actions Node punycode/url.parse deprecations",
+        "pinned actions Node20 forced to Node24",
+        "one state test exceeded60seconds and passed"
+      ],
+      "expected_faults": [
+        "TLS handshake/header/lifetime rejection controls",
+        "managed HEAD403 refusal",
+        "Node Connect ConnectionRefused after intentional stop",
+        "startup.json absent after intentional uninstall"
+      ],
+      "provider_or_physical_mx_reboot_acceptance": false
+    },
+    "windows_completed_raw_review": {
+      "job_id": 117692328597,
+      "source": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+      "status": "completed",
+      "conclusion": "success",
+      "log": "/tmp/s3drive-dispatch-progress-257-windows.log",
+      "sha256": "25377375a16cf8cd9b73db4c40b1823fc725a5c6a4f829f60e1ce3bdc68773c6",
+      "reviewed": true,
+      "platform": "Microsoft Windows Server 2025 Datacenter 10.0.26100",
+      "winfsp": "2.1.25156.ddca7bd",
+      "scope": "50 authority tests;287 state passed/1 ignored;16 offline multipart tests;32 HTTPS flushes;lifecycle;paired recovery;snapshots;7 broad native tests;11 Unicode filenames;cross-logon startup;schema24 fixture correction",
+      "notices": [
+        "LNK4199 DELAYLOAD ignored for nine CLI test targets without WinFsp imports",
+        "three locked disposable fixture profiles: dummy credentials removed; profile deletion deferred to VM destruction",
+        "cache/artifact Node punycode/url.parse deprecations",
+        "pinned actions Node20 forced to Node24",
+        "long-running coordinator/paired/state tests ultimately passed"
+      ],
+      "expected_faults": [
+        "TLS handshake/partial-header/lifetime controls",
+        "managed HEAD403 refusal",
+        "dirty-head rival content conflict",
+        "List Connect TimedOut after explicit service stop: native fixture asserts new open fails while old pinned snapshot stays readable"
+      ],
+      "raw_reference_trace_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "artifact_validation_pending": true,
+      "historical_no_write_cause_fixed": false,
+      "windows_10_11_or_physical_reboot_or_provider_acceptance": false
+    },
+    "raw_reviews_closed": true,
+    "run_annotations_reviewed": [
+      "ubuntu-latest scheduled to migrate to Ubuntu26 starting2026-10-19; this cohort actually ran24.04.5",
+      "Node20 actions forced to Node24"
+    ],
+    "acceptance_scope": "one own-source hosted Linux/Windows/book cohort plus own strict21/14 reference artifacts; no causal transport reliability or workstation/provider acceptance",
+    "success_checker_exit_code": 0,
+    "unchanged_source_repeat_passed": false,
+    "historical_transport_failure_resolved": false,
+    "main_runtime_promoted": false,
+    "artifact_validation": {
+      "log": "/tmp/s3drive-dispatch-progress-257-artifact-check.log",
+      "sha256": "35114e80043f4bf5a88682bc2e3c0fa8733cfb2ce4fc57932e1ae3f177c1d6b4",
+      "directory": "/tmp/s3drive-dispatch-progress-257-artifacts",
+      "downloads": [
+        {
+          "kind": "disposition",
+          "id": 12139435870,
+          "zip_sha256": "5e31ee22e54302a8d075999e62d70617cfa570eed665c3add11f4da5050d002b",
+          "json_sha256": "1f6712e098adb117b9efdd7970cd0f7c9b56ff8d75d79301454ab8fb254767f8"
+        },
+        {
+          "kind": "replacement",
+          "id": 12139390103,
+          "zip_sha256": "1757393d51f2ff8a325de62b14c39ffaa4ba02ab8224abc1e5493b5e3fac7cfd",
+          "json_sha256": "5abb2c643461a565a21df0644e70bc6ecb7d3f1e4c570021574cb42a0e3a1254"
+        }
+      ],
+      "strict_field_type_source_checks": [
+        {
+          "kind": "replacement",
+          "records": 21,
+          "source": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+          "sha256": "5abb2c643461a565a21df0644e70bc6ecb7d3f1e4c570021574cb42a0e3a1254",
+          "strict_types_and_all_fields_match": true
+        },
+        {
+          "kind": "disposition",
+          "records": 14,
+          "source": "25753746287aa52a36a9ba42d8bf5162f1de07d1",
+          "sha256": "1f6712e098adb117b9efdd7970cd0f7c9b56ff8d75d79301454ab8fb254767f8",
+          "strict_types_and_all_fields_match": true
+        }
+      ],
+      "project_powershell_oracles_passed": true,
+      "no_prior_cohort_artifacts_used": true
+    }
   }
 }

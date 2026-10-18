@@ -17,7 +17,7 @@ The user selected managed layout on 2026-10-16; P6m phases now define the target
 
 | Phase | Deliverable | Completion evidence |
 | --- | --- | --- |
-| P0 — research and scaffold | This book, workspace, local CLI, SQLite bootstrap, private Git repository | Local gate passes; pushed source matches local commit; repository privacy verified |
+| P0 — research and scaffold | This book, workspace, local CLI, SQLite bootstrap, GitHub repository (intentionally public under D040) | Local gate passes; pushed source matches local commit; current public visibility verified read-only |
 | P1 — provider contract | Read-only S3 client, bounded list/head/range APIs, source identity, error model and provider evidence records | Deterministic HTTP contract tests plus an explicitly selected test bucket/provider; pagination, signed requests, exact ranges and revisions verified |
 | P2 — Linux read-only drive | Shared namespace engine and FUSE callbacks | Real mount; directory traversal and random/sequential reads match remote bytes; no mutation calls; clean unmount and cancellation |
 | P3 — Windows read-only drive | WinFsp binding decision and Windows adapter reusing P2 core | Native MSVC build and Windows runtime tests; Explorer/PowerShell access; stable names/handles and clean removal |
@@ -1165,3 +1165,43 @@ match, retry or bypass replaces them. The first local gate passed unchanged
 Rust sources under its old definition. The final extended gate2 then passed
 schema preflight,50 authority/292 state and workspace/build/lint/book checks on
 unchanged12 frozen source/contract files. Own native CI remains required.
+
+
+### Large managed-file representation study (proposal, 2026-10-18)
+
+The [source audit and representation comparison](large-managed-files.md) records
+why multipart upload alone cannot remove the managed reader's whole-file
+verification/buffer, native edit buffer, logical prehash and authority payload
+limits. The existing bounded composition library should be reused where its
+contract fits; local chunk staging does not currently imply chunked S3 objects.
+
+A user question is pending: immutable chunks and authenticated paged manifests,
+or one object per file generation. The recommendation is chunked managed
+storage, with explicit legacy compatibility. No format, schema, authority hash,
+8MiB bound, network behavior or provider policy has changed. The study includes
+an architecture image and reproducible hypothetical storage arithmetic, not
+performance or account pricing evidence. Single-object storage can also gain
+verified random reads through authenticated range digests; the tradeoff is not
+an assertion that range verification requires separate objects.
+
+Done for this investigation: audit actual source2575374 boundaries, compare
+recovery/reads/edits/object-count/retention implications, refresh primary AWS and
+Wasabi sources, record the decision question, and specify the implementation
+and native/provider acceptance sequence. A representation-specific codec or
+publisher implementation depends on that choice. Current source-bound CI review
+and existing transport investigation can proceed independently.
+
+
+### Dispatch candidate hosted closure (2026-10-18)
+
+Source `25753746287aa52a36a9ba42d8bf5162f1de07d1`,
+[run39133178423](https://github.com/marshallr12/s3drive/actions/runs/39133178423),
+passed Linux, Windows and book. Completed own raw logs were reviewed before
+checking that run's ZIP digests, strict typed21 replacement/14 disposition
+records and both project PowerShell oracles. The schema24 Windows session
+fixture now passes natively; parentc7's failure remains recorded. See the
+[dated dispatch evidence](evidence/dispatch-progress-20261018.json) for exact
+jobs, hashes, scope and notices, including deferred disposable VM profile cleanup.
+This is one passing observational candidate cohort. The historical actively
+polled/no-write transport failure is unresolved, there is no identical-source
+repeat acceptance, and no runtime promotion or new provider approval follows.

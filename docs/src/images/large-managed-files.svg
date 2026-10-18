@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="890" viewBox="0 0 1280 890" role="img" aria-labelledby="title desc">
+  <title id="title">Proposed large managed-file architecture</title>
+  <desc id="desc">Linux and Windows each run a Rust filesystem engine with local SQLite and an S3 client. A shared Rust authority publishes one compact root reference. S3 holds authenticated manifest pages and immutable chunks. Changed chunks are new; unchanged chunks are shared with retained generations. This format is a proposal, not implemented.</desc>
+  <defs><marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#455b76" stroke-width="1.5"/></marker></defs>
+  <rect width="1280" height="890" fill="#f6f8fc"/>
+  <g font-family="DejaVu Sans, sans-serif" fill="#172b43">
+    <text x="40" y="51" font-size="30" font-weight="bold">Large files: publish a root, reuse unchanged chunks</text>
+    <text x="40" y="85" font-size="18" fill="#845b0a">Proposed format · 2026-10-18 · Existing 8 MiB native limit remains</text>
+    <g fill="#e7effb" stroke="#4c6c99" stroke-width="2">
+      <rect x="40" y="125" width="370" height="215" rx="12"/>
+      <rect x="40" y="395" width="370" height="215" rx="12"/>
+    </g>
+    <text x="61" y="160" font-size="22" font-weight="bold">Linux workstation</text>
+    <text x="61" y="196" font-size="18">FUSE → shared Rust engine</text>
+    <text x="61" y="229" font-size="18">Local SQLite: edits, cache, journal</text>
+    <text x="61" y="262" font-size="18">S3 client + local credentials</text>
+    <text x="61" y="308" font-size="17">Login / SSH supervisor; no systemd</text>
+    <text x="61" y="430" font-size="22" font-weight="bold">Windows workstation</text>
+    <text x="61" y="466" font-size="18">WinFsp → shared Rust engine</text>
+    <text x="61" y="499" font-size="18">Local SQLite: edits, cache, journal</text>
+    <text x="61" y="532" font-size="18">S3 client + local credentials</text>
+    <text x="61" y="578" font-size="17">Per-user login / SSH access</text>
+    <rect x="525" y="125" width="715" height="155" rx="12" fill="#e0f1e9" stroke="#397c64" stroke-width="2"/>
+    <text x="550" y="161" font-size="23" font-weight="bold">Shared Rust metadata authority</text>
+    <text x="550" y="197" font-size="18">Names, file IDs, revisions and one root reference per file</text>
+    <text x="550" y="232" font-size="18">Authoritative SQLite · optional accepted Turso backend</text>
+    <text x="550" y="259" font-size="16">Root CAS commits after dependency receipts; no S3 credentials here</text>
+    <rect x="525" y="365" width="715" height="345" rx="12" fill="#eef4fc" stroke="#4c6c99" stroke-width="2"/>
+    <text x="550" y="402" font-size="23" font-weight="bold">S3-compatible buckets (Wasabi)</text>
+    <rect x="745" y="428" width="280" height="53" rx="7" fill="#e0f1e9" stroke="#397c64"/>
+    <text x="763" y="462" font-size="19">Immutable manifest root</text>
+    <rect x="580" y="525" width="245" height="53" rx="7" fill="#fff" stroke="#4c6c99"/>
+    <rect x="945" y="525" width="245" height="53" rx="7" fill="#fff" stroke="#4c6c99"/>
+    <text x="600" y="559" font-size="18">Verified manifest page</text>
+    <text x="965" y="559" font-size="18">Verified manifest page</text>
+    <rect x="555" y="622" width="300" height="53" rx="7" fill="#e0f1e9" stroke="#397c64"/>
+    <rect x="920" y="622" width="290" height="53" rx="7" fill="#fff0d4" stroke="#a8791d"/>
+    <text x="574" y="655" font-size="18">Unchanged immutable chunks</text>
+    <text x="941" y="655" font-size="18">New changed chunks</text>
+    <g fill="none" stroke="#455b76" stroke-width="2" marker-end="url(#a)">
+      <path d="M410 192H510"/><path d="M410 440H465V242H510"/>
+      <path d="M410 285H470V454H730"/><path d="M410 535H485V590H540"/>
+      <path d="M1210 280V454H1035"/>
+      <path d="M815 481V500H702V516"/><path d="M955 481V500H1065V516"/>
+      <path d="M702 578V612"/><path d="M1065 578V612"/>
+    </g>
+    <text x="925" y="323" font-size="17">Pins root identity + hash</text>
+    <text x="550" y="697" font-size="16">Hashes authenticate pages → chunks; sparse holes are explicit extents</text>
+    <rect x="40" y="752" width="1200" height="105" rx="12" fill="#fff0d4" stroke="#a8791d"/>
+    <text x="62" y="786" font-size="20" font-weight="bold">A chunk PUT is not a completed file flush</text>
+    <text x="62" y="818" font-size="18">Require all dependency receipts + authority root CAS + local acknowledgment. Retain conflicts and old roots.</text>
+    <text x="62" y="843" font-size="16">No bucket migration, deletion, new provider writes or format activation is authorized by this diagram.</text>
+  </g>
+</svg>

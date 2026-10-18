@@ -49,6 +49,11 @@ to the user.
 
 ## Questions to resolve at the relevant phase
 
+- **Before a new large managed-file format:** One object per generation, or
+  immutable chunks plus authenticated paged manifests? The
+  [representation study](large-managed-files.md) recommends chunks; the user's
+  choice is pending. Existing payload hashes and unknown operations keep their
+  original meaning.
 - **Before cache sizing and broader OS acceptance:** Typical file sizes, directory sizes and working
   set? How much local disk may the cache consume? Which Windows/Linux versions
   and CPU architectures need support?

@@ -25,11 +25,49 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; current HEADc7fca789 already includes that rule.
 
+## Large-file representation study (local, 2026-10-18)
+
+New docs/src/large-managed-files.md, images/large-managed-files.svg and
+scripts/study-managed-layout.py plus dated JSON compare one-object generations
+with immutable chunks/authenticated paged manifests. Actual2575374 source audit:
+managed Reader downloads/hashes whole file; native writes buffer whole payload;
+logical Input requires whole SHA before begin; authority reservation caps8MiB.
+Existing fs/edits.rs already has bounded range composition; do not reinvent it.
+Multipart alone does not remove these boundaries. Recommendation is chunked
+managed storage, but the user's asynchronous representation choice is PENDING.
+Do not implement or activate that format before resolving the product choice.
+Keep legacy references/hashes/unknown operations exactly compatible. Alternatives
+include one object plus authenticated range hashes and future multipart copy.
+Study's1GiB/100edits arithmetic is hypothetical, excludes manifests/overhead,
+not a benchmark/bill/limit. Primary AWS range and Wasabi retention/accounting/
+multipart docs refreshed; no account policy or provider objects changed.
+Full local study gate2 EXIT0 session67227, log
+/tmp/s3drive-large-managed-study-gate2.log and result JSON beside it:
+292state/1ignored,50authority,format/lint/build,59doclinks/55chapters. All12
+frozen runtime/contract hashes unchanged. Study gate1 terminated143 during
+managed-publication tests without an assertion failure; cause not established,
+no pass claimed. Gate2 completed normally. Arithmetic JSON reproduces exactly.
+Diagram XML/text extents checked. ImageMagick renderer unavailable and browser
+screenshot timed out; system librsvg/Cairo rendered successfully and local PNG
+was visually reviewed. Authority pointer was rerouted to avoid the S3 heading.
+Study and reviewed evidence are being published on codex/large-file-representation,
+a documentation-only child of2575374. A [skip ci] commit avoids another identical
+hosted native cycle: full local gate plus final docs checks passed; runtime/native
+evidence stays bound to2575374. No main/runtime promotion. Verify publication
+with git status and ls-remote; repository visibility must remain PUBLIC.
+P0 table now reflects D040 public policy instead of stale privacy requirement.
+
 ## Current candidate: dispatch observations (P6m4i)
 
-Working branch is now codex/dispatch-progress, still based atc7fca789. That
-exact source's Windows CI is terminal FAILURE (stale schema23 fixture), below. Previous candidate branch remains pushed
-atc7; main is unchanged/public. Dirty observations/research carried intact.
+Runtime candidate is codex/dispatch-progress at25753746287aa52a36a9ba42d8bf5162f1de07d1,
+normally pushed with all17 scoped files. Parentc7fca789's Windows CI is terminal
+FAILURE (stale schema23 fixture), below. Publication
+/tmp/s3drive-dispatch-progress-publication.json: clean after push, all12 frozen
+source hashes unchanged, PUBLIC before/after and0visibility mutations. Main stays
+1a93b5f. Post-push HANDOFF/dispatch observations are included with the new representation
+study on its documentation branch; no new hosted native run is requested for
+that docs-only commit. Runtime candidate and CI remain2575374. Previous
+candidate branch remains pushed atc7; main is unchanged/public.
 Plan appended to implementation-plan.md. The observational delta is implemented
 in wire.rs, wire/owned.rs, wire/progress.rs and wire/tests.rs; no schema/dependency
 or scheduling/policy change. Five compact public fields track initial readiness,
@@ -59,12 +97,32 @@ Final extended gate2 EXIT0 session50715:
 (15unit),292state/1ignored,17core,51S3 and workspace/build/lint/book passed;
 all12 frozen hashes unchanged, no warnings/errors. Proof
 /tmp/s3drive-dispatch-progress-gate2-result.json.
-NEXT: record final result, run docs checks, inspect/stage explicit17-file scope
-/tmp/s3drive-dispatch-progress-publication-plan.json, normal commit/push on
-codex/dispatch-progress with PUBLIC read-only identity checks. Main remains1a93b5f.
-Then require own hosted acceptance; no transport correction claim or main promotion. Keep c7 CI/artifacts
-separate and preserve all carried dirty research/acceptance docs. No runtime
-promotion or provider requests.
+Final result docs links/build/test also EXIT0; commit/push EXIT0 session33314.
+CI39133178423 is terminal SUCCESS at exact2575374: Windows117692328597,
+Linux117692328400, book117692328244. Watch36321 closed EXIT0. All own completed
+raw reviews are closed; marker /tmp/s3drive-dispatch-progress-257-raw-reviewed.json.
+Windows raw SHA25625377375a16cf8cd9b73db4c40b1823fc725a5c6a4f829f60e1ce3bdc68773c6;
+Linux SHA1bbcf0753b4296cc065a95a0bf170e6ea247e7a2793ac5abdbfbf2982ba11452.
+Own checker /tmp/s3drive-check-dispatch-progress-257.py EXIT0 session75387:
+/tmp/s3drive-dispatch-progress-257-artifact-check.log. Own source/run ZIP API
+hashes and strict all-field/type21replacement/14disposition records plus both
+PowerShell project oracles match. No prior artifacts borrowed. New directory
+/tmp/s3drive-dispatch-progress-257-artifacts. Do not rerun this one-use checker
+into the same directory. Book58links/54chapters; Linux9real FUSE tests,292state,
+50authority,32HTTPS flushes,11Unicode names and paired no-systemd recovery.
+Windows Server2025/WinFsp2.1.25156:287state/1ignored,50authority,16multipart,
+32HTTPS flushes,lifecycle,paired startup/recovery,snapshots and7broad native pass.
+Own corrected schema24 session fixture now passed; parentc7 remains failed.
+Raw notices reviewed: LNK4199 on9non-WinFsp CLI tests, three locked disposable
+profiles left to VM destruction after dummy credential removal, expected TLS/
+HEAD403/dirty-conflict faults and deliberate stopped-service List Connect timeout.
+Node/action notices and ultimately-passing long tests retained. Ubuntu-latest
+migration to26 starts2026-10-19; this run actually used24.04.5. Future CI runner
+pinning is worth a separate change, not silently claiming a new OS was tested.
+This is ONE passing cohort; no causal fix or identical-source repeat acceptance.
+No runtime promotion, physical workstation reboot, Win10/11, provider requests,
+remote deployment or snapshot restoration is established. Preserve all earlier
+failures and the unresolved transport requirement.
 
 ## Current work: offline immutable multipart plans (2026-10-18)
 
