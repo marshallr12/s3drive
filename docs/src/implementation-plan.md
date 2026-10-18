@@ -1970,3 +1970,15 @@ and its dated evidence; the captured prior CI category remains unknown. The
 next implementation work is the separately scoped source-settlement persistence
 contract above, followed by controller integration. Existing native regression
 does not activate mounted chunks or establish physical reboot/provider acceptance.
+
+
+Reader implementation checkpoint (2026-10-18): controller474 and helperfef are
+accepted and combined in source `88d02f7` on `codex/manifest-range-reader`.
+Its full local gate passed (256 unchanged source hashes,12 publication/source,
+5 reader,62 S3,365 state/1ignored,64chapters). The new reader, diagram and indexed
+local evidence are documented in the
+[reader branch book source](https://github.com/marshallr12/s3drive/blob/88d02f7a6605bf13bfd212d67c6609ae16b0ebfd/docs/src/manifest-range-reader.md).
+Its [own hosted cohort](https://github.com/marshallr12/s3drive/actions/runs/39171113280)
+is running; raw/artifact acceptance remains pending. Primary controller sources
+stay unchanged until that acceptance. Native chunk lifecycle and real-provider
+acceptance remain separate. Continue in its isolated worktree and read its HANDOFF.

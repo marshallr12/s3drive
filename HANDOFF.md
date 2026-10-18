@@ -60,6 +60,30 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
+## Active continuation: manifest reader hosted checks (2026-10-18)
+
+Reader worktree /home/marshall/src/worktrees/s3drive-manifest-range-reader,
+branch codex/manifest-range-reader, published source88d02f7 and statusb3e30f0.
+Its full combined gate84960 CLOSED EXIT0,256hashes unchanged:12publication,
+5reader,62S3,365state/1ignored,68docfiles/64chapters,fmt/clippy/build.
+14-member indexed archive72706bytes SHA
+ a1737729817e21d78c356c699987e1d4129f128172c71363007b04d9bb4a2ffd.
+Own CI39171113280 attempt1 still in progress:Windows117804178631,
+Linux117804178819,book117804178853. Watch42929, log
+/tmp/s3drive-manifest-reader-88d-watch.log. Resume same watcher/check cohort;
+review own terminal logs and finalized artifacts before acceptance, no rerun
+or borrowed artifacts. Reader256runtime stays frozen. Current primary253
+controller source stays unchanged. No main promotion or visibility mutation.
+Helperfef own cohort39167583915 accepted all3/typed21+14/raw35; 22-member archive
+118377bytes SHA15d38ecf5047cd5f67c70c37347a19b527e2476d77c5580654edfbf44c629d26.
+Accepted helper checkpointae06faa pushed; both prerequisites combined in reader.
+New reader supports authenticated bounded ranges, full-chunk hashes, holes,
+Unicode, old immutable references, max64GiB sparse tree, capacity/cancellation/
+deadline controls. No legacy/schema/wire/native activation changes. New SVG
+XML/render/visual review passed. Native chunk mount/write lifecycle remains
+later work. No new provider mutation or physical reboot acceptance. Goal ACTIVE.
+Historical helper-live/reader-proposal sections below are superseded here.
+
 ## Current work: controller accepted; verified reader preparation (2026-10-18)
 
 Previous goal turn was verified wait on39163298774/Windows117780950165. This
