@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "full combined local gate passed; own hosted acceptance pending",
+  "status": "full combined local gate and own source-bound hosted cohort accepted",
   "branch": "codex/manifest-range-reader",
   "worktree": "/home/marshall/src/worktrees/s3drive-manifest-range-reader",
   "combined_checkpoint": "ef117bcc3e8e8bfbbc4deb3d97241d66474d6d51",
@@ -158,5 +158,41 @@
       }
     ]
   },
-  "hosted_acceptance": "pending; own cohort running; no own raw log or artifact acceptance yet"
+  "hosted_acceptance": {
+    "source": "88d02f7a6605bf13bfd212d67c6609ae16b0ebfd",
+    "run_id": 39171113280,
+    "run_attempt": 1,
+    "jobs": {
+      "windows": 117804178631,
+      "linux": 117804178819,
+      "book": 117804178853
+    },
+    "all_jobs_success": true,
+    "all_raw_logs_reviewed": true,
+    "artifacts": {
+      "replacement": 12152741226,
+      "disposition": 12153275892
+    },
+    "independent_typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true,
+    "archive": {
+      "path": "evidence/manifest-reader-88d-hosted-20261018.tar.gz",
+      "sha256": "994942870840d5efd3082d61dd3533e89dbf0bd154844f5b3d2d93b7b37428ac",
+      "bytes": 118459,
+      "members": 22,
+      "all_indexed_members_verified": true,
+      "source": "88d02f7a6605bf13bfd212d67c6609ae16b0ebfd",
+      "run_id": 39171113280,
+      "run_attempt": 1,
+      "independent_typed_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "all_raw_fields_and_types_equal": true
+    },
+    "scope": "managed library reader and existing-format native regression; no mounted manifests/new provider/physical reboot"
+  }
 }

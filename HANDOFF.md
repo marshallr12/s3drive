@@ -63,7 +63,7 @@ P0 table now reflects D040 public policy instead of stale privacy requirement.
 ## Native local gate passed; publication next (2026-10-18)
 
 Worktree /home/marshall/src/worktrees/s3drive-native-manifest-reads,
-branch codex/native-manifest-reads fromb3e30f0, uncommitted draft. Read plan and
+branch codex/native-manifest-reads fromb3e30f0, local feature commit9ed5765. Read plan and
 native-manifest-reads.md. Current257 frozen map is
 /tmp/s3drive-native-manifest-v3-frozen.json; old canonical map records gates1/2.
 Gate3 CLOSED EXIT0,257 hashes unchanged; do not repeat without new change/failure. Shared CARGO_TARGET_DIR=/home/marshall/src/s3drive/target,
@@ -102,20 +102,31 @@ mapSHA6f192f26f798fc4c411135b73aef3e9d620fcf3a4051b882f40e133653686924.
 Native FUSE/WinFsp acceptance still pending. Primary253/reader256 unchanged.
 PUBLIC remains current; goalACTIVE. This section supersedes historical pending state.
 
-## Reader publication and hosted acceptance running (2026-10-18)
+## Accepted reader; native draft continuation (2026-10-18)
 
-Combined reader source88d02f7a6605bf13bfd212d67c6609ae16b0ebfd pushed on
-codex/manifest-range-reader; clean exactremote/all256frozen hashes verified.
-PUBLIC read-only verified; main1a93b5f unchanged. Own run39171113280 attempt1:
-Windows117804178631, Linux117804178819, book117804178853 all in progress.
-Watch42929 -> /tmp/s3drive-manifest-reader-88d-watch.log. Resume same watch,
-do not rerun CI or borrow older native artifacts. On terminal all3SUCCESS:
-review all own raw logs, bind own finalized replacement/disposition artifactIDs,
-verify payload source/digests/typed21+14/projectoracles/raw35 before acceptance.
-On failure preserve actual cohort evidence and diagnose before a new source.
-No own raw review/artifact acceptance has occurred yet. Keep256runtime files
-frozen. Proof /tmp/s3drive-manifest-reader-publication.json. Helper acceptance
-ae06faa is pushed; controller474 accepted independently; both are ancestors.
+Source88d02f7a6605bf13bfd212d67c6609ae16b0ebfd own run39171113280 attempt1
+all3SUCCESS:Windows117804178631,Linux117804178819,book117804178853.
+Watch42929 CLOSED EXIT0; all own raw logs reviewed/hash-bound. One-use checker
+3479 CLOSED EXIT0, own finalized replacement12152741226/disposition12153275892,
+independent strict21/14 + project oracles + raw35 field/type comparison PASS.
+22-member hosted archive manifest-reader-88d-hosted-20261018.tar.gz,118459bytes,
+SHA994942870840d5efd3082d61dd3533e89dbf0bd154844f5b3d2d93b7b37428ac;
+all indexed members verified. Do not reexecute one-use checker/archive builders.
+Windows5reader4.61s/12publication32.89s/62S3/360state1ignored; Linux5reader4.12s/
+12publication51.31s/62S3/365state1ignored. Existing native regression only:
+Windows7native82.70s + pairedstartup71.97s; Linux9native76.31s + no-systemd/SSH.
+Windows3 locked disposable profiles retained after dummy credentials removed;
+unused WinFsp delay-import +11target reports and Node/cache notices preserved.
+This accepts library reader, not mounted manifests/provider/reboot behavior.
+Runtime256 hashes remain frozen in the isolated reader checkout; publication proof in/tmp.
+
+Current draft is /home/marshall/src/worktrees/s3drive-native-manifest-reads,
+branch codex/native-manifest-reads fromb3e30f0. Read its HANDOFF/plan/contract.
+Six focused portable controls/one native ignored passed; explicit local native
+attempt failed at FUSE readiness OperationNotPermitted under NoNewPrivs1,
+child reaped/noFUSEmount remains. Full localgate22825 live with257 frozen files.
+No new native source publication yet; do not confuse its pending gate with this
+accepted reader. Primarycontroller253 stays unchanged. PUBLIC/goalACTIVE.
 
 ## Active reader implementation (2026-10-18)
 

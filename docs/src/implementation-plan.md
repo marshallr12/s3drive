@@ -2018,16 +2018,17 @@ source-inspection plan, not mounted acceptance or a finalized public API.
 
 Reader result: combined full local gate84960 EXIT0, all256 frozen hashes
 unchanged, 12 publication/source +5 reader +62 S3 +365state/1ignored,64chapters.
-The 14-member local archive is indexed and verified. Own hosted acceptance is
-next; portable controls do not activate native chunk reads or writes.
-
+The 14-member local archive is indexed and verified. Own hosted cohort
+39171113280 passed all3 jobs, reviewed raw logs and strict21/14 + raw35 checks.
+The indexed22-member hosted archive is verified. Native integration follows
+in codex/native-manifest-reads; portable controls do not activate native chunks.
 
 ### Draft native manifest reads (2026-10-18)
 
 Worktree /home/marshall/src/worktrees/s3drive-native-manifest-reads, branch
 codex/native-manifest-reads, from b3e30f0. The reader256 runtime remains frozen
-in its own worktree while CI39171113280 runs. Drafting is isolated; publish only
-after prerequisite acceptance and this phase's gates. See
+in its own worktree; CI39171113280 is accepted. The native local gate passed
+with257 hashes unchanged, and actual FUSE/WinFsp acceptance follows on its own source. See
 [native read integration contract](native-manifest-reads.md) for footprint,
 compatibility, failure behavior and engine/FUSE/WinFsp done criteria.
 
@@ -2037,7 +2038,8 @@ Proposal, pending native read acceptance. The existing logical writer explicitly
 rejects manifest bases and caps a file at8MiB (`logical::Binding::validate` and
 `MAX_BYTES`). Raising that constant would retain whole-file buffering and hashing.
 The offline chunk planner accepts a64GiB logical size but currently prepares a
-complete local staging snapshot; it has no authenticated remote-reference overlay.
+complete local staging snapshot under configured object/scan quotas; it has no
+authenticated remote-reference overlay.
 These are distinct boundaries. See the accepted source's
 [logical binding](https://github.com/marshallr12/s3drive/blob/88d02f7a6605bf13bfd212d67c6609ae16b0ebfd/crates/s3drive-state/src/logical.rs),
 [full-snapshot planner](https://github.com/marshallr12/s3drive/blob/88d02f7a6605bf13bfd212d67c6609ae16b0ebfd/crates/s3drive-state/src/chunked.rs)
