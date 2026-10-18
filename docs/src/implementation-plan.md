@@ -1982,3 +1982,15 @@ Its [own hosted cohort](https://github.com/marshallr12/s3drive/actions/runs/3917
 is running; raw/artifact acceptance remains pending. Primary controller sources
 stay unchanged until that acceptance. Native chunk lifecycle and real-provider
 acceptance remain separate. Continue in its isolated worktree and read its HANDOFF.
+
+
+Native read-integration draft checkpoint (2026-10-18): reader88d's own cohort
+has passed all3 jobs and strict21/14 + raw35 checks at reader checkpoint7c2b454.
+Implementation proceeds in /home/marshall/src/worktrees/s3drive-native-manifest-reads
+on codex/native-manifest-reads. Six focused controls passed, including mixed formats,
+two stores, sparse64GiB metadata, old roots and namespace faults. Local real FUSE
+readiness failed OperationNotPermitted under NoNewPrivs1. The first full gate
+failed an existing setup Info TLS connect timeout; its unchanged isolated case
+passed. The second complete gate is running with top-level tests serialized and
+all production timeouts/inside-test concurrency unchanged. No fullgate/native
+acceptance or draft publication is claimed yet. Read that checkout's handoff.

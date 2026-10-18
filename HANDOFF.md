@@ -60,29 +60,38 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Active continuation: manifest reader hosted checks (2026-10-18)
+## Active native draft; accepted reader (2026-10-18)
 
-Reader worktree /home/marshall/src/worktrees/s3drive-manifest-range-reader,
-branch codex/manifest-range-reader, published source88d02f7 and statusb3e30f0.
-Its full combined gate84960 CLOSED EXIT0,256hashes unchanged:12publication,
-5reader,62S3,365state/1ignored,68docfiles/64chapters,fmt/clippy/build.
-14-member indexed archive72706bytes SHA
- a1737729817e21d78c356c699987e1d4129f128172c71363007b04d9bb4a2ffd.
-Own CI39171113280 attempt1 still in progress:Windows117804178631,
-Linux117804178819,book117804178853. Watch42929, log
-/tmp/s3drive-manifest-reader-88d-watch.log. Resume same watcher/check cohort;
-review own terminal logs and finalized artifacts before acceptance, no rerun
-or borrowed artifacts. Reader256runtime stays frozen. Current primary253
-controller source stays unchanged. No main promotion or visibility mutation.
-Helperfef own cohort39167583915 accepted all3/typed21+14/raw35; 22-member archive
-118377bytes SHA15d38ecf5047cd5f67c70c37347a19b527e2476d77c5580654edfbf44c629d26.
-Accepted helper checkpointae06faa pushed; both prerequisites combined in reader.
-New reader supports authenticated bounded ranges, full-chunk hashes, holes,
-Unicode, old immutable references, max64GiB sparse tree, capacity/cancellation/
-deadline controls. No legacy/schema/wire/native activation changes. New SVG
-XML/render/visual review passed. Native chunk mount/write lifecycle remains
-later work. No new provider mutation or physical reboot acceptance. Goal ACTIVE.
-Historical helper-live/reader-proposal sections below are superseded here.
+Reader88d is accepted, all3 ownCI39171113280 SUCCESS, rawlogsreviewed and own
+replacement12152741226/disposition12153275892 strict21/14+raw35 PASS.
+22member archive118459bytes SHA
+994942870840d5efd3082d61dd3533e89dbf0bd154844f5b3d2d93b7b37428ac.
+Reader checkpoint7c2b45435cd4aa3999e63ee16ccb6b03f5985c76 pushed, cleanexactremote.
+
+CURRENT checkout for implementation:
+/home/marshall/src/worktrees/s3drive-native-manifest-reads,
+codex/native-manifest-reads, uncommitted draft fromb3e30f0. Read its HANDOFF and
+native-manifest-reads.md. Adds version3 read-only mixedlegacy/chunknamespace,
+logical64GiB metadata, bounded range handles, engine/native controls andCIstep.
+6focused portable controls/1native ignored passed5.74s; Clippy3 EXIT0.
+Explicit local native attempt failed FUSEreadiness OperationNotPermitted,
+NoNewPrivs1, ownedchildreaped/noFUSEleft; no native success or privilege bypass.
+First fullgate22825 CLOSED EXIT101 in existing paired-startup fixture setup:
+seed CLI managed store-plan InfoTLSConnecttimeout2.09s beforeHTTP/bodypoll,
+not changed filesystem path. Other7suitecontrols passed,257sourcehashes unchanged.
+HighCPUpressure observed; causeunproven. Unchanged focusedcase39166 EXIT0,2.69s.
+Gate2 session46929 LIVE, log /tmp/s3drive-native-manifest-gate2.log,
+RUST_TEST_THREADS=1 + shared CARGO_TARGET_DIR=/home/marshall/src/s3drive/target;
+same script/source/deadlines/innerconcurrency, only top-leveltests serialized.
+Resume samehandle. Do not publish native source or claim fullgate/native PASS
+before actual results. Runtime257 frozen in/tmp/s3drive-native-manifest-frozen.json.
+Preserve firstfailedlog /tmp/s3drive-native-manifest-gate.log andfailureJSON.
+
+After gate2 PASS: finalize evidence/archive, commitdraft then merge acceptedreader
+7c2b454 doccheckpoint preserving257runtime, push ownnative branch for actual
+FUSE/WinFspCI. If failure, diagnose first; no blind reruns. Primary253 andreader256
+runtime unchanged. No main or visibility mutation; PUBLIC and goalACTIVE.
+Historical pending reader sections below are superseded by this current state.
 
 ## Current work: controller accepted; verified reader preparation (2026-10-18)
 
