@@ -425,6 +425,75 @@ Windows workspace/lifecycle/paired/reference/broad gates were skipped. This
 candidate is not accepted and main remainsbf9509. Preserve the existing assertions
 and deadlines while investigating; see the [dated raw evidence](evidence/authority-snapshot-platform-20261018.json).
 
+### Next transport investigation boundary (proposal, 2026-10-18)
+
+Resolved reqwest0.13.5 `ClientBuilder::connector_layer` requires the layer to
+return its exact sealed `Conn` type. The observer can inspect that connection's
+public metadata, but cannot substitute an I/O wrapper or attach custom metadata
+through a changed return type. The connection's fields and construction are
+private. Do not assume this hook supports client plaintext I/O counters, or
+enable verbose HTTP logging that could disclose the bearer/request. The resolved
+[connector-layer signature](https://docs.rs/reqwest/0.13.5/reqwest/struct.ClientBuilder.html#method.connector_layer)
+and local source were inspected2026-10-18. This is an API constraint, not an
+explanation of the native failure.
+
+Evaluate a standalone per-RPC Hyper HTTP/1 connection with Rustls, where one
+owned future polls both the connection driver and the single request/response,
+without the legacy pool/independently spawned driver. This is a candidate design
+to test, not a demonstrated correction. Inspect the resolved handshake,
+request-channel, cancellation, TLS and platform-verifier contracts before code.
+First prove independent HTTP/TLS peers, exact authenticated JSON/framing and
+bounded response reads; expose only fixed stages and sanitized I/O counters.
+Preserve numeric-loopback HTTP restrictions, hostname verification, explicit
+private roots replacing platform trust, no key logging/proxy/redirect/retry,
+2-second connection and10-second absolute caller deadline, and unknown outcomes
+after cancellation/lost replies. No deadline extension or replay workaround.
+
+Any replacement candidate must retain the behavioral fault/concurrency/receipt
+controls, then pass real Linux and Windows native/startup/reference acceptance
+and a source-identical repeat. A passing standalone client or a pure multipart
+planner cannot establish that this transport resolves the correlated failure.
+
+### Test-only owned exchange control (candidate, 2026-10-18)
+
+`crates/s3drive-authority/tests/owned_exchange.rs` now implements that small
+study, leaving `WireClient` and production routing unchanged. Hyper's client
+feature is declared explicitly; package versions and the lockfile are unchanged.
+The first request is queued before polling its HTTP/1 driver, using the pinned
+Hyper1.12.0 one-buffered-request behavior. The request, driver, TCP/TLS stream
+and response-body consumer remain inside the same exchange future. A completed
+driver may already have queued a full response or body error; the consumer is
+drained under the same deadline. No driver task or pooled socket survives the
+exchange. This is an implementation study, not an established failure cause.
+
+Seven local tests passed against independent ephemeral HTTP/TLS peers:32 exact
+authenticated UTF-8 JSON requests on32 distinct transports per protocol;
+lost replies,307 refusal and truncated/oversized replies without replay;
+chunked replies exactly8MiB and one byte over; wrong roots/names; stalled TLS;
+cancellation after full request receipt; and stalled partial responses. The
+TCP/TLS handshake limit is2 seconds and the whole exchange limit10 seconds
+after polling starts. Both protocols exercised the full10-second stalled-body
+deadline. Declared body lengths, Host, bearer, content type, close policy and
+all request bytes are checked independently. Replies need no peer close header.
+
+The initial cancellation control expected graceful EOF. A measured TLS reset
+showed that dropping an owned socket need not perform graceful shutdown. The
+passing control accepts only EOF/UnexpectedEof or ConnectionReset as closure;
+other errors, timeouts and extra bytes fail. The fixture joins or aborts/reaps
+its server task before returning, and observes no extra transport during its
+bounded post-exchange check. It commits no authority/S3 effect, so request receipt
+and socket closure never establish a durable mutation or permission to replay.
+
+The prototype uses generated explicit roots, a synthetic token and fixed local
+endpoints. It does not implement platform trust, production URL/private-file
+validation, JSON/volume/receipt checks or foreign-thread/caller-queue deadline
+integration. Those contracts must be carried over before a production transport
+candidate, followed by native and unchanged-source repeat gates. The full local
+gate passed:7 owned-exchange controls, existing7 authority unit/10 HTTP/9 TLS,
+17 core and274 state tests, other workspace suites, lint/build and57-document
+book checks. No production transport or native correction is accepted from this
+local result; see the [dated source and scope record](evidence/owned-http1-study-20261018.json).
+
 ## Bounded failure diagnostics (2026-10-17)
 
 The [same-source Windows failure investigation](authority-startup.md#same-source-repeat-failure-2026-10-17)

@@ -86,5 +86,64 @@
       "/tmp/s3drive-multipart-sizing-final-book.log": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4",
       "/tmp/s3drive-multipart-sizing-final-book-tests.log": "18cb1cf40c90c10e5ad5730f90e6845f480c1c0e9795f03a3b78ab6d21854d2d"
     }
+  },
+  "published_checkpoint": {
+    "source": "b793ea58e662f7884981f9ce89ce94482e3fb489",
+    "parent": "0bbc4dbdf5915cd6252e2d718bdf370c15407b7d",
+    "branch": "codex/multipart-sizing",
+    "private": true,
+    "normal_push": true,
+    "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+    "local_gate_exit_code": 0,
+    "parent_windows_failure_retained": true,
+    "large_file_execution_enabled": false,
+    "at_utc": "2026-10-18T10:04:04.277650+00:00"
+  },
+  "hosted": {
+    "run": 39117793980,
+    "source": "b793ea58e662f7884981f9ce89ce94482e3fb489",
+    "status": "in_progress",
+    "conclusion": "",
+    "jobs": [
+      {
+        "databaseId": 117647008136,
+        "name": "rust (windows-latest)",
+        "status": "in_progress",
+        "conclusion": ""
+      },
+      {
+        "databaseId": 117647008193,
+        "name": "book",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "databaseId": 117647008237,
+        "name": "rust (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "observed_at_utc": "2026-10-18T10:21:45.047836+00:00",
+    "acceptance": false,
+    "note": "Pure geometry changes do not resolve parent0bbc Windows transport failure; no main promotion based on geometry alone",
+    "completed_raw_review": {
+      "linux": {
+        "sha256": "4c88687754abb6ddcabc9533be09cba250b000e93476023217aa53365bb0ed74",
+        "scope": "all9 native,32-flush, paired no-systemd and both coordinator startup protocols; only controlled faults and stopped-authority refusals"
+      },
+      "book": {
+        "sha256": "648e74ec7465feefdaf3c96f9735b64f14740ee648e3ff8bcca9af38d9c195b0",
+        "scope": "completed job log retained"
+      }
+    },
+    "success_only_checker": "/tmp/s3drive-check-multipart-b793.py",
+    "checker_executed": false
+  },
+  "postpush_docs": {
+    "links": 57,
+    "build_exit_code": 0,
+    "test_exit_code": 0,
+    "new_transport_study": "proposal only; reqwest sealed Conn constraint verified locally, no runtime/API change"
   }
 }

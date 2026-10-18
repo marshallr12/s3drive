@@ -964,3 +964,17 @@ before multipart execution; do not substitute arithmetic tests for those gates.
 The pure planner's six cases, complete local workspace/lint/build and book gate
 passed. Its parent0bbc4db has a recorded native Windows failure; this local
 sizing result is not acceptance of that parent or large-file execution.
+
+### P6m4e — owned HTTP/1 exchange study (candidate, 2026-10-18)
+
+Before replacing the production client, implement a test-only direct Hyper/
+Rustls exchange that co-polls its driver and exactly one authenticated request.
+Require independent ephemeral HTTP/TLS peers to observe exact JSON bytes,
+Content-Length, Host, bearer and Connection: close; full replies, lost reply,
+307 refusal, truncated/oversized response, wrong trust/name and stalled handshake
+controls; cancellation after full peer receipt must close the owned socket.
+Keep2-second TCP/TLS and10-second whole-exchange deadlines, bounded responses,
+sanitized errors and no retry, proxy, pool or independently spawned driver.
+Inspect resolved APIs before implementation and run the full local gate. This
+study does not replace URL/config/platform-trust validation or production
+transport, and cannot prove a Windows correction or a committed mutation.

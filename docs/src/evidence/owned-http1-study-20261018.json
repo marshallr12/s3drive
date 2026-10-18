@@ -1,0 +1,114 @@
+{
+  "format": "s3drive-owned-http1-study-v1",
+  "date": "2026-10-18",
+  "status": "full local gate passed; test-only study, hosted scope pending",
+  "branch": "codex/owned-http1-probe",
+  "parent": "b793ea58e662f7884981f9ce89ce94482e3fb489",
+  "main_unchanged": "bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05",
+  "production_transport_replaced": false,
+  "native_failure_fixed": false,
+  "provider_requests": 0,
+  "source_sha256": {
+    "Cargo.toml": "d2d511dd0bbc4ae5c5c90942622b8799320107467fdd9426df73161bc5d6dc70",
+    "crates/s3drive-authority/tests/owned_exchange.rs": "d0fe5b9f7a304e7cf672ad2add30d1f1c44c53f31d58a25c265f5d16bc85d63e"
+  },
+  "lock_sha256": "85a582c41797f59a6cd5891a5c490ddf6d8c5abbf4ab3ba28141bdda2a3ab716",
+  "dependency_versions": {
+    "hyper": "1.12.0",
+    "hyper-util": "0.1.21",
+    "rustls": "0.23.46",
+    "tokio-rustls": "0.26.6",
+    "reqwest": "0.13.5",
+    "rcgen": "0.14.9"
+  },
+  "api_inspection": [
+    "hyper client/conn/http1.rs handshake, send_request and cancellation docs; client/dispatch.rs first buffered request",
+    "http-body1.1.0 Body::poll_frame and SizeHint",
+    "rustls client builder explicit roots, no client auth, default NoKeyLog and no early data",
+    "tokio-rustls connect and server accept",
+    "rcgen subject-alt-name generation, self-signed certificates and private DER representation",
+    "reqwest Body::from(Vec<u8>) preserving reusable-body framing"
+  ],
+  "runtime_design": "Test-only fixed-endpoint exchange; one owned future co-polls one Hyper HTTP1 driver with authenticated request and bounded response; no pool, redirect following, retry, proxy or independently spawned driver",
+  "deadlines": {
+    "tcp_plus_tls_seconds": 2,
+    "whole_exchange_seconds": 10,
+    "scope": "after the exchange starts polling; production caller/task-queue deadline parity still required"
+  },
+  "controls": [
+    "32 complete independent transports each for HTTP and TLS; exact UTF8 JSON/body length/Host/bearer/content-type/close; peer omits response close and observes EOF",
+    "HTTP/TLS lost reply after complete receipt,307 no-follow, truncated body and oversized Content-Length; exactly one request/transport",
+    "HTTP/TLS chunked body exactly8MiB accepted; one byte over cap rejected without terminal chunk",
+    "wrong explicit root and wrong hostname rejected before request body poll",
+    "stalled TLS hits2-second connection deadline",
+    "HTTP/TLS canceled caller after full receipt closes socket and produces no additional transport",
+    "HTTP/TLS stalled partial response hits10-second whole deadline and closes owned socket"
+  ],
+  "focused": {
+    "command": "cargo test -p s3drive-authority --test owned_exchange --locked -- --nocapture",
+    "cases": 7,
+    "exit_code": 0,
+    "log": "/tmp/s3drive-owned-http1-focused3.log",
+    "log_sha256": "47a74e4a4b09d168cc426329bb3fde71813c8e4d247be1193a2a8bcc9b2e6713"
+  },
+  "cancellation_observation": {
+    "log": "/tmp/s3drive-owned-http1-cancel-observation.log",
+    "initial_graceful_only_assertion_exit_code": 101,
+    "measured_error_kind": "ConnectionReset",
+    "refinement": "Cancellation accepts only UnexpectedEof or ConnectionReset, never arbitrary read errors, timeouts or extra bytes",
+    "passing_http": "UnexpectedEof",
+    "passing_tls": "ConnectionReset"
+  },
+  "local_gate": {
+    "status": "completed",
+    "log": "/tmp/s3drive-owned-http1-gate2.log",
+    "session": 86164,
+    "exit_code": 0,
+    "log_sha256": "73acd80691338b4831f7fcb8a5e199a5b61bc3bb4d742602c2358685f7a17f64",
+    "authority_unit": 7,
+    "owned_exchange": 7,
+    "http": 10,
+    "tls": 9,
+    "core": 17,
+    "state": 274,
+    "docs": 57,
+    "source_unchanged": true
+  },
+  "limits": [
+    "Linux-only local study until hosted results; not a Windows root-cause explanation or correction",
+    "fixed ephemeral loopback endpoints, generated explicit roots and synthetic token; platform trust and URL/private-file configuration not implemented",
+    "no production caller/foreign-thread queue deadline or lifecycle integration",
+    "raw reply bytes only; existing production JSON/volume/receipt validation must be preserved before adoption",
+    "fixture reads mutation bytes but commits no authority or S3 effect; no durable mutation or unsent-outcome claim",
+    "pinned first-request buffering behavior requires regression after dependency updates",
+    "large-file upload, restore/failover, live provider and physical startup acceptance unchanged"
+  ],
+  "local_gate_first": {
+    "exit_code": 101,
+    "log": "/tmp/s3drive-owned-http1-gate1.log",
+    "failure": "Clippy err_expect in test-only socket-closure assertion; changed to expect_err, no runtime/acceptance suppression"
+  },
+  "resolved_source_sha256": {
+    "hyper-1.12.0/src/client/conn/http1.rs": "6ec8124f5dc3f176baae99d9528d467e976e2522912d5bab13603a792fecb203",
+    "hyper-1.12.0/src/client/dispatch.rs": "cce049418dcd9e1700b87701d6e78a4a021ba0e9912e9b669fec3d3f037d4e29",
+    "http-body-1.1.0/src/lib.rs": "125d4c7dfbc608130435fad85e5ce9a244eb8388383a6006370c6ab8d3e35300",
+    "rustls-0.23.46/src/client/builder.rs": "aa2df5ce333599e3acd9cbf6f7758eb5444f6d9cf4b66c0a84130fc7e6a55f4b",
+    "tokio-rustls-0.26.6/src/client.rs": "99c21fc31cd2a7e9b10e6802a41598a3e42bf1b17e6007c4c7f59257e1e77293",
+    "rcgen-0.14.9/src/certificate.rs": "e3930f3143a04a13a7f8fc31f3d602071420012401261f867eb56704bc1e301f",
+    "reqwest-0.13.5/src/async_impl/body.rs": "5f817e5c8713fc08aa410057540c6ffa37a1595340bddd2c2f39479b5c0103e9",
+    "rustls-platform-verifier-0.7.1/src/lib.rs": "cb63f0781eb232fb16dfaeacde94cbfe256c71c064bef09b58ca43625e7d605d",
+    "rustls-platform-verifier-0.7.1/src/verification/others.rs": "afdd9c4cd053745603014ead548593944ac43ad7424e15b10d52a32e32f0ce22",
+    "rustls-platform-verifier-0.7.1/src/verification/windows.rs": "6b277079bdd38ddc7d13a813aaeeb0f290905c01e90639f6381d6c96d89f28a2"
+  },
+  "online_api_lookup": "Pinned docs.rs pages attempted2026-10-18 but unavailable through web tool; API evidence is inspected resolved local source and its hashes, not claimed online verification",
+  "platform_verifier_followup": "Resolved0.7.1 BuilderVerifierExt::with_platform_verifier uses Verifier::new with builder crypto provider; current reqwest uses same Verifier::new path for default trust. Not linked/called by this study; platform behavior still requires adoption tests.",
+  "final_docs": {
+    "links": 57,
+    "build_exit_code": 0,
+    "test_exit_code": 0,
+    "log_sha256": {
+      "/tmp/s3drive-owned-http1-final-book.log": "59af72437999817599bc66b062b41a3dff66c55caae1417faf338b134378d7d4",
+      "/tmp/s3drive-owned-http1-final-book-tests.log": "18cb1cf40c90c10e5ad5730f90e6845f480c1c0e9795f03a3b78ab6d21854d2d"
+    }
+  }
+}

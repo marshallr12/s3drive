@@ -7,12 +7,46 @@ gate with `bash scripts/gate.sh`; native/provider/recovery gates are separate.
 
 ## Accepted checkpoint and first action
 
-Current branch: codex/multipart-sizing, dependent on pushed diagnostic0bbc4db.
-Pure geometry code/docs are uncommitted; preserve them. Its full local gate passed
+Current branch: codex/owned-http1-probe, based on b793ea5. Preserve existing
+post-push docs plus new Cargo feature declaration/test-only owned_exchange.rs,
+implementation plan and docs/src/evidence/owned-http1-study-20261018.json.
+No production WireClient/routing or dependency version/lockfile change. Public
+Hyper1.12/Rustls/tokio-rustls/rcgen/body APIs inspected in resolved sources.
+Seven independent local HTTP/TLS controls passed at
+/tmp/s3drive-owned-http1-focused3.log. Initial strict cancellation EOF failed;
+measured TLS ConnectionReset, then accepted only EOF or Reset, never arbitrary
+errors/extra bytes. Plain HTTP cancellation observed EOF, TLS Reset. Both10sec
+stalled-response controls and2sec stalled TLS passed. Full gate1 failed Clippy
+err_expect only; fixed expect_err. Full gate2 completed EXIT0 session86164,
+/tmp/s3drive-owned-http1-gate2.log: owned7, authority7unit/10HTTP/9TLS, core17,
+state274 and workspace/build/lint/57-doc book. No local gate process remains.
+Code fingerprints in new study JSON are frozen. Explicit roots/fixed ephemeral
+endpoints/synthetic bearer only; no provider/native/Windows correction claim.
+Production URL/private files/platform roots/JSON receipts/caller-queue parity
+and native/repeat acceptance remain required before adopting this transport.
+
+Prior multipart checkpoint b793ea58e662f7884981f9ce89ce94482e3fb489 was
+normally pushed privately; proof /tmp/s3drive-multipart-sizing-publication.json.
+It depends on diagnostic0bbc4db, whose Windows failure is retained below.
+Its full local gate passed
 EXIT0 (session75443, /tmp/s3drive-multipart-sizing-gate1.log): core17 including
 multipart6, state274, all workspace/build/lint/book checks. No payload/network,
 schema/config or8MiB write-bound change. New evidence: docs/src/evidence/
 multipart-sizing-20261018.json. Done criteria in multipart-plan.md and plan.
+Exact new CI39117793980 is live: Windows117647008136, Linux117647008237,
+book117647008193. Watch87567, /tmp/s3drive-multipart-sizing-hosted-watch.log.
+Linux and book are terminal SUCCESS. Completed raw /tmp/s3drive-multipart-b793-
+{linux,book}.log reviewed: Linux9 native/32-flush/paired and both coordinator
+startup protocols passed; only controlled faults and stopped-authority refusal.
+After terminal Windows raw review and all-three success only, prepared
+/tmp/s3drive-check-multipart-b793.py and its reference checker may validate the
+own strict21/14 artifacts at new /tmp/s3drive-multipart-b793-artifacts. They have
+NOT RUN. Never run them on a failed source or reuse another cohort's artifacts.
+Poll this exact handle/run, never restart solely on observation timeout. This
+planner does not change transport behavior; even a passing run cannot erase the
+parent failure or establish a transport correction. No main promotion is planned
+from geometry alone. Post-push status/research docs may be dirty; preserve them
+for the next substantive phase, without docs-only native CI cycles.
 
 Diagnostic0bbc4dbdf5915cd6252e2d718bdf370c15407b7d was normally pushed privately
 to codex/error-connection-metadata with frozen source/privacy/ref guards, proof
@@ -35,12 +69,19 @@ independently bound to that CLI. Standalone startup/snapshot and authority7unit/
 10HTTP/9TLS passed; console Ctrl+C5ms single observation only. No upload/outcome
 or root-cause inference. Current multipart changes do not belong to hosted0bbc.
 
-First action next: complete the local planner checkpoint/docs, then prioritize
-the correlated transport
+First action next: poll b793 hosted status;
+complete final study documentation checks and a guarded private topic
+checkpoint. Then prioritize the correlated transport
 failure before enabling new upload paths. Do not promote0bbc despite portable
 success or replace its original IDs/assertions/deadlines. Fresh CLI refusal means
 native-callback-only explanations are not established. A different per-RPC
 transport ownership design is only a proposal, not a demonstrated correction.
+Resolved reqwest connector_layer requires the exact sealed Conn response type;
+it cannot return a new I/O wrapper/attach custom metadata through a substituted
+response. Do not implement that invalid hook or turn on verbose bearer/body logs.
+The next proposed study is one owned future co-polling direct Hyper HTTP/1 driver
+and request, with unchanged Rustls trust/deadlines/no-replay and full behavior
+controls, before any native claim. See remote-authority's next-boundary proposal.
 
 Local/remote main AND codex/authority-snapshots are now
 bf9509eb5dceb99101ddf5ac37ac432bd6b8ff05. Exact-source primary CI39113628548 is
@@ -155,7 +196,7 @@ next substantive source, not a docs-only native CI cycle. Preserve:
   main publication, repeat status and research)
 - docs/src/remote-authority.md and implementation-plan.md (same findings/limits)
 - docs/src/evidence/error-connection-info-probe-20261018.tar.gz
-A new error-connection metadata phase is being implemented after bf9509 on
+The error-connection metadata phase was implemented after bf9509 on
 codex/error-connection-metadata. Main and its completed repeat remain exactbf9509.
 New source adds ErrorConnection to WireError, collected only on the error path
 through bounded16 legacy sources. Unobserved/Unavailable/Omitted/Loopback/Multiple
@@ -180,7 +221,7 @@ complete/lost controls. Six PASS lines, EXIT0 at
 /tmp/s3drive-error-connection-info-probe1.log; scratch
 /tmp/s3drive-error-connection-info-20261018-1p10x0dp and location pointer
 /tmp/s3drive-error-connection-info-probe-location.txt. Source/manifest/lock/README
-archive is the uncommitted evidence tar.gz above; hashes/limits in platform JSON.
+archive is committed in the evidence tar.gz above; hashes/limits in platform JSON.
 Pooled send errors attach conn_info; earlier connection_for errors do not. This
 distinguishes error-reported connection info from candidates. The candidate now
 collects it; accepted mainbf9509 does not. Hosted acceptance is pending. Omission,
@@ -201,7 +242,7 @@ All prior candidate failures remain in platform JSON, remote-authority.md and
 archives. Main previously accepted f8 with two passing cohorts, not a universal
 Windows correction. bf9509's passing primary and repeat likewise do not explain them.
 
-Most recent failed parent e988 CI39111567111: Linux/book success, Windows raw
+Earlier connector candidate e988 CI39111567111: Linux/book success, Windows raw
 controls/standalone snapshot-console/native32/lifecycle/workspace passed, then
 paired Info/Request/UnexpectedEof at08:52:23Z, body_frame_polled=false with
 connector_started AND connector_completed true. Nearby empty TLS socket133
