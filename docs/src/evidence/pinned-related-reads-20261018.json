@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "full local gate passed; own hosted acceptance pending",
+  "status": "full local gate and own source-bound hosted acceptance passed",
   "branch": "codex/pinned-related-reads",
   "base": "20706cd521b984a50d7aecd08026a72019ef2e4f",
   "worktree": "/home/marshall/src/worktrees/s3drive-pinned-related-reads",
@@ -403,5 +403,42 @@
     "book_raw_reviewed": true,
     "book_review_marker": "/tmp/s3drive-pinned-related-fef-book-reviewed.json",
     "book_conclusion": "success"
+  },
+  "hosted_acceptance": {
+    "source": "fef944268c89d2c0b1d859a6a86d0f6761c24361",
+    "run_id": 39167583915,
+    "run_attempt": 1,
+    "jobs": {
+      "windows": 117793655137,
+      "linux": 117793655088,
+      "book": 117793654818
+    },
+    "all_jobs_success": true,
+    "all_raw_logs_reviewed": true,
+    "artifacts": {
+      "replacement": 12151153703,
+      "disposition": 12151479241
+    },
+    "independent_typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true,
+    "archive": {
+      "path": "evidence/pinned-related-fef-hosted-20261018.tar.gz",
+      "sha256": "15d38ecf5047cd5f67c70c37347a19b527e2476d77c5580654edfbf44c629d26",
+      "bytes": 118377,
+      "members": 22,
+      "all_indexed_members_verified": true,
+      "source": "fef944268c89d2c0b1d859a6a86d0f6761c24361",
+      "run_id": 39167583915,
+      "run_attempt": 1,
+      "independent_typed_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "all_raw_fields_and_types_equal": true
+    },
+    "scope": "helper and existing-format regression; no mounted chunks, physical reboot or new provider mutations"
   }
 }

@@ -2,8 +2,8 @@
 
 Implementation date: **2026-10-18**. This S3-library preparation supports the
 planned lazy manifest reader. It does not enable a manifest reader or mounted
-chunked files. Focused S3 controls and the full local gate passed; source-bound hosted
-acceptance remains pending.
+chunked files. Focused S3 controls, the full local gate and the source-bound hosted
+cohort have passed.
 
 An existing `ReadHandle` binds source configuration, credentials, key and the
 revision obtained through its online HEAD. A manifest file needs multiple
@@ -74,6 +74,19 @@ This phase is developed in a separate checkout from accepted source checkpoint
 acceptance has passed. Tested helper source `fef9442`
 is pushed on `codex/pinned-related-reads`; all 252 hashes and its clean exact
 remote were verified. Its [own hosted cohort](https://github.com/marshallr12/s3drive/actions/runs/39167583915)
-is running. The primary checkout's controller source stays frozen; no
-older hosted artifacts certify this helper. Merge/integration, the complete
-verified range reader and native chunk lifecycle remain later work.
+completed successfully on Linux, Windows and the book job. All three raw logs
+were reviewed. Own finalized artifacts 12151153703 and 12151479241 passed
+independent strict 21/14 typed-record checks, the project oracles and all 35 raw
+field/type comparisons. Older artifacts were not reused. The
+[22-member indexed hosted archive](evidence/pinned-related-fef-hosted-20261018.tar.gz)
+retains the exact source, logs, artifacts and checks; every member was verified.
+The archive SHA-256 is `15d38ecf5047cd5f67c70c37347a19b527e2476d77c5580654edfbf44c629d26`.
+
+Both platforms passed all 62 S3 tests, including the three new controls. Existing
+format native regression also passed: nine Linux FUSE controls and seven Windows
+WinFsp controls, plus separate startup, flush and disposition checks. Windows
+retained three locked disposable fixture profiles until VM destruction after
+dummy credential removal; unused delay-import and Node deprecation warnings
+remain in the logs. This does not certify mounted chunks, a physical reboot or
+new Wasabi behavior. Controller acceptance is independent. Integration and
+verified manifest-range reads follow; native chunk lifecycle remains later work.
