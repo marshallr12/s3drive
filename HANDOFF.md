@@ -119,7 +119,15 @@ reader contract now inimplementation-plan.md; preserveslegacyrefusal, pinnedroot
 separatephysical/pagehashes, boundedauthenticatedpath/chunkfetches andcurrentS3
 authorization. Plan only, no reader implementation yet.
 Book117788707918 SUCCESS/rawreviewed own474/schema28/66files/62chapters; marker
-/tmp/s3drive-chunk-source-controller-474-book-reviewed.json. Windows/Linux LIVE.
+/tmp/s3drive-chunk-source-controller-474-book-reviewed.json. Linux117788707913
+alsoSUCCESS/rawreviewed:12chunk44.40s(all4new),365state/1ignored,9native62.68s,
+no-systemd desktop/SSH andpinnedHTTP/HTTPS/privateCA recovery24.15s. Marker
+/tmp/s3drive-chunk-source-controller-474-linux-reviewed.json, logSHA
+c5273e9fe0732986a166f42a71c5193a744bb3a78aff5286f6594ea7fc86b0a3. Expected
+HEAD403/ConnectionRefused/removedstartup.json refusal andNode/cachedeprecations
+retained. Existingmountedformat only; notmountedchunks/Wasabi/physicalreboot.
+Windows117788707767 still LIVE atworkspace tests. Samewatch79476.
+
 Readerdesignaudit foundmissing pinned-credential related-object open API. New
 concretecontract inimplementation-plan: samecredentialgeneration forroot/children,
 rootactuallevel == descriptorordinallevel (authoritymaxlevel2), metadata-only
@@ -1404,3 +1412,23 @@ The full previous handoff was archived byte-identically before refresh:
 Archive SHA256: 7e6ea7afa13c681ba9f46f166b0cbcf4a75b1091722fab54f77f820d7877769c. Before: 405 lines; after: 242 lines.
 Previous complete archives before-a14-refresh, before-snapshot-cancel and
 before-flush-receipts remain in docs/archive; no history was discarded.
+
+## Independent helper checkout running (2026-10-18)
+
+Related-read prep is now implemented only in
+/home/marshall/src/worktrees/s3drive-pinned-related-reads, branch
+codex/pinned-related-reads fromaccepted20706cd. Productionreader.rs adds8lines
+ReadHandle.open_related (samecapturedprovider,freshHEAD,boxedfuture); testsadd
+3controls: chainedroot/child/grandchildcredentialgeneration vs newgeneration,
+exactscope/GETpreconditions, freshHEADdenial/missing/invalidkey, inlinefuturebound.
+Focused1 95205 EXIT101:2pass/1fixturetargetassertfail (SDKx-id=GetObject query);
+fixedexactparsedpath, productionunchanged. Focus2 64173 EXIT0,62S3pass21.04s.
+Fullgate57146 LIVE, /tmp/s3drive-pinned-related-gate.log. Its own252filemap
+/tmp/s3drive-pinned-related-frozen.json (twoS3deltasvsacceptedbase). Root253
+controllerhashesstillunchanged. Newworktreehasuncommittedsource/docs; readitsown
+HANDOFF andpinned-related-reads.md beforecontinuing. No newmanagedreader/native
+activation. Fullgatesourcefrozen. Nohelperpublication/hostedacceptanceyet.
+LocalbuildusesCARGO_TARGET_DIR=/home/marshall/src/s3drive/target to reuseexisting
+buildcache; do notstartanotherlocalS3Drivecargo job while57146is live. Controller
+CI runsremotely andisindependent. Next awaithelpergate andcurrent474Windows,
+acceptsourceboundevidence withoutborrowingcohorts, thenprepareintegration.

@@ -429,6 +429,14 @@
     ],
     "scope": "not yet acceptance; own exact source/jobs/artifacts/raw review required",
     "book_raw_reviewed": true,
-    "book_review_marker": "/tmp/s3drive-chunk-source-controller-474-book-reviewed.json"
+    "book_review_marker": "/tmp/s3drive-chunk-source-controller-474-book-reviewed.json",
+    "linux_raw_reviewed": true,
+    "linux_review_marker": "/tmp/s3drive-chunk-source-controller-474-linux-reviewed.json",
+    "linux_conclusion": "success",
+    "linux_log_sha256": "c5273e9fe0732986a166f42a71c5193a744bb3a78aff5286f6594ea7fc86b0a3",
+    "linux_chunk_controls": 12,
+    "linux_chunk_seconds": 44.4,
+    "linux_native_controls": 9,
+    "linux_native_seconds": 62.68
   }
 }
