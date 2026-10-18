@@ -64,7 +64,9 @@ artifacts also passed; [their evidence](evidence/manifest-objects-20261018.json)
 is separate from the earlier codec run. The new [offline SQLite chunk plans](chunk-plans.md)
 prepare restartable chunk/page dependencies from a sealed local snapshot.
 Their own local gate passed (310 state tests; 18 new chunk-plan tests), with
-[separate evidence](evidence/chunk-plans-20261018.json). Live publication, remote
+[separate evidence](evidence/chunk-plans-20261018.json). The [chunk upload bridge](chunk-object-uploads.md) and new
+[manifest authority contract](manifest-root-authority.md) provide physical
+object receipts and versioned metadata CAS separately. Client settlement, remote
 reference reuse and native large files remain unfinished.
 
 [Offline immutable multipart plans](multipart-plan.md#offline-immutable-plans-candidate-implementation-2026-10-18)

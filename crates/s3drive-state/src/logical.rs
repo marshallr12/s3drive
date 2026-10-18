@@ -76,6 +76,7 @@ impl Binding {
             (Kind::EmptyFile, None) => {}
             (Kind::File, Some(p))
                 if p.valid()
+                    && p.reservation.manifest.is_none()
                     && p.reservation.volume == self.volume
                     && p.reservation.node == n.id
                     && p.reservation.store == self.store => {}

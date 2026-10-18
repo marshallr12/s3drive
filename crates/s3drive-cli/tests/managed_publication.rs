@@ -6,6 +6,8 @@ mod atomic_create;
 mod disposition_controller;
 #[path = "support/fixture.rs"]
 pub mod fixture;
+#[path = "support/manifest_authority.rs"]
+mod manifest_authority;
 #[path = "support/mode_cancellation.rs"]
 mod mode_cancellation;
 #[path = "support/open_journal.rs"]
@@ -426,7 +428,8 @@ async fn managed_child() {
         &std::fs::read_to_string(std::env::var("S3DRIVE_MANAGED_CONFIG").unwrap()).unwrap(),
     )
     .unwrap();
-    let authority = if mode.starts_with("detached_")
+    let authority = if mode.starts_with("manifest_")
+        || mode.starts_with("detached_")
         || mode.starts_with("pending_")
         || mode.starts_with("owned_")
         || mode.starts_with("fenced_")
@@ -445,6 +448,13 @@ async fn managed_child() {
     };
     let (wire, stop, server) = serve(authority.client()).await;
     let volume = info(&wire).await.id;
+    if mode == "manifest_authority" {
+        Box::pin(manifest_authority::run(&config, &root, &wire, &volume)).await;
+        stop.send(()).unwrap();
+        server.await.unwrap();
+        authority.shutdown().await.unwrap();
+        return;
+    }
     if mode.starts_with("session_") {
         Box::pin(session_recovery::run_mode(
             &mode, &config, &root, &wire, &volume,

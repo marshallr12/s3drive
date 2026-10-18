@@ -116,6 +116,9 @@ impl Reader {
         }
         if let Some(payload) = &node.payload {
             let r = &payload.reservation;
+            if r.manifest.is_some() {
+                return Err(Failure::UnsupportedContent.into());
+            }
             let (store, _) = self.0.stores.get(&r.store.id).ok_or(Failure::Binding)?;
             if node.kind != Kind::File
                 || !payload.valid()

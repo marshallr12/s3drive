@@ -1,6 +1,6 @@
 {
   "implementation_date": "2026-10-18",
-  "status": "full local gate passed and source pushed; own hosted cohort in progress",
+  "status": "full local gate and own hosted cohort passed",
   "branch": "codex/chunk-object-uploads",
   "parent_commit": "e2f0709126a0ff9f54e2d303655bb0abe079ba07",
   "schema_version": 25,
@@ -296,36 +296,88 @@
     "run_id": 39145482478,
     "run_attempt": 1,
     "url": "https://github.com/marshallr12/s3drive/actions/runs/39145482478",
-    "status": "in_progress",
+    "status": "completed",
     "jobs": [
       {
         "id": 117728329566,
         "name": "rust (windows-latest)",
-        "status": "in_progress",
-        "conclusion": null
+        "status": "completed",
+        "conclusion": "success"
       },
       {
         "id": 117728329702,
         "name": "book",
-        "status": "in_progress",
-        "conclusion": null
+        "status": "completed",
+        "conclusion": "success"
       },
       {
         "id": 117728329705,
         "name": "rust (ubuntu-latest)",
-        "status": "in_progress",
-        "conclusion": null
+        "status": "completed",
+        "conclusion": "success"
       }
     ],
     "watch_session": 59922,
     "watch_log": "/tmp/s3drive-chunk-upload-252-watch.log",
     "checker_script": "/tmp/s3drive-check-chunk-upload-252.py",
-    "checker_compiled_only": true,
-    "checker_executed": false,
-    "all_raw_reviews_closed": false,
+    "checker_compiled_only": false,
+    "checker_executed": true,
+    "all_raw_reviews_closed": true,
     "new_artifact_output": "/tmp/s3drive-chunk-upload-252-artifacts",
-    "own_native_cohort_accepted": false,
-    "chunked_native_large_file_or_provider_acceptance": false
+    "own_native_cohort_accepted": true,
+    "chunked_native_large_file_or_provider_acceptance": false,
+    "conclusion": "success",
+    "checker_exit_code": 0,
+    "raw_review": "/tmp/s3drive-chunk-upload-252-raw-reviewed.json",
+    "checker_log": "/tmp/s3drive-chunk-upload-252-artifact-check.log",
+    "checker_log_sha256": "eb8ed3251091ba02e51d94c69e46d396e5993f8ac827c00d3801eda07b659479",
+    "artifacts": [
+      {
+        "kind": "replacement",
+        "id": 12143780290,
+        "source": "2524573c2bd476e609daae529e6c3d1fcb32cb80",
+        "run_id": 39145482478,
+        "run_attempt": 1,
+        "windows_job": 117728329566,
+        "zip_sha256": "c495e7fbdfda7b1a3bbfc63c68512d0163922fe0e99741bbd813b8e400115c80",
+        "json_sha256": "1b914bf3cd87f3175bb4e3257dceafc75794f0488e08c42927b7092057e5bbb1",
+        "primary_artifact_reused": false
+      },
+      {
+        "kind": "disposition",
+        "id": 12143656516,
+        "source": "2524573c2bd476e609daae529e6c3d1fcb32cb80",
+        "run_id": 39145482478,
+        "run_attempt": 1,
+        "windows_job": 117728329566,
+        "zip_sha256": "38f5f13d34e9b88a5b46e535195816ae99880c763e7c1e4a985175fb576b09b6",
+        "json_sha256": "d2d16953bf720512bdb5e9c1dc3e5b1b19d6154df9d7a1726c80bb526598e914",
+        "primary_artifact_reused": false
+      }
+    ],
+    "raw_records": [
+      {
+        "kind": "replacement",
+        "records": 21,
+        "all_fields_and_types_equal": true
+      },
+      {
+        "kind": "disposition",
+        "records": 14,
+        "all_fields_and_types_equal": true
+      }
+    ],
+    "platform_scope": "GitHub hosted Ubuntu and Windows Server 2025 / WinFsp 2.1.25156; previous mounted representation only",
+    "root_authority_schema26_accepted": false,
+    "notices": "Node/cache deprecations; unused WinFsp delay-load imports; three disposable profiles left to VM disposal after dummy credentials removed; long tests completed successfully",
+    "expected_faults": "TLS handshake/partial-header/connection lifetime, rival conflicts and deliberately stopped authority are negative controls; historical NoWrite cause remains unresolved",
+    "archive": {
+      "path": "chunk-upload-252-hosted-20261018.tar.gz",
+      "sha256": "f76be66c3d4b94d38c110836b467747ac449a62df4caf710f5430df550a5f3d6",
+      "bytes": 93775,
+      "members": 20,
+      "all_member_hashes_verified": true
+    }
   },
   "publication": {
     "source": "2524573c2bd476e609daae529e6c3d1fcb32cb80",

@@ -29,8 +29,9 @@ same-supervisor child replacement passed. Earlier timeout causes remain open.
 managed files. The [offline planner](docs/src/chunk-plans.md) passed its own
 Linux/Windows hosted cohort. The [chunk object upload bridge](docs/src/chunk-object-uploads.md)
 connects prepared trees to exact create-only operations and verified child
-receipts; authority-root publication and mounted large-file activation remain
-unfinished. No real user startup, remote hosting or Turso backend is installed.
+receipts. The [manifest authority contract](docs/src/manifest-root-authority.md)
+adds versioned root metadata and content CAS; client publication/settlement and
+mounted large-file activation remain unfinished. No real user startup, remote hosting or Turso backend is installed.
 
 The shared engine preserves uncertain/conflicting bytes and exact operation
 identities. Direct and managed writes require explicit source/prefix policy and

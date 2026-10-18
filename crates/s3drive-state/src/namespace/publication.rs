@@ -1,6 +1,8 @@
 //! Immutable payload reservations and publication CAS. The authenticated client
 //! must verify S3 bytes; the metadata service does not possess S3 credentials.
 use super::*;
+mod manifest;
+pub use manifest::{MAX_MANIFEST_LENGTH, ManifestRoot};
 use sha2::{Digest, Sha256};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -24,7 +26,11 @@ fn is_false(value: &bool) -> bool {
 pub fn payload_reference(payload: &Option<Payload>) -> Option<String> {
     payload.as_ref().map(|p| {
         let mut h = Sha256::new();
-        h.update(b"s3drive-content-reference-v1\0");
+        h.update(if p.reservation.manifest.is_some() {
+            b"s3drive-manifest-content-reference-v1\0".as_slice()
+        } else {
+            b"s3drive-content-reference-v1\0".as_slice()
+        });
         h.update(serde_json::to_vec(p).expect("payload serialization"));
         h.finalize().iter().map(|b| format!("{b:02x}")).collect()
     })
@@ -42,6 +48,8 @@ pub struct Reservation {
     pub sha256: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub guard: Option<ContentGuard>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub manifest: Option<ManifestRoot>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -109,11 +117,16 @@ impl Reservation {
                 g.expected.as_ref().is_none_or(|s| digest(s))
                     && g.removal.as_ref().is_none_or(|f| !g.detached && f.valid())
             })
-            && self.key
-                == format!(
-                    "{}v1/{}/{}/{}",
-                    self.store.root, self.volume, self.node, self.id
-                )
+            && match &self.manifest {
+                None => {
+                    self.key
+                        == format!(
+                            "{}v1/{}/{}/{}",
+                            self.store.root, self.volume, self.node, self.id
+                        )
+                }
+                Some(m) => self.guard.is_some() && m.key(self).is_ok_and(|key| self.key == key),
+            }
     }
 }
 impl Payload {
@@ -130,7 +143,8 @@ fn valid_proof(operation: &str, etag: &str, version: Option<&str>) -> bool {
 }
 pub(super) fn uses_content_guard(db: &Connection, m: &Mutation) -> Result<bool> {
     match m {
-        Mutation::ReserveContent { .. }
+        Mutation::ReserveManifest { .. }
+        | Mutation::ReserveContent { .. }
         | Mutation::ReserveDetachedContent { .. }
         | Mutation::ReservePendingContent { .. } => Ok(true),
         Mutation::Publish {
@@ -210,6 +224,29 @@ pub(super) fn valid(m: &Mutation) -> bool {
                 && *expected_revision < i64::MAX as u64
                 && *size <= 8 * 1024 * 1024
                 && digest(sha256)
+        }
+        Mutation::ReserveManifest {
+            node,
+            expected_revision,
+            store,
+            size,
+            sha256,
+            manifest,
+            guard,
+        } => {
+            valid_id(node)
+                && node != ROOT
+                && valid_id(store)
+                && store != ROOT
+                && *expected_revision < i64::MAX as u64
+                && (64..=s3drive_core::manifest::MAX_PAGE_BYTES as u64).contains(size)
+                && digest(sha256)
+                && manifest.root().is_ok()
+                && guard.expected.as_ref().is_none_or(|s| digest(s))
+                && guard
+                    .removal
+                    .as_ref()
+                    .is_none_or(|f| !guard.detached && f.valid())
         }
         Mutation::Publish {
             reservation,
@@ -304,7 +341,15 @@ pub(super) fn mutate(
             ))?;
             Ok((ROOT.into(), Artifact::Store(store)))
         }
-        Mutation::Reserve {
+        Mutation::ReserveManifest {
+            node: id,
+            expected_revision,
+            store: store_id,
+            size,
+            sha256,
+            ..
+        }
+        | Mutation::Reserve {
             node: id,
             expected_revision,
             store: store_id,
@@ -336,6 +381,7 @@ pub(super) fn mutate(
             ..
         } => {
             let guard = match &request.mutation {
+                Mutation::ReserveManifest { guard, .. } => Some(guard.clone()),
                 Mutation::ReserveContent {
                     expected_payload, ..
                 }
@@ -371,7 +417,7 @@ pub(super) fn mutate(
                 return Err(Error::Limit);
             }
             let store = store(db, store_id)?;
-            let reservation = Reservation {
+            let mut reservation = Reservation {
                 id: request.operation.clone(),
                 volume: request.volume.clone(),
                 node: id.clone(),
@@ -384,7 +430,14 @@ pub(super) fn mutate(
                 size: *size,
                 sha256: sha256.clone(),
                 guard,
+                manifest: match &request.mutation {
+                    Mutation::ReserveManifest { manifest, .. } => Some((**manifest).clone()),
+                    _ => None,
+                },
             };
+            if let Some(m) = &reservation.manifest {
+                reservation.key = m.key(&reservation)?;
+            }
             if !reservation.valid() {
                 return Err(Error::Invalid);
             }
@@ -436,4 +489,152 @@ pub(super) fn mutate(
         }
         _ => Err(Error::Invalid),
     }
+}
+
+#[cfg(test)]
+mod legacy_vectors;
+
+/// Check the exact new-format effect again after the durable operation-result
+/// insert, while still in the same transaction. A successful statement count
+/// alone does not exclude an ignored/deleted/rewritten trigger effect.
+pub(super) fn verify_manifest_effect(
+    db: &Connection,
+    request: &Apply,
+    receipt: &Receipt,
+) -> Result<()> {
+    let (r, published) = match &receipt.artifact {
+        Some(Artifact::Reservation(r)) if r.manifest.is_some() => (r, None),
+        Some(Artifact::Published(p)) if p.reservation.manifest.is_some() => {
+            (&p.reservation, Some(p))
+        }
+        _ => return Ok(()),
+    };
+    validate_manifest_replay(db, request, receipt)?;
+    if volume(db)?.sequence != receipt.sequence {
+        return Err(Error::Internal);
+    }
+    let saved = reservation(db, &r.id).map_err(|_| Error::Internal)?;
+    let n = node(db, &r.node).map_err(|_| Error::Internal)?;
+    if &saved != r || n != receipt.node {
+        return Err(Error::Internal);
+    }
+    let raw: Option<Vec<u8>> = sql(db.query_row(
+        "SELECT publication FROM namespace_uploads WHERE reservation_id=?1",
+        [&r.id],
+        |row| row.get(0),
+    ))?;
+    match published {
+        None if raw.is_none() && base_matches(&n, r.expected_revision, r.guard.as_ref()) => Ok(()),
+        Some(p)
+            if n.payload.as_ref() == Some(p) && raw.as_deref() == Some(encode(p)?.as_slice()) =>
+        {
+            Ok(())
+        }
+        _ => Err(Error::Internal),
+    }
+}
+
+/// Historical receipts are checked structurally, without comparing them with a
+/// newer live node. Legacy receipts keep their original decoding behavior.
+pub(super) fn validate_manifest_receipt(receipt: &Receipt, volume_id: &str) -> Result<()> {
+    let n = &receipt.node;
+    if let Some(p) = &n.payload
+        && p.reservation.manifest.is_some()
+        && (!p.valid()
+            || p.reservation.volume != volume_id
+            || p.reservation.node != n.id
+            || n.kind != Kind::File)
+    {
+        return Err(Error::Internal);
+    }
+    match &receipt.artifact {
+        Some(Artifact::Reservation(r)) if r.manifest.is_some() => {
+            if !r.valid()
+                || r.volume != volume_id
+                || r.node != n.id
+                || n.revision > receipt.sequence
+                || !base_matches(n, r.expected_revision, r.guard.as_ref())
+            {
+                return Err(Error::Internal);
+            }
+        }
+        Some(Artifact::Published(p))
+            if p.reservation.manifest.is_some()
+                && (!p.valid()
+                    || p.reservation.volume != volume_id
+                    || p.reservation.node != n.id
+                    || n.payload.as_ref() != Some(p)
+                    || n.revision != receipt.sequence
+                    || n.kind != Kind::File
+                    || n.deleted != p.reservation.guard.as_ref().is_some_and(|g| g.detached)) =>
+        {
+            return Err(Error::Internal);
+        }
+        _ => (),
+    }
+    Ok(())
+}
+
+pub(super) fn validate_manifest_replay(
+    db: &Connection,
+    request: &Apply,
+    receipt: &Receipt,
+) -> Result<()> {
+    validate_manifest_receipt(receipt, &request.volume)?;
+    if let Mutation::ReserveManifest {
+        node,
+        expected_revision,
+        store,
+        size,
+        sha256,
+        manifest,
+        guard,
+    } = &request.mutation
+    {
+        let Some(Artifact::Reservation(r)) = &receipt.artifact else {
+            return Err(Error::Internal);
+        };
+        if receipt.sequence <= request.expected_sequence
+            || r.id != request.operation
+            || r.volume != request.volume
+            || &r.node != node
+            || r.expected_revision != *expected_revision
+            || &r.store.id != store
+            || r.size != *size
+            || &r.sha256 != sha256
+            || r.manifest.as_ref() != Some(manifest.as_ref())
+            || r.guard.as_ref() != Some(guard)
+        {
+            return Err(Error::Internal);
+        }
+    }
+    if let Mutation::Publish {
+        reservation: id,
+        upload_operation,
+        etag,
+        version,
+    } = &request.mutation
+    {
+        // Reservation descriptors are immutable and retained after publication;
+        // this compares no historical node with its newer live replacement.
+        let expected = reservation(db, id).map_err(|_| Error::Internal)?;
+        if expected.manifest.is_some()
+            || matches!(&receipt.artifact,Some(Artifact::Published(p)) if p.reservation.manifest.is_some())
+        {
+            let Some(Artifact::Published(p)) = &receipt.artifact else {
+                return Err(Error::Internal);
+            };
+            if p.reservation != expected
+                || &p.upload_operation != upload_operation
+                || &p.etag != etag
+                || &p.version != version
+                || receipt.sequence <= request.expected_sequence
+                || receipt.node.deleted != expected.guard.as_ref().is_some_and(|g| g.detached)
+            {
+                return Err(Error::Internal);
+            }
+        }
+    }
+
+    Ok(())
 }

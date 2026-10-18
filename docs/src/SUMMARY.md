@@ -51,6 +51,7 @@
 - [Large managed files: storage representation](large-managed-files.md)
 - [Durable offline chunk plans](chunk-plans.md)
 - [Chunk object uploads](chunk-object-uploads.md)
+- [Manifest root authority](manifest-root-authority.md)
 - [Linux and Windows integration](platform-integration.md)
 - [Security and operations](security-and-operations.md)
 - [Phased implementation plan](implementation-plan.md)

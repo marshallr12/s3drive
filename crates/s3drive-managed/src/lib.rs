@@ -24,6 +24,7 @@ pub enum Failure {
     IsDirectory,
     Integrity,
     Protocol,
+    UnsupportedContent,
     RetainedConflict,
     CancelledTransition,
     Authority(s3drive_authority::Error),

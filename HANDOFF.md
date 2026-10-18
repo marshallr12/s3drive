@@ -60,9 +60,50 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Current phase: chunk object upload bridge (2026-10-18)
+## Current phase: manifest root authority (2026-10-18)
 
-Working branch codex/chunk-object-uploads frome2f0709. Published runtime source
+Working branch codex/manifest-root-authority from2097d44. Schema26 is a
+comments-only persistent JSON-format marker, no data/hash rewriting. Optional
+strict ManifestRoot is omitted from old reservations, keeping independent frozen
+legacy bytes/hash vectors. ReserveManifest binds root identity/store/key/geometry
+and mandatory original ContentGuard; existing Publish CAS handles conflicts,
+rename, detached nodes and pending-removal fences. New references have a distinct
+hash domain; old inputs/bindings/readers explicitly refuse manifests. No mounted
+activation, provider calls, credential changes or visibility mutations.
+
+Full local gate2 session9009 CLOSED EXIT0:329state/1ignored,59S3,34core,
+50authority,18managed-publication; format/Clippy/build,62doclinks and58book
+chapters PASS. All243 frozen runtime/fixture hashes unchanged. Log
+/tmp/s3drive-manifest-authority-gate2.log. Evidence JSON and durable16member
+local log/hash archive are in docs/src/evidence/manifest-root-authority-*.
+Independent7fixture regeneration matches. XML/librsvg/visual review and both
+HTTP preview requests passed at33767/manifest-root-authority.html.
+
+Required legacy review found two receipt gaps; both reproduced/fixed. Fresh
+commit verifies exact saved effects; historical replay binds immutable request/
+reservation without comparing to a newer node. Seven SQL fault injections,
+four historical publication corruptions and three reservation corruptions covered.
+Initial full gate10914 EXIT101: owner_move_start child stack overflow (17PASS/
+1FAIL). Metadata/new-branch boxing alone did not fix it. Split the four original
+owner-move scenarios into boxed futures, preserving all statements/checkpoints;
+local debug frame audit:841992bytes before,63304dispatcher+359592max scenario
+after. No stack-size or assertion changes. All18contracts pass in the full gate.
+Clippy constant-chunk/collapsible-match/large-enum findings fixed without
+suppressions; only the new mutation boxes metadata, JSON unchanged.
+
+Own source-bound hosted acceptance is not yet dispatched. Source publication
+must preserve PUBLIC visibility and main1a93b5f; do not borrow parent252 native
+artifacts or claim chunked native/real provider acceptance from this gate.
+
+Next phase requires an exact durable chunk-publication/settlement journal binding
+original snapshot/guard/parent/frozen plan/route, reserve+publish UUIDs, physical
+root receipt and immutable authority request/result. Do not settle a logical edit
+using only root physical generation acknowledgment. Preserve newer dirty heads,
+old references and unknown identities. Then verified range reader/native paths.
+
+## Preceding chunk object upload bridge (2026-10-18)
+
+Published branch codex/chunk-object-uploads frome2f0709. Runtime source
 2524573c2bd476e609daae529e6c3d1fcb32cb80. State Transfer/materialize
 bind exact physical operations via existing staged_operations; no schema change.
 Planner inherits Storage's exact staging quotas. New policy-bound
@@ -96,17 +137,18 @@ mutations. Existing mounted representation and main remain unchanged.
 Published normally: clean/exact remote/all230 frozen hashes/PUBLIC before-after;
 main1a93b5f unchanged. Proof /tmp/s3drive-chunk-upload-publication.json. Final
 book/link checks and preview33767/chunk-object-uploads.html passed. Own CI
-39145482478 attempt1 at2524573 is LIVE: Windows117728329566, book117728329702,
-Linux117728329705. Watch59922 LIVE /tmp/s3drive-chunk-upload-252-watch.log; track
-same handle/run, never rerun on observation timeout. Prepared checker
-/tmp/s3drive-check-chunk-upload-252.py compiled only, NOT executed. Require all3
-terminal successes plus own completed raw reviews in
-/tmp/s3drive-chunk-upload-252-raw-reviewed.json. New output must be
-/tmp/s3drive-chunk-upload-252-artifacts; use own finalized Windows IDs/API
-source/run/digest/times, strict21/14 typed fields plus both project oracles.
-Refuse all previous IDs, including bdb12142621547/12142503573. On failure retain
-evidence and do not run the success checker. New chunked native format is still
-inactive; even passing regressions cannot certify a mounted large-file path.
+39145482478 attempt1 at2524573 completed SUCCESS for all3 jobs: Windows117728329566,
+book117728329702, Linux117728329705. Watch59922 CLOSED EXIT0. All3 raw logs reviewed;
+checker36340 CLOSED EXIT0. Own fresh replacement12143780290 and disposition12143656516
+artifacts passed strict typed21/14/project oracles; all35records match raw logs
+exactly including field types. Proofs /tmp/s3drive-chunk-upload-252-artifacts/.
+Durable20member archive docs/src/evidence/chunk-upload-252-hosted-20261018.tar.gz
+SHA256f76be66c3d4b94d38c110836b467747ac449a62df4caf710f5430df550a5f3d6
+(93775bytes), every indexed member verified.
+Windows is hosted Server2025/WinFsp2.1.25156. Expected negative controls and
+Node/cache/unused delay-import notices retained; three disposable dummy-credential
+profiles left to VM disposal. No historical NoWrite cause, physical workstation,
+provider, chunked native large-file or newer schema26 acceptance inferred.
 Next phase: authenticate/reserve chunk root identities and original content CAS,
 publish UploadedTree through authority and settle the exact logical edit; then
 verified range reads/native integration and authenticated remote-reference reuse.

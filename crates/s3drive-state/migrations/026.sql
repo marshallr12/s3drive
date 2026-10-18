@@ -1,0 +1,3 @@
+-- Manifest reservations add an optional, versioned descriptor to the existing
+-- immutable authority JSON records. No old rows, JSON bytes or hashes change.
+-- The user_version boundary makes older binaries refuse this persistent format.

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="620" viewBox="0 0 1100 620" role="img" aria-labelledby="title desc">
+<title id="title">Manifest root publication architecture</title>
+<desc id="desc">Existing chunk preparation and S3 upload feed a new versioned Rust authority root contract. Client logical settlement and mounted range reads are planned.</desc>
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="none" stroke="#46617b" stroke-width="1.5"/></marker></defs>
+<rect width="1100" height="620" fill="#f4f7fb"/>
+<g font-family="sans-serif" fill="#172b42">
+<text x="36" y="40" font-size="24" font-weight="bold">Immutable file data, one atomic namespace root</text>
+<text x="36" y="67" font-size="16">2026-10-18 • authority metadata implemented; mounted chunked format remains inactive</text>
+<rect x="30" y="95" width="480" height="425" rx="12" fill="#fff" stroke="#93a8bd"/>
+<text x="50" y="127" font-size="20" font-weight="bold">Linux / Windows client</text>
+<rect x="55" y="150" width="430" height="83" rx="8" fill="#e5f1ff" stroke="#5585b2"/>
+<text x="72" y="177" font-size="18">Private local SQLite + staged bytes</text>
+<text x="72" y="202" font-size="15">Frozen snapshot → chunks → authenticated pages</text>
+<text x="72" y="221" font-size="15">Exact physical operations and child receipts</text>
+<rect x="55" y="265" width="430" height="74" rx="8" fill="#e5f1ff" stroke="#5585b2"/>
+<text x="72" y="292" font-size="18">Policy-bound Rust S3 client</text>
+<text x="72" y="316" font-size="15">Create only; raw-body checksum; uncertain recovery</text>
+<rect x="55" y="385" width="430" height="104" rx="8" fill="#fff6df" stroke="#a67c28" stroke-dasharray="6 4"/>
+<text x="72" y="413" font-size="18">Planned client integration</text>
+<text x="72" y="438" font-size="15">Durable root publication → exact logical settlement</text>
+<text x="72" y="463" font-size="15">Verified range reader → FUSE / WinFsp adapters</text>
+<rect x="650" y="145" width="410" height="135" rx="10" fill="#e8f5ed" stroke="#4d8b65"/>
+<text x="672" y="176" font-size="21" font-weight="bold">S3-compatible service</text>
+<text x="672" y="204" font-size="17">Immutable data chunks + manifest pages</text>
+<text x="672" y="231" font-size="15">Root descriptor binds logical length + page hash</text>
+<text x="672" y="254" font-size="15">No bucket credentials held by authority</text>
+<rect x="650" y="360" width="410" height="160" rx="10" fill="#e8eafa" stroke="#6f72a4"/>
+<text x="672" y="392" font-size="21" font-weight="bold">Shared Rust authority</text>
+<text x="672" y="421" font-size="17">ReserveManifest + Publish content CAS</text>
+<text x="672" y="449" font-size="17">Authoritative SQLite namespace • schema 26</text>
+<text x="672" y="477" font-size="15">Exact requests, receipts and atomic saved effects</text>
+<text x="672" y="500" font-size="15">Optional Turso persistence remains separate work</text>
+<g stroke="#46617b" stroke-width="2" fill="none" marker-end="url(#arrow)">
+<path d="M270 233 V263"/><path d="M485 302 H570 V213 H648"/>
+<path d="M485 437 H648" stroke-dasharray="6 4"/>
+</g>
+<text x="528" y="285" font-size="14">PUT / verify</text>
+<text x="530" y="413" font-size="14">Authenticated</text>
+<text x="530" y="431" font-size="14">root metadata</text>
+<text x="36" y="561" font-size="17">Root-page raw SHA ≠ domain-separated page hash ≠ logical content-reference hash</text>
+<text x="36" y="590" font-size="16">Metadata commit alone does not establish uploaded data, local file flush, or native large-file acceptance.</text>
+</g></svg>

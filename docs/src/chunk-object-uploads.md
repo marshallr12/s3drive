@@ -16,7 +16,8 @@ body length and raw SHA-256. Its deterministic physical staging operation hashes
 the frozen input, attached logical generation/manifest, exact object record and
 raw checksum. The existing `staged_operations` table maps that operation to one
 physical generation before body materialization. No new table or schema version
-is introduced; schema 25 remains current.
+was introduced by this phase (schema 25). The follow-on
+[authority contract](manifest-root-authority.md) adds schema 26.
 
 A restart after begin, append or seal resumes that physical generation. Missing,
 redirected or inconsistent mappings fail explicitly. Sealed bodies are freshly

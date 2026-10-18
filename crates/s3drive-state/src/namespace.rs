@@ -9,7 +9,10 @@ pub(crate) fn migrate_removals(db: &Connection) -> crate::Result<()> {
 }
 pub mod publication;
 use crate::State;
-pub use publication::{Artifact, ContentGuard, Payload, Reservation, Store, payload_reference};
+pub use publication::{
+    Artifact, ContentGuard, MAX_MANIFEST_LENGTH, ManifestRoot, Payload, Reservation, Store,
+    payload_reference,
+};
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use s3drive_core::names;
 use serde::{Deserialize, Serialize};
@@ -91,6 +94,15 @@ impl NodeGuard {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
 pub enum Mutation {
+    ReserveManifest {
+        node: String,
+        expected_revision: u64,
+        store: String,
+        size: u64,
+        sha256: String,
+        manifest: Box<ManifestRoot>,
+        guard: ContentGuard,
+    },
     RegisterStore {
         route: String,
         root: String,
@@ -262,7 +274,10 @@ impl Apply {
         {
             return Err(Error::Invalid);
         }
-        if let Mutation::Reserve {
+        if let Mutation::ReserveManifest {
+            expected_revision, ..
+        }
+        | Mutation::Reserve {
             expected_revision, ..
         }
         | Mutation::ReserveContent {
@@ -278,8 +293,20 @@ impl Apply {
         {
             return Err(Error::Invalid);
         }
+        if let Mutation::ReserveManifest {
+            node,
+            store,
+            size,
+            manifest,
+            ..
+        } = &self.mutation
+            && !manifest.context(&self.volume, node, store, &self.operation, *size)
+        {
+            return Err(Error::Invalid);
+        }
         let valid = match &self.mutation {
             Mutation::RegisterStore { .. }
+            | Mutation::ReserveManifest { .. }
             | Mutation::Reserve { .. }
             | Mutation::ReserveContent { .. }
             | Mutation::ReserveDetachedContent { .. }
@@ -744,7 +771,16 @@ impl State {
             return Err(Error::Invalid);
         }
         stored(&self.connection, operation)?
-            .map(|(_, outcome)| serde_json::from_slice(&outcome).map_err(|_| Error::Internal))
+            .map(|(encoded, outcome)| {
+                let request: Apply =
+                    serde_json::from_slice(&encoded).map_err(|_| Error::Internal)?;
+                let result: Result<Receipt> =
+                    serde_json::from_slice(&outcome).map_err(|_| Error::Internal)?;
+                if let Ok(r) = &result {
+                    publication::validate_manifest_replay(&self.connection, &request, r)?;
+                }
+                Ok(result)
+            })
             .transpose()
     }
     /// Sequence guard, namespace effect and dedup result commit together.
@@ -760,7 +796,12 @@ impl State {
             if original != encoded {
                 return Err(Error::OperationMismatch);
             }
-            return serde_json::from_slice(&outcome).map_err(|_| Error::Internal)?;
+            let result: Result<Receipt> =
+                serde_json::from_slice(&outcome).map_err(|_| Error::Internal)?;
+            if let Ok(r) = &result {
+                publication::validate_manifest_replay(&tx, request, r)?;
+            }
+            return result;
         }
         let count: i64 = sql(
             tx.query_row("SELECT count(*) FROM namespace_operations", [], |r| {
@@ -826,6 +867,7 @@ impl State {
             return Err(Error::Internal);
         }
         if let Ok(receipt) = &outcome {
+            publication::verify_manifest_effect(&tx, request, receipt)?;
             removals::check_effect(&tx, &receipt.node.id)?;
             if let Some((target, _)) = request.mutation.owned_destination() {
                 removals::check_effect(&tx, &target.id)?;
@@ -840,6 +882,7 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
     if matches!(
         &request.mutation,
         Mutation::RegisterStore { .. }
+            | Mutation::ReserveManifest { .. }
             | Mutation::Reserve { .. }
             | Mutation::ReserveContent { .. }
             | Mutation::ReserveDetachedContent { .. }
@@ -885,6 +928,7 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
     }
     let changed = match &request.mutation {
         Mutation::RegisterStore { .. }
+        | Mutation::ReserveManifest { .. }
         | Mutation::Reserve { .. }
         | Mutation::ReserveContent { .. }
         | Mutation::ReserveDetachedContent { .. }

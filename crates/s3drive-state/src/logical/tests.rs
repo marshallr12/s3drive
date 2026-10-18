@@ -642,6 +642,7 @@ fn verified_observation_preserves_identity_and_rejects_dirty_external_changes() 
             size: 0,
             sha256: hex(&Sha256::digest([])),
             guard: None,
+            manifest: None,
         },
         upload_operation: "e".repeat(64),
         etag: "\"remote\"".into(),

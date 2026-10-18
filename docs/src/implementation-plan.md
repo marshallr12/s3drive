@@ -1361,3 +1361,72 @@ Full local gate passed (315 state, 59 S3, 34 core and 50 authority tests;
 format/Clippy/build, links and 57 book chapters). Own-source hosted regressions
 remain separate. See the
 [upload bridge contract](chunk-object-uploads.md).
+
+## Manifest root authority contract — implementation 2026-10-18
+
+Extend the existing authenticated coordinator with an explicit `ReserveManifest`
+mutation and advertised `manifest-root-v1` feature. Embed optional versioned root
+metadata in Reservation, omitted for legacy records. Keep physical page length
+and raw SHA in existing fields, and expose logical length separately. Preserve
+exact old serialized Apply/Reservation/Payload bytes and v1 CAS hashes; only the
+new format selects a distinct content-reference domain. Reuse the existing atomic
+Publish, content guard, detached and pending-removal checks. Bind volume, node,
+store, object generation, root ordinal and derived v2 key; reject mismatches.
+Schema26 marks the new persistent JSON format without rewriting old rows or
+adding a side table. Older binaries must refuse the upgraded database.
+
+This independently testable phase provides authority metadata publication, not
+client logical settlement or mounted-format activation. Legacy managed inputs
+and readers must refuse the new format explicitly; generic one-object stage/
+flush must not bypass child receipts. The next phase needs an exact durable
+chunk-plan publication/settlement journal and policy-bound publisher.
+
+Done criteria: frozen independent legacy JSON/hash vectors first pass against
+the preceding implementation; structural/key/hash-domain refusal tests; SQLite
+reserve/publish/reopen, stale-content races, rename/detached/removal semantics,
+ignored/deleted writes and rollback; real authenticated TCP protocol round trips
+and explicit old reader/input refusal. Verify schema25 upgrade preserves legacy
+bytes/operations and full local gate passes. No provider writes, credential or
+visibility changes, native large-file claims or conversion of legacy content.
+
+Focused results: 14 state tests and one authenticated TCP contract pass. Fault
+injection exposed false saved-effect and substituted historical-result receipts;
+checks now refuse both. Independent legacy vectors passed before the extension.
+See [manifest root authority](manifest-root-authority.md) and its dated evidence
+for archived logs. The full gate passed: 329 state, 59 S3, 34 core and 50
+authority tests; all 18 managed publication contracts, formatting, Clippy, build,
+62 doc-link files and 58 book chapters. Client settlement and mounted activation
+remain unfinished.
+
+### Next bounded slice: client chunk-root publication journal (proposal)
+
+Keep this separate from native activation and from the legacy one-object journal.
+Persist a new versioned record that binds the exact Ready plan input, attached
+logical snapshot and manifest, authenticated store route, original content guard,
+root descriptor/raw body checksum, reserve and publish IDs. Bind object-generation
+UUID to reserve UUID. Do not derive a new ID or expected content after a crash.
+Validate every saved field on load, with explicit retained rejection/conflict.
+
+Before any authority request, persist its exact bytes. Recover a missing reply
+using that same operation; never rebase an unknown request to the current volume
+sequence. Before publication, require the root physical acknowledgment and the
+plan's exact direct-child proofs through the existing owner. Persist the complete
+Publish request before sending it, then the matching complete authority receipt.
+Missing local acknowledgment, incomplete/uncertain/rival objects, a mismatched
+store/plan/guard and SQLite-full must leave the source snapshot pending.
+
+The first journal result should mean “this exact tree root was committed,” not
+“the mounted file was flushed.” Current `logical::Record` requires a legacy
+`managed::Input`, and `logical::Binding` rejects manifests. A root physical
+GenerationId cannot be substituted into that chain. A later logical integration
+phase must version this linkage, preserve the old serialized/hash contract and
+atomically advance the exact snapshot's settlement marker without discarding a
+newer dirty head. Handle/removal closing barriers must participate before native
+callbacks can use the new path; no detached/owner shortcut may bypass them.
+
+Done criteria for the journal slice: restart at each durable/network boundary,
+real authenticated coordinator plus loopback S3 SDK upload, lost reserve/publish
+responses, content race, corrupt/missing child/root acknowledgment, unchanged
+uncertain operation identity, legacy refusal and actual SQLite-full rollback.
+Require the local gate and its own source-bound Linux/Windows hosted regression;
+no new provider mutation or mounted-file flush claim follows from those tests.

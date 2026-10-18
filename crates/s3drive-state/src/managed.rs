@@ -110,6 +110,7 @@ impl Input {
             size: *size,
             sha256: sha256.clone(),
             guard,
+            manifest: None,
         };
         let probe = Apply {
             volume: r.volume.clone(),
