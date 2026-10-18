@@ -118,6 +118,20 @@ execute onlyafterallacceptancechecks. No priorpayloads reusable. FullgoalACTIVE.
 reader contract now inimplementation-plan.md; preserveslegacyrefusal, pinnedroot,
 separatephysical/pagehashes, boundedauthenticatedpath/chunkfetches andcurrentS3
 authorization. Plan only, no reader implementation yet.
+Book117788707918 SUCCESS/rawreviewed own474/schema28/66files/62chapters; marker
+/tmp/s3drive-chunk-source-controller-474-book-reviewed.json. Windows/Linux LIVE.
+Readerdesignaudit foundmissing pinned-credential related-object open API. New
+concretecontract inimplementation-plan: samecredentialgeneration forroot/children,
+rootactuallevel == descriptorordinallevel (authoritymaxlevel2), metadata-only
+EmptyFile vs publishedemptyroot,4activeoperations/256pinnedsnapshots/8MiBoutput/
+1MiBdatabuffer/10432pagebytes/27pagevisits/9dataobjects/30sdeadline, perreaderfamily.
+Budgetsproposed, notmeasuredRSS; no readerimplementation. Lockedaws-config1.12.0
+andcredential-types1.3.0 sources inspected+hashed; docs.rsprimaryconfirmsprofile
+filesparsedonce/cached, so testrotation viaexistingRotatingCredentials fixture.
+Datedevidence manifest-range-reader-contract-20261018.json. IndependentS3helper
+preparation allowedinnewisolatedworktreefromaccepted20706cd; fullmanagedreader
+stillfollowscontrolleracceptance. Keeporiginal253sourcehashes frozen for474checker.
+
 
 ## Accepted prerequisite: exact chunk source settlement state (2026-10-18)
 

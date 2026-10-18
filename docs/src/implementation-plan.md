@@ -1844,6 +1844,101 @@ concurrent read capacity. Prove pinned old-root reads after newer publication
 and rename while new opens see the new root. Existing native callbacks, legacy
 whole-file readers and mounted-format activation remain separately gated.
 
+##### Concrete reader contract and footprint (proposal, 2026-10-18)
+
+Read-only source inspection found an additional dependency boundary: the root
+`ReadHandle` already captures one credential generation, while the original
+`S3Reader` may use a provider that supplies a different generation on a later
+open. The new file handle must open child pages/data through the root handle's
+captured provider. Add a narrow `ReadHandle::open_related(key)`-style method
+that performs a fresh scoped HEAD with those captured credentials; do not
+expose credentials or let a caller substitute metadata/configuration. Keep the
+root handle alive for the file snapshot. Expired captured credentials fail
+explicitly; a new file open can obtain newly resolved credentials. This follows
+the existing [open implementation and rotating-provider control](https://github.com/marshallr12/s3drive/blob/474601edd5582ebed9316d04cf4524db6d72694b/crates/s3drive-s3/src/reader/tests.rs).
+
+Do not assume that editing an INI file hot-reloads an existing SDK provider.
+The resolved `aws-config` 1.12.0 profile provider caches parsed profile files
+after its first load. The planned rotation control should extend the existing
+injected `RotatingCredentials` fixture and inspect signed dummy requests, rather
+than depend on profile-file rereading. This is a dependency-source finding,
+verified 2026-10-18, not a new S3Drive reload feature.
+[AWS SDK profile-provider documentation](https://docs.rs/aws-config/1.12.0/aws_config/profile/struct.ProfileFileCredentialsProvider.html).
+
+Proposed public surface: a reader under `s3drive_managed::chunks`, configured
+from an authenticated metadata client, expected volume and at most 16 mapped
+stores; `open_file(node_id)` returns an opaque cloneable pinned file, whose
+`read_range(offset, length)` returns a complete verified bounded buffer or an
+error. Expose its pinned Node/logical length for callers. The legacy managed
+Reader and `FileSnapshot::bytes()` retain their current meanings. No arbitrary
+caller-supplied descriptor constructor or mounted callback dispatch is added.
+
+Distinguish two empty-file states. An authenticated live `Kind::EmptyFile` Node
+without a payload has no S3 object to authorize; validate its optional placement
+and return a pinned zero-length view using metadata authorization alone. A
+published empty manifest is a `Kind::File` with a real root page and must still
+perform the root HEAD/GET/hash checks at open. Missing payload on `Kind::File`
+is an integrity error. Legacy one-object payloads remain explicitly unsupported
+by this new reader rather than being mistaken for empty files. Deleted nodes
+fail new opens; an already pinned empty/manifest view retains its identity.
+
+Initial finite budgets, per shared reader family:
+
+- Four active open/read operations, acquired without an unbounded queue; a
+  clone shares the same permits. One permit covers the complete operation.
+- 256 retained pinned file snapshots; clones of one snapshot share its retained
+  permit. Acquire permits before metadata/provider work; errors and cancellation
+  release them. These are library ownership bounds, not total SDK/RSS bounds.
+- At most 8 MiB output and one complete 1 MiB data buffer per active range read.
+  Read pages within the 10,432-byte codec bound and retain only the bounded
+  authenticated path/current page needed for traversal. No whole-tree cache.
+- One overall 30-second open/read deadline, including all metadata/provider
+  awaits, in addition to existing per-request deadlines. Return no partial buffer
+  after integrity failure or timeout. Zero-length/EOF reads make no network call.
+
+Require the verified root page's level to equal the level encoded in the
+validated descriptor ordinal. The authority's manifest length/ordinal policy
+admits at most level 2 (64 GiB logical length), even though the general codec
+admits level 7. A root with a different actual level must fail. Child verification
+then strictly decreases level while checking exact covered ranges. An 8 MiB
+unaligned read intersects at most nine chunk intervals; conservatively budget
+27 visited pages and nine complete data objects per read. Count visits and
+fetched bytes explicitly, skip authenticated holes by their recorded lengths,
+and fail on exceeded bounds. These are proposed algorithm budgets, not measured
+request counts or new file-size support. See the current
+[authority descriptor policy](https://github.com/marshallr12/s3drive/blob/474601edd5582ebed9316d04cf4524db6d72694b/crates/s3drive-state/src/namespace/publication/manifest.rs).
+Do not require a reused child/data reference's generation or ordinal to equal
+the current root generation or logical chunk index: the authenticated reference
+names its own immutable object. Keep role/store/file namespace checks intact.
+
+Expected write footprint: additive S3 ReadHandle method and its existing
+credential/scope/HEAD-denial/future-size controls; new managed chunk-reader child
+module and an additive module export; a dedicated real-SDK/authenticated-authority
+integration test with owned dummy S3 fault/gate fixture; this book/evidence.
+Prefer a new focused read fixture over changing the widely shared write fixture
+merely to inject arbitrary page faults. No state migration, wire/codec vector,
+native callback, write-policy or credential-file change is needed. Before coding,
+inspect the resolved dependency APIs used by deadline/semaphore/test gates and
+verify that the chosen traversal satisfies the stated visit/buffer budgets.
+
+The S3 helper's meaningful controls must show related HEAD and GET retain the
+root's access key/session token after an injected provider rotation, independent
+new opens use the new generation, and denied/missing related objects never reuse
+cached authorization. Keep the future's inline size bounded as the existing
+S3 open control does; size checks cannot substitute for native stack acceptance.
+The managed tests must additionally prove both physical and page hash checks,
+actual root-level refusal, all-or-error cross-chunk corruption, explicit request
+and byte counts, capacity at controlled barriers, cancellation/released permits,
+and preserved old-root reads after newer publication/rename. No new API is
+implemented by this contract. The full managed reader follows acceptance of
+the controller cohort. Its additive pinned-credential S3 helper can be developed
+as independent preparation in an isolated checkout from the accepted S3 baseline:
+it does not depend on source settlement or alter the controller checkout's frozen
+files. It still needs focused tests, its full local gate and source-bound hosted
+acceptance before integration.
+The [dated source-audit evidence](evidence/manifest-range-reader-contract-20261018.json)
+records the proposed budgets and resolved dependency hashes.
+
 ### Current acceptance repair: TLS budget fixture (2026-10-18)
 
 Own publisher CI39156593000 failed Linux before the chunk tests, in the existing

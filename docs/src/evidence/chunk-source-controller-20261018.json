@@ -427,6 +427,8 @@
       12147997314,
       12147329360
     ],
-    "scope": "not yet acceptance; own exact source/jobs/artifacts/raw review required"
+    "scope": "not yet acceptance; own exact source/jobs/artifacts/raw review required",
+    "book_raw_reviewed": true,
+    "book_review_marker": "/tmp/s3drive-chunk-source-controller-474-book-reviewed.json"
   }
 }

@@ -1,0 +1,41 @@
+{
+  "date": "2026-10-18",
+  "status": "read-only design; no implementation",
+  "document": "implementation-plan.md",
+  "prerequisite_source": "474601edd5582ebed9316d04cf4524db6d72694b",
+  "prerequisite_cohort_pending": true,
+  "runtime_changes": 0,
+  "frozen_253_hashes_unchanged": true,
+  "findings": [
+    "ReadHandle captures a credential generation; child opens must use that captured provider",
+    "Profile provider caches parsed profile files; use injected rotating fixture for generation tests",
+    "Root actual page level must equal descriptor ordinal level; authority cap implies maximum level2",
+    "General codec alone does not authenticate descriptors or establish online S3 access"
+  ],
+  "proposed_budgets": {
+    "active_open_read_operations_per_family": 4,
+    "retained_snapshots_per_family": 256,
+    "max_output_bytes": 8388608,
+    "max_data_buffer_bytes": 1048576,
+    "max_page_encoded_bytes": 10432,
+    "max_visited_pages_per_read": 27,
+    "max_complete_data_objects_per_read": 9,
+    "overall_deadline_seconds": 30,
+    "total_sdk_or_rss_bound_claim": false
+  },
+  "dependency_source_sha256": {
+    "aws-config-1.12.0/src/profile/credentials.rs": "e7ef4d27a4d778fe6b996b4ce885648ce7cee1a3e313156a027379784facc2b1",
+    "aws-credential-types-1.3.0/src/provider/credentials.rs": "8b19397646d6c77a9c63e197320584b4e83d6dfda09e23f1765141860b147aac"
+  },
+  "primary_source": "https://docs.rs/aws-config/1.12.0/aws_config/profile/struct.ProfileFileCredentialsProvider.html",
+  "existing_credential_control": "crates/s3drive-s3/src/reader/tests.rs::rotation_changes_new_opens_but_preserves_existing_handle_credentials",
+  "provider_requests": 0,
+  "credentials_changed": false,
+  "implementation_acceptance": false,
+  "empty_file_states": {
+    "metadata_only_empty_node": "validate authenticated live Node and optional placement; no S3 object exists",
+    "published_empty_manifest": "real root requires HEAD/GET/bothhashchecks at open",
+    "missing_payload_on_kind_file": "integrity error",
+    "legacy_one_object_payload": "explicit unsupported content in new reader"
+  }
+}
