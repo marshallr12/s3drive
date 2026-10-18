@@ -1,6 +1,6 @@
 {
   "research_date": "2026-10-18",
-  "status": "offline candidate; focused and full local gate passed; own hosted acceptance not yet run",
+  "status": "offline codec locally accepted; pushed; own hosted run in progress",
   "parent_commit": "e08f607b9f0e27537f022752a40123be52361079",
   "module": "s3drive-core::manifest",
   "format": {
@@ -109,5 +109,76 @@
     "date": "2026-10-18",
     "initial_implementation_started_as_provisional_offline_default": true,
     "implicit_migration_or_provider_approval": false
+  },
+  "publication": {
+    "branch": "codex/managed-manifest",
+    "commit": "e48f36fdaf05ea73fc69282e5b616630545a13a5",
+    "remote": "e48f36fdaf05ea73fc69282e5b616630545a13a5",
+    "main": "1a93b5f7248892fec96dc8da4438ee7967692e77",
+    "public_before": "public",
+    "public_after": "public",
+    "visibility_mutations": 0,
+    "all14_frozen_hashes_match": true,
+    "clean": true
+  },
+  "hosted": {
+    "source": "e48f36fdaf05ea73fc69282e5b616630545a13a5",
+    "run_id": 39137161051,
+    "run_attempt": 1,
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39137161051",
+    "status": "in_progress",
+    "conclusion": null,
+    "watch_session": 42188,
+    "watch_log": "/tmp/s3drive-managed-manifest-e48-watch.log",
+    "jobs": [
+      {
+        "id": 117703908126,
+        "name": "book",
+        "status": "completed",
+        "conclusion": "success",
+        "html_url": "https://github.com/marshallr12/s3drive/actions/runs/39137161051/job/117703908126"
+      },
+      {
+        "id": 117703908277,
+        "name": "rust (ubuntu-latest)",
+        "status": "in_progress",
+        "conclusion": null,
+        "html_url": "https://github.com/marshallr12/s3drive/actions/runs/39137161051/job/117703908277"
+      },
+      {
+        "id": 117703908294,
+        "name": "rust (windows-latest)",
+        "status": "in_progress",
+        "conclusion": null,
+        "html_url": "https://github.com/marshallr12/s3drive/actions/runs/39137161051/job/117703908294"
+      }
+    ],
+    "book_completed_raw_review": {
+      "source": "e48f36fdaf05ea73fc69282e5b616630545a13a5",
+      "run_id": 39137161051,
+      "run_attempt": 1,
+      "job_id": 117703908126,
+      "status": "completed",
+      "conclusion": "success",
+      "reviewed": true,
+      "log": "/tmp/s3drive-managed-manifest-e48-book.log",
+      "sha256": "fe6c89742ab5218510ae0dde0ef8ebb842f63962b39861a4558aafb0659b5062",
+      "scope": "schema24 fixture preflight;59doclink files;55mdBook chapters",
+      "notices": [
+        "Git default branch advice",
+        "Rust pinned toolchain override during mdBook install",
+        "checkout Node20 forced to Node24"
+      ],
+      "native_or_provider_acceptance": false
+    },
+    "all_raw_reviews_closed": false,
+    "success_checker_eligible": false,
+    "success_checker_executed": false,
+    "success_checker_script": "/tmp/s3drive-check-managed-manifest-e48.py",
+    "checker_compiled_only": true,
+    "checker_output_must_be_new": "/tmp/s3drive-managed-manifest-e48-artifacts",
+    "own_native_cohort_accepted": false,
+    "native_large_files_accepted": false,
+    "provider_acceptance": false
   }
 }

@@ -88,8 +88,27 @@ session91280 /tmp/s3drive-managed-manifest-gate.log:27core,50authority,292state/
 match. Isolated Python regeneration matches all8 vectors. Final docs checks
 follow the D041 updates; do not cite the concurrent257 repeat as native
 acceptance of this new module.
-Final D041/status documentation links, build and55chapter tests passed. Ready
-for an ordinary feature-branch push and its own source-bound CI; no main merge.
+Final D041/status documentation links, build and55chapter tests passed.
+Published e48f36fdaf05ea73fc69282e5b616630545a13a5 on codex/managed-manifest,
+ordinary push, clean/exact remote/all14 frozen hashes/PUBLIC before-after;
+proof /tmp/s3drive-managed-manifest-publication.json. Main remains1a93b5f.
+Own CI39137161051 attempt1 at e48: book117703908126 SUCCESS with completed raw
+review; Linux117703908277 and Windows117703908294 LIVE at last observation.
+Watch42188 redirects /tmp/s3drive-managed-manifest-e48-watch.log; poll this same
+handle/run, do not restart on timeout. Do not cite257's separate repeat as proof.
+Prepared /tmp/s3drive-check-managed-manifest-e48.py (Python compiled only), own
+PowerShell oracle script and new output /tmp/s3drive-managed-manifest-e48-artifacts.
+Checker MUST wait for all3 terminal-success jobs and own completed raw reviews
+with source/run/attempt/job IDs and log hashes in
+/tmp/s3drive-managed-manifest-e48-raw-reviewed.json. Extract fresh artifact IDs
+from this Windows completed upload log, verify API digests/source/timestamps,
+strict21/14 typed fields and both project oracles. All previous artifact IDs
+are explicitly refused. On any failure preserve it; no success checker or
+success claim. After own closure, update dated evidence and current book status.
+Next implementation is an independently testable offline chunk identity/builder/
+dependency-journal phase; read the large-file chapter's sequence and inspect
+resolved dependency APIs first. Legacy logical Input currently needs a whole SHA
+before begin: do not simply lift its8MiB limit or reuse a root as that SHA.
 
 ## Completed exact257 repeat attempt2 (2026-10-18)
 
