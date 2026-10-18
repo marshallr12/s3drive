@@ -2,8 +2,9 @@
 
 Implementation and source-review date: **2026-10-18**. The isolated draft on
 `codex/native-manifest-reads` adds manifest reads to version-3 read-only managed
-mounts. Focused controls and the fresh full local gate passed; actual FUSE
-and WinFsp acceptance is pending. No successful native chunk mount is claimed.
+mounts. The original portable gate passed, but its Linux native control
+failed. A repair is in progress on `codex/manifest-snapshot-inodes`; actual FUSE
+and WinFsp acceptance of the repair is pending. No successful native chunk mount is claimed.
 The prerequisite reader source `88d02f7` has passed its own Linux/Windows/book
 cohort and strict reference-artifact checks at checkpoint `7c2b454`.
 
@@ -20,6 +21,16 @@ S3 file data and returns no partially validated result.
 Manifest file sizes come from the validated logical descriptor rather than the
 root object's physical length. A read-only open selects a reader from validated
 live metadata, then independently obtains a fresh authorized pinned snapshot.
+Read-only manifest inodes identify the immutable payload reference together with
+its global file ID. Rename retains that inode; publishing another payload gets
+a different inode. Attributes for an already discovered manifest inode come
+from its validated lookup snapshot, including when FUSE omits the file handle.
+This metadata does not authorize a new open or a provider read. Path lookup stays
+online; open checks live authority state both before and after obtaining its fresh
+snapshot and rejects a changed payload with a conflict. Existing handles keep
+their pinned version. Versions count toward the existing bounded inode table;
+exhaustion returns a resource error. Legacy and writable inode behavior remains
+unchanged.
 A concurrent format change can fail explicitly; it never causes a retry or write
 fallback. Manifest OpenFile holds the bounded reader File; legacy files retain
 their existing whole-byte FileSnapshot behavior. Empty metadata files and
@@ -101,7 +112,26 @@ self-review. Every indexed member was verified. Archive SHA-256:
 
 Published source `d98ea2f` is on `codex/native-manifest-reads`. Its
 [own Linux/Windows/book run](https://github.com/marshallr12/s3drive/actions/runs/39176574738)
-is running, with the real native manifest control explicitly present in both
-Rust jobs. The clean exact remote and all 257 source hashes were verified;
+contains the real native manifest control explicitly in both Rust jobs.
+The Linux native test failed: after publishing a 4-byte replacement, `fstat`
+on the old 130 MiB handle returned 4 bytes. The two versions shared an inode;
+FUSE can request attributes without a file handle. This is an implementation
+failure, distinct from the local mount restriction. The repair retains the old
+handle size assertion and adds same-name replacement, rename identity, stale
+open and publication-during-open checks. The original cohort cannot certify
+the repaired source; a fresh local and hosted cohort is required. The clean exact remote and all 257 source hashes were verified;
 repository visibility remains PUBLIC and main is unchanged. No own hosted/native
 acceptance is claimed until its logs and source-bound artifacts are reviewed.
+
+The [dated snapshot-inode repair evidence](evidence/manifest-snapshot-inodes-20261018.json)
+records the failed native candidate, negative control and repaired portable checks.
+
+The repair's full local gate passed with all 257 frozen inputs unchanged:
+12 publication controls, six reader/filesystem controls (one native control
+ignored), 62 S3 tests, 365 state tests (one ignored), formatting, Clippy,
+build and book checks. The [13-member indexed repair archive](evidence/manifest-snapshot-inodes-local-20261018.tar.gz)
+includes corrected source, the negative control, the completed local gate and
+both earlier native job logs. Every indexed member was verified. Archive SHA-256:
+`e243742e802539035a8efa36478ce339a6f1ce43646460592bade4feb887a2aa`.
+This establishes portable acceptance only; the corrected source still needs its
+own real FUSE and WinFsp controls.

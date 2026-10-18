@@ -2068,3 +2068,27 @@ file allocation, small edits with measured unchanged-chunk reuse, truncate/appen
 rename during dirty edits, unknown root replies, killed owners, SQLite-full rollback,
 local/remote conflict retention and real FUSE/WinFsp flush/read/restart behavior.
 This section records source findings and proposals, not an implemented write API.
+
+### Native snapshot identity repair (2026-10-18)
+
+Actual source d98 Linux CI reached the real FUSE test and failed after a new
+4-byte root publication: fstat on an old130MiB handle returned4. The shared inode
+identity and path-refresh metadata are insufficient when the kernel omits a file
+handle or updates shared inode attributes. Do not remove the old-size assertion.
+
+Repair draft in codex/manifest-snapshot-inodes: read-only manifest node identities
+include their authenticated payload reference; rename without content change
+keeps identity. Cache only the validated lookup version's metadata on that inode.
+New path lookup and file open still authenticate online. Check the expected
+payload reference both before and after fresh snapshot open, refusing a race
+instead of opening a different version under the old inode. Legacy/mutable file
+identities remain unchanged. Add portable publication/rename/race controls and
+retain the actual native size/bytes check on Linux and Windows. Source d98's
+cohort is terminal FAILURE (Windows native passed2.39s; Linux native failed);
+its artifacts cannot certify the repair. The original watcher closed exit1.
+
+Repair checkpoint: full local gate passed (session68406, unchanged257inputs),
+including both stale/open-race controls and all existing portable regressions.
+The13member indexed local archive retains the old failed cohort and negative
+control alongside the corrected source. Actual repaired native acceptance is
+pending; do not activate chunk writes or promote this source on the local gate.

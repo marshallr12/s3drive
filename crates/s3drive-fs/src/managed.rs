@@ -180,6 +180,7 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
         kind: Kind::Directory,
         source: None,
         key: s3drive_authority::ROOT.into(),
+        manifest: None,
     });
     Ok(ReadOnlyFs {
         readers: Vec::new(),
@@ -207,13 +208,45 @@ impl Nodes {
         n: &s3drive_authority::Node,
         parent: u64,
     ) -> Result<Arc<Node>> {
+        self.insert_managed_version(n, parent, false)
+    }
+    pub(super) fn insert_managed_snapshot(
+        &mut self,
+        n: &s3drive_authority::Node,
+        parent: u64,
+    ) -> Result<Arc<Node>> {
+        self.insert_managed_version(n, parent, true)
+    }
+    fn insert_managed_version(
+        &mut self,
+        n: &s3drive_authority::Node,
+        parent: u64,
+        snapshot: bool,
+    ) -> Result<Arc<Node>> {
         validate_name(&n.name)?;
         let kind = if n.kind == s3drive_authority::Kind::Directory {
             Kind::Directory
         } else {
             Kind::File
         };
-        let identity = (usize::MAX, n.id.clone(), kind);
+        let manifest = if snapshot
+            && n.payload
+                .as_ref()
+                .is_some_and(|p| p.reservation.manifest.is_some())
+        {
+            Some(ManifestView {
+                reference: s3drive_authority::payload_reference(&n.payload)
+                    .ok_or(Error::Internal)?,
+                metadata: logical_metadata(n)?,
+            })
+        } else {
+            None
+        };
+        let key = match &manifest {
+            Some(view) => format!("manifest/{}/{}", n.id, view.reference),
+            None => n.id.clone(),
+        };
+        let identity = (usize::MAX, key, kind);
         let id = if let Some(id) = self.by_key.get(&identity) {
             *id
         } else {
@@ -232,10 +265,26 @@ impl Nodes {
             kind,
             source: None,
             key: n.id.clone(),
+            manifest,
         });
         self.by_id.insert(id, node.clone());
         Ok(node)
     }
+}
+pub(super) fn check_snapshot(node: &Node, live: &s3drive_authority::Node) -> Result<()> {
+    let actual = if live
+        .payload
+        .as_ref()
+        .is_some_and(|p| p.reservation.manifest.is_some())
+    {
+        s3drive_authority::payload_reference(&live.payload)
+    } else {
+        None
+    };
+    if node.manifest.as_ref().map(|v| v.reference.as_str()) != actual.as_deref() {
+        return Err(Error::Conflict);
+    }
+    Ok(())
 }
 pub(super) fn metadata(node: &s3drive_authority::Node) -> ObjectMetadata {
     ObjectMetadata {

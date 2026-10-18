@@ -183,10 +183,24 @@ pub async fn engine(f: &Fixture, path: &Path) {
     assert_eq!(large.read(65536 * C - 3, 99).await.unwrap(), vec![0; 3]);
     let other = fs.lookup(ROOT, "second store 日本語").await.unwrap();
     assert!(fs.open(other.id).await.unwrap().read(0, 99).await.unwrap() == OTHER);
-    // A new publication and rename leave the old file identity/root pinned.
-    f.tree(10, 4, BTreeMap::from([(0, b"new!".to_vec())])).await;
+    // A rename keeps the immutable payload identity; publication changes it.
     f.change(
         182,
+        Mutation::Move {
+            node: id(10),
+            parent: s3drive_authority::ROOT.into(),
+            name: "rename only 日本語.bin".into(),
+        },
+    )
+    .await;
+    assert_eq!(
+        fs.lookup(ROOT, "rename only 日本語.bin").await.unwrap().id,
+        node.id
+    );
+    let original = f.node(10).await;
+    f.tree(10, 4, BTreeMap::from([(0, b"new!".to_vec())])).await;
+    f.change(
+        183,
         Mutation::Move {
             node: id(10),
             parent: s3drive_authority::ROOT.into(),
@@ -195,10 +209,26 @@ pub async fn engine(f: &Fixture, path: &Path) {
     )
     .await;
     let fresh = fs.lookup(ROOT, "renamed 日本語.bin").await.unwrap();
+    assert_ne!(
+        fresh.id, node.id,
+        "immutable publication reused a snapshot inode"
+    );
     assert_eq!(fs.metadata(fresh.id).await.unwrap().unwrap().size, 4);
     assert!(fs.open(fresh.id).await.unwrap().read(0, 100).await.unwrap() == b"new!");
     assert_eq!(old.current_metadata().unwrap().size, 130 * C);
+    assert_eq!(fs.metadata(node.id).await.unwrap().unwrap().size, 130 * C);
     assert!(old.read(128 * C - 3, 8).await.unwrap() == expected);
+    let before = f.s3.events().len();
+    assert!(matches!(fs.open(node.id).await, Err(Error::Conflict)));
+    assert_eq!(f.s3.events().len(), before, "stale inode fetched S3");
+    // Publication between dispatch and snapshot open must also reject the inode.
+    f.reply_next_node(original);
+    assert!(matches!(fs.open(node.id).await, Err(Error::Conflict)));
+    assert_eq!(
+        f.s3.events().len() - before,
+        2,
+        "race fetched child/data objects"
+    );
     // A late chunk failure never returns a successful verified prefix.
     f.s3.fault(Target::Exact(tree.data[1].clone()), Fault::GetDenied);
     assert!(
@@ -226,9 +256,16 @@ pub async fn engine(f: &Fixture, path: &Path) {
     }
     for mode in [6, 7, 8, 9, 10, 11, 12, 14] {
         f.mode.store(mode, Ordering::SeqCst);
+        let requests = f.requests();
+        assert_eq!(fs.metadata(fresh.id).await.unwrap().unwrap().size, 4);
+        assert_eq!(
+            f.requests(),
+            requests,
+            "inode attributes queried live namespace"
+        );
         assert!(
-            fs.metadata(fresh.id).await.is_err(),
-            "malformed namespace node accepted: {mode}"
+            fs.open(fresh.id).await.is_err(),
+            "malformed namespace node accepted at open: {mode}"
         );
         assert_eq!(before, f.s3.events().len());
     }
@@ -476,6 +513,22 @@ pub async fn native(f: &Fixture, root: &Path) {
         "native reads downloaded too much data"
     );
     f.tree(10, 4, BTreeMap::from([(0, b"new!".to_vec())])).await;
+    let path = mount.path.clone();
+    let mut old = blocking(&mut mount, move || {
+        assert_eq!(std::fs::read(path.join(NAME)).unwrap(), b"new!");
+        assert_eq!(std::fs::metadata(path.join(NAME)).unwrap().len(), 4);
+        assert_eq!(old.metadata().unwrap().len(), 130 * C);
+        old.seek(SeekFrom::Start(128 * C - 3)).unwrap();
+        let mut bytes = [0; 8];
+        old.read_exact(&mut bytes).unwrap();
+        assert_eq!(
+            bytes.to_vec(),
+            [pattern(127, C)[C as usize - 3..].to_vec(), pattern(128, 5)].concat()
+        );
+        old
+    })
+    .await;
+
     f.change(
         182,
         Mutation::Move {

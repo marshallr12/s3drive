@@ -60,19 +60,43 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Current native-read publication / hosted gate (2026-10-18)
+## Current repair: immutable manifest inode identities (2026-10-18)
+
+Worktree /home/marshall/src/worktrees/s3drive-manifest-snapshot-inodes,
+branch codex/manifest-snapshot-inodes from755da0f. Source d98's Linux native
+job117820371839 FAILED at native.rs494: old130MiB fd metadata reports4 after
+new4byte publication. Log /tmp/s3drive-native-manifest-d98-linux-failed.log.
+Actual OS failure, not setup. Do not relax/remove assertion. Repair per plan:
+read-only manifest per-payload inode identity + pinned lookup metadata + version
+checks around fresh file open. Legacy/mutable identity semantics stay unchanged.
+Repair implemented. Negative control failed on old code (inode3 == inode3);
+focused suite now passes6controls/1nativeignored in4.57s, including both open
+race guards. Full gate68406 CLOSED EXIT0; log /tmp/s3drive-snapshot-inodes-gate.log
+SHA4aecc516640f2c4920d9bc91c2bab40366d7be2c9fd51f4897353548f06cd12d.
+All257 inputs unchanged;12publication+6reader/1nativeignored+62S3+365state/1ignored,
+fmt/clippy/build/book. Indexed13member archive133937bytes SHA
+e243742e802539035a8efa36478ce339a6f1ce43646460592bade4feb887a2aa.
+Own fresh FUSE/WinFsp cohort remains required before acceptance.
+Old native worktree257source remains frozen; d98cohortfailed, no success checker.
+Run39176574738 is terminal FAILURE. Windows117820371735 SUCCESS, including
+native manifest2.39s; book passed/reviewed; Linux FAILED. Watch24055 CLOSED
+EXIT1. Raw Windows log /tmp/s3drive-native-manifest-d98-windows.log retained;
+no success checker/artifact acceptance for this failed cohort. Never reuse its
+artifacts as corrected-source acceptance. PUBLIC policy applies, no privileged bypass.
+## Failed native-read candidate / historical hosted gate (2026-10-18)
 
 Source d98ea2ff2ec9cc72b55458190d657bb53642d227 pushed on
 codex/native-manifest-reads from local feature9ed5765 + accepted reader7c2b454.
 Clean exactremote/all257 committed/runtime hashes verified; PUBLIC retained and
-main1a93b5f unchanged. Own run39176574738 attempt1 currently in progress:
+main1a93b5f unchanged. Own run39176574738 attempt1 was launched; Linux
+subsequently FAILED as detailed above, so this cohort cannot be accepted:
 Windows117820371735, Linux117820371839, book117820371587.
-Watch24055 -> /tmp/s3drive-native-manifest-d98-watch.log; resume same handle.
+Watch24055 CLOSED EXIT1 -> /tmp/s3drive-native-manifest-d98-watch.log;
+do not resume or run this failed cohort's success checker.
 Both rust jobs explicitly include Verify native manifest ranges and remount.
-Do not borrow older native artifacts or claim mounted chunks before own controls
-pass. On success: all3 terminal source-bound jobs, own rawlog review, own finalized
-Windows reference artifactIDs/API digests/typed21+14/projectoracles/raw35, plus
-new named native test success on BOTH platforms. On failure preserve cohort and
+Do not run this failed cohort's success checker or borrow its artifacts for the
+repair. The repair requires all3 terminal source-bound jobs, rawlog review, own
+finalized Windows reference artifacts and both native controls. Preserve cohort and
 diagnose before fresh source. No own Linux/Windows raw review or combined hosted acceptance yet.
 Runtime257 remains frozen in/tmp/s3drive-native-manifest-v3-frozen.json.
 

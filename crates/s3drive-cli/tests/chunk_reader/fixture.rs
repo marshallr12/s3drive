@@ -296,6 +296,7 @@ struct Proxy {
     upstream: WireClient,
     mode: Arc<AtomicU8>,
     requests: Arc<Mutex<Vec<Request>>>,
+    next_node: Arc<Mutex<Option<Node>>>,
 }
 async fn proxy(
     axum::extract::State(p): axum::extract::State<Proxy>,
@@ -308,6 +309,11 @@ async fn proxy(
     );
     p.requests.lock().unwrap().push(request.clone());
     let mut r = p.upstream.request(&request).await.unwrap();
+    if matches!(request, Request::Node { .. })
+        && let Some(node) = p.next_node.lock().unwrap().take()
+    {
+        r = Reply::Node(node);
+    }
     match (&request, &mut r, p.mode.load(Ordering::SeqCst)) {
         (Request::Features {}, Reply::Features(f), 1) => f.retain(|f| f != "manifest-root-v1"),
         (Request::Info {}, Reply::Info(v), 2) => v.id = id(999),
@@ -371,6 +377,7 @@ pub struct Fixture {
     stops: Vec<oneshot::Sender<()>>,
     tasks: Vec<JoinHandle<()>>,
     operation: AtomicU64,
+    next_node: Arc<Mutex<Option<Node>>>,
 }
 pub struct Tree {
     pub root: String,
@@ -440,10 +447,12 @@ impl Fixture {
         });
         let mode = Arc::new(AtomicU8::new(0));
         let requests = Arc::new(Mutex::new(Vec::new()));
+        let next_node = Arc::new(Mutex::new(None));
         let p = Proxy {
             upstream: direct.clone(),
             mode: mode.clone(),
             requests: requests.clone(),
+            next_node: next_node.clone(),
         };
         let l = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}/v1/namespace", l.local_addr().unwrap());
@@ -486,6 +495,7 @@ impl Fixture {
             stops: vec![stop3, stop2, stop],
             tasks: vec![task2, task, server],
             operation: AtomicU64::new(40),
+            next_node,
         };
         f.change(
             200,
@@ -586,6 +596,11 @@ impl Fixture {
     }
     pub fn requests(&self) -> usize {
         self.requests.lock().unwrap().len()
+    }
+    pub fn reply_next_node(&self, node: Node) {
+        let mut next = self.next_node.lock().unwrap();
+        assert!(next.is_none());
+        *next = Some(node);
     }
     pub fn config(&self, path: &Path, extra: &[(u64, Source)]) -> s3drive_core::Config {
         let token =

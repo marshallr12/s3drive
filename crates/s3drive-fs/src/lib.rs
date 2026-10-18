@@ -36,6 +36,14 @@ pub struct Node {
     pub kind: Kind,
     source: Option<usize>,
     key: String,
+    manifest: Option<ManifestView>,
+}
+/// One immutable content version's inode attributes, authorized by lookup.
+/// This metadata does not grant permission to open or read provider objects.
+#[derive(Debug, Clone)]
+struct ManifestView {
+    reference: String,
+    metadata: ObjectMetadata,
 }
 
 #[derive(Debug)]
@@ -304,6 +312,7 @@ impl ReadOnlyFs {
             kind: Kind::Directory,
             source: None,
             key: String::new(),
+            manifest: None,
         });
         let mut nodes = Nodes {
             by_id: HashMap::from([(ROOT, root)]),
@@ -770,7 +779,11 @@ impl ReadOnlyFs {
                     if let Some(w) = &backend.writes {
                         w.remember(&n)?;
                     }
-                    nodes.insert_managed(&n, parent.id)
+                    if backend.chunks.is_some() {
+                        nodes.insert_managed_snapshot(&n, parent.id)
+                    } else {
+                        nodes.insert_managed(&n, parent.id)
+                    }
                 })
                 .collect();
         }
@@ -840,6 +853,11 @@ impl ReadOnlyFs {
 
     pub async fn metadata(&self, id: u64) -> Result<Option<ObjectMetadata>> {
         let node = self.node(id)?;
+        if let Some(view) = &node.manifest {
+            // The inode identifies this lookup version, not the latest content
+            // under the global file ID. Kernels can omit a handle in getattr.
+            return Ok(Some(view.metadata.clone()));
+        }
         if let Some(backend) = &self.managed {
             let live = backend.node(&node.key).await?;
             return Ok(if live.kind == s3drive_authority::Kind::Directory {
@@ -886,6 +904,7 @@ impl ReadOnlyFs {
             }
             if let Some(reader) = &backend.chunks {
                 let live = backend.node(&node.key).await?;
+                managed::check_snapshot(&node, &live)?;
                 if live
                     .payload
                     .as_ref()
@@ -894,6 +913,7 @@ impl ReadOnlyFs {
                     let file = Box::pin(reader.open_file(&node.key))
                         .await
                         .map_err(managed::error)?;
+                    managed::check_snapshot(&node, file.metadata())?;
                     let initial_metadata = managed::logical_metadata(file.metadata())?;
                     return Ok(OpenFile {
                         initial_metadata,
@@ -1014,6 +1034,7 @@ impl Nodes {
             kind,
             source: Some(source),
             key,
+            manifest: None,
         });
         self.by_id.insert(id, node.clone());
         self.by_key.insert(identity, id);

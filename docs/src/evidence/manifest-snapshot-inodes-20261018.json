@@ -1,0 +1,112 @@
+{
+  "date": "2026-10-18",
+  "status": "repair full portable local gate passed; native acceptance pending",
+  "branch": "codex/manifest-snapshot-inodes",
+  "base": "755da0f",
+  "failed_source": "d98ea2ff2ec9cc72b55458190d657bb53642d227",
+  "failed_run": 39176574738,
+  "failed_linux_job": 117820371839,
+  "native_failure": {
+    "old_file_expected_bytes": 136314880,
+    "old_file_observed_bytes": 4,
+    "log": "/tmp/s3drive-native-manifest-d98-linux-failed.log",
+    "sha256": "748b5e11b1beeeb350fd0dfa441cf077f47d9da6f51243e865935d928c9f09f9"
+  },
+  "negative_control": {
+    "exit_code": 101,
+    "reason": "old implementation reused inode3 for new immutable payload",
+    "log": "/tmp/s3drive-snapshot-inodes-negative.log",
+    "sha256": "0ed5458b765175e1c77996f374c9c4c61ab1192616f1f44402674feadce46b53"
+  },
+  "focused": {
+    "exit_code": 0,
+    "passed": 6,
+    "ignored_native": 1,
+    "seconds": 4.57,
+    "log": "/tmp/s3drive-snapshot-inodes-focused.log",
+    "sha256": "754d6a966f74d63eba468e1b98e20a63c61a9a3f2d797e64177c136124fd1a5d"
+  },
+  "gate": {
+    "exit_code": 0,
+    "session": 68406,
+    "log": "/tmp/s3drive-snapshot-inodes-gate.log",
+    "log_sha256": "4aecc516640f2c4920d9bc91c2bab40366d7be2c9fd51f4897353548f06cd12d",
+    "all_frozen_hashes_unchanged": true,
+    "frozen_count": 257,
+    "frozen_map_sha256": "3936a953ab232a4077863fe093fc866d0f3a605103c3756f110e0a6fa9ed5bc5",
+    "environment": {
+      "RUST_TEST_THREADS": "2"
+    },
+    "test_summaries": [
+      "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.56s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.91s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.37s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.27s",
+      "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.76s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 12.10s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s",
+      "test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 60.51s",
+      "test result: ok. 6 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 5.80s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.23s",
+      "test result: ok. 2 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 8.17s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.76s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.92s",
+      "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 26.60s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.09s",
+      "test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+      "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.33s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 21.53s",
+      "test result: ok. 365 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 221.30s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ],
+    "scope": "portable full local gate only; native repair acceptance pending"
+  },
+  "scope": [
+    "read-only manifest payload-specific inode",
+    "lookup attributes pinned per payload",
+    "fresh open authority checks before and after snapshot acquisition",
+    "same-name replacement and rename native old-handle checks retained"
+  ],
+  "not_claimed": [
+    "repair native acceptance",
+    "Wasabi provider mutation",
+    "physical reboot",
+    "chunk writes"
+  ],
+  "failed_cohort": {
+    "status": "completed",
+    "conclusion": "failure",
+    "windows_job": 117820371735,
+    "windows_conclusion": "success",
+    "windows_native_seconds": 2.39,
+    "windows_log_sha256": "fed1599b9eb7fc3a020cd44c2ee5404d8a48fb1dc4ee746c501045dc731f4e4e",
+    "linux_conclusion": "failure",
+    "book_conclusion": "success",
+    "acceptance": "failed cohort; no repair acceptance or success checker; Windows reference artifacts not used"
+  },
+  "local_archive": {
+    "path": "evidence/manifest-snapshot-inodes-local-20261018.tar.gz",
+    "sha256": "e243742e802539035a8efa36478ce339a6f1ce43646460592bade4feb887a2aa",
+    "bytes": 133937,
+    "members": 13,
+    "all_indexed_members_verified": true,
+    "acceptance": "portable gate only; repaired native acceptance pending"
+  }
+}
