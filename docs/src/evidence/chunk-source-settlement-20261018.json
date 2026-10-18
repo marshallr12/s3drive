@@ -94,7 +94,9 @@
     "text_extents_fit": true,
     "librsvg_rendered": true,
     "visually_reviewed": true,
-    "notice": "Rsvg.Handle.render_cairo deprecated; retained"
+    "notice": "Rsvg.Handle.render_cairo deprecated; retained",
+    "http_preview_200": true,
+    "sha256": "698a4c47df3abc59a0606480b43f93beeb7af1cb8a945f92acf46d5e1b7d658c"
   },
   "dependency_source_audit": {
     "rusqlite-0.40.2/src/transaction.rs": "ed5d3f13f057415607efaff56eb4e8a46f985a7f4c1c7b7899063604b6809cfd",
@@ -400,5 +402,62 @@
     "bytes": 90271,
     "members": 14,
     "all_indexed_members_verified": true
+  },
+  "runtime_commit": "41b759aeb09511f2e27956c8c6a0110bfe283dcb",
+  "publication": {
+    "source": "41b759aeb09511f2e27956c8c6a0110bfe283dcb",
+    "parent": "96b644110525d80e9d45d3e021bf745ee4f11a06",
+    "branch": "codex/chunk-source-settlement",
+    "clean_exact_remote_tip": true,
+    "all_252_frozen_hashes_match": true,
+    "full_local_gate_session": 93252,
+    "full_local_gate_exit_code": 0,
+    "local_archive_sha256": "a1193c2f2a2876cf0a78436fccd1a6a236c09426574a0bd241514f02094d7180",
+    "visibility_before": {
+      "nameWithOwner": "marshallr12/s3drive",
+      "visibility": "PUBLIC"
+    },
+    "visibility_after": {
+      "nameWithOwner": "marshallr12/s3drive",
+      "visibility": "PUBLIC"
+    },
+    "visibility_mutations": 0,
+    "main_unchanged": "1a93b5f7248892fec96dc8da4438ee7967692e77",
+    "docs": {
+      "links_files": 66,
+      "book_chapters": 62,
+      "html_build": true,
+      "http_chapter_svg_archive": true
+    },
+    "hosted_acceptance": false,
+    "next": "own source-bound hosted cohort; then controller integration"
+  },
+  "hosted_cohort": {
+    "source": "41b759aeb09511f2e27956c8c6a0110bfe283dcb",
+    "run_id": 39163298774,
+    "run_attempt": 1,
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39163298774",
+    "status": "in_progress",
+    "jobs": {
+      "rust (windows-latest)": 117780950165,
+      "book": 117780950315,
+      "rust (ubuntu-latest)": 117780950360
+    },
+    "watch_session": 28386,
+    "watch_log": "/tmp/s3drive-chunk-source-41b-watch.log",
+    "checker": "/tmp/s3drive-check-chunk-source-41b.py",
+    "checker_prepared_not_executed": true,
+    "fresh_output_directory": "/tmp/s3drive-chunk-source-41b-artifacts",
+    "fresh_output_absent": true,
+    "all_three_raw_logs_required_before_checker": true,
+    "rejected_preceding_artifact_ids": [
+      12147997314,
+      12147329360,
+      12147331157,
+      12147209844
+    ],
+    "scope": "not yet acceptance; exact own source/jobs/artifacts/raw review required",
+    "book_raw_reviewed": true,
+    "book_review_marker": "/tmp/s3drive-chunk-source-41b-book-reviewed.json"
   }
 }

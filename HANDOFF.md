@@ -82,8 +82,8 @@ Authority preflight/init/snapshot allowlists and reciprocal guards cover newtabl
 21 schema-rewind fixture files only drop newtables first; two Windows fixture
 expectations now28. No legacy serialized vectors/domains intentionally changed.
 Resolvedrusqlite0.40.2 transaction/commit/query/Optional APIs andTokio1.53.3join
-inspected. Full local gate now PASS. No current source publication/hosted
-acceptance. Existing32d artifacts cannot certify schema28.
+inspected. Full local gate now PASS; source41b759a pushed, own CI39163298774
+LIVE. Hosted acceptance pending. Existing32d artifacts cannot certify schema28.
 
 Focused4 session17100 CLOSED EXIT0,31pass (15existing+16new),54.76s; log
 /tmp/s3drive-chunk-source-focus4.log. Includes unknown/conflict refusal, first old
@@ -107,8 +107,8 @@ journal.rs9afe7a1363af8d2e796d679033ed4354af10a0ad4aef07f696dc8c2d1172e5e1;
 newtests eb09b12eb14688f147639d72ed28c6ed803a55fb492b206157f0582052677999.
 Do not edit runtime during full gate. New chapter/SVG distinguish source/root and
 newer pending head. SVG XML/text extents/render and visual review passed after
-shortening overflowing labels; librsvg render_cairo deprecation retained. Need
-final doc links/build/test/HTTP check and publication. Durable14member local
+shortening overflowing labels; librsvg render_cairo deprecation retained. Final
+doc links/build/test/HTTP chapter/SVG/archive checks PASS. Durable14member local
 archive chunk-source-settlement-local-20261018.tar.gz,90271bytes,SHA
 a1193c2f2a2876cf0a78436fccd1a6a236c09426574a0bd241514f02094d7180;
 all indexed members verified. Builder /tmp/s3drive-archive-chunk-source-local.py
@@ -122,9 +122,31 @@ established regression cause. Log /tmp/s3drive-chunk-source-gate.log,
 SHA487be3ec765e156c2c7b053d4fe85e02ec50dfa7b604256c370d8f39f5f013b3.
 Final reviewer verified both last test refinements/hash, no remaining scoped
 blocker and no reviewer execution. Do not repeat the local gate without a new
-change/failure. Next publish this frozen state slice and inspect its own new
-Linux/Windows/book cohort;32d artifacts cannot substitute. Controller integration
+change/failure. Inspect its own new Linux/Windows/book cohort;32d artifacts
+cannot substitute. Controller integration
 follows that accepted baseline, with realSDK/authenticatedloopback controls.
+
+Published source41b759aeb09511f2e27956c8c6a0110bfe283dcb on
+codex/chunk-source-settlement,39files; clean exactremote/all252frozenhashes/PUBLIC
+before-after and main1a93b5f unchanged. Proof /tmp/s3drive-chunk-source-publication.json.
+Own CI39163298774 attempt1 LIVE:Windows117780950165,book117780950315,
+Linux117780950360. Watch28386 LIVE /tmp/s3drive-chunk-source-41b-watch.log.
+Resume this SAME run/handle; observation timeout is not a reason to rerun.
+Checker /tmp/s3drive-check-chunk-source-41b.py and strict raw comparison
+/tmp/s3drive-chunk-source-41b-raw-compare.py PREPARED/COMPILED ONLY, not executed.
+Fresh output /tmp/s3drive-chunk-source-41b-artifacts and own3raw reviewmarker
+/tmp/s3drive-chunk-source-41b-raw-reviewed.json absent. Require all3terminalSUCCESS
+and own completed raw review before checker. It binds exact source/run/attempt/
+jobs, own finalized artifactIDs/API digests/times, all252sourcehashes and four
+unchanged oracles; strict21/14+project checks then all35raw fields/types. Reject
+previous32d IDs12147997314/12147329360 and oldercf9/etc. No successchecker on a
+failed cohort; archive failed logs separately instead. This handoff is a docs-only
+status child; runtime remains frozen. Full goal ACTIVE; repository PUBLIC.
+Book117780950315 now SUCCESS/raw reviewed:own41b/schema28,66docfiles/62chapters,
+Ubuntu24.04 image20261012.334.1; pinnedRust/defaultbranch/Node20forced24 notices.
+Marker /tmp/s3drive-chunk-source-41b-book-reviewed.json. Windows and Linux still
+LIVE. Hosted archive builder /tmp/s3drive-chunk-source-41b-archive.py prepared/
+compiled ONLY; execute after own3raw review + all3SUCCESS + checkerEXIT0 + raw35.
 
 ## Preceding checkpoint: TLS fixture accepted (2026-10-18)
 

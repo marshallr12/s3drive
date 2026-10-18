@@ -95,7 +95,11 @@ unchanged: 365 state tests / 1 ignored, all 16 new source controls, 59 S3 tests,
 the workspace eventually completed; these times are gate observations, not a
 benchmark. The [14-member indexed local archive](evidence/chunk-source-settlement-local-20261018.tar.gz)
 retains the complete gate, focused controls, review, frozen source map, exact
-implementation and runtime delta. Its own hosted cohort remains required. See
+implementation and runtime delta. Source `41b759a` is pushed on
+`codex/chunk-source-settlement`, with all 252 hashes and the clean exact remote
+tip verified. Public visibility was checked read-only before and after; main is
+unchanged. Its [own hosted cohort](https://github.com/marshallr12/s3drive/actions/runs/39163298774)
+is running. Earlier artifacts cannot substitute for this source's acceptance. See
 the [dated evidence](evidence/chunk-source-settlement-20261018.json).
 
 No payload eviction/reclamation, role release, implicit migration, detached or
