@@ -302,6 +302,9 @@ async fn tls_wire_diagnostics_distinguish_failure_stages_without_disclosing_inpu
             assert_eq!(reached, 5, "fault was not established: {context}");
             let error = result.expect(&context).expect_err(&context);
             assert_redacted(&error, &[SECRET, &url, &cert.cert, PRIVATE_BODY]);
+            if let WireError::Transport { connector_started, connector_completed, .. } = error {
+                assert!(connector_started && connector_completed, "received HTTP body without connector observations: {context}");
+            }
             match fault {
                 Fault::Status => assert_eq!(error, WireError::HttpStatus(503), "{context}"),
                 Fault::Oversize => assert_eq!(error, WireError::ResponseTooLarge, "{context}"),
@@ -399,6 +402,8 @@ async fn tls_requires_correct_trust_hostname_token_and_volume() {
                 phase: WirePhase::Connect,
                 timed_out: false,
                 body_frame_polled: false,
+                connector_started: true,
+                connector_completed: false,
                 ..
             }
         ),
@@ -457,6 +462,124 @@ async fn tls_requires_correct_trust_hostname_token_and_volume() {
         s.stop().await;
     }
     a.shutdown().await.unwrap();
+}
+
+/// Two concurrent requests through one cloned client must not share diagnostic
+/// state. One peer completes TLS/receives HTTP then loses the reply; the other
+/// accepts TCP but deliberately never completes TLS. Neither is replayed.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn tls_concurrent_connector_observations_stay_with_the_original_request() {
+    let cert = Certificate::new("127.0.0.1", false);
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("https://{}/v1/namespace", listener.local_addr().unwrap());
+    let client = cert.client(&url);
+    let clone = client.clone();
+    let acceptor = cert.acceptor();
+    let (stop, stopped) = oneshot::channel();
+    let mut peer = tokio::spawn(async move {
+        let exchange = async {
+            let (tcp, _) = listener.accept().await.unwrap();
+            let mut requests = tokio::task::JoinSet::new();
+            requests.spawn(async move {
+                let mut stream = acceptor.accept(tcp).await.unwrap();
+                let mut header = Vec::new();
+                while !header.ends_with(b"\r\n\r\n") {
+                    assert!(header.len() < 8192);
+                    header.push(stream.read_u8().await.unwrap());
+                }
+                let length = std::str::from_utf8(&header)
+                    .unwrap()
+                    .lines()
+                    .find_map(|line| {
+                        line.to_ascii_lowercase()
+                            .strip_prefix("content-length: ")
+                            .and_then(|n| n.parse::<usize>().ok())
+                    })
+                    .unwrap();
+                assert!(length < 4096);
+                let mut body = vec![0; length];
+                stream.read_exact(&mut body).await.unwrap();
+                assert!(matches!(
+                    serde_json::from_slice::<Request>(&body).unwrap(),
+                    Request::Info {}
+                ));
+                // Drop the exact connection after a fully received request.
+            });
+            let (stalled_tcp, _) = listener.accept().await.unwrap();
+            stopped.await.unwrap();
+            drop(stalled_tcp);
+            requests.join_next().await.unwrap().unwrap();
+            assert!(
+                tokio::time::timeout(Duration::from_millis(500), listener.accept())
+                    .await
+                    .is_err(),
+                "connector diagnostic replayed a request"
+            );
+        };
+        tokio::time::timeout(Duration::from_secs(8), exchange)
+            .await
+            .unwrap();
+    });
+    let results = tokio::time::timeout(Duration::from_secs(6), async {
+        tokio::join!(
+            client.request(&Request::Info {}),
+            clone.request(&Request::Info {})
+        )
+    })
+    .await;
+    let _ = stop.send(());
+    let finished = tokio::time::timeout(Duration::from_secs(3), &mut peer).await;
+    if finished.is_err() {
+        peer.abort();
+        let _ = peer.await;
+    }
+    assert!(
+        matches!(finished, Ok(Ok(()))),
+        "controlled peer did not finish"
+    );
+    let (first, second) = results.expect("bounded connector control");
+    let errors = [first.unwrap_err(), second.unwrap_err()];
+    assert_eq!(
+        errors
+            .iter()
+            .filter(|e| matches!(
+                e,
+                WireError::Transport {
+                    request: WireRequest::Info,
+                    phase: WirePhase::Connect,
+                    timed_out: true,
+                    body_frame_polled: false,
+                    connector_started: true,
+                    connector_completed: false,
+                    ..
+                }
+            ))
+            .count(),
+        1,
+        "{errors:?}"
+    );
+    assert_eq!(
+        errors
+            .iter()
+            .filter(|e| matches!(
+                e,
+                WireError::Transport {
+                    request: WireRequest::Info,
+                    phase: WirePhase::Request,
+                    timed_out: false,
+                    body_frame_polled: true,
+                    connector_started: true,
+                    connector_completed: true,
+                    ..
+                }
+            ))
+            .count(),
+        1,
+        "{errors:?}"
+    );
+    for error in errors {
+        assert_redacted(&error, &[SECRET, &url, &cert.cert]);
+    }
 }
 
 #[tokio::test]

@@ -873,6 +873,17 @@ receipts and lost caller after actual commit passed local controls. Require the
 [runtime execution contract](remote-authority.md#runtime-owned-request-execution-candidate-2026-10-18)
 and new exact-source hosted acceptance before attributing a cause or promoting.
 
+The runtime-owned candidate949073f subsequently passed Linux/book, Windows32
+flushes, full lifecycle, workspace, standalone/paired recovery and reference
+steps, but failed the broader write test opening an existing Unicode file:
+List/UnexpectedEof/native1117 with body_frame_polled=false. Main remains f8c4f58.
+The next bounded phase adds request-scoped connector call/success observations,
+validated against independent concurrent TLS peers and wrong-scope completion.
+Its criterion is correct attribution/privacy with unchanged recovery/no-replay
+contracts, followed by the full local gate and the same hosted native gates.
+It is not a substitute for correcting the transport failure. See
+[connector observations](remote-authority.md#connector-observations-candidate-2026-10-18).
+
 Require exclusive existing-authority ownership and explicit volume/policy pin;
 read supported legacy/current state without migrations or namespace changes.
 Produce a new private artifact outside mounted trees, with a database filename

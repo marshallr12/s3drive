@@ -1,0 +1,29 @@
+{
+  "recorded_at_utc": "2026-10-18T08:09:53.608264+00:00",
+  "source_commit": "949073f783c0e930f52e0d01010828312819d01f",
+  "status": "prepared only; not authorized or executed",
+  "command": "s3drive probe-writes plan s3drive.local.toml wasabi --output PRIVATE_PLAN_PATH",
+  "bucket": "s3drivetest",
+  "prefix": "s3drive-conformance/69329649f34f798791386c4d3c62ac1e/",
+  "plan_digest": "03febed0e9df68b61994d830830d73abdb972b096b0d74d8344ad0ec728ee177",
+  "plan_file_sha256": "649c8edbb7f51a27c953b19959ea23f00311af9409551b8f5bed5924068b1720",
+  "bounds": {
+    "exact_keys": 6,
+    "maximum_put_attempts": 14,
+    "maximum_object_bytes": 4096,
+    "planned_script_transfer_budget_bytes": 1048576
+  },
+  "provider_requests_made": 0,
+  "credentials_resolved": false,
+  "live_mutation_authorized": false,
+  "probe_run_executed": false,
+  "private_file_mode": "0600",
+  "binary_sha256": "17cf3b34cd381ff222f77a5375a8ef2b363d388ea2a9f694b642501f4821ec28",
+  "future_managed_acceptance": {
+    "status": "requires separate concrete runner/plan and explicit scope approval",
+    "reserved_probe_namespace_for_application_writes": "rejected by WritePolicy::permits_full_key",
+    "evidence_renewal": "inspect original report timestamp, source/credential binding and explicitly chosen max age; plan creation does not prove renewal is required",
+    "permission": "provider capability evidence does not authorize new application writes"
+  },
+  "policy_source_sha256": "7f0166f59b1bfbab4acc4451b9eb7b3a4d5e8a6538f0027371ead29189f6c6a6"
+}

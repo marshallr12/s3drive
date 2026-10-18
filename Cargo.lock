@@ -2413,6 +2413,8 @@ dependencies = [
  "tempfile",
  "tokio",
  "tokio-rustls 0.26.6",
+ "tower-layer",
+ "tower-service",
  "url",
  "zeroize",
 ]

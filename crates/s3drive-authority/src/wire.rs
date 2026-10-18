@@ -7,12 +7,13 @@ use std::{
     pin::Pin,
     sync::{
         Arc,
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicU8, Ordering},
     },
     task::{Context, Poll},
     time::Duration,
 };
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
+mod connector;
 
 /// Low-cardinality diagnostics only. Never retains a URL, token, request,
 /// response body, certificate, or the underlying dependency error.
@@ -30,6 +31,11 @@ pub enum WireError {
         /// The HTTP consumer polled a data frame. This does not prove a
         /// socket write, server receipt, authentication or database commit.
         body_frame_polled: bool,
+        /// A connector call was made under this request's task scope.
+        connector_started: bool,
+        /// Such a connector returned a connection successfully. This does not
+        /// identify the selected socket or establish request delivery/commit.
+        connector_completed: bool,
     },
     HttpStatus(u16),
     ResponseTooLarge,
@@ -78,7 +84,7 @@ impl WireError {
         error: reqwest::Error,
         phase: WirePhase,
         request: WireRequest,
-        body_frame_polled: bool,
+        progress: &Progress,
     ) -> Self {
         let phase = if error.is_connect() {
             WirePhase::Connect
@@ -102,6 +108,7 @@ impl WireError {
             }
             source = cause.source();
         }
+        let (connector_started, connector_completed) = progress.connector_observation();
         Self::Transport {
             request,
             phase,
@@ -109,7 +116,9 @@ impl WireError {
             io_kind,
             incomplete_message,
             connection_closed,
-            body_frame_polled,
+            body_frame_polled: progress.body_frame_polled.load(Ordering::Acquire),
+            connector_started,
+            connector_completed,
         }
     }
 }
@@ -124,6 +133,14 @@ struct ObservedBody {
 struct Progress {
     body_frame_polled: AtomicBool,
     response_headers: AtomicBool,
+    // Monotonic aggregate: 0=unobserved, 1=called, 2=at least one success.
+    connector: AtomicU8,
+}
+impl Progress {
+    fn connector_observation(&self) -> (bool, bool) {
+        let observed = self.connector.load(Ordering::Acquire);
+        (observed >= 1, observed == 2)
+    }
 }
 impl HttpBody for ObservedBody {
     type Data = Bytes;
@@ -230,6 +247,7 @@ impl WireClient {
             .tls_sslkeylogfile(false)
             .redirect(reqwest::redirect::Policy::none())
             .retry(reqwest::retry::never())
+            .connector_layer(connector::Observe)
             .connect_timeout(Duration::from_secs(2))
             .timeout(REQUEST_TIMEOUT);
         if let Some(roots) = roots {
@@ -265,25 +283,34 @@ impl WireClient {
         // A canceled/lost reply never makes a mutation safe to replay.
         let mut tasks = tokio::task::JoinSet::new();
         tasks.spawn_on(
-            async move { client.request_inner(&request, observed).await },
+            async move {
+                connector::CURRENT
+                    .scope(observed.clone(), client.request_inner(&request, observed))
+                    .await
+            },
             &runtime,
         );
         match tokio::time::timeout_at(deadline, tasks.join_next()).await {
             Ok(Some(Ok(result))) => result,
             Ok(Some(Err(_))) | Ok(None) => Err(WireError::Execution { request: kind }),
-            Err(_) => Err(WireError::Transport {
-                request: kind,
-                phase: if progress.response_headers.load(Ordering::Acquire) {
-                    WirePhase::ResponseBody
-                } else {
-                    WirePhase::Request
-                },
-                timed_out: true,
-                io_kind: None,
-                incomplete_message: false,
-                connection_closed: false,
-                body_frame_polled: progress.body_frame_polled.load(Ordering::Acquire),
-            }),
+            Err(_) => {
+                let (connector_started, connector_completed) = progress.connector_observation();
+                Err(WireError::Transport {
+                    request: kind,
+                    phase: if progress.response_headers.load(Ordering::Acquire) {
+                        WirePhase::ResponseBody
+                    } else {
+                        WirePhase::Request
+                    },
+                    timed_out: true,
+                    io_kind: None,
+                    incomplete_message: false,
+                    connection_closed: false,
+                    body_frame_polled: progress.body_frame_polled.load(Ordering::Acquire),
+                    connector_started,
+                    connector_completed,
+                })
+            }
         }
     }
     async fn request_inner(
@@ -301,20 +328,17 @@ impl WireClient {
             .bearer_auth(&self.token.0)
             .json(request)
             .build()
-            .map_err(|e| WireError::transport(e, WirePhase::Request, kind, false))?;
+            .map_err(|e| WireError::transport(e, WirePhase::Request, kind, &progress))?;
         let inner = built.body_mut().take().ok_or(WireError::InvalidRequest)?;
         *built.body_mut() = Some(reqwest::Body::wrap(ObservedBody {
             inner,
             progress: progress.clone(),
         }));
-        let mut response = self.http.execute(built).await.map_err(|e| {
-            WireError::transport(
-                e,
-                WirePhase::Request,
-                kind,
-                progress.body_frame_polled.load(Ordering::Acquire),
-            )
-        })?;
+        let mut response = self
+            .http
+            .execute(built)
+            .await
+            .map_err(|e| WireError::transport(e, WirePhase::Request, kind, &progress))?;
         progress.response_headers.store(true, Ordering::Release);
         if !response.status().is_success() {
             return Err(WireError::HttpStatus(response.status().as_u16()));
@@ -326,14 +350,11 @@ impl WireClient {
             return Err(WireError::ResponseTooLarge);
         }
         let mut bytes = Vec::new();
-        while let Some(chunk) = response.chunk().await.map_err(|e| {
-            WireError::transport(
-                e,
-                WirePhase::ResponseBody,
-                kind,
-                progress.body_frame_polled.load(Ordering::Acquire),
-            )
-        })? {
+        while let Some(chunk) = response
+            .chunk()
+            .await
+            .map_err(|e| WireError::transport(e, WirePhase::ResponseBody, kind, &progress))?
+        {
             if bytes.len() + chunk.len() > 8 * 1024 * 1024 {
                 return Err(WireError::ResponseTooLarge);
             }

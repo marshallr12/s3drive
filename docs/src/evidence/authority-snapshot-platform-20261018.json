@@ -83,7 +83,7 @@
       "hyper-util-0.1.21/src/client/legacy/client.rs": "bc854508f0bee926f93adf5c00b0ecd4387d3047d8f748b3571a2a72dcbbb8a1"
     }
   },
-  "next_diagnostic": "Observe actual request-body frame polling through a public HttpBody wrapper, with independent received-byte and failed-trust controls; false is not proof of no connection and true is not proof of a socket write or commit",
+  "next_diagnostic": "Per-request task-scoped connector call/success observations; distinguish completed connector from HTTP-body polling without claiming socket selection, delivery, or safe replay",
   "limitations": [
     "No attribution to scheduler, dependency bug, provider or snapshot implementation",
     "No direct correlation between server connection ordinal and failed client RPC",
@@ -409,5 +409,146 @@
       "Caller aborted after actual SQLite commit with reply withheld: original receipt remains queryable and sequence advances once, no second request",
       "Original privacy, framing, trust, request/body timeout and no-redirect/no-replay controls retained"
     ]
+  },
+  "runtime_owned_step_observations": {
+    "source_commit": "949073f783c0e930f52e0d01010828312819d01f",
+    "run": 39108821537,
+    "observed_at_utc": "2026-10-18T08:23:15.520788+00:00",
+    "overall_acceptance": false,
+    "linux_job": 117620351955,
+    "linux_conclusion": "success",
+    "book_job": 117620351830,
+    "book_conclusion": "success",
+    "linux_raw_verified": [
+      "queued cancellation/no TCP and real-client positive control",
+      "foreign-thread exact metadata operations/receipts",
+      "caller canceled after actual commit retains original receipt",
+      "native32 HTTPS flushes with exact binary bytes/PUT counts",
+      "all9 native cases",
+      "paired no-systemd recovery with exact unknown IDs/no repeated PUT and retained conflict",
+      "no-systemd pinned coordinator HTTP and HTTPS supervision"
+    ],
+    "raw_log_sha256": {
+      "linux": "e2566f776985815317a9da8abf28bca483fab5b1200ba82beeb755d1bbb3aee1",
+      "book": "2ba25100497f26dbc98d92e36569a0af7c7e8b9ce649fac119f01636e6eb8564",
+      "windows": "f8c438314e293e33bdf9b101ae0182c9ab0b8617b9fb0af5b8a786ab7a0884b3"
+    },
+    "windows_job": 117620351957,
+    "windows_status": "completed",
+    "windows_step_conclusions_observed": [
+      "early wire/execution controls success",
+      "standalone coordinator/snapshot success",
+      "unchanged native32-flush step success",
+      "complete disposition lifecycle success"
+    ],
+    "windows_raw_review": "Completed raw job reviewed; full native acceptance failed; strict artifact acceptance not run",
+    "remaining": "Diagnose/correct the native transport failure, then require a new exact-source all-success cohort and strict artifacts",
+    "root_cause_or_general_windows_fix_proven": false,
+    "main_unchanged": "f8c4f5832e399c6c54567c122c875e2a438ce681",
+    "run_conclusion": "failure",
+    "windows_conclusion": "failure",
+    "windows_failed_step": "Verify real Windows drive and teardown",
+    "windows_raw_verified": [
+      "early Hyper2/lifetime2/execution1/HTTP10/TLS8 controls",
+      "standalone ordinary-account HTTPS coordinator, independent logons and supervised recovery",
+      "offline snapshot ACL/link/case/read-handle checks and private-console cancellation",
+      "unchanged native32-flush: all32 exact generations and single PUT counts",
+      "complete native disposition lifecycle",
+      "workspace suite including269 state tests",
+      "paired managed drive/coordinator, independent logons, exact unknown recovery/no repeated PUT, retained conflict and controlled removal",
+      "paired offline snapshot/console checks",
+      "project reference oracles reported21 replacement and14 disposition observations; not independent artifact acceptance",
+      "broader native suite6 passed/1 failed"
+    ],
+    "windows_failure": {
+      "test": "actual_managed_existing_file_writes_and_recovery",
+      "at_utc": "2026-10-18T08:11:12Z",
+      "source_location": "crates/s3drive-cli/tests/support/managed.rs:1758 opening existing nonempty Unicode file after successful empty-file flush",
+      "native_error": 1117,
+      "request": "List",
+      "phase": "Request",
+      "timed_out": false,
+      "io_kind": "UnexpectedEof",
+      "body_frame_polled": false,
+      "nearby_server_event": {
+        "category": "HttpTimeout",
+        "connection": 19,
+        "http_ms": 5057,
+        "read_bytes": 0,
+        "written_bytes": 0,
+        "flushes": 1,
+        "dispatched": false
+      },
+      "exact_rpc_socket_correlation": false,
+      "fresh_cli_control_in_this_case": false
+    },
+    "console_cancel_to_exit_ms_single_observations": {
+      "standalone": 5,
+      "paired": 5
+    },
+    "transport_event_review": [
+      "32-flush HttpShutdown connection115 had positive read/write/flush/dispatched plus all32 exact caller-byte/PUT proofs; precise shutdown category, not an unexpected RPC failure",
+      "broader immutable-read List/Connect timeout follows deliberate service stop at managed.rs1549; retained opened snapshot and restart checks passed",
+      "no other broad-suite transport error found beyond failed List and the deliberate stop; the older e51 passing-mutation List/EOF remains separately unclassified"
+    ]
+  },
+  "connector_observation_candidate": {
+    "recorded_at_utc": "2026-10-18T08:23:15.521368+00:00",
+    "based_on_source": "949073f783c0e930f52e0d01010828312819d01f",
+    "status": "full local gate2 passed; hosted acceptance pending",
+    "behavior": "Public reqwest connector_layer with generic pass-through Tower service; captures task-local Arc at Service::call; monotonic atomic 0/1/2 snapshot for unobserved/called/one-or-more successful connector handoffs",
+    "diagnostics": [
+      "connector_started",
+      "connector_completed"
+    ],
+    "interpretation": "A successful connector future is not selected-socket, HTTP transmission, server receipt, authentication or commit proof; false never establishes unsent",
+    "scheduling_limit": "Adding a connector layer selects reqwest boxed/layered connector path; do not claim scheduling equivalence or causality if subsequent failures change",
+    "unchanged": [
+      "request identities/body/headers",
+      "connect2/reqwest10/outer10 deadlines",
+      "no proxy/redirect/transport retry",
+      "trust and recovery semantics",
+      "native fixtures and CI workflow"
+    ],
+    "controls": [
+      "call-time scope retained when completion polled under another scope; failed/unscoped calls do not pollute another request",
+      "two concurrent requests through cloned shared client: fully received HTTP then lost reply vs accepted TCP with stalled TLS, exactly two sockets and no retry in observation window",
+      "failed trust started=true completed=false; existing independently received HTTP fault controls started=true completed=true; private data redacted"
+    ],
+    "local_logs": {
+      "focused": "/tmp/s3drive-connector-observation-focused1.log",
+      "gate1": "/tmp/s3drive-connector-observation-gate1.log (clippy rejected async returning a future in test; corrected to inspected sync_scope API)",
+      "gate2": "/tmp/s3drive-connector-observation-gate2.log"
+    },
+    "resolved_api_sources": {
+      "reqwest-0.13.5/src/async_impl/client.rs": "5b7e2556d122a75cd8d3ef62a33d45e430c8eff229a33bc3f53fc7e9af2d97de",
+      "reqwest-0.13.5/src/connect.rs": "74827c0f4dce00fa6c35dfc6d4f79a93944e55c82b243140f03a0db8458505ff",
+      "tower-layer-0.3.3/src/lib.rs": "4124a66bc533f64d67b44e98d1782104aa85b85a64638ab42f94319a0ff00812",
+      "tower-service-0.3.3/src/lib.rs": "6d278dd3dba5d17e5be2e3a0af6f181be93eede2510129a7877f8eb86bba1092",
+      "tokio-1.53.3/src/task/task_local.rs": "72be75ead1802bc3f51d9703f807babe2534fea0944416a6472bc5a00c6eab03"
+    },
+    "gate2": {
+      "exit_code": 0,
+      "log_sha256": "c12a611900a7cfe6deb74c64428e78bf7beb1b271cc4447b8ed25cb23df697ae",
+      "scope": "fmt/clippy/workspace tests/build/57-doc links/mdBook build/test; not native mounts or live provider acceptance",
+      "counts": {
+        "authority_unit": 3,
+        "lifetime": 2,
+        "execution": 1,
+        "http": 10,
+        "tls": 9,
+        "state": 274
+      },
+      "rust_and_cargo_unchanged_during_gate": true
+    },
+    "source_sha256": {
+      "crates/s3drive-authority/src/wire.rs": "2de6f1a71480f9b3b0a9baacfa421691cea61234e8b85b84522a5f271609c9ab",
+      "crates/s3drive-authority/src/wire/connector.rs": "e87b751ea03b1cd77eaec43f24445fb8c00f3bb254367dd26979c37bb8b0d948",
+      "crates/s3drive-authority/tests/remote.rs": "2e285a34c2abc4e1266f5f296be1665f602a40d26946d911fed3d1009398732d",
+      "Cargo.toml": "209858646e7022781a4bd4c4fc1c73bee4154af4cc355dcda5766093269a8c67",
+      "Cargo.lock": "85a582c41797f59a6cd5891a5c490ddf6d8c5abbf4ab3ba28141bdda2a3ab716",
+      "crates/s3drive-authority/Cargo.toml": "314cca0827308a2391ca492c48b53c0fe960a4708f1bcc74e0c937156b4d56a6"
+    },
+    "ci_workflow_unchanged_from_parent": true
   }
 }

@@ -6,34 +6,59 @@ implementation. Research, decisions and acceptance records belong in docs/src/.
 
 ## Current source and first action
 
-- Private topic: codex/authority-snapshots at
-  a14ffa37b8e3c18a353c19c724bfe438b365ec6a. Normal FF push from e51 verified,
-  including exact remote SHA/privacy and unchanged local/remote main f8.
-- Main: f8c4f5832e399c6c54567c122c875e2a438ce681. Snapshot/finite-connection/
-  body-poll candidates are NOT accepted on main. No force push.
-- CI39106656359 is TERMINAL FAILURE: Linux117613851099, Windows117613851164,
-  book117613850947 SUCCESS; Linux SUCCESS9 native including32flush, Windows FAILED
-  early burst after six raw controls and standalone snapshot/console passed.
-  Fourth flush (step3) Apply/Request/UnexpectedEof, body_frame_polled=false,
-  native1117 at managed.rs1709. Nearby empty TLS socket32 timeout5105ms not
-  directly bound to RPC. Fresh CLI OriginalVolume152ms with both processes live.
-  Later Windows gates skipped. Raw /tmp/s3drive-body-burst-a14-{linux,windows,book}.log.
-  Next: prototype worker-owned metadata RPC dispatch; preserve10s whole bound,
-  abort scoped jobs on caller cancellation, exact original requests, no replay.
-  First run:
-  `gh run view 39106656359`. Watch session72681 and
-  /tmp/s3drive-body-burst-a14-watch.log are now terminal/obsolete. Do not wait
-  as if a14 were still live. Never rerun a terminal old source
-  merely to get a different result.
-- Only post-push handoff/archive maintenance is uncommitted. Preserve it and
-  bundle with a later substantive source change; no docs-only native CI cycle.
+- Topic codex/authority-snapshots has a new connector-observation checkpoint
+  based on949073f783c0e930f52e0d01010828312819d01f. Final normal FF push/new CI
+  follow local gate2; check exact HEAD/remote/private state before use.
+- Main remains f8c4f5832e399c6c54567c122c875e2a438ce681. No new candidate accepted.
+- CI39108821537 at949 is TERMINAL FAILURE: Linux117620351955 and book117620351830
+  SUCCESS; Windows117620351957 failed broad native existing-file writes. Raw logs
+  /tmp/s3drive-rpc-dispatch-949-{linux,windows,book}.log reviewed. Windows controls,
+  unchanged32flush, complete lifecycle, workspace269state, standalone/paired
+  recovery/snapshot/console and project21/14 reference steps passed. Broad6passed/
+  1failed: managed.rs1758 existing nonempty Unicode file open, List/Request/
+  UnexpectedEof/native1117/body_frame_polled=false. Nearby empty TLS socket19
+  HttpTimeout5057ms/read0/write0/flush1/dispatched=false is NOT exactly correlated.
+  Deliberate authority-stop List/Connect timeout in the immutable-read case is
+  expected by that fixture; no other broad transport warning found. Do not treat
+  the older e51 passing-mutation List/EOF as classified. No main promotion.
+- New diagnostic source adds request-scoped connector call/success
+  flags through public reqwest connector_layer. Layer captures task-local Arc at
+  call; one monotonic atomic snapshot; no destinations/headers/bodies/errors.
+  Public layering changes connector boxing/scheduling; no causal fix claim.
+  Direct tower-layer/service0.3.3 dependencies already resolved, no version churn.
+  Local focused controls passed; gate1 caught Clippy async-yields-async in test,
+  corrected with inspected sync_scope. Full gate2 EXIT0, log
+  /tmp/s3drive-connector-observation-gate2.log:274state, authority3unit including
+  connector1, lifetime2/execution1/HTTP10/TLS9, other workspace suites/build/57docs.
+  Rust/Cargo fingerprint check unchanged. First action after publication: inspect
+  exact new CI using gh run list/view; no restart of the failed949 source.
+- A14 CI39106656359 is TERMINAL FAILURE: Linux/book success, nine Linux native
+  including32flush passed; Windows six raw controls + standalone snapshot/console
+  passed, then fourth flush failed Apply/UnexpectedEof/native1117 with
+  body_frame_polled=false. Nearby empty TLS socket32 timed out5105ms, not directly
+  correlated. Fresh CLI OriginalVolume152ms after failure, both processes alive.
+  Later Windows steps skipped. Raw /tmp/s3drive-body-burst-a14-{linux,windows,book}.log.
+  Watch72681 is closed/obsolete. No artifact acceptance or main promotion.
+- The new source runs all authority wire/execution controls early on Windows,
+  then the unchanged native32-flush case and every prior gate. At the connector
+  candidate expect nine TLS controls, connector unit1, execution1, Hyper2/lifetime2/HTTP10; Linux9 native, Windows burst1+
+  lifecycle1+broad7. Validate actual counts in raw logs, not a step label alone.
+- Prepared NOT RUN /tmp/s3drive-check-949-cohort.py and
+  /tmp/s3drive-949-reference-check.ps1 require terminal all-three SUCCESS, then
+  exact-source ZIP digests, strict21/14 and project oracles in
+  /tmp/s3drive-rpc-dispatch-949-artifacts. Do not use a14/e51/f8 artifacts.
+  Raw logs are /tmp/s3drive-rpc-dispatch-949-{linux,windows,book}.log; failed cohort
+  checker MUST NOT run. Prepare a new source-bound checker for the next cohort.
+- The connector checkpoint bundles prior post-push949 observations and the
+  offline Wasabi option; no provider requests or new mutation approval. Archive
+  and runtime code/tests/docs/evidence were committed/pushed in949.
 - Other clean worktrees: /home/marshall/src/s3drive-windows-transport at f8 on
   codex/windows-transport-followup; /home/marshall/src/s3drive-snapshot-acceptance
-  detached at failed33ddfe1, for inspection only. All share
-  /home/marshall/src/s3drive/target. Rebuild/verify intended source before using
-  its CLI; another checkout's build replaces that executable.
+  detached at failed33ddfe1 for inspection only. All share
+  /home/marshall/src/s3drive/target; rebuild/verify the intended source before
+  using that executable, because another checkout's build replaces it.
 
-## New runtime-owned RPC candidate (locally green; not yet pushed)
+## Runtime-owned RPC candidate (locally green; pushed949, hosted FAILED)
 
 WireClient now clones the exact request once and runs the RPC in a caller-scoped
 JoinSet job on the current runtime, with10-second absolute cooperative queue+
@@ -52,10 +77,10 @@ steps are byte-identical to a14. Structural comparison passed.
 Focused /tmp/s3drive-rpc-dispatch-focused2.log exit0 (Hyper2/lifetime2/execution1/
 HTTP10/TLS8). Full /tmp/s3drive-rpc-dispatch-gate1.log exit0:274 state, those
 controls, snapshot CLI2, restart8, SDK17, managed8, lint/build/57-doc. Rust stayed
-frozen. Next: final docs checks, commit and guarded normal private push from
-a14; then inspect NEW CI source. Keep main at f8 pending full exact-source proof.
-Uncommitted work includes wire.rs, execution.rs/remote.rs, workflow control
-broadening, dated evidence/docs and handoff archive. Preserve all of it.
+frozen. Final docs and source/archive-hash checks passed, then949 was pushed
+privately without force. Next: inspect CI39108821537 at exact949, including
+Windows controls and unchanged early burst. This run now failed later broad writes;
+see current state above. Keep main at f8 pending new full proof.
 
 ## What a14 changes and what is verified
 
@@ -98,7 +123,7 @@ before the early native burst. Check those controls before interpreting a
 Windows marker. The burst runs once before replacement/lifecycle/workspace;
 the later broad step excludes only this and the lifecycle already run explicitly.
 Every previous gate remains. Expected native counts are Linux9, Windows early
-burst1 + lifecycle1 + broad7. Actual a14 native results are NOT yet verified.
+burst1 + lifecycle1 + broad7. Actual a14 Windows burst failed as recorded above.
 
 Local verification (Rust frozen during each gate):
 - Body phase: /tmp/s3drive-body-poll-focused1.log and
@@ -241,6 +266,25 @@ Plan digest98914e5210466c6c1e074ea36184ea580d20c93749363e18650e5ddf14906de6;
 evidence docs/src/evidence/wasabi-conditional-put-2026-10-16.json. Do not reuse that
 approval for probes/multipart/managed writes. New mutations need a prepared exact
 scope and explicit approval. No root/user credentials/hosting/Turso/startup changes.
+
+## Prepared provider option (NOT authorized or executed)
+
+An offline fresh six-key conditional probe plan was generated from the real
+wasabi source at949, without credentials resolution or provider requests:
+/tmp/s3drive-wasabi-next-20261018-wz8t4v1w/probe-plan.toml (mode0600).
+Location pointer /tmp/s3drive-next-wasabi-plan-location.txt. Prefix
+s3drivetest/s3drive-conformance/69329649f34f798791386c4d3c62ac1e/;
+canonical confirmation03febed0e9df68b61994d830830d73abdb972b096b0d74d8344ad0ec728ee177,
+file SHA649c8edbb7f51a27c953b19959ea23f00311af9409551b8f5bed5924068b1720.
+At most14 PUT attempts, six keys,4KiB/object,<1MiB transfer. No approval requested
+or granted for this new scope. DO NOT RUN without explicit fresh approval.
+It is an optional prepared renewal, not proof renewal is necessary: first inspect
+original report age/binding and intended explicit policy max age. Do not extend
+an existing expired policy to bypass it. Application writes cannot use reserved
+s3drive-conformance/ keys; permits_full_key rejects them independently of report.
+Managed Wasabi acceptance needs its own separate approved application prefix,
+concrete runner/plan and bounded effects. Old probe approval grants none of that.
+Sanitized preparation record docs/src/evidence/wasabi-next-plan-20261018.json.
 
 ## Full-goal work still required
 

@@ -160,3 +160,22 @@ rename, live fault recovery, strict generation fencing or provider-wide
 linearizability. The probe deliberately forgetting a receipt is not a real
 network fault. Native Windows against Wasabi and application uploads still
 need their own acceptance. Existing mounts remain read-only.
+
+## Prepared next-provider option (2026-10-18; not executed)
+
+A fresh six-key plan was generated with the existing offline CLI. Preparation
+made zero provider requests and resolved no credentials. Its source and bounds
+are in the [sanitized preparation record](evidence/wasabi-next-plan-20261018.json);
+the private plan's local path is in HANDOFF. It permits no action without new
+explicit approval. The previous fourteen-attempt approval remains consumed.
+
+This is a prepared renewal option, not a finding that renewal is necessary.
+Before selecting evidence for a write policy, inspect its original observation
+time, source/credential binding and explicitly chosen maximum age. Preparing a
+new plan neither validates current bucket state nor executes a capability check.
+
+Managed-filesystem acceptance needs a separate concrete runner and approved
+application prefix. The implemented `WritePolicy::permits_full_key` rejects
+application keys in the reserved `s3drive-conformance/` namespace. Provider
+capability evidence and permission to mutate application objects are separate;
+successful probe cleanup does not authorize a new managed-volume upload.

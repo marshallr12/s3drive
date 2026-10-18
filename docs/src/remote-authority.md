@@ -188,6 +188,46 @@ execution/uncertainty checks, not a native Windows failure reproducer. Windows
 now runs all authority wire/execution controls before the unchanged32-flush
 native gate, followed by every prior acceptance gate.
 
+## Connector observations (candidate, 2026-10-18)
+
+The runtime-owned candidate949073f failed
+[CI39108821537](https://github.com/marshallr12/s3drive/actions/runs/39108821537).
+Linux/book succeeded. Windows passed the unchanged32-flush gate, full lifecycle,
+workspace, standalone/paired recovery and project reference checks, then failed
+opening an existing Unicode file in the broader write case: List/Request/
+UnexpectedEof, native1117, body_frame_polled=false. A nearby empty TLS socket
+expired after5057ms, but it is not correlated to that exact RPC. Both console
+checks exited5ms after cancellation (single observations, no timing guarantee).
+Main stays at f8c4f58; runtime ownership did not eliminate the failure. See the
+[dated raw-log record](evidence/authority-snapshot-platform-20261018.json).
+
+The next diagnostic uses reqwest's public
+[connector_layer](https://docs.rs/reqwest/0.13.5/reqwest/struct.ClientBuilder.html#method.connector_layer)
+API, inspected in the resolved local source on2026-10-18. It reports whether a
+connector was called under this RPC's task scope and whether such a future
+successfully returned a connection. The layer captures that scope at call time,
+so later completion cannot attach to a different concurrently polled request.
+A single monotonic atomic snapshot distinguishes unobserved, started and at
+least one success. Unscoped work is not attributed to any request.
+
+Neither flag identifies the selected socket, proves HTTP bytes were sent or
+resolves an unknown mutation. A false flag cannot authorize replay. Error output
+contains only these fixed booleans and existing categories; destinations, tokens,
+bodies, certificates and dependency error strings are never recorded. Trust,
+framing, operation identities and existing deadlines/retry policy stay the same.
+The public layer does select reqwest's boxed connector path, so scheduling
+transparency is not claimed. This is diagnostic work, not an established fix.
+
+Controlled concurrent TLS exchanges use one cloned client: one peer receives
+HTTP then drops its reply; the other accepts TCP but stalls TLS. They must
+produce different connector-completion/body-poll flags, with exactly two sockets
+and no extra attempt in the bounded observation window. Existing trust, received
+bytes, timeout, redaction and no-replay assertions remain. New native acceptance
+and strict source-bound artifacts are still required before promotion. The full
+local gate passed, including274 state tests, nine TLS cases, three authority
+unit cases (two Hyper controls and one scope control), lint/build and57-document
+checks. No native mount or live-provider acceptance follows from that gate.
+
 ## Bounded failure diagnostics (2026-10-17)
 
 The [same-source Windows failure investigation](authority-startup.md#same-source-repeat-failure-2026-10-17)

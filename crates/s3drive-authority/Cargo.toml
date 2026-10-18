@@ -19,6 +19,8 @@ tokio-rustls.workspace = true
 hyper.workspace = true
 hyper-util.workspace = true
 zeroize.workspace = true
+tower-layer.workspace = true
+tower-service.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
