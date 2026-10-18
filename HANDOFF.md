@@ -60,7 +60,58 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Current phase: offline object identities/root descriptors (2026-10-18)
+## Current implementation: durable offline chunk plans (2026-10-18)
+
+Branch codex/chunk-plan-journal from fa0a91d; implemented work is ready for publication after final docs checks.
+Schema25 adds local chunk_plans/chunk_objects, frozen input before data hashing,
+exact staging-operation attachment, durable cursor/hash/page preparation and an
+offline Ready root. New worker handle uses the existing private owner. No upload
+permit, live root capability, file-content conversion or mounted-limit increase.
+Initial full local snapshot preparation; remote unchanged-object reuse still
+needs authenticated base-root ancestry/retention. Original guards, parent/route
+and edit/object IDs stay bound. Keep dirty and unknown results. Ordinals are8byte
+BLOBs; checked i64 conversions handle SQLite numbers (fallible_uint is disabled).
+Resolved rusqlite0.40.2 signatures/features inspected; no dependency changes.
+
+Phase contract/done criteria in docs/src/implementation-plan.md. New chapter
+chunk-plans.md and SVG diagram explain workflow and limits. Independent Python
+fixtures reproduce all3 pages plus input hash for a sparse >128MiB file.
+Focused final18PASS/293filtered EXIT0:
+/tmp/s3drive-chunk-plan-focused-final.log. Covers child edits/retained old roots,
+missing dependencies, actual SQLITE_FULL, process death after a committed step,
+malformed cells, ignored/deleted SQL effects, authority roles and migration.
+Ready is expected metadata, never current-media freshness or a flush receipt.
+
+Gate1 session22553 closed EXIT101:308state PASS/2FAIL/1ignored. Exact failures:
+old22 authority fixture left new tables present; old23 migration test expected24.
+Fixed both simulated22 setups to drop new client tables and the migration target
+assertion to exact crate::SCHEMA_VERSION. All3 targeted identity/migration checks
+pass; original byte/hash/refusal assertions remain. No source edits during gate1.
+Old55 hashes preserved /tmp/s3drive-chunk-plan-frozen-gate1.json.
+Gate2 session42132 closed EXIT0 on unchanged frozen56 source/fixture hashes:
+/tmp/s3drive-chunk-plan-frozen-gate2.json, /tmp/s3drive-chunk-plan-gate2.log.
+310state PASS/1ignored,34core,50authority,51S3,format/Clippy/build,60doclinks and
+56book chapters passed; no warnings/errors. Do not restart completed gate handles.
+Both corrected migration/identity fixtures pass within the full suite. Evidence docs/src/evidence/chunk-plans-20261018.json.
+
+Initial tests caught a real post-UPDATE object deletion hole. Final written-row
+and expected-count checks now force rollback. Parser/API/test-fixture errors
+were corrected (reserved gen, disabled u64 SQL traits, append_at, deliberate FK
+corruption and an external crash marker). Clippy2 passed before final tests;
+full gate validates final Clippy. Failed evidence remains recorded separately.
+Diagram XML/raster reviewed. No provider requests, installs or visibility changes.
+
+Source audit: journal::read_data verifies whole stored chunks per intersecting
+extent. A logical1MiB slice does NOT cap total physical I/O/checksum work on a
+fragmented snapshot. Metadata and final graph validation also scan admitted
+records. Limits are documented; no constant-latency or native large-file claim.
+After gate2, publish ordinary feature branch with PUBLIC read-only checks and
+own source-bound CI; never borrow parent52's now-closed native/artifact cohort.
+Next integration still needs bounded physical publication/unknown recovery,
+authority root capability/CAS, verified range readers, native adapters, remote
+reference reuse and separately authorized provider acceptance.
+
+## Preceding object identity checkpoint (2026-10-18)
 
 Branch codex/manifest-object-identity from ec43132. Pure core module implemented:
 role-separated v2 object keys and120byte root descriptor, independent vectors,
@@ -83,17 +134,25 @@ Evidence docs/src/evidence/manifest-objects-20261018.json. Own future CI must be
 tied to new source, not e48. Next phase needs durable SQLite frozen edit IDs and
 object dependencies before publication; never cast unsigned ordinals to signed
 SQL integers. New code supplies no adoption, write or root-publication permit.
-Own CI39138395876 attempt1, source52cd213: book117707557507 SUCCESS with
-own completed review; Linux117707557713 SUCCESS, completed raw review still
-pending; Windows117707557677 LIVE. Watch65541
-redirects /tmp/s3drive-manifest-objects-52-watch.log; poll same run/handle, never
-restart on observation timeout. Prepared checker
-/tmp/s3drive-check-manifest-objects-52.py compiled only, NOT executed. Require all3
-terminal successes and own completed raw reviews in
-/tmp/s3drive-manifest-objects-52-raw-reviewed.json before success checker.
-New directory /tmp/s3drive-manifest-objects-52-artifacts; select own Windows
-upload IDs, validate source/run/API hashes and typed21/14/project oracles. Old
-e48 and257 artifact IDs refused. Do not borrow old source acceptance.
+Own CI39138395876 attempt1, source52cd213 is terminal SUCCESS at all3 jobs:
+book117707557507, Linux117707557713, Windows117707557677. Watch65541 closed EXIT0.
+Own completed raw reviews closed; marker
+/tmp/s3drive-manifest-objects-52-raw-reviewed.json. Fresh replacement12141120690
+and disposition12141530185 selected from own Windows uploads; source/run/API
+ZIP hashes, strict21/14 typed fields and both project oracles passed. Checker
+/tmp/s3drive-check-manifest-objects-52.py closed EXIT0 session95911, log
+/tmp/s3drive-manifest-objects-52-artifact-check.log. Directory
+/tmp/s3drive-manifest-objects-52-artifacts is final; do not rerun one-use checker
+or borrow its artifacts for schema25. Linux34core/17manifest,292state/9FUSE,
+32HTTPSflushes/11Unicode and both no-systemd coordinator protocols passed.
+Windows34core/17manifest,287state/1ignored,32HTTPSflushes,lifecycle,paired/snapshots,
+7broad native,11Unicode/cross-logon startup passed on Server2025/WinFsp2.1.25156.
+Reviewed expected TLS faults, HEAD403, rival conflict and stopped-authority List
+timeout; LNK4199 on9 CLI targets, Node deprecations/forced24, three disposable
+locked profiles after dummy credentials removed and long ultimately-passing
+state test. Both cache saves normal. No schema25 builder, native large files,
+physical MX reboot, Win10/11 or Wasabi acceptance; no historical cause fixed,
+no identical52 repeat, no main promotion. Prior failures retained.
 
 ## Preceding codec checkpoint: source e48 (2026-10-18)
 

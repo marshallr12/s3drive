@@ -445,7 +445,7 @@ fn schema_seventeen_evidence_hashes_are_preserved_without_opting_into_controller
     );
     f.client
         .connection
-        .execute_batch("DROP TABLE multipart_parts; DROP TABLE multipart_plans; DROP TABLE recovered_windows_opens; DROP TABLE windows_session_recoveries; DROP TABLE windows_mount_sessions; DROP TABLE retired_windows_opens")
+        .execute_batch("DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans; DROP TABLE recovered_windows_opens; DROP TABLE windows_session_recoveries; DROP TABLE windows_mount_sessions; DROP TABLE retired_windows_opens")
         .unwrap();
     f.client
         .connection

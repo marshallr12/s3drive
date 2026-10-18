@@ -319,7 +319,7 @@ fn owned_replacement_schema21_upgrade_keeps_legacy_request_bytes_and_hashes() {
     let bytes = hash(&before).unwrap();
     f.client
         .connection
-        .execute_batch("DROP TABLE multipart_parts; DROP TABLE multipart_plans")
+        .execute_batch("DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans")
         .unwrap();
     f.client
         .connection

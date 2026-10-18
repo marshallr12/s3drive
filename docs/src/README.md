@@ -59,9 +59,13 @@ separately from the earlier runtime repeat. Existing mounted formats and limits
 remain. See the [codec evidence](evidence/managed-manifest-20261018.json).
 The follow-on offline object namespace and compact root descriptor also pass the
 local gate. They separate data/page addresses and preserve file/store/generation
-identity; [their evidence](evidence/manifest-objects-20261018.json) is separate
-from the earlier codec's native run. Durable object dependencies and live root
-publication remain unfinished.
+identity. Their own hosted Linux/Windows/book run and fresh typed reference
+artifacts also passed; [their evidence](evidence/manifest-objects-20261018.json)
+is separate from the earlier codec run. The new [offline SQLite chunk plans](chunk-plans.md)
+prepare restartable chunk/page dependencies from a sealed local snapshot.
+Their own local gate passed (310 state tests; 18 new chunk-plan tests), with
+[separate evidence](evidence/chunk-plans-20261018.json). Live publication, remote
+reference reuse and native large files remain unfinished.
 
 [Offline immutable multipart plans](multipart-plan.md#offline-immutable-plans-candidate-implementation-2026-10-18)
 freeze original bindings and hash verified staged bytes in bounded owner commands.

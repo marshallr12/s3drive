@@ -1287,3 +1287,50 @@ physical staged generations, object records and manifest edges independently.
 a lost response; therefore persist/reuse the original operation key and inspect
 its result before retrying. These are inspected existing contracts, not newly
 implemented graph recovery or permission to send.
+
+
+### Durable offline chunk plans (phase contract, 2026-10-18)
+
+Branch codex/chunk-plan-journal from fa0a91d. Add schema25 local-only tables for
+frozen edit inputs and immutable prepared objects. Freeze caller-retained edit
+and object-generation IDs, original content guard, source/route, parent snapshot,
+file identities and final size before hashing. Attach only the exact sealed
+staging operation for that input. Resume deterministic 1 MiB chunk hashing and
+at most128-child page construction after restart, using cursor compare/replay.
+Explicit zero extents become holes; no missing-object fallback. Ready describes
+an offline expected tree, never a remote receipt, authority root or write permit.
+
+Initial preparation materializes a complete new generation from the local
+snapshot. Cross-generation remote-object reuse remains explicitly unavailable
+until authenticated base-root ancestry/retention is implemented; this is not
+completion of the chosen incremental chunked filesystem. Keep all mounted
+limits and live content formats unchanged. Use source-bound compatibility gates.
+
+Done criteria: >8 MiB multilevel independent reads/edits/sparse and empty trees;
+fixed page/root validation; exact identity/parent/route/guard refusal; cursor
+replay and process death; missing/corrupt staged bytes and prepared rows refused;
+metadata/payload quotas before work; SQL trigger/SQLITE_FULL rollback; schema24
+migration preserves existing hashes/unknown operations; both new tables refused
+by authority initialization/snapshots. Inspect resolved rusqlite0.40.2 APIs;
+update strict native schema fixtures and old-schema test setup without weakening
+assertions. Run focused state tests, the repository gate and own-source CI.
+
+
+Offline chunk-plan result: 18 focused tests pass; all four independent vectors
+reproduce; final full gate2 passes on 56 unchanged source/fixture hashes (310
+state/one ignored, 34 core, 50 authority, 51 S3, format/lint/build and 56 book
+chapters). Gate1 failed two stale downgrade/current-version fixtures; those were
+corrected without weakening identity, hash or refusal assertions and all three
+targeted migration/identity controls pass. The [chapter](chunk-plans.md) and
+[dated evidence](evidence/chunk-plans-20261018.json) record scope and limits.
+Logical 1 MiB slices do not cap physical staging I/O or checksum work under
+fragmentation; metadata scans also need measurement/optimization before native
+large-file admission. This phase provides no remote receipt or authority root
+capability, and remote unchanged-reference reuse remains unfinished.
+
+The recorded [Wasabi conditional-PUT evidence](evidence/wasabi-conditional-put-2026-10-16.json)
+supports investigating bounded create-only chunk/page publication without a
+multipart prerequisite. Its 4 KiB/empty disposable fixtures do not certify 1 MiB
+chunk writes, a complete managed tree, current application policy or recovery.
+No provider requests were made for the chunk-plan phase. New live acceptance
+still requires a concrete bounded plan and new authorization.

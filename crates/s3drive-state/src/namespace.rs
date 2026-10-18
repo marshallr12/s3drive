@@ -669,7 +669,9 @@ impl State {
                         (SELECT count(*) FROM managed_rejections) +
                         (SELECT count(*) FROM logical_conflicts) +
                         (SELECT count(*) FROM multipart_plans) +
-                        (SELECT count(*) FROM multipart_parts)",
+                        (SELECT count(*) FROM multipart_parts) +
+                        (SELECT count(*) FROM chunk_plans) +
+                        (SELECT count(*) FROM chunk_objects)",
                 [],
                 |r| r.get(0),
             ))?;

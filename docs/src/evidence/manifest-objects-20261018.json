@@ -1,6 +1,6 @@
 {
   "research_date": "2026-10-18",
-  "status": "offline identities locally accepted and pushed; own hosted run in progress",
+  "status": "offline identities locally and own-source hosted accepted within recorded scope",
   "branch": "codex/manifest-object-identity",
   "parent_commit": "ec4313229dee121902d9012cd53c03c301efb540",
   "module": "s3drive-core::manifest::objects",
@@ -90,8 +90,8 @@
     "run_id": 39138395876,
     "run_attempt": 1,
     "url": "https://github.com/marshallr12/s3drive/actions/runs/39138395876",
-    "status": "in_progress",
-    "conclusion": null,
+    "status": "completed",
+    "conclusion": "success",
     "watch_session": 65541,
     "watch_log": "/tmp/s3drive-manifest-objects-52-watch.log",
     "jobs": [
@@ -105,8 +105,8 @@
       {
         "id": 117707557677,
         "name": "rust (windows-latest)",
-        "status": "in_progress",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "success",
         "html_url": "https://github.com/marshallr12/s3drive/actions/runs/39138395876/job/117707557677"
       },
       {
@@ -136,14 +136,122 @@
       ],
       "native_or_provider_acceptance": false
     },
-    "all_raw_reviews_closed": false,
-    "success_checker_eligible": false,
-    "success_checker_executed": false,
-    "checker_compiled_only": true,
+    "all_raw_reviews_closed": true,
+    "success_checker_eligible": true,
+    "success_checker_executed": true,
+    "checker_compiled_only": false,
     "success_checker_script": "/tmp/s3drive-check-manifest-objects-52.py",
     "new_output": "/tmp/s3drive-manifest-objects-52-artifacts",
-    "own_native_cohort_accepted": false,
+    "own_native_cohort_accepted": true,
     "large_file_or_provider_acceptance": false,
-    "linux_completed_raw_review_pending": true
+    "linux_completed_raw_review_pending": false,
+    "watch_exit_code": 0,
+    "success_checker_exit_code": 0,
+    "success_checker_session": 95911,
+    "historical_transport_cause_fixed": false,
+    "unchanged_source_repeat_passed": false,
+    "linux_completed_raw_review": {
+      "source": "52cd2139e148d2e5055493f8e1c50880c6a57e98",
+      "run_id": 39138395876,
+      "run_attempt": 1,
+      "job_id": 117707557713,
+      "status": "completed",
+      "conclusion": "success",
+      "reviewed": true,
+      "log": "/tmp/s3drive-manifest-objects-52-linux.log",
+      "sha256": "bab52ed784e0cc6a349346761bbc87dc4a9ef3b7bf3bcdd7e5b939abb0028906",
+      "review_view": "/tmp/s3drive-manifest-objects-52-linux-review.txt",
+      "scope": "34core/17manifest,50authority,292state/1ignored,51S3,9realFUSE,32HTTPSflushes,11Unicode names,paired and no-systemd coordinator HTTP/HTTPS",
+      "notices": [
+        "Node cache/action deprecations and forced24",
+        "cache save completed normally"
+      ],
+      "expected_faults": [
+        "TLS HandshakeRejected/partial-header HttpTimeout29bytes/Lifetime",
+        "HEAD403 refusal",
+        "Node ConnectionRefused after deliberate authority stop; post-uninstall startup.json absent"
+      ],
+      "new_schema25_chunk_builder_or_native_large_files_or_provider_acceptance": false,
+      "historical_transport_cause_fixed": false
+    },
+    "windows_completed_raw_review": {
+      "source": "52cd2139e148d2e5055493f8e1c50880c6a57e98",
+      "run_id": 39138395876,
+      "run_attempt": 1,
+      "job_id": 117707557677,
+      "status": "completed",
+      "conclusion": "success",
+      "reviewed": true,
+      "log": "/tmp/s3drive-manifest-objects-52-windows.log",
+      "sha256": "749ee064c1190b74b1dec321a0bdfb96d15cf75bc153115d6d39cfaccca328bd",
+      "review_view": "/tmp/s3drive-manifest-objects-52-windows-review.txt",
+      "scope": "34core/17manifest,50authority,287state/1ignored,51S3,32HTTPSflushes,lifecycle,paired recovery/snapshots,7broad native,11Unicode names,cross-logon startup,Server2025/WinFsp2.1.25156",
+      "notices": [
+        "Node cache/action deprecations and forced24",
+        "cache save completed normally",
+        "LNK4199 on9 CLI test targets without WinFsp imports",
+        "three locked disposable fixture profiles, dummy credentials removed; deletion deferred to VM destruction",
+        "one state test over60seconds ultimately passes"
+      ],
+      "expected_faults": [
+        "TLS HandshakeRejected/partial-header HttpTimeout29bytes/Lifetime",
+        "HEAD403 refusal",
+        "dirty rival conflict; List Connect TimedOut after deliberate authority stop"
+      ],
+      "new_schema25_chunk_builder_or_native_large_files_or_provider_acceptance": false,
+      "historical_transport_cause_fixed": false,
+      "own_artifact_ids": {
+        "replacement": 12141120690,
+        "disposition": 12141530185
+      }
+    },
+    "artifact_validation": {
+      "log": "/tmp/s3drive-manifest-objects-52-artifact-check.log",
+      "sha256": "9dd8d6426e9bf182add54ba77436db66625b2d189ca419bc8b640c53814330b2",
+      "directory": "/tmp/s3drive-manifest-objects-52-artifacts",
+      "downloads": [
+        {
+          "kind": "disposition",
+          "id": 12141530185,
+          "source": "52cd2139e148d2e5055493f8e1c50880c6a57e98",
+          "run_id": 39138395876,
+          "run_attempt": 1,
+          "windows_job": 117707557677,
+          "zip_sha256": "eae25f750947fe8b090af08cc1e8f4f7fff03f50dc2ac3dbcf0951a0c3d346ee",
+          "json_sha256": "d47d443cad409d2a990b2e80df6b0bd131baf18e3565124a544e7b35772df0c7",
+          "primary_artifact_reused": false
+        },
+        {
+          "kind": "replacement",
+          "id": 12141120690,
+          "source": "52cd2139e148d2e5055493f8e1c50880c6a57e98",
+          "run_id": 39138395876,
+          "run_attempt": 1,
+          "windows_job": 117707557677,
+          "zip_sha256": "45d7c48b8e0b48453d299ac3f6a22232ed951cfe09d4da77d78e6ee1bc8c3a5a",
+          "json_sha256": "29517bda9cf4954b9b69a52ad937c2e8780b5b4cc97f67f4817ac6badf8ae75e",
+          "primary_artifact_reused": false
+        }
+      ],
+      "strict_types_fields_source": [
+        {
+          "kind": "replacement",
+          "records": 21,
+          "source": "52cd2139e148d2e5055493f8e1c50880c6a57e98",
+          "sha256": "29517bda9cf4954b9b69a52ad937c2e8780b5b4cc97f67f4817ac6badf8ae75e",
+          "strict_types_and_all_fields_match": true
+        },
+        {
+          "kind": "disposition",
+          "records": 14,
+          "source": "52cd2139e148d2e5055493f8e1c50880c6a57e98",
+          "sha256": "d47d443cad409d2a990b2e80df6b0bd131baf18e3565124a544e7b35772df0c7",
+          "strict_types_and_all_fields_match": true
+        }
+      ],
+      "both_project_oracles_passed": true,
+      "earlier_artifacts_reused": false
+    },
+    "acceptance_scope": "One own-source52 Linux/WindowsServer2025/book cohort and fresh typed21/14/project artifacts; not schema25 chunk-plan builder, native large files, Win10/11, physical reboot, Wasabi or historical transport root cause"
   }
 }

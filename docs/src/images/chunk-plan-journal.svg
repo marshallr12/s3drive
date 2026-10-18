@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="530" viewBox="0 0 1024 530" role="img" aria-labelledby="title desc">
+<title id="title">Durable offline chunk preparation in private SQLite</title>
+<desc id="desc">A frozen edit identity attaches to its exact sealed local snapshot. Restartable chunk steps hash one MiB; page steps assemble at most 128 references. SQLite retains the cursor, object records and a compact Ready root. S3 publication, dependency receipts and authority CAS remain a separate future phase.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#3765a0"/></marker></defs>
+<rect width="1024" height="530" fill="#f7f9fc"/>
+<g font-family="DejaVu Sans,sans-serif" fill="#183047">
+<text x="30" y="36" font-size="24" font-weight="bold">Offline chunk preparation</text>
+<text x="30" y="61" font-size="15">Local state only · restartable SQLite commits · no network calls</text>
+<g fill="#e4eefb" stroke="#3765a0" stroke-width="2">
+<rect x="30" y="90" width="300" height="105" rx="10"/>
+<rect x="400" y="90" width="300" height="105" rx="10"/>
+<rect x="30" y="265" width="300" height="115" rx="10"/>
+<rect x="400" y="265" width="300" height="115" rx="10"/>
+<rect x="770" y="265" width="225" height="115" rx="10"/>
+</g>
+<g font-size="17" font-weight="bold">
+<text x="47" y="119">Frozen input in SQLite</text><text x="417" y="119">Sealed local snapshot</text>
+<text x="47" y="295">Chunk preparation</text><text x="417" y="295">Manifest preparation</text><text x="787" y="295">Ready root</text>
+</g>
+<g font-size="15">
+<text x="47" y="147">Edit ID, object UUID, original guard</text><text x="47" y="172">File, store, route, size and parent</text>
+<text x="417" y="147">Reuse existing staging storage</text><text x="417" y="172">Attach the exact operation result</text>
+<text x="47" y="322">Hash ≤1 MiB of logical bytes</text><text x="47" y="347">Record hash, holes and cursor</text><text x="47" y="369">Resume the same ID after restart</text>
+<text x="417" y="322">At most 128 child references</text><text x="417" y="347">Store canonical page bytes</text><text x="417" y="369">Commit pages and cursor together</text>
+<text x="787" y="322">120 byte descriptor</text><text x="787" y="347">Expected tree only</text><text x="787" y="369">Not a flush receipt</text>
+</g>
+<g stroke="#3765a0" stroke-width="2" fill="none" marker-end="url(#arrow)">
+<path d="M330 142H400"/><path d="M550 195V225H180V265"/><path d="M330 320H400"/><path d="M700 320H770"/>
+<path d="M883 380V430" stroke-dasharray="6 5"/>
+</g>
+<rect x="300" y="430" width="695" height="77" rx="9" fill="#eef0f4" stroke="#7b8794" stroke-dasharray="6 5"/>
+<text x="319" y="459" font-size="17" font-weight="bold">Future publication: S3 client + dependency receipts + authority CAS</text>
+<text x="319" y="485" font-size="15">Requires its own journal, recovery, platform and provider acceptance.</text>
+</g>
+</svg>

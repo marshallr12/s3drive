@@ -49,6 +49,7 @@
 - [Native file creation](native-creation.md)
 - [Multipart uploads: research and plan](multipart-plan.md)
 - [Large managed files: storage representation](large-managed-files.md)
+- [Durable offline chunk plans](chunk-plans.md)
 - [Linux and Windows integration](platform-integration.md)
 - [Security and operations](security-and-operations.md)
 - [Phased implementation plan](implementation-plan.md)

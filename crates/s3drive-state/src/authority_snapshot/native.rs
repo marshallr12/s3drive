@@ -181,6 +181,8 @@ fn identity(
         "recovered_windows_opens",
         "multipart_plans",
         "multipart_parts",
+        "chunk_plans",
+        "chunk_objects",
     ];
     if tables.len() > 64 {
         return Err(Error::Validation);
