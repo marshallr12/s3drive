@@ -185,6 +185,17 @@ function Run-Child($Value) {
         @{ supervisor_pid=$PID; child_pid=$child.Id; owner_sid=$sid; logon=$logon } |
             ConvertTo-Json | Set-Content -LiteralPath (Join-Path $root 'runtime.json') -Encoding UTF8
         Log-Line "$Component process started"
+        # Read-only scheduling observations. Diagnostics must never turn a
+        # successful child launch into a failed/retried launch.
+        try {
+            $supervisor = [Diagnostics.Process]::GetCurrentProcess()
+            try { $supervisorPriority = $supervisor.PriorityClass.ToString() }
+            finally { $supervisor.Dispose() }
+            $childPriority = $child.PriorityClass.ToString()
+            Log-Line "$Component scheduling: supervisor=$supervisorPriority child=$childPriority"
+        } catch {
+            try { Log-Line "$Component scheduling observation unavailable" } catch {}
+        }
         while (-not $child.HasExited) {
             if ($null -ne $line -and $line.IsCompleted) {
                 $text = $line.GetAwaiter().GetResult()

@@ -772,3 +772,13 @@ checks. Exact-source hosted native/reference/startup gates remain required. Do n
 checkpoint fixes the production issue; use measured failure phases to choose
 the next correction. Snapshot prototype remains unpublished in the root
 worktree, outside this clean investigation.
+
+
+The first diagnostic candidate9b403bb failed Windows workspace only at a new
+blanket zero-log-error assertion after every client reply/receipt check passed.
+A2ms dispatched read321/write481/five-flush generic event is not the older
+request/header-timeout failure. The follow-up adds the explicit Hyper shutdown
+category and permits only that phase after independent complete replies, with
+positive exchange counters. A deterministic Hyper-driver fault test covers the
+boundary; no deadlines, retries, native assertions or TLS policy change. Require
+new exact-source Windows evidence before attributing the old event or promoting.

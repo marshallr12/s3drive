@@ -1,15 +1,41 @@
 # S3Drive handoff
 
-Updated2026-10-17. Goal ACTIVE. Current priority: Windows TLS transport RCA.
-Private local/remote main is a7994e6203ccb082c1b441d19806cfb6ed6d3929.
-Primary CI39090568625 passed all-three jobs plus native/startup and strict21/14
-source-bound artifacts before promotion. Same-source main repeat CI39092631904
-then FAILED: Linux117572408555/book117572408389 succeeded; Windows117572408577
-failed the paired test during initial seed, before mounting. Store-apply returned
-Request/UnexpectedEof; live authority logged HttpTimeout. No evidence yet ties
-that event to a specific request or proves whether a mutation committed. Preserve
-unknown IDs/plans; no automatic mutation retry or deadline/TLS weakening.
-Raw /tmp/s3drive-main-repeat-windows.log. A passing rerun cannot explain this.
+Updated2026-10-18. Goal ACTIVE. Current priority: Windows TLS diagnostic follow-up.
+Private main remains a7994e6. Candidate9b403bb CI39095464132 is terminal FAILED:
+Linux117580869237/book117580869021 SUCCESS; Windows117580869114 passed early
+TLS focus, replacement reference and native lifecycle, then workspace failed the
+new churn test's blanket zero-server-error assertion. ALL client RPC/receipt/
+sequence checks had passed; one HttpTransport connection214 had read321/written481
+bytes, five flushes, dispatched=true,2ms. Original seed Request/UnexpectedEof +
+HttpTimeout at a799 repeat remains unexplained; do not conflate these failures.
+Raw /tmp/s3drive-transport-windows1.log. All later Windows startup/pair/broad
+steps were skipped. No promotion and no unchanged rerun.
+
+Follow-up in clean /home/marshall/src/s3drive-windows-transport adds Hyper's
+explicit is_shutdown category (resolved1.12 source inspected). The test permits
+ONLY that phase with positive read/write/flush counts and dispatch AFTER every
+client independently validated complete replies/receipts. Generic transport,
+truncation and timeout still fail. A deterministic real Hyper duplex driver
+injects shutdown failure AFTER a complete Content-Length reply to verify this
+boundary. No retry/deadline/TLS policy changes. Do not attribute the prior
+untyped event to shutdown without the next classified Windows result.
+
+Root /home/marshall/src/s3drive retains unpublished snapshot library/CLI work.
+Two CLI tests and nine filtered state cases passed. Full root gate PASSED exit0
+at /tmp/s3drive-snapshot-gate1.log:274 state, two new CLI, ten HTTP, six TLS,
+17 SDK, seven managed cases and lint/build/57-doc checks. No Windows/snapshot
+platform acceptance yet. Diagnostic focused two I/O/Hyper shutdown cases PASSED
+/tmp/s3drive-transport-shutdown-tests1.log. Final diagnostic full gate PASSED exit0 at
+/tmp/s3drive-transport-shutdown-gate1.log:265 state, two I/O/Hyper cases, ten HTTP,
+six TLS, seven restart/worker,17 SDK, seven managed and lint/build/57-doc checks.
+Later PS-only read-only priority logging has AST/policy verification separately;
+no priority setting, deadline, retry or TLS behavior changed. The book records
+Microsoft's default-priority/inheritance contracts only as an unmeasured hypothesis.
+Root snapshot prototype is local unpushed defc8b9; do not reset or publish it before
+its own platform acceptance. Next privately push this locally green diagnostic
+checkpoint and inspect exact-source Windows classification/native/startup results. Require local full gate, exact-source hosted native/startup logs and
+strict21/14 artifacts before any guarded main fast-forward. Repo remains PRIVATE.
+No provider/user startup/root/hosting changes authorized.
 
 RCA worktree /home/marshall/src/s3drive-windows-transport is based exactly on
 main, branch codex/windows-transport-followup. Root codex/authority-snapshots

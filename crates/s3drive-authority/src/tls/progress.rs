@@ -108,6 +108,81 @@ mod tests {
     use super::*;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
+    struct ShutdownFails<T>(T);
+    impl<T: AsyncRead + Unpin> AsyncRead for ShutdownFails<T> {
+        fn poll_read(
+            self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+            buf: &mut ReadBuf<'_>,
+        ) -> Poll<io::Result<()>> {
+            Pin::new(&mut self.get_mut().0).poll_read(cx, buf)
+        }
+    }
+    impl<T: AsyncWrite + Unpin> AsyncWrite for ShutdownFails<T> {
+        fn poll_write(
+            self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+            buf: &[u8],
+        ) -> Poll<io::Result<usize>> {
+            Pin::new(&mut self.get_mut().0).poll_write(cx, buf)
+        }
+        fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+            Pin::new(&mut self.get_mut().0).poll_flush(cx)
+        }
+        fn poll_shutdown(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+            Poll::Ready(Err(io::Error::new(
+                io::ErrorKind::NotConnected,
+                "private shutdown failure",
+            )))
+        }
+    }
+
+    #[tokio::test]
+    async fn hyper_identifies_shutdown_failure_after_a_complete_independently_read_reply() {
+        use hyper_util::rt::TokioIo;
+        let (inner, mut peer) = tokio::io::duplex(4096);
+        let (io, progress) = ObservedIo::new(ShutdownFails(inner), 1);
+        let observed = progress.clone();
+        let service = hyper::service::service_fn(move |_| {
+            observed.dispatched.store(true, Ordering::Relaxed);
+            async {
+                Ok::<_, std::convert::Infallible>(hyper::Response::new(axum::body::Body::from(
+                    "complete reply",
+                )))
+            }
+        });
+        let mut http = hyper::server::conn::http1::Builder::new();
+        http.timer(hyper_util::rt::TokioTimer::new())
+            .keep_alive(false);
+        let server = async { http.serve_connection(TokioIo::new(io), service).await };
+        let caller = async {
+            peer.write_all(b"GET / HTTP/1.1\r\nHost: fixture\r\nConnection: close\r\n\r\n")
+                .await
+                .unwrap();
+            let mut response = Vec::new();
+            peer.read_to_end(&mut response).await.unwrap();
+            let response = std::str::from_utf8(&response).unwrap();
+            assert!(response.starts_with("HTTP/1.1 200 OK\r\n"));
+            assert!(response.contains("content-length: 14\r\n"));
+            assert!(response.ends_with("\r\n\r\ncomplete reply"));
+        };
+        let (result, ()) = tokio::time::timeout(std::time::Duration::from_secs(3), async {
+            tokio::join!(server, caller)
+        })
+        .await
+        .unwrap();
+        let error = result.expect_err("injected shutdown must fail");
+        assert!(
+            error.is_shutdown(),
+            "Hyper must preserve the precise shutdown phase"
+        );
+        assert!(!error.is_timeout() && !error.is_incomplete_message());
+        assert!(progress.read.load(Ordering::Relaxed) > 0);
+        assert!(progress.written.load(Ordering::Relaxed) > 0);
+        assert!(progress.flushed.load(Ordering::Relaxed) > 0);
+        assert!(progress.dispatched.load(Ordering::Relaxed));
+    }
+
     #[tokio::test]
     async fn preserves_partial_io_flush_shutdown_and_counts_only_new_bytes() {
         let (inner, mut peer) = tokio::io::duplex(2);

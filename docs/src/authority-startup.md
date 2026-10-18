@@ -120,6 +120,45 @@ The transport error seen in the accepted read-only native suite occurs after
 its deliberate coordinator stop; it proves new opens fail while an existing
 verified handle remains readable, not an unexplained healthy-service failure.
 
+## Diagnostic candidate9b403bb result (2026-10-18)
+
+[CI39095464132](https://github.com/marshallr12/s3drive/actions/runs/39095464132)
+passed Linux/book and Windows early TLS focus, replacement reference and native
+lifecycle. Windows workspace then failed the new churn test's blanket
+zero-server-error assertion. Every client RPC, complete reply, exact receipt
+and sequence check had passed. One server event recorded HttpTransport after2ms,
+with321 bytes read,481 written, five flushes and dispatch=true. This is a different
+failure from the earlier missing reply/header timeout. Later Windows startup
+and pairing steps were skipped; neither failure is claimed fixed.
+
+The next candidate distinguishes Hyper's explicit shutdown error from generic
+HTTP transport. The [resolved Hyper error API](https://docs.rs/hyper/1.12.0/hyper/struct.Error.html#method.is_shutdown)
+identifies failures during AsyncWrite shutdown; its dispatch source wraps that
+phase only after the HTTP connection becomes done. Source inspected2026-10-18.
+The churn test may permit only that typed phase, with positive read/write/flush
+counts and dispatch, after all callers independently validated complete replies.
+All generic transport, truncation and timeout events still fail. A deterministic
+real Hyper driver injects a shutdown failure after an independently read complete
+Content-Length reply to test this boundary. No timeout, retry or TLS changes.
+Whether the old untyped event was shutdown remains unproven until classified
+Windows evidence is available; byte counts alone are insufficient.
+
+## Scheduling observation hypothesis (2026-10-18)
+
+The launcher does not explicitly set Task Scheduler priority. Microsoft's
+[TaskSettings.Priority contract](https://learn.microsoft.com/en-us/windows/win32/taskschd/tasksettings-priority)
+documents default7 as below-normal; child creation may inherit a below-normal
+parent according to [Windows scheduling priorities](https://learn.microsoft.com/en-us/windows/win32/procthread/scheduling-priorities).
+Sources read2026-10-18. These defaults are a reason to measure scheduling, not
+evidence that starvation caused the original timeout. No actual Windows
+process priority or CPU-starvation correlation has yet been recorded.
+
+The next diagnostic launcher logs only the current supervisor/child priority
+classes after launch. Getter errors produce a fixed unavailable marker without
+changing child ownership or retry behavior. It does not set priorities, alter
+Task Scheduler policy or change network deadlines. Use the next hosted record
+with connection counters before deciding whether a scheduling test is warranted.
+
 ## Required restart behavior
 
 Initial `authority-serve` bootstrap may initialize an empty authority and prints

@@ -37,6 +37,7 @@ enum ConnectionFailure {
     HandshakeTimeout,
     HttpTimeout,
     IncompleteHttp,
+    HttpShutdown,
     HttpTransport,
     Lifetime,
 }
@@ -83,7 +84,9 @@ impl Diagnostics {
     fn http(&self, result: Result<(), hyper::Error>, progress: &Progress) {
         if let Err(error) = result {
             self.record_progress(
-                if error.is_timeout() {
+                if error.is_shutdown() {
+                    ConnectionFailure::HttpShutdown
+                } else if error.is_timeout() {
                     ConnectionFailure::HttpTimeout
                 } else if error.is_incomplete_message() {
                     ConnectionFailure::IncompleteHttp
