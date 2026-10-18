@@ -473,7 +473,46 @@
     "svg_http_matches_source": true
   },
   "hosted": {
-    "status": "not yet launched; publication follows local gate",
-    "own_native_cohort_accepted": false
+    "source": "63164d012bc150fd0f5258afd5466e9efb41bd2e",
+    "run_id": 39153910031,
+    "run_attempt": 1,
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39153910031",
+    "status": "in_progress",
+    "jobs": [
+      {
+        "id": 117753033763,
+        "name": "rust (windows-latest)",
+        "status": "in_progress"
+      },
+      {
+        "id": 117753033479,
+        "name": "book",
+        "status": "in_progress"
+      },
+      {
+        "id": 117753033780,
+        "name": "rust (ubuntu-latest)",
+        "status": "in_progress"
+      }
+    ],
+    "watch_session": 20504,
+    "watch_log": "/tmp/s3drive-chunk-publication-631-watch.log",
+    "checker_script": "/tmp/s3drive-check-chunk-publication-631.py",
+    "checker_compiled_only": true,
+    "checker_executed": false,
+    "all_raw_reviews_closed": false,
+    "new_artifact_output": "/tmp/s3drive-chunk-publication-631-artifacts",
+    "own_native_cohort_accepted": false,
+    "chunked_native_large_file_or_provider_acceptance": false
+  },
+  "publication": {
+    "source": "63164d012bc150fd0f5258afd5466e9efb41bd2e",
+    "branch": "codex/chunk-root-publication",
+    "exact_remote": true,
+    "clean": true,
+    "all247_frozen_hashes_match": true,
+    "public_before_after": true,
+    "visibility_mutations": 0,
+    "main_unchanged": "1a93b5f7248892fec96dc8da4438ee7967692e77"
   }
 }

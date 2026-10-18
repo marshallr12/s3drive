@@ -62,7 +62,8 @@ P0 table now reflects D040 public policy instead of stale privacy requirement.
 
 ## Active work: isolated chunk-root journal (2026-10-18)
 
-Branch codex/chunk-root-publication fromceef8e1. Implemented schema27 isolated
+Branch codex/chunk-root-publication fromceef8e1. Published runtime
+63164d012bc150fd0f5258afd5466e9efb41bd2e. Implemented schema27 isolated
 client journal with exact full reserve/publish requests, complete historical
 receipts, retained Conflict, permanent role/count, reciprocal legacy lifecycle
 exclusion, cross-column operation ownership and bounded restart enumeration.
@@ -95,8 +96,18 @@ Unicode, content races, missing recursive receipts, post-write trigger damage,
 actual SQLITE_FULL and schema26 collision rollback. Historical prepared recovery
 works after current payload corruption while source remains pending.
 
-Own source-bound hosted regression is pending publication; do not borrow the
-preceding3e5 cohort. Network controller is the next independent slice: read the
+Publication clean/exact remote/all247hashes/PUBLIC before-after, main1a93b5f
+unchanged; proof /tmp/s3drive-chunk-publication-publication.json. Own CI39153910031
+attempt1 at63164d0 LIVE: Windows117753033763,book117753033479,Linux117753033780.
+Watch20504 LIVE /tmp/s3drive-chunk-publication-631-watch.log. Track same run/handle;
+do not rerun on observation timeout. Prepared checker
+/tmp/s3drive-check-chunk-publication-631.py compiled only, NOT executed. Require
+all3 terminal success and own completed raw review marker
+/tmp/s3drive-chunk-publication-631-raw-reviewed.json. Output must be fresh
+/tmp/s3drive-chunk-publication-631-artifacts; bind exact source/run/attempt/job IDs,
+finalized artifact IDs/API digest/time, strict typed21/14 and project oracles,
+then all35 raw fields/types. Reject prior IDs including3e512145416969/12145194101.
+No success checker on failure; do not borrow the preceding3e5 cohort. Network controller is the next independent slice: read the
 following proposal in implementation-plan.md. Acquire authenticated metadata
 directly (legacy Reader rejects manifest bases), bind both fingerprints, repeat
 exact saved Apply, and recover prepared Publish without fresh upload work/grant
