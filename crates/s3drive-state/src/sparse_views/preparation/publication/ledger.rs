@@ -38,9 +38,15 @@ impl Meta {
             return Err(Failure::Corrupt.into());
         }
         let mut operations = BTreeSet::new();
+        let mut acknowledgments = BTreeSet::new();
         for (plan, r) in &self.records {
             r.validate()?;
             lineage::validate(self, r)?;
+            if let Some(a) = &r.acknowledgment
+                && !acknowledgments.insert(a.operation())
+            {
+                return Err(Failure::Corrupt.into());
+            }
             if *plan != r.input.plan
                 || !operations.insert(&r.input.reserve.operation)
                 || !operations.insert(&r.input.publish_operation)
@@ -258,6 +264,9 @@ pub(super) fn kind(before: &Meta, after: &Meta) -> &'static str {
     }
     for (p, r) in &after.records {
         if let Some(old) = before.records.get(p) {
+            if r.acknowledgment != old.acknowledgment {
+                return "acknowledge";
+            }
             if r.rejection != old.rejection {
                 return "reject";
             }

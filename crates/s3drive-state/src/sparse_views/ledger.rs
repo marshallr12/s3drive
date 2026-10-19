@@ -237,7 +237,7 @@ fn load(db: &Connection, patches: bool) -> Result<Ledger> {
         let file = out.files.get(&target).ok_or(Failure::Corrupt)?;
         if record.operation != op
             || record.request != request
-            || record.request.binding != file.binding
+            || !record.request.binding.same_scope(&file.binding)?
         {
             return Err(Failure::Corrupt.into());
         }
@@ -279,6 +279,9 @@ fn load(db: &Connection, patches: bool) -> Result<Ledger> {
     }
     let mut visited = BTreeSet::new();
     for (target, file) in &out.files {
+        if out.record(file.head)?.request.binding != file.binding {
+            return Err(Failure::Corrupt.into());
+        }
         let mut chain = Vec::new();
         let mut next = Some(file.head);
         while let Some(key) = next {
@@ -301,6 +304,9 @@ fn load(db: &Connection, patches: bool) -> Result<Ledger> {
     }
     if visited.len() != out.records.len() {
         return Err(Failure::Corrupt.into());
+    }
+    if patches {
+        preparation::publication::settlement::validate_views(db, &out)?;
     }
     Ok(out)
 }

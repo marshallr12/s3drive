@@ -88,7 +88,7 @@ missing/rejected predecessor or nonancestor never becomes an overwrite fallback.
 No clean epoch, reclamation, fresh external-base adoption, new-file origins or
 native chunk activation follows from W5a acceptance. Goal ACTIVE/progress.
 
-## Current W5b1 clean-epoch successor — local gate passed, own cohort running
+## Accepted W5b1 clean base epochs (2026-10-19)
 
 Worktree /home/marshall/src/worktrees/s3drive-mixed-clean-epochs,
 codex/mixed-clean-epochs. Read docs/src/mixed-clean-epochs.md there; preserve the exact head/binding
@@ -120,21 +120,32 @@ all verified, including final324 and both failed324 sources. Gate3 all324 unchan
 446state1ignored/37core/22reader1nativeignored/62S3/23publication, format/Clippy/
 build/80MD/76chapters passed. Log SHA
 9484b5e6c0dc27087a33bbb6dbddbbc0f8704df75f8c38861357f859fda851c5.
-Prepare own hosted cohort after publication with
-/tmp/s3drive-prepare-mixed-epochs-hosted.py (actual source/run/three job IDs required).
-Own sourcea3574998138d0e4dfa2c62a28c2ada1e18099732 published; all324 current and
-committed hashes exact. Own39263559455 attempt1 in progress:
-book118097200982/Linux118097201820/Windows118097201387. Owned observer661520;
-child/start ticks in/tmp/s3drive-mixed-epochs-hosted-watch-running.json.
-Checker/oracle/raw-comparer/archive and review aid prepared, NOT executed. After
-all3 terminal success: full raw review, exact source/API ZIP SHA, typed21+14/project/
-all35 raw fields and types, then one-use archive. Require446Linux/441Windowsstate,
-23publication, all12 new ack cases/11 epoch kills and actual SDK cycles. Keep324
-frozen throughout own acceptance. Parent artifacts12186786596/12187983013 and
-all earlier cohort artifacts must not substitute. NEVER rerun completed local archive. Full local and own hosted/native/
-source gates before promotion. W5b2/3 pins, retry retirement and reclamation,
-authoritative external clean-base observation, explicit origins, W6 and provider/
-physical session/reboot acceptance remain required; no native chunk writes claimed.
+Own sourcea357499/schema35/all324, run39263559455 attempt1 ALL3 SUCCESS:
+book118097200982/Linux118097201820/Windows118097201387. Watch661520/661521
+CLOSED0; checker77961 CLOSED0; one-use raw comparison/archive complete. NEVER
+rerun these completed tools. Full raw/source/API ZIP SHA/independent typed21+14/
+project/all35 raw fields/types passed. Own artifacts12193040182/12192258972;
+parent artifacts refused. Hosted104members/392261bytes SHA
+2dbf5b3c542b57f7dff302cea67ccb210a38f4dcac08768b20539dd1fc37de9a,
+all indexed members verified. Linux446/Windows441state1ignored each,
+37core/22reader1nativeignored/62S3/23publication passed. Actual FUSE9/74.58s,
+WinFsp7/92.63s, manifest1.65s/2.79s, paired no-systemd24.21s/Windowsmanaged80.60s.
+Ubuntu24.04 image20261012.334.1/Windows Server2025 image20261007.264.1. Three
+locked disposable profiles: dummy credentials removed, final deletion deferred
+to VM destruction; two unused delay-import groups/tool notices retained, all slow
+tests completed. No native chunk writes, GC, live Wasabi or physical acceptance.
+
+Successor W5b2a schema36/all329 is isolated in
+/home/marshall/src/worktrees/s3drive-scoped-source-operations, branch
+codex/scoped-source-operations, sourcea3028bf. Its own39267986023 attempt1 is LIVE:
+book118112493974/Linux118112494209/Windows118112493652. Observer740763/740770.
+Own full local gate731068/731069 LIVE; inspect
+/tmp/s3drive-scoped-operations-gate1-{running,result}.json before any new Cargo.
+Focused13 state cases,14 actual kill boundaries, SDK1/69.97s/13loopbackPUT and
+SQLITE_FULL exact retry passed. Its runtime is not promoted. Frozen329 map
+/tmp/s3drive-scoped-operations-candidate3-frozen.json. W5b2/3 pins/retry retirement/
+reclamation, fresh external-base adoption, explicit origins/W6 and provider/
+physical session acceptance remain. Goal ACTIVE/progress.
 
 ## Accepted W4b1 exact-data verification (2026-10-19)
 

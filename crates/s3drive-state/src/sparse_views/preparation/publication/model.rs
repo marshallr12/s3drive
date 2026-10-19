@@ -228,6 +228,8 @@ pub struct Record {
     pub(super) publication: Option<ns::Apply>,
     pub(super) receipt: Option<ns::Receipt>,
     pub(super) rejection: Option<Rejection>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) acknowledgment: Option<Acknowledgment>,
 }
 impl fmt::Debug for Record {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -235,6 +237,9 @@ impl fmt::Debug for Record {
     }
 }
 impl Record {
+    pub fn acknowledgment(&self) -> Option<&Acknowledgment> {
+        self.acknowledgment.as_ref()
+    }
     pub fn input(&self) -> &Input {
         &self.input
     }
@@ -274,7 +279,9 @@ impl Record {
     pub(super) fn validate(&self) -> Result<()> {
         let expected = self.input.reservation()?;
         if self.format
-            != if self.input.predecessor.is_some() {
+            != if self.acknowledgment.is_some() {
+                3
+            } else if self.input.predecessor.is_some() {
                 2
             } else {
                 1
@@ -338,6 +345,7 @@ impl Record {
         {
             return Err(Failure::Corrupt.into());
         }
+        settlement::validate_record(self)?;
         Ok(())
     }
 }

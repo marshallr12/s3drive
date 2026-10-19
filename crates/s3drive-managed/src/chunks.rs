@@ -5,8 +5,8 @@ mod reader;
 pub use reader::{
     BaseDescriptor, BaseFile, ChunkContent, ChunkProof, EditedFile, File, MAX_CHUNK_PROOF_BYTES,
     MAX_PAGE_PROOF_BYTES, MixedPublisher, MixedRecovery, MixedRecoveryFailure, MixedRootCommit,
-    MixedRootFailure, MixedRootRecovery, MixedUploader, PageProof, Preparation, PreparedChunk,
-    PreparedDependency, ReadFailure, ReadOptions, Reader,
+    MixedRootFailure, MixedRootRecovery, MixedSourceReceipt, MixedUploader, PageProof, Preparation,
+    PreparedChunk, PreparedDependency, ReadFailure, ReadOptions, Reader,
 };
 
 use s3drive_authority::{Apply, Error, Reply, Request, Store, WireClient};

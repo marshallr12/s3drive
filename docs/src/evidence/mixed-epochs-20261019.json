@@ -1,7 +1,7 @@
 {
   "date": "2026-10-19",
   "phase": "W5b1",
-  "status": "W5b1 complete local gate passed; own hosted/native/source cohort required before promotion",
+  "status": "W5b1 full local and own hosted/native/source acceptance passed; promoted runtime schema35; no native chunk writes or reclamation",
   "schema": 35,
   "scope": "exact source acknowledgment and immutable clean base transition; no payload reclamation or native chunk writes",
   "checks": [
@@ -162,8 +162,36 @@
       "linux": 118097201820,
       "windows": 118097201387
     },
-    "status": "pending",
-    "checker_oracle_raw_comparer_archive_executed": false,
+    "status": "accepted",
+    "checker_oracle_raw_comparer_archive_executed": true,
     "parent_artifact_reuse_permitted": false
+  },
+  "hosted": {
+    "path": "evidence/mixed-epochs-hosted-20261019.tar.gz",
+    "sha256": "2dbf5b3c542b57f7dff302cea67ccb210a38f4dcac08768b20539dd1fc37de9a",
+    "bytes": 392261,
+    "members": 104,
+    "all_indexed_members_verified": true,
+    "source": "a3574998138d0e4dfa2c62a28c2ada1e18099732",
+    "run_id": 39263559455,
+    "run_attempt": 1,
+    "independent_typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true,
+    "jobs": {
+      "book": 118097200982,
+      "linux": 118097201820,
+      "windows": 118097201387
+    },
+    "state_passed": {
+      "linux": 446,
+      "windows": 441
+    },
+    "own_artifacts": {
+      "replacement": 12193040182,
+      "disposition": 12192258972
+    }
   }
 }

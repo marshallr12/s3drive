@@ -2,6 +2,8 @@
 //! fixtures/dummy profiles only. No provider or mounted chunk-format acceptance.
 #[path = "support/fixture.rs"]
 pub mod fixture;
+#[path = "chunk_publication/mixed_epochs.rs"]
+mod mixed_epochs;
 #[path = "chunk_publication/mixed_roots.rs"]
 mod mixed_roots;
 #[path = "chunk_publication/mixed_uploads.rs"]
@@ -1075,6 +1077,7 @@ async fn chunk_child() {
         )
         .unwrap();
         match mode.as_str() {
+            "mixed_epochs" => mixed_epochs::run_case(&config, &root, &s).await,
             "mixed_lineage" => mixed_roots::lineage(&config, &root, &s).await,
             "mixed_roots_controls" => Box::pin(mixed_roots::controls(&config, &root, &s)).await,
             "mixed_roots_rivals" => Box::pin(mixed_roots::rivals(&config, &root, &s)).await,
@@ -1327,6 +1330,7 @@ async fn run(mode: &str) {
         }
     }
     let expected = match mode {
+        "mixed_epochs" => 13,
         "mixed_lineage" => 12,
         "mixed_roots_controls" => 9,
         "mixed_roots_rivals" => 8,
@@ -1486,4 +1490,9 @@ async fn mixed_roots_publish_empty_zero_partial_unicode_and_preserve_exact_local
 async fn mixed_publication_lineage_repeats_after_restart_recovers_exact_reply_and_refuses_foreign_root()
  {
     run("mixed_lineage").await;
+}
+
+#[tokio::test]
+async fn mixed_clean_epochs_acknowledge_exact_heads_preserve_old_reads_and_reuse_published_base() {
+    run("mixed_epochs").await;
 }

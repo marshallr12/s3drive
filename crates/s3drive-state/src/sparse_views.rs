@@ -1,5 +1,5 @@
 //! Private immutable base/patch views and exact local-operation replay.
-//! No network, clean settlement, authority capability or native activation.
+//! Exact acknowledgments live in preparation::publication. No network or native activation.
 use crate::{Result, State, worker::Owner};
 use rusqlite::{Connection, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};

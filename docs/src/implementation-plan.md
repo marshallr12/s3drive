@@ -3255,3 +3255,12 @@ remains required before promotion; no mounted chunk writes or reclamation.
 W5b1 own cohort39263559455 attempt1 is running for exacta357499/schema35/all324.
 Full local446state/23publication passed. Source/native/artifact acceptance remains
 required before runtime promotion; main remains W5a/schema34. [Current evidence](mixed-clean-epochs.md).
+
+W5b1 own acceptance completed2026-10-19: exacta357499/schema35/all324,
+run39263559455 attempt1 all3 success. Full raw/source/own API ZIP SHA/independent
+typed21+14/project/all35 raw fields/types passed. Indexed104-member hosted archive
+SHA2dbf5b3c542b57f7dff302cea67ccb210a38f4dcac08768b20539dd1fc37de9a.
+[Exact epoch acceptance](mixed-clean-epochs.md). W5b2a scoped operations are on
+an isolated sourcea3028bf/schema36 branch with their own local/hosted gates running;
+they are not promoted by W5b1 acceptance. Pins/seals/GC, fresh external-base
+adoption, origins/W6 and provider/physical session acceptance remain.

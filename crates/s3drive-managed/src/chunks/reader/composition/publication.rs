@@ -45,6 +45,30 @@ impl MixedRootCommit {
         self.record.receipt().expect("validated mixed root commit")
     }
 }
+#[derive(Clone, PartialEq, Eq)]
+pub struct MixedSourceReceipt(roots::SourceReceipt);
+impl fmt::Debug for MixedSourceReceipt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("MixedSourceReceipt([exact view; no reclamation])")
+    }
+}
+impl MixedSourceReceipt {
+    pub fn plan(&self) -> Id {
+        self.0.plan()
+    }
+    pub fn view_id(&self) -> Id {
+        self.0.view()
+    }
+    pub fn clean_view_id(&self) -> Option<Id> {
+        self.0.acknowledgment().clean_view()
+    }
+    pub fn observed_head(&self) -> Id {
+        self.0.acknowledgment().observed_head()
+    }
+    pub fn record(&self) -> &roots::Record {
+        self.0.record()
+    }
+}
 fn committed(record: roots::Record) -> Result<MixedRootCommit> {
     if record.receipt().is_none() || record.publication().is_none() {
         return Err(MixedRootFailure::NotPrepared.into());
@@ -61,6 +85,12 @@ impl Log {
         match self {
             Self::Normal(c) => c.get(p).await,
             Self::Recovery(c) => c.get(p).await,
+        }
+    }
+    async fn acknowledged(&self, p: Id) -> Result<Option<roots::SourceReceipt>> {
+        match self {
+            Self::Normal(c) => c.acknowledged(p).await,
+            Self::Recovery(c) => c.acknowledged(p).await,
         }
     }
     async fn reserved(&self, p: Id, r: s3drive_authority::Receipt) -> Result<roots::Record> {
@@ -124,6 +154,18 @@ impl MixedRootRecovery {
     ) -> Result<Self> {
         let c = roots::RecoveryClient::open(directory).await?;
         Self::build(Log::Recovery(c), authority, volume, store)
+    }
+    /// Return only an already committed local acknowledgment. No source access,
+    /// new acknowledgment, head update or remote request is possible here.
+    pub async fn acknowledged(&self, plan: Id) -> Result<Option<MixedSourceReceipt>> {
+        let _slot = self
+            .0
+            .slots
+            .try_acquire()
+            .map_err(|_| MixedRootFailure::Busy)?;
+        let r = self.0.log.get(plan).await?;
+        self.scope(&r)?;
+        Ok(self.0.log.acknowledged(plan).await?.map(MixedSourceReceipt))
     }
     pub async fn close(&self) -> Result<()> {
         match &self.0.log {
@@ -195,7 +237,7 @@ struct Publisher {
 pub struct MixedPublisher(Arc<Publisher>);
 impl fmt::Debug for MixedPublisher {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("MixedRootPublisher([private; no clean settlement])")
+        f.write_str("MixedRootPublisher([private; explicit view acknowledgment])")
     }
 }
 impl Preparation {
@@ -231,6 +273,24 @@ impl Preparation {
     }
 }
 impl MixedPublisher {
+    /// Local exact-view settlement only; no S3/authority RPC or new admission.
+    pub async fn acknowledge(
+        &self,
+        operation: Id,
+        options: s3drive_state::sparse_views::Options,
+    ) -> Result<MixedSourceReceipt> {
+        let _slot = self
+            .0
+            .slots
+            .try_acquire()
+            .map_err(|_| MixedRootFailure::Busy)?;
+        Ok(MixedSourceReceipt(
+            self.0
+                .client
+                .acknowledge(operation, self.plan(), options)
+                .await?,
+        ))
+    }
     pub fn plan(&self) -> Id {
         self.0.preparation.id
     }
