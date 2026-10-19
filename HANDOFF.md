@@ -28,8 +28,11 @@ include main's policy commit; the c7fca789 feature lineage includes that rule.
 ## Current W1c2 combined baseline (2026-10-18)
 
 Local W1c1 e18d6f5 is now combined with accepted W1b2e7b6ca. Runtime merge is a
-new draft, NOT tested or hosted-accepted as a combination yet. Reader changes
-have not begun. First baseline check, then implement the W1c2 proposal in the
+new draft, baseline all-target check9230 CLOSED0 and focused reader77295 CLOSED0
+(9pass/1nativeignored10.69s). All264 inputs unchanged in
+/tmp/s3drive-history-reader-baseline-frozen.json; result
+/tmp/s3drive-history-reader-baseline-result.json. No own combined full/hosted
+acceptance. Reader changes have not begun. Implement the W1c2 proposal in the
 implementation plan, preserve all existing namespace/native behavior and run a
 fresh full/own hosted gate before W2 or activation. Keep chunk writes unsupported.
 No pending CI remains for the W1b prerequisite; watch7139/checker12398 CLOSED0.

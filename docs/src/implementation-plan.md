@@ -2312,3 +2312,8 @@ W1c1 result: full local gate60956 EXIT0, all262 frozen inputs unchanged;
 368state/1ignored,11 authority namespace,8reader/format1nativeignored,12publication,
 62S3,fmt/clippy/build/book passed. The indexed20-member local archive is verified.
 No reader activation or own combined hosted acceptance follows from this alone.
+
+Combined baseline5231113 check9230 and focused reader77295 both EXIT0,
+9passed/1nativeignored10.69s; all264 runtime inputs unchanged. This baseline
+compile/integration result does not replace the future W1c2 full/native gate.
+Reader implementation has not begun; next implement the proposal above.
