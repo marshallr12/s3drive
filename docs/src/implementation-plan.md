@@ -2845,8 +2845,8 @@ proof traversal under the same permit/deadline. New final-length controls reject
 old-object prefix reuse, verify unread old tails and preserve truncated bytes as
 zeros after regrowth. Updated [architecture and contract](incremental-data.md)
 explain pending W3b mixed-tree persistence and W4-W6. Parent W2c own39213440204
-book/Linux passed (raw reviewed); Windows remains running, so parent acceptance
-is still pending. No runtime source changed during the gates. W3a full result:393state1ignored/
+all3/raw/source/own ZIP digests/typed21+14/project/raw checks passed and parent
+is accepted as main057c8ae. No runtime source changed during the gates. W3a full result:393state1ignored/
 37core/19reader1nativeignored/62S3 plus format/Clippy/build/75MD links/71book
 chapters. Indexed16-member local archive verified. Publish exact source for its
 own combined platform/native/source checks; parent source remains distinct.
@@ -2856,3 +2856,25 @@ is pushed with mainabdda37 ancestry and all288 exact inputs from the green gate.
 Its own [run39215314627](https://github.com/marshallr12/s3drive/actions/runs/39215314627)
 is running; all3/raw/own-artifact/source acceptance remains pending. Documentation-
 only follow-ups preserve the frozen source; prior cohorts do not certify it.
+
+W2c accepted,2026-10-19: source84da0ee passed own39213440204 all3 full raw/source/
+own ZIP API digests/typed21+14/project/all35 field/type checks. Indexed62-member
+hosted archive retained. All286 inputs exact; canonical integration changes only
+docs/evidence after the tested runtime. Linux393state/Windows388state1ignored,
+37core/16reader1nativeignored/62S3 and real manifest FUSE/WinFsp remount, legacy
+native and paired/no-systemd recovery passed. See [composition evidence](sparse-composition.md).
+Separate W3a9544193/288 inputs has own39215314627 book/Linux green and Windows
+running; no W3a/native chunk writes activated by this promotion. W3b/W4-W6 and
+legacy/metadata-empty/provider/physical acceptance remain.
+
+W3b source finding,2026-10-19: reader cache identity and upload Session.binding_id
+both call credential_binding with the full configuration fingerprint and pinned
+credentials. Therefore compare Executor.recovery_target to the exact sparse base
+source/fingerprint and generated object key; do not use storage routing identity
+alone or silently rotate credentials. The persisted journal proves local intent/
+integrity; the controller must reauthorize historical provenance before uploads.
+
+W3a ancestry update,2026-10-19: merge accepted main057c8ae into preparation branch
+with docs/evidence-only delta from source9544193 and all288 inputs unchanged.
+Its own39215314627 book/Linux passed, Windows is running. Parent acceptance does
+not substitute for this source's own combined checks.

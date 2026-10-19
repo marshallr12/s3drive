@@ -107,6 +107,18 @@
     "status": "running; combined acceptance pending",
     "watch_session": 3007,
     "watch_log": "/tmp/s3drive-incremental-data-hosted-watch.log",
-    "prepared_checkers_not_executed": true
+    "prepared_checkers_not_executed": true,
+    "latest_observed_status": {
+      "book": "success",
+      "linux": "success",
+      "windows": "running"
+    }
+  },
+  "accepted_parent": {
+    "main": "057c8aea33363b9579fc30c05e52a4e71959253a",
+    "runtime": "84da0ee633871f862f4a84a276af5ac3322cff42",
+    "run_id": 39213440204,
+    "all_three_raw_source_own_artifacts": "passed",
+    "feature_runtime_inputs_unchanged": 288
   }
 }

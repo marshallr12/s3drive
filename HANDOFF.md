@@ -25,12 +25,41 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Accepted W2c authenticated sparse composition (2026-10-19)
+
+Runtime84da0ee633871f862f4a84a276af5ac3322cff42, own39213440204 attempt1 ALL3
+SUCCESS. Watch65839 CLOSED0; checker7518 CLOSED0. All full raw/source reviews,
+own API ZIP digests, independent typed21+14/project oracles/all35 raw fields and
+types passed. Own artifacts replacement12168917157/disposition12169760536.
+Indexed62-member hosted archive270208bytes SHA
+00aa618e7b4929140cc6337b5c697aafe504798c89b470a8c883625a4a84d737.
+All286 frozen runtime/contract working+committed hashes must remain exact across
+canonical integration. Linux393state/Windows388state1ignored,37core/16reader
+1nativeignored/62S3 passed. Native legacy Linux9/Windows7 passed; manifest
+FUSE1.42s/WinFsp2.43s, paired Windows79.98s and Linux no-systemd HTTP/TLS24.22s.
+Windows3 locked disposable fixture profiles had dummy credentials removed; final
+profile deletion deferred to VM destruction. Two delay-import warnings, completed
+long tests, expected403/conflicts and Node/Ubuntu-label notices retained. Actual
+Linux image Ubuntu24.04/20261012.334.1; Windows Server2025 image20261007.264.1.
+
+This accepts authenticated historical manifest/local patch/zero composition and
+its regressions, not native edited reads/writes, mixed publication, settlement,
+provider or physical reboot/session behavior. Full dated evidence and diagram:
+docs/src/sparse-composition.md and evidence/sparse-composition-20261019.json.
+Parent source d37096c remains historical patch acceptance. New W3a source9544193
+is separate/frozen288 inputs; its own39215314627 book/Linux SUCCESS, Windows
+still running. Keep its runtime unchanged. W3b/W4-W6 and legacy/empty remain.
+
 ## Published W3a — own combined checks pending (2026-10-19)
 
 Source9544193908967ea2852121bef7d91cdce89ed042 pushed to codex/incremental-data;
 all288 working/committed frozen inputs unchanged. Mainabdda37 is an ancestor;
 merge from local-green6f4afb7 changed docs only. Own run39215314627 attempt1:
-book117937677538, Linux117937677524, Windows117937677247 currently running.
+book117937677538/Linux117937677524 SUCCESS; Windows117937677247 still running.
+Full book/Linux raw reviews retained at
+/tmp/s3drive-incremental-data-hosted-partial-review.json; own all3/typed acceptance
+is pending. Linux19reader1ignored/393state1ignored/37core/62S3 and actual FUSE/
+no-systemd/paired recovery passed; do not substitute this for Windows.
 Watch3007 LIVE, /tmp/s3drive-incremental-data-hosted-watch.log. Four one-use
 checkers prepared under /tmp/s3drive-{check-incremental-data-hosted.py,
 incremental-data-hosted-*}; NOT executed. Await all3 terminal outcomes, review
@@ -42,10 +71,10 @@ write activation or complete mixed-tree/publication/settlement claim follows.
 
 Worktree /home/marshall/src/worktrees/s3drive-incremental-data,
 branch codex/incremental-data fromb884a1a. No schema/wire/legacy planner/provider/
-native activation. Parent composition84da0ee stays frozen286 inputs; own
-39213440204 book/Linux SUCCESS with full raw reviews retained at
-/tmp/s3drive-sparse-composition-hosted-partial-review.json; Windows still running.
-Watch65839 LIVE. Parent has no all3/source/artifact acceptance yet.
+native activation. Parent composition84da0ee is accepted as main057c8ae with
+all286 inputs exact and own39213440204 all3/raw/source/own artifact checks passed.
+Watch65839 CLOSED0/checker7518 CLOSED0. See accepted section above. This feature
+keeps all288 frozen runtime inputs unchanged during its own run39215314627.
 
 W3a implemented: private exact-view/full-binding/offset/length candidate returns
 opaque inherited proof without data GET only for complete same-length unchanged
@@ -69,7 +98,7 @@ Published9544193 now needs own combined acceptance. W3b persisted mixed graph/
 cursor/subtree reuse, W4 exact-CAS publication, W5 exact-view settlement, legacy/
 metadata-empty support and W6 actual native writes remain. Goal ACTIVE/progress.
 
-## Published W2c — own combined checks pending (2026-10-19)
+## Historical W2c publication — superseded by acceptance above (2026-10-19)
 
 Frozen source84da0ee633871f862f4a84a276af5ac3322cff42 is pushed to
 codex/sparse-composition; all286 working/committed inputs match the successful
