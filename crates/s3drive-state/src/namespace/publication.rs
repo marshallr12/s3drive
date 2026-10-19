@@ -1,6 +1,7 @@
 //! Immutable payload reservations and publication CAS. The authenticated client
 //! must verify S3 bytes; the metadata service does not possess S3 credentials.
 use super::*;
+pub(crate) mod empty;
 mod history;
 mod manifest;
 pub use manifest::{MAX_MANIFEST_LENGTH, ManifestRoot};
@@ -325,6 +326,7 @@ pub(super) fn mutate(
     sequence: u64,
 ) -> Result<(String, Artifact)> {
     match &request.mutation {
+        Mutation::CreateEmptyManifest { .. } => empty::mutate(db, request, sequence),
         Mutation::RegisterStore { route, root } => {
             let count: i64 =
                 sql(db.query_row("SELECT count(*) FROM namespace_stores", [], |r| r.get(0)))?;
@@ -582,6 +584,9 @@ pub(super) fn validate_manifest_replay(
     receipt: &Receipt,
 ) -> Result<()> {
     validate_manifest_receipt(receipt, &request.volume)?;
+    if matches!(request.mutation, Mutation::CreateEmptyManifest { .. }) {
+        return empty::replay(db, request, receipt);
+    }
     if let Mutation::ReserveManifest {
         node,
         expected_revision,

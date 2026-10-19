@@ -382,7 +382,7 @@ fn schema37_migration_preserves_literal_rows_but_cannot_launder_new_observation_
         .unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
-    assert_eq!(s.info().unwrap().schema_version, 38);
+    assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
     assert_eq!(rows(&s), before);
     let next = adopted(
         j(&mut s)

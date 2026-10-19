@@ -1,8 +1,8 @@
 # Empty-manifest client integration
 
 Source review: 2026-10-19. **Proposed next integration phase; not implemented.**
-The [atomic authority operation](atomic-empty-manifest-create.md) is being tested
-in an isolated schema39 candidate. It deliberately cannot prove an S3 upload:
+The [atomic authority operation](atomic-empty-manifest-create.md) is accepted
+at exact source29eb237/schema39 after its complete local and hosted gates. It deliberately cannot prove an S3 upload:
 the client must make and verify that upload before submitting the metadata request.
 This work must lead into normal native create/write/flush, rather than introduce
 another disconnected write profile.

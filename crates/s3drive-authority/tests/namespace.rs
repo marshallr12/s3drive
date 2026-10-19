@@ -5,6 +5,8 @@ use std::time::Duration;
 use tokio::{io::AsyncReadExt, sync::oneshot, task::JoinHandle};
 
 const SECRET: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+#[path = "namespace/empty.rs"]
+mod empty;
 #[path = "namespace/history.rs"]
 mod history;
 

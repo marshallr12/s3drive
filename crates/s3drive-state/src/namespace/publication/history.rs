@@ -101,8 +101,10 @@ impl State {
         .ok_or(Error::Internal)?;
         let original: Apply = decode(encoded)?;
         original.validate().map_err(|_| Error::Internal)?;
-        if !matches!(original.mutation, Mutation::ReserveManifest { .. })
-            || original.volume != volume_id
+        if !matches!(
+            original.mutation,
+            Mutation::ReserveManifest { .. } | Mutation::CreateEmptyManifest { .. }
+        ) || original.volume != volume_id
             || original.operation != reservation_id
         {
             return Err(Error::Internal);
@@ -112,7 +114,16 @@ impl State {
         validate_manifest_replay(&tx, &original, &receipt)?;
         if receipt.sequence > v.sequence
             || receipt.node.id != node_id
-            || receipt.artifact.as_ref() != Some(&Artifact::Reservation(r.clone()))
+            || !match &receipt.artifact {
+                Some(Artifact::Reservation(saved)) => {
+                    saved == &r && matches!(original.mutation, Mutation::ReserveManifest { .. })
+                }
+                Some(Artifact::Published(p)) => {
+                    p.reservation == r
+                        && matches!(original.mutation, Mutation::CreateEmptyManifest { .. })
+                }
+                _ => false,
+            }
         {
             return Err(Error::Internal);
         }

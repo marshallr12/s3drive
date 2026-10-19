@@ -1,5 +1,9 @@
 # Atomic creation with a real empty manifest
 
+Status: codec and metadata authority accepted on2026-10-19 after exact full local
+and hosted source/native/artifact verification. Client upload and native chunk
+creation remain subsequent integration work. Earlier pending statuses below are historical.
+
 ![Planned S3 upload flow and implemented atomic Rust authority / SQLite boundary](images/empty-manifest-create.svg)
 
 Declared 2026-10-19. Isolated `codex/empty-manifest-create`, based on locally green
@@ -132,3 +136,34 @@ succeeded. Windows118237890166 and the complete own raw/source/artifact acceptan
 remain pending. Parent342 is accepted. This does not upload an S3 root, enable
 native chunk creation/writes or prove physical desktop/reboot behavior. Earlier
 pending local statuses above are historical.
+
+
+## Repaired hosted acceptance (2026-10-19)
+
+Exact source29eb23782d7b3e0484c4ae8200fb419ecfa50279/schema39/all349 passed
+[CI39304491982](https://github.com/marshallr12/s3drive/actions/runs/39304491982),
+attempt1: book118237889657/Linux118237890146/Windows118237890166 all succeeded.
+Complete raw logs, all349 working/committed inputs, own API ZIP digests, independent
+typed21+14 records, project oracles and all35 raw fields/JSON types passed. Own
+replacement12213307038/disposition12215345023 artifacts were used.
+
+The [indexed hosted archive](evidence/empty-create-hosted-20261019.tar.gz) contains
+114 verified members/426532bytes, SHA-256
+`7b1c9ee692ff503de6075857f0ac677a011516b6ac6458189adce7b6047dbfa2`.
+One-use raw reviewer/source checker75702/comparator+archiver87356 DONE; never rerun.
+Observer1306049 CLOSED0/all_success19:10:54Z. All ten slow Windows cases and15
+interleaved reference tests completed. All new core/state/HTTP cases passed on
+both platforms, including actual killed owners and SQLITE_FULL rollback.
+
+Linux505/Windows500 state cases (one diagnostic ignored each),26reader (one
+native-only ignored),24publication/39core/62S3 passed. Actual native regressions
+passed FUSE9/60.23s, WinFsp7/92.85s, manifest ranges/remount1.18s/2.57s, and paired
+no-systemd23.97s/Windows78.93s. Actual images: Ubuntu24.04 **20261018.339.1** and
+WindowsServer2025 windows-2025-vs2026 **20261007.264.1**. Three locked disposable
+profiles had dummy credentials removed; final deletion deferred to VM destruction.
+Unused delay-import linker warnings and tooling deprecations were retained/reviewed.
+
+This accepts the canonical codec and atomic metadata operation plus existing
+native regressions. It does not implement the authenticated root-upload/create
+client, native chunk writes, reclamation, real Wasabi mutations, or physical
+MX/Windows10/11 sign-in/reboot acceptance.

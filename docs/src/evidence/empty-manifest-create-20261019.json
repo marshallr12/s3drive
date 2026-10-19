@@ -1,7 +1,7 @@
 {
   "research_date": "2026-10-19",
   "phase": "atomic-empty-manifest-create",
-  "status": "complete-local-gate-passed-own-Windows-and-hosted-acceptance-pending",
+  "status": "accepted-codec-and-atomic-metadata-with-existing-native-regressions",
   "source": "29eb23782d7b3e0484c4ae8200fb419ecfa50279",
   "schema": 39,
   "runtime_inputs": 349,
@@ -94,9 +94,46 @@
     },
     "windows": {
       "job": 118237890166,
-      "status": "pending"
+      "status": "success"
     },
-    "full_raw_source_artifact_acceptance": "pending"
+    "full_raw_source_artifact_acceptance": "passed",
+    "archive": {
+      "path": "evidence/empty-create-hosted-20261019.tar.gz",
+      "sha256": "7b1c9ee692ff503de6075857f0ac677a011516b6ac6458189adce7b6047dbfa2",
+      "bytes": 426532,
+      "members": 114,
+      "all_indexed_members_verified": true,
+      "source": "29eb23782d7b3e0484c4ae8200fb419ecfa50279",
+      "run_id": 39304491982,
+      "run_attempt": 1,
+      "independent_typed_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "all_raw_fields_and_types_equal": true
+    },
+    "own_artifacts": {
+      "replacement": 12213307038,
+      "disposition": 12215345023
+    },
+    "images": {
+      "linux": "Ubuntu24.04 20261018.339.1",
+      "windows": "WindowsServer2025 windows-2025-vs2026 20261007.264.1"
+    },
+    "native_regressions": {
+      "fuse": {
+        "passed": 9,
+        "seconds": 60.23
+      },
+      "winfsp": {
+        "passed": 7,
+        "seconds": 92.85
+      },
+      "manifest_remount_linux_seconds": 1.18,
+      "manifest_remount_windows_seconds": 2.57,
+      "paired_no_systemd_seconds": 23.97,
+      "paired_windows_seconds": 78.93
+    }
   },
   "capabilities": {
     "canonical_codec_and_atomic_metadata": true,

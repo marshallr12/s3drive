@@ -3501,3 +3501,14 @@ formatting/workspaceClippy/build/book. [381-member indexed local archive and
 13-member failed-cohort archive](atomic-empty-manifest-create.md) retained. Own
 CI39304491982 book/Linux succeeded; own Windows and complete raw/source/artifact
 acceptance remain pending. Canonical runtime remains accepted schema38/all342.
+
+
+### Atomic empty-manifest promotion (2026-10-19)
+
+Source29eb237/schema39/all349 accepted after its complete local gate, own
+CI39304491982 all3 success, full raw/source/API ZIP and independent typed21+14/
+project/all35 raw fields/types. [Hosted and local indexed evidence](atomic-empty-manifest-create.md).
+Exactly18 runtime deltas promoted; canonical main matches accepted349. Actual
+FUSE/WinFsp, manifest remount and paired startup regressions passed. This completes
+codec/atomic metadata creation; authenticated root upload, client intent recovery,
+typed native state composition and actual mounted chunk creation/writes remain.

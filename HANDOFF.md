@@ -29,24 +29,30 @@ Use target-specific platform dependencies. SQLite state stays outside the mount.
 
 ## Accepted canonical implementation
 
-Main runtime includes accepted authenticated external-clean observation,
-schema38/all342 exact inputs. Own tested source12a2f2a7d836aab518c7b0d60675234d6470ef97,
-CI39298010083 attempt1: book118215485753/Linux118215486002/Windows118215486257
-all succeeded. Complete local gate passed18:06:20Z unchanged. Complete raw/source/
-API ZIP, independent typed21+14/project/all35 raw fields and JSON types passed.
-Actual native FUSE9/WinFsp7, manifest ranges/remount and paired no-systemd/Windows
-startup passed. Images Ubuntu24.04 20261012.334.1; WindowsServer2025
-windows-2025-vs2026 20261007.264.1. These are not native chunk-write, Wasabi or
-physical desktop/reboot proofs. Three locked disposable Windows profiles had dummy
-credentials removed; final profile deletion deferred to hosted VM destruction.
+Main runtime includes the accepted canonical empty-manifest codec and atomic
+metadata creation operation, schema39/all349 exact inputs. Own tested source
+29eb23782d7b3e0484c4ae8200fb419ecfa50279, CI39304491982 attempt1:
+book118237889657/Linux118237890146/Windows118237890166 all succeeded. Complete
+local gate passed18:51:46Z unchanged. Complete raw/source/API ZIP, independent
+typed21+14/project/all35 fields and JSON types passed. Exactly18 runtime deltas
+promoted from accepted parent12a2f2a/schema38/all342; parent archives retained.
 
-[Observation acceptance](docs/src/external-clean-reader.md): indexed376-member
-local archive SHAbe0848b254fb9eb9a300fd7d0bd21f4deef4e9fbd940c496b2e2ba913e774b08
-and109-member hosted archive SHA95f70fe3f45d554cac275f7325b51644c54012a43e237544fd5c50a2752ac10c.
-All one-use observation342 acceptance/comparator/archivers are DONE; NEVER rerun.
-Canonical publication proof: /tmp/s3drive-canonical-external-clean-reader-publication.json.
-Ordinary later documentation commits do not change accepted runtime. Parent340
-local clean-adoption intent remains accepted; its indexed archives are retained.
+[Empty-manifest acceptance](docs/src/atomic-empty-manifest-create.md): indexed381-
+member local archive SHAcc8f21b1d0ea061e172280ebf0be6d024f7ef878f1e30a972480d6dd79625f7a,
+114-member hosted archive SHA7b1c9ee692ff503de6075857f0ac677a011516b6ac6458189adce7b6047dbfa2,
+and13-member first failed-cohort archive SHA4f3c2953358ffa2050b885351ae8486b3e8b87c4b0c5721d5566789d1f052105.
+One-use local archiver20230, failed archive45994, raw reviewer/checker75702 and
+comparator/hosted archive87356 DONE; NEVER rerun. Observer1306049 CLOSED0 at19:10:54Z.
+Canonical publication proof: /tmp/s3drive-canonical-empty-create-publication.json.
+Ordinary later documentation commits do not change accepted runtime.
+
+Actual native FUSE9/WinFsp7, manifest ranges/remount and paired no-systemd/Windows
+startup passed. Images Ubuntu24.04 20261018.339.1; WindowsServer2025
+windows-2025-vs2026 20261007.264.1. These are existing native regressions, not native
+chunk creation/write, Wasabi mutation or physical desktop/reboot proofs. Three
+locked disposable profiles had dummy credentials removed; final profile deletion
+deferred to hosted VM destruction. Client authenticated root-upload/create remains
+next; authority proof fields alone do not establish provider I/O.
 
 The accepted path includes authenticated manifest reads, immutable local patches,
 mixed plans/dependency uploads, exact root publication/recovery, local lineage and
@@ -127,19 +133,25 @@ local/hosted plus failed-first-cohort archives. One-use local archiver20230 DONE
 never rerun. No owned local Cargo remains from gate2; check before next build.
 Exact local status/log/map: /tmp/s3drive-empty-create-{gate2,candidate2}-*.
 
-Own CI39304491982 attempt1 source29eb237: book118237889657/Linux118237890146
-succeeded; Windows118237890166 running; observer1306049/start144186109 GET-only.
-Complete book/Linux raw logs retained under /tmp/s3drive-empty-create2-hosted-*.
-Hosted source checker /tmp/s3drive-check-empty-create2-hosted.py, raw reviewer,
-comparator, PS project oracle and hosted archiver prepared, NOT executed. Require
-terminal own Windows raw review before marker/checker. Candidate1 acceptance
-scripts never executed; do not use them for candidate2 or reuse parent artifacts.
-Only candidate2 maps349/source29eb237 apply for repaired acceptance.
+Own CI39304491982 attempt1 source29eb237 all3 succeeded; complete raw/source/
+API ZIP/independent typed/project/all35 fields/types passed. Own artifacts:
+replacement12213307038/disposition12215345023. Indexed114-member hosted archive
+SHA7b1c9ee692ff503de6075857f0ac677a011516b6ac6458189adce7b6047dbfa2.
+All one-use acceptance tools DONE; never rerun. Main now matches accepted349.
 [Candidate contract and diagram](docs/src/atomic-empty-manifest-create.md).
 No S3 upload or native creation enabled. Authenticated publisher remains next.
-[Source-reviewed client integration proposal](docs/src/empty-manifest-publisher.md)
-binds upload, exact metadata recovery and native acceptance into one path. Do not
-widen the legacy namespace journal without typed source/open composition.
+
+Prepared next worktree /home/marshall/src/worktrees/s3drive-empty-manifest-intent,
+branchcodex/empty-manifest-intent, runtime base29eb237/all349 exact. Documentation
+only is uncommitted there: refreshed HANDOFF/implementation-plan and a declared
+first durable client-journal boundary appended to empty-manifest-publisher.md.
+No implementation or local Cargo started there. Keep this separate from the
+accepted frozen349 candidate. [Integration proposal](docs/src/empty-manifest-publisher.md).
+Next: implement bounded schema40 creation intent on existing Storage owner with
+exact generation/verified-proof/request/receipt recovery, then real SDK/authority
+publisher and typed source/namespace/open composition into native callbacks.
+Do not widen legacy namespace roles or enable native writes prematurely.
+
 
 
 

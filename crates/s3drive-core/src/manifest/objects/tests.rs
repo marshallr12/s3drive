@@ -241,3 +241,42 @@ fn parsed_descriptor_and_valid_page_do_not_authenticate_address_metadata() {
         namespace().root_key(&original).unwrap()
     );
 }
+
+#[test]
+fn canonical_empty_root_matches_independent_bytes_digests_and_key() {
+    use sha2::{Digest, Sha256};
+    let (root, body) = RootDescriptor::empty([1; 16], [2; 16], [3; 16], [4; 16]).unwrap();
+    assert_eq!(body, include_bytes!("fixtures/empty-page.bin"));
+    assert_eq!(
+        &root.encode(),
+        include_bytes!("fixtures/empty-root-descriptor.bin")
+    );
+    assert_eq!(root.length(), 0);
+    assert_eq!(root.page().ordinal(), 1 << 56);
+    let verified = root.verify_page(&body).unwrap();
+    assert!(verified.page().entries().is_empty());
+    let fixture = include_str!("fixtures/empty-vector.json");
+    let hex = |bytes: &[u8]| bytes.iter().map(|b| format!("{b:02x}")).collect::<String>();
+    assert!(fixture.contains(&format!(
+        "\"raw_sha256\": \"{}\"",
+        hex(&Sha256::digest(&body))
+    )));
+    assert!(fixture.contains(&format!(
+        "\"page_digest\": \"{}\"",
+        hex(root.page().sha256())
+    )));
+    assert_ne!(&Sha256::digest(&body)[..], root.page().sha256());
+    let ns = Namespace::new("managed/".into(), [1; 16], [2; 16], [3; 16]).unwrap();
+    assert!(fixture.contains(&format!(
+        "\"key\": \"{}\"",
+        ns.root_key(&root).unwrap().as_str()
+    )));
+}
+#[test]
+fn canonical_empty_root_refuses_every_reserved_identity() {
+    for at in 0..4 {
+        let mut ids = [[1; 16], [2; 16], [3; 16], [4; 16]];
+        ids[at] = [0; 16];
+        assert!(RootDescriptor::empty(ids[0], ids[1], ids[2], ids[3]).is_err());
+    }
+}

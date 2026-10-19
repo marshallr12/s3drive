@@ -110,6 +110,7 @@ impl Request {
                 "deferred-owner-move-v1".into(),
                 "owned-target-replace-v1".into(),
                 "manifest-root-v1".into(),
+                "atomic-empty-manifest-v1".into(),
                 "manifest-history-v1".into(),
             ])),
             Self::Info {} => state.namespace_volume().map(Reply::Info),

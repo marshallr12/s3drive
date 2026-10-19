@@ -139,6 +139,23 @@ impl RootDescriptor {
             page,
         })
     }
+    /// Canonical zero-length root intent and its real page body. No upload,
+    /// provider authorization or namespace publication follows from this helper.
+    pub fn empty(
+        volume: [u8; 16],
+        node: [u8; 16],
+        store: [u8; 16],
+        generation: [u8; 16],
+    ) -> Result<(Self, Vec<u8>)> {
+        let page = Page::new(volume, node, 0, 0, Vec::new())?;
+        let root = Self::new(
+            volume,
+            node,
+            0,
+            Reference::new(store, generation, 1 << 56, page.digest())?,
+        )?;
+        Ok((root, page.encode()))
+    }
     pub fn volume(&self) -> &[u8; 16] {
         &self.volume
     }
