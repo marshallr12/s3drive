@@ -37,7 +37,7 @@
 - [Implemented read-only provider contract](provider-contract.md)
 - [Related reads with pinned credentials](pinned-related-reads.md)
 - [Verified manifest range reader](manifest-range-reader.md)
-- [Native manifest reads: draft integration](native-manifest-reads.md)
+- [Native manifest reads](native-manifest-reads.md)
 - [Implemented Linux read-only mount](linux-mount.md)
 - [Windows read-only drive](windows-mount.md)
 - [Wasabi integration target](wasabi.md)

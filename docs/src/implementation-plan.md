@@ -2150,3 +2150,13 @@ including both stale/open-race controls and all existing portable regressions.
 The13member indexed local archive retains the old failed cohort and negative
 control alongside the corrected source. Actual repaired native acceptance is
 pending; do not activate chunk writes or promote this source on the local gate.
+
+
+Native read acceptance checkpoint (2026-10-18): repaired source `c633d02` has
+completed own run39178517491 attempt1 with all3 jobs successful, both dedicated
+real native manifest controls passing, reviewed raw logs, own strict21/14
+artifacts/project oracles and all35 raw-field/type matches. Indexed26member hosted
+evidence is verified; see the [native read contract](native-manifest-reads.md).
+This is scoped native read acceptance. Independent W1a development proceeds from
+the accepted library reader in its own checkout while preserving this source;
+chunk writes, provider conformance and actual reboot remain later requirements.

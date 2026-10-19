@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "repair full portable gate and own Linux native job passed; Windows acceptance pending",
+  "status": "accepted scoped read-only manifest native integration: own all3 jobs, raw review, strict Windows artifacts and raw35 comparison passed",
   "branch": "codex/manifest-snapshot-inodes",
   "base": "755da0f",
   "failed_source": "d98ea2ff2ec9cc72b55458190d657bb53642d227",
@@ -167,5 +167,73 @@
       "checkout Node20 forced to24"
     ],
     "scope": "book only; native and combined review remain pending"
+  },
+  "windows_review": {
+    "source": "c633d02d47ccf2da20cfadd50e0b8e11f6e06811",
+    "run_id": 39178517491,
+    "run_attempt": 1,
+    "job_id": 117826123721,
+    "reviewed": true,
+    "log": "/tmp/s3drive-snapshot-inodes-c633-windows.log",
+    "sha256": "e6647965cd49290261e559de52249d1be88ba97f76016db1e4f549f087490003",
+    "native_manifest_seconds": 1.79,
+    "existing_native_tests": 7,
+    "existing_native_seconds": 95.32,
+    "state_tests": 360,
+    "state_ignored": 1,
+    "state_seconds": 533.18,
+    "paired_startup_seconds": 81.64,
+    "notices": [
+      "three locked disposable fixture profiles; dummy credentials removed; profile disposal deferred to VM destruction",
+      "unused WinFsp delay import warning in 11 unique test targets and standalone manifest invocation",
+      "Node20 actions forced to24",
+      "expected injected permission/conflict/stopped-authority failures retain local data",
+      "five long-running notices resolved with passing named controls"
+    ],
+    "long_running_controls": [
+      "supervised_windows_coordinator_tls_independent_logons_and_recovery",
+      "chunk_roots_missing_grandchild_and_failed_prepare_block_publication",
+      "namespace_client::opens::tests::retirement::retired_opens_free_live_open_and_event_budgets_with_a_long_lived_reader",
+      "namespace_client::opens::tests::session::obsolete_full_open_quota_can_be_retained_without_synthesizing_closing_callbacks",
+      "supervised_windows_managed_drive_and_coordinator_recovery"
+    ],
+    "scope": "Windows raw logs reviewed; artifact acceptance requires separate strict checks"
+  },
+  "hosted_archive": {
+    "path": "evidence/manifest-snapshot-inodes-c633-hosted-20261018.tar.gz",
+    "sha256": "800057c4b01f08120681438acc67ce0099fe083ffdc476af37e0e6ce5ee912fd",
+    "bytes": 143913,
+    "members": 26,
+    "all_indexed_members_verified": true,
+    "source": "c633d02d47ccf2da20cfadd50e0b8e11f6e06811",
+    "run_id": 39178517491,
+    "run_attempt": 1,
+    "independent_typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true
+  },
+  "hosted_acceptance": {
+    "run_id": 39178517491,
+    "run_attempt": 1,
+    "source": "c633d02d47ccf2da20cfadd50e0b8e11f6e06811",
+    "all_three_jobs_success": true,
+    "all_three_raw_logs_reviewed": true,
+    "own_reference_artifacts": {
+      "replacement": 12155790591,
+      "disposition": 12155504654
+    },
+    "typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "project_oracles_passed": true,
+    "raw_all_fields_types_match": 35,
+    "checker_session": 95100,
+    "checker_exit_code": 0,
+    "watch_session": 30345,
+    "watch_exit_code": 0,
+    "no_older_artifacts_reused": true
   }
 }

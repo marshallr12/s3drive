@@ -1,13 +1,12 @@
 # Native manifest read integration
 
-Implementation and source-review date: **2026-10-18**. The isolated draft on
-`codex/native-manifest-reads` adds manifest reads to version-3 read-only managed
-mounts. The original portable gate passed, but its Linux native control
-failed. A repair is in progress on `codex/manifest-snapshot-inodes`; actual FUSE
-acceptance passed on the repair's own Linux runner; WinFsp acceptance is pending.
-No cross-platform acceptance is claimed.
-The prerequisite reader source `88d02f7` has passed its own Linux/Windows/book
-cohort and strict reference-artifact checks at checkpoint `7c2b454`.
+Implementation and source-review date: **2026-10-18**. Source `c633d02` on
+`codex/manifest-snapshot-inodes` has passed its own Linux/Windows/book cohort,
+reviewed raw logs, strict typed reference artifacts and all35 raw-field/type
+comparisons. This accepts the described version-3 read-only manifest controls.
+The earlier draft `d98ea2f` failed its Linux native size check; the repair and
+negative evidence are retained below. The prerequisite reader source `88d02f7`
+was separately accepted at checkpoint `7c2b454`.
 
 ## Filesystem behavior
 
@@ -152,3 +151,27 @@ hash-bound in the [repair evidence](evidence/manifest-snapshot-inodes-20261018.j
 Windows and combined artifact review remain pending. These timings identify
 executions and support no performance claim. Provider mutations and a physical
 reboot were not part of these loopback runner tests.
+
+
+## Completed cross-platform native cohort
+
+The [own source-c633d02 run](https://github.com/marshallr12/s3drive/actions/runs/39178517491)
+completed all three jobs successfully. The explicit Linux FUSE control passed
+in1.22s and Windows WinFsp control in1.79s, with the original old-handle assertion
+retained and same-name publication before rename. The Windows runner was Windows
+Server2025, image `windows-2025-vs2026` version `20261007.264.1`; testing was on
+GitHub's disposable VM, not this Linux workstation.
+
+The run's own finalized replacement/disposition artifacts passed strict21/14
+record checks and project oracles. All35 raw JSON observations matched every
+artifact field and type. API artifact ZIP digests, exact source and all257 frozen
+inputs were verified. The [26-member hosted evidence archive](evidence/manifest-snapshot-inodes-c633-hosted-20261018.tar.gz)
+retains all three raw logs, checkers, artifacts and exact tested source; every
+indexed member was verified. SHA-256:
+`800057c4b01f08120681438acc67ce0099fe083ffdc476af37e0e6ce5ee912fd`.
+The long-running notices, expected injected failures, unused WinFsp delay-import
+warnings and three disposable-profile cleanup deferrals remain visible in the
+logs. Dummy credentials were removed before profile disposal was deferred.
+These results accept the scoped read-only controls, not chunk writes, a physical
+workstation reboot, restore/failover or new Wasabi mutations. The later W1a
+reference-proof library has separate source and unfinished gates.

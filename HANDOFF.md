@@ -60,51 +60,50 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Current repair: immutable manifest inode identities (2026-10-18)
+## Accepted read-only manifest native integration (2026-10-18)
 
-Published c633d02d47ccf2da20cfadd50e0b8e11f6e06811, clean exactremote with
-all257 working/committed hashes verified. Own run39178517491 attempt1:
-Linux SUCCESS/raw reviewed, book SUCCESS/raw reviewed; Windows still LIVE.
-Linux117826123544, Windows117826123721, book117826123692. Watch30345 ->
-/tmp/s3drive-snapshot-inodes-c633-watch.log; resume same handle/cohort.
-Linux repaired native manifest1.22s,9existingnative63.27s,365state/1ignored106.66s,
-no-systemd coordinator HTTP/TLS23.97s all passed. Exact-source raw review:
-/tmp/s3drive-snapshot-inodes-c633-linux-reviewed.json and corresponding book
-review marker. Both logs retained. No combined rawreview marker or own Windows
-artifact acceptance yet. Do not run success checker before all3 complete/reviewed.
-Publication proof /tmp/s3drive-snapshot-inodes-publication.json. PUBLIC retained,
-main1a93b5f unchanged. Need own terminal all3/native controls/rawlog review and
-own finalized Windows typed21+14/projectoracles/raw35 artifacts. Do not borrow
-old artifacts. Runtime stays frozen while observing; docs-only children may
-record evidence with skip-ci. Goal ACTIVE; chunk writes remain later work.
-Plan now records W1-W6: opaque inherited-reference provenance, sparse edit
-views, mixed tree proofs, publication, exact-view settlement and actual native
-writes. Existing tree receipts require every local upload receipt; source ack
-requires a full sealed local snapshot. Do not fake either for inherited refs.
-These are source-backed proposals, pending repaired native-read acceptance.
+Runtime c633d02d47ccf2da20cfadd50e0b8e11f6e06811, all257 working/committed
+hashes remain frozen. Own run39178517491 attempt1 ALL3 SUCCESS and raw-reviewed:
+Linux117826123544, Windows117826123721, book117826123692. Watch30345 CLOSED0.
+Both explicit real native manifest controls passed: Linux1.22s, Windows1.79s.
+Strict independent typed21replacement/14disposition, project oracles and all35
+raw-field/type comparisons passed; checker95100 CLOSED0. Own finalized artifacts
+12155790591 and12155504654, API ZIP digests checked; no older artifacts reused.
+Indexed26member hosted archive143913bytes SHA
+800057c4b01f08120681438acc67ce0099fe083ffdc476af37e0e6ce5ee912fd, every member
+verified. See docs/src/evidence/manifest-snapshot-inodes-20261018.json and
+manifest-snapshot-inodes-c633-hosted-20261018.tar.gz. One-use checker/rawcompare/
+archive already completed; do not rerun their mkdir/assert-not-exists paths.
 
+Linux9existing native63.27s,365state/1ignored106.66s, no-systemd coordinator
+HTTP/TLS23.97s. Windows7existing native95.32s,360state/1ignored533.18s,
+paired startup81.64s. Timings identify executions, not benchmarks. Raw Windows
+notices retained: three locked disposable profiles, dummy credentials removed,
+profile disposal deferred to VM destruction; unused WinFsp delay import in11
+unique targets plus standalone manifest invocation; Node notices; five long
+controls ultimately passed. No physical reboot or new Wasabi mutation claimed.
+Local full gate68406 passed before publication: all257 unchanged,12publication,
+6reader/1nativeignored,62S3,365state/1ignored,fmt/clippy/build/book. Indexed13member
+local archive133937bytes SHAe243742e802539035a8efa36478ce339a6f1ce43646460592bade4feb887a2aa.
+Old d98 cohort39176574738 is terminal FAILURE and retained separately: Linux
+old130MiB fd stat returned4 after new publication; Windows passed2.39s. The repair
+keeps that assertion and adds same-name replacement before rename plus guards
+against stale/racing opens. Do not reuse the failed cohort as acceptance.
 
-Worktree /home/marshall/src/worktrees/s3drive-manifest-snapshot-inodes,
-branch codex/manifest-snapshot-inodes from755da0f. Source d98's Linux native
-job117820371839 FAILED at native.rs494: old130MiB fd metadata reports4 after
-new4byte publication. Log /tmp/s3drive-native-manifest-d98-linux-failed.log.
-Actual OS failure, not setup. Do not relax/remove assertion. Repair per plan:
-read-only manifest per-payload inode identity + pinned lookup metadata + version
-checks around fresh file open. Legacy/mutable identity semantics stay unchanged.
-Repair implemented. Negative control failed on old code (inode3 == inode3);
-focused suite now passes6controls/1nativeignored in4.57s, including both open
-race guards. Full gate68406 CLOSED EXIT0; log /tmp/s3drive-snapshot-inodes-gate.log
-SHA4aecc516640f2c4920d9bc91c2bab40366d7be2c9fd51f4897353548f06cd12d.
-All257 inputs unchanged;12publication+6reader/1nativeignored+62S3+365state/1ignored,
-fmt/clippy/build/book. Indexed13member archive133937bytes SHA
-e243742e802539035a8efa36478ce339a6f1ce43646460592bade4feb887a2aa.
-Own fresh FUSE/WinFsp cohort remains required before acceptance.
-Old native worktree257source remains frozen; d98cohortfailed, no success checker.
-Run39176574738 is terminal FAILURE. Windows117820371735 SUCCESS, including
-native manifest2.39s; book passed/reviewed; Linux FAILED. Watch24055 CLOSED
-EXIT1. Raw Windows log /tmp/s3drive-native-manifest-d98-windows.log retained;
-no success checker/artifact acceptance for this failed cohort. Never reuse its
-artifacts as corrected-source acceptance. PUBLIC policy applies, no privileged bypass.
+Next: W1a independent data/hole reference-proof foundation is uncommitted in
+/home/marshall/src/worktrees/s3drive-manifest-reference-proofs,
+codex/manifest-reference-proofs from accepted reader7c2b454. Focused6 passed4.97s;
+first full gate93249 interrupted143 without test failure, cause unknown; pending
+TLS test passed alone10.58s. Fresh full gate2 session98776 LIVE ->
+/tmp/s3drive-reference-proofs-gate2.log,258 inputs frozen. Read its handoff before
+work. Do not edit mapped source during gate. It does not activate native writes.
+W1-W6 plan here records authenticated bases, sparse edits, mixed-tree proofs,
+publication, exact-view settlement and actual native writes. Source inspection
+corrected the prior-root claim: root_key uses Role::Page; geometrically valid
+old roots may be inherited as children with explicit provenance. No invented
+upload receipts. Goal ACTIVE; preserve PUBLIC and main policy. Primary runtime
+promotion is a separate integration action, not inferred from evidence publication.
+
 ## Failed native-read candidate / historical hosted gate (2026-10-18)
 
 Source d98ea2ff2ec9cc72b55458190d657bb53642d227 pushed on
