@@ -1,7 +1,7 @@
 {
   "date": "2026-10-19",
   "phase": "authenticated clean-version observation",
-  "status": "complete local gate passed; own hosted/platform/source/artifact acceptance required",
+  "status": "accepted: full local gate and own hosted/platform/source/artifact checks passed",
   "schema": 38,
   "source": "12a2f2a7d836aab518c7b0d60675234d6470ef97",
   "runtime_inputs": 342,
@@ -257,9 +257,49 @@
       "linux": 118215486002,
       "windows": 118215486257
     },
-    "tools_executed": false,
+    "tools_executed": true,
     "parent_artifact_reuse_permitted": false,
-    "status": "book/Linux succeeded; Windows workspace tests running"
+    "status": "accepted; all three jobs succeeded and full raw/source/artifact/native evidence passed",
+    "archive": {
+      "path": "evidence/external-clean-reader-hosted-20261019.tar.gz",
+      "sha256": "95f70fe3f45d554cac275f7325b51644c54012a43e237544fd5c50a2752ac10c",
+      "bytes": 413977,
+      "members": 109,
+      "all_indexed_members_verified": true,
+      "source": "12a2f2a7d836aab518c7b0d60675234d6470ef97",
+      "run_id": 39298010083,
+      "run_attempt": 1,
+      "independent_typed_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "all_raw_fields_and_types_equal": true
+    },
+    "artifacts": {
+      "replacement": 12208623087,
+      "disposition": 12212012053
+    },
+    "images": {
+      "linux_and_book": "Ubuntu24.04 image20261012.334.1",
+      "windows": "WindowsServer2025 windows-2025-vs2026 image20261007.264.1"
+    },
+    "native": {
+      "fuse_cases": 9,
+      "fuse_seconds": 51.61,
+      "winfsp_cases": 7,
+      "winfsp_seconds": 93.7,
+      "manifest_linux_seconds": 1.01,
+      "manifest_windows_seconds": 2.4,
+      "paired_no_systemd_seconds": 23.51,
+      "paired_windows_seconds": 87.48
+    },
+    "review": {
+      "windows_slow_tests_completed": 10,
+      "interleaved_reference_tests_completed": 15,
+      "locked_disposable_profiles": 3,
+      "dummy_credentials_removed": true,
+      "profile_deletion_deferred_to_vm_destruction": true
+    }
   },
   "parent": {
     "source": "67a75e3047a867e2499ef08ded64fe00b72a4aa9",

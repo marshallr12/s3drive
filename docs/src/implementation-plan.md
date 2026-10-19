@@ -3460,3 +3460,14 @@ SHAbe0848b254fb9eb9a300fd7d0bd21f4deef4e9fbd940c496b2e2ba913e774b08 verified,
 including failed/passing SDK contexts and parent340 local/hosted evidence.
 Own book/Linux succeeded; Windows and complete own raw/source/native/artifact
 acceptance remain required. Mounted chunk writes and reclamation remain absent.
+
+
+### Authenticated clean observation accepted (2026-10-19)
+
+Source12a2f2a/schema38/all342 passed the full local gate and own hosted
+CI39298010083 Linux/Windows/book cohort, complete raw/source/native/artifact
+verification. [Contract and indexed archives](external-clean-reader.md). Main now
+contains exactly those accepted runtime inputs. Earlier pending statuses are
+historical. Mounted chunk writes and retention remain outstanding. The separate
+atomic empty-manifest creation candidate0c7f8b7/schema39/all349 is undergoing its
+own complete local and hosted gates; it has not been promoted.

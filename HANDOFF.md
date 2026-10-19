@@ -29,26 +29,24 @@ Use target-specific platform dependencies. SQLite state stays outside the mount.
 
 ## Accepted canonical implementation
 
-Main runtime includes accepted local clean-version adoption intent, schema38/all340
-exact inputs. Own tested source67a75e3047a867e2499ef08ded64fe00b72a4aa9,
-CI39295182975 attempt1. Full local gate passed17:46:14Z.
-Own book118205713291/Linux118205712929/Windows118205713142 all succeeded.
-Complete raw/source/API ZIP, independent typed21+14/project/all35 raw fields and
-JSON types passed. Actual native FUSE9/WinFsp7, manifest ranges/remount and paired
-no-systemd/Windows startup passed. Images Ubuntu24.04 20261012.334.1;
-WindowsServer2025 windows-2025-vs2026 20261007.264.1. These are not native chunk
-write, Wasabi or physical desktop/reboot proofs.
-
-[Local adoption acceptance](docs/src/external-clean-local.md): indexed355-member
-local archive SHA6771882a97cca90e85ca7570d6b05e6fa8ce4bda7e6956628d609cc10bacc582
-and107-member hosted archive SHAb97670d9733322847845c305d8e9fb6114673957f9348180f2bed9e156048902.
-All one-use parent340 acceptance/comparator/archivers are DONE; NEVER rerun.
-Canonical publication proof: /tmp/s3drive-canonical-external-clean-local-publication.json.
-Ordinary later documentation commits do not change the accepted runtime.
-Prior accepted source903ade67e21cd71bb7ab02716c098993d9f6e82f/schema37/run39289349689
-introduced shared reader/preparation guards. Historical component records below
-retain their original scopes. Three locked disposable Windows profiles had dummy
+Main runtime includes accepted authenticated external-clean observation,
+schema38/all342 exact inputs. Own tested source12a2f2a7d836aab518c7b0d60675234d6470ef97,
+CI39298010083 attempt1: book118215485753/Linux118215486002/Windows118215486257
+all succeeded. Complete local gate passed18:06:20Z unchanged. Complete raw/source/
+API ZIP, independent typed21+14/project/all35 raw fields and JSON types passed.
+Actual native FUSE9/WinFsp7, manifest ranges/remount and paired no-systemd/Windows
+startup passed. Images Ubuntu24.04 20261012.334.1; WindowsServer2025
+windows-2025-vs2026 20261007.264.1. These are not native chunk-write, Wasabi or
+physical desktop/reboot proofs. Three locked disposable Windows profiles had dummy
 credentials removed; final profile deletion deferred to hosted VM destruction.
+
+[Observation acceptance](docs/src/external-clean-reader.md): indexed376-member
+local archive SHAbe0848b254fb9eb9a300fd7d0bd21f4deef4e9fbd940c496b2e2ba913e774b08
+and109-member hosted archive SHA95f70fe3f45d554cac275f7325b51644c54012a43e237544fd5c50a2752ac10c.
+All one-use observation342 acceptance/comparator/archivers are DONE; NEVER rerun.
+Canonical publication proof: /tmp/s3drive-canonical-external-clean-reader-publication.json.
+Ordinary later documentation commits do not change accepted runtime. Parent340
+local clean-adoption intent remains accepted; its indexed archives are retained.
 
 The accepted path includes authenticated manifest reads, immutable local patches,
 mixed plans/dependency uploads, exact root publication/recovery, local lineage and
@@ -99,14 +97,21 @@ SHAbe0848b254fb9eb9a300fd7d0bd21f4deef4e9fbd940c496b2e2ba913e774b08 includes
 exact342, all SDK failed/passing contexts and independently verified parent340
 local+hosted archives. Same-prefix gate1 result/log and candidate1 frozen map/source.
 No local Cargo remains from these owned runs; verify actual processes before next.
-Own CI39298010083 attempt1: book118215485753/Linux118215486002 succeeded;
-Windows118215486257 workspace tests running. GET-only observer1184928/startticks
-143907161 tracks exact cohort. Book/Linux complete raw logs retained. Own one-use
-raw review/checker/comparator/hosted archiver prepared/compiled, NOT executed.
-PS oracle parsed only. Require own complete raw review before marker/checker.
-Expected496Linux/491Windows state,26reader1nativeignored,24publication, all inherited
-plus new2worker/3SDK cases. Parent340 artifacts12209851124/12207128174 forbidden reuse.
-Main is accepted schema38/all340; authenticated source12a2f2a/all342 remains separate.
+Own CI39298010083 attempt1 all3 succeeded. Complete raw/source/API ZIP and
+independent typed/project/all35 fields/types passed. Indexed109-member hosted
+archive SHA95f70fe3f45d554cac275f7325b51644c54012a43e237544fd5c50a2752ac10c.
+Raw review/checker55074/comparator+archive55849 DONE, never rerun. Exactly nine
+runtime deltas promoted; canonical main matches accepted source12a2f2a/all342.
+
+New isolated atomic empty-manifest creation candidate: worktree
+/home/marshall/src/worktrees/s3drive-empty-manifest-create, branchcodex/empty-manifest-create,
+source0c7f8b72bcea830760f437036d201eb9c077ea1b/schema39/all349 frozen.
+Core2/state9/HTTP1 focused cases and workspace all-target Clippy passed.
+Full local gate1253500/child1253506 and own CI39302692507 attempt1 are running.
+Exact status/log/frozen inputs: /tmp/s3drive-empty-create-{gate1,candidate1}-*.
+Check live PID/startticks/results before touching runtime; one shared local Cargo.
+No S3 upload or native creation enabled. Authenticated publisher remains next.
+
 
 Next native prerequisite investigation: source/open namespace journals use compact
 content references and already share Storage, but their constructors reject sparse

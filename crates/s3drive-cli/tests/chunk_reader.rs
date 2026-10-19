@@ -11,6 +11,8 @@ mod composition;
 mod guards;
 #[path = "chunk_reader/mixed_plans.rs"]
 mod mixed_plans;
+#[path = "chunk_reader/observation.rs"]
+mod observation;
 #[path = "chunk_reader/pages.rs"]
 mod pages;
 #[path = "chunk_reader/preparation.rs"]
@@ -751,6 +753,9 @@ async fn manifest_reader_child() {
         "preparation" => Box::pin(preparation::flow(&mut f, &path)).await,
         "preparation-faults" => Box::pin(preparation::faults(&f, &path)).await,
         "preparation-limits" => Box::pin(preparation::limits(&f, &path)).await,
+        "observation" => Box::pin(observation::flow(&f, &path)).await,
+        "observation-faults" => Box::pin(observation::faults(&f, &path)).await,
+        "observation-races" => Box::pin(observation::races(&f, &path)).await,
         "guards" => Box::pin(guards::flow(&f, &path)).await,
         "composition" => Box::pin(composition::flow(&mut f, &path)).await,
         "composition-faults" => Box::pin(composition::faults(&f, &path)).await,
@@ -955,4 +960,20 @@ async fn mixed_plans_verify_full_old_tails_unicode_partial_zero_runs_empty_roots
 async fn edited_read_guards_keep_clone_and_preparation_lifetimes_and_release_failed_or_canceled_opens()
  {
     run("guards").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn clean_observation_adopts_live_versions_preserves_unicode_old_reads_and_recovers_without_rpc()
+ {
+    run("observation").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn clean_observation_refuses_pending_dirty_foreign_denied_and_corrupt_versions_without_admission()
+ {
+    run("observation-faults").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn clean_observation_rechecks_live_and_local_heads_and_bounds_cancel_quota_slots_and_deadline()
+ {
+    run("observation-races").await;
 }

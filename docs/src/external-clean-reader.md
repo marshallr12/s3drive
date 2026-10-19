@@ -1,5 +1,9 @@
 # Authenticated clean-version observation
 
+Current status,2026-10-19: accepted after full local and own hosted/platform/
+source/artifact checks. Mounted chunk writes and reclamation remain disabled.
+
+
 Declared 2026-10-19, isolated `codex/external-clean-reader`, based on local intent
 source67a75e3/schema38. Parent full/hosted acceptance is pending; keep this phase
 isolated until both parent and this source pass their own required checks.
@@ -117,3 +121,33 @@ One-use local archiver DONE; never rerun. Parent340 is accepted. Own book/Linux
 succeeded; Windows and own complete raw/source/native/artifact acceptance remain
 required. This does not enable mounted chunk writes, reclamation or physical
 sign-in/reboot acceptance. Earlier pending local statuses are historical.
+
+
+## Own hosted acceptance (2026-10-19)
+
+Source12a2f2a7d836aab518c7b0d60675234d6470ef97 passed
+[CI39298010083](https://github.com/marshallr12/s3drive/actions/runs/39298010083),
+attempt1: book118215485753/Linux118215486002/Windows118215486257 all succeeded.
+Complete raw logs, exact342 committed/working inputs, own API ZIP digests,
+independent typed21+14 records, project oracles and all35 raw fields/JSON types
+passed. Own replacement12208623087/disposition12212012053 reports were used.
+The [indexed hosted archive](evidence/external-clean-reader-hosted-20261019.tar.gz)
+contains109 verified members/413977bytes, SHA-256
+`95f70fe3f45d554cac275f7325b51644c54012a43e237544fd5c50a2752ac10c`.
+One-use raw review/source checker55074/comparator+hosted archive55849 DONE;
+never rerun. Observer1184928 CLOSED0/all_success18:23:24Z.
+
+Linux496/Windows491 state cases (one diagnostic ignored each),26reader (one
+native-only ignored),24publication/37core/62S3 passed. All ten slow Windows cases
+and15 interleaved reference tests completed. Separate actual native runs passed
+FUSE9/51.61s, WinFsp7/93.70s, manifest ranges/remount1.01s/2.40s, and paired
+no-systemd23.51s/Windows87.48s. Actual images Ubuntu24.04 20261012.334.1 and
+WindowsServer2025 windows-2025-vs2026 20261007.264.1. Three locked disposable
+profiles had dummy credentials removed and deletion deferred to VM destruction;
+unused delay-import warnings/tooling deprecations were retained and reviewed.
+
+This accepts the authenticated observation libraries and existing native
+regressions. It does not enable mounted chunk writes, reclaim history, prove real
+Wasabi mutations or physical MX/Windows10/11 sign-in/reboot. Earlier pending
+statuses above are historical; the separate atomic empty-create candidate needs
+its own full acceptance.

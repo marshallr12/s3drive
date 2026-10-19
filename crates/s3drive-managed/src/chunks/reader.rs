@@ -23,9 +23,9 @@ mod base;
 mod composition;
 pub use base::BaseDescriptor;
 pub use composition::{
-    ChunkContent, EditedFile, MixedPublisher, MixedRecovery, MixedRecoveryFailure, MixedRootCommit,
-    MixedRootFailure, MixedRootRecovery, MixedSourceReceipt, MixedUploader, Preparation,
-    PreparedChunk, PreparedDependency,
+    ChunkContent, CleanObservation, EditedFile, MixedPublisher, MixedRecovery,
+    MixedRecoveryFailure, MixedRootCommit, MixedRootFailure, MixedRootRecovery, MixedSourceReceipt,
+    MixedUploader, ObservationKind, Preparation, PreparedChunk, PreparedDependency,
 };
 mod provenance;
 pub use provenance::{ChunkProof, MAX_CHUNK_PROOF_BYTES, MAX_PAGE_PROOF_BYTES, PageProof};

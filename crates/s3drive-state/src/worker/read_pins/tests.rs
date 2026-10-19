@@ -272,3 +272,115 @@ async fn a_burst_of_final_drops_queues_one_wake_and_preserves_seven_command_slot
     assert_eq!(active(&storage).await, 0);
     storage.close().await.unwrap();
 }
+
+async fn observation_fixture(path: &Path) -> (Storage, Client, crate::sparse_views::View) {
+    let (storage, client, old) = fixture(path).await;
+    let binding = client.view(old).await.unwrap().binding().clone();
+    let base = binding.base().unwrap();
+    let clean = Binding::new(
+        s3drive_core::manifest::base::Descriptor::from_hex(
+            base.volume(),
+            &"44".repeat(16),
+            base.reservation(),
+            base.payload_reference(),
+        )
+        .unwrap(),
+        *binding.store(),
+        *binding.source(),
+        binding.fingerprint().into(),
+        binding.root().into(),
+        32,
+    )
+    .unwrap();
+    let view = client.begin([3; 32], clean, 32).await.unwrap();
+    client.enable_scoped().await.unwrap();
+    (storage, client, view)
+}
+#[tokio::test]
+async fn observation_preflight_canceled_queue_and_unread_reply_release_the_complete_guard() {
+    let temp = tempfile::tempdir().unwrap();
+    let (storage, client, view) = observation_fixture(temp.path()).await;
+    let token = crate::sparse_views::ScopedOperation::new(view.binding(), [9; 32]).unwrap();
+    let release = block(&storage).await;
+    let mut queued = Box::pin(client.prepare_observation(token, view.id()));
+    submit_only(queued.as_mut()).await;
+    drop(queued);
+    release.send(()).unwrap();
+    assert_eq!(active(&storage).await, 0);
+    let release = block(&storage).await;
+    let mut reply = Box::pin(client.prepare_observation(token, view.id()));
+    submit_only(reply.as_mut()).await;
+    release.send(()).unwrap();
+    assert_eq!(active(&storage).await, 1);
+    drop(reply);
+    assert_eq!(active(&storage).await, 0);
+    assert_eq!(
+        client.recover_adoption(token, view.id()).await.unwrap(),
+        None
+    );
+    storage.close().await.unwrap();
+}
+#[tokio::test]
+async fn observation_preflight_recovers_known_intent_before_full_pin_or_narrowed_source_quota() {
+    use crate::sparse_views::{Adoption, Limits, ObservationStart, ScopedOperation};
+    let temp = tempfile::tempdir().unwrap();
+    let (storage, client, view) = observation_fixture(temp.path()).await;
+    let mut guards = Vec::new();
+    for _ in 0..256 {
+        guards.push(client.guard(view.id()).await.unwrap());
+    }
+    let token = ScopedOperation::new(view.binding(), [9; 32]).unwrap();
+    let error = client
+        .prepare_observation(token, view.id())
+        .await
+        .unwrap_err();
+    assert_eq!(
+        error.downcast_ref::<crate::sparse_views::pins::Failure>(),
+        Some(&crate::sparse_views::pins::Failure::Quota)
+    );
+    let old = view.binding();
+    let base = old.base().unwrap();
+    let new = Binding::new(
+        s3drive_core::manifest::base::Descriptor::from_hex(
+            base.volume(),
+            base.node(),
+            &"55".repeat(16),
+            &"66".repeat(32),
+        )
+        .unwrap(),
+        *old.store(),
+        *old.source(),
+        old.fingerprint().into(),
+        old.root().into(),
+        0,
+    )
+    .unwrap();
+    let Adoption::Adopted(next) = client
+        .adopt_clean_intent(token, view.id(), new)
+        .await
+        .unwrap()
+    else {
+        panic!()
+    };
+    let narrow = storage
+        .sparse_views(
+            Options::default()
+                .with_limits(Limits {
+                    views: 1,
+                    metadata_bytes: 1,
+                    ..Limits::default()
+                })
+                .unwrap(),
+        )
+        .unwrap();
+    let ObservationStart::Known(recovered) =
+        narrow.prepare_observation(token, view.id()).await.unwrap()
+    else {
+        panic!()
+    };
+    assert_eq!(*recovered, next);
+    assert_eq!(active(&storage).await, 256);
+    drop(guards);
+    assert_eq!(active(&storage).await, 0);
+    storage.close().await.unwrap();
+}

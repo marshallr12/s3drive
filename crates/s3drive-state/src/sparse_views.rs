@@ -11,7 +11,7 @@ use model::{BlockRef, Change, Record, Request};
 mod ledger;
 use ledger::{File, Saved, inspect};
 mod adoption;
-pub use adoption::Adoption;
+pub use adoption::{Adoption, ObservationStart};
 mod guards;
 pub mod pins;
 pub use guards::ReadGuard;

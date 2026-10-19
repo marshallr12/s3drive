@@ -7,6 +7,8 @@ mod publication;
 pub use publication::{
     MixedPublisher, MixedRootCommit, MixedRootFailure, MixedRootRecovery, MixedSourceReceipt,
 };
+mod observation;
+pub use observation::{CleanObservation, ObservationKind};
 mod recovery;
 pub use recovery::{MixedRecovery, MixedRecoveryFailure};
 mod uploading;

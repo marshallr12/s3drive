@@ -149,5 +149,63 @@ impl Client {
     }
 }
 
+/// Transient local preflight, never a remote observation or a commit permit.
+#[derive(Debug)]
+pub enum ObservationStart {
+    Known(Box<View>),
+    Ready(ReadGuard),
+}
+impl Journal<'_> {
+    fn observation_preflight(
+        &mut self,
+        token: ScopedOperation,
+        parent: Id,
+    ) -> Result<(View, bool)> {
+        let tx = self
+            .state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred)?;
+        isolation(&tx)?;
+        let before = inspect(&tx)?;
+        if let Some(view) = known(&tx, &before, token, parent)? {
+            tx.commit()?;
+            return Ok((view, true));
+        }
+        let old = before.record(parent)?;
+        let target = old.request.binding.target()?;
+        if !old.clean() || before.files.get(&target).ok_or(Failure::Corrupt)?.head != parent {
+            return Err(Failure::Conflict.into());
+        }
+        preparation::adoption_fence(&tx, target)?;
+        let view = View(old.clone());
+        tx.commit()?;
+        Ok((view, false))
+    }
+}
+impl Client {
+    /// Deliver a complete guard before replying, so cancellation releases it.
+    pub async fn prepare_observation(
+        &self,
+        token: ScopedOperation,
+        parent: Id,
+    ) -> Result<ObservationStart> {
+        let client = self.clone();
+        let options = self.options;
+        self.owner
+            .call(move |s| {
+                let mut journal = Journal::new(&mut s.state, options)?;
+                let (view, known) = journal.observation_preflight(token, parent)?;
+                if known {
+                    return Ok(ObservationStart::Known(Box::new(view)));
+                }
+                let pin = journal.pin(view.id())?;
+                Ok(ObservationStart::Ready(super::guards::ReadGuard::new(
+                    client, view, pin,
+                )))
+            })
+            .await
+    }
+}
+
 #[cfg(test)]
 mod tests;
