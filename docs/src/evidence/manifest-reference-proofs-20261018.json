@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "W1a full local gate passed; own combined hosted acceptance pending",
+  "status": "W1a accepted in combined own-source8c3448f cohort",
   "branch": "codex/manifest-reference-proofs",
   "base": "7c2b45435cd4aa3999e63ee16ccb6b03f5985c76",
   "scope": "W1a data/hole reachability witnesses; not whole W1, uploads, receipts, sparse edits or mounted writes",
@@ -98,10 +98,9 @@
     "windows": "passed; own all3 accepted at native checkpoint52f591c"
   },
   "not_claimed": [
-    "W1a full gate or hosted acceptance",
     "historical base reopen",
     "inherited subtree proofs",
-    "chunk writes"
+    "native chunk writes"
   ],
   "local_archive": {
     "path": "evidence/manifest-reference-proofs-local-20261018.tar.gz",
@@ -110,5 +109,17 @@
     "members": 16,
     "all_indexed_members_verified": true,
     "scope": "W1a portable local gate only"
+  },
+  "hosted": {
+    "source": "8c3448f478f9ab62fe1a23ce965907546be5d10c",
+    "run_id": 39184629344,
+    "run_attempt": 1,
+    "all_three_jobs": "success, raw reviewed",
+    "strict_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true,
+    "evidence": "snapshot-format-transitions-20261018.json"
   }
 }

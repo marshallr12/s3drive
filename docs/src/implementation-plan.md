@@ -2198,3 +2198,12 @@ read-only chunk-capable backend and guard both manifest and legacy reader opens.
 Keep direct, writable and missing-capability fallback behavior scoped unchanged.
 Require real Linux/Windows controls plus a fresh combined local/hosted cohort;
 prerequisite artifacts cannot certify this source.
+
+Result: combined source8c3448f passed its full local gate and its own hosted
+run39184629344, all3 jobs/raw reviewed. Actual FUSE1.63s and WinFsp2.53s include
+all-format snapshots and original old-handle assertions. Own artifact ZIP
+digests, strict21+14/project oracles and all35 raw fields/types passed; no prior
+artifacts reused. The indexed29-member hosted archive is verified. W1b page
+reachability remains an independent draft with local gate95188 running; combine
+this accepted source and require its own gate before integration. Native chunk
+writes, sparse SQLite views, historical bases and mixed-tree proofs remain later.

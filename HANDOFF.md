@@ -27,22 +27,30 @@ include main's policy commit; the c7fca789 feature lineage includes that rule.
 
 ## Current combined-source snapshot-format repair (2026-10-18)
 
-Published 8c3448f478f9ab62fe1a23ce965907546be5d10c, clean exactremote/all259
-working+committed hashes verified, PUBLIC retained/main unchanged. Own run
-39184629344 attempt1 LIVE: Linux117844328637, Windows117844328867,
-book117844329388. Watch73843 -> /tmp/s3drive-formats-8c3-watch.log. Resume
-same handle/cohort; do not mutate runtime while observing. One-use checker,
-project oracle wrapper, raw compare and archive are prepared under /tmp:
-s3drive-check-formats-8c3.py, s3drive-formats-8c3-reference-check.ps1,
-s3drive-formats-8c3-raw-compare.py, s3drive-formats-8c3-archive.py. NOT EXECUTED.
-Need all3 terminal/raw-reviewed, both native steps success and this source's own
-finalized typed21/14 artifacts/project oracles/all35 raw fields+types. No own raw
-review marker/artifact directory yet. Never borrow accepted c633 artifacts.
+Accepted runtime8c3448f478f9ab62fe1a23ce965907546be5d10c: own run39184629344
+attempt1 ALL3 SUCCESS; watch73843 CLOSED0, checker68867 CLOSED0. All three raw
+logs reviewed/bound to exact jobs; Linux FUSE1.63s, Windows WinFsp2.53s. Own
+artifact ZIP API digests, typed21+14/project oracles and all35 raw fields/types
+passed. No c633/earlier artifacts reused. Frozen259 working/committed unchanged.
+Indexed29member hosted archive169525bytes SHA
+318b4981938bf217e29b681bcef31ca7edccaaebe53c417ca03d8e93c6b6147a.
+Windows Server2025 image20261007.264.1; three disposable profiles locked,
+dummy credentials removed, removal deferred to VM destruction; unused delay
+import warnings retained. Linux no-systemd HTTP/privateCA24.26s and paired
+FUSE recovery passed; Windows paired recovery84.85s. These are loopback runner
+controls, not live Wasabi, physical reboot or native chunk-write acceptance.
+
+Next worktree /home/marshall/src/worktrees/s3drive-manifest-page-proofs,
+codex/manifest-page-proofs from ed2e93b: W1b metadata-only PageProof, focused7
+passed5.54s; own full local gate95188 still LIVE, frozen260 unchanged. It must
+combine this accepted runtime and pass its own source-bound hosted cohort
+before integration. Historical base reopen/sparse edits/mixed-tree publication/
+exact-view settlement/native chunk writes remain required; goal ACTIVE.
 
 
 Worktree /home/marshall/src/worktrees/s3drive-manifest-reference-proofs,
 branch codex/manifest-reference-proofs. Local merge9c49fe4 combines accepted
-native52f591c with local-green W1a ed2e93b. Combined source pushed; native/hosted acceptance remains pending.
+native52f591c with local-green W1a ed2e93b. Combined source is now accepted by its own all3/raw/artifact cohort.
 Negative control55850 EXIT101: old metadata-empty inode reported4 instead of0
 following manifest publication; /tmp/s3drive-formats-negative.log. Production
 was unchanged for this control. Repair now snapshots all file content versions
@@ -59,7 +67,7 @@ new independent scenarios. No production quota raised or assertions relaxed.
 Two unused-mut warnings were removed; Clippy30783 EXIT0. Native control extends
 same-name publication and retained fd sizes/bytes to empty/legacy/root formats,
 republication and rename, with existing teardown deadlines and legacy cap.
-New real OS assertions remain unverified until a fresh exact-source cohort.
+New real OS assertions passed in this exact-source cohort.
 Combined gate1 session38083 CLOSED101 on existing readonly engine fixture
 reopening a stale inode. Updated only that engine case to refresh path lookup,
 assert stale-open Conflict and distinct snapshot inode, preserve global ID,
@@ -70,7 +78,7 @@ session81306 CLOSED EXIT0 -> /tmp/s3drive-formats-combined-gate2.log; all259
 inputs unchanged in /tmp/s3drive-formats-combined-frozen.json. Eight reader/format
 controls/1nativeignored,12publication,62S3,365state/1ignored,fmt/clippy/build/book
 passed. Indexed25member local archive116562bytes SHA
-d7ad206a5579ef5dcaaedb4ee3e7c82374c262093098f375208506bdf4076e5b. Own fresh native/hosted cohort required. Previous
+d7ad206a5579ef5dcaaedb4ee3e7c82374c262093098f375208506bdf4076e5b. Own fresh native/hosted cohort accepted. Previous
 W1a/native maps and archives retain their own source; do not reuse as acceptance.
 
 ## Current W1a foundation: authenticated chunk-reference proofs (2026-10-18)
@@ -81,8 +89,8 @@ reader gates accepted). Independent library foundation while native repair
 c633 run39178517491 ALL3/strict21+14/raw35 accepted at52f591c; watch30345 CLOSED0.
 Preserve that accepted candidate; its artifacts do not accept this W1a source.
 Local archive 16members/53064bytes SHAb1af7908f2646d1f33436949897ae04ce22b093baade991cb137ff52530eee8a.
-Source remains a local draft until accepted native prerequisites are combined
-and a fresh exact-source hosted cohort passes. No own W1a artifact acceptance.
+W1a is accepted in combined source8c3448f, with native prerequisites and its
+own fresh exact-source hosted cohort; the standalone ed2e93b did not run CI.
 Next audit before primary promotion: add empty/legacy opened-handle metadata
 checks across payload-format publication; current native control begins with
 a manifest base. Preserve original pinned size/bytes assertions.

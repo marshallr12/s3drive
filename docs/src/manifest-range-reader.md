@@ -209,3 +209,13 @@ retains both runs, the diagnostic, frozen inputs and exact helper/test source.
 Every indexed member was verified. Own combined-source hosted acceptance remains
 pending. The separate native c633 cohort is now accepted; this does not accept
 W1a or activate writes.
+
+W1a acceptance update,2026-10-18: combined source `8c3448f` completed its
+[own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39184629344).
+All three raw logs were reviewed, both actual native controls passed, and own
+typed21/14 artifacts/project oracles/all35 raw fields and types matched. The
+[combined acceptance](native-manifest-reads.md) and its indexed29-member hosted
+archive retain the evidence. This supersedes the earlier pending status above;
+it accepts W1a in that combined source. W1b page reuse is developed separately
+and still needs its own acceptance. Historical base reopening and writes remain
+unimplemented by these read/provenance helpers.

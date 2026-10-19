@@ -217,7 +217,25 @@ real native assertions need a fresh exact-source Linux/Windows cohort.
 
 Combined candidate `8c3448f` is pushed on `codex/manifest-reference-proofs`.
 Its [own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39184629344)
-is running. All259 working and committed runtime inputs match; public visibility
-and unchanged main were verified read-only. This cohort must validate the added
-real-drive format assertions and proof API; earlier native artifacts do not
-accept this source.
+completed successfully, with all three raw logs reviewed. The real FUSE control
+passed in1.63s and WinFsp control in2.53s, including the added all-format snapshot
+assertions. The Windows runner was Windows Server2025, image
+`windows-2025-vs2026` version `20261007.264.1`; it was not this Linux workstation.
+All259 working and committed runtime inputs match. The run's own API ZIP
+digests, strict21/14 artifact records, project oracles and all35 raw observations'
+fields and types passed. Earlier artifacts were not reused.
+
+The [29-member hosted archive](evidence/snapshot-format-proofs-8c3-hosted-20261018.tar.gz)
+retains the logs, artifacts, checkers and exact tested source; every indexed
+member was verified. SHA-256:
+`318b4981938bf217e29b681bcef31ca7edccaaebe53c417ca03d8e93c6b6147a`.
+The Windows logs retain three locked disposable-profile cleanup deferrals
+(dummy credentials removed), unused WinFsp delay-import warnings, successful
+long-test notices and Node action deprecations. Injected denial, conflict and
+stopped-authority errors remain explicit. No assertions or deadlines were relaxed.
+
+This accepts the combined snapshot-format repair and W1a proof exports. It
+does not accept the separately developed W1b page proofs, historical base
+reopening, sparse edit views, mixed-tree publication or native chunk writes.
+The paired/no-systemd startup controls use owned loopback fixtures; physical
+workstation reboot and new live-provider acceptance remain separate.

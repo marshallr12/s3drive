@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "full combined portable gate passed; fresh native/hosted acceptance pending",
+  "status": "combined own Linux/Windows/book native cohort accepted with raw and artifact checks",
   "branch": "codex/manifest-reference-proofs",
   "merge_base": "9c49fe4",
   "prerequisites": {
@@ -145,6 +145,104 @@
     "visibility": "PUBLIC",
     "visibility_checks_read_only": true,
     "main": "1a93b5f7248892fec96dc8da4438ee7967692e77",
-    "acceptance": "pending own all3/native/raw review and own strict artifacts"
-  }
+    "acceptance": "own all3 native/raw reviewed; API ZIP digests and typed21/14/project oracles/raw35 all fields/types pass",
+    "watch_exit_code": 0
+  },
+  "hosted_archive": {
+    "path": "evidence/snapshot-format-proofs-8c3-hosted-20261018.tar.gz",
+    "sha256": "318b4981938bf217e29b681bcef31ca7edccaaebe53c417ca03d8e93c6b6147a",
+    "bytes": 169525,
+    "members": 29,
+    "all_indexed_members_verified": true,
+    "source": "8c3448f478f9ab62fe1a23ce965907546be5d10c",
+    "run_id": 39184629344,
+    "run_attempt": 1,
+    "independent_typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true
+  },
+  "hosted_raw_reviews": {
+    "linux": {
+      "source": "8c3448f478f9ab62fe1a23ce965907546be5d10c",
+      "run_id": 39184629344,
+      "run_attempt": 1,
+      "job_id": 117844328637,
+      "reviewed": true,
+      "log": "/tmp/s3drive-formats-8c3-linux.log",
+      "sha256": "fd865b7008803426f6a49d9951d6ec0383715bc471e9495c209514a4f1809f13",
+      "native_manifest_seconds": 1.63,
+      "existing_native_tests": 9,
+      "existing_native_seconds": 73.96,
+      "state_tests": 365,
+      "state_ignored": 1,
+      "state_seconds": 135.12,
+      "reader_tests": 8,
+      "reader_ignored": 1,
+      "reader_seconds": 4.17,
+      "coordinator_no_systemd_http_and_tls_seconds": 24.26,
+      "frozen_inputs": 259,
+      "scope": "Linux FUSE manifest/format-transition old-handle/remount acceptance and regression only; Windows and combined artifact review pending",
+      "notices": [
+        "expected injected PermissionDenied and stopped-authority ConnectionRefused retain local data",
+        "finally stop after startup removal reports missing startup.json",
+        "Node20 actions forced to24",
+        "cache Node punycode/url.parse deprecation notices"
+      ]
+    },
+    "windows": {
+      "source": "8c3448f478f9ab62fe1a23ce965907546be5d10c",
+      "run_id": 39184629344,
+      "run_attempt": 1,
+      "job_id": 117844328867,
+      "reviewed": true,
+      "log": "/tmp/s3drive-formats-8c3-windows.log",
+      "sha256": "a3d590e25dc431511412739c48b2515cdf095cd2ac185466125f0815dd8cdfa5",
+      "native_manifest_seconds": 2.53,
+      "existing_native_tests": 7,
+      "existing_native_seconds": 106.29,
+      "state_tests": 360,
+      "state_ignored": 1,
+      "state_seconds": 324.24,
+      "reader_tests": 8,
+      "reader_ignored": 1,
+      "reader_seconds": 6.41,
+      "paired_managed_startup_seconds": 84.85,
+      "frozen_inputs": 259,
+      "scope": "own Windows WinFsp all-format snapshots, manifest reads/remount and W1a portable proof acceptance; artifact comparisons pending",
+      "notices": [
+        "three disposable VM profiles locked; dummy credentials removed, profile removal deferred to VM destruction",
+        "unused WinFsp DELAYLOAD linker warning on11 unique workspace targets plus standalone chunk-reader rebuild",
+        "injected PermissionDenied, rival conflict and stopped-authority timed-out Connect are expected retained-data controls",
+        "Node20 actions forced24 and cache Node punycode/url.parse deprecations",
+        "long test notices subsequently completed successfully"
+      ]
+    },
+    "book": {
+      "source": "8c3448f478f9ab62fe1a23ce965907546be5d10c",
+      "run_id": 39184629344,
+      "run_attempt": 1,
+      "job_id": 117844329388,
+      "reviewed": true,
+      "log": "/tmp/s3drive-formats-8c3-book.log",
+      "sha256": "8b21f81db826faa3babd639c6f00402ed836a916f518c838c8c1448ec9445af9",
+      "result": "schema28/two fixtures,69MD,65chapters,book build/test passed",
+      "notices": [
+        "pinned toolchain override installing mdbook",
+        "Git default-branch hints",
+        "Node20 checkout forced to24"
+      ],
+      "scope": "book only; native and combined artifact/raw review pending"
+    }
+  },
+  "not_claimed": [
+    "W1b page proofs",
+    "historical base reopen",
+    "sparse edit views",
+    "mixed publication",
+    "native chunk writes",
+    "physical workstation reboot",
+    "new provider mutations"
+  ]
 }
