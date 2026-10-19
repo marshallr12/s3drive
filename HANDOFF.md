@@ -6,48 +6,44 @@ implementation. Keep research/decisions/status/plans in docs/src/. Run the local
 gate with `bash scripts/gate.sh`; native/provider/recovery gates are separate.
 
 
-Current independent phase: mixed upload authorization batch,2026-10-19.
-Runtime checkpointd4a46c5; no promotion or own hosted cohort yet.
-Worktree /home/marshall/src/worktrees/s3drive-mixed-upload-auth-batch, branch
-codex/mixed-upload-auth-batch, based on canonical1b0b692/schema35/accepted324.
-Read docs/src/mixed-upload-authorization-batch.md. Managed planning/preparation/
-uploading and SDK root case/harness only; no schema or dependency change. Private
-exact-preparation authorization scope owns one family permit; sequential full
-child semantics; opening/closing fresh base authorization; unchanged outer30s
-deadline and physical recovery before any fresh authorization. Public dependency
-API unchanged, source SQL transactions end before network. No native chunk writes.
+Current phase status,2026-10-19 (supersedes historical running notes below).
+Canonical runtime remains accepted W5b1/schema35/all324. No draft runtime promoted.
 
-Workspace check1 passed20.76s. SDK1 passed78.26s, SDK2 passed79.54s with closing
-authorization denial: two history checks and no staging generation; restored
-normal upload proved exactly six history/six base HEAD checks for three objects.
-Old lost-reply/killed-owner/recovery/Unicode/tail/newer-head assertions passed.
-Frozen324 map/source /tmp/s3drive-upload-auth-batch-candidate2-frozen.json and
--source.tar.gz. Candidate1 retained. Upcoming owned full gate1 uses
-/tmp/s3drive-upload-auth-batch-gate1-{running,result}.json and .log; inspect its
-actual process state before any other Cargo. Runner770061/child770062 LIVE; one Cargo at a time.
-No reduced SDK concurrency on this branch: normal four test threads. Full local
-and own hosted/native/source acceptance required before promotion.
+Upload authorization batch: isolated codex/mixed-upload-auth-batch, worktree
+/home/marshall/src/worktrees/s3drive-mixed-upload-auth-batch. Runtime d4a46c5,
+published source2fc45fed5a15c1a24f0f9713ab7caca02569ec5b. Full gate1 CLOSED0,
+all324 unchanged:23publication/160.85s,446state1ignored/37core/22reader1nativeignored/
+62S3, format/Clippy/build and83MD/79chapters. Normal four test threads. Indexed
+673-member local archive SHA67df76b1e22be23d738cc3ec9225b1921ac2223eab589171a91a663bec857b19.
+Local archiver DONE, never rerun. Own CI39276521247 attempt1: book118142124084 and
+Linux118142124394 SUCCESS; Windows118142124251 pending at15:44:55Z. First observer
+826436/826437 CLOSED1 on HTTP502, not a CI failure. Follow-up GET-only poller828884
+(startticks143026538), /tmp/s3drive-upload-auth-batch-hosted-poll2-{running,result}.json.
+Inspect current state; never restart this cohort on observer errors. Prepared own
+checker/raw comparator/archive NOT executed. Read mixed-upload-authorization-batch.md.
 
-Scoped source170979e repair remains isolated and UNACCEPTED. Repair gate2 CLOSED101,
-all329 unchanged:23SDK passed/1 root inner upload Timeout in277.44s. SHA
- a700c0ccce6a66ca84b78d2392c6f033c18b10e6941e6b9718b81923e54f46ca.
-Both original failures passed alone88.68s/89.91s; query change and two-case fixture
-admission did not resolve all timeouts. Originala3028bf CI39267986023 still saving
-Windows cache at last GET; book/Linux success. Its results cannot establish this
-changed batch or repair. Main remains accepted W5b1/schema35/all324. Pins/retirement/
-GC, fresh external-base adoption, origins/W6/provider/physical gates remain.
+Manual source read pins: isolated codex/source-read-pins, worktree
+/home/marshall/src/worktrees/s3drive-source-read-pins. Runtime b336567/schema37,
+all333 frozen inputs; based on UNACCEPTED scoped repair1ad9dc6. State runner827840/
+827841 CLOSED0:474passed/1ignored/247.54s, all333 unchanged. Focused13passed incl13
+real kill boundaries, SQLITE_FULL and exhaustion; metadata-only recovery1passed,
+state all-target Clippy and workspace compilation passed. Indexed component archive
+347members/861266bytes SHA b27862b4b6fad34932ca51fe05bc5d1d0910e1ffbbabd103247792b68003fb2b.
+One-use component archiver DONE, never rerun. No local Cargo remains from these
+runs; inspect processes before starting another. Read source-read-pins.md.
+Manual token clones are metadata copies, not lifetime guards. No automatic
+EditedFile guards, bounded Drop cleanup, retirement, GC or native chunk writes.
+Parent integration and full/platform/source acceptance remain mandatory.
 
-Retention research2026-10-19 is in docs/src/mixed-retention-plan.md. Actual
-source/preparation/root/physical dependencies are mapped; pins without GC first,
-clean-anchor witness/retry namespaces then reclamation. No arbitrary dirty-view
-seal or copied hash is accepted as proof. Existing child IDs bind operation/request
-while spans require parent replay. All original preparation/upload retry identities
-also need closure before forgetting rows; source scoping alone is insufficient.
-Transient read pins must not hold SQLite transactions open, and session replacement
-must be proven by exclusive ownership rather than heartbeat/sign-out. SQLite
-space/WAL behavior is cited to official docs. Resolved bundled SQLite3.53.2 was
-read from libsqlite3-sys0.38.2's header; no dependency change required. Proposal
-only, no pins/deletion implementation or provider/native activation.
+Scoped repair170979e/schema36/all329 remains unaccepted: full gate2 CLOSED101,
+23publication pass/1 root upload Timeout; exact case passed alone89.91s. Original
+a3028bf own CI39267986023 ALL3 SUCCESS cannot replace its failed local gate or
+accept changed repair/batch/pin sources. Integrate batch only after own acceptance,
+then retest scoped repair at normal concurrency before its own fresh hosted cohort.
+Do not promote schema37 ahead of its parent. Retention research and dependency
+closure are in mixed-retention-plan.md; no copied hash or arbitrary dirty-view seal
+proves safe reclamation. New origins/W6, external-base adoption, real provider and
+physical startup/session acceptance remain outstanding. Goal ACTIVE.
 
 ## Current repository visibility: PUBLIC (user decision, 2026-10-18)
 

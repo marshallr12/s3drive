@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-19",
+  "phase": "W5b2b1 manual source read-pin registry",
+  "status": "component checks passed; parent integration/full workspace/native/source acceptance required",
+  "schema": 37,
+  "checkpoint": "b336567",
+  "runtime_inputs": 333,
+  "component_archive": {
+    "scope": "component state/compile evidence only; not full workspace/native/source acceptance",
+    "path": "evidence/source-read-pins-component-20261019.tar.gz",
+    "sha256": "b27862b4b6fad34932ca51fe05bc5d1d0910e1ffbbabd103247792b68003fb2b",
+    "bytes": 861266,
+    "members": 347,
+    "all_indexed_members_verified": true,
+    "runtime_inputs": 333,
+    "checkpoint": "b336567",
+    "schema": 37,
+    "state_passed": 474,
+    "state_ignored": 1,
+    "state_seconds": 247.54,
+    "state_log_sha256": "81ed7a341b51d3ce5dab30ffe30137a07a290513c4cf56144cf5b01db64ee0de"
+  },
+  "state_regression": {
+    "runner_pid": 827840,
+    "runner_start_ticks": "143016394",
+    "child_pid": 827841,
+    "child_start_ticks": "143016403",
+    "started": "2026-10-19T15:26:00.505670+00:00",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "s3drive-state",
+      "--locked"
+    ],
+    "cwd": "/home/marshall/src/worktrees/s3drive-source-read-pins",
+    "runtime_inputs": 333,
+    "frozen_map": "/tmp/s3drive-source-pins-candidate1-frozen.json",
+    "tty": false,
+    "rust_test_threads": 4,
+    "log": "/tmp/s3drive-source-pins-state1.log",
+    "exit_code": 0,
+    "finished": "2026-10-19T15:30:22.844709+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": [],
+    "sha256": "81ed7a341b51d3ce5dab30ffe30137a07a290513c4cf56144cf5b01db64ee0de"
+  },
+  "checks": {
+    "focused1": "9 passed27.49s; unused-mut test warning corrected",
+    "focused2": "12 passed/1 fixture failure; managed-directory validation preserved",
+    "focused3": "13 passed23.48s;13 real killed-owner boundaries; actual SQLITE_FULL; counter exhaustion",
+    "metadata_recovery": "1 passed0.56s; source BLOB corruption; no session rotation",
+    "clippy_state_all_targets": "passed17.29s; warnings denied",
+    "workspace_check": "passed15.47s",
+    "schema_fixture_guard": "37;2 fixture assertions passed",
+    "diagram": "source-native SVG rendered and visually inspected"
+  },
+  "unimplemented": [
+    "clone-sharing automatic managed-reader guards",
+    "bounded asynchronous worker cleanup",
+    "EditedFile integration",
+    "durable retry/retirement and clean anchors",
+    "garbage collection",
+    "native chunk writes"
+  ],
+  "parent": "unaccepted scoped repair1ad9dc6; must integrate verified upload batching and scoped-operation acceptance before promotion"
+}

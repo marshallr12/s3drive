@@ -1,0 +1,77 @@
+{
+  "date": "2026-10-19",
+  "phase": "mixed-upload-authorization-batch",
+  "status": "full local gate passed; own hosted/native/source acceptance required",
+  "schema": 35,
+  "source_checkpoint": "d4a46c5",
+  "runtime_inputs": 324,
+  "local_gate": {
+    "runner_pid": 770061,
+    "runner_start_ticks": "142845390",
+    "child_pid": 770062,
+    "child_start_ticks": "142845405",
+    "started": "2026-10-19T14:57:30.522985+00:00",
+    "command": [
+      "bash",
+      "scripts/gate.sh"
+    ],
+    "cwd": "/home/marshall/src/worktrees/s3drive-mixed-upload-auth-batch",
+    "runtime_inputs": 324,
+    "frozen_map": "/tmp/s3drive-upload-auth-batch-candidate2-frozen.json",
+    "tty": false,
+    "rust_test_threads": 4,
+    "log": "/tmp/s3drive-upload-auth-batch-gate1.log",
+    "exit_code": 0,
+    "finished": "2026-10-19T15:11:09.214033+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": [],
+    "sha256": "4c70e3749adfd2250c63e9aaa90249ddeb154c732825cdc31faa3cc14ffe41a6"
+  },
+  "checks": {
+    "workspace_check_seconds": 20.76,
+    "sdk1_seconds": 78.26,
+    "sdk2_seconds": 79.54,
+    "base_head_checks_for_three_new_objects": 6,
+    "history_checks_for_three_new_objects": 6,
+    "closing_denial_history_checks": 2,
+    "closing_denial_staging_created": false,
+    "publication_passed": 23,
+    "publication_seconds": 160.85,
+    "state_passed": 446,
+    "state_ignored": 1,
+    "core_passed": 37,
+    "reader_passed": 22,
+    "reader_native_ignored": 1,
+    "s3_passed": 62,
+    "markdown_files": 83,
+    "book_chapters": 79,
+    "reduced_sdk_concurrency": false
+  },
+  "local_archive": {
+    "path": "evidence/upload-auth-batch-local-20261019.tar.gz",
+    "sha256": "67df76b1e22be23d738cc3ec9225b1921ac2223eab589171a91a663bec857b19",
+    "members": 673,
+    "bytes": 4195092,
+    "all_indexed_members_verified": true,
+    "final_runtime_inputs": 324,
+    "sdk1_runtime_inputs": 324,
+    "prior_failed_contexts": 3,
+    "each_prior_failed_runtime_inputs": 329,
+    "source_checkpoint": "d4a46c5",
+    "gate_exit_code": 0,
+    "gate_log_sha256": "4c70e3749adfd2250c63e9aaa90249ddeb154c732825cdc31faa3cc14ffe41a6"
+  },
+  "scope": "private start/end-authorized batch with complete sequential child semantics; no schema/dependency change or native chunk activation",
+  "own_hosted": {
+    "status": "in progress; book and Linux succeeded, Windows pending as of 2026-10-19T15:44:55Z",
+    "parent_or_prototype_artifact_reuse_permitted": false,
+    "source": "2fc45fed5a15c1a24f0f9713ab7caca02569ec5b",
+    "run_id": 39276521247,
+    "attempt": 1,
+    "jobs": {
+      "book": 118142124084,
+      "linux": 118142124394,
+      "windows": 118142124251
+    }
+  }
+}

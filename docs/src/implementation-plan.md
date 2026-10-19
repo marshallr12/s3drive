@@ -3286,3 +3286,14 @@ Private exact-preparation scope, one family permit, unchanged outer deadline,
 complete child semantics, start/end fresh authorization and unchanged unknown
 physical recovery. This independent performance slice must prove six base checks
 for three new objects in the130-chunk case before own full/platform acceptance.
+
+Current2026-10-19: upload authorization batching passed its complete local gate
+(all324 unchanged); its own CI39276521247 has book/Linux success and Windows
+pending at15:44:55Z. [Exact batch evidence](mixed-upload-authorization-batch.md).
+
+The isolated [manual source read-pin registry](source-read-pins.md), checkpoint
+b336567/schema37/all333, passed474 state cases (one ignored), focused crash/full-
+disk checks, metadata-only recovery, Clippy and workspace compilation. It is based
+on unaccepted scoped repair1ad9dc6. Parent integration, full workspace/platform
+acceptance and automatic managed-reader guards with bounded cleanup remain
+required. Component evidence does not enable reclamation or native chunk writes.

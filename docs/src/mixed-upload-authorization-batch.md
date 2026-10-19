@@ -1,6 +1,6 @@
 # One authorization scope for a mixed upload dependency batch
 
-Declared implementation contract,2026-10-19. **Prototype and focused SDK passed; full/platform gates pending.**
+Declared implementation contract,2026-10-19. **Complete local gate passed; own platform/source acceptance pending.**
 Independent from the unaccepted scoped-operation/schema36 repair; baseline main
 has accepted W5b1/schema35. Original scoped gate and two repair gates retained
 upload Timeouts; both failing cases passed alone (88.68s/89.91s). Limiting separate
@@ -60,3 +60,29 @@ existing lost-reply/killed-owner/credential-free recovery and Unicode/tail/newer
 head assertions passed. Candidate2 is324 frozen inputs, only the declared five
 runtime files changed from accepted W5b1. No SDK admission semaphore is present
 on this branch: its upcoming full gate uses the normal four test threads.
+
+## Complete local gate (2026-10-19)
+
+Source checkpointd4a46c5/schema35/all324 unchanged inputs passed the full gate at
+15:11:09Z. Publication23/160.85s, state446 (one ignored),37core,22reader (one
+native ignored),62S3, formatting/all-target Clippy/build,83Markdown links and79
+book chapters passed. Normal four test threads were used; no fixture admission
+semaphore or deadline increase was used on this independent branch. Both formerly
+timing-out cases and all forged/missing/corrupt/unread-tail/policy/concurrency
+cases passed. Full log SHA-256:
+`4c70e3749adfd2250c63e9aaa90249ddeb154c732825cdc31faa3cc14ffe41a6`.
+
+The [indexed local archive](evidence/upload-auth-batch-local-20261019.tar.gz)
+contains673 verified members/4195092bytes, including final324 and initial SDK324
+sources, all local logs, and three exact failed329-input parent contexts. SHA-256
+`67df76b1e22be23d738cc3ec9225b1921ac2223eab589171a91a663bec857b19`.
+[Dated evidence](evidence/upload-auth-batch-20261019.json) records scope and counts.
+The one-use archive is complete; never rerun it. This local result cannot replace
+this source's own hosted/native/reference/source acceptance, nor establish Wasabi,
+physical reboot/session behavior or native chunk writes. Main runtime is unchanged.
+
+Own hosted source `2fc45fed5a15c1a24f0f9713ab7caca02569ec5b` is running in
+[CI run39276521247](https://github.com/marshallr12/s3drive/actions/runs/39276521247),
+attempt1. At15:44:55Z book and Linux succeeded; Windows remained in progress.
+A read-only observer stopped on HTTP502; the same cohort is still being observed
+with transient-error retries. No workflow rerun or artifact acceptance is implied.

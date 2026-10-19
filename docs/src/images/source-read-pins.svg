@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="700" viewBox="0 0 1240 700">
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9" fill="#466b88"/></marker><style>text{font-family:DejaVu Sans,sans-serif;fill:#17324d} .title{font-size:26px;font-weight:bold}.h{font-size:19px;font-weight:bold}.b{font-size:15px}.s{font-size:13px}.edge{fill:none;stroke:#466b88;stroke-width:2;marker-end:url(#arrow)}</style></defs>
+<rect width="1240" height="700" fill="#f7fafc"/>
+<text x="30" y="36" class="title">Read-pin registry: prototype retention boundary</text>
+<rect x="30" y="70" width="610" height="85" rx="12" fill="#fff6df" stroke="#b58a29" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="50" y="99" class="h">Linux FUSE / Windows WinFsp</text><text x="50" y="124" class="b">Planned clone-sharing guard bridge</text><text x="50" y="145" class="s">Not activated by the registry API alone</text>
+<path d="M335 155V205" class="edge" stroke-dasharray="6 5"/>
+<rect x="30" y="205" width="610" height="110" rx="12" fill="#e6f2fb" stroke="#7197b4"/>
+<text x="50" y="235" class="h">Rust storage worker</text><text x="50" y="261" class="b">Explicit manual pin / read / release APIs</text><text x="50" y="287" class="s">One queue and one exclusive State owner</text>
+<rect x="360" y="220" width="260" height="78" rx="8" fill="#fff" stroke="#9eb3c4"/>
+<text x="376" y="247" class="b">RAM: incarnation and witness</text><text x="376" y="267" class="s">Reject live counter/projection</text><text x="376" y="285" class="s">rewinds</text>
+<path d="M640 235H700V122H760" class="edge"/>
+<text x="710" y="185" class="s">Existing metadata</text><text x="710" y="202" class="s">and content CAS</text>
+<rect x="760" y="80" width="435" height="85" rx="12" fill="#f0ebfa" stroke="#a795c4"/>
+<text x="780" y="111" class="h">Shared Rust coordinator / SQLite</text><text x="780" y="138" class="b">Authority and publication remain separate from pins</text>
+<path d="M640 275H760" class="edge"/>
+<text x="653" y="251" class="s">Existing</text><text x="653" y="268" class="s">authorized I/O</text>
+<rect x="760" y="230" width="180" height="90" rx="12" fill="#e6f3ef" stroke="#80aa9d"/>
+<text x="780" y="263" class="h">S3 client</text><text x="780" y="289" class="b">Credentials and</text><text x="780" y="308" class="b">content checks</text>
+<path d="M940 275H995" class="edge"/>
+<rect x="995" y="230" width="200" height="90" rx="12" fill="#e6f3ef" stroke="#80aa9d"/>
+<text x="1010" y="256" class="b">S3-compatible service</text><text x="1010" y="281" class="b">Immutable chunks</text><text x="1010" y="304" class="b">and manifests</text>
+<text x="760" y="353" class="b">Pins do not grant cloud access or authorize deletion.</text>
+<path d="M185 315V400" class="edge"/><text x="205" y="357" class="b">Local retention metadata only</text>
+<rect x="30" y="400" width="610" height="190" rx="12" fill="#fff" stroke="#7197b4"/>
+<text x="50" y="432" class="h">Local SQLite, outside the mounted tree</text>
+<rect x="50" y="449" width="570" height="34" rx="5" fill="#eef3f7"/><text x="62" y="471" class="b">Source views, patches and pending operation data: retained</text>
+<rect x="50" y="491" width="570" height="34" rx="5" fill="#eef3f7"/><text x="62" y="513" class="b">Pin session: owner, issued counter, count and projection hash</text>
+<rect x="50" y="533" width="570" height="34" rx="5" fill="#eef3f7"/><text x="62" y="555" class="b">At most 256 pin rows; releases preserve the high-water mark</text>
+<text x="30" y="621" class="b">First pin by a proven replacement owner retires only the previous transient read pins.</text>
+<text x="30" y="645" class="b">SSH/tmux disconnect does not replace the owner. Source bytes and unresolved operations stay intact.</text>
+<text x="30" y="680" class="s">Dashed = planned filesystem guard integration. No local or S3 garbage collection is enabled.</text>
+</svg>
