@@ -3222,3 +3222,22 @@ typed21+14/project/all35 raw fields/types passed. Indexed99-member archive SHA
 its full local gate2 is running after a single unused-unit Clippy fix. It does not
 activate native chunks. Bounded retention and fresh external-base adoption,
 explicit origins/W6 and provider/physical session gates remain required.
+
+
+### W5b1 clean epochs — declared2026-10-19
+
+Implement [the exact acknowledgment/epoch contract](mixed-clean-epochs.md) in
+codex/mixed-clean-epochs, isolated from W5a's frozen319-input own cohort. Own
+schema35 record/view extension, metadata/source validators, source-mutation identity
+guards, atomic same-owner acknowledgment and scoped current-head facade, managed
+local acknowledgment and SDK/fault/recovery tests. Preserve literal old formats,
+source reads and exact remote recovery. Full local and own hosted/native/source
+gates precede promotion; no reclamation or native chunk-write activation.
+
+
+Cross-machine clean-base observation is an additional required boundary before
+W6: adopt a fresh authoritative manifest only against a proven clean local head,
+with no unresolved/dirty work, retaining prior snapshots. It is distinct from
+W5b1 acknowledgment of our own publication. See [the epoch contract](mixed-clean-epochs.md).
+W5b1 full gate1 stopped at a single unused-unit Clippy diagnostic with all324
+inputs unchanged; only that expression was removed. A fresh full gate follows.

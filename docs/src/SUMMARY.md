@@ -47,6 +47,7 @@
 - [Mixed dependency uploads](mixed-uploads.md)
 - [Edited manifest publication plan](mixed-root-publication.md)
 - [Repeated edited-file publications](mixed-publication-lineage.md)
+- [Acknowledgment and clean base epochs](mixed-clean-epochs.md)
 - [Native manifest reads](native-manifest-reads.md)
 - [Implemented Linux read-only mount](linux-mount.md)
 - [Windows read-only drive](windows-mount.md)
