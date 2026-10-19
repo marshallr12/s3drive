@@ -127,3 +127,7 @@ The [local evidence archive](evidence/mixed-plans-local-20261019.tar.gz) contain
 all300 runtime inputs, focused and full logs, failed source snapshots, reviewed
 diagram and a verified member digest index. Its SHA-256 is
 `363badd8492a7f492ad8fcf209933969ec3c4175b2cb745ee6b5faa304d2588f`.
+
+Exact source `e140508b19aef4082f9565990402852d4f27cdb4` is published for its
+[own Linux, Windows and book run](https://github.com/marshallr12/s3drive/actions/runs/39225921755).
+Acceptance is pending; preceding source artifacts do not cover this implementation.

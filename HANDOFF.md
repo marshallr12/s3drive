@@ -82,10 +82,17 @@ Full gate2 session34846 CLOSED EXIT0. All300 runtime/contract inputs match
 archive1046139bytes SHA363badd8492a7f492ad8fcf209933969ec3c4175b2cb745ee6b5faa304d2588f
 contains all300 source inputs, successful/failed logs, old sources and diagram
 review. Archive verified; one-use archiver already executed, do not rerun.
-Own combined Linux/Windows/book acceptance is pending. Next publish this exact
-source and retain all300 hashes while its own cohort runs. Never reuse parent
-artifacts or claim real Wasabi/physical reboot success. No runtime changes since
-successful gate freeze. Main3086038 remains accepted schema31 until own acceptance.
+Published sourcee140508b19aef4082f9565990402852d4f27cdb4 to codex/mixed-plans.
+Own39225921755 attempt1: Linux117972061091, book117972061466,
+Windows117972061489. All currently running. Watch74306 LIVE, log
+/tmp/s3drive-mixed-plans-hosted-watch.log. All300 working/committed inputs must
+remain exact. One-use checker/oracle/raw-comparer/archiver prepared under
+/tmp/s3drive-{check-mixed-plans-hosted.py,mixed-plans-hosted-*}; NOT executed.
+Await all3 terminal results, review complete raw logs, then own source/API ZIP
+SHA/independent typed21+14/project/all35 raw-field/type acceptance and archive.
+No runtime changes since successful gate freeze. Main3086038 remains accepted
+schema31 until own acceptance. Never reuse parent artifacts or infer Wasabi,
+physical reboot or native chunk-write success from these regression checks.
 W4 exact CAS/dependency sends/unknown recovery, W5 exact-view settlement and
 retention/reclamation, legacy/metadata-empty admission and W6 native writes remain.
 

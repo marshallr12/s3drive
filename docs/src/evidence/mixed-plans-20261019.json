@@ -233,5 +233,19 @@
     "all_indexed_members_verified": true,
     "all300_frozen_inputs_unchanged": true,
     "scope": "full portable local mixed preparation only; own combined/native gates still required"
+  },
+  "publication": {
+    "source": "e140508b19aef4082f9565990402852d4f27cdb4",
+    "run_id": 39225921755,
+    "attempt": 1,
+    "jobs": {
+      "linux": 117972061091,
+      "book": 117972061466,
+      "windows": 117972061489
+    },
+    "watch_session": 74306,
+    "status": "running; own acceptance pending",
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39225921755",
+    "checkers": "prepared; not executed"
   }
 }
