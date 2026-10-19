@@ -2056,10 +2056,11 @@ or silently route chunks through the legacy logical writer.
 Boundary edits/truncation must verify complete old chunks before using their
 bytes. A shortened final data object requires new bytes/hash/length; a prefix of
 an old object is not a valid unchanged reference. Growth can change tree height.
-A previous root key has the root role and cannot simply become a child-page key;
-any copied page must use a valid page-role key and publication provenance. Existing
-reader controls already allow older generations/ordinals while enforcing same
-store/file/role scope. Preserve those checks during reuse.
+A previous root may be reused as a child page when its authenticated identity,
+start, length and level match the new parent: roots already use the page-key
+namespace. Reuse still needs inherited-base provenance, not a fabricated fresh
+upload receipt. Existing reader controls allow older generations/ordinals while
+enforcing same store/file/role scope. Preserve those checks during reuse.
 
 Plan independently green storage/edit/publication/controller phases before native
 write callbacks. Keep one-object writes compatible and make new format activation
@@ -2093,7 +2094,7 @@ Implement after repaired native-read acceptance, in independently green phases:
 
 | Phase | Concrete contract | Required evidence |
 | --- | --- | --- |
-| W1 authenticated base provenance | Export bounded manifest paths from an authorized pinned File; bind inherited data/page references to volume, file, store, role, exact base descriptor and content CAS guard; no arbitrary-reference constructor | Wrong file/store/role, forged/short paths, older valid generations, root-as-child refusal, bounded traversal/cancellation; no data download for unchanged-reference discovery |
+| W1 authenticated base provenance | Export bounded manifest paths from an authorized pinned File; bind inherited data/page references to volume, file, store, role, exact base descriptor and content CAS guard; no arbitrary-reference constructor | Wrong file/store/role, forged/short paths, older valid generations, valid/invalid old-root child shapes, bounded traversal/cancellation; no data download for unchanged-reference discovery |
 | W2 durable sparse edit views | SQLite stores exact base binding plus immutable local patches/zero ranges, size and view lineage; persist operation keys before changes; retain dirty bytes across restart | 64 GiB sparse growth with bounded memory/disk growth, competing/lost-reply edits, process kills, corrupt rows/media and SQLite-full rollback; bounded read-your-writes composition |
 | W3 incremental tree preparation | New changed objects plus tagged inherited references; persist bounded preparation cursor and new/mixed proof format; retain old full-snapshot planner/verifier | Measured one-byte edit reuses unchanged data, authenticated path coverage, final partial-chunk truncate/growth, 127/128 chunk boundary, tree-height growth and holes; no manufactured flush receipts |
 | W4 mixed-tree publication | Upload new dependencies before pages/root; inherited dependencies require validated base provenance; persist exact original CAS and operation identities; recover unknown results without unconditional PUT | Two-machine base conflict, lost reserve/PUT/root replies, renamed/deleted base, restart and quota failure; unchanged chunks produce zero PUTs and no full-file download |
@@ -2103,9 +2104,15 @@ Implement after repaired native-read acceptance, in independently green phases:
 For W3/W4, inherited proof establishes reachability from the authenticated frozen
 base, not current object availability or permission to reclaim it. Missing/denied
 objects remain explicit errors; reference retention and future garbage collection
-must honor pinned bases and dirty views. A prior root must be re-materialized as
-a page-role object before use as a child if the tree grows; its root-role key
-cannot be substituted. Shrinking/growing a partial data object changes its length
+must honor pinned bases and dirty views. Earlier planning text incorrectly
+assigned a distinct physical root role. In the actual
+[`Namespace::root_key`](https://github.com/marshallr12/s3drive/blob/c633d02d47ccf2da20cfadd50e0b8e11f6e06811/crates/s3drive-core/src/manifest/objects.rs)
+implementation, roots use `Role::Page`. Reusing an old root as a child is eligible
+when the new parent's expected hash, file identity, start, length and level pass
+[`VerifiedPage::verify_child`](https://github.com/marshallr12/s3drive/blob/c633d02d47ccf2da20cfadd50e0b8e11f6e06811/crates/s3drive-core/src/manifest.rs).
+This does not convert its historical receipt into a new upload receipt; the new
+mixed-tree verifier must admit explicit inherited provenance. Shrinking/growing
+a partial data object changes its length
 and hash, so verify the complete old chunk and prepare new bytes. Preserve the
 existing root/page and whole-payload/page-digest distinctions.
 
