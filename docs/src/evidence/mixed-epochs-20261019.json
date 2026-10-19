@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-19",
+  "phase": "W5b1",
+  "status": "implemented draft; full local and own hosted acceptance pending",
+  "schema": 35,
+  "scope": "exact source acknowledgment and immutable clean base transition; no payload reclamation or native chunk writes",
+  "checks": [
+    {
+      "name": "workspace check1",
+      "exit_code": 0
+    },
+    {
+      "name": "focused1 inherited publication",
+      "passed": 17,
+      "seconds": 13.69
+    },
+    {
+      "name": "focused2 initial settlement",
+      "passed": 4,
+      "seconds": 0.99
+    },
+    {
+      "name": "focused3 metadata recovery",
+      "passed": 5,
+      "seconds": 1.25
+    },
+    {
+      "name": "focused4 fault and kill",
+      "passed": 10,
+      "seconds": 9.86,
+      "epoch_kill_boundaries": 11
+    },
+    {
+      "name": "focused5 private owner race",
+      "passed": 11,
+      "seconds": 9.15,
+      "epoch_kill_boundaries": 11
+    },
+    {
+      "name": "sdk1",
+      "result": "failed test harness observation scope",
+      "retained_source": "/tmp/s3drive-mixed-epochs-sdk1-tests.rs",
+      "log": "/tmp/s3drive-mixed-epochs-sdk1.log"
+    },
+    {
+      "name": "sdk2",
+      "exit_code": 0,
+      "passed": 1,
+      "seconds": 74.36,
+      "owned_fixture_puts": 13,
+      "scope": "four3MiB+17 sparse edit/publish/ack cycles; restart; old reads; chunk reuse; newer head; empty base; no ack RPC;8KiB future bound"
+    }
+  ],
+  "acceptance_remaining": [
+    "complete frozen-input local gate",
+    "own hosted Linux Windows book native source artifact cohort",
+    "W5b2 explicit pins/retry retirement",
+    "W5b3 bounded local reclamation",
+    "explicit legacy and metadata-empty origins",
+    "W6 native chunk callbacks/lifecycle",
+    "provider and physical reboot/session gates"
+  ]
+}

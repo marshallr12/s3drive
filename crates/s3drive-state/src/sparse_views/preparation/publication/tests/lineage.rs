@@ -246,7 +246,7 @@ fn schema_thirty_four_keeps_literal_old_publication_blobs_hashes_and_requests() 
     );
     drop(db);
     let mut s = State::open_managed(&path).unwrap();
-    assert_eq!(s.info().unwrap().schema_version, 34);
+    assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
     assert_eq!(capture(&s.connection), before);
     assert_eq!(j(&mut s).get(r.input.plan).unwrap(), r);
 }

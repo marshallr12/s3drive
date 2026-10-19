@@ -1,5 +1,5 @@
 //! Durable mixed-root requests and historical semantic coverage. No S3 rights,
-//! source authentication, clean settlement or mounted-file flush receipt.
+//! source authentication, payload reclamation or mounted-file flush capability.
 use super::{Binding, Id, Info, OriginalChunk, RootDescriptor, digest};
 use crate::{Result, State, journal::GenerationId, namespace as ns};
 use rusqlite::{Connection, TransactionBehavior, params};
@@ -16,6 +16,8 @@ mod journal;
 mod ledger;
 mod lineage;
 pub use journal::{Client, DataNeed, Journal};
+pub(in crate::sparse_views) mod settlement;
+pub use settlement::{Acknowledgment, SourceReceipt};
 mod recovery;
 pub use recovery::{RecoveryClient, RecoveryStore};
 const MAX_RECORDS: usize = 256;
@@ -113,6 +115,16 @@ pub(crate) fn require_legacy(db: &Connection) -> Result<()> {
         })? {
             return Err(Failure::Conflict.into());
         }
+    }
+    Ok(())
+}
+pub(crate) fn require_pre35(db: &Connection) -> Result<()> {
+    if ledger::inspect(db)?
+        .records
+        .values()
+        .any(|r| r.acknowledgment.is_some())
+    {
+        return Err(Failure::Corrupt.into());
     }
     Ok(())
 }

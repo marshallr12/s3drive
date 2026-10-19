@@ -38,6 +38,9 @@ fn metadata(db: &Connection) -> Result<ledger::Meta> {
     if version == 33 && meta.records.values().any(|r| r.input.predecessor.is_some()) {
         return Err(Failure::Corrupt.into());
     }
+    if version < 35 && meta.records.values().any(|r| r.acknowledgment.is_some()) {
+        return Err(Failure::Corrupt.into());
+    }
     if meta.records.is_empty() {
         return Err(Failure::Missing.into());
     }
@@ -86,6 +89,20 @@ impl RecoveryStore {
         let r = meta.records.get(&plan).ok_or(Failure::Missing)?.clone();
         tx.commit()?;
         Ok(r)
+    }
+    pub fn acknowledged(&mut self, plan: Id) -> Result<Option<SourceReceipt>> {
+        let tx = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred)?;
+        let meta = metadata(&tx)?;
+        let r = meta.records.get(&plan).ok_or(Failure::Missing)?;
+        if r.acknowledgment.is_none() {
+            return Ok(None);
+        }
+        settlement::validate_recovery(&tx, r)?;
+        let receipt = SourceReceipt::from_record(r.clone())?;
+        tx.commit()?;
+        Ok(Some(receipt))
     }
     pub fn records(&mut self) -> Result<Vec<Record>> {
         let tx = self
@@ -196,6 +213,9 @@ impl RecoveryClient {
     }
     pub async fn get(&self, plan: Id) -> Result<Record> {
         self.call(move |s| s.get(plan)).await
+    }
+    pub async fn acknowledged(&self, plan: Id) -> Result<Option<SourceReceipt>> {
+        self.call(move |s| s.acknowledged(plan)).await
     }
     pub async fn records(&self) -> Result<Vec<Record>> {
         self.call(|s| s.records()).await

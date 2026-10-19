@@ -1,10 +1,12 @@
 //! Authenticated sparse reads, preparation and explicit mixed-root publication.
-//! No clean settlement or native chunk-write activation.
+//! Exact local acknowledgments are explicit; no reclamation or native activation.
 use super::*;
 use s3drive_core::manifest::{Reference, base::Descriptor};
 use s3drive_state::sparse_views::{self, Binding, Id, Piece, Range, View};
 mod publication;
-pub use publication::{MixedPublisher, MixedRootCommit, MixedRootFailure, MixedRootRecovery};
+pub use publication::{
+    MixedPublisher, MixedRootCommit, MixedRootFailure, MixedRootRecovery, MixedSourceReceipt,
+};
 mod recovery;
 pub use recovery::{MixedRecovery, MixedRecoveryFailure};
 mod uploading;

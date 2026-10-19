@@ -56,7 +56,7 @@ pub(super) enum Boundary {
     Validated,
     Committed,
 }
-fn store_record(
+pub(super) fn store_record(
     db: &Connection,
     saved: &Saved,
     hook: &mut impl FnMut(Boundary) -> Result<()>,
@@ -130,6 +130,7 @@ impl<'a> Journal<'a> {
             tx.commit()?;
             return Ok(result);
         }
+        preparation::publication::settlement::guard_operation(&tx, operation)?;
         let target = record.request.binding.target()?;
         if before.files.contains_key(&target) {
             return Err(Failure::Conflict.into());
@@ -256,12 +257,14 @@ impl<'a> Journal<'a> {
             tx.commit()?;
             return Ok(result);
         }
+        preparation::publication::settlement::guard_operation(&tx, operation)?;
         let parent = before.record(change.parent())?;
         let target = parent.request.binding.target()?;
         if before.files.get(&target).ok_or(Failure::Corrupt)?.head != parent.id {
             return Err(Failure::Conflict.into());
         }
         let size = match &change {
+            Change::Rebase { .. } => return Err(Failure::Invalid.into()),
             Change::Resize { .. } => size.ok_or(Failure::Invalid)?,
             Change::Write { offset, blocks, .. } => parent
                 .request
@@ -329,6 +332,26 @@ impl<'a> Journal<'a> {
         tx.commit()?;
         hook(Boundary::Committed)?;
         Ok(View(record))
+    }
+    /// Scope-bound metadata lookup across locally acknowledged base epochs.
+    /// This grants no permission to read the returned immutable source.
+    pub fn current_head(&mut self, binding: &Binding) -> Result<View> {
+        binding.validate()?;
+        let tx = self
+            .state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred)?;
+        let before = inspect(&tx)?;
+        let file = before
+            .files
+            .get(&binding.target()?)
+            .ok_or(Failure::NotFound)?;
+        if !binding.same_scope(&file.binding)? {
+            return Err(Failure::Conflict.into());
+        }
+        let view = View(before.record(file.head)?.clone());
+        tx.commit()?;
+        Ok(view)
     }
     pub fn view(&mut self, id: Id) -> Result<View> {
         let tx = self
@@ -425,6 +448,13 @@ impl Client {
         let options = self.options;
         self.owner
             .call(move |s| Journal::new(&mut s.state, options)?.head(&binding))
+            .await
+    }
+    pub async fn current_head(&self, binding: Binding) -> Result<View> {
+        binding.validate()?;
+        let options = self.options;
+        self.owner
+            .call(move |s| Journal::new(&mut s.state, options)?.current_head(&binding))
             .await
     }
     pub async fn write(

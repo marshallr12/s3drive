@@ -195,6 +195,7 @@ impl<'a> Journal<'a> {
             publication: None,
             receipt: None,
             rejection: None,
+            acknowledgment: None,
         };
         let mut after = before.clone();
         after.records.insert(plan, r.clone());
@@ -210,6 +211,21 @@ impl<'a> Journal<'a> {
             "Committed",
         );
         Ok(r)
+    }
+    pub fn acknowledged(&mut self, plan: Id) -> Result<Option<SourceReceipt>> {
+        let r = self.get(plan)?;
+        if r.acknowledgment.is_none() {
+            return Ok(None);
+        }
+        Ok(Some(SourceReceipt::from_record(r)?))
+    }
+    pub fn acknowledge(
+        &mut self,
+        operation: Id,
+        plan: Id,
+        options: crate::sparse_views::Options,
+    ) -> Result<SourceReceipt> {
+        settlement::acknowledge(self.state, operation, plan, options)
     }
     pub fn reserved(&mut self, plan: Id, receipt: ns::Receipt) -> Result<Record> {
         update(&mut self.state.connection, plan, true, |r| {
@@ -362,6 +378,18 @@ impl Client {
     ) -> Result<Record> {
         begin_bounds(&base, &store, &publish_operation)?;
         self.call(move |j| j.begin(plan, base, store, sequence, publish_operation))
+            .await
+    }
+    pub async fn acknowledged(&self, plan: Id) -> Result<Option<SourceReceipt>> {
+        self.call(move |j| j.acknowledged(plan)).await
+    }
+    pub async fn acknowledge(
+        &self,
+        operation: Id,
+        plan: Id,
+        options: crate::sparse_views::Options,
+    ) -> Result<SourceReceipt> {
+        self.call(move |j| j.acknowledge(operation, plan, options))
             .await
     }
     pub async fn reserved(&self, plan: Id, receipt: ns::Receipt) -> Result<Record> {

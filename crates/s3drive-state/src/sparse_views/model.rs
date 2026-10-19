@@ -93,6 +93,13 @@ impl Binding {
         .map_err(|_| Failure::Invalid)?;
         Ok(())
     }
+    pub(super) fn same_scope(&self, other: &Self) -> Result<bool> {
+        Ok(self.target()? == other.target()?
+            && self.store == other.store
+            && self.source == other.source
+            && self.fingerprint == other.fingerprint
+            && self.root == other.root)
+    }
     pub(super) fn target(&self) -> Result<Id> {
         let base = self.base()?;
         // A store/route/base change must conflict with the same file's dirty
@@ -128,11 +135,17 @@ pub(super) enum Change {
     Resize {
         parent: Id,
     },
+    Rebase {
+        parent: Id,
+        publication: Id,
+    },
 }
 impl Change {
     pub(super) fn parent(&self) -> Id {
         match self {
-            Self::Write { parent, .. } | Self::Resize { parent } => *parent,
+            Self::Write { parent, .. } | Self::Resize { parent } | Self::Rebase { parent, .. } => {
+                *parent
+            }
         }
     }
 }
@@ -144,7 +157,11 @@ impl Request {
         }
         match &self.edit {
             None if self.format == 1 => (),
-            Some(change) if self.format == 2 && change.parent() != [0; 32] => {
+            Some(change)
+                if self.format == 2
+                    && change.parent() != [0; 32]
+                    && !matches!(change, Change::Rebase { .. }) =>
+            {
                 if let Change::Write { offset, blocks, .. } = change {
                     if blocks.is_empty() || blocks.len() > MAX_RANGE_BYTES / PATCH_BYTES {
                         return Err(Failure::Invalid.into());
@@ -166,6 +183,16 @@ impl Request {
                         return Err(Failure::Invalid.into());
                     }
                 }
+            }
+            Some(Change::Rebase {
+                parent,
+                publication,
+            }) if self.format == 3
+                && *parent != [0; 32]
+                && *publication != [0; 32]
+                && self.size == self.binding.base_size =>
+            {
+                ()
             }
             _ => return Err(Failure::Invalid.into()),
         }
@@ -303,7 +330,16 @@ impl Record {
     }
     pub(super) fn child(operation: Id, request: Request, parent: &Record) -> Result<Self> {
         request.validate()?;
-        if operation == [0; 32] || request.binding != parent.request.binding {
+        if operation == [0; 32]
+            || match &request.edit {
+                Some(Change::Rebase { .. }) => {
+                    !request.binding.same_scope(&parent.request.binding)?
+                        || request.binding == parent.request.binding
+                        || request.size != parent.request.size
+                }
+                _ => request.binding != parent.request.binding,
+            }
+        {
             return Err(Failure::Invalid.into());
         }
         let change = request.edit.as_ref().ok_or(Failure::Invalid)?;
@@ -312,6 +348,15 @@ impl Record {
         }
         let mut spans = Vec::new();
         match change {
+            Change::Rebase { .. } => {
+                push(
+                    &mut spans,
+                    Span::Base {
+                        offset: 0,
+                        length: request.size,
+                    },
+                );
+            }
             Change::Resize { .. } => {
                 slice(
                     &parent.spans,
@@ -363,9 +408,17 @@ impl Record {
         if spans.len() > MAX_VIEW_EXTENTS {
             return Err(Failure::Quota.into());
         }
-        let id = hash(b"s3drive-sparse-child-view-v1\0", &(operation, &request))?;
+        let rebase = matches!(change, Change::Rebase { .. });
+        let id = hash(
+            if rebase {
+                b"s3drive-sparse-rebase-view-v1\0"
+            } else {
+                b"s3drive-sparse-child-view-v1\0"
+            },
+            &(operation, &request),
+        )?;
         Ok(Self {
-            format: 2,
+            format: if rebase { 3 } else { 2 },
             id,
             operation,
             request,

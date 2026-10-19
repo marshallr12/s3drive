@@ -25,7 +25,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 34;
+pub const SCHEMA_VERSION: i32 = 35;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
@@ -302,7 +302,13 @@ impl State {
             }
             // Version34 admits explicit local predecessor edges in format2 root
             // records. Existing schema33 rows/hashes remain byte-for-byte intact.
+            // Version35 admits exact source acknowledgments and immutable rebase
+            // transitions. Validation precedes the version marker; no old BLOB
+            // or hash is rewritten and a failure rolls back the marker too.
             sparse_views::preparation::publication::check_schema(&tx)?;
+            if version <= 34 {
+                sparse_views::preparation::publication::require_pre35(&tx)?;
+            }
             sparse_views::preparation::publication::validate_all(&tx)?;
             sparse_views::preparation::check_schema(&tx)?;
             sparse_views::preparation::validate_all(&tx)?;

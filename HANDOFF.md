@@ -58,6 +58,30 @@ This remains a historical root commit, not local clean settlement or a file flus
 Normal source opening is strict; no lost-operation rebase or overwrite fallback.
 Manifest origins only; legacy/metadata-empty origins still need explicit formats.
 
+## W5b1 declared clean-epoch successor (2026-10-19)
+
+Ownership: codex/mixed-clean-epochs in
+/home/marshall/src/worktrees/s3drive-mixed-clean-epochs. Read
+ docs/src/mixed-clean-epochs.md before implementation. W5a's source319 stays frozen
+in its separate worktree while own39253634685 runs. W5b1 must atomically acknowledge
+an exact root/view, rebase only the matching current head, and preserve historical
+acknowledgments/newer edits/old immutable IDs and reads. Extend root/source record
+formats in schema35, with no old-row rewrite; root metadata helper must not recurse
+into source validation. Add shared operation-ID guards, scoped current head, managed
+same-owner local ack and SDK/fault/kill/migration tests. Workspace check1 EXIT0; inherited focused1 17passed. New focused5 11passed/
+9.15s incl11 actual epoch-kill boundaries, SQLite-full, migration, corrupt graph/
+metadata/BLOB refusal, operation IDs, limits/triggers and owner race. SDK2 EXIT0/
+one74.36s/13ownedPUT case: four3MiB+17 sparse cycles, old reads, base reuse, newer
+head preservation, restart/metadata ack recovery and empty base;8KiB future bound.
+SDK1 failed an observation interval that included earlier authenticated reads;
+scoped before replay, assertion retained; exact failed source/log under/tmp.
+Root receipts use a small shared immutable Arc; no body data copied into a new
+base. No new tables/dependencies, only schema35 format marker; old-format bytes
+omit acknowledgment and stay unchanged. Full local gate1 is next on324 inputs frozen at
+/tmp/s3drive-mixed-epochs-frozen.json. Own hosted acceptance remains required
+before promotion. W5b2/3 bounded retention, origins, W6 and provider/
+physical acceptance remain. Goal ACTIVE/progress; no clean or native claim yet.
+
 ## Current W5a exact local lineage — complete local gate, own cohort running
 
 Worktree /home/marshall/src/worktrees/s3drive-mixed-publication-lineage,

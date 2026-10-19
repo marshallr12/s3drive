@@ -3211,3 +3211,14 @@ W5b clean epochs/retention and explicit origins/W6 remain.
 W5a own cohort39253634685 attempt1 is running for exact source50ee01c/schema34.
 Main runtime remains accepted W4b2/schema33 until full own source/native/artifact
 acceptance. [Current successor evidence](mixed-publication-lineage.md).
+
+
+### W5b1 clean epochs — declared2026-10-19
+
+Implement [the exact acknowledgment/epoch contract](mixed-clean-epochs.md) in
+codex/mixed-clean-epochs, isolated from W5a's frozen319-input own cohort. Own
+schema35 record/view extension, metadata/source validators, source-mutation identity
+guards, atomic same-owner acknowledgment and scoped current-head facade, managed
+local acknowledgment and SDK/fault/recovery tests. Preserve literal old formats,
+source reads and exact remote recovery. Full local and own hosted/native/source
+gates precede promotion; no reclamation or native chunk-write activation.
