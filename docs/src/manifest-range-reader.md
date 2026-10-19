@@ -219,3 +219,68 @@ archive retain the evidence. This supersedes the earlier pending status above;
 it accepts W1a in that combined source. W1b page reuse is developed separately
 and still needs its own acceptance. Historical base reopening and writes remain
 unimplemented by these read/provenance helpers.
+
+## W1b authenticated page reachability (2026-10-18)
+
+Draft on `codex/manifest-page-proofs`, based on local-green W1a `ed2e93b`.
+`File::prove_root()` returns a witness for its already validated manifest root
+without refetching metadata. `File::prove_page_containing(offset, level)` walks
+at most two authenticated child pages, returning the complete containing page's
+actual start, length, level and reference. Both share the reader's four active
+slots and overall deadline; neither fetches data objects. A published-empty
+manifest has a root witness; a metadata-empty file has no manifest root.
+
+`File::verify_page_proof()` performs bounded pure revalidation against the
+authorized File. Its distinct `S3DPREF1` encoding contains a 50-byte header and
+at most two length-prefixed pages, at most 20,918 bytes. The root witness needs
+only the header. Verification reconstructs the reference from the trusted root
+and authenticated parent chain; no supplied object reference is trusted. It
+rejects wrong bases, kinds, counts, lengths, hashes, spans and trailing bytes.
+The base identity is shared with chunk witnesses, but their encodings cannot be
+interchanged. As with W1a, a witness proves pinned reachability rather than
+current data health, write permission or an upload receipt.
+
+An old root can become a child because both use the Page key namespace. The
+positive fixture grows a 128-chunk leaf root into a 129-chunk level-one root and
+inherits the original leaf with its exact span, level, file scope and digest.
+The containing new parent's proof authenticates the old object; relabeling the
+old standalone root witness to the new base fails. A parent declaring the wrong
+child span is refused. Root height must still match its canonical size-derived
+ordinal. The initial two-chunk parent fixture violated that rule and was
+correctly rejected; production validation was preserved.
+
+Seven focused real-SDK/authority reader controls passed in 5.54 seconds,
+including root reuse, a 64 GiB sparse metadata tree, cross-kind/base refusal,
+cancellation, shared admission and deadline recovery. The independent full local
+gate passed with all260 frozen runtime inputs unchanged. The
+[dated evidence](evidence/manifest-page-proofs-20261018.json) and
+[indexed16-member local archive](evidence/manifest-page-proofs-local-20261018.tar.gz)
+retain both initial failures, the passing focused/full runs and exact helper/test
+source. Every indexed member was verified. This checkout has no own hosted
+acceptance. Historical base reopening, sparse SQLite edit views, mixed publication,
+exact-view settlement and native chunk writes remain separate work.
+
+Combined source `bf2e6ae` includes accepted snapshot/proof checkpoint `da84d3a`.
+Its fresh full local gate passed with all261 frozen inputs unchanged, nine
+reader/format controls (one native ignored),12 publication controls,62 S3 tests,
+365 state tests/one ignored and formatting/Clippy/build/book checks. The
+[indexed19-member combined local archive](evidence/manifest-page-proofs-combined-local-20261018.tar.gz)
+retains the complete gate, frozen inputs and exact combined helper/native source;
+every indexed member was verified. Its own hosted/native acceptance is pending.
+
+The published candidate now runs its
+[own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39187701991).
+It must complete with raw-log and source-bound artifact review before acceptance;
+local results and earlier native artifacts do not substitute.
+
+W1b acceptance update,2026-10-18: source `bf2e6ae` completed its
+[own cohort](https://github.com/marshallr12/s3drive/actions/runs/39187701991), all3
+jobs and raw logs reviewed. Real FUSE1.13s and WinFsp3.04s retained all-format
+old-handle/remount assertions. Own artifact API ZIP digests, typed21/14/project
+oracles and all35 raw fields/types matched. Earlier artifacts were not reused.
+The [indexed31-member hosted archive](evidence/manifest-page-proofs-bf2-hosted-20261018.tar.gz)
+retains all logs, artifacts, checks and exact helper/native source; every member
+was verified. SHA-256 `7ea07240c7ab082534754536d2809b90168b0f53342cd955c3a0ddc0d8ea3096`.
+These results accept the bounded reachability helper; historical base reopening,
+sparse edit views, mixed publication, settlement and native chunk writes remain
+separate. This supersedes the earlier pending status above.

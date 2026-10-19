@@ -25,12 +25,21 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
-## Current W1c1 historical manifest metadata (2026-10-18)
+## Current W1c2 combined baseline (2026-10-18)
+
+Local W1c1 e18d6f5 is now combined with accepted W1b2e7b6ca. Runtime merge is a
+new draft, NOT tested or hosted-accepted as a combination yet. Reader changes
+have not begun. First baseline check, then implement the W1c2 proposal in the
+implementation plan, preserve all existing namespace/native behavior and run a
+fresh full/own hosted gate before W2 or activation. Keep chunk writes unsupported.
+No pending CI remains for the W1b prerequisite; watch7139/checker12398 CLOSED0.
+
+## Local prerequisite W1c1 historical manifest metadata (2026-10-18)
 
 Isolated /home/marshall/src/worktrees/s3drive-payload-history-authority,
 codex/payload-history-authority from accepted da84d3a. Page-proof sourcebf2e6ae
-remains frozen in its own checkout/run39187701991/watch7139; it is not accepted
-by this new work. Scope: authenticated, exact-reference historical manifest
+is accepted in its own checkout/run39187701991 at2e7b6ca; that does not certify
+this combined history draft. Scope: authenticated, exact-reference historical manifest
 payload lookup from existing namespace_uploads, state/authority controls, book.
 No schema migration, S3 authorization/write, arbitrary File constructor or
 native activation. New additive manifest-history-v1 request/reply/capability.
@@ -57,7 +66,62 @@ Next W1c2 proposal in implementation plan: separate metadata-free content versio
 from named File, 88-byte untrusted base descriptor, authority-bound old-root
 reopen/current S3 auth, original own-payload CAS (not its predecessor guard).
 
-## Current combined-source snapshot-format repair (2026-10-18)
+
+## Current W1b page-proof foundation (2026-10-18)
+
+Accepted runtime bf2e6aed16d32c62e094082a50769141f8f90ef6, own run39187701991
+attempt1 ALL3 SUCCESS. Watch7139 CLOSED0, checker12398 CLOSED0. All three raw
+logs reviewed and source-bound: Linux FUSE1.13s, Windows WinFsp3.04s;9reader/
+format1nativeignored,62S3, Linux365state1ignored,Windows360state1ignored.
+Own artifact ZIP API digests, typed21+14/project oracles/all35 raw fields/types
+passed, no older artifacts reused. All261 frozen working/committed inputs match.
+Indexed31-member hosted archive172177bytes SHA
+7ea07240c7ab082534754536d2809b90168b0f53342cd955c3a0ddc0d8ea3096.
+Windows Server2025 image20261007.264.1; three disposable profiles locked, dummy
+credentials removed, removal deferred to VM destruction. Unused delay-import,
+long-test and Node action notices retained. Linux no-systemd HTTP/privateCA23.71s;
+Windows paired recovery80.16s. No performance, physical reboot or provider claim.
+Fresh full local gate68162 CLOSED0, all261 unchanged; indexed19-member local
+archive100784bytes SHA333f2722f4672361a9bcf2304fb92061df42813c001bcebfe4066facd8b7cb8e.
+No native chunk writes or historical-base reopening follows from W1b acceptance.
+
+Next implementation /home/marshall/src/worktrees/s3drive-payload-history-authority,
+codex/payload-history-authority: local clean W1c1 checkpoint
+e18d6f5b619f3c1b17cdb734af093ce0b1d4df84, not pushed. Full gate60956 CLOSED0,
+frozen262 unchanged,368state1ignored/11authoritynamespace plus all workspace/
+book checks.20-member local archive71917bytes SHA
+d7e7aedb493448a7794ddb15f66503d52e188caced3284fe36724ada15942668.
+Authenticated exact history metadata,16KiB SQL guards and no-rebase HTTP controls
+passed; no reader/native activation. Read that HANDOFF/plan. Combine accepted W1b
+then implement W1c2 BaseFile/version split and authority-bound old-root reopening;
+require own combined full/hosted gates. Sparse views, mixed publication, exact-view
+settlement/native chunk writes remain required. Goal ACTIVE; PUBLIC intentional.
+
+Isolated /home/marshall/src/worktrees/s3drive-manifest-page-proofs,
+branch codex/manifest-page-proofs from local-green W1a ed2e93b (not hosted-
+accepted separately). Combined candidate8c3448f is accepted in its own checkout at da84d3a;
+run39184629344 ALL3/raw/artifacts passed; this does not automatically accept W1b.
+Scope: opaque PageProof metadata witness, reader exports, real SDK/authority
+fixture controls and book. No native activation, schema/wire changes, writes or
+receipt conversions. Data and page witnesses share a base identity but distinct
+encodings. Prove root/canonical and noncanonical subtrees, published-empty root,
+base/kind/shape/corruption/trailing refusal, shared capacity/deadline/cancel and
+actual reuse of a prior root as a child with zero data reads during proof export.
+Focused7/7 passed5.54s, log /tmp/s3drive-page-proofs-focused2.log. Initial build
+needed explicit authority-error conversion; initial positive reuse fixture used
+a noncanonical level-one/two-chunk root and correctly failed. Corrected fixture
+uses canonical128-to129-chunk height growth and retains wrong-child-span refusal.
+Full local gate session95188 CLOSED EXIT0, /tmp/s3drive-page-proofs-gate.log,
+frozen260 /tmp/s3drive-page-proofs-frozen.json. Clippy,7reader and12publication
+controls passed with365state/1ignored,62S3,fmt/clippy/build/book. Runtime unchanged.
+Indexed16-member local archive61969bytes SHA
+cc54ea160c8c9bf36ae4c8daf8c6ca24663a5efaf5845a391dc1ea35d962f902.
+Combined8c3448f now ALL3/raw/typed21+14/raw35 accepted at da84d3a;
+watch73843 CLOSED0, checker68867 CLOSED0. Own W1b hosted gate now accepted above.
+Independent and combined local gates plus own hosted gate passed. Full sparse edits/publication/
+settlement/native chunk writes remain later work. Read implementation plan.
+
+## Accepted prerequisite snapshot-format repair (2026-10-18)
 
 Accepted runtime8c3448f478f9ab62fe1a23ce965907546be5d10c: own run39184629344
 attempt1 ALL3 SUCCESS; watch73843 CLOSED0, checker68867 CLOSED0. All three raw
@@ -74,9 +138,9 @@ controls, not live Wasabi, physical reboot or native chunk-write acceptance.
 
 Next worktree /home/marshall/src/worktrees/s3drive-manifest-page-proofs,
 codex/manifest-page-proofs from ed2e93b: W1b metadata-only PageProof, focused7
-passed5.54s; own full local gate95188 still LIVE, frozen260 unchanged. It must
-combine this accepted runtime and pass its own source-bound hosted cohort
-before integration. Historical base reopen/sparse edits/mixed-tree publication/
+passed5.54s; independent full local gate95188 CLOSED0, frozen260 unchanged.
+W1b3890584 combined accepted da84d3a into bf2e6ae; its full and own hosted
+gates are now accepted above. Historical base reopen/sparse edits/mixed-tree publication/
 exact-view settlement/native chunk writes remain required; goal ACTIVE.
 
 
@@ -113,7 +177,7 @@ passed. Indexed25member local archive116562bytes SHA
 d7ad206a5579ef5dcaaedb4ee3e7c82374c262093098f375208506bdf4076e5b. Own fresh native/hosted cohort accepted. Previous
 W1a/native maps and archives retain their own source; do not reuse as acceptance.
 
-## Current W1a foundation: authenticated chunk-reference proofs (2026-10-18)
+## Historical W1a foundation: authenticated chunk-reference proofs (2026-10-18)
 
 Isolated /home/marshall/src/worktrees/s3drive-manifest-reference-proofs,
 branch codex/manifest-reference-proofs from accepted reader7c2b454 (all3 own

@@ -20,7 +20,7 @@ use std::{
 };
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 mod provenance;
-pub use provenance::{ChunkProof, MAX_CHUNK_PROOF_BYTES};
+pub use provenance::{ChunkProof, MAX_CHUNK_PROOF_BYTES, MAX_PAGE_PROOF_BYTES, PageProof};
 
 pub const MAX_READ_BYTES: usize = 8 * 1024 * 1024;
 pub const MAX_ACTIVE: usize = 4;

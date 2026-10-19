@@ -2,6 +2,8 @@
 //! persistent ownership decision, or arbitrary reference constructor.
 use super::*;
 use s3drive_core::manifest::Reference;
+mod pages;
+pub use pages::{MAX_PAGE_PROOF_BYTES, PageProof};
 
 const MAGIC: &[u8; 8] = b"S3DCREF1";
 const HEADER: usize = 49;
