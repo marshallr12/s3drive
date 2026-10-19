@@ -190,10 +190,7 @@ impl Request {
             }) if self.format == 3
                 && *parent != [0; 32]
                 && *publication != [0; 32]
-                && self.size == self.binding.base_size =>
-            {
-                ()
-            }
+                && self.size == self.binding.base_size => {}
             _ => return Err(Failure::Invalid.into()),
         }
         Ok(())

@@ -3222,3 +3222,11 @@ guards, atomic same-owner acknowledgment and scoped current-head facade, managed
 local acknowledgment and SDK/fault/recovery tests. Preserve literal old formats,
 source reads and exact remote recovery. Full local and own hosted/native/source
 gates precede promotion; no reclamation or native chunk-write activation.
+
+
+Cross-machine clean-base observation is an additional required boundary before
+W6: adopt a fresh authoritative manifest only against a proven clean local head,
+with no unresolved/dirty work, retaining prior snapshots. It is distinct from
+W5b1 acknowledgment of our own publication. See [the epoch contract](mixed-clean-epochs.md).
+W5b1 full gate1 stopped at a single unused-unit Clippy diagnostic with all324
+inputs unchanged; only that expression was removed. A fresh full gate follows.

@@ -77,8 +77,12 @@ SDK1 failed an observation interval that included earlier authenticated reads;
 scoped before replay, assertion retained; exact failed source/log under/tmp.
 Root receipts use a small shared immutable Arc; no body data copied into a new
 base. No new tables/dependencies, only schema35 format marker; old-format bytes
-omit acknowledgment and stay unchanged. Full local gate1 is next on324 inputs frozen at
-/tmp/s3drive-mixed-epochs-frozen.json. Own hosted acceptance remains required
+omit acknowledgment and stay unchanged. Full gate1 runner547274 CLOSED101 at one Clippy unused-unit diagnostic; all324
+unchanged. Removed only redundant unit expression, no semantic change/suppression.
+Exact source60e11a8/frozen map/log and failed model copy retained. Fresh gate2 on
+final2 map324 is next. Source publication and full acceptance remain pending.
+Fresh remote clean-base adoption is additionally required before W6; it cannot
+reuse our-own-publication acknowledgment to invent an external receipt. Own hosted acceptance remains required
 before promotion. W5b2/3 bounded retention, origins, W6 and provider/
 physical acceptance remain. Goal ACTIVE/progress; no clean or native claim yet.
 

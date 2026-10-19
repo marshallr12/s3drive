@@ -57,7 +57,20 @@
     "W5b2 explicit pins/retry retirement",
     "W5b3 bounded local reclamation",
     "explicit legacy and metadata-empty origins",
+    "fresh authoritative remote manifest adoption for proven clean local heads",
     "W6 native chunk callbacks/lifecycle",
     "provider and physical reboot/session gates"
+  ],
+  "full_local_attempts": [
+    {
+      "attempt": 1,
+      "source": "60e11a8",
+      "result": "failed at Clippy",
+      "exit_code": 101,
+      "all_inputs_unchanged": 324,
+      "reason": "unneeded unit expression in new format3 match arm; removed without warning suppression or semantic change",
+      "log_sha256": "673573a5dcbb525c5bc71ffd839cd3d35bcfb85b06160097097fd4282b0fbf15",
+      "retained_source": "/tmp/s3drive-mixed-epochs-failed-gate1-model.rs"
+    }
   ]
 }

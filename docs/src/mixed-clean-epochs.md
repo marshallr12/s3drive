@@ -77,3 +77,20 @@ acknowledgment-future budget. The first SDK harness assertion incorrectly includ
 preceding authenticated reads in the no-RPC interval; the observation is now scoped
 to the acknowledgment itself. Failed source/log retained; no assertion suppression.
 Full local and own hosted/native/source acceptance remain required.
+
+
+Cross-machine clean-base adoption remains required before W6. This slice derives
+bases only from our own validated publication receipts. A later authoritative
+remote manifest must also be adoptable when the local head is proven clean and
+has no unresolved publication or dirty descendant. That separate observation
+path must use fresh authenticated metadata/S3 identity, preserve old reads and
+CAS against the exact expected local clean head. It must never treat a remote
+change as permission to overwrite pending local edits, or disguise an external
+publication as our own root receipt. Current `current_head` is metadata selection,
+not automatic remote reconciliation. Legacy and metadata-empty origins still
+require explicit formats.
+
+The first complete local gate retained all324 inputs and stopped at one Clippy
+style diagnostic: an unnecessary unit expression in the new rebase-format match
+arm. Removed that expression without changing the predicate or suppressing the
+warning. Exact failed source/map/log retained. A fresh complete gate is required.
