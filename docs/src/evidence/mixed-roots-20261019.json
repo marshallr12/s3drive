@@ -220,5 +220,28 @@
     "all_members_verified": true,
     "runtime_inputs": 317,
     "local_gate_exit": 0
+  },
+  "publication": {
+    "source": "2d9e21369c587f84cd20b9a11c85e7d822a4a957",
+    "run_id": 39249045883,
+    "attempt": 1,
+    "jobs": {
+      "book": 118048015714,
+      "linux": 118048016109,
+      "windows": 118048016468
+    },
+    "status": "own cohort in progress; acceptance pending",
+    "observer": {
+      "source": "2d9e21369c587f84cd20b9a11c85e7d822a4a957",
+      "run_id": 39249045883,
+      "run_attempt": 1,
+      "runner_pid": 455646,
+      "runner_start_ticks": "141806586",
+      "child_pid": 455647,
+      "child_start_ticks": "141806592",
+      "log": "/tmp/s3drive-mixed-roots-hosted-watch.log",
+      "started": "2026-10-19T12:04:22.397441+00:00"
+    },
+    "own_one_use_acceptance": "scripts prepared and syntax checked, NOT executed"
   }
 }

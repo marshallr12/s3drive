@@ -39,6 +39,20 @@ One-use local archiver already executed; NEVER rerun. Focused results and both
 failures/fixes remain in dated evidence. Own hosted/native/source cohort is next;
 keep317 runtime inputs frozen. No root acceptance from parent/native regressions.
 
+Published own source2d9e21369c587f84cd20b9a11c85e7d822a4a957; all317 current
+and committed hashes exact. Own39249045883 attempt1 in progress:
+book118048015714/Linux118048016109/Windows118048016468. Owned observer455646;
+child PID/start ticks at /tmp/s3drive-mixed-roots-hosted-watch-running.json,
+confirmed live. Log/result /tmp/s3drive-mixed-roots-hosted-watch{.log,-result.json}.
+Four one-use own checker/oracle/raw-comparer/archive scripts prepared under
+/tmp/s3drive-{check-mixed-roots-hosted.py,mixed-roots-hosted-*}, NOT executed.
+After all3 terminal success: full raw review, exact317 source/API ZIP SHA/typed
+21+14/project/all35 raw fields/types, one-use archive. Require12 new state cases
+(including24 actual kill boundaries and budget reservation),3 new SDK cases and
+429state/424Windowsstate,21publication. Native fixture schema33 on both platforms.
+Never reuse parent artifacts12180169543/12181478025 or repair repository visibility.
+Keep all317 frozen until own cohort done. Source/recorded state remains draft.
+
 Worktree /home/marshall/src/worktrees/s3drive-mixed-root-journal,
 codex/mixed-root-journal froma1e84e6. Parent W4b1 now accepted main95f72cc,
 exact5112fd2/schema32/all306. New draft schema33 adds bounded hash-bound semantic

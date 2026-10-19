@@ -300,3 +300,10 @@ retained failures. This accepts no platform/provider behavior: the own hosted
 Linux/Windows/book/native/source cohort is still required before W4b2 promotion.
 W5 exact-view clean-base transition/retention, legacy/empty origins and W6 native
 chunk writes remain required for the complete drive goal.
+
+
+Exact final source `2d9e21369c587f84cd20b9a11c85e7d822a4a957` is published for
+[its own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39249045883).
+Acceptance remains pending. Parent/source/native evidence cannot substitute for
+this schema33 runtime. No mounted chunk writes or local clean settlement follow
+from the locally verified root commit.
