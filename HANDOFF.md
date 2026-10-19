@@ -70,12 +70,34 @@ write/resize maps without tail resurrection, independent quotas, old-view reads,
 worker/process-kill and SQLite-full controls. W2c/W3-W6 and legacy/metadata-empty
 recovery remain required. No remote/native activation or provider writes.
 
-## Current W2b1 SQLite base-view admission — local green (2026-10-19)
+
+## Current accepted W2b1 SQLite base-view admission (2026-10-19)
+
+Runtime1681ee654e7f6d0b4f39ba3fb4b306bfdb505ea0 accepted in own run39203016390
+attempt1 ALL3 SUCCESS. Watch8301 CLOSED0; checker17512 CLOSED0. All3 raw logs,
+own ZIP API digests/independent typed21+14/project oracles/all35 raw fields/types
+passed. Indexed44-member hosted archive205202bytes SHA
+67707da79e182e876320a9c6a31144b766f69ed596513bd9b411bd373348302a.
+All275 frozen inputs match working/committed source. Linux378state/Windows373state
+1ignored,37core/11reader1nativeignored/62S3 passed. Linux manifest FUSE1.62s,
+Windows WinFsp2.71s; Linux no-systemd HTTP/TLS24.21s and paired recovery, Windows
+paired82.82s. Three locked hosted fixture profiles retained; dummy credentials
+removed; deletion deferred to VM destruction. No performance/physical reboot/
+provider/new native chunk-write acceptance. Main integration retains these275
+inputs, changing documentation/evidence only. PUBLIC remains intentional.
+
+Next local-green follow-up: /home/marshall/src/worktrees/s3drive-sparse-mutations,
+codex/sparse-mutations, schema30 immutable-version migration prerequisite W2b2a.
+Its full local gate2 6893 passed276inputs/380state1ignored/37core/11reader1native
+ignored/62S3 after a narrow owned disk-full fixture repair. Read that checkout's
+HANDOFF and migration discussion before continuing; publish its exact source for
+own combined gates. Main's accepted runtime remains schema29; patch bytes,
+mutations, W2c/W3-W6 and legacy/metadata-empty recovery remain required.
 
 Worktree /home/marshall/src/worktrees/s3drive-sparse-edit-views,
 branch codex/sparse-edit-views from core checkpointc759250 (runtimec279e0f).
 Core own CI39198380488 passed all3/raw/own artifacts and is accepted; do not edit
-that checkout's267 runtime inputs. Main is now accepted core docs checkpoint3ddafbc (runtimec279e0f), still schema28. Core full local
+that checkout's267 runtime inputs. The previous main was accepted core docs checkpoint3ddafbc (runtimec279e0f), schema28; this accepted base-view integration advances it to schema29. Core full local
 gate33550 EXIT0 is complete; local-only storage may build on its intent codec.
 Read implementation plan and docs/src/sparse-base-views.md. Draft implemented:
 new schema29, immutable base/zero model, atomic begin/exact replay, private worker,
@@ -107,11 +129,9 @@ d2e1e894ee830ff96f8e98cc87b6353255b12e306c58179c45ed8eae59356120.
 Published merged runtime1681ee654e7f6d0b4f39ba3fb4b306bfdb505ea0, including
 main3ddafbc ancestry with documentation/evidence-only merge delta. All275
 working/committed hashes match the local gate. Proof
-/tmp/s3drive-sparse-views-publication.json. Own run39203016390 attempt1 LIVE:
-book117899814013,Linux117899814131,Windows117899814181. Watch8301 LIVE ->
-/tmp/s3drive-sparse-views-hosted-watch.log. Own raw/API/digest/typed21+14/project
-oracles/all35 raw fields+types still required; never reuse older artifacts.
-Current source is local green only; main remains accepted codec/schema28.
+/tmp/s3drive-sparse-views-publication.json. Own run39203016390 attempt1 completed successfully; accepted results and indexed
+hosted evidence are recorded above. Main promotion preserves the tested275 inputs.
+
 
 This completed local slice W2b1: private SQLite identity/base-view admission, immutable
 bounded base/zero extent model, exact begin-operation replay, read-only range

@@ -1,6 +1,6 @@
 {
   "date": "2026-10-19",
-  "status": "W2b1 full portable local gate passed; own combined platform/native acceptance pending",
+  "status": "W2b1 accepted: full portable gate and own Windows/Linux/book cohort passed with raw and artifact checks",
   "branch": "codex/sparse-edit-views",
   "baseline": "e90d791812b63adfc53501c23c24979b37c881c5",
   "scope": "local immutable initial base/zero metadata, exact begin replay, private owner, schema29 and reciprocal isolation; no patch writes or provider access",
@@ -194,5 +194,183 @@
       "linux": 117899814131,
       "windows": 117899814181
     }
+  },
+  "hosted": {
+    "source": "1681ee654e7f6d0b4f39ba3fb4b306bfdb505ea0",
+    "run_id": 39203016390,
+    "attempt": 1,
+    "all_three_jobs": "success",
+    "raw_review": {
+      "source": "1681ee654e7f6d0b4f39ba3fb4b306bfdb505ea0",
+      "run_id": 39203016390,
+      "run_attempt": 1,
+      "reviewed": true,
+      "jobs": {
+        "117899814131": {
+          "source": "1681ee654e7f6d0b4f39ba3fb4b306bfdb505ea0",
+          "job_id": 117899814131,
+          "run_attempt": 1,
+          "reviewed": true,
+          "log": "/tmp/s3drive-sparse-views-hosted-linux.log",
+          "sha256": "b8b50cdc3739a511b19ed71116f156a269a9e5a8dc97785661f291c0ead667a6",
+          "platform": "Ubuntu24.04 image20261012.334",
+          "core": {
+            "passed": 37,
+            "seconds": 0.03
+          },
+          "reader": {
+            "passed": 11,
+            "ignored": 1,
+            "seconds": 6.5
+          },
+          "state": {
+            "passed": 378,
+            "ignored": 1,
+            "seconds": 138.04
+          },
+          "s3": {
+            "passed": 62,
+            "seconds": 18.26
+          },
+          "legacy_native": {
+            "passed": 9,
+            "seconds": 77.51
+          },
+          "manifest_native": {
+            "passed": 1,
+            "seconds": 1.62
+          },
+          "no_systemd_coordinator_http_and_tls": {
+            "passed": 1,
+            "seconds": 24.21
+          },
+          "paired_fuse_recovery": "passed",
+          "sparse_tests": 10,
+          "notices": [
+            "expected403 and stopped-authority ConnectionRefused retain dirty data",
+            "startup missing-file negative after removal",
+            "Node20 forced24, punycode and url.parse deprecations"
+          ],
+          "not_claimed": [
+            "patch bytes or native chunk writes",
+            "Wasabi or physical reboot acceptance"
+          ]
+        },
+        "117899814013": {
+          "source": "1681ee654e7f6d0b4f39ba3fb4b306bfdb505ea0",
+          "job_id": 117899814013,
+          "run_attempt": 1,
+          "reviewed": true,
+          "log": "/tmp/s3drive-sparse-views-hosted-book.log",
+          "sha256": "1f252ad3d08cad563d3dceb219e793fd2c0e2b582966005785ed284f83c655e6",
+          "chapters": 67,
+          "markdown_files": 71,
+          "schema": 29,
+          "notices": [
+            "pinned toolchain overrides default",
+            "Node20 forced24 action notice"
+          ]
+        },
+        "117899814181": {
+          "source": "1681ee654e7f6d0b4f39ba3fb4b306bfdb505ea0",
+          "job_id": 117899814181,
+          "run_attempt": 1,
+          "reviewed": true,
+          "log": "/tmp/s3drive-sparse-views-hosted-windows.log",
+          "sha256": "49e2e428ad53ab21876b7c20d32bfef2fd79610fbc62e25e2ce77c0044ba5ab1",
+          "platform": "Windows Server2025 windows-2025-vs2026/20261007.264.1",
+          "core": {
+            "passed": 37,
+            "seconds": 0.03
+          },
+          "reader": {
+            "passed": 11,
+            "ignored": 1,
+            "seconds": 9.26
+          },
+          "state": {
+            "passed": 373,
+            "ignored": 1,
+            "seconds": 265.69
+          },
+          "s3": {
+            "passed": 62,
+            "seconds": 23.54
+          },
+          "legacy_native": {
+            "passed": 7,
+            "seconds": 90.46
+          },
+          "manifest_native": {
+            "passed": 1,
+            "seconds": 2.71
+          },
+          "paired_startup": {
+            "passed": 1,
+            "seconds": 82.82
+          },
+          "sparse_tests": 10,
+          "notices": [
+            "3 locked disposable fixture profiles; dummy credentials removed; deletion deferred to VM destruction",
+            "unused WinFsp delay imports across11 executables and explicit reader rebuild",
+            "long state/coordinator tests completed",
+            "expected403/rival conflicts retain dirty bytes",
+            "Node20 forced24, punycode and url.parse action deprecations"
+          ],
+          "not_claimed": [
+            "new native chunk writes",
+            "schema30 migration acceptance",
+            "performance or physical reboot acceptance",
+            "Wasabi acceptance"
+          ]
+        }
+      }
+    },
+    "archive": {
+      "path": "evidence/sparse-base-views-hosted-20261019.tar.gz",
+      "sha256": "67707da79e182e876320a9c6a31144b766f69ed596513bd9b411bd373348302a",
+      "bytes": 205202,
+      "members": 44,
+      "all_indexed_members_verified": true,
+      "source": "1681ee654e7f6d0b4f39ba3fb4b306bfdb505ea0",
+      "run_id": 39203016390,
+      "run_attempt": 1,
+      "independent_typed_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "all_raw_fields_and_types_equal": true
+    },
+    "own_artifact_downloads": [
+      {
+        "kind": "disposition",
+        "id": 12164703036,
+        "source": "1681ee654e7f6d0b4f39ba3fb4b306bfdb505ea0",
+        "run_id": 39203016390,
+        "run_attempt": 1,
+        "windows_job": 117899814181,
+        "zip_sha256": "068171e09264d46b17dfcbf54fbef722afebecbde773a19c580c18d5e4498cab",
+        "json_sha256": "c4f97b0d79003f847dde7dae2efe424d5cbd89d6a7ea63795e9cb6c9af60efbc",
+        "primary_artifact_reused": false
+      },
+      {
+        "kind": "replacement",
+        "id": 12163839520,
+        "source": "1681ee654e7f6d0b4f39ba3fb4b306bfdb505ea0",
+        "run_id": 39203016390,
+        "run_attempt": 1,
+        "windows_job": 117899814181,
+        "zip_sha256": "bf17f2889f7ccb29f88ea1ba4e2307bd1d00548ea9a212ec7ac49611fb705997",
+        "json_sha256": "a6bbecb0d0863f143c786b14dc010246b9763921b732212b1841f3b433e4fbc4",
+        "primary_artifact_reused": false
+      }
+    ],
+    "independent_typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all35_raw_fields_and_types_equal": true,
+    "all275_runtime_inputs_match_source": true,
+    "scope": "initial local base/zero metadata and regression acceptance; no patch/native chunk writes or physical reboot claim"
   }
 }

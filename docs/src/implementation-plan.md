@@ -2642,6 +2642,17 @@ for its own platform gates before acceptance. W2b2 remains a real multi-version
 migration and patch-mutation implementation, not an activation of W2b1 metadata.
 
 
+W2b1 accepted,2026-10-19: runtime1681ee6 passed own
+[run39203016390](https://github.com/marshallr12/s3drive/actions/runs/39203016390),
+all3 raw logs/own ZIP API digests/strict typed21+14/project oracles/all35 raw fields
+and types. Indexed44-member hosted archive and275 runtime inputs verified.
+Linux378state/Windows373state1ignored,37core/11reader1nativeignored/62S3 passed;
+real manifest FUSE1.62s/WinFsp2.71s and paired no-systemd/Windows recovery passed.
+Canonical integration keeps this runtime unchanged. W2b2a schema30 follow-up in
+codex/sparse-mutations has full local gate6893 green and requires its own combined
+platform gates; it enables no patch API. W2b2b mutations and W2c/W3-W6 remain.
+
+
 ### W2b2 patch mutations — declared next phase (2026-10-19)
 
 Implement in an isolated worktree from locally green W2b1, keeping its hosted
