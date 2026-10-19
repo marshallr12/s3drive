@@ -272,3 +272,15 @@ The published candidate now runs its
 [own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39187701991).
 It must complete with raw-log and source-bound artifact review before acceptance;
 local results and earlier native artifacts do not substitute.
+
+W1b acceptance update,2026-10-18: source `bf2e6ae` completed its
+[own cohort](https://github.com/marshallr12/s3drive/actions/runs/39187701991), all3
+jobs and raw logs reviewed. Real FUSE1.13s and WinFsp3.04s retained all-format
+old-handle/remount assertions. Own artifact API ZIP digests, typed21/14/project
+oracles and all35 raw fields/types matched. Earlier artifacts were not reused.
+The [indexed31-member hosted archive](evidence/manifest-page-proofs-bf2-hosted-20261018.tar.gz)
+retains all logs, artifacts, checks and exact helper/native source; every member
+was verified. SHA-256 `7ea07240c7ab082534754536d2809b90168b0f53342cd955c3a0ddc0d8ea3096`.
+These results accept the bounded reachability helper; historical base reopening,
+sparse edit views, mixed publication, settlement and native chunk writes remain
+separate. This supersedes the earlier pending status above.

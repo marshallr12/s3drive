@@ -2241,3 +2241,10 @@ Candidatebf2e6ae is published on codex/manifest-page-proofs. Its
 is in progress with the actual native checks retained. Frozen261 runtime hashes
 match the tested local source. Own source-bound raw/artifact acceptance remains
 pending; accepted8c3448f artifacts cannot certify this new helper.
+
+W1b result: runtimebf2e6ae own run39187701991 ALL3 SUCCESS, all raw reviewed,
+both actual native controls and own ZIP digests/typed21+14/project oracles/all35
+raw fields/types passed. Indexed31-member hosted archive verified. No older
+artifacts reused; all261 frozen inputs match. Next combine this accepted source
+with local-green W1c1 e18d6f5, then implement its documented W1c2 reader reopen
+contract before sparse edit views. W1b does not activate writes or provider calls.
