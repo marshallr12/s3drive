@@ -2,8 +2,7 @@
 
 Implementation date: **2026-10-19**. W3b in `codex/mixed-plans` adds schema32 and
 a managed producer for durable preparation of one immutable edited view. Focused
-state/SDK/authority tests and the full local gate passed; own combined platform
-gates are pending. This phase performs no uploads, root publication, clean settlement
+state/SDK/authority tests, full local gate and own combined platform gates passed. This phase performs no uploads, root publication, clean settlement
 or native write activation.
 
 ![A Rust plan controller uses a private SQLite worker to persist cursor, tagged dependencies and deduplicated BLOBs. It authenticates original metadata through the shared Rust authority and reads immutable source objects using the S3 client. Publication and native writes remain later phases.](images/mixed-plans.svg)
@@ -114,7 +113,7 @@ SDK/authority/controller cases passed in15.76s, including false root/data/hole
 claims, semantic dependency verification and private credential isolation.
 The full local gate passed:408state and22reader tests (one ignored each),
 37core and62S3 tests, formatting/Clippy/build,76Markdown link checks and72book
-chapters. All300 frozen runtime inputs match. Own combined acceptance is pending.
+chapters. All300 frozen runtime inputs match. Own combined acceptance passed on exact source; see the dated cohort below.
 
 The first full gate passed formatting/workspace Clippy but found the existing
 authority-snapshot validator did not allow the three new empty local tables.
@@ -130,4 +129,28 @@ diagram and a verified member digest index. Its SHA-256 is
 
 Exact source `e140508b19aef4082f9565990402852d4f27cdb4` is published for its
 [own Linux, Windows and book run](https://github.com/marshallr12/s3drive/actions/runs/39225921755).
-Acceptance is pending; preceding source artifacts do not cover this implementation.
+This own cohort passed; preceding source artifacts were not reused.
+
+
+Own platform acceptance,2026-10-19: all three jobs in run39225921755 attempt1
+passed for exact source `e140508b19aef4082f9565990402852d4f27cdb4`. Linux408 and
+Windows403 state tests passed (one ignored each),37core/22reader1ignored/62S3.
+Every new state and managed controller case passed. Real legacy FUSE9 and WinFsp7
+regressions, native manifest range/remount on both, Linux startup without systemd
+and paired Windows independent-logon recovery passed. This accepts W3b preparation
+and regressions; it does not activate native chunk writes or accept W4 uploads.
+
+All300 working and committed input hashes, complete raw/job steps, own artifact
+API ZIP digests, independent typed21 replacement/14 disposition records, project
+oracles and all35 raw fields/types matched. The [hosted evidence archive](evidence/mixed-plans-hosted-20261019.tar.gz)
+contains78 verified members, SHA-256
+`dc9fe9b4381633f403525a79943a645d8196606b62964c2acc78b2bb2e7364f1`.
+A review-helper classification initially rejected interleaved reference JSON;
+the checker consequently stopped before artifact creation. Both failed and final
+validation logs are retained. CI/source were not rerun or changed to obtain green.
+
+Three disposable Windows fixture profiles remained locked; dummy credentials
+were removed and profile deletion deferred to VM destruction. Unused WinFsp
+import warnings, completed long tests, expected fault diagnostics and runner
+notices are retained. Actual native platforms were Ubuntu24.04 and Windows
+Server2025; physical MX/Windows reboot and SSH/tmux acceptance remains separate.
