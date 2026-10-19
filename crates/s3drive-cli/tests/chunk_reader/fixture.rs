@@ -296,6 +296,7 @@ struct Proxy {
     upstream: WireClient,
     mode: Arc<AtomicU8>,
     requests: Arc<Mutex<Vec<Request>>>,
+    next_node: Arc<Mutex<Option<Node>>>,
 }
 async fn proxy(
     axum::extract::State(p): axum::extract::State<Proxy>,
@@ -308,6 +309,11 @@ async fn proxy(
     );
     p.requests.lock().unwrap().push(request.clone());
     let mut r = p.upstream.request(&request).await.unwrap();
+    if matches!(request, Request::Node { .. })
+        && let Some(node) = p.next_node.lock().unwrap().take()
+    {
+        r = Reply::Node(node);
+    }
     match (&request, &mut r, p.mode.load(Ordering::SeqCst)) {
         (Request::Features {}, Reply::Features(f), 1) => f.retain(|f| f != "manifest-root-v1"),
         (Request::Info {}, Reply::Info(v), 2) => v.id = id(999),
@@ -337,6 +343,25 @@ async fn proxy(
     if p.mode.load(Ordering::SeqCst) == 13 && matches!(request, Request::Store { .. }) {
         r = Reply::Features(vec![]);
     }
+    if p.mode.load(Ordering::SeqCst) == 17 && matches!(request, Request::Features {}) {
+        r = Reply::List(s3drive_authority::Listing {
+            sequence: 0,
+            children: vec![],
+        });
+    }
+    if let Reply::List(list) = &mut r {
+        match p.mode.load(Ordering::SeqCst) {
+            20 => list.sequence = u64::MAX,
+            21 => list.children[0].parent = Some(id(999)),
+            22 => list.children[0].deleted = true,
+            23 => list.children.push(list.children[0].clone()),
+            24 => list.children[1].id = list.children[0].id.clone(),
+            25 => list.children[0].placement.as_mut().unwrap().id = id(999),
+            26 => list.children[0].name = "CON:bad".into(),
+            27 => list.children = vec![list.children[0].clone(); 1001],
+            _ => (),
+        }
+    }
     axum::Json(r)
 }
 pub struct Fixture {
@@ -345,12 +370,14 @@ pub struct Fixture {
     pub wire: WireClient,
     pub volume: String,
     pub source: Source,
+    authority_endpoint: String,
     pub s3: S3State,
     pub mode: Arc<AtomicU8>,
     requests: Arc<Mutex<Vec<Request>>>,
     stops: Vec<oneshot::Sender<()>>,
     tasks: Vec<JoinHandle<()>>,
     operation: AtomicU64,
+    next_node: Arc<Mutex<Option<Node>>>,
 }
 pub struct Tree {
     pub root: String,
@@ -420,10 +447,12 @@ impl Fixture {
         });
         let mode = Arc::new(AtomicU8::new(0));
         let requests = Arc::new(Mutex::new(Vec::new()));
+        let next_node = Arc::new(Mutex::new(None));
         let p = Proxy {
             upstream: direct.clone(),
             mode: mode.clone(),
             requests: requests.clone(),
+            next_node: next_node.clone(),
         };
         let l = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}/v1/namespace", l.local_addr().unwrap());
@@ -459,12 +488,14 @@ impl Fixture {
                 allow_http_loopback: true,
                 list_url_encoding: ListUrlEncoding::Percent,
             },
+            authority_endpoint: url,
             s3: state,
             mode,
             requests,
             stops: vec![stop3, stop2, stop],
             tasks: vec![task2, task, server],
             operation: AtomicU64::new(40),
+            next_node,
         };
         f.change(
             200,
@@ -565,6 +596,34 @@ impl Fixture {
     }
     pub fn requests(&self) -> usize {
         self.requests.lock().unwrap().len()
+    }
+    pub fn reply_next_node(&self, node: Node) {
+        let mut next = self.next_node.lock().unwrap();
+        assert!(next.is_none());
+        *next = Some(node);
+    }
+    pub fn config(&self, path: &Path, extra: &[(u64, Source)]) -> s3drive_core::Config {
+        let token =
+            s3drive_state::create_private_secret(&path.join("secrets"), TOKEN.as_bytes()).unwrap();
+        let mut text = format!(
+            "version=3\nmode='read-only'\n[managed]\nauthority={:?}\nvolume={:?}\ntoken_file={:?}\n",
+            self.authority_endpoint,
+            self.volume,
+            token.to_str().unwrap(),
+        );
+        for (store, source) in std::iter::once(&(200, self.source.clone())).chain(extra.iter()) {
+            text.push_str(&format!(
+                "[[managed.stores]]\nid={:?}\nsource={:?}\n",
+                id(*store),
+                source.alias
+            ));
+        }
+        for source in std::iter::once(&self.source).chain(extra.iter().map(|(_, s)| s)) {
+            text.push_str("[[sources]]\n");
+            text.push_str(&toml::to_string(source).unwrap());
+        }
+        std::fs::write(path.join("drive.toml"), &text).unwrap();
+        s3drive_core::Config::parse(&text).unwrap()
     }
     pub async fn publish_page(
         &self,

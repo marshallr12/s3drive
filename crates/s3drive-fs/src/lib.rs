@@ -36,6 +36,14 @@ pub struct Node {
     pub kind: Kind,
     source: Option<usize>,
     key: String,
+    manifest: Option<ManifestView>,
+}
+/// One immutable content version's inode attributes, authorized by lookup.
+/// This metadata does not grant permission to open or read provider objects.
+#[derive(Debug, Clone)]
+struct ManifestView {
+    reference: String,
+    metadata: ObjectMetadata,
 }
 
 #[derive(Debug)]
@@ -111,6 +119,7 @@ pub struct OpenFile {
     handle: Option<ReadHandle>,
     initial_metadata: ObjectMetadata,
     managed: Option<s3drive_managed::FileSnapshot>,
+    managed_chunks: Option<s3drive_managed::chunks::File>,
     managed_write: Option<(Arc<managed::writes::Writes>, Arc<managed::writes::File>)>,
     cache: Option<(Arc<CacheBackend>, Key)>,
     snapshot: OnceCell<Pinned>,
@@ -184,6 +193,11 @@ impl OpenFile {
         }
         if let Some((_, file)) = &self.writes {
             return file.read(offset, length).await;
+        }
+        if let Some(file) = &self.managed_chunks {
+            return Box::pin(file.read_range(offset, length))
+                .await
+                .map_err(managed::error);
         }
         // Keep the transport's validation/EOF behavior on cached reads too.
         if length > MAX_READ_BYTES {
@@ -298,6 +312,7 @@ impl ReadOnlyFs {
             kind: Kind::Directory,
             source: None,
             key: String::new(),
+            manifest: None,
         });
         let mut nodes = Nodes {
             by_id: HashMap::from([(ROOT, root)]),
@@ -755,11 +770,7 @@ impl ReadOnlyFs {
             return Err(Error::NotDirectory);
         }
         if let Some(backend) = &self.managed {
-            let listing = backend
-                .reader
-                .list(&parent.key)
-                .await
-                .map_err(managed::error)?;
+            let listing = backend.list(&parent.key).await?;
             let mut nodes = self.nodes.lock().map_err(|_| Error::Internal)?;
             return listing
                 .children
@@ -768,7 +779,11 @@ impl ReadOnlyFs {
                     if let Some(w) = &backend.writes {
                         w.remember(&n)?;
                     }
-                    nodes.insert_managed(&n, parent.id)
+                    if backend.chunks.is_some() {
+                        nodes.insert_managed_snapshot(&n, parent.id)
+                    } else {
+                        nodes.insert_managed(&n, parent.id)
+                    }
                 })
                 .collect();
         }
@@ -838,12 +853,13 @@ impl ReadOnlyFs {
 
     pub async fn metadata(&self, id: u64) -> Result<Option<ObjectMetadata>> {
         let node = self.node(id)?;
+        if let Some(view) = &node.manifest {
+            // The inode identifies this lookup version, not the latest content
+            // under the global file ID. Kernels can omit a handle in getattr.
+            return Ok(Some(view.metadata.clone()));
+        }
         if let Some(backend) = &self.managed {
-            let live = backend
-                .reader
-                .node(&node.key)
-                .await
-                .map_err(managed::error)?;
+            let live = backend.node(&node.key).await?;
             return Ok(if live.kind == s3drive_authority::Kind::Directory {
                 None
             } else {
@@ -854,7 +870,7 @@ impl ReadOnlyFs {
                             return Ok(Some(metadata));
                         }
                     }
-                    Some(managed::metadata(&live))
+                    Some(managed::logical_metadata(&live)?)
                 }
             });
         }
@@ -886,6 +902,34 @@ impl ReadOnlyFs {
             if writing && backend.writes.is_none() {
                 return Err(Error::ReadOnly);
             }
+            if let Some(reader) = &backend.chunks {
+                let live = backend.node(&node.key).await?;
+                managed::check_snapshot(&node, &live)?;
+                if live
+                    .payload
+                    .as_ref()
+                    .is_some_and(|p| p.reservation.manifest.is_some())
+                {
+                    let file = Box::pin(reader.open_file(&node.key))
+                        .await
+                        .map_err(managed::error)?;
+                    managed::check_snapshot(&node, file.metadata())?;
+                    let initial_metadata = managed::logical_metadata(file.metadata())?;
+                    return Ok(OpenFile {
+                        initial_metadata,
+                        node,
+                        handle: None,
+                        managed: None,
+                        managed_chunks: Some(file),
+                        managed_write: None,
+                        cache: None,
+                        snapshot: OnceCell::new(),
+                        bypass: AtomicBool::new(false),
+                        writes: None,
+                        writable_open: false,
+                    });
+                }
+            }
             let (snapshot, managed_write) = if let Some(w) = &backend.writes {
                 let (snapshot, file) = Box::pin(w.open(&node.key, writing)).await?;
                 (snapshot, file.map(|file| (w.clone(), file)))
@@ -908,6 +952,7 @@ impl ReadOnlyFs {
                     None
                 },
                 managed_write,
+                managed_chunks: None,
                 cache: None,
                 snapshot: OnceCell::new(),
                 bypass: AtomicBool::new(false),
@@ -951,6 +996,7 @@ impl ReadOnlyFs {
         Ok(OpenFile {
             node,
             initial_metadata: handle.metadata().clone(),
+            managed_chunks: None,
             handle: Some(handle),
             managed: None,
             managed_write: None,
@@ -988,6 +1034,7 @@ impl Nodes {
             kind,
             source: Some(source),
             key,
+            manifest: None,
         });
         self.by_id.insert(id, node.clone());
         self.by_key.insert(identity, id);

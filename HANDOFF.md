@@ -25,6 +25,16 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Current combined-source audit (2026-10-18)
+
+Accepted native prerequisite52f591c is merged into local W1a ed2e93b. Both
+prerequisite runtimes stay frozen in their original checkpoints; combined source
+is not yet accepted. Next add negative controls for metadata-empty/legacy opened
+handles across format publication, then repair if demonstrated and run fresh
+combined local/hosted gates. Only read-only chunk-capable backends may acquire
+new content-snapshot inode semantics; writable/direct/fallback paths stay scoped.
+No new provider writes or native claim follows from the merge.
+
 ## Current W1a foundation: authenticated chunk-reference proofs (2026-10-18)
 
 Isolated /home/marshall/src/worktrees/s3drive-manifest-reference-proofs,
@@ -94,6 +104,138 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
+## Accepted read-only manifest native integration (2026-10-18)
+
+Runtime c633d02d47ccf2da20cfadd50e0b8e11f6e06811, all257 working/committed
+hashes remain frozen. Own run39178517491 attempt1 ALL3 SUCCESS and raw-reviewed:
+Linux117826123544, Windows117826123721, book117826123692. Watch30345 CLOSED0.
+Both explicit real native manifest controls passed: Linux1.22s, Windows1.79s.
+Strict independent typed21replacement/14disposition, project oracles and all35
+raw-field/type comparisons passed; checker95100 CLOSED0. Own finalized artifacts
+12155790591 and12155504654, API ZIP digests checked; no older artifacts reused.
+Indexed26member hosted archive143913bytes SHA
+800057c4b01f08120681438acc67ce0099fe083ffdc476af37e0e6ce5ee912fd, every member
+verified. See docs/src/evidence/manifest-snapshot-inodes-20261018.json and
+manifest-snapshot-inodes-c633-hosted-20261018.tar.gz. One-use checker/rawcompare/
+archive already completed; do not rerun their mkdir/assert-not-exists paths.
+
+Linux9existing native63.27s,365state/1ignored106.66s, no-systemd coordinator
+HTTP/TLS23.97s. Windows7existing native95.32s,360state/1ignored533.18s,
+paired startup81.64s. Timings identify executions, not benchmarks. Raw Windows
+notices retained: three locked disposable profiles, dummy credentials removed,
+profile disposal deferred to VM destruction; unused WinFsp delay import in11
+unique targets plus standalone manifest invocation; Node notices; five long
+controls ultimately passed. No physical reboot or new Wasabi mutation claimed.
+Local full gate68406 passed before publication: all257 unchanged,12publication,
+6reader/1nativeignored,62S3,365state/1ignored,fmt/clippy/build/book. Indexed13member
+local archive133937bytes SHAe243742e802539035a8efa36478ce339a6f1ce43646460592bade4feb887a2aa.
+Old d98 cohort39176574738 is terminal FAILURE and retained separately: Linux
+old130MiB fd stat returned4 after new publication; Windows passed2.39s. The repair
+keeps that assertion and adds same-name replacement before rename plus guards
+against stale/racing opens. Do not reuse the failed cohort as acceptance.
+
+Next: W1a independent data/hole reference-proof foundation is uncommitted in
+/home/marshall/src/worktrees/s3drive-manifest-reference-proofs,
+codex/manifest-reference-proofs from accepted reader7c2b454. Focused6 passed4.97s;
+first full gate93249 interrupted143 without test failure, cause unknown; pending
+TLS test passed alone10.58s. Fresh full gate2 session98776 LIVE ->
+/tmp/s3drive-reference-proofs-gate2.log,258 inputs frozen. Read its handoff before
+work. Do not edit mapped source during gate. It does not activate native writes.
+W1-W6 plan here records authenticated bases, sparse edits, mixed-tree proofs,
+publication, exact-view settlement and actual native writes. Source inspection
+corrected the prior-root claim: root_key uses Role::Page; geometrically valid
+old roots may be inherited as children with explicit provenance. No invented
+upload receipts. Goal ACTIVE; preserve PUBLIC and main policy. Primary runtime
+promotion is a separate integration action, not inferred from evidence publication.
+
+## Failed native-read candidate / historical hosted gate (2026-10-18)
+
+Source d98ea2ff2ec9cc72b55458190d657bb53642d227 pushed on
+codex/native-manifest-reads from local feature9ed5765 + accepted reader7c2b454.
+Clean exactremote/all257 committed/runtime hashes verified; PUBLIC retained and
+main1a93b5f unchanged. Own run39176574738 attempt1 was launched; Linux
+subsequently FAILED as detailed above, so this cohort cannot be accepted:
+Windows117820371735, Linux117820371839, book117820371587.
+Watch24055 CLOSED EXIT1 -> /tmp/s3drive-native-manifest-d98-watch.log;
+do not resume or run this failed cohort's success checker.
+Both rust jobs explicitly include Verify native manifest ranges and remount.
+Do not run this failed cohort's success checker or borrow its artifacts for the
+repair. The repair requires all3 terminal source-bound jobs, rawlog review, own
+finalized Windows reference artifacts and both native controls. Preserve cohort and
+diagnose before fresh source. No own Linux/Windows raw review or combined hosted acceptance yet.
+Runtime257 remains frozen in/tmp/s3drive-native-manifest-v3-frozen.json.
+
+Book117820371587 SUCCESS; own raw log reviewed/hash-bound in
+/tmp/s3drive-native-manifest-d98-book-reviewed.json (schema28/69files/65chapters).
+Linux/Windows still live; current observed Linux at old native mount gate,
+Windows at disposition lifecycle before fullworkspace/newnative step.
+Prepared (not executed) /tmp/s3drive-check-native-manifest-d98.py,
+/tmp/s3drive-native-manifest-d98-reference-check.ps1, raw-compare.py andarchive.py.
+Checker binds source/run/jobs/257map and BOTH explicit native step successes plus
+named engine/native tests; requires6reader/1ignored+12publication+62S3 controls.
+Combined /tmp/s3drive-native-manifest-d98-raw-reviewed.json and artifacts directory
+must remain absent until all3terminalSUCCESS and all ownrawlogs reviewed.
+Archive also retains exact FS/native-test sources, not just the managed reader.
+
+
+Local fullgate3 session58981 CLOSED EXIT0, RUST_TEST_THREADS2, all257 unchanged:
+12publication+6reader/1nativeignored+62S3+365state/1ignored+69docfiles/65chapters,
+fmt/clippy/build. 27member local archive114301bytes SHA
+138761972263bdf707c249fccf8954a4766a1e4497153ff2b796fd4e71f2a2a6;
+all indexed members verified. Gate1TLSsetupcause stillunproven; gate2serial-libtest
+marker framing proven withnegative/positivecontrols and repaired fixture newlines,
+without relaxed deadlines/assertions or productiontransport/writer changes.
+Explicit local native attempt failed FUSEreadiness OperationNotPermitted under
+NoNewPrivs1; ownedchildreaped/noFUSEleft. No root bypass or provider mutation.
+
+After native acceptance, chunk writes remain: implementation-plan.md records
+legacylogical8MiB/rejectedmanifestbase and full-snapshot planner boundaries.
+Do not pretend raising8MiB enables bounded/reusing writes. No such API implemented.
+Primary253controller and acceptedreader256 remain unchanged. GoalACTIVE/PUBLIC.
+This current section supersedes historical pending/publication notes below.
+
+## Native local gate passed; publication next (2026-10-18)
+
+Worktree /home/marshall/src/worktrees/s3drive-native-manifest-reads,
+branch codex/native-manifest-reads fromb3e30f0, local feature commit9ed5765. Read plan and
+native-manifest-reads.md. Current257 frozen map is
+/tmp/s3drive-native-manifest-v3-frozen.json; old canonical map records gates1/2.
+Gate3 CLOSED EXIT0,257 hashes unchanged; do not repeat without new change/failure. Shared CARGO_TARGET_DIR=/home/marshall/src/s3drive/target,
+RUST_TEST_THREADS=2, same scripts/gate.sh, inner concurrency/deadlines unchanged.
+Gate3 session58981 EXIT0, log /tmp/s3drive-native-manifest-gate3.log. Preserve prior failed cohorts.
+
+Gate1 22825 EXIT101 at existing setup managed store-plan InfoTLSConnecttimeout
+beforeHTTP/body/newFS; causeunproven, observedhighCPUpressure. Isolated unchanged
+startup39166 EXIT0,2.69s. Gate2 46929 EXIT101 at pairedfixture30s marker timeout.
+Diagnostic33451 defaultthreads passed4.01s; full workspace serial83006 failed at
+ENGINE_READY after file-open-write. Negative20443 caught exact libtest prefix
+in2.54s (EXIT101): serial runner merged test-name prefix with first marker.
+Fixed only fixture framing: leading newline before ENGINE_READY andPRODUCER_READY;
+kept exact marker matching/30s bound and added static stage/marker diagnostics.
+Positive55315 fullworkspace serial fixture EXIT0,4.60s inclrecovery/conflict;
+producer62449 fullworkspace serial startup EXIT0,2.16s. No production retry,
+transport deadline, schema/wire or writer change. Native test now explicitly
+checks native open makes zero data-chunk GETs. No real native success yet.
+
+Native read-only implementation: version3 mixedlegacy/manifest namespace,
+logical64GiB sizes, bounded pinned range OpenFile, two stores/Unicode/sparse/
+oldroot/fault controls, real FUSE/WinFsp test + explicit CIstep. Before latest
+fixture refinements,6focused+1ignored PASS5.74s andClippy3 PASS. Explicitlocal
+native attempt EXIT101 atFUSEreadiness OperationNotPermitted/NoNewPrivs1,
+ownedchildreaped/noFUSEleft. No bypass/root/provider mutations.
+
+Reader88d ACCEPTED all3 ownCI39171113280 andstrict21/14+raw35; checkpoint
+7c2b45435cd4aa3999e63ee16ccb6b03f5985c76 pushed, cleanexactremote.
+Next: commitdraft, merge accepted reader doccheckpoint
+preserving257map, push ownnative source for real FUSE/WinFspCI. Local archive builder executed successfully:27members/114301bytes SHA
+138761972263bdf707c249fccf8954a4766a1e4497153ff2b796fd4e71f2a2a6;
+all indexed members verified. Result /tmp/s3drive-native-manifest-gate-result.json.
+LogSHA0a6fc4dd936983e8268d298f871e179f02a79acd92e3916e9d193d4ef40c3466;
+mapSHA6f192f26f798fc4c411135b73aef3e9d620fcf3a4051b882f40e133653686924.
+12publication+6reader/1nativeignored+62S3+365state/1ignored+65chapters PASS.
+Native FUSE/WinFsp acceptance still pending. Primary253/reader256 unchanged.
+PUBLIC remains current; goalACTIVE. This section supersedes historical pending state.
+
 ## Accepted reader; native draft continuation (2026-10-18)
 
 Source88d02f7a6605bf13bfd212d67c6609ae16b0ebfd own run39171113280 attempt1
@@ -110,7 +252,7 @@ Windows7native82.70s + pairedstartup71.97s; Linux9native76.31s + no-systemd/SSH.
 Windows3 locked disposable profiles retained after dummy credentials removed;
 unused WinFsp delay-import +11target reports and Node/cache notices preserved.
 This accepts library reader, not mounted manifests/provider/reboot behavior.
-Runtime256 hashes remain frozen in this checkout; publication proof in/tmp.
+Runtime256 hashes remain frozen in the isolated reader checkout; publication proof in/tmp.
 
 Current draft is /home/marshall/src/worktrees/s3drive-native-manifest-reads,
 branch codex/native-manifest-reads fromb3e30f0. Read its HANDOFF/plan/contract.
