@@ -2,8 +2,8 @@
 
 Implementation date: **2026-10-19**. W2b2b in `codex/sparse-patches` implements
 local patch bytes, immutable write/resize versions and exact operation replay.
-Focused controls and the full local gate passed. The changed source still
-requires its own combined Windows/Linux native and reference-artifact gates. Mounted chunk writes and remote publication are still disabled.
+Focused controls and the full local gate passed. Its own exact-source Windows/Linux/book cohort also passed, including
+raw/native/reference/ZIP API digest and independent artifact checks. Mounted chunk writes and remote publication are still disabled.
 
 ![The private Rust worker commits immutable patch bytes, views, operation results and a head in SQLite. Retained versions prevent tail resurrection. Planned composition connects to the existing manifest reader, Rust S3 client, shared Rust authority and S3-compatible service.](images/sparse-patches.svg)
 
@@ -118,6 +118,15 @@ reviewed diagram. No earlier hosted artifact certifies this changed source.
 Published source `d37096c` matches all284 locally gated runtime inputs and includes
 accepted main ancestry. Its
 [own Windows/Linux/book run](https://github.com/marshallr12/s3drive/actions/runs/39209163191)
-is in progress. Main remains accepted base-view/schema29. This publication does
-not establish native chunk writes, combined platform acceptance, provider behavior
-or physical workstation reboot/session acceptance.
+passed all3 jobs. All25 sparse controls and the repaired reader-accounting control
+passed on Linux and Windows. Linux393state/Windows388state (one ignored),37core,
+12reader (one native ignored),62S3 passed. Real manifest FUSE/remount1.60s and
+WinFsp/remount2.38s passed; Linux no-systemd HTTP/privateCA24.14s and paired
+recovery, Windows paired75.99s passed. These are correctness observations, not
+performance acceptance. The [indexed hosted archive](evidence/sparse-patches-hosted-20261019.tar.gz)
+retains60 verified members. Own ZIP API digests, independent typed21+14 records,
+project oracles and all35 raw fields/types matched; no older artifact was reused.
+Windows used hosted Server2025 image20261007.264.1, with three locked disposable
+fixture profiles whose dummy credentials were removed and deletion deferred to VM
+destruction. Main integration keeps these284 runtime inputs unchanged. W2c is
+separate source; native chunk writes/provider/physical reboot acceptance remain.
