@@ -111,5 +111,15 @@
       "repair": "explicit version29..32 missing-table compatibility; current schemas still fail closed",
       "retained_source": "/tmp/s3drive-mixed-epochs-failed-gate2-settlement.rs"
     }
-  ]
+  ],
+  "current_local_gate": {
+    "attempt": 3,
+    "source": "652f93806349a729f603301d3669005685c5f40d",
+    "runtime_inputs": 324,
+    "status": "running",
+    "runner_pid": 605949,
+    "child_pid": 605950,
+    "frozen_map": "/tmp/s3drive-mixed-epochs-final3-frozen.json",
+    "no_runtime_promotion": true
+  }
 }
