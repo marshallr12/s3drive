@@ -2022,8 +2022,17 @@ An older readonly engine fixture now performs fresh path lookup after replacemen
 and preserves global-ID/old-byte/rename/delete assertions. Indexed25member local
 evidence retains failures and exact source. The
 [own combined OS cohort](https://github.com/marshallr12/s3drive/actions/runs/39184629344)
-is running; its native control adds all-format fd snapshots and legacy rename.
-Earlier c633 native artifacts cannot accept this source. Continue in the isolated
-checkout; read its handoff/plan and finish own raw/artifact checks before promotion.
-W1b page proofs, historical base reopen, sparse SQLite edits, mixed-tree proofs,
-exact-view settlement, native chunk writes and provider/reboot acceptance remain.
+passed all3 jobs with raw review, actual FUSE1.63s/WinFsp2.53s, own ZIP digests,
+typed21+14/project oracles and all35 raw fields/types. Accepted checkpoint
+[da84d3a](https://github.com/marshallr12/s3drive/commit/da84d3a05e0562bed00f77f3ea5aece935e52d32)
+retains the indexed29-member hosted archive. Earlier artifacts were not reused.
+
+W1b3890584 independently passed the full local gate with260 unchanged inputs,
+7reader/12publication/62S3/365state1ignored and book/build checks. It exports
+bounded opaque PageProof witnesses and proves valid prior-root reuse as a child
+with invalid geometry refusal, no data fetch or receipt fabrication. The local
+combined sourcebf2e6ae now includes accepted da84d3a and runs fresh gate68162
+with261 frozen inputs. This combined source has no own hosted acceptance yet;
+continue in codex/manifest-page-proofs and finish its own gates before promotion.
+Historical base reopen, sparse SQLite edits, mixed-tree proofs, exact-view
+settlement, native chunk writes and provider/reboot acceptance remain.
