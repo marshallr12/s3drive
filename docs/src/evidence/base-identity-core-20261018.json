@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "W2a full portable local gate passed; own hosted/native cohort pending",
+  "status": "W2a accepted: full local and own Linux/Windows/book/raw/artifact cohort passed",
   "branch": "codex/base-identity-core",
   "baseline": "41188dd35d6518ff3f97683fce9bec92ab7f3409",
   "scope": "pure core identity codec and managed error/API wrapper; no schema, authority, provider or native changes",
@@ -12,7 +12,6 @@
     "sha256": "e784bc43bc7ae558f1829e4e02a915fe58a7d3750c8c4843f40b1f0d03160185"
   },
   "not_claimed": [
-    "own hosted/native acceptance",
     "SQLite sparse edit views",
     "native chunk writes",
     "provider mutation"
@@ -114,5 +113,159 @@
     },
     "visibility": "PUBLIC, read-only verified",
     "hosted_accepted": false
+  },
+  "hosted_acceptance": {
+    "source": "c279e0fe20054b86d015b5899a96b1070c261e2e",
+    "run_id": 39198380488,
+    "attempt": 1,
+    "watch_session": 13536,
+    "watch_exit_code": 0,
+    "checker_session": 25604,
+    "checker_exit_code": 0,
+    "jobs": {
+      "linux": {
+        "source": "c279e0fe20054b86d015b5899a96b1070c261e2e",
+        "job_id": 117885996299,
+        "run_attempt": 1,
+        "reviewed": true,
+        "log": "/tmp/s3drive-base-identity-core-hosted-linux.log",
+        "sha256": "eba17a46b5d796038ad6ce4606e3cd34d0f129895ed8035e45a570009d19d4f5",
+        "core": {
+          "passed": 37,
+          "seconds": 0.02
+        },
+        "reader": {
+          "passed": 11,
+          "ignored": 1,
+          "seconds": 4.43
+        },
+        "state": {
+          "passed": 368,
+          "ignored": 1,
+          "seconds": 61.75
+        },
+        "s3": {
+          "passed": 62,
+          "seconds": 9.06
+        },
+        "legacy_native": {
+          "passed": 9,
+          "seconds": 50.93
+        },
+        "manifest_native": {
+          "passed": 1,
+          "seconds": 1.19
+        },
+        "no_systemd_coordinator_http_and_tls": {
+          "passed": 1,
+          "seconds": 23.57
+        },
+        "paired_fuse_recovery": "passed",
+        "notices": [
+          "expected403 and stopped-authority ConnectionRefused preserve local data",
+          "startup missing-file negative after removal",
+          "Node20 forced24, punycode and url.parse action deprecations"
+        ],
+        "not_claimed": [
+          "new native chunk writes",
+          "SQLite sparse views",
+          "Wasabi or physical reboot acceptance"
+        ]
+      },
+      "windows": {
+        "source": "c279e0fe20054b86d015b5899a96b1070c261e2e",
+        "job_id": 117885986696,
+        "run_attempt": 1,
+        "reviewed": true,
+        "log": "/tmp/s3drive-base-identity-core-hosted-windows.log",
+        "sha256": "3b928be566cc24482a279973429e2d9b80655aa557b5a8e052e01e4a1985fd0e",
+        "platform": "Windows Server2025 windows-2025-vs2026/20261007.264.1",
+        "core": {
+          "passed": 37,
+          "seconds": 0.02
+        },
+        "reader": {
+          "passed": 11,
+          "ignored": 1,
+          "seconds": 7.51
+        },
+        "state": {
+          "passed": 363,
+          "ignored": 1,
+          "seconds": 372.87
+        },
+        "s3": {
+          "passed": 62,
+          "seconds": 22.14
+        },
+        "legacy_native": {
+          "passed": 7,
+          "seconds": 92.33
+        },
+        "manifest_native": {
+          "passed": 1,
+          "seconds": 14.11
+        },
+        "paired_startup": {
+          "passed": 1,
+          "seconds": 88.76
+        },
+        "notices": [
+          "3 locked disposable fixture profiles; dummy credentials removed; deletion deferred to VM destruction",
+          "unused WinFsp delay imports across11 workspace executables and explicit chunk-reader rebuild",
+          "long coordinator/state tests completed successfully",
+          "expected403 and rival-content conflict retained local dirty data",
+          "Node20 forced24, punycode and url.parse action deprecations"
+        ],
+        "not_claimed": [
+          "performance acceptance",
+          "SQLite sparse-view implementation",
+          "new native chunk writes",
+          "Wasabi or physical reboot acceptance"
+        ]
+      },
+      "book": {
+        "source": "c279e0fe20054b86d015b5899a96b1070c261e2e",
+        "job_id": 117885989603,
+        "run_attempt": 1,
+        "reviewed": true,
+        "log": "/tmp/s3drive-base-identity-core-hosted-book.log",
+        "sha256": "15b4d408ec5cc35748b3cf841fc94875f4f157aae19c13990292f6b46c44fc7f",
+        "chapters": 66,
+        "markdown_files": 70,
+        "schema": 28,
+        "notices": [
+          "pinned toolchain overrides default",
+          "checkout Node20 forced24 deprecation"
+        ]
+      }
+    },
+    "own_artifact_ids": {
+      "replacement": 12162658840,
+      "disposition": 12163198932
+    },
+    "zip_digests_match_github": true,
+    "typed_and_project_oracles": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all35_raw_fields_and_types_equal": true,
+    "earlier_artifacts_reused": false,
+    "all267_frozen_working_and_committed_inputs_match": true
+  },
+  "hosted_archive": {
+    "path": "evidence/base-identity-core-hosted-20261019.tar.gz",
+    "sha256": "5f3b6e6d51406d96b44c0bc62ae288c4fbfa332674be55058b098c1896893acd",
+    "bytes": 184270,
+    "members": 36,
+    "all_indexed_members_verified": true,
+    "source": "c279e0fe20054b86d015b5899a96b1070c261e2e",
+    "run_id": 39198380488,
+    "run_attempt": 1,
+    "independent_typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true
   }
 }

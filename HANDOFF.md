@@ -25,41 +25,35 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
-## Current W2a core identity — local green (2026-10-19)
+## Current accepted W2a core identity (2026-10-19)
 
-Worktree /home/marshall/src/worktrees/s3drive-base-identity-core,
-branch codex/base-identity-core from accepted main41188dd35d6518ff3f97683fce9bec92ab7f3409.
-Pure core manifest::base structural identity/88-byte codec plus managed wrapper
-preserving getters, Debug, encoding, ReadFailure and all history/root checks.
-No dependency, schema, authority, native or provider change. Three new core
-controls include a literal vector, all truncation/marker/reserved/canonical cases.
-Focused core94096 CLOSED0; reader5271 CLOSED0 (11pass/1nativeignored10.86s).
-Direct contains replaced the identical reserved-ID iterator before final freeze.
-Full local gate33550 CLOSED EXIT0 -> /tmp/s3drive-base-identity-core-gate.log;
-all267 frozen inputs unchanged in /tmp/s3drive-base-identity-core-frozen.json.
-37core/368state1ignored/11reader1nativeignored/62S3 plus all format/Clippy/build/
-links/book checks passed. Indexed12-member local archive46819bytes SHA
-5e4b6ec73046762836d0959f2abec0d51b821f7f1ecc28d9177eda48b4bf1c11.
-Published runtime c279e0fe20054b86d015b5899a96b1070c261e2e; all267
-committed/working hashes match local gate. Own run39198380488 attempt1 LIVE:
-Windows117885986696,book117885989603,Linux117885996299. Watch13536 LIVE ->
-/tmp/s3drive-base-identity-core-hosted-watch.log. Publication proof
-/tmp/s3drive-base-identity-core-publication.json. Own run-specific raw/API/typed/
-project/raw35 checkers prepared with prefix /tmp/s3drive-base-identity-core-hosted;
-main checker /tmp/s3drive-check-base-identity-core-hosted.py. Never reuse older
-artifacts or execute checker until all3 jobs succeed and raw logs are reviewed.
-Own hosted/native acceptance not yet claimed. Main remains accepted41188dd; PUBLIC.
+Runtime c279e0fe20054b86d015b5899a96b1070c261e2e passed own run39198380488
+attempt1 ALL3 SUCCESS. Watch13536 CLOSED0; checker25604 CLOSED0. All3 raw logs
+reviewed, own ZIP API digests/typed21+14/project oracles/all35 raw fields+types
+passed; no older artifacts reused. Linux/Windows37core and11reader1nativeignored;
+Linux FUSE1.19s/368state1ignored, Windows WinFsp14.11s/363state1ignored.62S3 both.
+Linux no-systemd HTTP/privateCA23.57s and pairedFUSE recovery passed; Windows
+paired88.76s. Windows Server2025 image20261007.264.1; three locked disposable
+profiles, dummy credentials removed, profile deletion deferred to VM destruction.
+Unused delay-import/completed long-test/action deprecation notices retained.
+Indexed36-member hosted archive184270bytes SHA
+5f3b6e6d51406d96b44c0bc62ae288c4fbfa332674be55058b098c1896893acd.
+All267 frozen working/committed hashes match tested source. Full local gate33550
+EXIT0; indexed12-member local archive passed. Canonical main integration uses
+this accepted runtime plus docs only; actual remote/primary verification receipt
+/tmp/s3drive-canonical-core-identity-publication.json. PUBLIC stays intentional.
 
-Next W2b may build the local-only SQLite view model against this locally gated
-pure codec in a separate clean worktree. Read W2 proposal, W2a layering detail
-and W2b footprint findings in implementation plan before declaring files. Split
-migration/isolation/model and mutation/composition into independently green
-slices. Inspect resolved rusqlite sources before APIs. Integrate new tables with
-all role/schema/open validations and migration/old-fixture controls. No extra
-SQLite connection or authority-role adoption. Require own combined hosted/native
-acceptance before activation; library milestones do not finish the drive goal.
-Legacy/metadata-empty recovery, W3/W4 mixed publication, W5 exact-view settlement,
-W6 actual native chunk writes, provider and MX sign-in/reboot gates remain.
+Next worktree /home/marshall/src/worktrees/s3drive-sparse-edit-views,
+codex/sparse-edit-views from local preparatione90d791 based on this same core
+runtime. W2b1 draft now implements schema29, immutable initial base/zero metadata,
+atomic begin/replay, range plans, private worker and reciprocal isolation.10new
+controls/24corruption cases1.47s plus27migration controls30.11s passed. Full local
+gate48732 LIVE -> /tmp/s3drive-sparse-views-gate.log; all275 inputs frozen in
+/tmp/s3drive-sparse-views-frozen.json. No runtime changes until it closes. Read
+that checkout's HANDOFF and plan/chapter; its new source is NOT accepted by this
+codec cohort. Main stays on accepted codec/schema28 until that phase's own gates.
+W2b2 patch mutations, W2c composition, W3/W4 mixed publication, W5 settlement,
+legacy/metadata-empty recovery and W6 native chunk writes remain. Goal ACTIVE.
 
 ## Current accepted W1c2 history/reader (2026-10-18)
 

@@ -2575,3 +2575,14 @@ book checks passed. Indexed12-member local archive verified; see
 acceptance is pending. W2b's local storage-only slices may build on this green
 structural codec in isolation, while their eventual combined source still needs
 its own complete platform gates before activation. Main stays at accepted41188dd.
+
+
+W2a accepted,2026-10-19: sourcec279e0f passed own
+[run39198380488](https://github.com/marshallr12/s3drive/actions/runs/39198380488),
+all3 raw logs/own ZIP digests/strict typed21+14/project oracles/all35 raw fields
+and types. Indexed36-member hosted archive and all267 frozen inputs verified.
+Linux manifest FUSE/remount1.19s, Windows WinFsp/remount14.11s;37core/11reader
+1nativeignored/62S3 on both. No performance/native chunk-write claim. Canonical
+integration keeps that runtime unchanged. W2b1 is a separate schema29 draft in
+codex/sparse-edit-views; focused storage/migration controls passed and its full
+local gate48732 is running. That new source has no hosted acceptance yet.

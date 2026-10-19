@@ -106,7 +106,7 @@ are retained in the evidence. These runner tests do not establish physical
 workstation reboot behavior, live Wasabi conformance or native chunk writes.
 
 
-## Core identity layering — local gate passed
+## Core identity layering — accepted
 
 W2a,2026-10-18, implements the structural codec in
 `s3drive_core::manifest::base::Descriptor`. This lets the later SQLite view layer
@@ -119,9 +119,17 @@ No database schema or native writes are added. The full local gate passed with
 tests (one native ignored),62S3 tests and all format/Clippy/build/book checks.
 The [dated evidence](evidence/base-identity-core-20261018.json) and
 [indexed12-member local archive](evidence/base-identity-core-local-20261019.tar.gz)
-retain exact source and results. Own hosted/native acceptance is still pending;
-W1c2's earlier cohort does not certify this newly changed source.
+retain exact source and results. The own hosted/native cohort also passed below.
 
 W2a source `c279e0f` is published. Its
 [own platform/book run](https://github.com/marshallr12/s3drive/actions/runs/39198380488)
-is in progress; publication does not imply hosted/native acceptance.
+passed all3 jobs with complete raw review and own ZIP/digest/typed21+14/project
+oracles/all35 raw fields and types checks. Both platforms passed37core and
+11reader tests (one native case separately executed),62S3 and existing native/
+recovery suites. Linux FUSE/remount1.19s; Windows WinFsp/remount14.11s. These are
+observations, not a performance guarantee. The
+[indexed hosted archive](evidence/base-identity-core-hosted-20261019.tar.gz)
+retains36 verified members and exact tested source. Windows retained three locked
+disposable profiles after dummy credential removal; deletion deferred to VM
+destruction. Delay-import, long-test and action notices remain recorded. No
+SQLite edit-view or native chunk-write acceptance follows from the codec phase.
