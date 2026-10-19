@@ -1,7 +1,7 @@
 {
   "date": "2026-10-19",
   "phase": "W4b2 mixed-root publication",
-  "status": "implemented draft; focused state/SDK tests pass; full local and own platform acceptance pending",
+  "status": "W4b2 full local gate passed; own Linux/Windows/book/native/source acceptance pending",
   "schema": 33,
   "branch": "codex/mixed-root-journal",
   "accepted_parent": "95f72cc",
@@ -157,7 +157,6 @@
     }
   ],
   "not_claimed": [
-    "full local gate",
     "Windows or native acceptance for this source",
     "sparse clean settlement or reclamation",
     "legacy/metadata-empty origins",
@@ -189,5 +188,37 @@
     "sha256": "4bdb733376ae8fad4d9f343a07bd537e710eca59f78548828cc6f1f3af56de1a",
     "reason": "Older schema32 migration test asserted final version32 instead of current33. All317 runtime inputs unchanged;427 pass/1 fail/1 ignored."
   },
-  "receipt_growth_budget": "Admission now reserves64KiB per root record, so later replies do not consume fresh admission quota. New regression passes exact-bound admission and narrowed-limit reply retention."
+  "receipt_growth_budget": "Admission now reserves64KiB per root record, so later replies do not consume fresh admission quota. New regression passes exact-bound admission and narrowed-limit reply retention.",
+  "final_full_gate": {
+    "runner_pid": 399330,
+    "runner_start_ticks": "141721231",
+    "child_pid": 399335,
+    "child_start_ticks": "141721242",
+    "started": "2026-10-19T11:50:08.891913+00:00",
+    "command": [
+      "bash",
+      "scripts/gate.sh"
+    ],
+    "cwd": "/home/marshall/src/worktrees/s3drive-mixed-root-journal",
+    "runtime_inputs": 317,
+    "frozen_map": "/tmp/s3drive-mixed-roots-final2-frozen.json",
+    "tty": false,
+    "rust_test_threads": 4,
+    "log": "/tmp/s3drive-mixed-roots-gate2.log",
+    "exit_code": 0,
+    "finished": "2026-10-19T11:59:11.516957+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": [],
+    "sha256": "7803fae7caa1890c8fa25aa567faffb0545b106aee47bc4d5fbc5aa8b1c1c6ac"
+  },
+  "local_archive": {
+    "source": "d72f6652e4bece2be0706785a698cac66a94596c",
+    "archive": "evidence/mixed-roots-local-20261019.tar.gz",
+    "sha256": "756f32f0ecc4694ff44c2a9282e013c5c4c4674258fc4826e8aec53a0c07a2e9",
+    "bytes": 1845921,
+    "members": 675,
+    "all_members_verified": true,
+    "runtime_inputs": 317,
+    "local_gate_exit": 0
+  }
 }

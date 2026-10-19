@@ -27,6 +27,18 @@ include main's policy commit; the c7fca789 feature lineage includes that rule.
 
 ## Current W4b2 mixed-root publication — focused green, full gates pending (2026-10-19)
 
+Exact final runtime d72f6652e4bece2be0706785a698cac66a94596c, schema33/all317.
+Owned final gate2 runner399330/child399335 CLOSED EXIT0 at11:59:11Z. All317
+unchanged;429state1ignored/37core/22reader1nativeignored/62S3/21publication,
+format/Clippy/build/78Markdown/74chapters passed. Log SHA
+7803fae7caa1890c8fa25aa567faffb0545b106aee47bc4d5fbc5aa8b1c1c6ac.
+Indexed675-member1845921byte source/evidence archive SHA
+756f32f0ecc4694ff44c2a9282e013c5c4c4674258fc4826e8aec53a0c07a2e9,
+all members verified, including exact final317 source and failed gate1 source317.
+One-use local archiver already executed; NEVER rerun. Focused results and both
+failures/fixes remain in dated evidence. Own hosted/native/source cohort is next;
+keep317 runtime inputs frozen. No root acceptance from parent/native regressions.
+
 Worktree /home/marshall/src/worktrees/s3drive-mixed-root-journal,
 codex/mixed-root-journal froma1e84e6. Parent W4b1 now accepted main95f72cc,
 exact5112fd2/schema32/all306. New draft schema33 adds bounded hash-bound semantic

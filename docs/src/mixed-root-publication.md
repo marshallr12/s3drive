@@ -279,3 +279,24 @@ grow without a new admission budget. A regression verifies exact-bound admission
 and receipt updates after the configured budget is narrowed. All36 preparation
 tests passed, including12 publication cases and both root/preparation process-kill
 suites. A fresh complete gate is required for these final changes.
+
+
+## W4b2 complete local gate
+
+The fresh full gate passed on317 unchanged runtime/contract inputs at11:59:11Z:
+429state tests (one ignored),37core,22reader (one native ignored),62S3 and
+21publication cases, formatting, Clippy, workspace build,78Markdown files and
+74book chapters. It includes the latest expired-policy control, final admission
+recheck, shared-owner close refusal, metadata-substitution check and receipt-growth
+reservation fix. The successful log SHA-256 is
+`7803fae7caa1890c8fa25aa567faffb0545b106aee47bc4d5fbc5aa8b1c1c6ac`.
+
+The [indexed local archive](evidence/mixed-roots-local-20261019.tar.gz) contains675
+verified members,1845921bytes, including all317 final inputs and the exact failed
+gate1 source/log/map. SHA-256
+`756f32f0ecc4694ff44c2a9282e013c5c4c4674258fc4826e8aec53a0c07a2e9`.
+[Dated root evidence](evidence/mixed-roots-20261019.json) records the scope and
+retained failures. This accepts no platform/provider behavior: the own hosted
+Linux/Windows/book/native/source cohort is still required before W4b2 promotion.
+W5 exact-view clean-base transition/retention, legacy/empty origins and W6 native
+chunk writes remain required for the complete drive goal.

@@ -3165,3 +3165,12 @@ state tests (including24 killed-owner boundaries) and two authenticated SDK/
 authority cases passed; retained earlier import, isolation, harness and Clippy
 failures are documented. Full local and own platform/native/source gates remain
 required. This does not settle sparse views or activate native chunk writes.
+
+
+W4b2 final local gate passed,2026-10-19: source d72f665/schema33/all317 inputs
+unchanged. Owned gate2 EXIT0:429state1ignored/37core/22reader1nativeignored/62S3/
+21publication, format/Clippy/build/78Markdown/74chapters. Exact failed gate1 and
+corrected final sources are in the675-member local archive (SHA
+756f32f0ecc4694ff44c2a9282e013c5c4c4674258fc4826e8aec53a0c07a2e9).
+[Root evidence](evidence/mixed-roots-20261019.json). Own hosted/native/source
+acceptance remains required. W5/origins/W6 are not replaced by root publication.
