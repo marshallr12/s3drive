@@ -124,6 +124,18 @@ scripts never executed; do not use them for candidate2 or reuse parent artifacts
 Check live PID/startticks/results before touching runtime; one shared local Cargo.
 [Candidate contract and diagram](docs/src/atomic-empty-manifest-create.md).
 No S3 upload or native creation enabled. Authenticated publisher remains next.
+[Source-reviewed client integration proposal](docs/src/empty-manifest-publisher.md)
+binds upload, exact metadata recovery and native acceptance into one path. Do not
+widen the legacy namespace journal without typed source/open composition.
+Candidate2 book succeeded; Linux/Windows and local gate2 remain live. Last actual
+process check: runner1305346/child1305347 and observer1306049 live; candidate1
+observer1263444 still follows its old Windows job. The failed1 archive builder
+/tmp/s3drive-empty-create-failed1-archive.py is prepared, NOT executed. Require old
+cohort terminal state and fetch complete old Windows raw log first; existing old
+book/Linux raw logs are already retained. New candidate2 hosted raw reviewer,
+source checker, comparator, PS project oracle and hosted/local archivers are
+prepared; PS parsed. None executed. Only candidate2 maps349/source29eb237 apply
+for new acceptance; candidate1 artifacts may never substitute for it.
 
 
 

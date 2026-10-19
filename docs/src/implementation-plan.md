@@ -3481,3 +3481,13 @@ of39;504 state cases passed and one failed. Repaired source29eb237 changes only
 that current-version expectation; the focused migration case passed. Its complete
 local gate and own CI39304491982 are running. No promotion or provider/native
 creation acceptance is claimed.
+
+
+### Client-to-native creation integration review (2026-10-19)
+
+[Proposed integration](empty-manifest-publisher.md) reuses the existing policy-bound
+single-use S3 executor and private SQLite owner. Source review confirms the older
+namespace journal neither admits the new operation nor composes with sparse state.
+The next implementation must durably connect upload proof, exact metadata request
+recovery and the ordinary native edit path. Native acceptance must exercise files
+beyond8MiB and lifecycle recovery; a library-only create is insufficient.

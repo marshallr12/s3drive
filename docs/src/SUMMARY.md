@@ -89,3 +89,5 @@
 - [Research sources](sources.md)
 
 - [Atomic empty-manifest creation candidate](atomic-empty-manifest-create.md)
+
+- [Empty-manifest client integration proposal](empty-manifest-publisher.md)
