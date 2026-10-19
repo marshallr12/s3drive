@@ -142,3 +142,33 @@ the published local view and handle retention/reclamation; W6 still must wire an
 verify native chunk writes, truncate, append and flush. Legacy/metadata-empty
 origins, provider conformance and physical session/reboot acceptance remain
 separate requirements for the complete drive goal.
+
+## W4b1 implementation checkpoint
+
+A separate `codex/mixed-publication` worktree now implements the offline
+`preparation::Journal::check_data` and same-owner asynchronous client API. This
+compares one completed plan's actual Data candidate with immutable view ranges.
+`OriginalChunk` contains a bounded original chunk witness and, for a data object,
+the complete original bytes. A hole witness supplies no data bytes; fully
+local/zero candidates require no original material. Debug output is redacted.
+The check verifies the full old length and digest before comparing retained
+spans, including when a shrink discards an old tail. It uses a single read-only
+transaction, returns unit and writes no semantic seal, request or receipt.
+
+This is offline correspondence relative to the frozen root, which the future
+managed publisher must still authenticate independently. It is neither fresh
+source admission nor root publication. Schema32 and all existing receipt types
+remain unchanged. The future semantic ledger must invoke this comparison inside
+its own evidence-recording transaction rather than treating a previous unit
+return as a lasting token.
+
+Five focused tests passed in0.46s after a refusal-path correction. They cover
+forged base/false-zero candidates, complete discarded tails, all-local/zero/hole
+material, growth, two-level ancestry, wrong tags/positions/paths, incomplete
+plans, unchanged state and private-worker restart. The first four-test version
+also passed; the subsequent expanded test exposed an inherited subtree position
+being reported as corruption rather than an invalid Data-candidate request.
+The validator now distinguishes that request from corrupted retained metadata.
+Failed and corrected logs/sources are retained under
+`/tmp/s3drive-mixed-semantics-*`. The full local gate is running on306 frozen
+runtime/contract inputs; hosted and native acceptance are still pending.

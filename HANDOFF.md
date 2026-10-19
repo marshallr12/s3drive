@@ -31,19 +31,31 @@ Worktree /home/marshall/src/worktrees/s3drive-mixed-publication,
 codex/mixed-publication, baseline803a534 (W4a runtime3fd2a87/schema32).
 Documentation-only source review and acceptance contract at
 docs/src/mixed-root-publication.md; user reaffirmed chunks/manifests D041.
-No new runtime/schema code yet. Implement complete exact-view semantic proof,
-content-guarded ReserveManifest/Publish and narrow metadata-only saved-request
-recovery as specified there before claiming W4b. Normal State opening validates
-source BLOBs and cannot serve the damaged-source recovery promise. Keep strict
-normal opening; the proposed narrow owner exposes no new work or S3 capability.
+W4b1 now owns a bounded offline exact-data verifier in preparation/semantics.rs,
+its synchronous/private-worker APIs and tests only. It checks completed plans'
+Data candidates against retained patches/zeros and complete original chunk
+witness/bytes, relative to the frozen root. No schema change, persisted semantic
+seal, authority authentication/request, root commit or clean acknowledgment.
+Done criterion: forged original spans and discarded-tail corruption refused,
+local/zero/growth/partial/multi-level proofs and exact replay after newer heads/
+restart pass, no state mutation, full local gate and independent hosted cohort.
+W4b2 must still implement the complete publication journal/controller and narrow
+metadata-only saved-request recovery specified in the chapter. Normal opening
+must remain strict.
+Five focused tests passed (focused3,0.46s), following an inherited-subtree
+request classification correction. Focused2 failed4/1; exact failed source/tests
+and log retained. Full local gate1 owned runner271909/child271911 is live,
+306 frozen inputs /tmp/s3drive-mixed-semantics-frozen.json. Logs/results at
+/tmp/s3drive-mixed-semantics-gate1-*; confirm PID+start ticks/result before
+continuation, never restart on observer timeout. Keep runtime frozen meanwhile.
 W4a's independent Windows cohort is still pending; keep that source frozen.
 W5 settlement, native W6, origins/provider/physical session gates remain.
 Links (78 Markdown files), mdbook build and all chapter tests passed for this
 doc-only change; SVG rendered and visually reviewed at1120x700. No runtime
 changes or new full-gate claim. Logs /tmp/s3drive-mixed-root-design-{links,book,
 book-test}.log. First resume: read the publication design, check own W4a run
-39235506209, finish its separate acceptance, then implement W4b against the exact
-accepted source. Never rerun completed one-use source/artifact archivers.
+39235506209 and the exact live local gate1 owner/result, finish their separate
+acceptance, then implement W4b2 against accepted source. Never rerun completed one-use source/artifact archivers.
 
 ## Inherited W4a validation checkpoint
 

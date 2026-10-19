@@ -9,6 +9,8 @@ use model::{Input, Kind, Object};
 mod journal;
 mod ledger;
 mod proof;
+mod semantics;
+pub use semantics::OriginalChunk;
 mod transfers;
 pub use journal::{Client, Dependency, Journal};
 pub use transfers::{Position, Transfer, TransferFailure, TreeReceipt};

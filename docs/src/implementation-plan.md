@@ -3100,3 +3100,14 @@ semantic-check ledger and publisher/recovery controller are proposals, not
 implemented behavior. W4a304-input runtime remains frozen in its separate
 worktree pending its own complete hosted cohort. No native activation or local
 clean transition is authorized by a physical upload receipt.
+
+
+W4b1 independently green slice, declared2026-10-19: add a bounded offline
+`check_data` verifier to the preparation journal/private worker. It must compare
+actual admitted Data candidates with exact immutable view ranges and full
+original-chunk witness/bytes; reject unused witness material, false base spans,
+wrong paths and discarded-tail corruption. It returns no durable proof or remote
+capability. State remains unchanged after checks. Validate new heads/restart,
+partial/grown/all-local/all-zero/hole and multi-level ancestry cases plus the
+full local and own hosted cohort. Schema32 unchanged. W4b2 must persist semantic
+coverage and exact root requests/recovery; this slice does not replace W4b/W5/W6.
