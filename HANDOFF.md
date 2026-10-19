@@ -61,8 +61,16 @@ Clippy/build/72MD links/68book chapters passed. Frozen map
 /tmp/s3drive-sparse-migration-gate2-result.json. Indexed21-member local archive
 101699bytes SHA5410de90111b2d9fd16d830ce652a4a96b384758c5447b3aa3675e0cb990a1ef
 retains failed gate/exact old fixture, experiment, repaired source/maps and pass.
-Publication and own combined platform gates remain required. No runtime changes
-since the successful freeze. Local acceptance is not native/provider acceptance.
+Published runtime8141996a4bba443ae09430aa39e2268167372485 includes accepted main
+5c9c305 ancestry, with documentation/evidence-only merge delta from local-green
+c2d96e6. All276 working/committed hashes match. Own run39205603137 attempt1 LIVE:
+Windows117907640424,book117907640714,Linux117907640741. Watch21371 LIVE ->
+/tmp/s3drive-sparse-migration-hosted-watch.log; publication proof
+/tmp/s3drive-sparse-migration-publication.json. Require own all3 raw log review,
+ZIP API digests/strict typed21+14/project oracles/all35 raw fields+types before
+acceptance; never reuse older artifacts. Current source remains local green only.
+Main is accepted B1/schema29. No runtime changes since the successful freeze.
+Local acceptance is not native/provider acceptance.
 
 W2b2b remains the declared next implementation: multiple immutable versions,
 bounded patch bytes, exact operation replay and expected-head checks, normalized

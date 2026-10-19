@@ -92,3 +92,11 @@ the intended additions/head change, including when SQL triggers ignore or alter
 writes. Process-kill, SQLite-full, late replay, overlapping writes, shrink/regrow,
 corruption and worker-owner controls remain necessary. These paragraphs are a
 proposal for the next implementation, not current behavior or acceptance.
+
+
+Published source `8141996` includes accepted main ancestry and matches all276
+locally gated runtime inputs. Its
+[own Windows/Linux/book run](https://github.com/marshallr12/s3drive/actions/runs/39205603137)
+is in progress. This is publication evidence, not hosted acceptance. Main remains
+on accepted base-view runtime/schema29; this follow-up schema30 source needs its
+own complete native and reference-artifact checks.
