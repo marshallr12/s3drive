@@ -2743,3 +2743,30 @@ cancellation and credential-rotation behavior. Verify through owned SDK + real
 Rust authority + local-journal fixtures and the complete local/own combined gates.
 Legacy and metadata-empty admission/restart contracts remain required before W6;
 this sequence does not narrow the final drive to existing manifest files only.
+
+Historical main72ee64f pointer (superseded by accepted checkpoint below):
+
+Current follow-up,2026-10-19: immutable patches and exact-parent write/resize
+versions are implemented in published `codex/sparse-patches` runtime `d37096c`,
+with full local gate40129 green/all284 frozen inputs.393state1ignored/37core/
+12reader1nativeignored/62S3 and all format/Clippy/build/book checks passed. See
+[feature implementation and diagram](https://github.com/marshallr12/s3drive/blob/codex/sparse-patches/docs/src/sparse-patches.md)
+and its [own combined run39209163191](https://github.com/marshallr12/s3drive/actions/runs/39209163191).
+Main stays on accepted B1/schema29; this is separate pending-platform source.
+The schema30 parent's own run39205603137 failed Linux reader byte accounting
+while Windows/book passed. The new source has bounded handler settlement and a
+controlled post-body accounting test, preserving the exact9-chunk assertion.
+It must pass its own all3/raw/native/own-artifact checks before acceptance.
+W2c verified remote/local composition, mixed publication, exact settlement,
+legacy/metadata-empty recovery and real native chunk writes remain required.
+
+
+W2b2b accepted,2026-10-19: runtime d37096c passed own
+[run39209163191](https://github.com/marshallr12/s3drive/actions/runs/39209163191),
+all3 raw logs/own ZIP API digests/typed21+14/project oracles/all35 raw fields/types.
+Indexed60-member hosted archive and all284 source inputs verified. Linux393state/
+Windows388state1ignored,37core/12reader1nativeignored/62S3 passed; real manifest
+FUSE1.60s/WinFsp2.38s and paired/no-systemd recovery passed. Canonical integration
+keeps these runtime inputs unchanged. Separate codex/sparse-composition adds W2c
+and has focused16reader1nativeignored green; its full local gate56076 is live.
+It needs its own combined acceptance. W3-W6 and legacy/metadata-empty remain.

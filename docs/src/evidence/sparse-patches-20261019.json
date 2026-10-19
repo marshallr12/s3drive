@@ -4,7 +4,7 @@
   "branch": "codex/sparse-patches",
   "baseline": "76e3dba98a64e2a83eb02fffba09e525fa1517ee",
   "schema": 31,
-  "status": "full portable local gate passed; own combined platform/native acceptance still required",
+  "status": "accepted W2b2b: full local gate and own Windows/Linux/book source passed all raw/artifact checks",
   "scope": "local immutable patches, exact head/operation writes and resizes, bounded verified local pieces; no S3 or native activation",
   "runs": {
     "focused1": {
@@ -191,5 +191,183 @@
     "hosted_accepted": false,
     "main_runtime": "accepted B1/schema29",
     "visibility": "PUBLIC, read-only verified; no visibility mutation"
+  },
+  "hosted": {
+    "source": "d37096cc9c1ba9b55b73fb30d1edfb2fa7ca0955",
+    "run_id": 39209163191,
+    "attempt": 1,
+    "all_three_jobs": "success",
+    "raw_review": {
+      "source": "d37096cc9c1ba9b55b73fb30d1edfb2fa7ca0955",
+      "run_id": 39209163191,
+      "run_attempt": 1,
+      "reviewed": true,
+      "jobs": {
+        "117918472383": {
+          "source": "d37096cc9c1ba9b55b73fb30d1edfb2fa7ca0955",
+          "job_id": 117918472383,
+          "run_attempt": 1,
+          "reviewed": true,
+          "log": "/tmp/s3drive-sparse-patches-hosted-linux.log",
+          "sha256": "4d49821fcf1bdc1a07ef254fc5bcd00f6cbf7c720f7657a0b699ccb1c1236f4d",
+          "platform": "Ubuntu24.04 image20261012.334.1",
+          "core": {
+            "passed": 37,
+            "seconds": 0.04
+          },
+          "reader": {
+            "passed": 12,
+            "ignored": 1,
+            "seconds": 6.32
+          },
+          "state": {
+            "passed": 393,
+            "ignored": 1,
+            "seconds": 137.85
+          },
+          "s3": {
+            "passed": 62,
+            "seconds": 17.93
+          },
+          "legacy_native": {
+            "passed": 9,
+            "seconds": 75.89
+          },
+          "manifest_native": {
+            "passed": 1,
+            "seconds": 1.6
+          },
+          "no_systemd_http_and_tls": {
+            "passed": 1,
+            "seconds": 24.14
+          },
+          "paired_fuse_recovery": "passed",
+          "notices": [
+            "expected403/stopped-authority ConnectionRefused preserve dirty data",
+            "startup missing-file negative after removal",
+            "Node20 forced24/punycode/url.parse deprecations"
+          ],
+          "sparse_tests": 25,
+          "not_claimed": [
+            "W2c composition acceptance",
+            "new native chunk writes",
+            "performance/Wasabi/physical reboot acceptance"
+          ]
+        },
+        "117918472313": {
+          "source": "d37096cc9c1ba9b55b73fb30d1edfb2fa7ca0955",
+          "job_id": 117918472313,
+          "run_attempt": 1,
+          "reviewed": true,
+          "log": "/tmp/s3drive-sparse-patches-hosted-windows.log",
+          "sha256": "6c585ec8b87dc169920acfe0df2ab3da84917299a6b475821d4e87fea7f329e5",
+          "platform": "WindowsServer2025 windows-2025-vs2026/20261007.264.1",
+          "core": {
+            "passed": 37,
+            "seconds": 0.03
+          },
+          "reader": {
+            "passed": 12,
+            "ignored": 1,
+            "seconds": 10.11
+          },
+          "state": {
+            "passed": 388,
+            "ignored": 1,
+            "seconds": 261.2
+          },
+          "s3": {
+            "passed": 62,
+            "seconds": 23.27
+          },
+          "legacy_native": {
+            "passed": 7,
+            "seconds": 90.58
+          },
+          "manifest_native": {
+            "passed": 1,
+            "seconds": 2.38
+          },
+          "paired_startup": {
+            "passed": 1,
+            "seconds": 75.99
+          },
+          "notices": [
+            "3 locked disposable fixture profiles; dummy credentials removed; deletion deferred to VM destruction",
+            "unused WinFsp delay imports across11 executables and explicit reader rebuild",
+            "long coordinator/state cases completed",
+            "expected403/rival-content conflicts preserve dirty data",
+            "Node20 forced24/punycode/url.parse deprecations"
+          ],
+          "sparse_tests": 25,
+          "not_claimed": [
+            "W2c composition acceptance",
+            "new native chunk writes",
+            "performance/Wasabi/physical reboot acceptance"
+          ]
+        },
+        "117918472018": {
+          "source": "d37096cc9c1ba9b55b73fb30d1edfb2fa7ca0955",
+          "job_id": 117918472018,
+          "run_attempt": 1,
+          "reviewed": true,
+          "log": "/tmp/s3drive-sparse-patches-hosted-book.log",
+          "sha256": "c1e8c5070cb65f357429c2524ab1aa77282a6ca0bffa7b4106871d9444a6b9b8",
+          "markdown_files": 73,
+          "chapters": 69,
+          "schema": 31,
+          "notices": [
+            "pinned toolchain overrides default",
+            "Node20 forced24 checkout notice"
+          ]
+        }
+      }
+    },
+    "archive": {
+      "path": "evidence/sparse-patches-hosted-20261019.tar.gz",
+      "sha256": "628c49e4c389cbcbfc821e8afd1bfc67b855ccee57a7f6db0d7424e0dc98d72f",
+      "bytes": 261313,
+      "members": 60,
+      "all_indexed_members_verified": true,
+      "source": "d37096cc9c1ba9b55b73fb30d1edfb2fa7ca0955",
+      "run_id": 39209163191,
+      "run_attempt": 1,
+      "independent_typed_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "all_raw_fields_and_types_equal": true
+    },
+    "download_proof": [
+      {
+        "kind": "disposition",
+        "id": 12167860879,
+        "source": "d37096cc9c1ba9b55b73fb30d1edfb2fa7ca0955",
+        "run_id": 39209163191,
+        "run_attempt": 1,
+        "windows_job": 117918472313,
+        "zip_sha256": "a2111d66e272f6d5fd9a4d1d9d4e82399ce19cf1096ccec5dbba624d1c35654f",
+        "json_sha256": "795d8176f4714a93e54bee7d0a4bf5a9f83a537e4428844c5cd6f102d14a90c8",
+        "primary_artifact_reused": false
+      },
+      {
+        "kind": "replacement",
+        "id": 12166749052,
+        "source": "d37096cc9c1ba9b55b73fb30d1edfb2fa7ca0955",
+        "run_id": 39209163191,
+        "run_attempt": 1,
+        "windows_job": 117918472313,
+        "zip_sha256": "a0bf9d7c1c19b2f7322fd49029c22e8a267abfb812cddcbd9fed4efd0494c0fc",
+        "json_sha256": "cfacd380e86245dda3a9fa59a20f6e198e6af5282aca0f3efd0fe900e3c4095f",
+        "primary_artifact_reused": false
+      }
+    ],
+    "typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all35_raw_fields_and_types_match": true,
+    "all284_runtime_inputs_verified": true,
+    "scope": "local patches/mutations and regression acceptance; no native chunk writes/W2c composition/provider/physical reboot claim"
   }
 }
