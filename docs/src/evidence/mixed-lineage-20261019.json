@@ -1,7 +1,7 @@
 {
   "date": "2026-10-19",
   "phase": "W5a",
-  "status": "implemented; full local and own hosted acceptance pending",
+  "status": "W5a complete local gate passed; own Linux/Windows/book/native/source cohort required before promotion",
   "schema": 34,
   "scope": "exact retained local root predecessor for strict descendant; no clean settlement or reclamation",
   "focused": [
@@ -55,7 +55,6 @@
     }
   ],
   "acceptance_remaining": [
-    "full unchanged-source local gate",
     "own hosted Linux Windows book native source artifact cohort",
     "clean-base epochs and bounded local retention (W5b)",
     "explicit legacy and metadata-empty origins",
@@ -72,6 +71,31 @@
       "reason": "shared test dispatch poll frame overflowed default stack in pre-existing source_flow after added large scenario; 21 publication cases passed and one aborted",
       "log_sha256": "82e307d9edcfbaed31c4d926f2f04be74bb6d4c8fa6c460a8a5e224fb5a731a7",
       "repair": "construct new large scenario future in separate non-inlined factory; keep default stack limits"
+    },
+    {
+      "attempt": 2,
+      "result": "passed",
+      "exit_code": 0,
+      "source": "71242f5a8184d9c126a00a82a3a2c9a99d91409f",
+      "unchanged_inputs": 319,
+      "finished": "2026-10-19T12:36:50.957612+00:00",
+      "log_sha256": "b14a48b1e9ebd3bd583fed0add8d2ff57c3653f24d50d20cae9f3264b023eb3b",
+      "state_passed": 434,
+      "state_ignored": 1,
+      "core_passed": 37,
+      "reader_passed": 22,
+      "reader_native_ignored": 1,
+      "s3_passed": 62,
+      "publication_passed": 22,
+      "checks": [
+        "schema fixtures",
+        "format",
+        "Clippy all targets",
+        "workspace tests",
+        "workspace build",
+        "79 Markdown links",
+        "75 mdBook chapters build/test"
+      ]
     }
   ],
   "dispatch_regression": {
@@ -79,5 +103,12 @@
     "seconds": 5.69,
     "case": "chunk_sources_publish_unicode_sparse_empty_and_acknowledge_exact_history",
     "scope": "default unchanged stack after factory isolation"
+  },
+  "local_archive": {
+    "bytes": 1690240,
+    "members": 663,
+    "sha256": "33d07eb2df7f6742dd7bc56a70d86cbb182400de6feb19e3b24e0f3256543359",
+    "all_indexed_members_verified": true,
+    "path": "evidence/mixed-lineage-local-20261019.tar.gz"
   }
 }

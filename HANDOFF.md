@@ -58,7 +58,7 @@ This remains a historical root commit, not local clean settlement or a file flus
 Normal source opening is strict; no lost-operation rebase or overwrite fallback.
 Manifest origins only; legacy/metadata-empty origins still need explicit formats.
 
-## Current W5a exact local lineage — local gate pending
+## Current W5a exact local lineage — complete local gate, own cohort next
 
 Worktree /home/marshall/src/worktrees/s3drive-mixed-publication-lineage,
 branch codex/mixed-publication-lineage, runtime71242f5 (schema34/all319 final2).
@@ -71,10 +71,19 @@ foreign-conflict case passed. First full gate1 CLOSED101 at old source_flow chil
 stack overflow after new scenario expanded shared dispatch; all319 unchanged,
 21other publication cases passed. Non-inlined future factory fixes construction
 without larger stacks; failing default-stack case passed5.69s. Exact failed source
-and logs retained. Owned full gate2 runner478318/child478320 currently live,
+and logs retained. Owned full gate2 runner478318/child478320 CLOSED EXIT0 at12:36:50Z,
 /tmp/s3drive-mixed-lineage-gate2-{running,result}.json and .log. Keep319 frozen at
 /tmp/s3drive-mixed-lineage-final2-frozen.json. Read docs/src/mixed-publication-lineage.md before continuing;
-new schema33 damaged-source saved-Publish case is included in that gate.
+new schema33 damaged-source saved-Publish case passed in that gate. All319
+unchanged;434state1ignored/37core/22reader1nativeignored/62S3/22publication,
+format/Clippy/build/79MD/75chapters passed. Log SHA
+b14a48b1e9ebd3bd583fed0add8d2ff57c3653f24d50d20cae9f3264b023eb3b.
+One-use local archive DONE:663members1690240bytes SHA
+33d07eb2df7f6742dd7bc56a70d86cbb182400de6feb19e3b24e0f3256543359,
+all members verified including exact final319 and failed gate1 source319. NEVER
+rerun completed local archiver. Prepare own cohort after publication; template
+/tmp/s3drive-prepare-mixed-lineage-hosted.py requires actual source/run/three jobIDs.
+No own checker/oracle/raw comparator/archive has been executed yet.
 Done contract: a later strict descendant may use an exactly retained successful
 local predecessor; wrong source/store/file, nonancestor, missing/unknown/conflicted
 predecessors and foreign current content must fail without admitting a new remote

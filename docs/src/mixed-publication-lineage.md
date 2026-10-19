@@ -1,7 +1,7 @@
 # Repeated edited-file publications
 
 Design and implementation contract, 2026-10-19. **Implemented in an isolated
-worktree; full local and own hosted acceptance pending.**
+worktree; full local gate passed, own hosted acceptance pending.**
 The user selected immutable chunks plus manifests. Small edits should reuse
 unchanged chunks. Ordinary drive names remain metadata in the shared authority.
 
@@ -159,3 +159,24 @@ inside a separate non-inlined factory; stack limits and assertions are unchanged
 The failing existing case then passed on its default stack (5.69s). A fresh full
 gate must cover this fix and all319 final inputs. Exact failed source and logs are
 retained; the first gate is not accepted as green.
+
+
+## Complete local gate (2026-10-19)
+
+Final checkpoint `71242f5a8184d9c126a00a82a3a2c9a99d91409f`, schema34/all319
+unchanged inputs, passed the full local gate at12:36:50Z. It passed434 state
+cases (one ignored),37core,22reader (one native ignored),62S3 and22publication
+cases, schema fixtures, formatting, all-target Clippy, workspace build,79Markdown
+links and75book chapters. All five new lineage/old-schema recovery cases passed,
+including saved schema33 Publish recovery with corrupt source and no migration.
+The root-owner suite exercised28 actual killed-process boundaries. The successful
+full log SHA-256 is
+`b14a48b1e9ebd3bd583fed0add8d2ff57c3653f24d50d20cae9f3264b023eb3b`.
+
+The [indexed local archive](evidence/mixed-lineage-local-20261019.tar.gz) contains663
+verified members,1690240bytes, including all319 final inputs and all319 exact
+failed gate1 inputs plus failure/repair logs and copied failed fixtures. SHA-256
+`33d07eb2df7f6742dd7bc56a70d86cbb182400de6feb19e3b24e0f3256543359`.
+This accepts local library behavior, not a native chunk filesystem. An own hosted
+Linux/Windows/book/native/source cohort is required before runtime promotion.
+W5b clean epochs/retention, explicit origins and W6 remain unimplemented gates.
