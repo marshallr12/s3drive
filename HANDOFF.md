@@ -48,8 +48,12 @@ Focused5 EXIT0/16state incl28 actual kills; SDK2 EXIT0/one6.35s/12ownedPUT case.
 New schema33 damaged-source pending-Publish recovery case awaits full gate.
 Harness failures: SDK1 explicit Option type; focused3 Committed hook label;
 focused4 private fixture field access. Exact failed sources/logs retained in/tmp.
-Final319 inputs frozen at/tmp/s3drive-mixed-lineage-frozen.json. Full local gate
-is next; no runtime promotion and no new live provider/native mutation claim.
+First full gate1 runner466160 CLOSED101, all319 inputs unchanged. Formatting/
+Clippy passed;21publication passed, old source_flow child stack overflowed after
+new large scenario expanded shared dispatcher. Exact sourcee27c78c/map/log/result
+and copies retained. Isolated new future construction in non-inlined factory;
+no increased stack limit. Old failing default-stack case passed5.69s (dispatch1).
+Fresh full gate2 on final2 frozen319 is next. No runtime promotion/new live claim.
 
 ## Current W4b2 mixed-root publication — focused green, full gates pending (2026-10-19)
 

@@ -61,5 +61,23 @@
     "explicit legacy and metadata-empty origins",
     "native chunk writes (W6)",
     "provider and physical session/reboot gates"
-  ]
+  ],
+  "full_local_attempts": [
+    {
+      "attempt": 1,
+      "result": "failed",
+      "exit_code": 101,
+      "unchanged_inputs": 319,
+      "source": "e27c78cc10af669a1d12f88cbbc9d3f59b42c44c",
+      "reason": "shared test dispatch poll frame overflowed default stack in pre-existing source_flow after added large scenario; 21 publication cases passed and one aborted",
+      "log_sha256": "82e307d9edcfbaed31c4d926f2f04be74bb6d4c8fa6c460a8a5e224fb5a731a7",
+      "repair": "construct new large scenario future in separate non-inlined factory; keep default stack limits"
+    }
+  ],
+  "dispatch_regression": {
+    "result": "passed",
+    "seconds": 5.69,
+    "case": "chunk_sources_publish_unicode_sparse_empty_and_acknowledge_exact_history",
+    "scope": "default unchanged stack after factory isolation"
+  }
 }

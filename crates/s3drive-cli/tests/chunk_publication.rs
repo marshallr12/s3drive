@@ -1075,7 +1075,7 @@ async fn chunk_child() {
         )
         .unwrap();
         match mode.as_str() {
-            "mixed_lineage" => Box::pin(mixed_roots::lineage(&config, &root, &s)).await,
+            "mixed_lineage" => mixed_roots::lineage(&config, &root, &s).await,
             "mixed_roots_controls" => Box::pin(mixed_roots::controls(&config, &root, &s)).await,
             "mixed_roots_rivals" => Box::pin(mixed_roots::rivals(&config, &root, &s)).await,
             "mixed_roots_crash" => Box::pin(mixed_roots::crash(&config, &root, &s)).await,

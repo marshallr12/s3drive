@@ -417,7 +417,17 @@ pub async fn controls(config: &s3drive_core::Config, root: &Path, s: &Server) {
 
 /// Consecutive edits keep their original authenticated source, with each new CAS
 /// bound only to an actual prior local publication. No clean-state claim.
-pub async fn lineage(config: &s3drive_core::Config, root: &Path, s: &Server) {
+// Keep construction of this large test future out of the shared async match's
+// poll frame. Every legacy scenario also uses that dispatcher on default stacks.
+#[inline(never)]
+pub fn lineage<'a>(
+    config: &'a s3drive_core::Config,
+    root: &'a Path,
+    s: &'a Server,
+) -> std::pin::Pin<Box<impl std::future::Future<Output = ()> + 'a>> {
+    Box::pin(lineage_inner(config, root, s))
+}
+async fn lineage_inner(config: &s3drive_core::Config, root: &Path, s: &Server) {
     let seed = setup(config, root, s).await;
     let old = publisher(&seed, s).await;
     let original = (0..32).map(|n| n as u8).collect::<Vec<_>>();
