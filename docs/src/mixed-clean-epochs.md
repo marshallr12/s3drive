@@ -1,6 +1,6 @@
 # Acknowledgment and clean base epochs
 
-Declared implementation contract, 2026-10-19. **Implemented draft; full gates pending.**
+Declared implementation contract, 2026-10-19. **Complete local gate passed; own hosted acceptance pending.**
 W5a permits consecutive publications from one frozen source. W5b1 must now make
 an exactly published head the next source base without rewriting old views.
 No payload reclamation or native activation is part of this slice.
@@ -104,3 +104,22 @@ table still fails closed. Both failed migration cases passed afterward, as did
 all12 acknowledgment cases including a new current-schema missing-table test.
 An initially misqualified test-only module path was corrected; its failed source
 and compile log are retained. A fresh complete gate follows these final changes.
+
+
+## Complete local gate (2026-10-19)
+
+Final source `652f93806349a729f603301d3669005685c5f40d`, schema35/all324
+unchanged inputs, passed the full local gate at13:48:18Z:446state tests (one
+ignored),37core,22reader (one native ignored),62S3 and23publication cases, schema
+fixtures, formatting, all-target Clippy, build,80Markdown links and76book chapters.
+All12 new acknowledgment cases and the actual SDK four-cycle/empty-base scenario
+passed. Log SHA-256
+`9484b5e6c0dc27087a33bbb6dbddbbc0f8704df75f8c38861357f859fda851c5`.
+
+The [indexed local archive](evidence/mixed-epochs-local-20261019.tar.gz) contains1004
+verified members,2542124bytes, with all324 final inputs and both exact failed
+324-input sources plus retained failure/repair logs. SHA-256
+`9c46f7b89c352a5b3b97297c39c7fd5aca4980b4683d85bdc6254d07acbcb48b`.
+[Dated evidence](evidence/mixed-epochs-20261019.json) records exact scope and failures.
+Own Linux/Windows/book/native/source acceptance is still required. Local success
+is not mounted chunk-write, provider or physical session/reboot acceptance.

@@ -88,7 +88,7 @@ missing/rejected predecessor or nonancestor never becomes an overwrite fallback.
 No clean epoch, reclamation, fresh external-base adoption, new-file origins or
 native chunk activation follows from W5a acceptance. Goal ACTIVE/progress.
 
-## Current W5b1 clean-epoch successor — local gate running
+## Current W5b1 clean-epoch successor — local gate passed, own cohort next
 
 Worktree /home/marshall/src/worktrees/s3drive-mixed-clean-epochs,
 codex/mixed-clean-epochs. Read docs/src/mixed-clean-epochs.md there; preserve the exact head/binding
@@ -98,7 +98,7 @@ rebase, historical/newer-head preservation, shared source-operation ID guards,
 scoped head facade, small immutable receipts, metadata-only recorded-ack recovery
 and managed APIs implemented. Four3MiB+17 actual SDK cycles preserve old reads,
 reuse new bases, retain newer edits and support empty manifests:13ownedPUT/74.36s.
-Eleven focused state cases incl11 real epoch-kill boundaries, SQLite-full,
+Twelve focused state cases incl11 real epoch-kill boundaries, SQLite-full,
 migration/refusal, self-consistent metadata corruption, source damage, narrowed
 limits/triggers, ID collision and private owner races passed. SDK1 observation
 scope failure/source retained; corrected interval, no assertion suppression.
@@ -111,11 +111,18 @@ publication tables existed. Added explicit29..32 missing-table compatibility;
 current schemas still refuse missing metadata. Migration2 passed2/0.23s; focused7
 passed12/7.88s incl11 kills and new current-schema table-loss refusal. Focused6
 module-path compile failure retained and fixed; no suppressed assertions.
-Exact failed source3d5de01/map/log/settlement copy retained. Fresh owned full gate3 runner605949/child605950 is live; it
+Exact failed source3d5de01/map/log/settlement copy retained. Fresh owned full gate3 runner605949/child605950 CLOSED EXIT0 at13:48:18Z; it
 uses final3 map324 at/tmp/s3drive-mixed-epochs-final3-frozen.json. Read /tmp/s3drive-mixed-epochs-gate3-{running,result}.json and .log before
 continuing; never restart a live owner from a timeout. One-use local archiver
-/tmp/s3drive-mixed-epochs-local-archive.py is prepared, NOT executed; it requires
-gate3 CLOSED0/446state/23publication and preserves all three exact324-input sources. Full local and own hosted/native/
+/tmp/s3drive-mixed-epochs-local-archive.py DONE; NEVER rerun. Indexed1004 members/
+2542124bytes SHA9c46f7b89c352a5b3b97297c39c7fd5aca4980b4683d85bdc6254d07acbcb48b,
+all verified, including final324 and both failed324 sources. Gate3 all324 unchanged:
+446state1ignored/37core/22reader1nativeignored/62S3/23publication, format/Clippy/
+build/80MD/76chapters passed. Log SHA
+9484b5e6c0dc27087a33bbb6dbddbbc0f8704df75f8c38861357f859fda851c5.
+Prepare own hosted cohort after publication with
+/tmp/s3drive-prepare-mixed-epochs-hosted.py (actual source/run/three job IDs required).
+No own checker/oracle/raw-comparer/archive has been executed. Full local and own hosted/native/
 source gates before promotion. W5b2/3 pins, retry retirement and reclamation,
 authoritative external clean-base observation, explicit origins, W6 and provider/
 physical session/reboot acceptance remain required; no native chunk writes claimed.

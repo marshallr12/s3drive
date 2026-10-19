@@ -1,7 +1,7 @@
 {
   "date": "2026-10-19",
   "phase": "W5b1",
-  "status": "implemented draft; full local and own hosted acceptance pending",
+  "status": "W5b1 complete local gate passed; own hosted/native/source cohort required before promotion",
   "schema": 35,
   "scope": "exact source acknowledgment and immutable clean base transition; no payload reclamation or native chunk writes",
   "checks": [
@@ -76,7 +76,6 @@
     }
   ],
   "acceptance_remaining": [
-    "complete frozen-input local gate",
     "own hosted Linux Windows book native source artifact cohort",
     "W5b2 explicit pins/retry retirement",
     "W5b3 bounded local reclamation",
@@ -110,16 +109,48 @@
       "reason": "new operation-ID guard queried publication tables before schema33 in deliberate schema29/30 mutation fixtures",
       "repair": "explicit version29..32 missing-table compatibility; current schemas still fail closed",
       "retained_source": "/tmp/s3drive-mixed-epochs-failed-gate2-settlement.rs"
+    },
+    {
+      "attempt": 3,
+      "source": "652f93806349a729f603301d3669005685c5f40d",
+      "result": "passed",
+      "exit_code": 0,
+      "all_inputs_unchanged": 324,
+      "finished": "2026-10-19T13:48:18.935428+00:00",
+      "log_sha256": "9484b5e6c0dc27087a33bbb6dbddbbc0f8704df75f8c38861357f859fda851c5",
+      "passed_state": 446,
+      "ignored_state": 1,
+      "passed_core": 37,
+      "passed_reader": 22,
+      "ignored_native_reader": 1,
+      "passed_s3": 62,
+      "passed_publication": 23,
+      "checks": [
+        "schema fixtures",
+        "format",
+        "all-target Clippy",
+        "workspace tests/build",
+        "80 Markdown links",
+        "76 mdBook chapters build/test"
+      ]
     }
   ],
   "current_local_gate": {
     "attempt": 3,
     "source": "652f93806349a729f603301d3669005685c5f40d",
     "runtime_inputs": 324,
-    "status": "running",
+    "status": "passed",
     "runner_pid": 605949,
     "child_pid": 605950,
     "frozen_map": "/tmp/s3drive-mixed-epochs-final3-frozen.json",
-    "no_runtime_promotion": true
+    "no_runtime_promotion": true,
+    "exit_code": 0
+  },
+  "local_archive": {
+    "bytes": 2542124,
+    "members": 1004,
+    "sha256": "9c46f7b89c352a5b3b97297c39c7fd5aca4980b4683d85bdc6254d07acbcb48b",
+    "all_indexed_members_verified": true,
+    "path": "evidence/mixed-epochs-local-20261019.tar.gz"
   }
 }

@@ -3241,3 +3241,12 @@ with no unresolved/dirty work, retaining prior snapshots. It is distinct from
 W5b1 acknowledgment of our own publication. See [the epoch contract](mixed-clean-epochs.md).
 W5b1 full gate1 stopped at a single unused-unit Clippy diagnostic with all324
 inputs unchanged; only that expression was removed. A fresh full gate follows.
+
+
+W5b1 full local gate3 passed2026-10-19: exact652f938/schema35/all324,
+446state1ignored/37core/22reader1nativeignored/62S3/23publication, format/Clippy/
+build/80MD/76chapters. Both old-schema regression tests and all12 new ack cases
+passed. The1004-member local archive preserves final324 and both failed324 sources;
+SHA9c46f7b89c352a5b3b97297c39c7fd5aca4980b4683d85bdc6254d07acbcb48b.
+[Exact epoch evidence](mixed-clean-epochs.md). Own hosted/native/source acceptance
+remains required before promotion; no mounted chunk writes or reclamation.
