@@ -3271,3 +3271,10 @@ cycle passed. Complete local gate1 stopped101 on two existing SDK upload Timeout
 (22publication cases passed); all329 inputs unchanged. Own CI39267986023 remains
 live for that exact source. Investigation uses a separate repair worktree; no
 runtime change is promoted. [Current scoped contract](scoped-source-operations.md).
+
+The [bounded retention proposal](mixed-retention-plan.md), researched2026-10-19,
+maps the actual source/preparation/root/physical dependencies. Pins without GC
+come first; clean-anchor witness formats and all operation retry namespaces must
+be closed before transactional reclamation. Logical read pins must not hold open
+SQLite transactions across network/file-handle lifetimes. This proposal does not
+activate deletion or expand any quota/deadline.

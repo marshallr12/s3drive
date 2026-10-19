@@ -22,6 +22,18 @@ No repaired source has its own hosted cohort yet; do not accept originala302 CI
 as evidence for this changed query. Main accepted324 inputs are exact to W5b1;
 proof /tmp/s3drive-canonical-clean-epochs-publication.json. Goal ACTIVE/progress.
 
+Retention research2026-10-19 is in docs/src/mixed-retention-plan.md. Actual
+source/preparation/root/physical dependencies are mapped; pins without GC first,
+clean-anchor witness/retry namespaces then reclamation. No arbitrary dirty-view
+seal or copied hash is accepted as proof. Existing child IDs bind operation/request
+while spans require parent replay. All original preparation/upload retry identities
+also need closure before forgetting rows; source scoping alone is insufficient.
+Transient read pins must not hold SQLite transactions open, and session replacement
+must be proven by exclusive ownership rather than heartbeat/sign-out. SQLite
+space/WAL behavior is cited to official docs. Resolved bundled SQLite3.53.2 was
+read from libsqlite3-sys0.38.2's header; no dependency change required. Proposal
+only, no pins/deletion implementation or provider/native activation.
+
 ## Current repository visibility: PUBLIC (user decision, 2026-10-18)
 
 The user intentionally made marshallr12/s3drive public. Preserve that setting.
