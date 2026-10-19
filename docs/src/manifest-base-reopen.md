@@ -85,4 +85,8 @@ remain later phases.
 Published source `0d2dfce` includes the current public main ancestry with a
 documentation-only merge; all266 locally gated source inputs remain identical.
 Its [own hosted run](https://github.com/marshallr12/s3drive/actions/runs/39194683513)
-is in progress. This is publication evidence, not native acceptance.
+is in progress. Linux and book jobs passed and their raw logs were reviewed:
+Linux11reader/1nativeignored6.36s,368state/1ignored,62S3,9existing native tests,
+explicit manifest FUSE/remount1.60s, no-systemd startup and paired recovery.
+Windows is still running. The combined source is not accepted until its Windows
+job and own raw/artifact checks also pass.

@@ -125,5 +125,70 @@
       "windows": 117874763565
     },
     "hosted_accepted": false
+  },
+  "hosted_progress": {
+    "run_id": 39194683513,
+    "run_attempt": 1,
+    "source": "0d2dfceb5585c82453dd7214ebdbf98aad9c19af",
+    "status": "Windows job live; overall acceptance pending",
+    "reviewed_jobs": {
+      "linux": {
+        "job_id": 117874763541,
+        "run_attempt": 1,
+        "reviewed": true,
+        "log": "/tmp/s3drive-base-reopen-hosted-linux.log",
+        "sha256": "2cc9334b851b0c926fc8e15c5b3d0cd0bc586a24338c5e9e29626c57de0bc4f0",
+        "reader": {
+          "passed": 11,
+          "ignored": 1,
+          "seconds": 6.36
+        },
+        "state": {
+          "passed": 368,
+          "ignored": 1,
+          "seconds": 135.63
+        },
+        "s3": {
+          "passed": 62,
+          "seconds": 17.61
+        },
+        "legacy_native": {
+          "passed": 9,
+          "seconds": 75.18
+        },
+        "manifest_native": {
+          "passed": 1,
+          "seconds": 1.6
+        },
+        "no_systemd_coordinator_http_and_private_ca": {
+          "passed": 1,
+          "seconds": 24.07
+        },
+        "paired_fuse_recovery": "passed",
+        "notices": [
+          "one long state test completed successfully",
+          "expected403 and stopped-authority ConnectionRefused preserve local data",
+          "startup missing-file negative after removal",
+          "Node20 forced24, punycode and url.parse action deprecations"
+        ],
+        "not_claimed": [
+          "new native chunk writes",
+          "Wasabi behavior",
+          "physical workstation reboot",
+          "performance acceptance"
+        ]
+      },
+      "book": {
+        "job_id": 117874763365,
+        "run_attempt": 1,
+        "log": "/tmp/s3drive-base-reopen-hosted-book.log",
+        "sha256": "d10948d7e36ebc36033916167ebff1d247fef62a31e637a67de9629663b404d3",
+        "reviewed": true,
+        "chapters": 66,
+        "markdown_files": 70,
+        "schema": 28,
+        "notice": "checkout Node20 forced Node24 deprecation; no build/test errors"
+      }
+    }
   }
 }

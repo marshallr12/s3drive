@@ -2508,3 +2508,17 @@ exhaustion. Show measured dirty byte and metadata growth, and reject accidental
 whole-file staging. Legacy and metadata-empty bases still need an explicit
 recovery contract before eventual native write acceptance. W2 supplies no root
 publication or clean acknowledgment; W3-W6 remain required.
+
+W2a layering detail from source inspection: core's `manifest::Error` already has
+Encoding and Binding cases, while managed callers currently downcast descriptor
+decode failures to `ReadFailure`. A bare type re-export would change that error
+contract. Prefer a core untrusted identity/codec plus the existing managed
+`BaseDescriptor` wrapper, delegating accessors/encoding and mapping decode errors
+back to the current ReadFailure variants. Preserve exact-length/magic rejection,
+reserved-ID rejection,88-byte vectors, redacted Debug, equality and every existing
+reader export/reopen test. A core constructor accepts identity intent only; it
+must not construct BaseFile, authorize a history request or create a send permit.
+State can use the core representation without depending on authority or managed.
+No dependency change is required for the pure codec. Keep the authority-backed
+lookup and fresh S3 root verification in managed. This corrects the earlier
+shorthand "re-export"; preserving the managed API includes its error semantics.

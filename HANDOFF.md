@@ -30,8 +30,12 @@ include main's policy commit; the c7fca789 feature lineage includes that rule.
 Published source0d2dfceb5585c82453dd7214ebdbf98aad9c19af (local implementation
 1c41802 plus main35abcc9 documentation-only merge), exactremote and clean before
 planning updates. All266 working/committed runtime hashes match full local gate.
-Own run39194683513 attempt1 RUNNING: Linux117874763541, Windows117874763565,
-book117874763365. Watch31680 LIVE -> /tmp/s3drive-base-reopen-hosted-watch.log.
+Own run39194683513 attempt1 RUNNING: Linux117874763541 SUCCESS/raw-reviewed,
+book117874763365 SUCCESS/raw-reviewed; Windows117874763565 still live workspace
+tests. Linux11reader/1nativeignored6.36s,368state1ignored135.63s,62S3,
+9existingnative75.18s, explicitmanifestFUSE1.60s and no-systemd HTTP/privateCA
+24.07s plus pairedFUSE recovery passed. Own linux/book review markers use prefix
+/tmp/s3drive-base-reopen-hosted. Watch31680 LIVE -> /tmp/s3drive-base-reopen-hosted-watch.log.
 Proof /tmp/s3drive-base-reopen-publication.json. Own raw/API artifacts/typed21+14/
 project oracles/all35 fields+types review still REQUIRED; no hosted acceptance.
 Prepared one-use checker /tmp/s3drive-check-base-reopen-hosted.py, reference
