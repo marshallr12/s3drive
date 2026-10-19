@@ -3206,3 +3206,8 @@ sources in the663-member archive SHA
 33d07eb2df7f6742dd7bc56a70d86cbb182400de6feb19e3b24e0f3256543359.
 Own hosted/native/source acceptance remains required before W5a runtime promotion.
 W5b clean epochs/retention and explicit origins/W6 remain.
+
+
+W5a own cohort39253634685 attempt1 is running for exact source50ee01c/schema34.
+Main runtime remains accepted W4b2/schema33 until full own source/native/artifact
+acceptance. [Current successor evidence](mixed-publication-lineage.md).

@@ -180,3 +180,10 @@ failed gate1 inputs plus failure/repair logs and copied failed fixtures. SHA-256
 This accepts local library behavior, not a native chunk filesystem. An own hosted
 Linux/Windows/book/native/source cohort is required before runtime promotion.
 W5b clean epochs/retention, explicit origins and W6 remain unimplemented gates.
+
+
+Exact source `50ee01c73b8ed75182903aed808611783ac24885` is published for
+[its own platform cohort](https://github.com/marshallr12/s3drive/actions/runs/39253634685).
+Acceptance is pending. Parent native artifacts and source cannot substitute for
+this schema34 runtime. Main's accepted runtime remains W4b2/schema33; publication
+of this successor does not activate native chunk writes or clean settlement.

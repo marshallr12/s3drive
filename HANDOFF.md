@@ -58,7 +58,7 @@ This remains a historical root commit, not local clean settlement or a file flus
 Normal source opening is strict; no lost-operation rebase or overwrite fallback.
 Manifest origins only; legacy/metadata-empty origins still need explicit formats.
 
-## Current W5a exact local lineage — complete local gate, own cohort next
+## Current W5a exact local lineage — complete local gate, own cohort running
 
 Worktree /home/marshall/src/worktrees/s3drive-mixed-publication-lineage,
 branch codex/mixed-publication-lineage, runtime71242f5 (schema34/all319 final2).
@@ -81,9 +81,17 @@ b14a48b1e9ebd3bd583fed0add8d2ff57c3653f24d50d20cae9f3264b023eb3b.
 One-use local archive DONE:663members1690240bytes SHA
 33d07eb2df7f6742dd7bc56a70d86cbb182400de6feb19e3b24e0f3256543359,
 all members verified including exact final319 and failed gate1 source319. NEVER
-rerun completed local archiver. Prepare own cohort after publication; template
-/tmp/s3drive-prepare-mixed-lineage-hosted.py requires actual source/run/three jobIDs.
-No own checker/oracle/raw comparator/archive has been executed yet.
+rerun completed local archiver. Own source50ee01c73b8ed75182903aed808611783ac24885 is published; all319 committed
+and working inputs exact. Own39253634685 attempt1 in progress:
+book118063332761/Linux118063333285/Windows118063333172. Owned observer530666;
+child/start ticks in/tmp/s3drive-mixed-lineage-hosted-watch-running.json.
+Four one-use checker/oracle/raw-comparer/archive scripts prepared, NOT executed;
+review aid also prepared. First resume: authoritative own API jobs; after all3
+terminal success, review complete raw logs, validate source/API ZIP SHA/typed21+14/
+project/all35 raw fields/types, then archive once. Required434Linux/429Windowsstate,
+22publication, five new lineage state cases and SDK consecutive-publication case.
+Do not reuse parent artifacts12184468560/12185592238 or prior earlier artifacts.
+Never rerun completed local archive. Keep all319 frozen through own acceptance.
 Done contract: a later strict descendant may use an exactly retained successful
 local predecessor; wrong source/store/file, nonancestor, missing/unknown/conflicted
 predecessors and foreign current content must fail without admitting a new remote

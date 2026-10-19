@@ -110,5 +110,18 @@
     "sha256": "33d07eb2df7f6742dd7bc56a70d86cbb182400de6feb19e3b24e0f3256543359",
     "all_indexed_members_verified": true,
     "path": "evidence/mixed-lineage-local-20261019.tar.gz"
+  },
+  "own_hosted": {
+    "source": "50ee01c73b8ed75182903aed808611783ac24885",
+    "run_id": 39253634685,
+    "attempt": 1,
+    "jobs": {
+      "book": 118063332761,
+      "linux": 118063333285,
+      "windows": 118063333172
+    },
+    "status": "pending",
+    "checker_oracle_raw_comparer_archive_executed": false,
+    "parent_artifact_reuse_permitted": false
   }
 }
