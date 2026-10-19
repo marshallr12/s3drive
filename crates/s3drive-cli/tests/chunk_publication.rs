@@ -1089,6 +1089,7 @@ async fn chunk_child() {
         )
         .unwrap();
         match mode.as_str() {
+            "mixed_scoped" => mixed_epochs::run_scoped_case(&config, &root, &s).await,
             "mixed_epochs" => mixed_epochs::run_case(&config, &root, &s).await,
             "mixed_lineage" => mixed_roots::lineage(&config, &root, &s).await,
             "mixed_roots_controls" => Box::pin(mixed_roots::controls(&config, &root, &s)).await,
@@ -1380,7 +1381,7 @@ async fn run(mode: &str) {
         }
     }
     let expected = match mode {
-        "mixed_epochs" => 13,
+        "mixed_epochs" | "mixed_scoped" => 13,
         "mixed_lineage" => 12,
         "mixed_roots_controls" => 9,
         "mixed_roots_rivals" => 8,
@@ -1545,4 +1546,9 @@ async fn mixed_publication_lineage_repeats_after_restart_recovers_exact_reply_an
 #[tokio::test]
 async fn mixed_clean_epochs_acknowledge_exact_heads_preserve_old_reads_and_reuse_published_base() {
     run("mixed_epochs").await;
+}
+
+#[tokio::test]
+async fn scoped_mixed_epochs_preserve_old_reads_and_replay_local_acknowledgments() {
+    run("mixed_scoped").await;
 }

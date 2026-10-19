@@ -149,6 +149,7 @@ fn identity(
         "namespace_removal_events",
     ];
     let local = [
+        "sparse_scoped_mode",
         "sparse_publication_role",
         "sparse_publications",
         "sparse_publication_checks",
@@ -646,6 +647,7 @@ mod tests {
             "PRAGMA foreign_keys=OFF; INSERT INTO sparse_preparations VALUES(zeroblob(32),zeroblob(32),zeroblob(32),x'7b',x'7b',zeroblob(32))".to_owned(),
             "PRAGMA foreign_keys=OFF; INSERT INTO sparse_preparation_objects VALUES(zeroblob(32),-1,0,x'7b',zeroblob(32))".to_owned(),
             "INSERT INTO sparse_preparation_blobs VALUES(zeroblob(32),x'01')".to_owned(),
+            "INSERT INTO sparse_scoped_mode VALUES(1,1,zeroblob(32))".to_owned(),
             "INSERT INTO sparse_publication_role VALUES(1,0,0,zeroblob(32))".to_owned(),
             "PRAGMA foreign_keys=OFF; INSERT INTO sparse_publications VALUES(zeroblob(32),'11111111111111111111111111111111','22222222222222222222222222222222',x'7b',zeroblob(32))".to_owned(),
             "PRAGMA foreign_keys=OFF; INSERT INTO sparse_publication_checks VALUES(zeroblob(32),0,x'7b',zeroblob(32))".to_owned(),

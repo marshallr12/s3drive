@@ -25,7 +25,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 35;
+pub const SCHEMA_VERSION: i32 = 36;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
@@ -299,6 +299,9 @@ impl State {
             }
             if version <= 32 {
                 tx.execute_batch(include_str!("../migrations/033.sql"))?;
+            }
+            if version <= 35 {
+                tx.execute_batch(include_str!("../migrations/036.sql"))?;
             }
             // Version34 admits explicit local predecessor edges in format2 root
             // records. Existing schema33 rows/hashes remain byte-for-byte intact.

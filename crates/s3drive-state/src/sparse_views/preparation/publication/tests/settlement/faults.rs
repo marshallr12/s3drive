@@ -88,6 +88,9 @@ fn schema_thirty_five_preserves_old_records_and_rejects_new_ack_formats_under_ol
             .contains("acknowledgment")
     );
     s.connection
+        .execute_batch("DROP TABLE sparse_scoped_mode")
+        .unwrap();
+    s.connection
         .pragma_update(None, "user_version", 34)
         .unwrap();
     drop(s);
@@ -95,7 +98,7 @@ fn schema_thirty_five_preserves_old_records_and_rejects_new_ack_formats_under_ol
     assert_eq!(recovery.acknowledged(p).unwrap(), None);
     drop(recovery);
     let mut s = State::open_managed(&path).unwrap();
-    assert_eq!(s.info().unwrap().schema_version, 35);
+    assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
     assert!(crate::sparse_views::ledger::inspect(&s.connection).unwrap() == source);
     assert!(ledger::inspect(&s.connection).unwrap() == meta);
     let after: Vec<u8> = s
@@ -192,7 +195,7 @@ fn missing_publication_table_never_forgets_current_schema_ack_identities_or_adop
         s.connection
             .execute_batch("DROP TABLE sparse_publications")
             .unwrap();
-        assert_eq!(s.info().unwrap().schema_version, 35);
+        assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
         assert!(
             crate::sparse_views::preparation::publication::settlement::guard_operation(
                 &s.connection,

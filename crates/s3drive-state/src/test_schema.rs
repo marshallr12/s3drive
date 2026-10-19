@@ -2,20 +2,20 @@
 //! constructing an older schema. Production migrations keep collision failures.
 pub(crate) fn legacy_sql(sql: &str) -> String {
     format!(
-        "DROP TABLE sparse_publication_checks; DROP TABLE sparse_publications; DROP TABLE sparse_publication_role; DROP TABLE sparse_preparation_objects; DROP TABLE sparse_preparations; DROP TABLE sparse_preparation_blobs; DROP TABLE sparse_view_blocks; DROP TABLE sparse_view_operations; DROP TABLE sparse_views; DROP TABLE sparse_view_files; DROP TABLE sparse_view_role; {sql}"
+        "DROP TABLE sparse_scoped_mode; DROP TABLE sparse_publication_checks; DROP TABLE sparse_publications; DROP TABLE sparse_publication_role; DROP TABLE sparse_preparation_objects; DROP TABLE sparse_preparations; DROP TABLE sparse_preparation_blobs; DROP TABLE sparse_view_blocks; DROP TABLE sparse_view_operations; DROP TABLE sparse_views; DROP TABLE sparse_view_files; DROP TABLE sparse_view_role; {sql}"
     )
 }
 
 /// Preserve populated old sparse views while removing only newer preparation DDL.
 pub(crate) fn before_preparation(sql: &str) -> String {
     format!(
-        "DROP TABLE sparse_publication_checks; DROP TABLE sparse_publications; DROP TABLE sparse_publication_role; DROP TABLE sparse_preparation_objects; DROP TABLE sparse_preparations; DROP TABLE sparse_preparation_blobs; {sql}"
+        "DROP TABLE sparse_scoped_mode; DROP TABLE sparse_publication_checks; DROP TABLE sparse_publications; DROP TABLE sparse_publication_role; DROP TABLE sparse_preparation_objects; DROP TABLE sparse_preparations; DROP TABLE sparse_preparation_blobs; {sql}"
     )
 }
 
 /// Preserve schema32 views/preparation/staging during additive publication migration.
 pub(crate) fn before_publication(sql: &str) -> String {
     format!(
-        "DROP TABLE sparse_publication_checks; DROP TABLE sparse_publications; DROP TABLE sparse_publication_role; {sql}"
+        "DROP TABLE sparse_scoped_mode; DROP TABLE sparse_publication_checks; DROP TABLE sparse_publications; DROP TABLE sparse_publication_role; {sql}"
     )
 }

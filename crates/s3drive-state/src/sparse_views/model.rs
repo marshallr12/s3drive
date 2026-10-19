@@ -93,6 +93,10 @@ impl Binding {
         .map_err(|_| Failure::Invalid)?;
         Ok(())
     }
+    pub fn epoch(&self) -> Result<Id> {
+        self.validate()?;
+        hash(b"s3drive-source-base-epoch-v1\0", self)
+    }
     pub(super) fn same_scope(&self, other: &Self) -> Result<bool> {
         Ok(self.target()? == other.target()?
             && self.store == other.store

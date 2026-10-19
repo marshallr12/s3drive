@@ -92,6 +92,9 @@ fn load(db: &Connection, patches: bool) -> Result<Ledger> {
     for (i, table) in tables.iter().enumerate() {
         counts[i] = count(db, &format!("SELECT count(*) FROM {table}"))?;
     }
+    if patches {
+        scoped::enabled(db)?;
+    }
     let mut out = Ledger::default();
     if counts == [0; 5] {
         return Ok(out);

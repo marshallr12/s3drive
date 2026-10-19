@@ -284,3 +284,62 @@ async fn private_owner_races_ack_and_write_without_losing_data_and_reopens_same_
     .await
     .expect("bounded epoch worker race timed out");
 }
+
+#[test]
+fn scoped_ack_closes_epoch_and_retained_old_tokens_replay_without_rebasing_twice() {
+    use crate::sparse_views::{Options as SourceOptions, ScopedOperation};
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("scoped epochs 🦀");
+    let mut s = State::open_managed(&path).unwrap();
+    let f = fixture();
+    let r = first(&mut s, &f);
+    let r = commit(&mut s, r);
+    let p = r.input.plan;
+    vj(&mut s).enable_scoped().unwrap();
+    let token = ScopedOperation::new(&f.binding, [71; 32]).unwrap();
+    assert!(
+        j(&mut s)
+            .acknowledge([72; 32], p, SourceOptions::default())
+            .is_err()
+    );
+    let a = j(&mut s)
+        .acknowledge_scoped(token, p, SourceOptions::default())
+        .unwrap();
+    let clean = vj(&mut s).current_head(&f.binding).unwrap();
+    assert_eq!(a.acknowledgment().clean_view(), Some(clean.id()));
+    assert_ne!(clean.binding().epoch().unwrap(), token.epoch());
+    let old_token = ScopedOperation::new(&f.binding, [73; 32]).unwrap();
+    assert!(
+        vj(&mut s)
+            .write_scoped(old_token, clean.id(), 0, b"stale")
+            .is_err()
+    );
+    let new_token = ScopedOperation::new(clean.binding(), [73; 32]).unwrap();
+    let next = vj(&mut s)
+        .write_scoped(new_token, clean.id(), 0, b"current")
+        .unwrap();
+    assert_eq!(
+        j(&mut s)
+            .acknowledge_scoped(token, p, SourceOptions::default())
+            .unwrap(),
+        a
+    );
+    assert_eq!(vj(&mut s).current_head(&f.binding).unwrap(), next);
+    drop(s);
+    let mut s = State::open_managed(&path).unwrap();
+    assert_eq!(
+        j(&mut s)
+            .acknowledge_scoped(token, p, SourceOptions::default())
+            .unwrap(),
+        a
+    );
+    assert_eq!(
+        vj(&mut s)
+            .write_scoped(new_token, clean.id(), 0, b"current")
+            .unwrap(),
+        next
+    );
+    assert_eq!(vj(&mut s).current_head(&f.binding).unwrap(), next);
+}
+
+mod scoped_crash;

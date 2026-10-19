@@ -225,7 +225,15 @@ impl<'a> Journal<'a> {
         plan: Id,
         options: crate::sparse_views::Options,
     ) -> Result<SourceReceipt> {
-        settlement::acknowledge(self.state, operation, plan, options)
+        settlement::acknowledge(self.state, operation, None, plan, options)
+    }
+    pub fn acknowledge_scoped(
+        &mut self,
+        token: crate::sparse_views::ScopedOperation,
+        plan: Id,
+        options: crate::sparse_views::Options,
+    ) -> Result<SourceReceipt> {
+        settlement::acknowledge(self.state, token.id()?, Some(token), plan, options)
     }
     pub fn reserved(&mut self, plan: Id, receipt: ns::Receipt) -> Result<Record> {
         update(&mut self.state.connection, plan, true, |r| {
@@ -390,6 +398,16 @@ impl Client {
         options: crate::sparse_views::Options,
     ) -> Result<SourceReceipt> {
         self.call(move |j| j.acknowledge(operation, plan, options))
+            .await
+    }
+    pub async fn acknowledge_scoped(
+        &self,
+        token: crate::sparse_views::ScopedOperation,
+        plan: Id,
+        options: crate::sparse_views::Options,
+    ) -> Result<SourceReceipt> {
+        token.id()?;
+        self.call(move |j| j.acknowledge_scoped(token, plan, options))
             .await
     }
     pub async fn reserved(&self, plan: Id, receipt: ns::Receipt) -> Result<Record> {

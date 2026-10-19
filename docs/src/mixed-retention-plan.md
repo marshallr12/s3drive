@@ -1,6 +1,6 @@
 # Bounded local retention for managed chunks
 
-Research and design proposal,2026-10-19. **Not implemented or accepted.**
+Research and design proposal,2026-10-19. **Reclamation is not implemented; pin/guard prototypes have separate acceptance records.**
 This follows [clean epochs](mixed-clean-epochs.md) and
 [scoped source operations](scoped-source-operations.md). It is required before
 continuous mounted chunk writes can exceed the current retained-history quotas.
@@ -16,7 +16,7 @@ found these dependencies. Paths below are relative to their crate's `src/`.
 |---|---|---|
 | Source views and original requests | One chain is reconstructed from the current head; derived spans require their parents | Validated clean anchors and explicit permitted cut edges |
 | Original write blocks | Every historical write request contributes block references, even when later spans overwrite them | Retire the request and its required history, or preserve its blocks |
-| Open edited reads | `EditedFile` holds an immutable view and shared reader snapshot permit, but has no SQLite retention pin | Same-owner source pin shared by clones |
+| Open edited reads | Accepted `EditedFile` holds an immutable view and shared snapshot permit; isolated schema37 adds clone-sharing SQLite pins | Same-owner source pin shared by clones |
 | Preparations and object rows | Plans retain their source view and complete dependency/transfer proofs | Durable plan/recovery pin and explicit terminal retirement |
 | Physical staging and upload intents | Transfer rows map exact staging generations and physical receipts; unknown attempts may still recover | Exact terminal receipt and no remaining recovery/source dependency |
 | Root records and checks | Acknowledgment/rebase and publication lineage cross-check retained records | A validated compact anchor format and closed retry identities |
@@ -109,3 +109,12 @@ quotas; old-token replay after retirement; and retained Unicode/binary/empty rea
 Online writes must progress beyond the current history limits with bounded local
 storage. Offline exhaustion must return an explicit error while preserving dirty
 data. Complete separate Linux/Windows native and provider gates before activation.
+
+
+Status2026-10-19: the [guarded-reader component](managed-reader-guards.md) passed
+its scoped state/reader checks and is being combined with verified batching under
+a new full gate. It does not implement dirty-window admission reservations, clean
+anchors, retry retirement or reclamation. The [native integration source review](native-chunk-integration.md)
+also identifies the existing role exclusions between source views and mounted
+namespace/open journals; those guards must remain until a validated composition
+and recovery protocol replaces them.

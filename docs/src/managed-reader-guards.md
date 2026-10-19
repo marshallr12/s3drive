@@ -91,3 +91,33 @@ source/guard code remains the component-tested implementation. Verify the exact
 337-input merge, run the new lifetime SDK check and full workspace gate, then
 require this combined source's own native/platform/artifact cohort. Keep native
 chunk writes and GC disabled. A passing parent cohort cannot accept these changes.
+
+## Combined batching full local gate (2026-10-19)
+
+Isolated checkpointefb2ab4/schema37 passed the complete local gate at16:50:32Z
+with all337 frozen inputs unchanged. Publication24/168.58s, state481 (one
+diagnostic ignored)/249.64s, reader23 (one native-only ignored)/44.94s,37core,
+62S3, formatting/all-target Clippy/build,87Markdown links and80book chapters
+passed. Ordinary four test threads were used; no SDK admission semaphore or
+deadline increase was used. Both ordinary and private batch source reads retain
+the shared guard; known physical recovery keeps its separate metadata-only path.
+
+The [indexed local archive](evidence/managed-batched-local-20261019.tar.gz) contains
+348 verified members/5148220bytes: exact337 committed/working inputs, full gate
+logs/map/runner/result, and two independently hash/index-verified parent archives.
+SHA-256 `3927d8dda7400c685e17d7cb44c35f76acf5aee5c1c299c4fd75dccd224745d1`.
+[Dated evidence](evidence/managed-batched-20261019.json) records scope; full log SHA
+`a4ee7d335147c38bdeb4ecae0f79e4707d0cb9816ba10fd7010e92cd1906b20d`.
+The one-use local archiver is DONE and must not be rerun. Parent36 and this combined
+source's own native/platform/source/artifact gates remain required before promotion.
+No mounted chunk writes, source reclamation or physical reboot proof follows.
+
+
+Own combined source903ade67e21cd71bb7ab02716c098993d9f6e82f is published in
+[run39289349689](https://github.com/marshallr12/s3drive/actions/runs/39289349689),
+attempt1: book118185617231 succeeded; Linux118185616746 and Windows118185617331
+are running. GET-only observer1101033 tracks these jobs. Own acceptance tools
+are prepared, not executed. Besides the fourteen scoped cases, they require all
+thirteen pin cases, seven guard cases, pinned metadata-only recovery and the SDK
+lifetime case,481/476 state counts,24publication,23reader and exact337 inputs.
+Both parent36 and this source's own full acceptance remain required for promotion.

@@ -29,10 +29,11 @@ Use target-specific platform dependencies. SQLite state stays outside the mount.
 
 ## Accepted canonical implementation
 
-Main runtime includes accepted W5b1 clean epochs and upload authorization batching,
-schema35/all324 exact inputs. Latest accepted hosted source is
-2fc45fed5a15c1a24f0f9713ab7caca02569ec5b (CI39276521247 attempt1).
-Epoch prerequisite evidence follows; batch evidence is in the current phase below.
+Main runtime includes accepted epoch-scoped source operations with verified upload
+batching, schema36/all329 exact inputs. Latest accepted hosted source is
+44f0ee19077c7623465faf62834858821cd1ee47 (CI39286027359 attempt1).
+Its full local gate and own raw/source/artifact/native acceptance passed; details
+are in the scoped phase below. Earlier epoch prerequisites remain historical.
 Epoch prerequisite integration: 0ff32cf72f8dfc8006d4f599c6104255160f3c75.
 Epoch hosted source: a3574998138d0e4dfa2c62a28c2ada1e18099732.
 CI39263559455 attempt1: book118097200982, Linux118097201820 and Windows118097201387
@@ -47,7 +48,7 @@ write, Wasabi or physical desktop/reboot proofs.
 archive SHA9c46f7b89c352a5b3b97297c39c7fd5aca4980b4683d85bdc6254d07acbcb48b
 and hosted archive SHA2dbf5b3c542b57f7dff302cea67ccb210a38f4dcac08768b20539dd1fc37de9a.
 Completed one-use acceptance/archivers must NEVER be rerun. Current canonical
-publication proof: /tmp/s3drive-canonical-upload-auth-batch-publication.json. Ordinary
+publication proof: /tmp/s3drive-canonical-scoped-batched-publication.json. Ordinary
 later documentation commits do not change the accepted runtime.
 
 The accepted path includes authenticated manifest reads, immutable local patches,
@@ -70,12 +71,12 @@ their cause. Never equate portable unit tests with an actual mount or flush.
    Own source/API ZIP digests/independent typed21+14/project/all35 raw fields/types
    passed. Hosted104-member archive SHA
    d1bab01a5bf10a5c928f16ff70b0bc18f6718b8ac64af09b5e1e90e9fb34145f.
-   All324 current runtime inputs now match this accepted CI source exactly.
+   At that batch checkpoint, all324 inputs matched its tested source exactly.
    [Contract/evidence](docs/src/mixed-upload-authorization-batch.md).
    Local673-member archive SHA67df76b1e22be23d738cc3ec9225b1921ac2223eab589171a91a663bec857b19
    is DONE; never rerun its archiver. This acceptance does not promote schemas36/37.
 
-2. **Scoped operations** — schema36/all329 remains UNACCEPTED. Originala3028bf
+2. **Scoped operations** — combined source accepted, schema36/all329. Originala3028bf
    CI39267986023 succeeded, but its local gate failed. Repair worktree
    /home/marshall/src/worktrees/s3drive-scoped-source-operations-repair,
    branch codex/scoped-source-operations-repair, runtime170979e/head1ad9dc6.
@@ -92,14 +93,14 @@ their cause. Never equate portable unit tests with an actual mount or flush.
    format/Clippy/build/83MD/79chapters passed at normal four threads. Indexed348-
    member local archive SHAaa3ecd77ca9c1539ef612db05fb23d057bd1b92040eb123fdb1a81d5a4929143.
    One-use local archiver DONE, never rerun. No local Cargo remains from that run.
-   Own published source44f0ee19077c7623465faf62834858821cd1ee47; CI39286027359
-   attempt1 live: book118172159855 queued; Linux118172161091 and
-   Windows118172161013 in progress at the latest GET.
-   GET-only observer1040546/startticks143419257, tracked in
-   /tmp/s3drive-scoped-batched-hosted-watch-{running,result}.json. Prepared own
-   checker/raw comparator/archive NOT executed. Do not restart jobs on observation
-   errors or reuse old artifacts. Own full hosted/native/source acceptance required
-   before schema36 promotion. Source329 remains frozen.
+   Own accepted source44f0ee19077c7623465faf62834858821cd1ee47; CI39286027359
+   attempt1 all3 SUCCESS: book118172159855/Linux118172161091/Windows118172161013.
+   Observer1040546 CLOSED0/all_success. One-use checker/raw comparator/archives DONE;
+   never rerun. Own source/API ZIP digests/independent typed21+14/project/all35 raw
+   fields/types passed. Hosted104-member archive SHA
+   5da274104d631b59c0d951917f617d11d6b7c19d3bfd765a90f7b009196527bd.
+   All329 current runtime inputs now match this accepted source exactly. Source37
+   guard/batching work remains isolated and needs own full acceptance.
    [Original scoped contract](docs/src/scoped-source-operations.md).
 
 3. **Manual pin registry** — worktree
@@ -139,7 +140,7 @@ their cause. Never equate portable unit tests with an actual mount or flush.
    [Managed reader evidence](docs/src/managed-reader-guards.md). This is not its full
    workspace/platform acceptance. After batch/scoped parent integration, adapt the
    new batch private chunk-read path to the guard and require fresh full/platform
-   source acceptance. Main remains accepted schema35/all324.
+   source acceptance. Main is now accepted schema36/all329.
 
 6. **Managed-reader/batch integration** — isolated worktree
    /home/marshall/src/worktrees/s3drive-managed-reader-batched,
@@ -147,13 +148,21 @@ their cause. Never equate portable unit tests with an actual mount or flush.
    Five-path merge from guard component8b29461; four paths match scoped6115775
    exactly, and preparation keeps guard reads in ordinary/private batch paths.
    No managed composition .local.read bypass remains. SDK admission limiter removed.
-   Full gate1 runner1041992/child1041993 LIVE, startticks143447847/143447855,
-   started16:37:55Z. Frozen337 map/source:
-   /tmp/s3drive-managed-batched-candidate1-frozen.json and -source.tar.gz.
-   Inspect /tmp/s3drive-managed-batched-gate1-{running,result}.json and .log.
-   No runtime edits or second Cargo while live. Parent36 own CI and this source's
-   fresh full/platform acceptance are required before promotion. No native chunk
-   activation or GC. [Declared integration](docs/src/managed-reader-guards.md).
+   Full gate1 runner1041992/child1041993 CLOSED0 at16:50:32Z, all337 unchanged.
+   Publication24/168.58s,481state1ignored/23reader1nativeignored/37core/62S3 plus
+   format/Clippy/build/87MD/80chapters passed at normal four threads. Verified348-
+   member local archive SHA3927d8dda7400c685e17d7cb44c35f76acf5aee5c1c299c4fd75dccd224745d1.
+   One-use local archiver DONE, never rerun. No local Cargo remains from this run.
+   Own CI source903ade67e21cd71bb7ab02716c098993d9f6e82f, run39289349689 attempt1:
+   book118185617231 succeeded; Linux118185616746 and Windows118185617331 running.
+   GET-only observer1101033/startticks143551012 in
+   /tmp/s3drive-managed-batched-hosted-watch-{running,result}.json. Own checker/
+   comparator/archive prepared, NOT executed; full raw review required first.
+   Parent36 and own full acceptance required before promotion. Source337 frozen.
+   [Current evidence](docs/src/managed-reader-guards.md). Main is now accepted schema36/all329.
+   [Native boundary review](docs/src/native-chunk-integration.md) maps the actual
+   config/writer/state-role/origin/unlinked-root gaps; the new SVG was rendered and
+   visually inspected. It is a proposed bridge, not driver activation or GC.
 
 One local Cargo at a time. All worktrees share /home/marshall/src/s3drive/target.
 Inspect actual PID/startticks or terminal result, not only a lock/status file.

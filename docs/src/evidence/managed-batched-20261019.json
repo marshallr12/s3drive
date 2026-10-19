@@ -1,0 +1,93 @@
+{
+  "date": "2026-10-19",
+  "phase": "managed reader guards with verified upload batching",
+  "status": "complete local gate passed; parent and own hosted/platform/source/artifact acceptance required",
+  "schema": 37,
+  "source_checkpoint": "efb2ab4",
+  "runtime_inputs": 337,
+  "local_gate": {
+    "runner_pid": 1041992,
+    "runner_start_ticks": "143447847",
+    "child_pid": 1041993,
+    "child_start_ticks": "143447855",
+    "started": "2026-10-19T16:37:55.024912+00:00",
+    "command": [
+      "bash",
+      "scripts/gate.sh"
+    ],
+    "cwd": "/home/marshall/src/worktrees/s3drive-managed-reader-batched",
+    "runtime_inputs": 337,
+    "frozen_map": "/tmp/s3drive-managed-batched-candidate1-frozen.json",
+    "tty": false,
+    "rust_test_threads": 4,
+    "log": "/tmp/s3drive-managed-batched-gate1.log",
+    "exit_code": 0,
+    "finished": "2026-10-19T16:50:32.035552+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": [],
+    "sha256": "a4ee7d335147c38bdeb4ecae0f79e4707d0cb9816ba10fd7010e92cd1906b20d"
+  },
+  "local_archive": {
+    "scope": "complete local gate only; parent and own hosted/platform/source/native acceptance required",
+    "path": "evidence/managed-batched-local-20261019.tar.gz",
+    "sha256": "3927d8dda7400c685e17d7cb44c35f76acf5aee5c1c299c4fd75dccd224745d1",
+    "bytes": 5148220,
+    "members": 348,
+    "all_indexed_members_verified": true,
+    "runtime_inputs": 337,
+    "source_checkpoint": "efb2ab4",
+    "schema": 37,
+    "gate_exit_code": 0,
+    "gate_log_sha256": "a4ee7d335147c38bdeb4ecae0f79e4707d0cb9816ba10fd7010e92cd1906b20d",
+    "rust_test_threads": 4,
+    "reduced_sdk_admission": false,
+    "counts": {
+      "publication": {
+        "passed": 24,
+        "ignored": 0,
+        "seconds": 168.58
+      },
+      "state": {
+        "passed": 481,
+        "ignored": 1,
+        "seconds": 249.64
+      },
+      "reader": {
+        "passed": 23,
+        "ignored": 1,
+        "seconds": 44.94
+      },
+      "core": {
+        "passed": 37,
+        "ignored": 0,
+        "seconds": 0.04
+      },
+      "s3": {
+        "passed": 62,
+        "ignored": 0,
+        "seconds": 20.87
+      }
+    },
+    "parent_archives_independently_verified": 2
+  },
+  "parent": {
+    "source": "44f0ee19077c7623465faf62834858821cd1ee47",
+    "run_id": 39286027359,
+    "acceptance": "accepted after own full local/platform/source/artifact checks",
+    "hosted_archive_sha256": "5da274104d631b59c0d951917f617d11d6b7c19d3bfd765a90f7b009196527bd"
+  },
+  "own_hosted": {
+    "status": "in progress; book succeeded; Linux and Windows running",
+    "parent_or_prototype_artifact_reuse_permitted": false,
+    "source": "903ade67e21cd71bb7ab02716c098993d9f6e82f",
+    "run_id": 39289349689,
+    "attempt": 1,
+    "jobs": {
+      "book": 118185617231,
+      "linux": 118185616746,
+      "windows": 118185617331
+    }
+  },
+  "native_chunk_writes": false,
+  "reclamation": false
+}

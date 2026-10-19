@@ -52,6 +52,7 @@
 - [Transient source read pins](source-read-pins.md)
 - [Clone-sharing source read guards](source-read-guards.md)
 - [Managed reader retention](managed-reader-guards.md)
+- [Mounted chunk-write integration](native-chunk-integration.md)
 - [Bounded local retention plan](mixed-retention-plan.md)
 - [Epoch-scoped source operations](scoped-source-operations.md)
 - [Scoped operations with verified upload batching](scoped-batched-repair.md)

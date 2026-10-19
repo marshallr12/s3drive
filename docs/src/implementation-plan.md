@@ -3354,3 +3354,30 @@ batch path, use the shared ReadGuard. Full local gate1 started2026-10-19T16:37:5
 Both parent acceptance and this source's own full/platform/source acceptance are
 required before promotion. Source guards and scoped batching remain library work;
 mounted chunk writes and reclamation remain disabled.
+
+
+W6 source review2026-10-19: [mounted chunk-write integration](native-chunk-integration.md)
+records the observed config gate, whole-generation8MiB writer, source-vs-native
+journal role exclusions, manifest-only sparse origin and linked-only root guard.
+The rendered/inspected diagram includes the local Rust/SQLite/S3 client and shared
+coordinator/S3 service. This is a proposed plan, not native activation. A validated
+state-composition protocol, clean external adoption/retirement and complete
+create/write/flush/rename/delete/retained-handle driver acceptance remain required.
+
+
+Combined managed retention/batchingefb2ab4/schema37/all337 passed its full local
+gate2026-10-19T16:50:32Z:24publication/481state1ignored/23reader1nativeignored/
+37core/62S3, format/Clippy/build/87MD/80chapters, all337 unchanged. Indexed348-member
+local archive SHA3927d8dda7400c685e17d7cb44c35f76acf5aee5c1c299c4fd75dccd224745d1 verified.
+[Exact evidence](managed-reader-guards.md). Own published source903ade6 is in
+CI39289349689 attempt1; book passed, OS jobs running. Parent36 own Windows is
+finishing. Neither schema36 nor37 is promoted until its complete own acceptance.
+The native boundary review and SVG are proposals; mounted chunks/GC remain off.
+
+
+Scoped/batched source44f0ee1/schema36/all329 accepted2026-10-19: own CI39286027359
+attempt1 all3 success, full raw/source/API ZIP/independent typed21+14/project/all35
+raw fields/types checked,104-member hosted archive verified. [Exact evidence](scoped-batched-repair.md).
+Exactly25 runtime deltas integrated into main; all329 match the own tested source.
+The schema37 candidate903ade6 remains separate, local full gate passed and own
+platform CI running. No native chunk-write activation or reclamation follows.

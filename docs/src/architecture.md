@@ -50,6 +50,12 @@ Linux without systemd and account-owned Windows mounts.
 
 ![Existing direct-layout components: Rust adapters, S3 client, local SQLite and startup supervisors.](images/architecture.png)
 
+The [mounted chunk-write source review](native-chunk-integration.md) maps the
+remaining callback, SQLite-role, origin and retained-handle boundaries. Its diagram
+shows the proposed bridge beside the existing8MiB whole-generation writer. The
+current mounted backend deliberately does not enable chunk readers in a writable
+configuration; library publication tests do not remove that integration boundary.
+
 ## Crate ownership and process model
 
 `s3drive-authority` implements the shared Rust metadata service, launched by

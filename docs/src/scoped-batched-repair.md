@@ -56,3 +56,24 @@ are prepared (Python compiled, PowerShell parsed only), not executed. They requi
 all fourteen scoped state cases and the scoped SDK cycle,460/455 state counts,
 24publication, exact329 inputs and fresh own artifacts; prior accepted batch and
 unaccepted scoped-prototype artifacts are explicitly excluded. No promotion yet.
+
+## Own platform acceptance (2026-10-19)
+
+Exact source44f0ee19077c7623465faf62834858821cd1ee47 passed all three jobs in
+run39286027359 attempt1. Full raw/source/API ZIP digests/independent typed21+14/
+project checks and all35 raw fields/JSON types passed. All fourteen scoped state
+cases and the scoped SDK cycle passed, along with the complete inherited suite.
+The [indexed hosted archive](evidence/scoped-batched-hosted-20261019.tar.gz) has104
+verified members/396487bytes; SHA-256
+`5da274104d631b59c0d951917f617d11d6b7c19d3bfd765a90f7b009196527bd`.
+The one-use checker, comparator and archives are DONE; never rerun them.
+
+Linux460/Windows455 state cases (one ignored each),24publication,22reader (one
+native ignored),37core and62S3 passed. Actual legacy FUSE9/53.82s, WinFsp7/94.85s,
+manifest1.07s/2.64s and paired no-systemd23.54s/Windows77.64s passed. Linux/book
+imageUbuntu24.04 20261012.334.1; WindowsServer2025 windows-2025-vs2026 20261007.264.1.
+Three locked disposable profiles had dummy credentials removed; deletion was
+deferred to VM destruction. Two unused WinFsp delay-import groups/tooling notices
+and completed slow tests are retained. These are native regressions, not mounted
+chunk-write, provider or physical reboot/session acceptance. Schema37 guard work
+requires its own separate acceptance before promotion.

@@ -1,7 +1,7 @@
 {
   "date": "2026-10-19",
   "phase": "scoped source operations with verified upload batching",
-  "status": "complete local gate passed; own hosted/platform/source/artifact acceptance pending",
+  "status": "accepted: full local and own hosted/native/source/artifact gates passed",
   "schema": 36,
   "source_checkpoint": "6115775",
   "runtime_inputs": 329,
@@ -72,7 +72,7 @@
   },
   "reduced_sdk_admission": false,
   "own_hosted": {
-    "status": "queued",
+    "status": "accepted",
     "parent_or_prototype_artifact_reuse_permitted": false,
     "source": "44f0ee19077c7623465faf62834858821cd1ee47",
     "run_id": 39286027359,
@@ -81,6 +81,52 @@
       "book": 118172159855,
       "linux": 118172161091,
       "windows": 118172161013
+    },
+    "all_three_jobs_success": true,
+    "archive": {
+      "path": "evidence/scoped-batched-hosted-20261019.tar.gz",
+      "sha256": "5da274104d631b59c0d951917f617d11d6b7c19d3bfd765a90f7b009196527bd",
+      "bytes": 396487,
+      "members": 104,
+      "all_indexed_members_verified": true,
+      "source": "44f0ee19077c7623465faf62834858821cd1ee47",
+      "run_id": 39286027359,
+      "run_attempt": 1,
+      "independent_typed_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "all_raw_fields_and_types_equal": true
+    },
+    "disposition_artifact_id": 12205555340,
+    "replacement_artifact_id": 12202644515,
+    "platform_results": {
+      "linux_state_passed": 460,
+      "windows_state_passed": 455,
+      "state_ignored_each": 1,
+      "publication_passed_each": 24,
+      "fuse": {
+        "passed": 9,
+        "seconds": 53.82
+      },
+      "winfsp": {
+        "passed": 7,
+        "seconds": 94.85
+      },
+      "manifest_seconds": {
+        "linux": 1.07,
+        "windows": 2.64
+      },
+      "paired_startup_seconds": {
+        "linux_no_systemd": 23.54,
+        "windows": 77.64
+      },
+      "linux_book_image": "Ubuntu24.04 20261012.334.1",
+      "windows_image": "WindowsServer2025 windows-2025-vs2026 20261007.264.1",
+      "locked_disposable_profiles": 3,
+      "dummy_credentials_removed": true,
+      "profile_deletion": "deferred to VM destruction",
+      "unused_winfsp_delay_import_groups": 2
     }
   },
   "unimplemented": [

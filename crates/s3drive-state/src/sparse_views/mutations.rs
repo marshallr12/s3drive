@@ -106,7 +106,27 @@ impl<'a> Journal<'a> {
         tx.commit()?;
         Ok(Self { state, options })
     }
+    pub fn enable_scoped(&mut self) -> Result<()> {
+        scoped::enable(self.state)
+    }
     pub fn begin(&mut self, operation: Id, binding: Binding, size: u64) -> Result<View> {
+        self.begin_inner(operation, None, binding, size)
+    }
+    pub fn begin_scoped(
+        &mut self,
+        token: ScopedOperation,
+        binding: Binding,
+        size: u64,
+    ) -> Result<View> {
+        self.begin_inner(token.id()?, Some(token), binding, size)
+    }
+    fn begin_inner(
+        &mut self,
+        operation: Id,
+        scope: Option<ScopedOperation>,
+        binding: Binding,
+        size: u64,
+    ) -> Result<View> {
         let record = Record::new(
             operation,
             Request {
@@ -123,6 +143,7 @@ impl<'a> Journal<'a> {
         isolation(&tx)?;
         let before = inspect(&tx)?;
         if let Some(old) = before.operation(operation) {
+            scoped::known(&tx, scope, operation, &old.request.binding)?;
             if old.request != record.request {
                 return Err(Failure::Conflict.into());
             }
@@ -131,6 +152,7 @@ impl<'a> Journal<'a> {
             return Ok(result);
         }
         preparation::publication::settlement::guard_operation(&tx, operation)?;
+        scoped::admit(&tx, scope, operation, &record.request.binding)?;
         let target = record.request.binding.target()?;
         if before.files.contains_key(&target) {
             return Err(Failure::Conflict.into());
@@ -189,6 +211,26 @@ impl<'a> Journal<'a> {
         bytes: &[u8],
         hook: impl FnMut(Boundary) -> Result<()>,
     ) -> Result<View> {
+        self.write_scoped_inner(operation, None, parent, offset, bytes, hook)
+    }
+    pub fn write_scoped(
+        &mut self,
+        token: ScopedOperation,
+        parent: Id,
+        offset: u64,
+        bytes: &[u8],
+    ) -> Result<View> {
+        self.write_scoped_inner(token.id()?, Some(token), parent, offset, bytes, |_| Ok(()))
+    }
+    fn write_scoped_inner(
+        &mut self,
+        operation: Id,
+        scope: Option<ScopedOperation>,
+        parent: Id,
+        offset: u64,
+        bytes: &[u8],
+        hook: impl FnMut(Boundary) -> Result<()>,
+    ) -> Result<View> {
         write_bounds(offset, bytes)?;
         let mut data = BTreeMap::new();
         let mut blocks = Vec::new();
@@ -206,6 +248,7 @@ impl<'a> Journal<'a> {
         }
         self.change(
             operation,
+            scope,
             Change::Write {
                 parent,
                 offset,
@@ -220,6 +263,18 @@ impl<'a> Journal<'a> {
         resize_bounds(size)?;
         self.change(
             operation,
+            None,
+            Change::Resize { parent },
+            Some(size),
+            BTreeMap::new(),
+            |_| Ok(()),
+        )
+    }
+    pub fn resize_scoped(&mut self, token: ScopedOperation, parent: Id, size: u64) -> Result<View> {
+        resize_bounds(size)?;
+        self.change(
+            token.id()?,
+            Some(token),
             Change::Resize { parent },
             Some(size),
             BTreeMap::new(),
@@ -229,6 +284,7 @@ impl<'a> Journal<'a> {
     fn change(
         &mut self,
         operation: Id,
+        scope: Option<ScopedOperation>,
         change: Change,
         size: Option<u64>,
         data: BTreeMap<Id, Vec<u8>>,
@@ -245,6 +301,7 @@ impl<'a> Journal<'a> {
         let before = inspect(&tx)?;
         // Known operations are compared before head admission or new quotas.
         if let Some(old) = before.operation(operation) {
+            scoped::known(&tx, scope, operation, &old.request.binding)?;
             if old.request.edit.as_ref() != Some(&change)
                 || size.is_some_and(|n| old.request.size != n)
                 || data
@@ -259,6 +316,7 @@ impl<'a> Journal<'a> {
         }
         preparation::publication::settlement::guard_operation(&tx, operation)?;
         let parent = before.record(change.parent())?;
+        scoped::admit(&tx, scope, operation, &parent.request.binding)?;
         let target = parent.request.binding.target()?;
         if before.files.get(&target).ok_or(Failure::Corrupt)?.head != parent.id {
             return Err(Failure::Conflict.into());
@@ -448,6 +506,54 @@ impl Client {
         let options = self.options;
         self.owner
             .call(move |s| Journal::new(&mut s.state, options)?.head(&binding))
+            .await
+    }
+    pub async fn enable_scoped(&self) -> Result<()> {
+        let options = self.options;
+        self.owner
+            .call(move |s| Journal::new(&mut s.state, options)?.enable_scoped())
+            .await
+    }
+    pub async fn begin_scoped(
+        &self,
+        token: ScopedOperation,
+        binding: Binding,
+        size: u64,
+    ) -> Result<View> {
+        binding.validate()?;
+        token.id()?;
+        let options = self.options;
+        self.owner
+            .call(move |s| Journal::new(&mut s.state, options)?.begin_scoped(token, binding, size))
+            .await
+    }
+    pub async fn write_scoped(
+        &self,
+        token: ScopedOperation,
+        parent: Id,
+        offset: u64,
+        bytes: Arc<[u8]>,
+    ) -> Result<View> {
+        write_bounds(offset, &bytes)?;
+        token.id()?;
+        let options = self.options;
+        self.owner
+            .call(move |s| {
+                Journal::new(&mut s.state, options)?.write_scoped(token, parent, offset, &bytes)
+            })
+            .await
+    }
+    pub async fn resize_scoped(
+        &self,
+        token: ScopedOperation,
+        parent: Id,
+        size: u64,
+    ) -> Result<View> {
+        resize_bounds(size)?;
+        token.id()?;
+        let options = self.options;
+        self.owner
+            .call(move |s| Journal::new(&mut s.state, options)?.resize_scoped(token, parent, size))
             .await
     }
     pub async fn current_head(&self, binding: Binding) -> Result<View> {

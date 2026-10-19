@@ -230,3 +230,5 @@ fn narrowed_file_quota_preserves_old_views_and_exact_replay() {
 mod integrity;
 mod patches;
 mod recovery;
+
+mod scoped;

@@ -215,6 +215,7 @@ pub(in crate::sparse_views) fn guard_operation(db: &Connection, op: Id) -> Resul
 pub(super) fn acknowledge(
     state: &mut State,
     operation: Id,
+    scope: Option<views::ScopedOperation>,
     plan: Id,
     options: views::Options,
 ) -> Result<SourceReceipt> {
@@ -232,6 +233,9 @@ pub(super) fn acknowledge(
         if a.operation != operation {
             return Err(Failure::Conflict.into());
         }
+        let source = views::ledger::inspect(&tx)?;
+        let observed = source.record(a.observed_head)?;
+        views::scoped::known(&tx, scope, operation, &observed.request.binding)?;
         return SourceReceipt::from_record(r.clone());
     }
     r.receipt.as_ref().ok_or(Failure::Incomplete)?;
@@ -243,6 +247,7 @@ pub(super) fn acknowledge(
     let published = source.record(r.input.view)?;
     let target = r.input.binding.target()?;
     let file = source.files.get(&target).ok_or(Failure::Corrupt)?;
+    views::scoped::admit(&tx, scope, operation, &file.binding)?;
     if !descends(&source, published.id, file.head)? {
         return Err(Failure::Conflict.into());
     }

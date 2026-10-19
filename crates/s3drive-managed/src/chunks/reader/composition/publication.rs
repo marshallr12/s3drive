@@ -291,6 +291,23 @@ impl MixedPublisher {
                 .await?,
         ))
     }
+    pub async fn acknowledge_scoped(
+        &self,
+        token: s3drive_state::sparse_views::ScopedOperation,
+        options: s3drive_state::sparse_views::Options,
+    ) -> Result<MixedSourceReceipt> {
+        let _slot = self
+            .0
+            .slots
+            .try_acquire()
+            .map_err(|_| MixedRootFailure::Busy)?;
+        Ok(MixedSourceReceipt(
+            self.0
+                .client
+                .acknowledge_scoped(token, self.plan(), options)
+                .await?,
+        ))
+    }
     pub fn plan(&self) -> Id {
         self.0.preparation.id
     }
