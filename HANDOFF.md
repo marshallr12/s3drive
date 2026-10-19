@@ -60,6 +60,12 @@ their cause. Never equate portable unit tests with an actual mount or flush.
 
 ## Active isolated work and exact next actions
 
+Read-only source review added [external clean adoption proposal](docs/src/external-clean-adoption.md).
+No implementation/API or migration is declared yet. Clean-head CAS, pending-work
+correlation, no-change/retry semantics and remote-authentication boundaries need
+a concrete phase contract before code. Old readers must retain their exact view.
+
+
 1. **Upload authorization batch** — worktree
    /home/marshall/src/worktrees/s3drive-mixed-upload-auth-batch,
    branch codex/mixed-upload-auth-batch. Runtime d4a46c5; published CI source

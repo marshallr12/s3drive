@@ -3381,3 +3381,12 @@ raw fields/types checked,104-member hosted archive verified. [Exact evidence](sc
 Exactly25 runtime deltas integrated into main; all329 match the own tested source.
 The schema37 candidate903ade6 remains separate, local full gate passed and own
 platform CI running. No native chunk-write activation or reclamation follows.
+
+
+### External clean observation source review (2026-10-19)
+
+[The proposal](external-clean-adoption.md) separates fresh authenticated remote
+observation from acknowledgment of our own publication. It calls for clean-head
+CAS, explicit unresolved-work refusal, retained old readers and exact retry.
+Record format, terminal-work predicate and no-change semantics remain open; no
+adoption code or native write activation is claimed.
