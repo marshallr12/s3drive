@@ -1,7 +1,7 @@
 {
   "date": "2026-10-19",
   "phase": "W4b2 mixed-root publication",
-  "status": "W4b2 full local gate passed; own Linux/Windows/book/native/source acceptance pending",
+  "status": "W4b2 full local and own Linux/Windows/book/native/source cohort accepted; no clean/native chunk writes",
   "schema": 33,
   "branch": "codex/mixed-root-journal",
   "accepted_parent": "95f72cc",
@@ -243,5 +243,35 @@
       "started": "2026-10-19T12:04:22.397441+00:00"
     },
     "own_one_use_acceptance": "scripts prepared and syntax checked, NOT executed"
+  },
+  "hosted": {
+    "source": "2d9e21369c587f84cd20b9a11c85e7d822a4a957",
+    "run_id": 39249045883,
+    "attempt": 1,
+    "jobs": {
+      "book": 118048015714,
+      "linux": 118048016109,
+      "windows": 118048016468
+    },
+    "all_three": "success",
+    "all_runtime_inputs": 317,
+    "exact_source_verified": true,
+    "independent_typed": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true,
+    "own_artifacts": {
+      "replacement": 12184468560,
+      "disposition": 12185592238
+    },
+    "parent_artifact_reused": false,
+    "archive": {
+      "path": "evidence/mixed-roots-hosted-20261019.tar.gz",
+      "members": 97,
+      "bytes": 371895,
+      "sha256": "d09d4d8200ad89c9b9919f7e00f8b1fbb7627603e1c713b00be825b5d7d9bbe2"
+    },
+    "scope": "library historical root commitment and restricted recovery; native legacy regression, not native chunk writes/provider/physical reboot acceptance"
   }
 }

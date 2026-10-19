@@ -1,15 +1,15 @@
 # Publishing an edited manifest root
 
-Design review: 2026-10-19. **Root publication remains proposed.**
-The W4b1 offline data-check prerequisite is accepted below; root publication
-is being implemented separately as W4b2.
+Design review and acceptance: 2026-10-19. **W4b1 verification and W4b2 library
+publication/recovery are accepted.** Native chunk writes and clean flushes remain
+separate gates. Earlier proposal sections document the reviewed contract.
 The user selected immutable chunks and authenticated manifests for large managed
 files (decision D041). [Mixed dependency uploads](mixed-uploads.md) implements
 physical object transfer separately. This chapter specifies the missing transition
 from uploaded objects to a visible shared file version. It does not activate
 mounted chunk writes or acknowledge a filesystem flush.
 
-![Proposed exact-view publication and recovery](images/mixed-root-publication.svg)
+![Verified library publication and recovery; clean settlement remains later](images/mixed-root-publication.svg)
 
 ## What is already established
 
@@ -307,3 +307,33 @@ Exact final source `2d9e21369c587f84cd20b9a11c85e7d822a4a957` is published for
 Acceptance remains pending. Parent/source/native evidence cannot substitute for
 this schema33 runtime. No mounted chunk writes or local clean settlement follow
 from the locally verified root commit.
+
+
+## W4b2 own hosted acceptance
+
+Exact source `2d9e21369c587f84cd20b9a11c85e7d822a4a957`, schema33/all317
+unchanged inputs, passed [its own cohort](https://github.com/marshallr12/s3drive/actions/runs/39249045883)
+at attempt1. All three jobs succeeded. Complete raw review, source matching,
+own artifact API ZIP SHA-256, independent typed21+14/project checks and comparison
+of all35 raw records' fields and JSON types passed. Replacement artifact12184468560
+and disposition12185592238 belong to this exact source; no parent artifact was reused.
+
+Linux429state/Windows424state (one ignored each),37core,22reader (one native
+ignored),62S3 and21publication tests passed. All12 new state cases and3 SDK cases
+passed. Real legacy FUSE9/75.11s, WinFsp7/76.57s, native manifest1.65s/1.99s and
+paired no-systemd24.14s/Windows managed67.19s passed. These are regression gates;
+they do not establish mounted chunk writes, clean settlement, Wasabi behavior or
+physical MX/Windows reboot/sign-in/SSH acceptance. Actual images were Ubuntu24.04
+20261012.334.1 and Windows Server2025 windows-2025-vs2026 20261007.264.1.
+
+Three disposable Windows profiles remained OS-locked; dummy credentials were
+removed and final deletion was deferred to VM destruction under the documented
+fixture policy. Two unused WinFsp delay-import warning groups, tooling notices
+and all eventually completed slow tests remain in evidence without suppression.
+
+The [indexed own hosted archive](evidence/mixed-roots-hosted-20261019.tar.gz)
+contains97 verified members,371895bytes, SHA-256
+`d09d4d8200ad89c9b9919f7e00f8b1fbb7627603e1c713b00be825b5d7d9bbe2`.
+[Dated evidence](evidence/mixed-roots-20261019.json) records source and scope.
+W5 clean epochs/retention, explicit legacy/metadata-empty origins and W6 native
+chunk writes remain required for the complete drive goal.

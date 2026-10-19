@@ -3174,3 +3174,14 @@ corrected final sources are in the675-member local archive (SHA
 756f32f0ecc4694ff44c2a9282e013c5c4c4674258fc4826e8aec53a0c07a2e9).
 [Root evidence](evidence/mixed-roots-20261019.json). Own hosted/native/source
 acceptance remains required. W5/origins/W6 are not replaced by root publication.
+
+
+W4b2 own acceptance completed2026-10-19: exact2d9e213/schema33/all317,
+run39249045883 attempt1 all3 successful. Complete raw/source/own API ZIP SHA,
+independent typed21+14/project/all35 raw field/type comparison passed;97-member
+hosted archive SHA d09d4d8200ad89c9b9919f7e00f8b1fbb7627603e1c713b00be825b5d7d9bbe2.
+Linux429/Windows424state,21publication, real legacy FUSE9/WinFsp7 and native
+manifest/paired startup passed. [Exact evidence](mixed-root-publication.md).
+W5a successor in codex/mixed-publication-lineage has schema34 repeated-local-root
+lineage; its full local gate2 is pending after an isolated test-dispatch factory
+fix. W5b clean epochs and bounded retirement, origins and W6 remain.
