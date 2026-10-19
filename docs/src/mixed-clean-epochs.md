@@ -1,6 +1,6 @@
 # Acknowledgment and clean base epochs
 
-Declared implementation contract, 2026-10-19. **Complete local gate passed; own hosted acceptance pending.**
+Declared implementation contract, 2026-10-19. **Local and own hosted/native/source acceptance passed.**
 W5a permits consecutive publications from one frozen source. W5b1 must now make
 an exactly published head the next source base without rewriting old views.
 No payload reclamation or native activation is part of this slice.
@@ -125,8 +125,32 @@ Own Linux/Windows/book/native/source acceptance is still required. Local success
 is not mounted chunk-write, provider or physical session/reboot acceptance.
 
 
-Exact source `a3574998138d0e4dfa2c62a28c2ada1e18099732` is published for
-[its own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39263559455).
-Acceptance remains pending. Parent source/native artifacts cannot substitute for
-this schema35 runtime. Main remains accepted W5a/schema34; no native chunk writes,
-reclamation or provider/physical reboot behavior is activated by publication.
+## Own hosted acceptance (2026-10-19)
+
+Exact source `a3574998138d0e4dfa2c62a28c2ada1e18099732` passed
+[its own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39263559455),
+attempt1, all three jobs. Linux446/Windows441 state tests (one ignored each),
+37core,22reader (one native ignored),62S3 and23publication passed, including all12
+new acknowledgment cases and11 actual epoch-kill boundaries. Actual legacy
+FUSE9/74.58s, WinFsp7/92.63s, manifest-remount1.65s/2.79s and paired
+no-systemd24.21s/Windows managed startup80.60s passed. These native regressions
+ran on Ubuntu24.04 image20261012.334.1 and Windows Server2025 image20261007.264.1.
+
+Complete raw review, exact324 working/committed source hashes, own API ZIP SHA,
+independent typed21 replacement+14 disposition records, project checks and all35
+raw records' fields/JSON types passed. Own artifacts12193040182/12192258972 were
+used; parent artifacts were refused. The [indexed hosted archive](evidence/mixed-epochs-hosted-20261019.tar.gz)
+contains104 verified members/392261bytes, SHA-256
+`2dbf5b3c542b57f7dff302cea67ccb210a38f4dcac08768b20539dd1fc37de9a`.
+
+All long-running tests completed. Three disposable Windows fixture profiles stayed
+locked: dummy credentials were removed; final profile deletion was deferred to VM
+destruction. Two unused WinFsp delay-import warning groups and action/toolchain
+notices are retained. Ordinary native-test ignores were exercised by separate
+native legs; the diagnostic scaling study remains ignored. The checker, raw
+comparison and archive are complete one-use operations and must not be rerun.
+
+This accepts local clean epochs; it does not activate native chunk writes or
+reclamation, nor establish Wasabi or physical workstation reboot/sign-in/SSH
+acceptance. W5b2/3, fresh authoritative external-base adoption, explicit origins
+and W6 remain. Goal ACTIVE/progress.
