@@ -186,3 +186,8 @@ See [dated verifier evidence](evidence/mixed-semantics-20261019.json) and the
 [local exact-source archive](evidence/mixed-semantics-local-20261019.tar.gz).
 This verifies the W4b1 local slice; W4b2 publication/recovery and later mounted
 acceptance remain required.
+
+
+Exact source `5112fd25452d0a262ed380c688e45b39d28c4370` is published for its
+[own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39239546495).
+Acceptance is pending. Parent W4a artifacts cannot substitute for this source.

@@ -81,5 +81,29 @@
     "local clean settlement or reclamation",
     "native chunk writes",
     "Wasabi or physical reboot/session acceptance"
-  ]
+  ],
+  "publication": {
+    "source": "5112fd25452d0a262ed380c688e45b39d28c4370",
+    "runtime_inputs": 306,
+    "own_run": 39239546495,
+    "attempt": 1,
+    "jobs": {
+      "linux": 118016754543,
+      "windows": 118016754819,
+      "book": 118016754945
+    },
+    "status": "all3 in progress; acceptance pending",
+    "observer": {
+      "source": "5112fd25452d0a262ed380c688e45b39d28c4370",
+      "run_id": 39239546495,
+      "run_attempt": 1,
+      "runner_pid": 326311,
+      "runner_start_ticks": "141328871",
+      "child_pid": 326313,
+      "child_start_ticks": "141328878",
+      "log": "/tmp/s3drive-mixed-semantics-hosted-watch.log",
+      "started": "2026-10-19T10:44:45.254543+00:00"
+    },
+    "own_one_use_acceptance_scripts": "prepared and syntax checked, NOT executed"
+  }
 }

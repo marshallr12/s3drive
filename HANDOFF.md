@@ -55,6 +55,19 @@ at docs/src/evidence/mixed-semantics-20261019.json preserves failures and scope.
 Own hosted/native/source acceptance is next; keep all306 runtime inputs frozen.
 Do not promote this slice merely from parent/native or portable results.
 
+Published exact own source5112fd25452d0a262ed380c688e45b39d28c4370.
+Own39239546495 attempt1 in progress: Linux118016754543/Windows118016754819/
+book118016754945. Owned observer326311/child326313 confirmed live with matching
+start ticks; metadata /tmp/s3drive-mixed-semantics-hosted-watch-running.json.
+Observer log/result /tmp/s3drive-mixed-semantics-hosted-watch{.log,-result.json}.
+Get API terminal state before acceptance; observation timeout never authorizes
+restart. Four own one-use checker/oracle/raw-comparer/archive scripts prepared
+under /tmp/s3drive-{check-mixed-semantics-hosted.py,mixed-semantics-hosted-*},
+NOT executed. Own artifacts must not reuse parent12179067044/12179218793.
+After all3 terminal success: download/review full raw logs (21-record replacement
+block before ok), strict source/API ZIP SHA/typed21+14/project/all35 raw-field/type
+checks, one-use archive. Keep all306 working and committed inputs frozen.
+
 Next W4b2 must persist complete semantic coverage, exact ReserveManifest/Publish
 requests and narrow metadata-only recovery; normal State opening remains strict.
 No S3 capability or fresh-work admission in saved-request recovery. W5 exact-view
