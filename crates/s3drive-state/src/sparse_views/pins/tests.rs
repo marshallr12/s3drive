@@ -163,7 +163,7 @@ fn schema36_migration_preserves_literal_source_bytes_and_current_missing_ddl_fai
     let path = temp.path().join("migration");
     let (s, v) = open(&path);
     let before = rows(&s);
-    s.connection.execute_batch("DROP TABLE source_read_pins; DROP TABLE source_read_pin_session; PRAGMA user_version=36").unwrap();
+    s.connection.execute_batch("DROP TABLE manifest_creations; DROP TABLE manifest_creation_role; DROP TABLE source_read_pins; DROP TABLE source_read_pin_session; PRAGMA user_version=36").unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
     assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);

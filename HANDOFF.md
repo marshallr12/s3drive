@@ -29,30 +29,30 @@ Use target-specific platform dependencies. SQLite state stays outside the mount.
 
 ## Accepted canonical implementation
 
-Main runtime includes the accepted canonical empty-manifest codec and atomic
-metadata creation operation, schema39/all349 exact inputs. Own tested source
-29eb23782d7b3e0484c4ae8200fb419ecfa50279, CI39304491982 attempt1:
-book118237889657/Linux118237890146/Windows118237890166 all succeeded. Complete
-local gate passed18:51:46Z unchanged. Complete raw/source/API ZIP, independent
-typed21+14/project/all35 fields and JSON types passed. Exactly18 runtime deltas
-promoted from accepted parent12a2f2a/schema38/all342; parent archives retained.
+Main runtime includes the accepted durable local empty-manifest creation journal,
+schema40/all354 exact inputs. Own tested sourcebb17161ecd60d31b34dfc90b341b5ea4d3d6d899,
+CI39313836156 attempt1: book118270052958/Linux118270053086/Windows118270053014
+all succeeded. Complete local gate passed19:57:58Z unchanged. Full raw/source/
+API ZIP, independent typed21+14/project/all35 fields and JSON types passed.
+Exactly19 runtime deltas promoted from accepted parent29eb237/schema39/all349.
 
-[Empty-manifest acceptance](docs/src/atomic-empty-manifest-create.md): indexed381-
-member local archive SHAcc8f21b1d0ea061e172280ebf0be6d024f7ef878f1e30a972480d6dd79625f7a,
-114-member hosted archive SHA7b1c9ee692ff503de6075857f0ac677a011516b6ac6458189adce7b6047dbfa2,
-and13-member first failed-cohort archive SHA4f3c2953358ffa2050b885351ae8486b3e8b87c4b0c5721d5566789d1f052105.
-One-use local archiver20230, failed archive45994, raw reviewer/checker75702 and
-comparator/hosted archive87356 DONE; NEVER rerun. Observer1306049 CLOSED0 at19:10:54Z.
-Canonical publication proof: /tmp/s3drive-canonical-empty-create-publication.json.
+[Creation-intent acceptance](docs/src/empty-manifest-publisher.md): indexed403-member
+local archive SHAa66a26b0e73fa50afe0267e13ca8f7669cd9a2c5a19ec37cc15a9bd8a42e2d09,
+119-member hosted archive SHA5aa41539617cd261118f87668dcb75a0679c601331e3180fcc60204970cd53bf,
+13-member failed first archive SHA36ca0c7555201edc2cff0949e2c81337eafe9ca19775b2702e0dcf9ac48cec83.
+One-use local archiver63176, failed archiver99420, raw reviewer/checker52968 and
+comparator/hosted archiver5863 DONE; NEVER rerun. Observer1442770 CLOSED0 at20:13:21Z.
+Canonical publication proof: /tmp/s3drive-canonical-empty-intent-publication.json.
 Ordinary later documentation commits do not change accepted runtime.
 
-Actual native FUSE9/WinFsp7, manifest ranges/remount and paired no-systemd/Windows
-startup passed. Images Ubuntu24.04 20261018.339.1; WindowsServer2025
-windows-2025-vs2026 20261007.264.1. These are existing native regressions, not native
-chunk creation/write, Wasabi mutation or physical desktop/reboot proofs. Three
-locked disposable profiles had dummy credentials removed; final profile deletion
-deferred to hosted VM destruction. Client authenticated root-upload/create remains
-next; authority proof fields alone do not establish provider I/O.
+Actual existing native regressions passed FUSE9/WinFsp7, manifest remount and
+paired no-systemd/Windows startup. Images Ubuntu24.04 test20261018.339.1
+(book20261012.334.1), WindowsServer2025 windows-2025-vs2026 20261007.264.1.
+Three locked disposable profiles had dummy credentials removed; final deletion
+deferred to VM destruction. These are existing native regressions, not native chunk
+creation/write, real Wasabi mutations or physical desktop/reboot acceptance. The
+new journal tests use modeled physical receipts; no S3 creation facade is enabled.
+Earlier Windows profile-cleanup failure primary cause remains unverified.
 
 The accepted path includes authenticated manifest reads, immutable local patches,
 mixed plans/dependency uploads, exact root publication/recovery, local lineage and
@@ -137,7 +137,8 @@ Own CI39304491982 attempt1 source29eb237 all3 succeeded; complete raw/source/
 API ZIP/independent typed/project/all35 fields/types passed. Own artifacts:
 replacement12213307038/disposition12215345023. Indexed114-member hosted archive
 SHA7b1c9ee692ff503de6075857f0ac677a011516b6ac6458189adce7b6047dbfa2.
-All one-use acceptance tools DONE; never rerun. Main now matches accepted349.
+All one-use acceptance tools DONE; never rerun. That checkpoint matched349;
+current main is the accepted354 journal phase.
 [Candidate contract and diagram](docs/src/atomic-empty-manifest-create.md).
 No S3 upload or native creation enabled. Authenticated publisher remains next.
 
@@ -192,18 +193,18 @@ Publication24/158.91s,state520+1ignored/252.87s,reader26+1nativeignored/67.87s,
 23660725bytes, includes exact354, focused/failed contexts and independently indexed
 parent349 local+hosted and failed-first-cohort archives. One-use archiver63176 DONE,
 never rerun. No owned local Cargo remains from gate2; verify before next build.
-/tmp/s3drive-empty-intent-{gate2,candidate2}-*. Main remains accepted349.
-Own CI39313836156 attempt1: book118270052958/Linux118270053086 succeeded;
-Windows118270053014 running. GET-only observer1442770/start144594863, status
-/tmp/s3drive-empty-intent2-hosted-watch-{running,result}.json. New source-specific
-raw reviewer, checker /tmp/s3drive-check-empty-intent2-hosted.py, comparator,
-PowerShell oracle and hosted archiver prepared, Python compiled/PS parsed, not executed. Local archiver
-63176 DONE, never rerun. Prefix /tmp/s3drive-empty-intent2-*. Require own complete raw
-review before marker/checker; expect520Linux/515Windows state (one diagnostic
-ignored), all14 creation cases plus new snapshot isolation control and inherited
-native gates. Failed-first candidate artifacts count0. Parent39 artifacts
-12213307038/12215345023 remain forbidden reuse. Complete own book/Linux raw logs retained; own Windows raw not yet available. [Contract](docs/src/empty-manifest-publisher.md).
-After acceptance: real SDK/authority creation facade, restricted metadata recovery,
+/tmp/s3drive-empty-intent-{gate2,candidate2}-*. Main now matches accepted354.
+Own CI39313836156 attempt1 all3 succeeded. Complete raw/source/API ZIP and
+independent typed/project/all35 fields/types passed. Own replacement12215769525/
+disposition12218526631 artifacts;119-member hosted archive
+SHA5aa41539617cd261118f87668dcb75a0679c601331e3180fcc60204970cd53bf. All one-use
+acceptance tools DONE; never rerun. Main now matches accepted354 exactly.
+[Contract](docs/src/empty-manifest-publisher.md).
+Next: real SDK/authority creation facade and restricted metadata-only recovery.
+Do not substitute fake physical proofs, relax legacy role isolation, or increase
+the native whole-generation byte limit. Native typed source/namespace/open
+composition and real mounted chunk callbacks remain required.
+Subsequent work: real SDK/authority creation facade, restricted metadata recovery,
 typed source/namespace/open composition and native callbacks. Do not widen legacy
 namespace roles or enable native writes prematurely.
 

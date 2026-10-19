@@ -14,6 +14,7 @@ mod directory_windows;
 pub mod journal;
 pub mod logical;
 pub mod managed;
+pub mod manifest_creation;
 pub mod multipart;
 pub mod namespace;
 pub mod namespace_client;
@@ -25,7 +26,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 39;
+pub const SCHEMA_VERSION: i32 = 40;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
@@ -308,6 +309,9 @@ impl State {
             if version <= 36 {
                 tx.execute_batch(include_str!("../migrations/037.sql"))?;
             }
+            if version < 40 {
+                tx.execute_batch(include_str!("../migrations/040.sql"))?;
+            }
             // Version38 admits distinct format4 external-clean observation intent.
             // No DDL or old BLOB changes. Pre-marker validation rejects format4
             // records in earlier schemas, and older binaries refuse version38.
@@ -338,6 +342,8 @@ impl State {
                 namespace::publication::empty::require_pre39(&tx)?;
             }
             namespace_client::check_schema(&tx)?;
+            manifest_creation::check_schema(&tx)?;
+            manifest_creation::validate_all(&tx)?;
             // Catch a damaged/current-version database before returning success.
             tx.prepare("SELECT source_alias, object_key, etag, version_id, size_bytes FROM legacy_cached_objects_v1 LIMIT 0")?;
             tx.prepare("SELECT source_id, config_fingerprint FROM source_bindings LIMIT 0")?;

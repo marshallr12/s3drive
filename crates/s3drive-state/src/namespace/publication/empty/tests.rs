@@ -203,16 +203,18 @@ fn atomic_empty_pre39_marker_preserves_literal_rows_and_refuses_new_record_laund
     let path = t.path().join("s");
     let s = setup(&path);
     let before = rows(&s);
+    crate::test_schema::without_creation(&s.connection);
     s.connection
         .pragma_update(None, "user_version", 38)
         .unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
-    assert_eq!(s.info().unwrap().schema_version, 39);
+    assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
     assert_eq!(rows(&s), before);
     let q = request(&s, 4);
     s.namespace_apply(&q).unwrap();
     let before = rows(&s);
+    crate::test_schema::without_creation(&s.connection);
     s.connection
         .pragma_update(None, "user_version", 38)
         .unwrap();

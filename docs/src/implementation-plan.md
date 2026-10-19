@@ -3546,3 +3546,14 @@ retains all failed/focused contexts and verified parent349 archives. Own
 CI39313836156 book/Linux succeeded; own Windows and complete raw/source/native/
 artifact acceptance remain required before promotion. Network publisher and native
 chunk creation/writes remain unfinished; accepted main stays schema39/all349.
+
+
+### Durable creation-intent promotion (2026-10-19)
+
+Sourcebb17161/schema40/all354 accepted after complete local gate and own
+CI39313836156 all3 success, full raw/source/API ZIP and independent typed21+14/
+project/all35 fields/types. [Indexed local/hosted evidence](empty-manifest-publisher.md).
+Exactly19 runtime deltas promoted; canonical main matches accepted354. Local
+creation/generation/proof/request/receipt recovery and snapshot compatibility are
+implemented. Authenticated SDK creation, restricted metadata-only recovery, typed
+native state composition and native chunk creation/writes remain subsequent work.

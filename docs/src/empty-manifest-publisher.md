@@ -1,6 +1,6 @@
 # Empty-manifest client integration
 
-Source review: 2026-10-19. **Proposed next integration phase; not implemented.**
+Source review: 2026-10-19. **Local intent journal accepted; network/native integration remains proposed.**
 The [atomic authority operation](atomic-empty-manifest-create.md) is accepted
 at source29eb237/schema39 after its own complete local and hosted gates. It deliberately cannot prove an S3 upload:
 the client must make and verify that upload before submitting the metadata request.
@@ -231,3 +231,37 @@ acceptance remains required. Parent349 is accepted. These tests do not enable
 a network creation publisher or native chunk-create/write callbacks; source
 proofs in the new state-journal tests remain explicitly modeled local fixtures.
 Earlier pending local statuses above are historical.
+
+
+## Own hosted acceptance (2026-10-19)
+
+Sourcebb17161ecd60d31b34dfc90b341b5ea4d3d6d899/schema40/all354 passed
+[CI39313836156](https://github.com/marshallr12/s3drive/actions/runs/39313836156),
+attempt1: book118270052958/Linux118270053086/Windows118270053014 all succeeded.
+Complete raw logs, exact354 working/committed inputs, own API ZIP digests, independent
+typed21+14 records, project oracles and all35 raw fields/JSON types passed. Own
+replacement12215769525/disposition12218526631 artifacts were used.
+
+The [indexed hosted archive](evidence/empty-intent-hosted-20261019.tar.gz) contains
+119 verified members/441408bytes, SHA-256
+`5aa41539617cd261118f87668dcb75a0679c601331e3180fcc60204970cd53bf`.
+One-use raw reviewer/source checker52968/comparator+archiver5863 DONE; never rerun.
+Observer1442770 CLOSED0/all_success20:13:21Z. All seven slow Linux and three slow
+Windows cases completed;15 interleaved reference completions were checked.
+
+Linux520/Windows515 state cases (one diagnostic ignored each),26reader (one
+native-only ignored),24publication/39core/62S3 passed. Actual existing native
+regressions passed FUSE9/75.65s, WinFsp7/84.86s, manifest ranges/remount1.63s/1.60s,
+and paired no-systemd24.10s/Windows78.49s. Actual images: Ubuntu24.04 test image
+20261018.339.1 (book image20261012.334.1), WindowsServer2025 windows-2025-vs2026
+20261007.264.1. Three locked disposable profiles had dummy credentials removed;
+final deletion deferred to VM destruction. Tooling deprecations and unused WinFsp
+delay-import warnings were retained/reviewed. Earlier Windows cleanup failure's
+primary cause remains unverified; this success does not retrospectively explain it.
+
+This accepts the local creation-intent journal, schema migration/isolation and
+snapshot compatibility repair, with existing native regressions. New state-journal
+physical receipts are model fixtures. Authenticated S3/authority creation, restricted
+metadata recovery, typed namespace/open composition, native chunk writes, retention,
+real Wasabi mutations and physical MX/Windows10/11 sign-in/reboot remain separate
+work. Earlier pending statuses above are historical.

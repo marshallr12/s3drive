@@ -149,6 +149,8 @@ fn identity(
         "namespace_removal_events",
     ];
     let local = [
+        "manifest_creation_role",
+        "manifest_creations",
         "sparse_scoped_mode",
         "source_read_pin_session",
         "source_read_pins",
@@ -1151,5 +1153,49 @@ mod tests {
             .is_err()
         );
         assert!(!source.join("nested").exists());
+    }
+    #[test]
+    fn empty_creation_tables_are_allowed_but_each_nonempty_client_table_refuses_snapshot() {
+        for table in ["manifest_creation_role", "manifest_creations"] {
+            let tmp = tempfile::tempdir().unwrap();
+            let source = tmp.path().join("authority");
+            let target = tmp.path().join("snapshot");
+            let v = seed(&source);
+            let empty = tmp.path().join("empty-local-tables");
+            let m = create(&source, &v.id, POLICY, &empty, &Limits::default()).unwrap();
+            assert_eq!(m.schema_version, SCHEMA_VERSION);
+            let db = Connection::open(source.join("metadata.sqlite3")).unwrap();
+            match table {
+                "manifest_creation_role" => {
+                    db.execute(
+                        "INSERT INTO manifest_creation_role VALUES(1,1,zeroblob(32))",
+                        [],
+                    )
+                    .unwrap();
+                }
+                _ => {
+                    db.execute(
+                        "INSERT INTO manifest_creations VALUES(?1,x'7b7d',zeroblob(32))",
+                        ["a".repeat(32)],
+                    )
+                    .unwrap();
+                }
+            }
+            drop(db);
+            let before = records(&source.join("metadata.sqlite3"));
+            assert_eq!(
+                create(&source, &v.id, POLICY, &target, &Limits::default()),
+                Err(Error::Validation)
+            );
+            assert!(!target.exists());
+            assert_eq!(records(&source.join("metadata.sqlite3")), before);
+            let db = Connection::open(source.join("metadata.sqlite3")).unwrap();
+            assert_eq!(
+                db.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r
+                    .get::<_, i64>(0))
+                    .unwrap(),
+                1
+            );
+        }
     }
 }

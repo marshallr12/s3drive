@@ -68,6 +68,8 @@ fn name(value: &str) -> bool {
 // Includes retained/orphaned records, not just active operations. Shared
 // namespace removal tables are authority state and are excluded as well.
 const EXCLUDED: &[&str] = &[
+    "manifest_creation_role",
+    "manifest_creations",
     "sparse_scoped_mode",
     "source_read_pin_session",
     "source_read_pins",
@@ -120,6 +122,7 @@ fn isolation(db: &Connection) -> Result<()> {
 }
 /// Reciprocal constructor guard; never put this in generic staging validation.
 pub(crate) fn require_legacy(db: &Connection) -> Result<()> {
+    crate::manifest_creation::require_legacy(db)?;
     crate::sparse_views::require_legacy(db)?;
     let used: bool = db.query_row("SELECT EXISTS(SELECT 1 FROM chunk_client_role) OR EXISTS(SELECT 1 FROM chunk_publications) OR EXISTS(SELECT 1 FROM chunk_source_role) OR EXISTS(SELECT 1 FROM chunk_source_settlements)", [], |r| r.get(0))?;
     if used {

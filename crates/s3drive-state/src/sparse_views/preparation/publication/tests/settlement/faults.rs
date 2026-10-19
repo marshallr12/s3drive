@@ -90,6 +90,7 @@ fn schema_thirty_five_preserves_old_records_and_rejects_new_ack_formats_under_ol
     s.connection
         .execute_batch("DROP TABLE source_read_pins; DROP TABLE source_read_pin_session; DROP TABLE sparse_scoped_mode")
         .unwrap();
+    crate::test_schema::without_creation(&s.connection);
     s.connection
         .pragma_update(None, "user_version", 34)
         .unwrap();
@@ -113,6 +114,7 @@ fn schema_thirty_five_preserves_old_records_and_rejects_new_ack_formats_under_ol
     let a = j(&mut s)
         .acknowledge([40; 32], p, crate::sparse_views::Options::default())
         .unwrap();
+    crate::test_schema::without_creation(&s.connection);
     s.connection
         .pragma_update(None, "user_version", 34)
         .unwrap();

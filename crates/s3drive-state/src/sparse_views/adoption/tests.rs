@@ -377,6 +377,7 @@ fn schema37_migration_preserves_literal_rows_but_cannot_launder_new_observation_
     let mut s = State::open_managed(&path).unwrap();
     let v = initial(&mut s);
     let before = rows(&s);
+    crate::test_schema::without_creation(&s.connection);
     s.connection
         .pragma_update(None, "user_version", 37)
         .unwrap();
@@ -390,6 +391,7 @@ fn schema37_migration_preserves_literal_rows_but_cannot_launder_new_observation_
             .unwrap(),
     );
     assert_eq!(next.0.format, 4);
+    crate::test_schema::without_creation(&s.connection);
     s.connection
         .pragma_update(None, "user_version", 37)
         .unwrap();

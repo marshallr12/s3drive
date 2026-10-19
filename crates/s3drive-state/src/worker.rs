@@ -171,6 +171,12 @@ impl Storage {
     ) -> Result<crate::sparse_views::Client> {
         crate::sparse_views::Client::new(self.owner.clone(), options)
     }
+    pub fn manifest_creations(
+        &self,
+        limits: crate::manifest_creation::Limits,
+    ) -> Result<crate::manifest_creation::Client> {
+        crate::manifest_creation::Client::new(self.owner.clone(), limits)
+    }
     pub fn uploads(&self) -> Uploads {
         Uploads {
             owner: self.owner.clone(),
