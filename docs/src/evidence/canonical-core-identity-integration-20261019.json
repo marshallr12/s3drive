@@ -1,0 +1,18 @@
+{
+  "date": "2026-10-19",
+  "runtime_source": "c279e0fe20054b86d015b5899a96b1070c261e2e",
+  "previous_main": "41188dd35d6518ff3f97683fce9bec92ab7f3409",
+  "own_run_id": 39198380488,
+  "attempt": 1,
+  "all3_raw_and_artifact_acceptance": "passed",
+  "runtime_inputs": 267,
+  "integration_delta": "documentation/evidence only beyond tested runtime",
+  "visibility_policy": "PUBLIC; never repair visibility",
+  "method": "normal atomic fast-forward; verify clean primary and both remote refs afterward",
+  "publication_receipt": "/tmp/s3drive-canonical-core-identity-publication.json",
+  "not_claimed": [
+    "SQLite sparse views or schema29 acceptance",
+    "native chunk writes",
+    "Wasabi or physical reboot acceptance"
+  ]
+}

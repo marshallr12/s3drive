@@ -2577,6 +2577,22 @@ structural codec in isolation, while their eventual combined source still needs
 its own complete platform gates before activation. Main stays at accepted41188dd.
 
 
+W2a accepted,2026-10-19: sourcec279e0f passed own
+[run39198380488](https://github.com/marshallr12/s3drive/actions/runs/39198380488),
+all3 raw logs/own ZIP digests/strict typed21+14/project oracles/all35 raw fields
+and types. Indexed36-member hosted archive and all267 frozen inputs verified.
+Linux manifest FUSE/remount1.19s, Windows WinFsp/remount14.11s;37core/11reader
+1nativeignored/62S3 on both. No performance/native chunk-write claim. Canonical
+integration keeps that runtime unchanged. W2b1 is a separate schema29 draft in
+codex/sparse-edit-views; focused storage/migration controls passed and its full
+local gate3 96485 has passed. That new source has no hosted acceptance yet.
+
+W2b1 progress: its first full gate48732 exposed the native snapshot local-table
+allowlist missing the four new EMPTY tables. The narrow repair retains unknown/
+nonempty/view/64-table refusals. Snapshot CLI2 and state9 controls passed after
+correcting only the synthetic orphan fixtures. The second full gate44679 actually terminated143; the complete third
+gate96485 passed all275 frozen inputs in its isolated checkout. No schema29 acceptance yet.
+
 ### W2b1 first SQLite slice — declared contract (2026-10-19)
 
 Preparation in codex/sparse-edit-views, based on locally green core runtimec279e0f.
