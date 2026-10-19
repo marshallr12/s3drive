@@ -63,3 +63,51 @@ and Windows10/11 remains separate from hosted native regressions.
 Do not activate the mounted path by increasing `MAX_BYTES`, enabling the existing
 chunk reader in a writable profile, or substituting publisher types alone. Those
 changes leave the observed ownership, origin and recovery boundaries unresolved.
+
+## Empty-file bootstrap option under investigation (2026-10-19)
+
+A real empty manifest could avoid treating a metadata-empty node as if it already
+had an S3 manifest. This is a source-reviewed option, not a declared mutation/API
+or an implemented native profile. Existing source facts:
+
+- Namespace creation derives the node ID from the create operation and currently
+  creates it with no payload. See [creation projection](https://github.com/marshallr12/s3drive/blob/67a75e3047a867e2499ef08ded64fe00b72a4aa9/crates/s3drive-state/src/namespace/creation.rs).
+- Namespace preconditions and open records use file IDs, placement and content
+  references rather than complete file buffers. They could be reused with typed
+  source-state composition. Their constructors currently reject sparse state;
+  that guard remains required. See [preconditions](https://github.com/marshallr12/s3drive/blob/67a75e3047a867e2499ef08ded64fe00b72a4aa9/crates/s3drive-state/src/namespace_client/changes.rs)
+  and [open journal](https://github.com/marshallr12/s3drive/blob/67a75e3047a867e2499ef08ded64fe00b72a4aa9/crates/s3drive-state/src/namespace_client/opens.rs).
+- Manifest history needs the retained reservation descriptor and publication in
+  namespace_uploads. A new creation operation must preserve that history, not just
+  place a payload on the live node. See [historical lookup](https://github.com/marshallr12/s3drive/blob/67a75e3047a867e2499ef08ded64fe00b72a4aa9/crates/s3drive-state/src/namespace/publication/history.rs).
+
+The candidate sequence is: derive a canonical zero-length manifest and its actual
+root bytes/key from the known volume, create-operation/node ID and selected store;
+conditionally upload and verify that immutable root; then atomically create the
+namespace entry with that manifest payload and its historical publication record.
+The logical file has zero bytes; its manifest object has a real encoded body.
+The existing authenticated manifest reader can then supply an ordinary initial
+clean view. No fabricated reservation or invented provider receipt is needed.
+
+This requires a new negotiated authority operation rather than changing old
+CreateEntry semantics. The authority should derive the canonical root itself and
+bind the name/parent revision, configured store, creator identity and exact upload
+proof fields. An independent unrelated namespace change need not conflict when
+the parent guard still holds, matching existing guarded creation. Persist the
+node, payload/history and exact operation outcome in one transaction. A known
+reply must replay historically after rename/removal/restart. Reject malformed
+or foreign proofs and all ignored/partial SQL effects without half-creating a file.
+
+A client must persist its exact physical and metadata intent before sends and
+recover unknown results without a second PUT or different namespace request.
+An uploaded root whose create conflicts may remain an owned orphan; do not delete
+it while the authority outcome is uncertain. Feature negotiation, atomic collision
+races, corruption, real SQLITE_FULL and killed-owner boundaries need their own
+phase contract and tests before implementation. Actual provider uploads still
+require a new concrete authorization scope; no live test follows from this option.
+
+A broader empty-origin binding is another possible design, but would require new
+historical authorization and preparation/publication semantics for a base with
+no provider object. The real-manifest bootstrap is the next option to evaluate
+because it can retain the existing manifest-only edit representation. Legacy
+payload conversion, bounded retirement and unlinked writes remain separate work.
