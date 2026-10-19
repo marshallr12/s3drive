@@ -79,3 +79,8 @@ build/documentation checks. The [indexed local archive](evidence/sparse-base-vie
 retains37 verified members, including both incomplete runs, the failed snapshot
 source, repaired source and reviewed architecture diagram. No older hosted cohort
 certifies the changed schema29 source; its own platform gate remains required.
+
+Published source `1681ee6` includes current main ancestry and exactly matches all
+275 locally gated runtime inputs. Its
+[own platform/book run](https://github.com/marshallr12/s3drive/actions/runs/39203016390)
+is in progress. This is publication evidence; combined hosted acceptance remains pending.

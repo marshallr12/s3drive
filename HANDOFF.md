@@ -59,9 +59,14 @@ inputs unchanged:378state1ignored/37core/11reader1nativeignored/62S3 plus
 format/Clippy/workspace build/71MD links/67book chapters passed. Indexed37-member
 local archive309769bytes SHA
 d2e1e894ee830ff96f8e98cc87b6353255b12e306c58179c45ed8eae59356120.
-Current source is local green only. Commit, merge current main ancestry (docs
-only relative to core baseline), verify all275 runtime hashes, then publish own
-combined platform cohort. Do not substitute the older codec run for this source.
+Published merged runtime1681ee654e7f6d0b4f39ba3fb4b306bfdb505ea0, including
+main3ddafbc ancestry with documentation/evidence-only merge delta. All275
+working/committed hashes match the local gate. Proof
+/tmp/s3drive-sparse-views-publication.json. Own run39203016390 attempt1 LIVE:
+book117899814013,Linux117899814131,Windows117899814181. Watch8301 LIVE ->
+/tmp/s3drive-sparse-views-hosted-watch.log. Own raw/API/digest/typed21+14/project
+oracles/all35 raw fields+types still required; never reuse older artifacts.
+Current source is local green only; main remains accepted codec/schema28.
 
 This completed local slice W2b1: private SQLite identity/base-view admission, immutable
 bounded base/zero extent model, exact begin-operation replay, read-only range

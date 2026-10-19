@@ -171,5 +171,28 @@
     "members": 37,
     "all_indexed_members_verified": true,
     "scope": "W2b1 portable local only"
+  },
+  "publication": {
+    "source": "1681ee654e7f6d0b4f39ba3fb4b306bfdb505ea0",
+    "branch": "codex/sparse-edit-views",
+    "remote_source": "1681ee654e7f6d0b4f39ba3fb4b306bfdb505ea0",
+    "clean": true,
+    "local_gate_session": 96485,
+    "local_gate_exit_code": 0,
+    "runtime_inputs": 275,
+    "all_working_and_committed_hashes_match": true,
+    "merge_delta_from_local_green": "documentation/evidence only; main ancestry included",
+    "schema": 29,
+    "run_id": 39203016390,
+    "attempt": 1,
+    "run_status": "in_progress",
+    "hosted_accepted": false,
+    "visibility": "PUBLIC, read-only verified",
+    "main_runtime": "accepted codec c279e0f/schema28",
+    "jobs": {
+      "book": 117899814013,
+      "linux": 117899814131,
+      "windows": 117899814181
+    }
   }
 }
