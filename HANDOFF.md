@@ -25,6 +25,69 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Current W3b durable mixed-tree preparation — local draft (2026-10-19)
+
+Worktree /home/marshall/src/worktrees/s3drive-mixed-plans,
+branch codex/mixed-plans fromc1f7fbb. Full declared phase at implementation-plan
+end. Parent W3a9544193 now ACCEPTED as main3086038 (all3/source/raw/own artifacts,
+checker4975 CLOSED0/watch3007 CLOSED0); all288 inputs exact. GoalACTIVE/progress.
+
+Owned draft files: sparse_views/preparation.rs and preparation/{model,proof}.rs.
+They are NOT wired into sparse_views.rs and are NOT compiled or tested. The
+preparation module declares ledger/journal modules that do not exist yet. Only
+explicit rustfmt --edition2024 --config skip_children=true on these three files
+has passed syntax/formatting; that is not Rust type checking or a local gate.
+No schema, runtime API, uploads, native writes or claimed receipt is activated.
+Do not run a baseline gate and call the unwired draft covered.
+
+Implemented draft model: versioned Input pins operation/view/new generation,
+original root descriptor and root-page blob ID; Progress has input offset and
+bottom-up page level/slot plus optional new root; Candidate distinguishes new
+bytes, structural zero run, inherited chunk and inherited page. Object Kind
+retains new data/page blobs vs inherited Witness. Witness stores exact old wire
+header + deduplicated page blob IDs, validates original payload-reference binding,
+root/path geometry/store/file and full data length; no arbitrary upload receipt.
+It parses existing S3DCREF1/S3DPREF1 bounded paths (at most2 pages). All are offline
+intent: managed producer/reopen and W4 must authenticate the actual root context.
+
+Next implement ledger.rs/journal.rs and migration032, wire only with a compiling
+coherent slice, then meaningful tests/controller/full gates. Ledger snapshot must
+preflight row counts/types/BLOB lengths/total bytes BEFORE allocation; validate
+blob SHA, canonical frozen inputs/state hashes, unique operations/new namespace
++generation, exact sparse-view lineage and no orphan blobs/rows. Check level/slot
+bounds BEFORE span/offset arithmetic on decoded Object (currently unchecked
+helper assumes a validated level). Candidate coverage must be contiguous and
+match cursor. Stale append must compare the saved candidate at that input cursor,
+not falsely acknowledge a different payload. Generated-page steps may return
+actual progress for stale cursors because the input is computed in the owner.
+Every mutation compares full expected post-snapshot to catch ignored/rewrite/
+foreign trigger effects, then commits atomically. Preserve exact old input BLOBs.
+
+Use shared blob table for root/witness pages and new bytes (raw SHA256 key,
+<=1MiB); de-duplicate repeated proof paths. Three planned tables: preparations
+(plan/op/view/input/progress/state hash), objects (plan/level/slot/record/hash),
+blobs (hash/data). Sparse role permits preparations; require_legacy must refuse
+any new prep rows even if sparse role missing. Add separate new-table validation
+without changing TABLES's existing fixed5 ledger layout or migration30 initial
+inspection. test_schema helper must drop new tables before sparse views when
+constructing older schemas. Schema assertions in two native PowerShell fixtures
+must move with032; no claim until schema migration/role/refusal tests pass.
+
+Input coverage admits chunk results, whole unchanged inherited subtrees only
+below the output-root level, and structural long zero runs. Output root is always
+new (do not adopt an old physical root as new reservation); old root may be a new
+child only at exact level/span. Coverage records avoid enumerating64GiB holes;
+CPU steps build <=128 child references into one page. Skip levels covered by a
+retained inherited subtree; rebuild affected ancestors bottom-up. Validate every
+produced page against retained children, both while in progress and on reopen.
+Use an intent-only View span helper for unbounded metadata coverage (existing
+range() caps byte requests at8MiB); the managed producer still revalidates SQL and
+fresh authorization, never trusts the pure helper as a send/read capability.
+No SQL owner across network. Controller compares full binding/root and uses
+private prepared candidates; future W4 revalidates source/policy before sends.
+Complete W3b requires actual mixed roots/restart/refusal/quota/SQL/crash tests,
+managed integration, full local and own combined gates. W4-W6/legacy-empty remain.
+
 ## Accepted W2c authenticated sparse composition (2026-10-19)
 
 Runtime84da0ee633871f862f4a84a276af5ac3322cff42, own39213440204 attempt1 ALL3
