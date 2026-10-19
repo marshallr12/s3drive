@@ -49,6 +49,30 @@ It cannot promise that the remote head stays unchanged until or after the local
 commit. A later write still needs the normal exact authority CAS and explicit
 conflict handling. A local record alone cannot establish remote authenticity.
 
+## Local implementation status
+
+The isolated [local intent phase](external-clean-local.md), source67a75e3/schema38,
+implements the SQLite half of this proposal. Focused tests and state Clippy passed;
+its full local and own Linux/Windows gates are running. Main remains accepted
+schema37. The distinct record/domain, exact scoped retry, unchanged result without
+admission, immutable View result and terminal-work predicate are declared there.
+This does not authenticate a new remote version or complete this proposal.
+
+The next managed facade should recover known local admission before network I/O,
+retain an old-view guard, preflight local cleanliness/work state, load the live
+node and independently verify its manifest root, then recheck the live payload
+and pinned provider revision before the local CAS. Use one existing operation
+deadline and the reader's current active/snapshot bounds. Neither a historical
+lookup alone nor a publicly retained candidate proves a fresh live observation.
+Existing code has separate [live opens](https://github.com/marshallr12/s3drive/blob/903ade67e21cd71bb7ab02716c098993d9f6e82f/crates/s3drive-managed/src/chunks/reader.rs)
+and [historical authorization](https://github.com/marshallr12/s3drive/blob/903ade67e21cd71bb7ab02716c098993d9f6e82f/crates/s3drive-managed/src/chunks/reader/composition.rs).
+This facade sequence is a source-reviewed proposal, not an implemented operation.
+
+## Earlier open decisions
+
+The following questions motivated the declared local phase; its contract now
+settles the local choices, while authenticated facade behavior still needs tests.
+
 ## Decisions needed before implementation
 
 Choose a distinct record format/hash domain and migration behavior, including

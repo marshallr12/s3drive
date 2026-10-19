@@ -61,10 +61,26 @@ their cause. Never equate portable unit tests with an actual mount or flush.
 
 ## Active isolated work and exact next actions
 
-Read-only source review added [external clean adoption proposal](docs/src/external-clean-adoption.md).
-No implementation/API or migration is declared yet. Clean-head CAS, pending-work
-correlation, no-change/retry semantics and remote-authentication boundaries need
-a concrete phase contract before code. Old readers must retain their exact view.
+Active next prerequisite: isolated `codex/external-clean-local` at
+/home/marshall/src/worktrees/s3drive-external-clean-local, source67a75e3047a867e2499ef08ded64fe00b72a4aa9.
+Schema38 adds distinct format4 Observe intent, scoped old-epoch retry, clean-head
+CAS, full unresolved-work validation and no-change admission without history growth.
+No authenticated remote facade, mounted chunk write or GC. [Contract](docs/src/external-clean-local.md).
+Focused12 passed1.23s (five actual kills/SQLITE_FULL/worker race/pins), separate
+publication-history case0.86s; state all-target Clippy17.34s. Initial check before
+test module creation failedE0583; module supplied before the successful focused run.
+Full gate1 runner1114325/startticks143781754, child1114329/startticks143781764
+LIVE at17:33:34Z, exact340 map/source frozen under
+/tmp/s3drive-external-clean-local-candidate1-{frozen.json,source.tar.gz}.
+Logs/status /tmp/s3drive-external-clean-local-gate1-{running,result}.json and .log.
+Own CI39295182975 attempt1: book118205713291/Linux118205712929/Windows118205713142
+running. GET-only observer1115366/startticks143787153, same-prefix hosted-watch
+status. Own acceptance tools prepared/compiled, NOT executed; raw review required
+before marker/checker/comparison/archive. Own expected state494Linux/489Windows,
+24publication/23reader. Parent337 artifacts12204512424/12205563584 forbidden reuse.
+Main remains accepted schema37/all337. Do not edit frozen candidate runtime or
+start another local Cargo while this gate lives. The next remote facade must add
+fresh live-node/root authentication and final observation checks; see proposal.
 
 
 1. **Upload authorization batch** — worktree

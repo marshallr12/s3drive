@@ -3403,3 +3403,13 @@ source. [Acceptance and limitations](managed-reader-guards.md). Earlier pending
 statuses above describe their historical checkpoints. Shared reader/preparation
 pins are implemented; clean external observation, retention cuts, mounted chunk
 writes and provider/physical session acceptance remain outstanding.
+
+
+### Local clean adoption implementation in progress (2026-10-19)
+
+[Local intent phase](external-clean-local.md), source67a75e3/schema38/all340 frozen,
+passed12 focused cases1.23s, one publication-history case0.86s and state all-target
+Clippy17.34s. Five killed-owner boundaries and real SQLITE_FULL were exercised.
+Full local gate runner1114325/child1114329 began17:33:34Z. Own CI39295182975
+attempt1: book118205713291/Linux118205712929/Windows118205713142 running.
+Main remains accepted schema37; local intent cannot prove fresh remote observation.
