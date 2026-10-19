@@ -25,6 +25,40 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Current W1a foundation: authenticated chunk-reference proofs (2026-10-18)
+
+Isolated /home/marshall/src/worktrees/s3drive-manifest-reference-proofs,
+branch codex/manifest-reference-proofs from accepted reader7c2b454 (all3 own
+reader gates accepted). Independent library foundation while native repair
+c633 run39178517491 ALL3/strict21+14/raw35 accepted at52f591c; watch30345 CLOSED0.
+Preserve that accepted candidate; its artifacts do not accept this W1a source.
+Local archive 16members/53064bytes SHAb1af7908f2646d1f33436949897ae04ce22b093baade991cb137ff52530eee8a.
+Source remains a local draft until accepted native prerequisites are combined
+and a fresh exact-source hosted cohort passes. No own W1a artifact acceptance.
+Next audit before primary promotion: add empty/legacy opened-handle metadata
+checks across payload-format publication; current native control begins with
+a manifest base. Preserve original pinned size/bytes assertions.
+Scope: reader child provenance module/export, existing SDK/authority fixture
+controls and book. No filesystem activation, writes, schema, wire or codec changes.
+W1a exports only opaque data/hole chunk proofs; not the full W1 page-reuse or
+historical-base-reopen API. Prove before acceptance: bounded path-only reads,
+no data fetch, pure snapshot-bound roundtrip validation, rename-stable base,
+new-root/foreign-file/corrupt/trailing/truncated refusal, aggregate holes, EOF,
+64GiB sparse bound and shared operation budget. Full local gate required;
+independent hosted gate needed before integration. Initial cargo check passed;
+six focused controls passed4.97s, including shared-budget and proof scenarios.
+Full gate1 session93249 exited143/SIGTERM during the existing remote TLS
+suite, no test failure reported, cause unknown; no Cargo/rustc remained.
+Log /tmp/s3drive-reference-proofs-gate.log; interrupted evidence in
+/tmp/s3drive-reference-proofs-gate1-interrupted.json. All258 frozen inputs
+unchanged. Pending TLS diagnostic test passed alone10.58s in session77216
+(package-only command, not whole-workspace acceptance). Fresh full gate2
+session98776 CLOSED EXIT0 (tty), same production code and RUST_TEST_THREADS2:
+/tmp/s3drive-reference-proofs-gate2.log. All258 frozen hashes unchanged; full fmt/clippy/test/build/book passed.
+No whole-workspace test failure reproduced; original signal cause stays unknown. Frozen258 /tmp/s3drive-reference-proofs-frozen.json.
+Preserve separate source
+acknowledgment and inherited-reference publication proof work for later phases.
+
 ## Large-file representation study (published, 2026-10-18)
 
 New docs/src/large-managed-files.md, images/large-managed-files.svg and

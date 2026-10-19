@@ -1,0 +1,114 @@
+{
+  "date": "2026-10-18",
+  "status": "W1a full local gate passed; own combined hosted acceptance pending",
+  "branch": "codex/manifest-reference-proofs",
+  "base": "7c2b45435cd4aa3999e63ee16ccb6b03f5985c76",
+  "scope": "W1a data/hole reachability witnesses; not whole W1, uploads, receipts, sparse edits or mounted writes",
+  "focused": {
+    "exit_code": 0,
+    "passed": 6,
+    "seconds": 4.97,
+    "log": "/tmp/s3drive-reference-proofs-focused.log",
+    "sha256": "26d30a4937a9eac62b43a4782467302fa242c05e6f642fe10f0ab6fa1a384c97"
+  },
+  "initial_check": {
+    "exit_code": 0,
+    "log": "/tmp/s3drive-reference-proofs-check.log",
+    "sha256": "37f118e72a050494fa9306cedbb73a072c0919203e1e58b5fa5fcf636299afa5"
+  },
+  "gate1": {
+    "exit_code": 143,
+    "session": 93249,
+    "log": "/tmp/s3drive-reference-proofs-gate.log",
+    "sha256": "d977aeaba46db8c954abcadabf09f020b85900ef5bc0cbad3dca6934b95081e6",
+    "frozen_count": 258,
+    "frozen_inputs_unchanged": true,
+    "reason": "SIGTERM; cause not established",
+    "cargo_or_rustc_processes_remaining": false,
+    "last_binary": "s3drive-authority/tests/remote.rs",
+    "last_completed_test": "tls_header_and_body_deadlines_close_incomplete_requests",
+    "test_failure_reported": false,
+    "acceptance": false
+  },
+  "diagnostic": {
+    "exit_code": 0,
+    "seconds": 10.58,
+    "scope": "package-only pending TLS diagnostic control",
+    "log": "/tmp/s3drive-reference-proofs-remote-diagnostic.log",
+    "sha256": "822e9abecff267a49e4165b5bfc5cdbcab083119c69d794b8e9b9f0f5a59457e"
+  },
+  "gate2": {
+    "exit_code": 0,
+    "session": 98776,
+    "log": "/tmp/s3drive-reference-proofs-gate2.log",
+    "log_sha256": "0cea38c793cfb670dea5769067a0437b6c944d01bdd7a32ac510091003c78eaf",
+    "frozen_count": 258,
+    "frozen_map_sha256": "6578dbf9139865c5518858258de08ff407167679369055f0b439c3a2aaaa53ac",
+    "all_frozen_inputs_unchanged": true,
+    "environment": {
+      "RUST_TEST_THREADS": "2",
+      "tty": true
+    },
+    "test_summaries": [
+      "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.57s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.14s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.43s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.36s",
+      "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.77s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 15.09s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s",
+      "test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 81.70s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.62s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.89s",
+      "test result: ok. 2 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 14.37s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.01s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.42s",
+      "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 41.42s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.53s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.61s",
+      "test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s",
+      "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.34s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 27.26s",
+      "test result: ok. 365 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 311.00s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ],
+    "scope": "W1a independent library full local gate; no own hosted or mounted write acceptance"
+  },
+  "native_candidate": {
+    "source": "c633d02d47ccf2da20cfadd50e0b8e11f6e06811",
+    "run_id": 39178517491,
+    "linux": "passed/raw reviewed",
+    "book": "passed/raw reviewed",
+    "windows": "passed; own all3 accepted at native checkpoint52f591c"
+  },
+  "not_claimed": [
+    "W1a full gate or hosted acceptance",
+    "historical base reopen",
+    "inherited subtree proofs",
+    "chunk writes"
+  ],
+  "local_archive": {
+    "path": "evidence/manifest-reference-proofs-local-20261018.tar.gz",
+    "sha256": "b1af7908f2646d1f33436949897ae04ce22b093baade991cb137ff52530eee8a",
+    "bytes": 53064,
+    "members": 16,
+    "all_indexed_members_verified": true,
+    "scope": "W1a portable local gate only"
+  }
+}

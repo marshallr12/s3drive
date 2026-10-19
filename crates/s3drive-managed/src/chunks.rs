@@ -2,7 +2,7 @@
 //! flushes. Explicit source acknowledgment is historical metadata only.
 //! No native activation, detached/removal mode or payload reclamation.
 mod reader;
-pub use reader::{File, ReadFailure, ReadOptions, Reader};
+pub use reader::{ChunkProof, File, MAX_CHUNK_PROOF_BYTES, ReadFailure, ReadOptions, Reader};
 
 use s3drive_authority::{Apply, Error, Reply, Request, Store, WireClient};
 use s3drive_s3::uploads::{Executor, chunks::Uploader};

@@ -2,6 +2,8 @@
 //! owned local memory. No provider uploads or mounted chunk acceptance.
 #[path = "chunk_reader/fixture.rs"]
 mod fixture;
+#[path = "chunk_reader/proofs.rs"]
+mod proofs;
 use fixture::*;
 use s3drive_authority::Mutation;
 use s3drive_core::manifest::{
@@ -639,6 +641,7 @@ async fn budgets(f: &Fixture) {
     let events = f.s3.events().len();
     let meta = f.requests();
     failed(file.read_range(0, 4).await, ReadFailure::Busy);
+    failed(file.prove_chunk(0).await, ReadFailure::Busy);
     failed(r.open_file(&id(11)).await, ReadFailure::Busy);
     assert!(file.read_range(u64::MAX, 1).await.unwrap().is_empty());
     assert_eq!(events, f.s3.events().len());
@@ -719,6 +722,7 @@ async fn manifest_reader_child() {
     let f = Fixture::open(&path, mode == "flow").await;
     match mode.as_str() {
         "flow" => Box::pin(flow(&f)).await,
+        "proofs" => Box::pin(proofs::flow(&f)).await,
         "integrity" => Box::pin(integrity(&f)).await,
         "transport" => Box::pin(transport(&f)).await,
         "budgets" => Box::pin(budgets(&f)).await,
@@ -802,4 +806,9 @@ async fn manifest_ranges_refuse_denied_missing_oversized_truncated_or_changed_ob
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn manifest_ranges_bound_slots_snapshots_cancel_and_overall_deadline() {
     run("budgets").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn manifest_chunk_proofs_bind_snapshot_without_data_reads_and_reject_forgery() {
+    run("proofs").await;
 }

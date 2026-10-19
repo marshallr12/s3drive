@@ -157,3 +157,55 @@ Windows logons. Those controls use the existing mounted format. They do not
 activate or certify mounted manifests. Windows retained three locked disposable
 fixture profiles until VM destruction after dummy credential removal; delay-import
 and Node notices remain in the logs. Native manifest integration follows separately.
+
+
+## W1a authenticated chunk-reference proofs (2026-10-18)
+
+Draft implementation on `codex/manifest-reference-proofs`, based on the accepted
+reader checkpoint `7c2b454`. `File::prove_chunk` exports an opaque `ChunkProof`
+for one data chunk or a clipped chunk within an aggregate hole. Export fetches
+only the necessary authenticated child pages (at most two); it shares the
+reader's four active slots and overall deadline and never HEADs or GETs data.
+The maximum encoded witness is 20,917 bytes. Metadata-empty and published-empty
+files have no chunk to prove; out-of-range indexes are errors.
+
+`File::verify_chunk_proof` performs bounded pure validation against that File's
+already authorized root, including exact payload binding, path hashes and shape,
+store scope, depth, lengths and trailing bytes. An arbitrary byte buffer cannot
+construct an authenticated token without such a File. Encoding contains the base
+binding, chunk index and path pages; it contains no credentials. Rename preserves
+the payload binding. A fresh File opened on another root/file rejects the witness.
+A retained old File can still verify its old witness. Restart requires authorized
+base re-opening; historical base re-opening is not implemented by this slice.
+
+The witness proves reachability from a pinned base, not successful data
+verification, current availability/authorization, upload completion, or a send
+permit. A missing data object can have a valid manifest reference and still fail
+a subsequent read. `None` from `reference()` means a verified hole. The opaque
+`base_binding()` is an identity, not the authority content-CAS guard. Future edit
+admission must retain the original authority guard separately and compare the
+verified offset, length and base binding with its intended operation. A valid
+witness for another reachable chunk must not redirect an edit.
+
+W1a does not export inherited page-subtree reuse or introduce new publication/
+settlement proofs. Sparse SQLite edit views, mixed inherited/new-object trees,
+exact-view settlement and actual mounted chunk writes remain separate required
+phases. It changes no schema, authority wire format, core manifest codec or
+native callback. The six focused reader controls passed in4.97s. The full local gate has now passed; own combined-source hosted acceptance
+remains pending. This is not a mounted-write claim. The separate
+native repair cohort remains bound to source `c633d02`.
+
+[W1a draft evidence](evidence/manifest-reference-proofs-20261018.json) retains
+the focused result, interrupted first gate and diagnostic; none substitutes
+for a completed full gate.
+
+W1a's fresh full local gate completed successfully with all258 frozen inputs
+unchanged (six reader controls,12 publication controls,62 S3 tests,
+365 state tests/one ignored,fmt/Clippy/build/book). The first gate exited143
+without a test failure report; its termination cause remains unknown. The pending
+TLS diagnostic test passed alone; this does not establish the interruption cause.
+The [indexed W1a local archive](evidence/manifest-reference-proofs-local-20261018.tar.gz)
+retains both runs, the diagnostic, frozen inputs and exact helper/test source.
+Every indexed member was verified. Own combined-source hosted acceptance remains
+pending. The separate native c633 cohort is now accepted; this does not accept
+W1a or activate writes.

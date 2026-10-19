@@ -2022,3 +2022,27 @@ The 14-member local archive is indexed and verified. Own hosted cohort
 39171113280 passed all3 jobs, reviewed raw logs and strict21/14 + raw35 checks.
 The indexed22-member hosted archive is verified. Native integration follows
 in codex/native-manifest-reads; portable controls do not activate native chunks.
+
+
+### W1a independent reference-proof foundation (2026-10-18)
+
+Develop from accepted reader7c2b454 in codex/manifest-reference-proofs while the
+separate repaired native cohort39178517491 finishes. Scope is an opaque proof
+of one data/hole chunk's reachability from an authorized File snapshot, bounded
+metadata-only export and pure revalidation against the same exact base. Encoded
+proofs contain no credentials and confer no upload authority or byte-health
+receipt. Rename preserves content identity; a changed root or another file must
+reject the proof. Aggregate holes still yield one clipped logical chunk.
+This is W1a, not complete inherited-page reuse, historical base reopening,
+sparse durable edits, new publication proofs or mounted writes. Native integration
+continues to require acceptance of its own frozen source. Require focused real
+SDK/authority controls and full local/own hosted gates before integration.
+
+
+Source correction for later page reuse: `Namespace::root_key` delegates to
+`key(Role::Page, ...)`; roots do not have a separate physical key role. An old
+root can be inherited as a child when the new parent expects its exact file,
+start, length, level and hash (`VerifiedPage::verify_child`). Do not require
+unconditional re-materialization merely because it was once a root. New mixed
+publication proofs still need explicit inherited provenance, not a fabricated
+new upload receipt. W1a's data/hole witness does not yet export subtree reuse.
