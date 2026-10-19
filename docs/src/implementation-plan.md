@@ -3111,3 +3111,14 @@ capability. State remains unchanged after checks. Validate new heads/restart,
 partial/grown/all-local/all-zero/hole and multi-level ancestry cases plus the
 full local and own hosted cohort. Schema32 unchanged. W4b2 must persist semantic
 coverage and exact root requests/recovery; this slice does not replace W4b/W5/W6.
+
+
+W4a accepted,2026-10-19: runtime3fd2a87/schema32/all304 frozen inputs. Own
+39235506209 attempt1 book/Linux/Windows SUCCESS; full raw/source/own API ZIP/
+independent typed21+14/project/all35 raw-field/type checks passed. Own84-member
+archive342113bytes SHAccafd84462a1d08c6814d5ef164811b668a94721a69b0e0d46bbe64ba2420e81.
+Linux412state/Windows407state,37core/22reader/62S3/18publication cases and real
+legacy/manifests/paired sessions passed. See [mixed dependency uploads](mixed-uploads.md)
+for scope, warnings, exact evidence and retained failures. Physical mixed upload
+completion is accepted; W4b root CAS, W5 settlement, origins and W6 mounted chunk
+writes remain. No new Wasabi or physical workstation session acceptance follows.

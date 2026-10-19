@@ -12,9 +12,10 @@ mounted chunk writes or acknowledge a filesystem flush.
 ## What is already established
 
 Source inspection used runtime `3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2`,
-schema 32, in `codex/mixed-uploads`. Its full local gate passed; its own hosted
-Windows acceptance was still running when this review began. Accepted main at
-this point remains W3b. These are repository implementation observations, not
+schema 32, in `codex/mixed-uploads`. Its full local gate and own hosted
+Linux/Windows/book/native/source cohort passed. W4a is now accepted on main as
+`00606e9`, with all304 runtime/contract inputs matching that source. See the
+[upload acceptance evidence](mixed-uploads.md). These are repository implementation observations, not
 claims about a provider or a released filesystem.
 
 The preparation journal freezes one immutable local view and its original base

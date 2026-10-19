@@ -48,7 +48,8 @@ and log retained. Full local gate1 owned runner271909/child271911 is live,
 306 frozen inputs /tmp/s3drive-mixed-semantics-frozen.json. Logs/results at
 /tmp/s3drive-mixed-semantics-gate1-*; confirm PID+start ticks/result before
 continuation, never restart on observer timeout. Keep runtime frozen meanwhile.
-W4a's independent Windows cohort is still pending; keep that source frozen.
+W4a's independent cohort is accepted and main00606e9 is pushed; all304
+parent runtime inputs are identical. This merge changes owned docs/evidence only.
 W5 settlement, native W6, origins/provider/physical session gates remain.
 Links (78 Markdown files), mdbook build and all chapter tests passed for this
 doc-only change; SVG rendered and visually reviewed at1120x700. No runtime
@@ -56,6 +57,36 @@ changes or new full-gate claim. Logs /tmp/s3drive-mixed-root-design-{links,book,
 book-test}.log. First resume: read the publication design, check own W4a run
 39235506209 and the exact live local gate1 owner/result, finish their separate
 acceptance, then implement W4b2 against accepted source. Never rerun completed one-use source/artifact archivers.
+
+## Accepted W4a mixed dependency uploads (2026-10-19)
+
+Runtime3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2, schema32/all304 frozen inputs.
+Own39235506209 attempt1 ALL3 SUCCESS: book118003478841/Linux118003478261/
+Windows118003478615. Owned watch264673/child264674 CLOSED0. Checker4648 CLOSED0;
+raw comparer/archive58899 CLOSED0. Full raw/source/own API ZIP SHA/independent
+ typed21+14/project/all35 raw fields and types passed. One-use scripts executed;
+never rerun. Own artifacts replacement12179067044/disposition12179218793.
+Indexed84-member archive342113bytes SHAccafd84462a1d08c6814d5ef164811b668a94721a69b0e0d46bbe64ba2420e81;
+all indexed members verified. Raw review helper initially assumed next-line ok
+for the21-record replacement output; corrected before checker, no CI rerun.
+
+Linux412state/Windows407state (one ignored each),37core/22reader1nativeignored/
+62S3/18publication passed. Real legacy FUSE9/77.42s, WinFsp7/91.84s; manifest
+remount1.65s/2.47s, paired no-systemd24.28s and Windows managed79.73s passed.
+Actual Ubuntu24.04 image20261012.334.1 / Windows Server2025 windows-2025-vs2026
+image20261007.264.1. Three locked disposable profiles: dummy credentials removed,
+final deletion by VM destruction. Two unused delay-import warning groups/tooling
+notices retained; slow tests completed. Local final gate4 CLOSED0, final324-member
+archive27fd5c537e227ca1e401140a42970755592b23f5474de86ba0a34617b3cfca53.
+
+Accepted physical mapping/dependency ordering/source and create-policy guards,
+complete historical mixed receipt, observation-only independent process recovery,
+Unicode/empty/partial/zero/forged/unread-tail/concurrent/cancel/rival controls.
+This is not root CAS, clean settlement, native chunk writes, Wasabi or physical
+reboot/sign-in/SSH/tmux acceptance. Goal ACTIVE/progress. Next W4b1 verifier source
+dbdfd61 in /home/marshall/src/worktrees/s3drive-mixed-publication has5 focused tests
+passed and an owned full local gate1 live on306 inputs; confirm PID/result before
+continuing. W4b2 journal/controller, W5, origins and W6 remain.
 
 ## Inherited W4a validation checkpoint
 
