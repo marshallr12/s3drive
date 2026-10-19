@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-18",
+  "accepted_runtime": "bf2e6aed16d32c62e094082a50769141f8f90ef6",
+  "accepted_checkpoint": "2e7b6ca020f5c4068291f7db779e6f359e04f515",
+  "accepted_run": 39187701991,
+  "run_attempt": 1,
+  "frozen_count": 261,
+  "frozen_map_sha256": "0dc7dba7a6e6c75f74fa8039c6ca269f26af4feedca267e43404db36b5d46c3f",
+  "all_frozen_working_hashes_match": true,
+  "all_non_document_tracked_paths_equal": 268,
+  "expected_integration_delta": [
+    "HANDOFF.md",
+    "docs/src/implementation-plan.md",
+    "docs/src/evidence/canonical-manifest-read-integration-20261018.json"
+  ],
+  "own_native_controls": {
+    "linux_seconds": 1.13,
+    "windows_seconds": 3.04
+  },
+  "all_three_raw_logs_reviewed": true,
+  "own_zip_digests_checked": true,
+  "strict_records": {
+    "replacement": 21,
+    "disposition": 14
+  },
+  "all_35_raw_fields_and_types_match": true,
+  "hosted_archive": {
+    "path": "evidence/manifest-page-proofs-bf2-hosted-20261018.tar.gz",
+    "sha256": "7ea07240c7ab082534754536d2809b90168b0f53342cd955c3a0ddc0d8ea3096",
+    "bytes": 172177,
+    "members": 31,
+    "all_indexed_members_verified": true,
+    "source": "bf2e6aed16d32c62e094082a50769141f8f90ef6",
+    "run_id": 39187701991,
+    "run_attempt": 1,
+    "independent_typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true
+  },
+  "local_gate": {
+    "source": "bf2e6aed16d32c62e094082a50769141f8f90ef6",
+    "session": 68162,
+    "exit_code": 0,
+    "runtime_inputs_equal": true
+  },
+  "integration_validation": "final docs/link checks; no repeated runtime gate for source-identical integration",
+  "visibility": "PUBLIC",
+  "visibility_checks_read_only": true,
+  "history_reopen_draft_included": false,
+  "not_claimed": [
+    "new native chunk writes",
+    "historical base reopening",
+    "new Wasabi mutations",
+    "physical workstation reboot"
+  ]
+}

@@ -2328,3 +2328,110 @@ full portable gate95974 now passed with all266 frozen inputs unchanged:368state/
 format/Clippy/build/doclinks/book. Indexed21-member local archive verified.
 Own hosted/native acceptance remains pending. No sparse SQLite schema or native
 chunk-write activation is included.
+
+### Earlier canonical integration checkpoints
+
+The following records describe their original checkpoints; later results above
+supersede their pending statuses. Both lineages are retained during integration.
+
+
+Reader implementation checkpoint (2026-10-18): controller474 and helperfef are
+accepted and combined in source `88d02f7` on `codex/manifest-range-reader`.
+Its full local gate passed (256 unchanged source hashes,12 publication/source,
+5 reader,62 S3,365 state/1ignored,64chapters). The new reader, diagram and indexed
+local evidence are documented in the
+[reader branch book source](https://github.com/marshallr12/s3drive/blob/88d02f7a6605bf13bfd212d67c6609ae16b0ebfd/docs/src/manifest-range-reader.md).
+Its [own hosted cohort](https://github.com/marshallr12/s3drive/actions/runs/39171113280)
+is running; raw/artifact acceptance remains pending. Primary controller sources
+stay unchanged until that acceptance. Native chunk lifecycle and real-provider
+acceptance remain separate. Continue in its isolated worktree and read its HANDOFF.
+
+
+Native read-integration draft checkpoint (2026-10-18): reader88d's own cohort
+has passed all3 jobs and strict21/14 + raw35 checks at reader checkpoint7c2b454.
+Implementation proceeds in /home/marshall/src/worktrees/s3drive-native-manifest-reads
+on codex/native-manifest-reads. Six focused controls passed, including mixed formats,
+two stores, sparse64GiB metadata, old roots and namespace faults. Local real FUSE
+readiness failed OperationNotPermitted under NoNewPrivs1. The first full gate
+failed an existing setup Info TLS connect timeout; its unchanged isolated case
+passed. The second complete gate is running with top-level tests serialized and
+all production timeouts/inside-test concurrency unchanged. No fullgate/native
+acceptance or draft publication is claimed yet. Read that checkout's handoff.
+
+
+Native read publication checkpoint (2026-10-18): source `d98ea2f` is pushed on
+codex/native-manifest-reads after the full local gate passed with257 unchanged
+source hashes,69documentationfiles/65chapters. Two fixture first-line markers
+were repaired after serial-libtest framing was reproduced, without relaxing any
+production deadline or assertion. The
+[own hosted OS cohort](https://github.com/marshallr12/s3drive/actions/runs/39176574738)
+is running; both Rust jobs explicitly execute real native manifest reads/remount.
+No native success is inferred from the portable gate. Primary runtime stays at
+its accepted controller source until the native phase is accepted. Chunk-write
+integration remains later work; continue in the native branch's isolated checkout.
+
+
+Combined snapshot/proof checkpoint (2026-10-18): accepted nativec633 at52f591c
+and local W1a ed2e93b are combined with a demonstrated empty/legacy snapshot
+repair in source `8c3448f`, on codex/manifest-reference-proofs. An old empty
+inode's4-vs0 size failure was reproduced before production changes. Readonly
+chunk-capable inodes now represent every payload version, with attributes pinned
+and guards before/after both readers. Stable authority IDs remain distinct from
+version inodes. Existing writable/direct/fallback scope remains unchanged.
+
+The fresh full local gate passed all259 frozen inputs,8reader/format controls
+(one native ignored),12publication,62S3,365state/one ignored and book/build checks.
+An older readonly engine fixture now performs fresh path lookup after replacement
+and preserves global-ID/old-byte/rename/delete assertions. Indexed25member local
+evidence retains failures and exact source. The
+[own combined OS cohort](https://github.com/marshallr12/s3drive/actions/runs/39184629344)
+passed all3 jobs with raw review, actual FUSE1.63s/WinFsp2.53s, own ZIP digests,
+typed21+14/project oracles and all35 raw fields/types. Accepted checkpoint
+[da84d3a](https://github.com/marshallr12/s3drive/commit/da84d3a05e0562bed00f77f3ea5aece935e52d32)
+retains the indexed29-member hosted archive. Earlier artifacts were not reused.
+
+W1b3890584 independently passed the full local gate with260 unchanged inputs,
+7reader/12publication/62S3/365state1ignored and book/build checks. It exports
+bounded opaque PageProof witnesses and proves valid prior-root reuse as a child
+with invalid geometry refusal, no data fetch or receipt fabrication. The combined
+sourcebf2e6ae includes accepted da84d3a and passed fresh full gate68162 with261
+unchanged frozen inputs,9reader/format1nativeignored,12publication,62S3,
+365state1ignored and all book/build checks. Indexed19-member local archive verified.
+Accepted [checkpoint2e7b6ca](https://github.com/marshallr12/s3drive/commit/2e7b6ca020f5c4068291f7db779e6f359e04f515)
+retains the results and indexed31-member hosted archive. Its
+[own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39187701991)
+passed all3 jobs/raw review, actual FUSE1.13s/WinFsp3.04s, own ZIP digests,
+typed21+14/projectoracles/all35 raw fields/types. No earlier artifacts reused.
+Historical base reopen, sparse SQLite edits, mixed-tree proofs, exact-view
+settlement, native chunk writes and provider/reboot acceptance remain.
+
+Independent W1c1 draft in codex/payload-history-authority adds authenticated
+exact-reference historical manifest lookup from existing retained publication
+and reservation records. No schema migration, operation-log scan or S3 call.
+Each of five BLOB fields has a16KiB SQL guard before Rust copying; a padded-valid-
+JSON negative reproduced acceptance before the fix. Three state controls
+(17 corrupt/oversized scenarios) and one production WireClient/auth HTTP restart/
+no-rebase control passed. Full local gate60956 passed with262 unchanged frozen
+inputs,368state1ignored,11authority namespace,8reader/format1nativeignored,
+12publication,62S3 and all format/Clippy/build/book checks. Local checkpoint
+e18d6f5 is clean with matching committed hashes; not pushed or hosted-accepted.
+The indexed20-member local archive is verified. This is not reader reopen or
+native acceptance. W1c2 must separate immutable
+content from namespace attributes, verify old roots with current credentials and
+retain the own-payload CAS reference rather than the predecessor reservation guard.
+
+W1c2 preparation: local5231113 combines W1c1e18d6f5 and accepted W1b2e7b6ca in
+codex/payload-history-authority.264 runtime inputs frozen; baseline all-target
+check9230 passed plus9focused reader controls/1nativeignored10.69s, all264
+unchanged. Reader implementation has not begun. The combination is not yet hosted-
+accepted. Implement the documented metadata-free pinned version/88-byte untrusted
+descriptor and authority-bound original-root re-open contract, retaining original
+own-payload CAS and current provider auth; then require own full/hosted gates.
+
+Canonical integration,2026-10-18: marshallr12/s3drive main and the primary checkout
+receive accepted checkpoint2e7b6ca/runtimebf2e6ae. All261 frozen runtime inputs
+and all268 non-document tracked files match the accepted source exactly. Own
+run39187701991 native/raw/artifact acceptance and local gate68162 apply to that
+runtime; final book/link checks cover the documentation-only integration delta.
+See [integration evidence](evidence/canonical-manifest-read-integration-20261018.json).
+The history/reopen draft remains separate, with no native-write activation.
