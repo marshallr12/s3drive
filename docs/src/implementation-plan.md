@@ -2040,3 +2040,18 @@ is live; own native/raw/artifact acceptance remains pending. Continue in
 codex/manifest-page-proofs and finish its own gates before promotion.
 Historical base reopen, sparse SQLite edits, mixed-tree proofs, exact-view
 settlement, native chunk writes and provider/reboot acceptance remain.
+
+Independent W1c1 draft in codex/payload-history-authority adds authenticated
+exact-reference historical manifest lookup from existing retained publication
+and reservation records. No schema migration, operation-log scan or S3 call.
+Each of five BLOB fields has a16KiB SQL guard before Rust copying; a padded-valid-
+JSON negative reproduced acceptance before the fix. Three state controls
+(17 corrupt/oversized scenarios) and one production WireClient/auth HTTP restart/
+no-rebase control passed. Full local gate60956 passed with262 unchanged frozen
+inputs,368state1ignored,11authority namespace,8reader/format1nativeignored,
+12publication,62S3 and all format/Clippy/build/book checks. Local checkpoint
+e18d6f5 is clean with matching committed hashes; not pushed or hosted-accepted.
+The indexed20-member local archive is verified. This is not reader reopen or
+native acceptance. W1c2 must separate immutable
+content from namespace attributes, verify old roots with current credentials and
+retain the own-payload CAS reference rather than the predecessor reservation guard.

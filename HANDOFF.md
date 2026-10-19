@@ -60,6 +60,33 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
+## Independent restart prerequisite: W1c1 (2026-10-18)
+
+ACTIVE implementation /home/marshall/src/worktrees/s3drive-payload-history-authority,
+codex/payload-history-authority from accepted da84d3a. Additive manifest-history-v1
+ManifestPayload metadata lookup: exact volume/node/reservation/original reference,
+existing publication record and reservation operation/receipt, one SQLite read
+transaction;16KiB SQL CASE bound on five BLOB fields before Rust copying. No schema,
+S3/reader/native activation. State3 passed (17 corruption cases)1.70s; actual
+WireClient/auth HTTP/restart/no-rebase control passed0.18s. Initial HTTP module
+path failure fixed; negative padded valid JSON accepted before SQL guard, now
+refused across all five fields. Full gate60956 CLOSED EXIT0 ->
+/tmp/s3drive-payload-history-gate.log, frozen262
+/tmp/s3drive-payload-history-frozen.json, unchanged.368state1ignored,11authority
+namespace,8reader/format1nativeignored,12publication,62S3,fmt/clippy/build/book.
+Local clean checkpoint e18d6f5b619f3c1b17cdb734af093ce0b1d4df84, all262
+committed/working hashes match; NOT PUSHED.20-member indexed local archive71917bytes
+SHA d7e7aedb493448a7794ddb15f66503d52e188caced3284fe36724ada15942668.
+Proof /tmp/s3drive-payload-history-local-checkpoint.json. No own hosted W1c1
+acceptance. Read that checkout HANDOFF/plan before the next slice.
+
+Next W1c2 proposed reader:88-byte untrusted base descriptor, metadata-free pinned
+content version shared by File/old-base handles, authenticated history plus fresh
+provider root revision/hash/route checks. Keep own original payload CAS, never
+its reservation's predecessor guard; do not construct File from cached Node.
+Legacy/empty recovery, sparse views, mixed-tree publication, settlement and actual
+native writes still required. Combine accepted W1b then own full/hosted gates.
+
 ## Current work: page proofs with accepted native snapshots (2026-10-18)
 
 ACTIVE /home/marshall/src/worktrees/s3drive-manifest-page-proofs,
@@ -82,7 +109,9 @@ Indexed19member combined local archive100784bytes SHA
 333f2722f4672361a9bcf2304fb92061df42813c001bcebfe4066facd8b7cb8e.
 Runtimebf2e6ae published with docschilda5a3021 on codex/manifest-page-proofs.
 Own run39187701991 attempt1 LIVE: Linux117853515918,Windows117853515627,
-book117853515963. Watch7139 -> /tmp/s3drive-page-proofs-bf2-watch.log. Resume
+book117853515963. Linux/book SUCCESS/raw reviewed; Windows finished tests/native
+and still saving cache at last live API check. Watch7139 ->
+/tmp/s3drive-page-proofs-bf2-watch.log. Resume
 same handle/cohort; no runtime mutation or observation-timeout restart.
 Need all3 terminal/raw reviewed, both native steps successful and own finalized
 artifact ZIP API digests, typed21+14/project oracles/all35 raw fields+types.
