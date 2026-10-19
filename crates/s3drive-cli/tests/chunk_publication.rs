@@ -1,5 +1,7 @@
 //! Real SDK + authenticated Rust authority + private SQLite, owned loopback
 //! fixtures/dummy profiles only. No provider or mounted chunk-format acceptance.
+#[path = "chunk_publication/empty_creation.rs"]
+mod empty_creation;
 #[path = "support/fixture.rs"]
 pub mod fixture;
 #[path = "chunk_publication/mixed_epochs.rs"]
@@ -157,6 +159,20 @@ async fn proxy(
         return axum::http::StatusCode::SERVICE_UNAVAILABLE.into_response();
     }
     let mut reply = p.upstream.request(&request).await.unwrap();
+    if p.mode.load(Ordering::SeqCst) == 13
+        && matches!(
+            &request,
+            Request::Apply {
+                request: Apply {
+                    mutation: Mutation::CreateEmptyManifest { .. },
+                    ..
+                }
+            }
+        )
+    {
+        p.publish_gate.wait().await;
+        p.publish_gate.wait().await;
+    }
     let loss = match &request {
         Request::Apply {
             request:
@@ -172,6 +188,13 @@ async fn proxy(
                     ..
                 },
         } => 2,
+        Request::Apply {
+            request:
+                Apply {
+                    mutation: Mutation::CreateEmptyManifest { .. },
+                    ..
+                },
+        } => 12,
         _ => 0,
     };
     if loss != 0
@@ -1071,9 +1094,11 @@ async fn chunk_child() {
     let s = Server::open(&root, policy).await;
     if matches!(
         mode.as_str(),
-        "recover" | "source_recover_unknown" | "source_recover_known"
+        "recover" | "source_recover_unknown" | "source_recover_known" | "empty_recover"
     ) {
-        if mode == "recover" {
+        if mode == "empty_recover" {
+            Box::pin(empty_creation::killed_recovery(&root, &s)).await;
+        } else if mode == "recover" {
             Box::pin(recover(&root, &s)).await;
         } else {
             Box::pin(source_settlement::recover(
@@ -1088,36 +1113,51 @@ async fn chunk_child() {
             &std::fs::read_to_string(std::env::var("S3DRIVE_CHUNK_CONFIG").unwrap()).unwrap(),
         )
         .unwrap();
-        match mode.as_str() {
-            "mixed_scoped" => mixed_epochs::run_scoped_case(&config, &root, &s).await,
-            "mixed_epochs" => mixed_epochs::run_case(&config, &root, &s).await,
-            "mixed_lineage" => mixed_roots::lineage(&config, &root, &s).await,
-            "mixed_roots_controls" => Box::pin(mixed_roots::controls(&config, &root, &s)).await,
-            "mixed_roots_rivals" => Box::pin(mixed_roots::rivals(&config, &root, &s)).await,
-            "mixed_roots_crash" => Box::pin(mixed_roots::crash(&config, &root, &s)).await,
-            "mixed_roots_recover" => Box::pin(mixed_roots::recover(&root, &s)).await,
-            "mixed_conflict" => Box::pin(mixed_uploads::conflict(&config, &root, &s)).await,
-            "mixed_concurrency" => Box::pin(mixed_uploads::concurrency(&config, &root, &s)).await,
-            "mixed_controls" => Box::pin(mixed_uploads::controls(&config, &root, &s)).await,
-            "mixed_faults" => Box::pin(mixed_uploads::faults(&config, &root, &s)).await,
-            "mixed_uploads" => Box::pin(mixed_uploads::flow(&config, &root, &s)).await,
-            "flow" => Box::pin(flow(&config, &root, &s)).await,
-            "exact" => Box::pin(exact_names(&config, &root, &s)).await,
-            "races" => Box::pin(races(&config, &root, &s)).await,
-            "refusals" => Box::pin(refusals(&config, &root, &s)).await,
-            "proof_fault" => Box::pin(proof_fault(&config, &root, &s)).await,
-            "crash" => Box::pin(crash(&config, &root, &s, false)).await,
-            "policy" => Box::pin(policy_recovery(&config, &root, &s)).await,
-            "source_flow" => Box::pin(source_settlement::flow(&config, &root, &s)).await,
-            "source_crash" => Box::pin(crash(&config, &root, &s, true)).await,
-            "source_ack_crash" => Box::pin(source_settlement::ack_crash(&config, &root, &s)).await,
-            "source_policy" => {
-                Box::pin(source_settlement::policy_recovery(&config, &root, &s)).await
-            }
-            _ => panic!(),
-        }
+        dispatch(&mode, &config, &root, &s).await;
     }
     s.close().await;
+}
+// Construct one heap-owned case before polling it. Keeping every case's
+// concrete future in the shared async dispatcher inflated unrelated cases'
+// debug-build stack frames under workspace feature unification.
+fn dispatch<'a>(
+    mode: &str,
+    config: &'a s3drive_core::Config,
+    root: &'a Path,
+    s: &'a Server,
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + 'a>> {
+    match mode {
+        "empty_deadline" => Box::pin(empty_creation::deadline(config, root, s)),
+        "empty_physical" => Box::pin(empty_creation::physical(config, root, s)),
+        "empty_crash" => Box::pin(empty_creation::crash(config, root, s)),
+        "empty_flow" => Box::pin(empty_creation::flow(config, root, s)),
+        "empty_controls" => Box::pin(empty_creation::controls(config, root, s)),
+        "empty_recovery" => Box::pin(empty_creation::recovery(config, root, s)),
+        "mixed_scoped" => Box::pin(mixed_epochs::run_scoped_case(config, root, s)),
+        "mixed_epochs" => Box::pin(mixed_epochs::run_case(config, root, s)),
+        "mixed_lineage" => Box::pin(mixed_roots::lineage(config, root, s)),
+        "mixed_roots_controls" => Box::pin(mixed_roots::controls(config, root, s)),
+        "mixed_roots_rivals" => Box::pin(mixed_roots::rivals(config, root, s)),
+        "mixed_roots_crash" => Box::pin(mixed_roots::crash(config, root, s)),
+        "mixed_conflict" => Box::pin(mixed_uploads::conflict(config, root, s)),
+        "mixed_concurrency" => Box::pin(mixed_uploads::concurrency(config, root, s)),
+        "mixed_controls" => Box::pin(mixed_uploads::controls(config, root, s)),
+        "mixed_faults" => Box::pin(mixed_uploads::faults(config, root, s)),
+        "mixed_uploads" => Box::pin(mixed_uploads::flow(config, root, s)),
+        "flow" => Box::pin(flow(config, root, s)),
+        "exact" => Box::pin(exact_names(config, root, s)),
+        "races" => Box::pin(races(config, root, s)),
+        "refusals" => Box::pin(refusals(config, root, s)),
+        "proof_fault" => Box::pin(proof_fault(config, root, s)),
+        "policy" => Box::pin(policy_recovery(config, root, s)),
+        "source_flow" => Box::pin(source_settlement::flow(config, root, s)),
+        "source_ack_crash" => Box::pin(source_settlement::ack_crash(config, root, s)),
+        "source_policy" => Box::pin(source_settlement::policy_recovery(config, root, s)),
+        "mixed_roots_recover" => Box::pin(mixed_roots::recover(root, s)),
+        "crash" => Box::pin(crash(config, root, s, false)),
+        "source_crash" => Box::pin(crash(config, root, s, true)),
+        _ => panic!("unknown owned fixture case"),
+    }
 }
 async fn run(mode: &str) {
     let put_gate = fixture::PutGate::default();
@@ -1131,6 +1171,7 @@ async fn run(mode: &str) {
     for stage in match mode {
         "mixed_roots_crash" => vec!["mixed_roots_crash", "mixed_roots_recover"],
         "crash" => vec!["crash", "recover"],
+        "empty_crash" => vec!["empty_crash", "empty_recover"],
         "source_crash" => vec!["source_crash", "source_recover_unknown"],
         "source_ack_crash" => vec!["source_ack_crash", "source_recover_known"],
         _ => vec![mode],
@@ -1313,7 +1354,11 @@ async fn run(mode: &str) {
             result.is_ok()
                 && if matches!(
                     stage,
-                    "crash" | "source_crash" | "source_ack_crash" | "mixed_roots_crash"
+                    "crash"
+                        | "source_crash"
+                        | "source_ack_crash"
+                        | "mixed_roots_crash"
+                        | "empty_crash"
                 ) {
                     killed && !status.success()
                 } else {
@@ -1321,6 +1366,20 @@ async fn run(mode: &str) {
                 },
             "case {stage}: {status}: {err}"
         );
+        if stage == "empty_crash" {
+            assert_eq!(puts(&f), 1);
+            let db = raw(tmp.path());
+            db.execute("UPDATE staged_chunks SET data=zeroblob(length(data))", [])
+                .unwrap();
+            drop(db);
+            std::fs::rename(&setup.credentials, tmp.path().join("credentials.disabled")).unwrap();
+            std::fs::rename(
+                tmp.path().join("policy.toml"),
+                tmp.path().join("policy.disabled"),
+            )
+            .unwrap();
+            counts = Some(f.requests.lock().unwrap().len());
+        }
         if stage == "mixed_roots_crash" {
             assert_eq!(puts(&f), 7);
             let db =
@@ -1372,6 +1431,8 @@ async fn run(mode: &str) {
                 | "source_recover_known"
                 | "source_policy"
                 | "source_flow"
+                | "empty_recovery"
+                | "empty_recover"
         ) {
             assert_eq!(
                 f.requests.lock().unwrap().len(),
@@ -1381,6 +1442,8 @@ async fn run(mode: &str) {
         }
     }
     let expected = match mode {
+        "empty_flow" | "empty_recovery" | "empty_crash" | "empty_physical" | "empty_deadline" => 1,
+        "empty_controls" => 2,
         "mixed_epochs" | "mixed_scoped" => 13,
         "mixed_lineage" => 12,
         "mixed_roots_controls" => 9,
@@ -1551,4 +1614,34 @@ async fn mixed_clean_epochs_acknowledge_exact_heads_preserve_old_reads_and_reuse
 #[tokio::test]
 async fn scoped_mixed_epochs_preserve_old_reads_and_replay_local_acknowledgments() {
     run("mixed_scoped").await;
+}
+
+#[tokio::test]
+async fn empty_manifest_creation_unicode_reads_zero_and_replays_historical_receipt_without_rpc() {
+    run("empty_flow").await;
+}
+#[tokio::test]
+async fn empty_manifest_creation_preflight_and_policy_refuse_before_put_and_collision_is_retained()
+{
+    run("empty_controls").await;
+}
+#[tokio::test]
+async fn empty_manifest_creation_lost_authority_reply_recovers_without_credentials_or_source_reads()
+{
+    run("empty_recovery").await;
+}
+
+#[tokio::test]
+async fn empty_manifest_creation_claimed_put_observes_before_fresh_feature_and_narrowed_policy() {
+    run("empty_physical").await;
+}
+#[tokio::test]
+async fn empty_manifest_creation_killed_owner_recovers_exact_request_with_corrupt_body_and_no_credentials()
+ {
+    run("empty_crash").await;
+}
+
+#[tokio::test]
+async fn empty_manifest_creation_deadline_retains_committed_request_and_releases_bounded_slot() {
+    run("empty_deadline").await;
 }

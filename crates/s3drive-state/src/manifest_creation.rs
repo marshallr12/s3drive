@@ -7,7 +7,9 @@ use std::{collections::BTreeMap, fmt};
 mod input;
 pub use input::Input;
 mod journal_impl;
+mod recovery;
 pub use journal_impl::{Client, Journal};
+pub use recovery::{RecoveryClient, RecoveryStore};
 const RECORD_BYTES: usize = 65536;
 const HARD_RECORDS: usize = 128;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -238,7 +240,7 @@ fn inspect(db: &Connection) -> Result<BTreeMap<String, Record>> {
         if let Some(generation) = record.generation {
             journal_impl::check_staged(db, &record.input, generation, false)?;
             if let Some(proof) = &record.physical
-                && journal::load(db, generation)?.manifest_hash != Some(proof.manifest)
+                && journal_impl::verified_physical(db, &record.input, generation)? != *proof
             {
                 return Err(Failure::Corrupt.into());
             }
@@ -324,5 +326,28 @@ fn checkpoint(label: &str) -> Result<()> {
         }
     }
     let _ = label;
+    Ok(())
+}
+
+fn acknowledge_record(r: &mut Record, request: &ns::Apply, receipt: ns::Receipt) -> Result<()> {
+    if r.request.as_ref() != Some(request) || r.rejection.is_some() {
+        return Err(Failure::Conflict.into());
+    }
+    r.input.check_receipt(request, &receipt)?;
+    if r.receipt.as_ref().is_some_and(|old| old != &receipt) {
+        return Err(Failure::Conflict.into());
+    }
+    r.receipt = Some(receipt);
+    Ok(())
+}
+fn reject_record(r: &mut Record, request: &ns::Apply, error: ns::Error) -> Result<()> {
+    if !terminal(error)
+        || r.request.as_ref() != Some(request)
+        || r.receipt.is_some()
+        || r.rejection.is_some_and(|old| old != error)
+    {
+        return Err(Failure::Conflict.into());
+    }
+    r.rejection = Some(error);
     Ok(())
 }

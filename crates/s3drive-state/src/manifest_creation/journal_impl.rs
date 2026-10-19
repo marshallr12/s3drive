@@ -107,25 +107,7 @@ impl<'a> Journal<'a> {
                     return Ok(());
                 }
                 let g = r.generation.ok_or(Failure::Incomplete)?;
-                check_staged(db, &r.input, g, false)?;
-                let info = remote::load(db, g)?;
-                if info.phase != remote::Phase::Verified
-                    || info.target != r.input.target()?
-                    || info.size != 64
-                    || info.guard != remote::Guard::Missing
-                    || info.anchor.is_some()
-                    || info.payload_sha256 != <[u8; 32]>::from(Sha256::digest(r.input.body()?))
-                {
-                    return Err(Failure::Incomplete.into());
-                }
-                let revision = info.revision.ok_or(Failure::Corrupt)?;
-                let physical = Physical {
-                    manifest: info.manifest_hash,
-                    payload: info.payload_sha256,
-                    operation: hex(info.operation.as_bytes()),
-                    etag: revision.etag().into(),
-                    version: revision.version().map(Into::into),
-                };
+                let physical = verified_physical(db, &r.input, g)?;
                 r.request = Some(r.input.request(
                     physical.operation.clone(),
                     physical.etag.clone(),
@@ -145,36 +127,23 @@ impl<'a> Journal<'a> {
     ) -> Result<Record> {
         self.change(
             id,
-            |_, r| {
-                if r.request.as_ref() != Some(request) || r.rejection.is_some() {
-                    return Err(Failure::Conflict.into());
-                }
-                r.input.check_receipt(request, &receipt)?;
-                if r.receipt.as_ref().is_some_and(|old| old != &receipt) {
-                    return Err(Failure::Conflict.into());
-                }
-                r.receipt = Some(receipt);
-                Ok(())
-            },
+            |_, r| acknowledge_record(r, request, receipt),
             checkpoint,
         )
     }
     pub fn reject(&mut self, id: &str, request: &ns::Apply, error: ns::Error) -> Result<Record> {
-        self.change(
-            id,
-            |_, r| {
-                if !terminal(error)
-                    || r.request.as_ref() != Some(request)
-                    || r.receipt.is_some()
-                    || r.rejection.is_some_and(|old| old != error)
-                {
-                    return Err(Failure::Conflict.into());
-                }
-                r.rejection = Some(error);
-                Ok(())
-            },
-            checkpoint,
-        )
+        self.change(id, |_, r| reject_record(r, request, error), checkpoint)
+    }
+    pub fn records(&mut self) -> Result<Vec<Record>> {
+        let tx = self
+            .state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred)?;
+        preflight(&tx)?;
+        isolation(&tx)?;
+        let rows = inspect(&tx)?.into_values().collect();
+        tx.commit()?;
+        Ok(rows)
     }
     fn change(
         &mut self,
@@ -200,6 +169,34 @@ impl<'a> Journal<'a> {
         hook("TransitionCommitted")?;
         Ok(r)
     }
+}
+// Read only the bounded, independently checksummed upload metadata. The
+// canonical source bytes are not needed after the physical proof is saved.
+pub(super) fn verified_physical(
+    db: &Connection,
+    input: &Input,
+    g: journal::GenerationId,
+) -> Result<Physical> {
+    check_staged(db, input, g, false)?;
+    let info = remote::load(db, g)?;
+    if info.phase != remote::Phase::Verified
+        || info.target != input.target()?
+        || info.size != 64
+        || info.guard != remote::Guard::Missing
+        || info.anchor.is_some()
+        || info.payload_sha256 != <[u8; 32]>::from(Sha256::digest(input.body()?))
+        || journal::load(db, g)?.manifest_hash != Some(info.manifest_hash)
+    {
+        return Err(Failure::Incomplete.into());
+    }
+    let revision = info.revision.ok_or(Failure::Corrupt)?;
+    Ok(Physical {
+        manifest: info.manifest_hash,
+        payload: info.payload_sha256,
+        operation: hex(info.operation.as_bytes()),
+        etag: revision.etag().into(),
+        version: revision.version().map(Into::into),
+    })
 }
 pub(super) fn check_staged(
     db: &Connection,
@@ -254,6 +251,9 @@ impl Client {
         self.owner
             .call(move |store| work(&mut Journal::new(&mut store.state, limits)?))
             .await
+    }
+    pub async fn records(&self) -> Result<Vec<Record>> {
+        self.call(|j| j.records()).await
     }
     pub async fn begin(&self, input: Input) -> Result<Record> {
         self.call(move |j| j.begin(input)).await

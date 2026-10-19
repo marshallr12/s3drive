@@ -2,6 +2,7 @@
 //! local journal and authority HTTP API, plus a bounded reader used by native
 //! managed mounts. Policy-bound native editing uses the same durable journal.
 pub mod chunks;
+pub mod creation;
 pub mod disposition;
 mod reader;
 pub use reader::Reader;

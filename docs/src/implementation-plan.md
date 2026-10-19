@@ -3557,3 +3557,33 @@ Exactly19 runtime deltas promoted; canonical main matches accepted354. Local
 creation/generation/proof/request/receipt recovery and snapshot compatibility are
 implemented. Authenticated SDK creation, restricted metadata-only recovery, typed
 native state composition and native chunk creation/writes remain subsequent work.
+
+### SDK empty-manifest creation candidate (2026-10-19)
+
+The isolated [creation coordinator](empty-manifest-publisher.md) now connects the
+accepted local intent to the real S3 executor and exact authority request. It adds
+an existing-only, credential-free metadata recovery capability without schema or
+native callback changes. Focused17 state and6 SDK cases passed. Complete local gate3 passed unchanged
+at7068013/all357; own Windows CI and raw/artifact review remain pending. Native
+chunk creation/write and retention remain
+subsequent phases. Existing whole-generation mounted writers remain isolated.
+
+
+Creation coordinator audit: a self-consistent request/proof snapshot rewrite was
+admitted against unchanged independent upload metadata, despite the prior source's
+passing gates. The candidate now cross-checks original bounded verified upload
+metadata in both normal and restricted recovery; a red regression and18 state/6
+SDK passes support the fix. New complete local/hosted gates are pending; do not
+promote the earlier passing source as a substitute. See the [audit record](empty-manifest-publisher.md).
+
+
+### SDK empty-manifest creation accepted (2026-10-19)
+
+Corrected950479c/schema40/all357 passed complete local gate4 unchanged and its
+own CI39325779322 all3 jobs. Full raw/source/API ZIP, independent typed21+14,
+project oracles and every raw-record field/JSON type passed. [Indexed evidence and
+architecture](empty-manifest-publisher.md). Exactly8 runtime deltas from the
+accepted354 parent add the authenticated SDK path, existing-only recovery and
+independent physical-proof coherence checks. Native chunk create/write, typed
+same-owner namespace/open composition, deferred/unlinked publication and retention
+remain required; the existing8MiB mounted writer is unchanged.

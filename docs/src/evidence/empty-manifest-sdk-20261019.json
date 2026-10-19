@@ -1,0 +1,66 @@
+{
+  "research_date": "2026-10-19",
+  "status": "accepted SDK phase; native chunk integration unfinished",
+  "source": "950479ca3aacd19059fe3e8474f548502476f36a",
+  "schema": 40,
+  "runtime_files": 357,
+  "parent_source": "bb17161ecd60d31b34dfc90b341b5ea4d3d6d899",
+  "runtime_delta_paths": 8,
+  "local_gate": {
+    "prefix": "/tmp/s3drive-empty-creator-gate4",
+    "exit": 0,
+    "all_inputs": 670,
+    "unchanged": true,
+    "state_passed": 524,
+    "state_ignored": 1,
+    "publication_passed": 30,
+    "reader_passed": 26,
+    "reader_native_ignored": 1
+  },
+  "hosted": {
+    "run": 39325779322,
+    "attempt": 1,
+    "jobs": {
+      "linux": 118311122005,
+      "windows": 118311122136,
+      "book": 118311122026
+    },
+    "all_success": true,
+    "strict_reference_records": [
+      21,
+      14
+    ],
+    "all_raw_records_fields_and_types_equal": 35,
+    "replacement_artifact": 12223045178,
+    "disposition_artifact": 12222694397
+  },
+  "archives": {
+    "local": {
+      "archive": "/tmp/s3drive-empty-creator-proof-local-20261019.tar.gz",
+      "source": "950479ca3aacd19059fe3e8474f548502476f36a",
+      "sha256": "0a004618809fbda20e9703f1c8838013889c9a3eaad1bc4102aaea49d5e6b2d2",
+      "bytes": 1191971,
+      "members": 375,
+      "all_inputs_unchanged": true,
+      "runtime_inputs": 357,
+      "local_gate_exit": 0,
+      "verified": true,
+      "hosted_acceptance": false
+    },
+    "hosted": {
+      "archive": "/home/marshall/src/worktrees/s3drive-empty-manifest-publisher/docs/src/evidence/empty-creator-proof-hosted-20261019.tar.gz",
+      "source": "950479ca3aacd19059fe3e8474f548502476f36a",
+      "run": 39325779322,
+      "sha256": "7855dc88476cc58858f766fa9bbe7e5dd663681b34c9521505dbfa5cb1131677",
+      "bytes": 455287,
+      "members": 46,
+      "verified": true,
+      "runtime_inputs": 357,
+      "schema": 40
+    }
+  },
+  "native_scope": "existing regressions only; no mounted chunk-write activation",
+  "provider_mutations": false,
+  "turso_provisioned": false,
+  "physical_desktop_reboot_verified": false
+}

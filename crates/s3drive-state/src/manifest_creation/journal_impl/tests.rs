@@ -758,3 +758,207 @@ fn downgraded_or_future_schema_markers_never_adopt_or_repair_new_creation_record
         assert_eq!(rows(&state), before);
     }
 }
+
+#[test]
+fn restricted_creation_recovery_finishes_saved_metadata_without_opening_corrupt_sparse_data() {
+    let t = tempfile::tempdir().unwrap();
+    let path = t.path().join("s");
+    let mut s = State::open_managed(&path).unwrap();
+    let i = input(4);
+    let saved = prepared(&mut s, &i);
+    let request = saved.request().unwrap().clone();
+    let base =
+        s3drive_core::manifest::base::Descriptor::from_hex(&id(1), &id(8), &id(7), &"b".repeat(64))
+            .unwrap();
+    let binding = crate::sparse_views::Binding::new(
+        base,
+        [3; 16],
+        [9; 32],
+        "a".repeat(64),
+        "managed/".into(),
+        0,
+    )
+    .unwrap();
+    let mut sparse =
+        crate::sparse_views::Journal::new(&mut s, crate::sparse_views::Options::default()).unwrap();
+    let view = sparse.begin([70; 32], binding, 0).unwrap();
+    sparse
+        .write([71; 32], view.id(), 0, b"retained dirty bytes")
+        .unwrap();
+    s.connection
+        .execute(
+            "UPDATE sparse_view_blocks SET data=randomblob(length(data))",
+            [],
+        )
+        .unwrap();
+    let data: Vec<u8> = s
+        .connection
+        .query_row("SELECT data FROM sparse_view_blocks", [], |r| r.get(0))
+        .unwrap();
+    drop(s);
+    assert!(State::open_managed(&path).is_err());
+    let mut recovery = RecoveryStore::open(&path).unwrap();
+    assert_eq!(recovery.get(&i.operation).unwrap(), saved);
+    let done = recovery
+        .acknowledge(&i.operation, &request, receipt(&i, &request))
+        .unwrap();
+    assert!(done.receipt().is_some());
+    assert_eq!(recovery.records().unwrap(), vec![done.clone()]);
+    drop(recovery);
+    assert!(State::open_managed(&path).is_err());
+    let db = Connection::open(path.join("metadata.sqlite3")).unwrap();
+    assert_eq!(
+        db.query_row("SELECT data FROM sparse_view_blocks", [], |r| r
+            .get::<_, Vec<u8>>(0))
+            .unwrap(),
+        data
+    );
+    drop(db);
+    assert_eq!(
+        RecoveryStore::open(&path)
+            .unwrap()
+            .get(&i.operation)
+            .unwrap(),
+        done
+    );
+}
+
+#[test]
+fn restricted_creation_recovery_never_creates_migrates_or_prepares_and_refuses_late_triggers() {
+    let t = tempfile::tempdir().unwrap();
+    let missing = t.path().join("missing");
+    assert!(RecoveryStore::open(&missing).is_err());
+    assert!(!missing.exists());
+    let path = t.path().join("s");
+    let mut s = State::open_managed(&path).unwrap();
+    drop(s);
+    assert!(RecoveryStore::open(&path).is_err());
+    s = State::open_managed(&path).unwrap();
+    let i = input(4);
+    j(&mut s).begin(i.clone()).unwrap();
+    drop(s);
+    let mut recovery = RecoveryStore::open(&path).unwrap();
+    let r = recovery.get(&i.operation).unwrap();
+    assert!(r.request().is_none());
+    let fake = i
+        .request("a".repeat(64), "\"model-only\"".into(), None)
+        .unwrap();
+    assert!(
+        recovery
+            .acknowledge(&i.operation, &fake, receipt(&i, &fake))
+            .is_err()
+    );
+    assert_eq!(recovery.get(&i.operation).unwrap(), r);
+    let db = Connection::open(path.join("metadata.sqlite3")).unwrap();
+    db.execute_batch("CREATE TRIGGER no_recovery AFTER UPDATE ON manifest_creations BEGIN DELETE FROM manifest_creation_role; END").unwrap();
+    assert!(recovery.get(&i.operation).is_err());
+    drop(recovery);
+    assert!(RecoveryStore::open(&path).is_err());
+    db.execute_batch("DROP TRIGGER no_recovery").unwrap();
+    db.pragma_update(None, "user_version", 39).unwrap();
+    drop(db);
+    assert!(RecoveryStore::open(&path).is_err());
+    let db = Connection::open(path.join("metadata.sqlite3")).unwrap();
+    assert_eq!(
+        db.pragma_query_value(None, "user_version", |r| r.get::<_, i32>(0))
+            .unwrap(),
+        39
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn restricted_creation_worker_reopens_exact_requests_and_releases_the_private_lock_on_close()
+{
+    use std::time::Duration;
+    tokio::time::timeout(Duration::from_secs(15), async {
+        let t = tempfile::tempdir().unwrap();
+        let path = t.path().join("s");
+        let mut s = State::open_managed(&path).unwrap();
+        let i = input(4);
+        let saved = prepared(&mut s, &i);
+        drop(s);
+        let client = RecoveryClient::open(&path).await.unwrap();
+        assert!(RecoveryStore::open(&path).is_err());
+        assert_eq!(client.get(i.operation.clone()).await.unwrap(), saved);
+        let request = saved.request().unwrap().clone();
+        let done = client
+            .acknowledge(i.operation.clone(), request.clone(), receipt(&i, &request))
+            .await
+            .unwrap();
+        assert_eq!(client.records().await.unwrap(), vec![done.clone()]);
+        client.close().await.unwrap();
+        assert!(client.get(i.operation.clone()).await.is_err());
+        assert_eq!(
+            RecoveryStore::open(&path)
+                .unwrap()
+                .get(&i.operation)
+                .unwrap(),
+            done
+        );
+    })
+    .await
+    .expect("restricted creation worker test timed out");
+}
+
+#[test]
+fn rewritten_request_and_physical_snapshot_cannot_replace_the_independent_verified_upload() {
+    for which in 0..3 {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("state");
+        let mut state = State::open_managed(&path).unwrap();
+        let input = input(4);
+        let mut record = prepared(&mut state, &input);
+        let ns::Mutation::CreateEmptyManifest {
+            etag,
+            upload_operation,
+            version,
+            ..
+        } = &mut record.request.as_mut().unwrap().mutation
+        else {
+            panic!()
+        };
+        let proof = record.physical.as_mut().unwrap();
+        match which {
+            0 => {
+                *etag = "\"rewritten\"".into();
+                proof.etag = etag.clone();
+            }
+            1 => {
+                *upload_operation = "b".repeat(64);
+                proof.operation = upload_operation.clone();
+            }
+            _ => {
+                *version = Some("rewritten-version".into());
+                proof.version = version.clone();
+            }
+        }
+        // Recompute both local checksums: a self-consistent duplicate snapshot
+        // is still not the original, independently retained upload proof.
+        let raw = serde_json::to_vec(&record).unwrap();
+        let mut map = BTreeMap::new();
+        map.insert(input.operation.clone(), record.clone());
+        state
+            .connection
+            .execute(
+                "UPDATE manifest_creations SET record=?1,state_hash=?2",
+                params![raw, record_hash(&record).unwrap().as_slice()],
+            )
+            .unwrap();
+        state
+            .connection
+            .execute(
+                "UPDATE manifest_creation_role SET state_hash=?1",
+                [projection(&map).unwrap().as_slice()],
+            )
+            .unwrap();
+        let before = rows(&state);
+        assert!(
+            Journal::new(&mut state, Limits::default()).is_err(),
+            "rewritten physical field {which} was admitted"
+        );
+        assert_eq!(rows(&state), before);
+        drop(state);
+        assert!(RecoveryStore::open(&path).is_err());
+        assert!(State::open_managed(&path).is_err());
+    }
+}
