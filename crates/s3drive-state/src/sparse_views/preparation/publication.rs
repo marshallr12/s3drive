@@ -157,3 +157,28 @@ fn checkpoint(kind: &str, point: &str) {
     use std::io::Read;
     let _ = std::io::stdin().read(&mut [0u8]);
 }
+
+#[derive(Clone, PartialEq, Eq)]
+pub(super) struct AdoptionFence(ledger::Meta);
+/// Full offline preparation/physical/publication validation; never remote auth.
+pub(super) fn adoption_fence(
+    db: &Connection,
+    source: &super::ledger::Snapshot,
+    target: Id,
+) -> Result<AdoptionFence> {
+    let meta = ledger::inspect(db)?;
+    ledger::validate_source(db, &meta)?;
+    for (plan, saved) in &source.plans {
+        let view = source.views.record(saved.input.view)?;
+        if view.request.binding.target()? == target
+            && meta
+                .records
+                .get(plan)
+                .and_then(|r| r.acknowledgment.as_ref())
+                .is_none()
+        {
+            return Err(super::super::Failure::Conflict.into());
+        }
+    }
+    Ok(AdoptionFence(meta))
+}

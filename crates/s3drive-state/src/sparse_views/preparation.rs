@@ -59,3 +59,32 @@ pub(crate) fn validate_all(db: &Connection) -> Result<()> {
 
 #[cfg(test)]
 mod tests;
+
+/// Preserve all preparation/publication state across a local source-head change.
+pub(super) struct AdoptionFence {
+    snapshot: ledger::Snapshot,
+    publication: publication::AdoptionFence,
+}
+pub(super) fn adoption_fence(db: &Connection, target: Id) -> Result<AdoptionFence> {
+    let snapshot = ledger::inspect(db)?;
+    let publication = publication::adoption_fence(db, &snapshot, target)?;
+    Ok(AdoptionFence {
+        snapshot,
+        publication,
+    })
+}
+pub(super) fn check_adoption_fence(
+    db: &Connection,
+    target: Id,
+    before: &AdoptionFence,
+) -> Result<()> {
+    let after = adoption_fence(db, target)?;
+    if before.snapshot.plans != after.snapshot.plans
+        || before.snapshot.objects != after.snapshot.objects
+        || before.snapshot.blobs != after.snapshot.blobs
+        || before.publication != after.publication
+    {
+        return Err(Failure::Corrupt.into());
+    }
+    Ok(())
+}

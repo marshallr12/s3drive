@@ -1,7 +1,7 @@
 {
   "date": "2026-10-19",
   "phase": "local clean-version adoption intent",
-  "status": "full local gate passed; own hosted/platform/source/artifact acceptance required",
+  "status": "accepted: full local gate and own hosted/platform/source/artifact checks passed",
   "schema": 38,
   "source": "67a75e3047a867e2499ef08ded64fe00b72a4aa9",
   "runtime_inputs": 340,
@@ -86,9 +86,49 @@
       "linux": 118205712929,
       "windows": 118205713142
     },
-    "status": "book/Linux succeeded; Windows workspace tests running",
-    "tools_executed": false,
-    "parent_artifact_reuse_permitted": false
+    "status": "accepted; all three jobs succeeded and complete raw/source/artifact/native evidence passed",
+    "tools_executed": true,
+    "parent_artifact_reuse_permitted": false,
+    "archive": {
+      "path": "evidence/external-clean-local-hosted-20261019.tar.gz",
+      "sha256": "b97670d9733322847845c305d8e9fb6114673957f9348180f2bed9e156048902",
+      "bytes": 407971,
+      "members": 107,
+      "all_indexed_members_verified": true,
+      "source": "67a75e3047a867e2499ef08ded64fe00b72a4aa9",
+      "run_id": 39295182975,
+      "run_attempt": 1,
+      "independent_typed_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "all_raw_fields_and_types_equal": true
+    },
+    "artifacts": {
+      "replacement": 12207128174,
+      "disposition": 12209851124
+    },
+    "images": {
+      "linux_and_book": "Ubuntu24.04 image20261012.334.1",
+      "windows": "WindowsServer2025 windows-2025-vs2026 image20261007.264.1"
+    },
+    "native": {
+      "fuse_cases": 9,
+      "fuse_seconds": 51.59,
+      "winfsp_cases": 7,
+      "winfsp_seconds": 101.13,
+      "manifest_linux_seconds": 1.08,
+      "manifest_windows_seconds": 2.87,
+      "paired_no_systemd_seconds": 23.57,
+      "paired_windows_seconds": 77.39
+    },
+    "review": {
+      "windows_slow_tests_completed": 5,
+      "interleaved_reference_tests_completed": 15,
+      "locked_disposable_profiles": 3,
+      "dummy_credentials_removed": true,
+      "profile_deletion_deferred_to_vm_destruction": true
+    }
   },
   "authenticated_observation": false,
   "native_chunk_writes": false,

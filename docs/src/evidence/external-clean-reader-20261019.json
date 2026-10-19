@@ -1,7 +1,7 @@
 {
   "date": "2026-10-19",
   "phase": "authenticated clean-version observation",
-  "status": "focused checks passed; own full local/hosted/platform/source/artifact acceptance running",
+  "status": "complete local gate passed; own hosted/platform/source/artifact acceptance required",
   "schema": 38,
   "source": "12a2f2a7d836aab518c7b0d60675234d6470ef97",
   "runtime_inputs": 342,
@@ -242,7 +242,12 @@
     "frozen_map": "/tmp/s3drive-external-clean-reader-candidate1-frozen.json",
     "tty": false,
     "rust_test_threads": 4,
-    "log": "/tmp/s3drive-external-clean-reader-gate1.log"
+    "log": "/tmp/s3drive-external-clean-reader-gate1.log",
+    "exit_code": 0,
+    "finished": "2026-10-19T18:06:20.463273+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": [],
+    "sha256": "1dba7a363a57508ec15c5b0af5b725328743b8422e7af38df7484bd6de52d380"
   },
   "own_hosted": {
     "run_id": 39298010083,
@@ -253,13 +258,63 @@
       "windows": 118215486257
     },
     "tools_executed": false,
-    "parent_artifact_reuse_permitted": false
+    "parent_artifact_reuse_permitted": false,
+    "status": "book/Linux succeeded; Windows workspace tests running"
   },
   "parent": {
     "source": "67a75e3047a867e2499ef08ded64fe00b72a4aa9",
     "full_local_gate_passed": true,
-    "own_hosted_acceptance_pending": true
+    "own_hosted_acceptance_pending": false,
+    "accepted": true,
+    "hosted_archive_sha256": "b97670d9733322847845c305d8e9fb6114673957f9348180f2bed9e156048902"
   },
   "native_chunk_writes": false,
-  "reclamation": false
+  "reclamation": false,
+  "local_archive": {
+    "scope": "complete local gate only; parent and own hosted/platform/source/native acceptance required",
+    "path": "evidence/external-clean-reader-local-20261019.tar.gz",
+    "sha256": "be0848b254fb9eb9a300fd7d0bd21f4deef4e9fbd940c496b2e2ba913e774b08",
+    "bytes": 9516416,
+    "members": 376,
+    "all_indexed_members_verified": true,
+    "runtime_inputs": 342,
+    "source_checkpoint": "12a2f2a",
+    "schema": 38,
+    "gate_exit_code": 0,
+    "gate_log_sha256": "1dba7a363a57508ec15c5b0af5b725328743b8422e7af38df7484bd6de52d380",
+    "rust_test_threads": 4,
+    "reduced_sdk_admission": false,
+    "counts": {
+      "publication": {
+        "passed": 24,
+        "ignored": 0,
+        "seconds": 171.66
+      },
+      "state": {
+        "passed": 496,
+        "ignored": 1,
+        "seconds": 258.82
+      },
+      "reader": {
+        "passed": 26,
+        "ignored": 1,
+        "seconds": 69.06
+      },
+      "core": {
+        "passed": 37,
+        "ignored": 0,
+        "seconds": 0.04
+      },
+      "s3": {
+        "passed": 62,
+        "ignored": 0,
+        "seconds": 21.35
+      }
+    },
+    "parent_archives_independently_verified": 2
+  },
+  "documentation": {
+    "markdown_files": 91,
+    "chapter_test_log_entries": 87
+  }
 }

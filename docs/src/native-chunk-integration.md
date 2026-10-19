@@ -2,8 +2,8 @@
 
 Source review,2026-10-19. **Proposed implementation plan; native chunk writes are
 not enabled.** The reviewed filesystem paths match accepted source
-`2fc45fed5a15c1a24f0f9713ab7caca02569ec5b`. The accepted schema37 libraries add
-retention guards but do not change these mounted callbacks.
+`2fc45fed5a15c1a24f0f9713ab7caca02569ec5b`. The accepted schema38 libraries add
+retention guards and local clean-adoption intent but do not change these mounted callbacks.
 
 ![Existing mounted writer and proposed chunk bridge, with local SQLite, Rust S3 client, shared coordinator and S3 service](images/native-chunk-integration.svg)
 

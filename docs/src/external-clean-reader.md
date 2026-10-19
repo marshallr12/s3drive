@@ -97,3 +97,23 @@ all required own/parent checks finish. No native chunk-write/GC activation.
 
 [Dated candidate evidence](evidence/external-clean-reader-20261019.json) retains
 the three focused attempts and exact current full-gate/cohort identities.
+
+
+## Complete local gate (2026-10-19)
+
+Source12a2f2a/schema38 passed the complete gate at18:06:20Z, all342 frozen inputs
+unchanged. Publication24/171.66s, state496 (one diagnostic ignored)/258.82s,
+reader26 (one native-only ignored)/69.06s,37core/62S3, formatting/workspace
+all-target Clippy/build and book checks passed. The log records91 Markdown links
+and87 chapter-test entries. Ordinary four threads and unchanged operation bounds.
+
+The [indexed local archive](evidence/external-clean-reader-local-20261019.tar.gz)
+contains376 verified members/9516416bytes: exact342 source, full gate/map/runner,
+SDK1/2/3 source contexts and focused logs (including the failed enum Clippy run),
+and independently hash/index-verified parent340 local and own hosted archives.
+SHA-256 `be0848b254fb9eb9a300fd7d0bd21f4deef4e9fbd940c496b2e2ba913e774b08`.
+Full log SHA-256 `1dba7a363a57508ec15c5b0af5b725328743b8422e7af38df7484bd6de52d380`.
+One-use local archiver DONE; never rerun. Parent340 is accepted. Own book/Linux
+succeeded; Windows and own complete raw/source/native/artifact acceptance remain
+required. This does not enable mounted chunk writes, reclamation or physical
+sign-in/reboot acceptance. Earlier pending local statuses are historical.

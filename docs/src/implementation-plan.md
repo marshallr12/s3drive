@@ -3444,3 +3444,19 @@ workspace Clippy35.04s after fixing the large preflight enum. Final SDK cases pr
 late provider revocation/ETag change after a good root fetch is refused, in addition
 to live/local races and retained reads. [Evidence](external-clean-reader.md).
 Own full gate1181132/1181137 and CI39298010083 attempt1 are running; main remains37.
+
+
+### Local clean-intent promotion and facade full gate (2026-10-19)
+
+Local source67a75e3/schema38/all340 accepted after own CI39295182975 attempt1
+all3 success, complete raw/source/API ZIP/typed21+14/project/all35 raw fields/types.
+[107-member hosted archive](external-clean-local.md) SHAb97670d9733322847845c305d8e9fb6114673957f9348180f2bed9e156048902
+verified. Exactly13 runtime deltas integrated; main matches all340 tested inputs.
+
+Separate authenticated source12a2f2a/all342 passed its full local gate18:06:20Z
+unchanged:496state1ignored/26reader1nativeignored/24publication/37core/62S3,
+format/Clippy/build/91Markdown links/87chapter entries. [376-member local archive](external-clean-reader.md)
+SHAbe0848b254fb9eb9a300fd7d0bd21f4deef4e9fbd940c496b2e2ba913e774b08 verified,
+including failed/passing SDK contexts and parent340 local/hosted evidence.
+Own book/Linux succeeded; Windows and complete own raw/source/native/artifact
+acceptance remain required. Mounted chunk writes and reclamation remain absent.

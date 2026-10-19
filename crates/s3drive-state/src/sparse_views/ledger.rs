@@ -232,6 +232,11 @@ fn load(db: &Connection, patches: bool) -> Result<Ledger> {
         let key = id(key)?;
         let target = id(target)?;
         let record: Record = decode(&raw)?;
+        if record.format == 4
+            && db.pragma_query_value(None, "user_version", |r| r.get::<_, i32>(0))? < 38
+        {
+            return Err(Failure::Corrupt.into());
+        }
         extents += record.spans.len();
         if record.spans.len() > MAX_VIEW_EXTENTS
             || extents > HARD_EXTENTS as usize

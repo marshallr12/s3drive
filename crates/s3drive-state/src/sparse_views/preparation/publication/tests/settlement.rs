@@ -390,3 +390,87 @@ fn recorded_ack_with_read_pins_recovers_without_source_bodies_or_session_rotatio
     );
     assert!(State::open_managed(&path).is_err());
 }
+
+#[test]
+fn external_adoption_accepts_acknowledged_history_but_retains_and_blocks_new_historical_work() {
+    use crate::sparse_views::{Adoption, ScopedOperation};
+    let temp = tempfile::tempdir().unwrap();
+    let mut s = State::open_managed(&temp.path().join("adopt café 🦀")).unwrap();
+    let f = fixture();
+    let r = first(&mut s, &f);
+    let r = commit(&mut s, r);
+    vj(&mut s).enable_scoped().unwrap();
+    let ack_token = ScopedOperation::new(&f.binding, [40; 32]).unwrap();
+    let receipt = j(&mut s)
+        .acknowledge_scoped(
+            ack_token,
+            r.input.plan,
+            crate::sparse_views::Options::default(),
+        )
+        .unwrap();
+    let clean = vj(&mut s).current_head(&f.binding).unwrap();
+    let op = ScopedOperation::new(clean.binding(), [80; 32]).unwrap();
+    let mut remote = clean.binding().clone();
+    remote.base = Descriptor::from_hex(
+        &hex(&[1; 16]),
+        &hex(&[2; 16]),
+        &hex(&[81; 16]),
+        &hex(&[82; 32]),
+    )
+    .unwrap()
+    .encode()
+    .to_vec();
+    remote.base_size = 0;
+    let metadata = ledger::inspect(&s.connection).unwrap();
+    let Adoption::Adopted(observed) = vj(&mut s)
+        .adopt_clean_intent(op, clean.id(), remote)
+        .unwrap()
+    else {
+        panic!()
+    };
+    assert!(ledger::inspect(&s.connection).unwrap() == metadata);
+    assert_eq!(
+        j(&mut s).acknowledged(r.input.plan).unwrap(),
+        Some(receipt.clone())
+    );
+    assert_eq!(
+        vj(&mut s).read(r.input.view, 5, 1).unwrap(),
+        vec![crate::sparse_views::Piece::Local(vec![255])]
+    );
+    // Historical readers may start preparation after adoption. No retroactive
+    // invariant may reject the already committed observation; next adoption blocks.
+    let old = vj(&mut s).view(r.input.view).unwrap();
+    pj(&mut s)
+        .begin(Request {
+            operation: [83; 32],
+            view: old.id(),
+            generation: [83; 16],
+            base_root: f.base.root.encode().to_vec(),
+            base_page: f.base.page.encode(),
+        })
+        .unwrap();
+    assert_eq!(
+        vj(&mut s).recover_adoption(op, clean.id()).unwrap(),
+        Some(observed.clone())
+    );
+    let token = ScopedOperation::new(observed.binding(), [84; 32]).unwrap();
+    let mut next = observed.binding().clone();
+    next.base = Descriptor::from_hex(
+        &hex(&[1; 16]),
+        &hex(&[2; 16]),
+        &hex(&[84; 16]),
+        &hex(&[85; 32]),
+    )
+    .unwrap()
+    .encode()
+    .to_vec();
+    let e = vj(&mut s)
+        .adopt_clean_intent(token, observed.id(), next)
+        .unwrap_err();
+    assert_eq!(
+        e.downcast_ref::<crate::sparse_views::Failure>(),
+        Some(&crate::sparse_views::Failure::Conflict)
+    );
+    assert_eq!(vj(&mut s).current_head(&f.binding).unwrap(), observed);
+    assert_eq!(j(&mut s).acknowledged(r.input.plan).unwrap(), Some(receipt));
+}

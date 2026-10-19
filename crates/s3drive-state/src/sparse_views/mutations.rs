@@ -91,8 +91,8 @@ pub(super) fn store_record(
     Ok(())
 }
 pub struct Journal<'a> {
-    state: &'a mut State,
-    options: Options,
+    pub(super) state: &'a mut State,
+    pub(super) options: Options,
 }
 impl<'a> Journal<'a> {
     pub fn new(state: &'a mut State, options: Options) -> Result<Self> {
@@ -339,7 +339,7 @@ impl<'a> Journal<'a> {
             return Err(Failure::Conflict.into());
         }
         let size = match &change {
-            Change::Rebase { .. } => return Err(Failure::Invalid.into()),
+            Change::Rebase { .. } | Change::Observe { .. } => return Err(Failure::Invalid.into()),
             Change::Resize { .. } => size.ok_or(Failure::Invalid)?,
             Change::Write { offset, blocks, .. } => parent
                 .request
@@ -494,8 +494,8 @@ impl<'a> Journal<'a> {
 }
 #[derive(Clone)]
 pub struct Client {
-    owner: Owner,
-    options: Options,
+    pub(super) owner: Owner,
+    pub(super) options: Options,
 }
 impl Client {
     pub(super) fn release_guard(&self, pin: pins::Pin) {

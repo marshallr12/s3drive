@@ -1,5 +1,10 @@
 # Local clean-version adoption intent
 
+Current status,2026-10-19: accepted after the complete local gate and this source's
+own hosted/platform/source/artifact checks. This remains local intent only; the
+authenticated facade has its own separate acceptance.
+
+
 Declared 2026-10-19. Isolated phase `codex/external-clean-local`, based on accepted
 schema37 main `dc0104a`. This phase adds local SQLite intent only. A later managed
 facade must authenticate a fresh authority/manifest observation before calling it;
@@ -92,3 +97,31 @@ The one-use local archiver is DONE; never rerun it. Own book/Linux CI succeeded;
 Windows is still running. Full own raw/source/native/artifact checks remain
 required before promotion. The separate remote-observation candidate cannot be
 accepted by this local intent result; it needs its own checks.
+
+
+## Own hosted acceptance (2026-10-19)
+
+Source67a75e3047a867e2499ef08ded64fe00b72a4aa9 passed
+[CI39295182975](https://github.com/marshallr12/s3drive/actions/runs/39295182975),
+attempt1: book118205713291/Linux118205712929/Windows118205713142 all succeeded.
+Complete raw logs, exact340 committed/working inputs, own API ZIP digests,
+independent typed21+14 records, project oracles and all35 raw fields/JSON types
+passed. Own replacement12207128174/disposition12209851124 artifacts were used.
+The [indexed hosted archive](evidence/external-clean-local-hosted-20261019.tar.gz)
+contains107 verified members/407971bytes, SHA-256
+`b97670d9733322847845c305d8e9fb6114673957f9348180f2bed9e156048902`.
+The one-use raw review/source checker/comparator/hosted archiver are DONE; never
+rerun them. Observer1115366 CLOSED0/all_success at18:07:07Z.
+
+Linux494/Windows489 state cases (one diagnostic ignored each),24publication and
+23reader (one native-only ignored),37core/62S3 passed. Five slow Windows cases
+completed;15 interleaved reference tests had explicit completion. Separate actual
+native runs passed FUSE9/51.59s, WinFsp7/101.13s, manifest ranges/remount1.08s/2.87s
+and paired no-systemd23.57s/Windows77.39s. Actual images Ubuntu24.04
+20261012.334.1 and WindowsServer2025 windows-2025-vs2026 20261007.264.1.
+
+Three disposable Windows profiles stayed locked; dummy credentials were removed,
+profile deletion deferred to hosted VM destruction. Unused WinFsp delay-import
+warnings and tooling deprecations were retained and reviewed. This does not prove
+native chunk writes, physical MX/Windows10/11 reboot, real Wasabi mutations or the
+separate authenticated facade. Earlier running statuses above are historical.

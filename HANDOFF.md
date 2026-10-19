@@ -29,28 +29,26 @@ Use target-specific platform dependencies. SQLite state stays outside the mount.
 
 ## Accepted canonical implementation
 
-Main runtime includes accepted managed-reader guards and verified batching,
-schema37/all337 exact inputs. Own tested source:
-903ade67e21cd71bb7ab02716c098993d9f6e82f (CI39289349689 attempt1).
-Full local gate passed at16:50:32Z with all337 unchanged. Own book118185617231,
-Linux118185616746 and Windows118185617331 succeeded. Complete raw/source/API ZIP,
-independent typed21+14/project/all35 raw fields and JSON types passed. Actual
-native FUSE9, WinFsp7, manifest reads/remount and paired startup checks passed.
-Actual images Ubuntu24.04 20261012.334.1 and WindowsServer2025
-windows-2025-vs2026 20261007.264.1. These are not mounted chunk-write, Wasabi or
-physical desktop/reboot proofs.
+Main runtime includes accepted local clean-version adoption intent, schema38/all340
+exact inputs. Own tested source67a75e3047a867e2499ef08ded64fe00b72a4aa9,
+CI39295182975 attempt1. Full local gate passed17:46:14Z.
+Own book118205713291/Linux118205712929/Windows118205713142 all succeeded.
+Complete raw/source/API ZIP, independent typed21+14/project/all35 raw fields and
+JSON types passed. Actual native FUSE9/WinFsp7, manifest ranges/remount and paired
+no-systemd/Windows startup passed. Images Ubuntu24.04 20261012.334.1;
+WindowsServer2025 windows-2025-vs2026 20261007.264.1. These are not native chunk
+write, Wasabi or physical desktop/reboot proofs.
 
-[Combined acceptance](docs/src/managed-reader-guards.md) records indexed local
-archive SHA3927d8dda7400c685e17d7cb44c35f76acf5aee5c1c299c4fd75dccd224745d1
-and hosted archive SHAa5f64762435bcb81f33f7c25a26b6d9f773587bb127aa310d0efc23b4cf08e2b.
-All one-use acceptance/comparator/archivers are DONE; NEVER rerun. Canonical
-publication proof: /tmp/s3drive-canonical-managed-batched-publication.json.
+[Local adoption acceptance](docs/src/external-clean-local.md): indexed355-member
+local archive SHA6771882a97cca90e85ca7570d6b05e6fa8ce4bda7e6956628d609cc10bacc582
+and107-member hosted archive SHAb97670d9733322847845c305d8e9fb6114673957f9348180f2bed9e156048902.
+All one-use parent340 acceptance/comparator/archivers are DONE; NEVER rerun.
+Canonical publication proof: /tmp/s3drive-canonical-external-clean-local-publication.json.
 Ordinary later documentation commits do not change the accepted runtime.
-Parent36 accepted source44f0ee19077c7623465faf62834858821cd1ee47/run39286027359;
-parent35 sourcea3574998138d0e4dfa2c62a28c2ada1e18099732/run39263559455.
-Historical component records below preserve their original scopes, not current
-promotion blockers. Three locked disposable Windows profiles had dummy credentials
-removed; final profile deletion was deferred to hosted VM destruction.
+Prior accepted source903ade67e21cd71bb7ab02716c098993d9f6e82f/schema37/run39289349689
+introduced shared reader/preparation guards. Historical component records below
+retain their original scopes. Three locked disposable Windows profiles had dummy
+credentials removed; final profile deletion deferred to hosted VM destruction.
 
 The accepted path includes authenticated manifest reads, immutable local patches,
 mixed plans/dependency uploads, exact root publication/recovery, local lineage and
@@ -61,7 +59,7 @@ their cause. Never equate portable unit tests with an actual mount or flush.
 
 ## Active isolated work and exact next actions
 
-Active next prerequisite: isolated `codex/external-clean-local` at
+Accepted local intent prerequisite: `codex/external-clean-local` at
 /home/marshall/src/worktrees/s3drive-external-clean-local, source67a75e3047a867e2499ef08ded64fe00b72a4aa9.
 Schema38 adds distinct format4 Observe intent, scoped old-epoch retry, clean-head
 CAS, full unresolved-work validation and no-change admission without history growth.
@@ -76,11 +74,12 @@ Indexed355-member local archive SHA6771882a97cca90e85ca7570d6b05e6fa8ce4bda7e695
 verified; one-use local archiver18521 DONE, never rerun. Exact340 frozen under
 /tmp/s3drive-external-clean-local-candidate1-{frozen.json,source.tar.gz}.
 Logs/status /tmp/s3drive-external-clean-local-gate1-{running,result}.json and .log.
-Own CI39295182975 attempt1: book118205713291/Linux118205712929/Windows118205713142
-running. GET-only observer1115366/startticks143787153, same-prefix hosted-watch
-status. Own acceptance tools prepared/compiled, NOT executed; raw review required
-before marker/checker/comparison/archive. Own expected state494Linux/489Windows,
-24publication/23reader. Parent337 artifacts12204512424/12205563584 forbidden reuse.
+Own CI39295182975 attempt1 all3 success: book118205713291/Linux118205712929/
+Windows118205713142. Observer1115366 CLOSED0/all_success18:07:07Z. Own one-use
+raw review/checker22739/comparator+hosted archiver39877 DONE, never rerun. Raw/source/
+API ZIP/typed21+14/project/all35 raw fields/types passed; own replacement12207128174
+and disposition12209851124. Indexed107-member hosted archive SHAb97670d9733322847845c305d8e9fb6114673957f9348180f2bed9e156048902.
+Exactly13 runtime deltas promoted; main all340 matches tested source67a75e3.
 The remote facade is now separately implemented in worktree
 /home/marshall/src/worktrees/s3drive-external-clean-reader, branchcodex/external-clean-reader,
 own source12a2f2a7d836aab518c7b0d60675234d6470ef97/all342. SDK1 sourcea8cc73e
@@ -92,22 +91,32 @@ valid root response and refusing late access revocation/ETag change. Source12a2f
 passed3SDK30.61s/Clippy2.89s; runner1179683 CLOSED0/all342 unchanged. All failed/
 passing source maps/archives/logs/runners/results retained, same-prefix SDK1/2/3.
 [Exact contract/evidence](docs/src/external-clean-reader.md).
-Full gate1 runner1181132/startticks143903102, child1181137/startticks143903111 LIVE,
-started17:53:47Z, exact342 candidate1 frozen map/source. Same-prefix gate1-running/
-result/log. No other local Cargo. Do not edit candidate runtime while it lives.
-Own CI39298010083 attempt1: book118215485753/Linux118215486002/Windows118215486257
-running. GET-only observer1184928/startticks143907161. Own checker/raw comparator/
-archiver are prepared/compiled, NOT executed; complete raw review required first.
-One-use full342 local archiver prepared (not executed) at
-/tmp/s3drive-external-clean-reader-local-archive.py; requires own terminal green
-gate and verified parent340 local+hosted archives. PS oracle syntax parsed only.
-Own expected496Linux/491Windows state,26reader1nativeignored,24publication,
-plus all inherited and new2worker/3SDK cases. Parent340 artifacts12209851124/
-12207128174 forbidden reuse. Parent340 own Windows has passed workspace tests and
-is now running actual driver acceptance; retain exact cohort until terminal.
-Main remains accepted schema37/all337. Do not edit frozen candidate runtime or
-start another local Cargo while this gate lives. The next remote facade must add
-fresh live-node/root authentication and final observation checks; see proposal.
+Full gate1 runner1181132/child1181137 CLOSED0 at18:06:20Z, all342 unchanged.
+Publication24/171.66s,state496+1ignored/258.82s,reader26+1nativeignored/69.06s,
+37core/62S3/fmt/workspaceClippy/build/91Markdown/87chapter entries passed.
+One-use local archiver49337 DONE; never rerun. Indexed376-member local archive
+SHAbe0848b254fb9eb9a300fd7d0bd21f4deef4e9fbd940c496b2e2ba913e774b08 includes
+exact342, all SDK failed/passing contexts and independently verified parent340
+local+hosted archives. Same-prefix gate1 result/log and candidate1 frozen map/source.
+No local Cargo remains from these owned runs; verify actual processes before next.
+Own CI39298010083 attempt1: book118215485753/Linux118215486002 succeeded;
+Windows118215486257 workspace tests running. GET-only observer1184928/startticks
+143907161 tracks exact cohort. Book/Linux complete raw logs retained. Own one-use
+raw review/checker/comparator/hosted archiver prepared/compiled, NOT executed.
+PS oracle parsed only. Require own complete raw review before marker/checker.
+Expected496Linux/491Windows state,26reader1nativeignored,24publication, all inherited
+plus new2worker/3SDK cases. Parent340 artifacts12209851124/12207128174 forbidden reuse.
+Main is accepted schema38/all340; authenticated source12a2f2a/all342 remains separate.
+
+Next native prerequisite investigation: source/open namespace journals use compact
+content references and already share Storage, but their constructors reject sparse
+state. FS lifecycle pre-callback work still flushes whole-generation files. Prefer
+one typed opt-in SQL composition, keeping legacy logical writers isolated. Empty
+file creation may bootstrap a real canonical empty manifest and atomically publish
+its namespace entry, avoiding a fabricated manifest identity for metadata-empty
+nodes. This is a source-reviewed option, NOT a declared API or implemented phase;
+validate canonical root, authority receipt/history and create/recovery semantics
+before code. Retention cuts and all retry namespaces still require their contracts.
 
 
 1. **Upload authorization batch** — worktree
@@ -190,7 +199,7 @@ fresh live-node/root authentication and final observation checks; see proposal.
    [Managed reader evidence](docs/src/managed-reader-guards.md). This is not its full
    workspace/platform acceptance. After batch/scoped parent integration, adapt the
    new batch private chunk-read path to the guard and require fresh full/platform
-   source acceptance. Main is now accepted schema37/all337.
+   source acceptance. Main is now accepted schema38/all340.
 
 6. **Managed-reader/batch integration** — isolated worktree
    /home/marshall/src/worktrees/s3drive-managed-reader-batched,

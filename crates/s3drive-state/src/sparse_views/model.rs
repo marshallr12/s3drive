@@ -139,6 +139,9 @@ pub(super) enum Change {
     Resize {
         parent: Id,
     },
+    Observe {
+        parent: Id,
+    },
     Rebase {
         parent: Id,
         publication: Id,
@@ -147,9 +150,10 @@ pub(super) enum Change {
 impl Change {
     pub(super) fn parent(&self) -> Id {
         match self {
-            Self::Write { parent, .. } | Self::Resize { parent } | Self::Rebase { parent, .. } => {
-                *parent
-            }
+            Self::Write { parent, .. }
+            | Self::Resize { parent }
+            | Self::Rebase { parent, .. }
+            | Self::Observe { parent } => *parent,
         }
     }
 }
@@ -164,7 +168,7 @@ impl Request {
             Some(change)
                 if self.format == 2
                     && change.parent() != [0; 32]
-                    && !matches!(change, Change::Rebase { .. }) =>
+                    && matches!(change, Change::Write { .. } | Change::Resize { .. }) =>
             {
                 if let Change::Write { offset, blocks, .. } = change {
                     if blocks.is_empty() || blocks.len() > MAX_RANGE_BYTES / PATCH_BYTES {
@@ -195,6 +199,10 @@ impl Request {
                 && *parent != [0; 32]
                 && *publication != [0; 32]
                 && self.size == self.binding.base_size => {}
+            Some(Change::Observe { parent })
+                if self.format == 4
+                    && *parent != [0; 32]
+                    && self.size == self.binding.base_size => {}
             _ => return Err(Failure::Invalid.into()),
         }
         Ok(())
@@ -329,6 +337,13 @@ impl Record {
             spans,
         })
     }
+    pub(super) fn clean(&self) -> bool {
+        self.request.size == self.request.binding.base_size
+            && matches!(
+                (self.format, &self.request.edit),
+                (1, None) | (3, Some(Change::Rebase { .. })) | (4, Some(Change::Observe { .. }))
+            )
+    }
     pub(super) fn child(operation: Id, request: Request, parent: &Record) -> Result<Self> {
         request.validate()?;
         if operation == [0; 32]
@@ -337,6 +352,11 @@ impl Record {
                     !request.binding.same_scope(&parent.request.binding)?
                         || request.binding == parent.request.binding
                         || request.size != parent.request.size
+                }
+                Some(Change::Observe { .. }) => {
+                    !parent.clean()
+                        || !request.binding.same_scope(&parent.request.binding)?
+                        || request.binding == parent.request.binding
                 }
                 _ => request.binding != parent.request.binding,
             }
@@ -349,7 +369,7 @@ impl Record {
         }
         let mut spans = Vec::new();
         match change {
-            Change::Rebase { .. } => {
+            Change::Rebase { .. } | Change::Observe { .. } => {
                 push(
                     &mut spans,
                     Span::Base {
@@ -409,17 +429,14 @@ impl Record {
         if spans.len() > MAX_VIEW_EXTENTS {
             return Err(Failure::Quota.into());
         }
-        let rebase = matches!(change, Change::Rebase { .. });
-        let id = hash(
-            if rebase {
-                b"s3drive-sparse-rebase-view-v1\0"
-            } else {
-                b"s3drive-sparse-child-view-v1\0"
-            },
-            &(operation, &request),
-        )?;
+        let (format, domain): (u8, &[u8]) = match change {
+            Change::Rebase { .. } => (3, b"s3drive-sparse-rebase-view-v1\0"),
+            Change::Observe { .. } => (4, b"s3drive-sparse-observed-view-v1\0"),
+            _ => (2, b"s3drive-sparse-child-view-v1\0"),
+        };
+        let id = hash(domain, &(operation, &request))?;
         Ok(Self {
-            format: if rebase { 3 } else { 2 },
+            format,
             id,
             operation,
             request,
