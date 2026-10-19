@@ -2008,18 +2008,24 @@ its accepted controller source until the native phase is accepted. Chunk-write
 integration remains later work; continue in the native branch's isolated checkout.
 
 
-Snapshot-inode repair checkpoint (2026-10-18): the earlier `d98ea2f`
-[cohort](https://github.com/marshallr12/s3drive/actions/runs/39176574738) failed
-on Linux: an old130MiB file handle reported4 bytes after publishing a replacement.
-Windows native passed; this does not accept the failed cohort. A read-only
-manifest payload-specific inode/attribute repair is published as `c633d02` on
-codex/manifest-snapshot-inodes. Negative control failed before repair; fresh full
-local gate passed with257 unchanged inputs, including stale and racing open checks.
-Its [own real OS cohort](https://github.com/marshallr12/s3drive/actions/runs/39178517491)
-has passed Linux (including the repaired native manifest control and no-systemd
-startup) and book checks; Windows remains live. Continue in that isolated
-checkout and read its plan/handoff. Its
-[W1-W6 incremental write plan](https://github.com/marshallr12/s3drive/blob/876cd5ee67b6fcc2eba68d0e3c2603a12e1cd7f1/docs/src/implementation-plan.md)
-records the additional inherited-reference proof and sparse-view settlement
-boundaries. Those are proposals pending repaired read acceptance. Primary runtime
-remains unchanged until actual repaired native acceptance.
+Snapshot-inode repair checkpoint (2026-10-18): source `c633d02` on
+codex/manifest-snapshot-inodes is accepted at checkpoint `52f591c`. Its
+[own real OS cohort](https://github.com/marshallr12/s3drive/actions/runs/39178517491)
+passed all3 jobs, both dedicated real native manifest controls, raw-log review,
+strict21/14 own artifacts/project oracles and all35 raw-field/type matches.
+The indexed26member hosted archive is verified. The earlier `d98ea2f` cohort
+failed Linux and remains separate negative evidence.
+
+The independent W1a library source `ed2e93b` is a clean local commit in
+`/home/marshall/src/worktrees/s3drive-manifest-reference-proofs`; it is not pushed
+or hosted-accepted yet. Full local gate passed with258 unchanged inputs, six
+reader controls and all existing portable regressions. An indexed16member local
+archive retains the interrupted first gate, diagnostic and complete second gate.
+Next combine the accepted native prerequisite and audit old empty/legacy handles
+across format publication before a fresh combined-source local/hosted cohort.
+Primary runtime remains unchanged until that integration is verified. The
+[W1-W6 incremental write plan](https://github.com/marshallr12/s3drive/blob/52f591c/docs/src/implementation-plan.md)
+continues through authenticated bases, sparse edits, mixed-tree proofs, exact-view
+settlement and actual native chunk writes. A source correction now permits prior
+roots as inherited children when their exact page geometry/provenance matches:
+root_key uses Role::Page. Provider conformance and physical reboot remain separate.

@@ -60,44 +60,51 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Snapshot-inode repair published; fresh native gates live (2026-10-18)
+## Current work: accepted native reads and W1a reference proofs (2026-10-18)
 
-Continue in /home/marshall/src/worktrees/s3drive-manifest-snapshot-inodes,
-branch codex/manifest-snapshot-inodes. Runtime c633d02d47ccf2da20cfadd50e0b8e11f6e06811,
-docs checkpoint876cd5e pushed; clean/exactremote/all257 working+committed hashes
-verified. Own run39178517491 attempt1: Linux117826123544,
-Windows117826123721, book117826123692. Linux and book SUCCESS/raw reviewed;
-Windows is live in workspace tests. Watch30345 ->
-/tmp/s3drive-snapshot-inodes-c633-watch.log; resume same handle/cohort.
-Read that checkout's HANDOFF/plan before implementation. Full gate68406 CLOSED
-EXIT0 (12publication,6reader/1nativeignored,62S3,365state/1ignored,fmt/clippy/build/book).
-Frozen map /tmp/s3drive-snapshot-inodes-frozen.json. Indexed13member local archive
-133937bytes SHAe243742e802539035a8efa36478ce339a6f1ce43646460592bade4feb887a2aa.
-Negative control failed on old code; repaired controls pass stale/open-race checks.
-Read-only manifest payload-specific inode+lookup attributes repair an actual
-Linux failure. Old source d98 cohort39176574738 terminal FAILURE: Linux native
-old130MiB fd stat returned4 after a4byte publication; Windows native passed2.39s,
-book passed. Old watch24055 CLOSED EXIT1. Logs retained; no success checker or
-artifact acceptance for failed cohort. Do not borrow its artifacts for repair.
-Repair keeps old-size assertion and adds same-name publication before rename.
-Linux repaired manifest native control passed1.22s,9existing native tests63.27s;
-no-systemd coordinator HTTP/TLS passed23.97s. Source-bound review markers:
-/tmp/s3drive-snapshot-inodes-c633-linux-reviewed.json and
-/tmp/s3drive-snapshot-inodes-c633-book-reviewed.json. Windows native and its
-own finalized artifacts remain pending; no combined marker/success checker yet.
-Need all3/native/rawreview and strict21+14/projectoracles/raw35. Prepared but NOT executed:
-/tmp/s3drive-check-snapshot-inodes-c633.py,
-/tmp/s3drive-snapshot-inodes-c633-reference-check.ps1,
-/tmp/s3drive-snapshot-inodes-c633-raw-compare.py and
-/tmp/s3drive-snapshot-inodes-c633-archive.py. No combined rawreview marker yet.
-The isolated plan defines W1-W6 for actual chunk writes: authenticated base
-provenance, sparse SQLite views, mixed-tree proof, publication, exact-view
-settlement, native writes. Existing full-snapshot tree receipts require local
-upload history for every object; exact source ack requires a full local snapshot.
-Inherited references need separate explicit proofs/settlement, not fabricated
-upload receipts or weakened validators. Pending native read acceptance.
-Primary runtime unchanged; no main/visibility mutation. PUBLIC remains intentional.
-Chunk writes remain later work, goal ACTIVE. Supersedes the historical live notes below.
+Native source c633d02d47ccf2da20cfadd50e0b8e11f6e06811 ACCEPTED at pushed
+docs checkpoint52f591c on codex/manifest-snapshot-inodes. Own run39178517491
+attempt1 ALL3 SUCCESS/raw-reviewed: Linux117826123544, Windows117826123721,
+book117826123692. Both dedicated real native controls passed (Linux1.22s,
+Windows1.79s). Own finalized reference artifacts12155790591/12155504654 passed
+strict21+14/projectoracles/all35 raw fields+types. No older artifacts reused.
+Watch30345 CLOSED0, checker95100 CLOSED0, raw comparison/archive completed;
+do not rerun one-use mkdir/assert-not-exists scripts. Indexed26member hosted
+archive143913bytes SHA800057c4b01f08120681438acc67ce0099fe083ffdc476af37e0e6ce5ee912fd.
+All257 runtime hashes unchanged; PUBLIC preserved, main1a93b5f unchanged.
+Old d98 cohort failed Linux (old130MiB handle stat returned4); retained separately.
+
+ACTIVE implementation checkout:
+/home/marshall/src/worktrees/s3drive-manifest-reference-proofs,
+branch codex/manifest-reference-proofs, clean LOCAL commit
+ed2e93b973ea3099ba5906261d3e8360cebf0184 from accepted reader7c2b454. NOT PUSHED
+or hosted-accepted yet. Exact258 working/committed hashes verified:
+/tmp/s3drive-reference-proofs-local-checkpoint.json and frozen map
+/tmp/s3drive-reference-proofs-frozen.json. New opaque data/hole chunk proofs
+export at most two metadata pages, no data reads; pure snapshot-bound validation
+and bounded encoding. This is W1a, not page-subtree reuse, historical-base reopen,
+sparse editing, upload permission, settlement or native chunk writes.
+Focused6 passed4.97s. Full local gate2 session98776 CLOSED0, all258 unchanged:
+12publication,6reader,62S3,365state/1ignored,fmt/clippy/build/book(68MD/64chapters).
+Indexed16member local archive53064bytes SHA
+b1af7908f2646d1f33436949897ae04ce22b093baade991cb137ff52530eee8a.
+Gate1 session93249 interrupted143/SIGTERM with no test-failure report, cause
+unknown; no Cargo/rustc remained. Pending TLS diagnostic passed alone10.58s;
+this does not identify the termination cause. Both logs retained in archive.
+
+NEXT: read that checkout's HANDOFF/plan. Combine accepted native prerequisite,
+audit opened empty/legacy snapshots across payload-format publication, and run
+a fresh exact-source combined local/hosted cohort before promoting runtime.
+Current native control starts its old-handle assertion from a manifest base;
+add empty/legacy transitions rather than assuming the same attributes stay pinned.
+Do not edit frozen source during running gates; all current handles are terminal.
+W1-W6 plan records required mixed-tree proof, sparse SQLite edits, exact-view
+settlement and actual native writes. Existing full-snapshot receipts require
+local upload history for every object and full sealed source snapshots; do not
+fabricate receipts for inherited refs. Root-key source correction: roots already
+use Role::Page; old roots may be inherited if exact child geometry/provenance
+matches. No forced rewrite merely because it was previously a root.
+Primary253 runtime unchanged; goal ACTIVE. Preserve intentional PUBLIC visibility.
 
 ## Historical native-read publication (failed cohort, 2026-10-18)
 
