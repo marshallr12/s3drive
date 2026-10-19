@@ -104,3 +104,20 @@ credentials; profile deletion was deferred to hosted-VM destruction. Unused
 WinFsp delay-import warnings, completed long tests and Node action deprecations
 are retained in the evidence. These runner tests do not establish physical
 workstation reboot behavior, live Wasabi conformance or native chunk writes.
+
+
+## Core identity layering — local gate passed
+
+W2a,2026-10-18, implements the structural codec in
+`s3drive_core::manifest::base::Descriptor`. This lets the later SQLite view layer
+record identity intent without depending on managed or authority. It does not
+authorize content. The managed BaseDescriptor remains a wrapper with its existing
+API and ReadFailure variants; authenticated historical lookup and fresh provider
+checks stay in the Reader. The88-byte persisted representation is unchanged.
+No database schema or native writes are added. The full local gate passed with
+267 unchanged source inputs:37core tests,368state tests (one ignored),11reader
+tests (one native ignored),62S3 tests and all format/Clippy/build/book checks.
+The [dated evidence](evidence/base-identity-core-20261018.json) and
+[indexed12-member local archive](evidence/base-identity-core-local-20261019.tar.gz)
+retain exact source and results. Own hosted/native acceptance is still pending;
+W1c2's earlier cohort does not certify this newly changed source.

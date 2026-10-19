@@ -1,74 +1,41 @@
 //! Persistable intent to reopen a version. Decoding does not authorize a File.
 use super::*;
 
-const MAGIC: &[u8; 8] = b"S3DBASE1";
-const LENGTH: usize = 88;
+use s3drive_core::manifest::base::{Descriptor, ENCODED_BYTES};
 
-/// Exact historical version identity, without credentials, S3 keys or cached
-/// namespace attributes. Its reference is the original edit CAS expected value,
-/// not the predecessor guard stored in the payload's reservation.
+/// Exact historical version intent. Decode does not authorize a File; use the
+/// Reader's authenticated historical lookup and fresh root verification.
 #[derive(Clone, PartialEq, Eq)]
-pub struct BaseDescriptor {
-    volume: String,
-    node: String,
-    reservation: String,
-    reference: String,
-}
+pub struct BaseDescriptor(Descriptor);
 impl fmt::Debug for BaseDescriptor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("ManifestBaseDescriptor([untrusted intent])")
     }
 }
+fn descriptor_error(error: manifest::Error) -> ReadFailure {
+    match error {
+        manifest::Error::Binding => ReadFailure::Binding,
+        _ => ReadFailure::Integrity,
+    }
+}
 impl BaseDescriptor {
     pub fn volume(&self) -> &str {
-        &self.volume
+        self.0.volume()
     }
     pub fn node(&self) -> &str {
-        &self.node
+        self.0.node()
     }
     pub fn reservation(&self) -> &str {
-        &self.reservation
+        self.0.reservation()
     }
     pub fn payload_reference(&self) -> &str {
-        &self.reference
+        self.0.payload_reference()
     }
-    pub fn encode(&self) -> [u8; LENGTH] {
-        let mut out = [0; LENGTH];
-        out[..8].copy_from_slice(MAGIC);
-        let mut at = 8;
-        for field in [&self.volume, &self.node, &self.reservation, &self.reference] {
-            for pair in field.as_bytes().as_chunks::<2>().0 {
-                // Private constructors establish canonical lowercase hex.
-                let nibble = |b: u8| {
-                    if b.is_ascii_digit() {
-                        b - b'0'
-                    } else {
-                        b - b'a' + 10
-                    }
-                };
-                out[at] = (nibble(pair[0]) << 4) | nibble(pair[1]);
-                at += 1;
-            }
-        }
-        out
+    pub fn encode(&self) -> [u8; ENCODED_BYTES] {
+        self.0.encode()
     }
     pub fn decode(encoded: &[u8]) -> Result<Self> {
-        if encoded.len() != LENGTH || &encoded[..8] != MAGIC {
-            return Err(ReadFailure::Integrity.into());
-        }
-        let value = Self {
-            volume: super::super::hex(&encoded[8..24]),
-            node: super::super::hex(&encoded[24..40]),
-            reservation: super::super::hex(&encoded[40..56]),
-            reference: super::super::hex(&encoded[56..88]),
-        };
-        if [&value.volume, &value.node, &value.reservation]
-            .iter()
-            .any(|id| id.as_str() == s3drive_authority::ROOT)
-        {
-            return Err(ReadFailure::Binding.into());
-        }
-        Ok(value)
+        Ok(Self(Descriptor::decode(encoded).map_err(descriptor_error)?))
     }
 }
 impl BaseFile {
@@ -84,20 +51,24 @@ impl BaseFile {
             .as_ref()
             .filter(|p| p.reservation.manifest.is_some())
             .ok_or(ReadFailure::UnsupportedContent)?;
-        Ok(BaseDescriptor {
-            volume: p.reservation.volume.clone(),
-            node: p.reservation.node.clone(),
-            reservation: p.reservation.id.clone(),
-            reference: s3drive_authority::payload_reference(&self.0.payload)
-                .ok_or(ReadFailure::Binding)?,
-        })
+        let reference =
+            s3drive_authority::payload_reference(&self.0.payload).ok_or(ReadFailure::Binding)?;
+        Ok(BaseDescriptor(
+            Descriptor::from_hex(
+                &p.reservation.volume,
+                &p.reservation.node,
+                &p.reservation.id,
+                &reference,
+            )
+            .map_err(descriptor_error)?,
+        ))
     }
 }
 impl Reader {
     /// Reauthorize the exact persisted version, then independently HEAD/GET/hash
     /// its root with current provider credentials. Never substitute live content.
     pub async fn reopen_base(&self, base: &BaseDescriptor) -> Result<BaseFile> {
-        if base.volume != self.0.volume {
+        if base.volume() != self.0.volume {
             return Err(ReadFailure::Binding.into());
         }
         if !self.0.history {
@@ -126,10 +97,10 @@ impl Reader {
             self.0
                 .authority
                 .request(&Request::ManifestPayload {
-                    volume: base.volume.clone(),
-                    node: base.node.clone(),
-                    reservation: base.reservation.clone(),
-                    reference: base.reference.clone(),
+                    volume: base.volume().to_owned(),
+                    node: base.node().to_owned(),
+                    reservation: base.reservation().to_owned(),
+                    reference: base.payload_reference().to_owned(),
                 })
                 .await?,
         )?
@@ -140,12 +111,12 @@ impl Reader {
         let (store, _) = self.0.stores.get(&r.store.id).ok_or(ReadFailure::Binding)?;
         if !p.valid()
             || r.manifest.is_none()
-            || r.volume != base.volume
-            || r.node != base.node
-            || r.id != base.reservation
+            || r.volume != base.volume()
+            || r.node != base.node()
+            || r.id != base.reservation()
             || &r.store != store
             || s3drive_authority::payload_reference(&Some(p.clone())).as_deref()
-                != Some(base.reference.as_str())
+                != Some(base.payload_reference())
         {
             return Err(ReadFailure::Binding.into());
         }

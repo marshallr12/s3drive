@@ -1,0 +1,98 @@
+{
+  "date": "2026-10-18",
+  "status": "W2a full portable local gate passed; own hosted/native cohort pending",
+  "branch": "codex/base-identity-core",
+  "baseline": "41188dd35d6518ff3f97683fce9bec92ab7f3409",
+  "scope": "pure core identity codec and managed error/API wrapper; no schema, authority, provider or native changes",
+  "focused_core": {
+    "exit_code": 0,
+    "session": 94096,
+    "passed": 3,
+    "log": "/tmp/s3drive-base-identity-core-focused.log",
+    "sha256": "e784bc43bc7ae558f1829e4e02a915fe58a7d3750c8c4843f40b1f0d03160185"
+  },
+  "not_claimed": [
+    "own hosted/native acceptance",
+    "SQLite sparse edit views",
+    "native chunk writes",
+    "provider mutation"
+  ],
+  "readers": {
+    "exit_code": 0,
+    "session": 5271,
+    "passed": 11,
+    "ignored": 1,
+    "seconds": 10.86,
+    "log": "/tmp/s3drive-base-identity-core-readers.log",
+    "sha256": "29ba7f71e31a647b1f7f6e00405615756251390a4cf46ce3c6e1efd0df7b4958"
+  },
+  "pre_gate_tidy": "Use direct fixed-array contains for the core constructor reserved-ID check; full gate tests the final source",
+  "last_updated": "2026-10-19",
+  "full_gate": {
+    "date": "2026-10-19",
+    "exit_code": 0,
+    "session": 33550,
+    "log": "/tmp/s3drive-base-identity-core-gate.log",
+    "sha256": "bd40c9871a1768122590d8d86e180b53eff638d5383e64883f92172c76863361",
+    "frozen_inputs": 267,
+    "all_frozen_inputs_unchanged": true,
+    "core": {
+      "passed": 37,
+      "seconds": 0.05
+    },
+    "state": {
+      "passed": 368,
+      "ignored": 1,
+      "seconds": 314.24
+    },
+    "test_summaries": [
+      "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.63s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.54s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.52s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.34s",
+      "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.18s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 25.10s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s",
+      "test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 79.65s",
+      "test result: ok. 11 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 12.43s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.45s",
+      "test result: ok. 2 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 9.17s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.95s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.47s",
+      "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 31.91s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.26s",
+      "test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s",
+      "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.89s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 23.55s",
+      "test result: ok. 368 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 314.24s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ],
+    "schema_format_clippy_workspace_tests_build_doc_links_book_build_and_test": "passed",
+    "scope": "W2a portable local only; no own native/hosted acceptance"
+  },
+  "local_archive": {
+    "path": "evidence/base-identity-core-local-20261019.tar.gz",
+    "sha256": "5e4b6ec73046762836d0959f2abec0d51b821f7f1ecc28d9177eda48b4bf1c11",
+    "bytes": 46819,
+    "members": 12,
+    "all_indexed_members_verified": true,
+    "scope": "W2a portable local only"
+  }
+}

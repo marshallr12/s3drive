@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated 2026-10-18. Goal ACTIVE. Mira is the assistant; no voice-context handoff
+Updated 2026-10-19. Goal ACTIVE. Mira is the assistant; no voice-context handoff
 capability was available. Read this and docs/src/implementation-plan.md before
 implementation. Keep research/decisions/status/plans in docs/src/. Run the local
 gate with `bash scripts/gate.sh`; native/provider/recovery gates are separate.
@@ -24,6 +24,35 @@ Do not reuse stale private-only publication guards as current policy. The active
 repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
+
+## Current W2a core identity — local green (2026-10-19)
+
+Worktree /home/marshall/src/worktrees/s3drive-base-identity-core,
+branch codex/base-identity-core from accepted main41188dd35d6518ff3f97683fce9bec92ab7f3409.
+Pure core manifest::base structural identity/88-byte codec plus managed wrapper
+preserving getters, Debug, encoding, ReadFailure and all history/root checks.
+No dependency, schema, authority, native or provider change. Three new core
+controls include a literal vector, all truncation/marker/reserved/canonical cases.
+Focused core94096 CLOSED0; reader5271 CLOSED0 (11pass/1nativeignored10.86s).
+Direct contains replaced the identical reserved-ID iterator before final freeze.
+Full local gate33550 CLOSED EXIT0 -> /tmp/s3drive-base-identity-core-gate.log;
+all267 frozen inputs unchanged in /tmp/s3drive-base-identity-core-frozen.json.
+37core/368state1ignored/11reader1nativeignored/62S3 plus all format/Clippy/build/
+links/book checks passed. Indexed12-member local archive46819bytes SHA
+5e4b6ec73046762836d0959f2abec0d51b821f7f1ecc28d9177eda48b4bf1c11.
+Own hosted/native acceptance not yet claimed; publish this checkpoint and track
+its own cohort. Main remains accepted41188dd. PUBLIC intentionally unchanged.
+
+Next W2b may build the local-only SQLite view model against this locally gated
+pure codec in a separate clean worktree. Read W2 proposal, W2a layering detail
+and W2b footprint findings in implementation plan before declaring files. Split
+migration/isolation/model and mutation/composition into independently green
+slices. Inspect resolved rusqlite sources before APIs. Integrate new tables with
+all role/schema/open validations and migration/old-fixture controls. No extra
+SQLite connection or authority-role adoption. Require own combined hosted/native
+acceptance before activation; library milestones do not finish the drive goal.
+Legacy/metadata-empty recovery, W3/W4 mixed publication, W5 exact-view settlement,
+W6 actual native chunk writes, provider and MX sign-in/reboot gates remain.
 
 ## Current accepted W1c2 history/reader (2026-10-18)
 

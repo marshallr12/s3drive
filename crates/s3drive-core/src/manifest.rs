@@ -3,6 +3,7 @@
 use sha2::{Digest, Sha256};
 use std::fmt;
 
+pub mod base;
 pub mod objects;
 
 pub const CHUNK_BYTES: u64 = 1024 * 1024;

@@ -2539,3 +2539,39 @@ Canonical history/reader integration uses the accepted0d2dfce runtime unchanged;
 see [integration evidence](evidence/canonical-manifest-history-integration-20261018.json).
 Only documentation/evidence follow the tested source. Publish by normal fast-
 forward and verify remote/main and the clean primary checkout against all266 inputs.
+
+
+W2a implementation draft,2026-10-18, from accepted main41188dd in
+codex/base-identity-core: `s3drive_core::manifest::base::Descriptor` implements
+only the88-byte structural identity codec and canonical hex constructor. Managed
+BaseDescriptor wraps it, preserves its existing accessors/encoding/redacted Debug
+and maps core Encoding to ReadFailure::Integrity and reserved IDs to Binding.
+Actual authenticated history/store/root checks remain in the existing reader.
+No dependency/schema/wire/native change. Three core controls include a literal
+persisted vector, every truncation length, marker/extra/reserved-ID errors,
+canonical hex refusal and explicitly untrusted alternative identities. Focused
+core tests passed; existing reader controls and a fresh full local gate are still
+required. This prepares SQLite dependency layering, not edit-view implementation.
+
+W2b footprint findings,2026-10-19, from the accepted state sources: this is not a standalone
+module-only addition. State currently migrates schema28 and validates its modules
+in the same opening transaction. Namespace initialization and chunk-publication
+role checks enumerate local tables; the latter deliberately excludes legacy
+logical/namespace state. New sparse-view tables must participate in schema,
+role-isolation and integrity checks, migration rollback and old-schema fixtures.
+They must not silently become compatible with the existing complete-snapshot
+publication/settlement role. Inspect these lists before declaring W2b's write
+footprint. The existing `Owner::call` worker queue can run transactional state
+methods; do not create another SQLite connection or unbounded blocking work in
+an async read callback. These are inspected integration constraints, not a new
+schema or an implemented sparse-view API.
+
+
+W2a local result,2026-10-19: full gate33550 passed with all267 frozen runtime
+inputs unchanged.37core tests include the literal descriptor vector;368state
+(one ignored),11reader (one native ignored),62S3 and all format/Clippy/build/
+book checks passed. Indexed12-member local archive verified; see
+[codec evidence](evidence/base-identity-core-20261018.json). Own hosted/native
+acceptance is pending. W2b's local storage-only slices may build on this green
+structural codec in isolation, while their eventual combined source still needs
+its own complete platform gates before activation. Main stays at accepted41188dd.
