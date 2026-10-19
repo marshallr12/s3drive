@@ -67,18 +67,23 @@ chunk-write activation. W4 publication, W5 settlement/retention/reclamation,
 legacy/metadata-empty origins and W6 mounted chunk writes remain. Provider and
 physical sign-in/reboot/SSH/tmux gates remain separate. Goal ACTIVE/progress.
 
-Successor worktree /home/marshall/src/worktrees/s3drive-mixed-uploads,
-codex/mixed-uploads fromdd9147f. Draft exact physical mapping/dependency uploader
-uses generic staging on the same worker. SDK1 passed113.48s, revised walk73.02s;
-four state controls passed1.71s including quota/actual SQLite-full/same-ID resume.
-First full gate86906 ended143 during the state suite without a final result;
-no gate processes remained and all303 inputs stayed exact. Owned gate2 runner
-157304/child157310 are live; metadata /tmp/s3drive-mixed-uploads-gate2-running.json,
-log /tmp/s3drive-mixed-uploads-gate2.log, final actual exit will be in
-/tmp/s3drive-mixed-uploads-gate2-result.json. Preserve runtime while live. The
-worktree HANDOFF is authoritative for current W4a state. Independent observation-only restart recovery
-without authenticated Preparation reopen is a known remaining W4a acceptance gap;
-see its HANDOFF and plan. Do not promote or call W4a accepted from these results.
+W4a successor source3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2 is published on
+codex/mixed-uploads. Worktree /home/marshall/src/worktrees/s3drive-mixed-uploads.
+Final local gate4 runner210431 CLOSED0 on304 frozen inputs:412state1ignored,
+37core/22reader1nativeignored/62S3/18publication cases, format/Clippy/build,
+77Markdown/73chapters. Indexed324-member final source/evidence archive2060824bytes
+SHA27fd5c537e227ca1e401140a42970755592b23f5474de86ba0a34617b3cfca53.
+Own39235506209 attempt1 running (book118003478841 SUCCESS;
+Linux118003478261/Windows118003478615 pending). Owned observer264673 and child
+264674; process identity metadata /tmp/s3drive-mixed-uploads-hosted-watch-running.json.
+Full current HANDOFF/plan/diagram/evidence in that worktree. Four one-use own
+acceptance scripts prepared, NOT executed. Keep all304 frozen until cohort done.
+No parent artifacts or portable tests substitute for own Windows/Linux native
+acceptance. Main remains accepted W3b/runtimee140508/schema32. Independent
+observation-only mixed recovery and SDK fault controls are implemented and locally
+tested in the successor; W4b root CAS, W5 settlement/retention, legacy/empty origins
+and W6 native chunk writes/provider/physical sign-in/reboot/SSH/tmux still remain.
+Goal ACTIVE/progress; no new native chunk-write activation.
 
 ## Accepted W3a bounded incremental data preparation (2026-10-19)
 

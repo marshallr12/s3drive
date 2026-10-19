@@ -2965,3 +2965,14 @@ successor pointer is reconciled without runtime changes. W4a is a separate draft
 with a live local gate and a known observation-only restart-construction gap;
 W4b/W5/W6, legacy/metadata-empty origins and provider/physical session acceptance
 remain. No chunk writes or file-flush semantics follow from W3b preparation.
+
+
+W4a successor source published,2026-10-19: exact runtime
+`3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2` on `codex/mixed-uploads` passed its
+full local gate on304 frozen inputs, including independent subprocess recovery,
+empty/partial/zero/Unicode cases, forged data/hole and unread-tail refusal,
+concurrent slots/cancellation/SQL progress and racing-creator restart controls.
+Own [Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39235506209)
+is running. Main stays accepted W3b/runtimee140508; own source/artifact/native
+acceptance remains required before W4a promotion. Root CAS, exact-view settlement
+and native chunk writes are still later work, not implied by physical completion.
