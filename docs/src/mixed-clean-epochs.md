@@ -123,3 +123,10 @@ verified members,2542124bytes, with all324 final inputs and both exact failed
 [Dated evidence](evidence/mixed-epochs-20261019.json) records exact scope and failures.
 Own Linux/Windows/book/native/source acceptance is still required. Local success
 is not mounted chunk-write, provider or physical session/reboot acceptance.
+
+
+Exact source `a3574998138d0e4dfa2c62a28c2ada1e18099732` is published for
+[its own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39263559455).
+Acceptance remains pending. Parent source/native artifacts cannot substitute for
+this schema35 runtime. Main remains accepted W5a/schema34; no native chunk writes,
+reclamation or provider/physical reboot behavior is activated by publication.

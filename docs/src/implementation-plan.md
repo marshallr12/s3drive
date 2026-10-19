@@ -3250,3 +3250,8 @@ passed. The1004-member local archive preserves final324 and both failed324 sourc
 SHA9c46f7b89c352a5b3b97297c39c7fd5aca4980b4683d85bdc6254d07acbcb48b.
 [Exact epoch evidence](mixed-clean-epochs.md). Own hosted/native/source acceptance
 remains required before promotion; no mounted chunk writes or reclamation.
+
+
+W5b1 own cohort39263559455 attempt1 is running for exacta357499/schema35/all324.
+Full local446state/23publication passed. Source/native/artifact acceptance remains
+required before runtime promotion; main remains W5a/schema34. [Current evidence](mixed-clean-epochs.md).

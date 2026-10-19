@@ -152,5 +152,18 @@
     "sha256": "9c46f7b89c352a5b3b97297c39c7fd5aca4980b4683d85bdc6254d07acbcb48b",
     "all_indexed_members_verified": true,
     "path": "evidence/mixed-epochs-local-20261019.tar.gz"
+  },
+  "own_hosted": {
+    "source": "a3574998138d0e4dfa2c62a28c2ada1e18099732",
+    "run_id": 39263559455,
+    "attempt": 1,
+    "jobs": {
+      "book": 118097200982,
+      "linux": 118097201820,
+      "windows": 118097201387
+    },
+    "status": "pending",
+    "checker_oracle_raw_comparer_archive_executed": false,
+    "parent_artifact_reuse_permitted": false
   }
 }

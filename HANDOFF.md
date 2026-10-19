@@ -88,7 +88,7 @@ missing/rejected predecessor or nonancestor never becomes an overwrite fallback.
 No clean epoch, reclamation, fresh external-base adoption, new-file origins or
 native chunk activation follows from W5a acceptance. Goal ACTIVE/progress.
 
-## Current W5b1 clean-epoch successor — local gate passed, own cohort next
+## Current W5b1 clean-epoch successor — local gate passed, own cohort running
 
 Worktree /home/marshall/src/worktrees/s3drive-mixed-clean-epochs,
 codex/mixed-clean-epochs. Read docs/src/mixed-clean-epochs.md there; preserve the exact head/binding
@@ -122,7 +122,16 @@ build/80MD/76chapters passed. Log SHA
 9484b5e6c0dc27087a33bbb6dbddbbc0f8704df75f8c38861357f859fda851c5.
 Prepare own hosted cohort after publication with
 /tmp/s3drive-prepare-mixed-epochs-hosted.py (actual source/run/three job IDs required).
-No own checker/oracle/raw-comparer/archive has been executed. Full local and own hosted/native/
+Own sourcea3574998138d0e4dfa2c62a28c2ada1e18099732 published; all324 current and
+committed hashes exact. Own39263559455 attempt1 in progress:
+book118097200982/Linux118097201820/Windows118097201387. Owned observer661520;
+child/start ticks in/tmp/s3drive-mixed-epochs-hosted-watch-running.json.
+Checker/oracle/raw-comparer/archive and review aid prepared, NOT executed. After
+all3 terminal success: full raw review, exact source/API ZIP SHA, typed21+14/project/
+all35 raw fields and types, then one-use archive. Require446Linux/441Windowsstate,
+23publication, all12 new ack cases/11 epoch kills and actual SDK cycles. Keep324
+frozen throughout own acceptance. Parent artifacts12186786596/12187983013 and
+all earlier cohort artifacts must not substitute. NEVER rerun completed local archive. Full local and own hosted/native/
 source gates before promotion. W5b2/3 pins, retry retirement and reclamation,
 authoritative external clean-base observation, explicit origins, W6 and provider/
 physical session/reboot acceptance remain required; no native chunk writes claimed.
