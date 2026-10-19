@@ -214,3 +214,10 @@ The [indexed combined local archive](evidence/snapshot-format-transitions-local-
 retains failures, controls, all input hashes and exact combined source. Every
 indexed member was verified. This supports portable acceptance only; the new
 real native assertions need a fresh exact-source Linux/Windows cohort.
+
+Combined candidate `8c3448f` is pushed on `codex/manifest-reference-proofs`.
+Its [own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39184629344)
+is running. All259 working and committed runtime inputs match; public visibility
+and unchanged main were verified read-only. This cohort must validate the added
+real-drive format assertions and proof API; earlier native artifacts do not
+accept this source.

@@ -27,9 +27,22 @@ include main's policy commit; the c7fca789 feature lineage includes that rule.
 
 ## Current combined-source snapshot-format repair (2026-10-18)
 
+Published 8c3448f478f9ab62fe1a23ce965907546be5d10c, clean exactremote/all259
+working+committed hashes verified, PUBLIC retained/main unchanged. Own run
+39184629344 attempt1 LIVE: Linux117844328637, Windows117844328867,
+book117844329388. Watch73843 -> /tmp/s3drive-formats-8c3-watch.log. Resume
+same handle/cohort; do not mutate runtime while observing. One-use checker,
+project oracle wrapper, raw compare and archive are prepared under /tmp:
+s3drive-check-formats-8c3.py, s3drive-formats-8c3-reference-check.ps1,
+s3drive-formats-8c3-raw-compare.py, s3drive-formats-8c3-archive.py. NOT EXECUTED.
+Need all3 terminal/raw-reviewed, both native steps success and this source's own
+finalized typed21/14 artifacts/project oracles/all35 raw fields+types. No own raw
+review marker/artifact directory yet. Never borrow accepted c633 artifacts.
+
+
 Worktree /home/marshall/src/worktrees/s3drive-manifest-reference-proofs,
 branch codex/manifest-reference-proofs. Local merge9c49fe4 combines accepted
-native52f591c with local-green W1a ed2e93b. Combined source NOT accepted/pushed.
+native52f591c with local-green W1a ed2e93b. Combined source pushed; native/hosted acceptance remains pending.
 Negative control55850 EXIT101: old metadata-empty inode reported4 instead of0
 following manifest publication; /tmp/s3drive-formats-negative.log. Production
 was unchanged for this control. Repair now snapshots all file content versions

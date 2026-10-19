@@ -126,5 +126,25 @@
     "members": 25,
     "all_indexed_members_verified": true,
     "scope": "combined portable gate only; new exact-source native acceptance pending"
+  },
+  "publication": {
+    "source": "8c3448f478f9ab62fe1a23ce965907546be5d10c",
+    "branch": "codex/manifest-reference-proofs",
+    "run_id": 39184629344,
+    "run_attempt": 1,
+    "jobs": {
+      "linux": 117844328637,
+      "windows": 117844328867,
+      "book": 117844329388
+    },
+    "watch_session": 73843,
+    "watch_log": "/tmp/s3drive-formats-8c3-watch.log",
+    "clean_exact_remote_verified": true,
+    "frozen_count": 259,
+    "working_committed_hashes_match": true,
+    "visibility": "PUBLIC",
+    "visibility_checks_read_only": true,
+    "main": "1a93b5f7248892fec96dc8da4438ee7967692e77",
+    "acceptance": "pending own all3/native/raw review and own strict artifacts"
   }
 }
