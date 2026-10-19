@@ -2581,3 +2581,14 @@ CLOSED0:36 preparation tests/66.10s, including all old migrations,12 publication
 cases,24 root kill boundaries and14 preparation kill boundaries. Full gate2 next
 on a fresh317 map; do not reuse gate1 as final success. Parent W4b1 accepted and
 pushed main95f72cc, source5112fd2. Root worktree current code remains unaccepted.
+
+
+Gate2 started11:50:08Z: owned runner399330/child399335, matching identity live.
+Map /tmp/s3drive-mixed-roots-final2-frozen.json317 inputs, exact current/committed
+source d72f6652e4bece2be0706785a698cac66a94596c. Log/result/running metadata
+/tmp/s3drive-mixed-roots-gate2-*. Confirm actual result before resuming, no retry
+on observer timeout. Local one-use archive script prepared at
+/tmp/s3drive-mixed-roots-local-archive.py, NOT executed; requires gate2 EXIT0 and
+all317 unchanged, includes exact failed gate1 source9e4dd90 plus final source.
+Own root platform cohort has NOT been started. Main95f72cc remains accepted
+W4b1/runtime5112fd2/schema32. Root schema33 remains separate and unaccepted.
