@@ -2034,10 +2034,11 @@ with invalid geometry refusal, no data fetch or receipt fabrication. The combine
 sourcebf2e6ae includes accepted da84d3a and passed fresh full gate68162 with261
 unchanged frozen inputs,9reader/format1nativeignored,12publication,62S3,
 365state1ignored and all book/build checks. Indexed19-member local archive verified.
-Published docschilda5a3021 retains the results. Its
+Accepted [checkpoint2e7b6ca](https://github.com/marshallr12/s3drive/commit/2e7b6ca020f5c4068291f7db779e6f359e04f515)
+retains the results and indexed31-member hosted archive. Its
 [own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39187701991)
-is live; own native/raw/artifact acceptance remains pending. Continue in
-codex/manifest-page-proofs and finish its own gates before promotion.
+passed all3 jobs/raw review, actual FUSE1.13s/WinFsp3.04s, own ZIP digests,
+typed21+14/projectoracles/all35 raw fields/types. No earlier artifacts reused.
 Historical base reopen, sparse SQLite edits, mixed-tree proofs, exact-view
 settlement, native chunk writes and provider/reboot acceptance remain.
 
@@ -2055,3 +2056,11 @@ The indexed20-member local archive is verified. This is not reader reopen or
 native acceptance. W1c2 must separate immutable
 content from namespace attributes, verify old roots with current credentials and
 retain the own-payload CAS reference rather than the predecessor reservation guard.
+
+W1c2 preparation: local5231113 combines W1c1e18d6f5 and accepted W1b2e7b6ca in
+codex/payload-history-authority.264 runtime inputs frozen; baseline all-target
+check9230 passed plus9focused reader controls/1nativeignored10.69s, all264
+unchanged. Reader implementation has not begun. The combination is not yet hosted-
+accepted. Implement the documented metadata-free pinned version/88-byte untrusted
+descriptor and authority-bound original-root re-open contract, retaining original
+own-payload CAS and current provider auth; then require own full/hosted gates.

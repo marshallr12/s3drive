@@ -60,7 +60,20 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Independent restart prerequisite: W1c1 (2026-10-18)
+## Current W1c2 combined baseline (2026-10-18)
+
+ACTIVE /home/marshall/src/worktrees/s3drive-payload-history-authority,
+codex/payload-history-authority, local5231113f1ba07ebb3e5a51619f4478805981f85f,
+NOT PUSHED. Combines local-green W1c1e18d6f5 and accepted W1b2e7b6ca; no runtime
+conflicts, both documentation histories preserved. Reader implementation has not
+begun; baseline all-target check9230 CLOSED0, focused reader77295 CLOSED0
+(9pass/1nativeignored10.69s). Logs /tmp/s3drive-history-reader-baseline-{check,focused}.log,
+frozen264 /tmp/s3drive-history-reader-baseline-frozen.json unchanged; result
+/tmp/s3drive-history-reader-baseline-result.json. This combination has no own
+full/hosted acceptance. Implement W1c2 proposal in that worktree's plan, keep
+native chunks unsupported for writes, then own full/local hosted gates before W2.
+
+## Local restart prerequisite: W1c1 (2026-10-18)
 
 ACTIVE implementation /home/marshall/src/worktrees/s3drive-payload-history-authority,
 codex/payload-history-authority from accepted da84d3a. Additive manifest-history-v1
@@ -87,7 +100,7 @@ its reservation's predecessor guard; do not construct File from cached Node.
 Legacy/empty recovery, sparse views, mixed-tree publication, settlement and actual
 native writes still required. Combine accepted W1b then own full/hosted gates.
 
-## Current work: page proofs with accepted native snapshots (2026-10-18)
+## Accepted W1b page proofs with native snapshots (2026-10-18)
 
 ACTIVE /home/marshall/src/worktrees/s3drive-manifest-page-proofs,
 branch codex/manifest-page-proofs. Independent W1b3890584 passed full local
@@ -107,19 +120,20 @@ frozen261 /tmp/s3drive-page-proofs-combined-frozen.json, all unchanged.9reader/f
 1nativeignored,12publication,62S3,365state1ignored,fmt/clippy/build/book passed.
 Indexed19member combined local archive100784bytes SHA
 333f2722f4672361a9bcf2304fb92061df42813c001bcebfe4066facd8b7cb8e.
-Runtimebf2e6ae published with docschilda5a3021 on codex/manifest-page-proofs.
-Own run39187701991 attempt1 LIVE: Linux117853515918,Windows117853515627,
-book117853515963. Linux/book SUCCESS/raw reviewed; Windows finished tests/native
-and still saving cache at last live API check. Watch7139 ->
-/tmp/s3drive-page-proofs-bf2-watch.log. Resume
-same handle/cohort; no runtime mutation or observation-timeout restart.
-Need all3 terminal/raw reviewed, both native steps successful and own finalized
-artifact ZIP API digests, typed21+14/project oracles/all35 raw fields+types.
-Prepared NOT EXECUTED /tmp/s3drive-check-page-proofs-bf2.py,
-/tmp/s3drive-page-proofs-bf2-reference-check.ps1,
-/tmp/s3drive-page-proofs-bf2-raw-compare.py,/tmp/s3drive-page-proofs-bf2-archive.py.
-No own raw-review marker/artifact directory yet; never borrow8c3448f artifacts.
-Publication /tmp/s3drive-page-proofs-publication.json. Keep source261 frozen.
+Runtimebf2e6ae own run39187701991 attempt1 ALL3 SUCCESS; accepted docscheckpoint
+2e7b6ca020f5c4068291f7db779e6f359e04f515 clean exactremote on
+codex/manifest-page-proofs. Watch7139 CLOSED0,checker12398 CLOSED0. All3 raw
+reviewed; actual FUSE1.13s and WinFsp3.04s. Own artifact API ZIP digests,
+typed21+14/projectoracles/all35 raw fields/types passed; no earlier artifacts reused.
+Indexed31-member hosted archive172177bytes SHA
+7ea07240c7ab082534754536d2809b90168b0f53342cd955c3a0ddc0d8ea3096.
+Frozen261 unchanged. Windows Server2025/image20261007.264.1; three disposable
+profiles locked, dummy credentials removed before VM-disposal deferral; unused
+delay-import/long-test/Node notices retained. No physical reboot/provider claim.
+Linux no-systemd HTTP/privateCA23.71s; Windows paired recovery80.16s. Proof
+/tmp/s3drive-page-proofs-bf2-acceptance-publication.json. PUBLIC retained, main
+1a93b5f unchanged. No live W1b CI remains; do not re-run one-use checkers/archive.
+Next reader integration is in the combined history worktree above.
 
 Accepted prerequisite runtime8c3448f478f9ab62fe1a23ce965907546be5d10c, clean
 exactremote docscheckpoint da84d3a05e0562bed00f77f3ea5aece935e52d32 on
@@ -141,7 +155,7 @@ chunk-capable inodes and guards both reader factories; stable logical IDs,
 distinct version inodes, stale opens Conflict, fresh path selects replacement.
 Writable/direct/fallback scope unchanged. Negative empty-fstat4-vs0, stale-fixture
 and unchanged legacy4-snapshot-cap failures preserved; no assertion/quota relaxed.
-W1a chunk-reference proofs accepted in same8c3448f source. W1b still separate.
+W1a chunk-reference proofs accepted in8c3448f; W1b accepted separately inbf2e6ae.
 
 Goal ACTIVE. Primary253 runtime unchanged. Complete historical base reopening,
 sparse SQLite edit views, mixed inherited/new-object publication, exact-view
