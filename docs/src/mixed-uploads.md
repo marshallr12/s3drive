@@ -138,3 +138,7 @@ and full logs, the failed Clippy source/map and preliminary evidence. Its SHA-25
 is `27fd5c537e227ca1e401140a42970755592b23f5474de86ba0a34617b3cfca53`.
 Own Linux/Windows/book/native acceptance remains pending. This is physical upload
 completion and recovery, not an authority root commit or local clean settlement.
+
+Exact source `3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2` is published for its
+[own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39235506209).
+Acceptance is pending. No predecessor's artifacts stand in for these gates.

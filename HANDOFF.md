@@ -32,7 +32,8 @@ Baseline accepted main66ba186/runtimee140508/schema32/all300 exact. Own W3b coho
 and one-use archive/checkers complete, do not rerun. Local pre-recovery checkpoint
 2a7dc16ca4019c9bcf870bdbd2e4cf132873a026 plus docs-only mergee40a470bd07d340e8697c75547fc88bb1fac5531;
 all303 input hashes preserved through merge. Current recovery/control source is
-uncommitted and not covered by the pre-recovery gate. No W4a own CI yet.
+published as3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2 and covered by final gate4;
+it is not covered by the preliminary303-input gate. Own W4a acceptance pending.
 
 Wired: deterministic exact physical mapping on same private owner/generic staging,
 new/inherited/hole tags, bounded new-transfer pagination, dependency ordering and
@@ -82,14 +83,29 @@ JSON result. Indexed324-member final local archive2060824bytes SHA
 contains all304 inputs, current full/focused logs, failed-source/map and preliminary
 archive. One-use final archiver executed/verified; do not rerun either archiver.
 
-Ready to publish this exact source for own Linux/Windows/book/native/source/
-artifact acceptance. Main66ba186 remains accepted runtimee140508/schema32 until
-own cohort accepted; do not reuse parent artifacts. Full W4a contract/evidence/
-diagram in mixed-uploads.md and plan end. W4b original-content CAS/root recovery,
-W5 exact-view settlement/clean base/retention, legacy/metadata-empty origins and
-W6 actual native writes/provider/physical sign-in/reboot/SSH/tmux remain. Goal
-ACTIVE/progress. No root publication, local clean acknowledgment or native chunk
-write activation follows from the locally green physical layer.
+Published runtime3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2 on codex/mixed-uploads.
+All304 working and committed hashes exact. Own run39235506209 attempt1:
+Linux118003478261/Windows118003478615/book118003478841. Acceptance pending;
+get actual terminal job state, review complete raw logs (account for interleaved
+reference JSON), then strict own source/API ZIP SHA/typed21+14/project/all35 raw
+field/type checks. Parent artifacts12173449348/12176705608 must not be reused.
+Read-only repo identity/visibility reporting only, never repair visibility.
+
+Owned CI observer runner264673 (child PID/start ticks at
+/tmp/s3drive-mixed-uploads-hosted-watch-running.json) confirmed live. Log
+/tmp/s3drive-mixed-uploads-hosted-watch.log, observer result
+/tmp/s3drive-mixed-uploads-hosted-watch-result.json. Observer exit is not job state;
+inspect API on failure. Four one-use own check/oracle/raw-comparer/archive scripts
+prepared under /tmp/s3drive-{check-mixed-uploads-hosted.py,mixed-uploads-hosted-*},
+NOT executed. Wait all3 complete success before those checks. Retain every failure;
+no automatic workflow rerun or unchanged-source chasing green. Keep304 frozen.
+
+Main66ba186 remains accepted runtimee140508/schema32 until own cohort accepted.
+Full W4a contract/evidence/diagram in mixed-uploads.md and plan end. W4b original
+content-CAS/root recovery, W5 exact-view settlement/clean base/retention,
+legacy/metadata-empty origins and W6 actual native writes/provider/physical
+sign-in/reboot/SSH/tmux remain. Goal ACTIVE/progress. No root publication, local
+clean acknowledgment or native chunk-write activation follows from this layer.
 
 
 ## Accepted W3b durable mixed-tree preparation (2026-10-19)

@@ -256,5 +256,30 @@
     "all_indexed_members_verified": true,
     "all304_frozen_inputs_unchanged": true,
     "scope": "final W4a local gate; own Linux/Windows/book/native source/artifact acceptance still required"
+  },
+  "publication": {
+    "source": "3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2",
+    "run_id": 39235506209,
+    "attempt": 1,
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39235506209",
+    "jobs": {
+      "linux": 118003478261,
+      "windows": 118003478615,
+      "book": 118003478841
+    },
+    "status": "running; own source/artifact acceptance pending",
+    "observer": {
+      "source": "3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2",
+      "run_id": 39235506209,
+      "run_attempt": 1,
+      "runner_pid": 264673,
+      "runner_start_ticks": "141126326",
+      "child_pid": 264674,
+      "child_start_ticks": "141126334",
+      "log": "/tmp/s3drive-mixed-uploads-hosted-watch.log",
+      "started": "2026-10-19T10:10:59.812129+00:00"
+    },
+    "one_use_checkers": "prepared; not executed",
+    "all304_working_and_committed_exact": true
   }
 }
