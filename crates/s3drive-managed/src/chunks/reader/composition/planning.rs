@@ -5,9 +5,9 @@ use s3drive_core::manifest::objects::RootDescriptor;
 use s3drive_state::sparse_views::preparation as plans;
 #[derive(Clone)]
 pub struct Preparation {
-    edited: EditedFile,
-    client: plans::Client,
-    id: Id,
+    pub(super) edited: EditedFile,
+    pub(super) client: plans::Client,
+    pub(super) id: Id,
 }
 impl fmt::Debug for Preparation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

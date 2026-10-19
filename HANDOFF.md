@@ -25,6 +25,67 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Current W4a mixed dependency uploads — draft, focused verification (2026-10-19)
+
+Worktree /home/marshall/src/worktrees/s3drive-mixed-uploads, branch
+codex/mixed-uploads fromdd9147f. Full phase contract at implementation-plan tail.
+Wired draft: exact stable physical mappings, same-private-owner check, bounded
+new-transfer walk, parent new-child receipts and a distinct historical mixed-tree
+receipt. Managed controller separates fresh semantic/policy checks from claimed
+observation; no authority root CAS, source settlement or native writes.
+State all-target check77154 CLOSED0/12.18s; managed check92052 CLOSED0/10.85s.
+First state focus43005 CLOSED101 (test-only fixture visibility); second10473
+CLOSED101 (2pass1fail: deliberate receipt removal hit FK). Corrected controlled
+corruption fixture; state27546 CLOSED0:3tests0.50s. New quota/SQL-full case added,
+not run yet. First SDK81003 CLOSED0:1test113.48s, actual SDK/owned S3 7 unique PUTs
+(4 base seed +3 mixed); lost PUT/denied source metadata recovered without resend,
+wrong owner/policy/parent order refused, complete mixed graph verified, newer head
+preserved and authority root unchanged. One unused test import removed afterward.
+Changed walk to new transfers only and added completed historical inspection
+without fresh source. SDK15379 CLOSED0:1test73.02s. Four state42017 CLOSED0:4tests
+1.71s including actual SQLite-full/quota preservation and same-generation resume.
+Then changed receipt validation to one compact checked forest in one read-only
+transaction (no cached proof crosses commands/mutations/awaits), and added bounded
+transfer pagination and fresh denied-source/no-stage controls. Full gate86906 closed143 (SIGTERM origin not established) during state suite,
+without final summary. No gate/Cargo/state child survived the process audit.
+All303 inputs exact; format/Clippy/new13-case SDK suite passed before interruption,
+not a full green result. Retained log/result/map at
+/tmp/s3drive-mixed-uploads-gate1{.log,-interrupted.json,-frozen.json}.
+Owned gate2 runner157304/child157310 CLOSED EXIT0,2026-10-19T09:31:49Z.
+All303 frozen inputs exact,412state1ignored/37core/22reader1nativeignored/62S3,
+13chunk-publication tests, format/Clippy/build/77Markdown/73chapters passed.
+Actual result /tmp/s3drive-mixed-uploads-gate2-result.json; log gate2.log SHA
+dffb3e4dbd83e41d2edb9de367f254376389590f0d7c71591afe49252bf06055.
+One-use local archive executed/verified:327members1040313bytes SHA
+401b33408ec66b7d7e892b443d13039537d0dd5a249f0f3e383ebb6dfc294606,
+contains all303 source inputs, focused/interrupted/successful logs and diagram.
+Do not rerun this one-use archiver. This accepts a local draft, not W4a completion.
+Next apply uncompiled independent recovery draft and SDK test from
+/tmp/s3drive-mixed-recovery-draft.rs and
+/tmp/s3drive-mixed-uploads-recovery-test-draft.rs, wire/export/test them. Gate2 does
+not cover those future changes. Record a new source map and full gate afterward.
+
+W3b own39225921755 ALL3 accepted. Watch74306 closed143 as observer;86036 closed0;
+checker22853 failed absent review marker after15 interleaved reference lines were
+classified incorrectly; corrected marker+fresh82089 passed before own archive.
+No CI rerun. All300/source/API ZIP SHA/typed21+14/project/all35 raw fields passed.
+Indexed78-member hosted archive306210bytes SHAdc9fe9b4381633f403525a79943a645d8196606b62964c2acc78b2bb2e7364f1.
+Accepted integration8764e3f17ffb01eee2031a1dfec41497637a8341 is pushed; main now
+66ba186f5c1d03e77d04eb0fe16831c6d956af2e after an owned doc-only gate pointer. Clean, runtimee140508,
+schema32/all300 exact; proof /tmp/s3drive-canonical-mixed-plans-publication.json.
+Primary book build passed. W4 worktree has not merged accepted main's docs yet;
+do that only after gate terminal, preserve303 hashes and current W4 instructions.
+Do not rerun one-use parent acceptance/check/archive tools; already complete.
+
+Independent observation-only restart recovery remains a concrete W4a gap:
+MixedUploader construction normally needs authenticated Preparation reopen.
+Add an exact-owner/binding recovery path from saved physical intent, using
+Executor::reconcile plus exact Verified acknowledgment, never a flush/submit path
+that can freshly claim Prepared work. Test actual worker/process restart with
+source metadata denied, expired/narrow policy and zero new PUTs. Also remaining
+SDK empty/partial/cancel/busy/fault controls, then full local/own combined gates.
+See plan tail. Goal ACTIVE/progress. No root CAS/settlement/native chunk writes.
+
 ## Current W3b durable mixed-tree preparation — local green (2026-10-19)
 
 Worktree /home/marshall/src/worktrees/s3drive-mixed-plans,

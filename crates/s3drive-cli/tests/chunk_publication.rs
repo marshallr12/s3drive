@@ -2,6 +2,8 @@
 //! fixtures/dummy profiles only. No provider or mounted chunk-format acceptance.
 #[path = "support/fixture.rs"]
 pub mod fixture;
+#[path = "chunk_publication/mixed_uploads.rs"]
+mod mixed_uploads;
 #[path = "chunk_publication/source_settlement.rs"]
 mod source_settlement;
 #[path = "support/writes.rs"]
@@ -1071,6 +1073,7 @@ async fn chunk_child() {
         )
         .unwrap();
         match mode.as_str() {
+            "mixed_uploads" => Box::pin(mixed_uploads::flow(&config, &root, &s)).await,
             "flow" => Box::pin(flow(&config, &root, &s)).await,
             "exact" => Box::pin(exact_names(&config, &root, &s)).await,
             "races" => Box::pin(races(&config, &root, &s)).await,
@@ -1196,6 +1199,7 @@ async fn run(mode: &str) {
         }
     }
     let expected = match mode {
+        "mixed_uploads" => 7,
         "flow" => 6,
         "source_flow" => 5,
         "races" | "crash" | "proof_fault" | "source_crash" => 4,
@@ -1292,4 +1296,10 @@ async fn chunk_sources_killed_after_failed_ack_recovers_known_root_without_rpc()
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn chunk_sources_expired_narrow_policy_busy_and_concurrent_first_ack() {
     run("source_policy").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn mixed_dependencies_upload_only_new_objects_and_recover_claimed_put_without_source_reauthorization()
+ {
+    run("mixed_uploads").await;
 }

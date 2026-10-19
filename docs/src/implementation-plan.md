@@ -2951,3 +2951,63 @@ adaptation and its nonempty refusal cases are included. The indexed329-member
 local archive preserves exact source and both failed and successful runs. Own
 combined gates are pending. Parent main3086038 stays accepted
 schema31; this source does not activate uploads, settlement or native writes.
+
+
+### W4a mixed dependency uploads — declared phase (2026-10-19)
+
+Implement in isolated `codex/mixed-uploads`, retaining W3b's frozen source and
+its separate own platform acceptance. This phase must turn a completed mixed
+plan into exact physical upload receipts without reserving/publishing an
+authority root or settling a local view. Keep existing full-snapshot contracts
+unchanged. Use the same private SQLite owner for sparse views, preparation and
+physical staging; refuse pairing a preparation with another executor owner.
+
+Derive stable operation keys from the complete frozen plan/root/object identity;
+use existing `begin_operation` staging records, with no new schema solely for a
+redundant mapping. New data/pages are physical uploads; inherited data/subtrees
+and proved holes never produce PUTs or fake upload receipts. Enumerate admitted
+records with bounded pagination, not one command per absent descendant of a
+reused subtree or each chunk in a large structural zero run. Every new parent
+requires exact historical receipts for its new children and validated inherited
+provenance. The final distinct mixed-tree receipt validates the complete retained
+graph/new-object receipts; it is not a full-snapshot TreeReceipt, root commit,
+source acknowledgment, fresh authorization or file flush.
+
+Before fresh staging/send, the managed controller must check full source/route/
+credential identity, provider create policy and checked exact-view semantics.
+Fresh parent pages also require authenticated inherited provenance/hole checks.
+Recovery of a claimed/uncertain attempt must enter observation before fresh
+composition or policy admission; never replace its target, bytes, guard or ID,
+and never issue another PUT. Persisted prepared attempts still require fresh
+admission before their first send. SQL must end before all network operations.
+Keep raw BLOB SHA distinct from manifest page digests. Preserve newer dirty
+heads, old input bytes, failed/uncertain operations, quotas and caller cancellation.
+No automatic delete/reclamation, retry under a new generation or unconditional
+PUT fallback. Staging collisions, triggers, disk-full and corrupt mappings must
+fail without false acknowledgment.
+
+Acceptance: actual SDK/owned S3 writes show only changed data plus new pages/root,
+unchanged subtree reuse/zero runs cause no descendant sends, complete mixed graph
+verifies, direct parent out-of-order sends fail, partial/empty/Unicode boundaries,
+wrong owner/binding/policy/provenance, lost PUT/restart/cancellation and retained
+quota/SQLite failures. Tests must show recovery preserves one attempt and does
+not require fresh original data for an already claimed dependency. Run full local
+and own Linux/Windows/book/native regression cohort on exact source. W4b original
+content-CAS root publication/recovery, W5 settlement/retention and W6 actual native
+writes, legacy/metadata-empty origins and provider/physical session gates remain.
+
+
+W4a review checkpoint,2026-10-19: the first SDK flow passed, and the new-transfer
+walk passed its SDK regression. Four focused state controls passed. The full
+local gate is running on303 frozen inputs. This is an intermediate draft, not
+phase acceptance. In addition to remaining empty/partial/cancel/busy/fault cases,
+process-restart recovery needs an independent observation-only constructor:
+current `MixedUploader` owns an authenticated `Preparation`, whose normal reopen
+requires fresh original-base authorization. A claimed physical attempt must be
+recoverable without that reopen. Build the recoverer from its exact private
+worker/client, executor binding and saved physical identity; refuse Prepared or
+missing attempts, use observation-only `Executor::reconcile`, and acknowledge
+only its exact Verified operation. It must never call a path that can freshly
+claim or PUT, including under narrowed/expired policy. Test actual worker/process
+restart with source metadata denied and unchanged PUT counts. Root CAS and local
+settlement remain W4b/W5; no historical receipt authenticates a fresh root request.

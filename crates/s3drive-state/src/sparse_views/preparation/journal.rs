@@ -3,7 +3,7 @@ use super::*;
 use ledger::{Saved, SavedObject, Snapshot};
 use model::{Progress, count, geometry, ordinal, root_level, span};
 pub struct Journal<'a> {
-    state: &'a mut State,
+    pub(super) state: &'a mut State,
     options: Options,
 }
 impl<'a> Journal<'a> {
@@ -446,7 +446,7 @@ fn write_delta(db: &Connection, before: &Snapshot, after: &Snapshot, kind: &str)
 }
 #[derive(Clone)]
 pub struct Client {
-    owner: Owner,
+    pub(super) owner: Owner,
     options: Options,
 }
 impl Client {
@@ -456,7 +456,7 @@ impl Client {
             options: options.validate()?,
         })
     }
-    async fn call<T: Send + 'static>(
+    pub(super) async fn call<T: Send + 'static>(
         &self,
         f: impl FnOnce(&mut Journal<'_>) -> Result<T> + Send + 'static,
     ) -> Result<T> {

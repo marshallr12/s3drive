@@ -353,7 +353,7 @@ impl Snapshot {
                     && o.end() > offset
             })
     }
-    fn data_at(&self, plan: Id, offset: u64) -> Result<&Object> {
+    pub(super) fn data_at(&self, plan: Id, offset: u64) -> Result<&Object> {
         if let Some(o) = self
             .objects
             .get(&(plan, -1, offset / manifest::CHUNK_BYTES))

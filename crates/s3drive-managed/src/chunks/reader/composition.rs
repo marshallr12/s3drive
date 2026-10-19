@@ -2,6 +2,8 @@
 use super::*;
 use s3drive_core::manifest::{Reference, base::Descriptor};
 use s3drive_state::sparse_views::{self, Binding, Id, Piece, Range, View};
+mod uploading;
+pub use uploading::MixedUploader;
 mod planning;
 pub use planning::{Preparation, PreparedDependency};
 mod preparation;

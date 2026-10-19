@@ -46,6 +46,12 @@ pub struct Storage {
     staging_options: journal::Options,
 }
 impl Storage {
+    pub(crate) fn same_owner(&self, owner: &Owner) -> bool {
+        self.owner.sender.same_channel(&owner.sender)
+    }
+    pub(crate) fn staging_options(&self) -> journal::Options {
+        self.staging_options
+    }
     pub async fn open(
         directory: &Path,
         cache_options: cache::Options,

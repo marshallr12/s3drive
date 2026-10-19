@@ -1,0 +1,153 @@
+{
+  "date": "2026-10-19",
+  "phase": "W4a mixed dependency uploads",
+  "status": "pre-recovery W4a draft full local gate passed; independent recovery/remaining controls/own combined pending",
+  "branch": "codex/mixed-uploads",
+  "baseline": "dd9147fc3e0814451dc2656e2bde44d70045852d",
+  "schema": 32,
+  "runs": {
+    "check1": {
+      "session": 85629,
+      "exit_code": 101,
+      "log": "/tmp/s3drive-mixed-uploads-check1.log",
+      "sha256": "44ad6b2a4f81ca7420869e2163d7fd9cf1c405b8f663b9195c4e82d939373d0e",
+      "summaries": []
+    },
+    "check2": {
+      "session": 77154,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-uploads-check2.log",
+      "sha256": "33bfb686b4b3d9a25807751e1522871d7e760b4c8570195fbf47e1127528519b",
+      "summaries": []
+    },
+    "managed-check1": {
+      "session": 92052,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-uploads-managed-check1.log",
+      "sha256": "8cab90ad9175793088ae0ac9f2ad733fe9b155bc30b68a0447a434bae193bb9b",
+      "summaries": []
+    },
+    "state-focused1": {
+      "session": 43005,
+      "exit_code": 101,
+      "log": "/tmp/s3drive-mixed-uploads-state-focused1.log",
+      "sha256": "aa15ca03822d0c8978c11f41e9147c2332224d8d55da976f22df1070f002ec19",
+      "summaries": []
+    },
+    "state-focused2": {
+      "session": 10473,
+      "exit_code": 101,
+      "log": "/tmp/s3drive-mixed-uploads-state-focused2.log",
+      "sha256": "6edbe4a8fe9b41baa3d97a216a3f8602185588549b364e5b105f41e01071dddb",
+      "summaries": [
+        "test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 409 filtered out; finished in 0.50s"
+      ]
+    },
+    "state-focused3": {
+      "session": 27546,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-uploads-state-focused3.log",
+      "sha256": "f0b86bb37fb60c751c5f6e0067b675974e965aa4a4ecf6529fe897a2d88fed18",
+      "summaries": [
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 409 filtered out; finished in 0.50s"
+      ]
+    },
+    "sdk-focused1": {
+      "session": 81003,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-uploads-sdk-focused1.log",
+      "sha256": "8ceabb3204a1eb0151daa244e7b242865e026421c79262b45c6d8c3ff7df99d2",
+      "summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 113.48s"
+      ]
+    },
+    "state-focused4": {
+      "session": 42017,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-uploads-state-focused4.log",
+      "sha256": "aaa41a6928b7eac4179de2c71f00867940f92485037f21dcf1a7fe747817dafb",
+      "summaries": [
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 409 filtered out; finished in 1.71s"
+      ]
+    },
+    "sdk-focused2": {
+      "session": 15379,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-uploads-sdk-focused2.log",
+      "sha256": "bcc7066ba1aba921007b9df615951b3be50db9a4e6dfeb43a7e61fbaf6c07bc7",
+      "summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 73.02s"
+      ]
+    }
+  },
+  "not_claimed": [
+    "authority root CAS publication",
+    "sparse clean settlement or reclamation",
+    "native chunk writes",
+    "Wasabi acceptance",
+    "physical reboot/sign-in/SSH/tmux acceptance"
+  ],
+  "full_gate": {
+    "runner_pid": 157304,
+    "runner_start_ticks": "140844461",
+    "child_pid": 157310,
+    "child_start_ticks": "140844470",
+    "started": "2026-10-19T09:24:01.170375+00:00",
+    "command": [
+      "bash",
+      "scripts/gate.sh"
+    ],
+    "cwd": "/home/marshall/src/worktrees/s3drive-mixed-uploads",
+    "runtime_inputs": 303,
+    "frozen_map": "/tmp/s3drive-mixed-uploads-frozen.json",
+    "tty": false,
+    "rust_test_threads": 4,
+    "log": "/tmp/s3drive-mixed-uploads-gate2.log",
+    "exit_code": 0,
+    "finished": "2026-10-19T09:31:49.779321+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": [],
+    "sha256": "dffb3e4dbd83e41d2edb9de367f254376389590f0d7c71591afe49252bf06055"
+  },
+  "diagram": {
+    "source": "images/mixed-uploads.svg",
+    "review_png": "/tmp/s3drive-mixed-uploads-diagram-review.png",
+    "status": "final SVG rendered and visually reviewed; labels/arrows clear"
+  },
+  "remaining_acceptance": [
+    "independent observation-only process/worker restart recovery without authenticated Preparation reopen",
+    "additional empty/partial/cancellation/busy/fault SDK controls",
+    "full local gate terminal success and exact source archive",
+    "own combined Linux/Windows/book/native regression cohort"
+  ],
+  "parent_cohort": {
+    "run_id": 39225921755,
+    "status": "all3 accepted; canonical main pushed",
+    "main": "66ba186f5c1d03e77d04eb0fe16831c6d956af2e",
+    "runtime_source": "e140508b19aef4082f9565990402852d4f27cdb4",
+    "all300_exact": true,
+    "proof": "/tmp/s3drive-canonical-mixed-plans-publication.json",
+    "accepted_integration": "8764e3f17ffb01eee2031a1dfec41497637a8341"
+  },
+  "interrupted_full_gate": {
+    "session": 86906,
+    "exit_code": 143,
+    "signal": "SIGTERM; origin not established",
+    "process_check": "no gate/cargo/state suite processes remaining",
+    "completed": false,
+    "all303_runtime_inputs_exact": true,
+    "log": "/tmp/s3drive-mixed-uploads-gate1.log",
+    "sha256": "4b76b7c8e39f14daf34d62cdf08c735160d42ac5acf7f9cc469e8a79115d0e97",
+    "last_stage": "state suite; no final suite result",
+    "prior_checks": "format/workspace Clippy passed; new13-case chunk publication suite passed"
+  },
+  "local_archive": {
+    "path": "evidence/mixed-uploads-local-20261019.tar.gz",
+    "sha256": "401b33408ec66b7d7e892b443d13039537d0dd5a249f0f3e383ebb6dfc294606",
+    "bytes": 1040313,
+    "members": 327,
+    "all_indexed_members_verified": true,
+    "all303_frozen_inputs_unchanged": true,
+    "scope": "locally green W4a draft; remaining controls/own platform gates still required"
+  }
+}

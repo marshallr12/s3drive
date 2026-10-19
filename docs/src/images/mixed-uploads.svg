@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="690" viewBox="0 0 1100 690">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#416278"/></marker></defs>
+<rect width="1100" height="690" fill="#f5f8fc"/>
+<g font-family="sans-serif" fill="#173248">
+<text x="35" y="42" font-size="25" font-weight="bold">Mixed dependency uploads</text>
+<text x="35" y="69" font-size="15">Draft W4a • exact physical completion • authority root commit and native writes remain later phases</text>
+<rect x="30" y="94" width="675" height="475" rx="18" fill="#e8f1fa" stroke="#a5bdd1"/>
+<text x="52" y="125" font-size="18" font-weight="bold">Linux or Windows workstation</text>
+<rect x="55" y="148" width="620" height="90" rx="10" fill="white" stroke="#8caac1"/>
+<text x="74" y="177" font-size="19" font-weight="bold">Rust managed controller</text>
+<text x="74" y="201" font-size="15">Exact immutable view + source checks + configured write policy</text>
+<text x="74" y="222" font-size="15">New child receipts before parent pages and root object</text>
+<rect x="55" y="292" width="345" height="185" rx="10" fill="white" stroke="#8caac1"/>
+<text x="74" y="323" font-size="19" font-weight="bold">Private SQLite worker</text>
+<text x="74" y="350" font-size="15">Frozen plan, cursor and dirty BLOBs</text>
+<text x="74" y="376" font-size="15">Stable physical operation / generation</text>
+<text x="74" y="402" font-size="15">Prepared → claimed → verified</text>
+<text x="74" y="428" font-size="15">Lost reply: observe same attempt</text>
+<text x="74" y="454" font-size="15">Outside the mounted filesystem</text>
+<rect x="447" y="292" width="228" height="185" rx="10" fill="white" stroke="#8caac1"/>
+<text x="467" y="323" font-size="19" font-weight="bold">Rust S3 client</text>
+<text x="467" y="350" font-size="15">Pinned credentials / route</text>
+<text x="467" y="376" font-size="15">Create-only new objects</text>
+<text x="467" y="402" font-size="15">HEAD / GET verification</text>
+<text x="467" y="428" font-size="15">Bounded execution slots</text>
+<text x="467" y="454" font-size="15">No second PUT after claim</text>
+<path d="M220 238V287" stroke="#416278" stroke-width="2" fill="none" marker-end="url(#a)"/>
+<path d="M560 238V287" stroke="#416278" stroke-width="2" fill="none" marker-end="url(#a)"/>
+<text x="244" y="269" font-size="13">SQL ends before network</text>
+<rect x="750" y="147" width="320" height="224" rx="14" fill="#e3f3eb" stroke="#89b39a"/>
+<text x="772" y="181" font-size="20" font-weight="bold">S3-compatible service</text>
+<text x="772" y="213" font-size="16">Immutable changed data</text>
+<text x="772" y="241" font-size="16">New manifest pages / root object</text>
+<text x="772" y="278" font-size="15">Old chunks and subtrees reused</text>
+<text x="772" y="303" font-size="15">Holes have no stored data object</text>
+<text x="772" y="342" font-size="14">Object completion ≠ file publication</text>
+<path d="M675 334H716V227H745" stroke="#416278" stroke-width="2" fill="none" marker-end="url(#a)"/>
+<text x="687" y="207" font-size="13">PUT / verify</text>
+<rect x="750" y="418" width="320" height="151" rx="14" fill="#fff2dd" stroke="#c9aa72"/>
+<text x="770" y="449" font-size="18" font-weight="bold">Shared Rust authority</text>
+<text x="770" y="477" font-size="15">Exact base history / authorization</text>
+<text x="770" y="502" font-size="15">Shared SQLite; optional Turso separate</text>
+<text x="770" y="544" font-size="14">Root content-CAS mutation: later W4b</text>
+<path d="M55 209H42V523H744" stroke="#416278" stroke-width="2" fill="none" stroke-dasharray="7 5" marker-end="url(#a)"/>
+<text x="385" y="546" font-size="13">Fresh source authorization</text>
+<rect x="30" y="603" width="1040" height="57" rx="10" fill="#173248"/>
+<text x="51" y="628" font-size="16" fill="white">Result: historical mixed-tree receipt, with separate tags for new objects, inherited provenance and holes.</text>
+<text x="51" y="649" font-size="14" fill="#d9e8f2">No root commit, local clean acknowledgment, reclamation or mounted chunk-write activation follows from this receipt.</text>
+</g></svg>

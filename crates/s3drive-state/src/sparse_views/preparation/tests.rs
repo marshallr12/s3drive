@@ -1,6 +1,6 @@
 use super::*;
 #[path = "tests/fixture.rs"]
-mod fixture;
+pub(super) mod fixture;
 use fixture::*;
 #[test]
 fn mixed_data_inheritance_exact_retry_and_old_views_survive_newer_heads_and_restart() {
