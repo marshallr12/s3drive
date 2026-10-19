@@ -68,3 +68,19 @@ codex/scoped-source-operations-repair worktree holds investigation; no repaired
 runtime is accepted. Main remains accepted W5b1/schema35. This phase still cannot
 reclaim bytes, adopt external bases, create new-file origins or enable mounted
 chunk writes.
+
+Repair checkpoint2026-10-19: isolated worktree
+/home/marshall/src/worktrees/s3drive-scoped-source-operations-repair, branch
+codex/scoped-source-operations-repair, head85262c8 (query repaira89b0f7 plus
+canonical main documentation). Only sparse_views/scoped.rs differs among329
+runtime inputs from faileda3028bf. Original exact failing binary passed alone
+1/88.68s; workload sensitivity is supported, cause still unproven. A bounded typed
+row query replaces redundant disabled-mode catalog/schema/count checks; no
+production deadline or quota increase. All14 scoped state tests passed12.06s,
+including14 killed-owner boundaries and actual SQLITE_FULL. Repair full gate1
+runner745423/child745432 is LIVE, started14:29:08Z; inspect
+/tmp/s3drive-scoped-repair-gate1-{running,result}.json and .log before any local
+Cargo. Frozen329: /tmp/s3drive-scoped-repair-final1-frozen.json; source tar retained.
+No repaired source has its own hosted cohort yet; do not accept originala302 CI
+as evidence for this changed query. Main accepted324 inputs are exact to W5b1;
+proof /tmp/s3drive-canonical-clean-epochs-publication.json. Goal ACTIVE/progress.
