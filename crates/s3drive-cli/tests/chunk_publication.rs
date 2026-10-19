@@ -141,6 +141,18 @@ async fn proxy(
         format!("Bearer {SECRET}").as_str()
     );
     p.seen.lock().unwrap().push(request.clone());
+    if p.mode.load(Ordering::SeqCst) == 11 && matches!(&request, Request::ManifestPayload { .. }) {
+        let checks = p
+            .seen
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|r| matches!(r, Request::ManifestPayload { .. }))
+            .count();
+        if checks >= 2 {
+            return axum::http::StatusCode::SERVICE_UNAVAILABLE.into_response();
+        }
+    }
     if p.mode.load(Ordering::SeqCst) == 8 {
         return axum::http::StatusCode::SERVICE_UNAVAILABLE.into_response();
     }
@@ -1114,6 +1126,7 @@ async fn run(mode: &str) {
     let mut counts = None;
     let mut mixed_recovery_window = None;
     let mut mixed_corrupt_tail = None;
+    let mut mixed_batch_window = None;
     for stage in match mode {
         "mixed_roots_crash" => vec!["mixed_roots_crash", "mixed_roots_recover"],
         "crash" => vec!["crash", "recover"],
@@ -1198,6 +1211,43 @@ async fn run(mode: &str) {
                         let (key, bytes) = mixed_corrupt_tail.take().unwrap();
                         f.objects.lock().unwrap().get_mut(&key).unwrap().0 = bytes;
                         std::fs::write(tmp.path().join("mixed-restore-tail.ack"), b"ack").unwrap();
+                    }
+                    "MIXED_BATCH_BEGIN" => {
+                        assert!(mixed_batch_window.is_none());
+                        mixed_batch_window = Some(f.requests.lock().unwrap().len());
+                        std::fs::write(tmp.path().join("mixed-batch-begin.ack"), b"ack").unwrap();
+                    }
+                    "MIXED_BATCH_END" => {
+                        let begin = mixed_batch_window.take().unwrap();
+                        let key =
+                            std::fs::read_to_string(tmp.path().join("batch-base-key.txt")).unwrap();
+                        let requests = f.requests.lock().unwrap();
+                        let observed = &requests[begin..];
+                        let base_heads = observed
+                            .iter()
+                            .filter(|r| {
+                                let mut words = r.split_whitespace();
+                                if words.next() != Some("HEAD") {
+                                    return false;
+                                }
+                                let url = url::Url::parse(&format!(
+                                    "http://fixture{}",
+                                    words.next().unwrap()
+                                ))
+                                .unwrap();
+                                let path = percent_encoding::percent_decode_str(url.path())
+                                    .decode_utf8()
+                                    .unwrap();
+                                path.ends_with(&format!("/{key}"))
+                            })
+                            .count();
+                        assert_eq!(
+                            base_heads, 6,
+                            "page fanout repeated root HEAD authorization"
+                        );
+                        assert_eq!(observed.iter().filter(|r| r.starts_with("PUT ")).count(), 3);
+                        drop(requests);
+                        std::fs::write(tmp.path().join("mixed-batch-end.ack"), b"ack").unwrap();
                     }
                     "MIXED_RECOVERY_BEGIN" => {
                         mixed_recovery_window = Some(f.requests.lock().unwrap().len());

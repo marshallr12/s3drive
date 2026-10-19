@@ -53,6 +53,47 @@ pub async fn crash(config: &s3drive_core::Config, root: &Path, s: &Server) {
         publisher.begin(id(101)).await.is_err(),
         "root reserved before physical receipts"
     );
+    // Permit the batch's opening check and revoke its final check. A failure
+    // here must precede even local physical materialization, not just Publish.
+    let plans = local.preparations(plans::Options::default()).unwrap();
+    let first = plans.transfers(prep.id(), None, 1).await.unwrap().remove(0);
+    assert_eq!(first.position().level, -1);
+    assert!(first.generation().is_none());
+    s.proxy.clear();
+    s.proxy.mode.store(11, Ordering::SeqCst);
+    assert!(
+        prep.uploader(e.clone())
+            .unwrap()
+            .upload_object(first.position())
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        s.proxy
+            .requests()
+            .iter()
+            .filter(|r| matches!(r, Request::ManifestPayload { .. }))
+            .count(),
+        2
+    );
+    assert!(
+        plans
+            .transfer(prep.id(), first.position())
+            .await
+            .unwrap()
+            .unwrap()
+            .generation()
+            .is_none()
+    );
+    s.proxy.mode.store(0, Ordering::SeqCst);
+    std::fs::write(
+        root.join("batch-base-key.txt"),
+        &initial.node.payload.as_ref().unwrap().reservation.key,
+    )
+    .unwrap();
+    checkpoint("MIXED_BATCH_BEGIN");
+    wait(root, "mixed-batch-begin.ack").await;
+    let auth_begin = s.proxy.requests().len();
     let physical = prep
         .uploader(e.clone())
         .unwrap()
@@ -60,6 +101,16 @@ pub async fn crash(config: &s3drive_core::Config, root: &Path, s: &Server) {
         .await
         .unwrap();
     assert_eq!(physical.new_objects(), 3);
+    let authorization_calls = s.proxy.requests()[auth_begin..]
+        .iter()
+        .filter(|r| matches!(r, Request::ManifestPayload { .. }))
+        .count();
+    assert_eq!(
+        authorization_calls, 6,
+        "three new objects need two bounded base checks each"
+    );
+    checkpoint("MIXED_BATCH_END");
+    wait(root, "mixed-batch-end.ack").await;
     s.proxy.mode.store(4, Ordering::SeqCst);
     assert!(publisher.begin(id(101)).await.is_err());
     s.proxy.mode.store(0, Ordering::SeqCst);

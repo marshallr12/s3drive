@@ -86,3 +86,25 @@ Own hosted source `2fc45fed5a15c1a24f0f9713ab7caca02569ec5b` is running in
 attempt1. At15:44:55Z book and Linux succeeded; Windows remained in progress.
 A read-only observer stopped on HTTP502; the same cohort is still being observed
 with transient-error retries. No workflow rerun or artifact acceptance is implied.
+
+## Own hosted acceptance (2026-10-19)
+
+Exact source2fc45fed5a15c1a24f0f9713ab7caca02569ec5b passed all three jobs in
+run39276521247 attempt1. Full raw logs, own API ZIP digests, independent typed21+14
+and project reference checks, and all35 raw fields/JSON types passed. The
+[indexed hosted archive](evidence/upload-auth-batch-hosted-20261019.tar.gz) has104
+verified members/393675bytes; SHA-256
+`d1bab01a5bf10a5c928f16ff70b0bc18f6718b8ac64af09b5e1e90e9fb34145f`.
+The one-use checker/comparator/archiver are complete and must not be rerun.
+
+Linux446/Windows441 state cases (one ignored each),23publication,37core,22reader
+(one native ignored) and62S3 passed. Actual native legacy FUSE9/69.32s, WinFsp7/
+83.83s, manifest1.46s/2.28s and paired no-systemd24.29s/Windows77.81s passed.
+Actual images: LinuxUbuntu24.04 20261018.339.1, bookUbuntu24.04 20261012.334.1;
+WindowsServer2025 windows-2025-vs2026 20261007.264.1. Three locked disposable
+profiles had dummy credentials removed, with deletion deferred to VM destruction.
+Two unused WinFsp delay-import warning groups, tooling notices and completed
+slow cases remain in the raw evidence. Job/workflow terminal status lag was
+observed; acceptance waited for terminal success rather than inferring it from
+completed steps. These results do not enable native chunk writes or GC and are
+not Wasabi or physical reboot/session acceptance.

@@ -73,7 +73,7 @@ impl MixedUploader {
         }
         self.executor
             .check_create(t.target().object_key(), t.size())?;
-        let checked = self.preparation.dependency(p.level, p.slot).await?;
+        let checked = self.preparation.check_upload_dependencies(p).await?;
         let plans::Dependency::New {
             role,
             reference,
@@ -92,9 +92,6 @@ impl MixedUploader {
         // A page's local graph is structural. Check its direct inherited/hole/
         // new-data semantics using the actual pinned source, then require exact
         // historical receipts before any fresh parent materialization/send.
-        for child in client.children(plan, p).await? {
-            self.preparation.dependency(child.level, child.slot).await?;
-        }
         client.require_dependencies(plan, p).await?;
         let staged = client
             .materialize(plan, p, &self.executor.storage())

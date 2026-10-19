@@ -1,7 +1,7 @@
 {
   "date": "2026-10-19",
   "phase": "mixed-upload-authorization-batch",
-  "status": "full local gate passed; own hosted/native/source acceptance required",
+  "status": "accepted: complete local and own hosted/native/source/artifact gates passed",
   "schema": 35,
   "source_checkpoint": "d4a46c5",
   "runtime_inputs": 324,
@@ -63,7 +63,7 @@
   },
   "scope": "private start/end-authorized batch with complete sequential child semantics; no schema/dependency change or native chunk activation",
   "own_hosted": {
-    "status": "in progress; book and Linux succeeded, Windows pending as of 2026-10-19T15:44:55Z",
+    "status": "accepted",
     "parent_or_prototype_artifact_reuse_permitted": false,
     "source": "2fc45fed5a15c1a24f0f9713ab7caca02569ec5b",
     "run_id": 39276521247,
@@ -72,6 +72,53 @@
       "book": 118142124084,
       "linux": 118142124394,
       "windows": 118142124251
+    },
+    "all_three_jobs_success": true,
+    "archive": {
+      "path": "evidence/upload-auth-batch-hosted-20261019.tar.gz",
+      "sha256": "d1bab01a5bf10a5c928f16ff70b0bc18f6718b8ac64af09b5e1e90e9fb34145f",
+      "bytes": 393675,
+      "members": 104,
+      "all_indexed_members_verified": true,
+      "source": "2fc45fed5a15c1a24f0f9713ab7caca02569ec5b",
+      "run_id": 39276521247,
+      "run_attempt": 1,
+      "independent_typed_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "all_raw_fields_and_types_equal": true
+    },
+    "replacement_artifact_id": 12198541228,
+    "disposition_artifact_id": 12199747330,
+    "platform_results": {
+      "linux_state_passed": 446,
+      "windows_state_passed": 441,
+      "state_ignored_each": 1,
+      "publication_passed_each": 23,
+      "fuse": {
+        "passed": 9,
+        "seconds": 69.32
+      },
+      "winfsp": {
+        "passed": 7,
+        "seconds": 83.83
+      },
+      "manifest_seconds": {
+        "linux": 1.46,
+        "windows": 2.28
+      },
+      "paired_startup_seconds": {
+        "no_systemd_linux": 24.29,
+        "windows": 77.81
+      },
+      "linux_image": "Ubuntu24.04 20261018.339.1",
+      "book_image": "Ubuntu24.04 20261012.334.1",
+      "windows_image": "WindowsServer2025 windows-2025-vs2026 20261007.264.1",
+      "locked_profiles": 3,
+      "dummy_credentials_removed": true,
+      "profile_deletion": "deferred to VM destruction",
+      "unused_winfsp_delay_import_groups": 2
     }
   }
 }

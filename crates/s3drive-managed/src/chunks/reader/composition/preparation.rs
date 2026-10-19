@@ -101,6 +101,15 @@ impl EditedFile {
             .read(self.view.id(), offset, length as usize)
             .await?;
         Box::pin(self.base.authorize_sparse()).await?;
+        self.prepare_material(chunk, offset, length, pieces).await
+    }
+    async fn prepare_material(
+        &self,
+        chunk: u64,
+        offset: u64,
+        length: u64,
+        pieces: Vec<Piece>,
+    ) -> Result<PreparedChunk> {
         let unchanged = matches!(pieces.as_slice(), [Piece::Base { offset: start, length: size }]
             if *start == offset && *size == length)
             && offset < self.base.size()
@@ -129,5 +138,23 @@ impl EditedFile {
             length,
             content,
         })
+    }
+}
+
+// Only the private, freshly authorized exact-preparation scope can use this
+// path without repeating history/root authorization for each page child.
+impl super::planning::DependencySession<'_> {
+    pub(super) async fn prepare_chunk(
+        &self,
+        chunk: u64,
+        offset: u64,
+        length: u64,
+    ) -> Result<PreparedChunk> {
+        let edited = self.edited();
+        let pieces = edited
+            .local
+            .read(edited.view.id(), offset, length as usize)
+            .await?;
+        edited.prepare_material(chunk, offset, length, pieces).await
     }
 }

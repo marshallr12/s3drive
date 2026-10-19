@@ -334,3 +334,121 @@ impl Reader {
         .await
     }
 }
+
+/// Operation-local exact preparation authorization. No public constructor,
+/// serialization, lifetime beyond this batch, or ability to select another view.
+pub(super) struct DependencySession<'a> {
+    preparation: &'a Preparation,
+    _active: OwnedSemaphorePermit,
+}
+impl DependencySession<'_> {
+    pub(super) fn edited(&self) -> &EditedFile {
+        &self.preparation.edited
+    }
+    async fn check(
+        &self,
+        p: plans::Position,
+        content: plans::Dependency,
+    ) -> Result<PreparedDependency> {
+        let edited = self.edited();
+        match &content {
+            plans::Dependency::New {
+                role: Role::Data,
+                bytes,
+                ..
+            } => {
+                let offset = p
+                    .slot
+                    .checked_mul(manifest::CHUNK_BYTES)
+                    .ok_or(ReadFailure::Bounds)?;
+                let expected =
+                    Box::pin(self.prepare_chunk(p.slot, offset, bytes.len() as u64)).await?;
+                if !matches_content(&expected, bytes) {
+                    return Err(ReadFailure::Integrity.into());
+                }
+            }
+            plans::Dependency::Hole { offset, length } => {
+                if !matches!(edited.view.intent_span(*offset), Some(Range::Zero { length:n }) if n >= *length)
+                {
+                    if *length > manifest::CHUNK_BYTES {
+                        return Err(ReadFailure::Integrity.into());
+                    }
+                    let expected = Box::pin(self.prepare_chunk(
+                        *offset / manifest::CHUNK_BYTES,
+                        *offset,
+                        *length,
+                    ))
+                    .await?;
+                    if !matches_content(&expected, &vec![0; *length as usize]) {
+                        return Err(ReadFailure::Integrity.into());
+                    }
+                }
+            }
+            plans::Dependency::Inherited {
+                role,
+                reference,
+                proof,
+            } => {
+                let actual = if *role == Role::Data {
+                    edited.base.verify_chunk_proof(proof)?.reference().cloned()
+                } else {
+                    Some(edited.base.verify_page_proof(proof)?.reference().clone())
+                };
+                if actual.as_ref() != Some(reference) {
+                    return Err(ReadFailure::Integrity.into());
+                }
+            }
+            plans::Dependency::New {
+                role: Role::Page, ..
+            } => {}
+        }
+        Ok(PreparedDependency {
+            plan: self.preparation.id,
+            view: edited.view.id(),
+            binding: edited.view.binding().clone(),
+            content,
+        })
+    }
+}
+impl Preparation {
+    /// Called only inside upload_object's existing overall deadline. One family
+    /// permit and two fresh base checks cover all immutable direct children.
+    pub(super) async fn check_upload_dependencies(
+        &self,
+        p: plans::Position,
+    ) -> Result<PreparedDependency> {
+        let active = self
+            .edited
+            .base
+            .0
+            .reader
+            .0
+            .active
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| ReadFailure::Busy)?;
+        let info = self.client.info(self.id).await?;
+        self.scope(&info)?;
+        let content = self.client.dependency(self.id, p.level, p.slot).await?;
+        let children = self.client.children(self.id, p).await?;
+        Box::pin(self.edited.base.authorize_sparse()).await?;
+        let session = DependencySession {
+            preparation: self,
+            _active: active,
+        };
+        let checked = session.check(p, content).await?;
+        for child in children {
+            let content = self
+                .client
+                .dependency(self.id, child.level, child.slot)
+                .await?;
+            // Drop each child's material immediately; do not accumulate fanout
+            // times chunk size in memory. All direct children still get checked.
+            session.check(child, content).await?;
+        }
+        let info = self.client.info(self.id).await?;
+        self.scope(&info)?;
+        Box::pin(self.edited.base.authorize_sparse()).await?;
+        Ok(checked)
+    }
+}

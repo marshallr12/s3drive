@@ -3307,3 +3307,12 @@ retains cleanup across a full worker queue. Failed cleanup preserves retention.
 This isolated schema37 prototype still needs parent acceptance, EditedFile
 integration and its full workspace/platform/source gates. No GC or native chunk
 writes follow from component success.
+
+
+Upload authorization batching accepted2026-10-19: exact2fc45fed/all324/schema35,
+CI39276521247 attempt1 all3 success; own raw/source/API ZIP digest/independent
+reference/project/all35 raw fields/types checked and104-member archive verified.
+[Accepted evidence](mixed-upload-authorization-batch.md). Exactly five runtime
+files integrated into main; schema36/37 remain unaccepted. The new managed-reader
+integrationb28ca7b/all337 is isolated: focused state/SDK and Clippy passed, with its
+broader component runner active. No native chunk writes or reclamation enabled.

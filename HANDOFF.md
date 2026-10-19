@@ -29,9 +29,12 @@ Use target-specific platform dependencies. SQLite state stays outside the mount.
 
 ## Accepted canonical implementation
 
-Main runtime remains W5b1 clean base epochs, schema35, all324 frozen runtime inputs.
-Accepted integration: 0ff32cf72f8dfc8006d4f599c6104255160f3c75.
-Accepted hosted source: a3574998138d0e4dfa2c62a28c2ada1e18099732.
+Main runtime includes accepted W5b1 clean epochs and upload authorization batching,
+schema35/all324 exact inputs. Latest accepted hosted source is
+2fc45fed5a15c1a24f0f9713ab7caca02569ec5b (CI39276521247 attempt1).
+Epoch prerequisite evidence follows; batch evidence is in the current phase below.
+Epoch prerequisite integration: 0ff32cf72f8dfc8006d4f599c6104255160f3c75.
+Epoch hosted source: a3574998138d0e4dfa2c62a28c2ada1e18099732.
 CI39263559455 attempt1: book118097200982, Linux118097201820 and Windows118097201387
 all succeeded. Local full gate3 passed with all324 unchanged. Own raw logs/source,
 API ZIP digests, independent typed21+14/project/all35 raw fields and JSON types
@@ -44,7 +47,7 @@ write, Wasabi or physical desktop/reboot proofs.
 archive SHA9c46f7b89c352a5b3b97297c39c7fd5aca4980b4683d85bdc6254d07acbcb48b
 and hosted archive SHA2dbf5b3c542b57f7dff302cea67ccb210a38f4dcac08768b20539dd1fc37de9a.
 Completed one-use acceptance/archivers must NEVER be rerun. Current canonical
-publication proof: /tmp/s3drive-canonical-clean-epochs-publication.json. Ordinary
+publication proof: /tmp/s3drive-canonical-upload-auth-batch-publication.json. Ordinary
 later documentation commits do not change the accepted runtime.
 
 The accepted path includes authenticated manifest reads, immutable local patches,
@@ -62,17 +65,15 @@ their cause. Never equate portable unit tests with an actual mount or flush.
    2fc45fed5a15c1a24f0f9713ab7caca02569ec5b. Full local gate passed, all324 unchanged,
    normal four threads:23publication/446state1ignored/37core/22reader1nativeignored/
    62S3, formatting/Clippy/build/book. Own CI39276521247 attempt1 has book118142124084
-   and Linux118142124394 success; Windows118142124251 is in progress at the latest GET
-   (final cache-save step). Poll the same job; never restart on an observation
-   timeout or HTTP502. GET-only poller828884/startticks143026538 is tracked in
-   /tmp/s3drive-upload-auth-batch-hosted-poll2-{running,result}.json.
-   First watcher826436/826437 exited1 on HTTP502, not a workflow failure.
-   Prepared checker/raw comparator/hosted archiver have NOT executed. Complete
-   raw book/Linux logs are retained; download Windows only when terminal.
-   Review the exact cohort, independently check own artifacts and source, then
-   integrate only if accepted. [Contract/evidence](docs/src/mixed-upload-authorization-batch.md).
+   and Linux118142124394 and Windows118142124251 all succeeded. GET-only poller
+   828884 CLOSED0; one-use checker/raw comparator/hosted archiver DONE, never rerun.
+   Own source/API ZIP digests/independent typed21+14/project/all35 raw fields/types
+   passed. Hosted104-member archive SHA
+   d1bab01a5bf10a5c928f16ff70b0bc18f6718b8ac64af09b5e1e90e9fb34145f.
+   All324 current runtime inputs now match this accepted CI source exactly.
+   [Contract/evidence](docs/src/mixed-upload-authorization-batch.md).
    Local673-member archive SHA67df76b1e22be23d738cc3ec9225b1921ac2223eab589171a91a663bec857b19
-   is DONE; never rerun its archiver.
+   is DONE; never rerun its archiver. This acceptance does not promote schemas36/37.
 
 2. **Scoped operations** — schema36/all329 remains UNACCEPTED. Originala3028bf
    CI39267986023 succeeded, but its local gate failed. Repair worktree
@@ -107,6 +108,17 @@ their cause. Never equate portable unit tests with an actual mount or flush.
    One-use archiver DONE, never rerun. No local Cargo remains from these runs;
    inspect actual processes before the next one. Managed EditedFile integration,
    full workspace/platform acceptance and parent integration remain required.
+
+5. **Managed reader integration** — isolated codex/managed-reader-guards at
+   /home/marshall/src/worktrees/s3drive-managed-reader-guards, checkpointb28ca7b,
+   schema37/all337 frozen. Seven state guard cases passed48.89s; SDK3 lifetime case
+   passed30.01s; workspace all-target Clippy passed35.45s. SDK1 fixture compilation
+   and SDK2 double-prefixed cancellation-target failures are retained and fixed.
+   Component runner931670 is live; inspect
+   /tmp/s3drive-managed-guards-component1-{running,result}.json before any Cargo.
+   It runs complete state and SDK reader regressions, not a full workspace gate.
+   After batch/scoped parent integration, adapt the new batch private chunk-read
+   path to the guard and require fresh full/platform/source acceptance.
 
 One local Cargo at a time. All worktrees share /home/marshall/src/s3drive/target.
 Inspect actual PID/startticks or terminal result, not only a lock/status file.
