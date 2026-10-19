@@ -3264,3 +3264,10 @@ SHA2dbf5b3c542b57f7dff302cea67ccb210a38f4dcac08768b20539dd1fc37de9a.
 an isolated sourcea3028bf/schema36 branch with their own local/hosted gates running;
 they are not promoted by W5b1 acceptance. Pins/seals/GC, fresh external-base
 adoption, origins/W6 and provider/physical session acceptance remain.
+
+W5b2a scoped-operation sourcea3028bf/schema36 is isolated and unaccepted. Fourteen
+focused state cases/14 killed-owner boundaries, SQLITE_FULL and the scoped SDK
+cycle passed. Complete local gate1 stopped101 on two existing SDK upload Timeouts
+(22publication cases passed); all329 inputs unchanged. Own CI39267986023 remains
+live for that exact source. Investigation uses a separate repair worktree; no
+runtime change is promoted. [Current scoped contract](scoped-source-operations.md).

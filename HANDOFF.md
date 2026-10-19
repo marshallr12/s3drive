@@ -139,10 +139,18 @@ Successor W5b2a schema36/all329 is isolated in
 /home/marshall/src/worktrees/s3drive-scoped-source-operations, branch
 codex/scoped-source-operations, sourcea3028bf. Its own39267986023 attempt1 is LIVE:
 book118112493974/Linux118112494209/Windows118112493652. Observer740763/740770.
-Own full local gate731068/731069 LIVE; inspect
+Own full local gate731068/731069 CLOSED101; inspect
 /tmp/s3drive-scoped-operations-gate1-{running,result}.json before any new Cargo.
-Focused13 state cases,14 actual kill boundaries, SDK1/69.97s/13loopbackPUT and
-SQLITE_FULL exact retry passed. Its runtime is not promoted. Frozen329 map
+Focused14 state cases across runs3/5,14 actual kill boundaries, SDK1/69.97s/13loopbackPUT and
+SQLITE_FULL exact retry passed. Full gate1 SDK22passed/2failed: existing mixed
+upload/root recovery cases reported inner upload Timeouts; new scoped case passed.
+All329 inputs unchanged, logSHAca8ff6c5e5904057b306ad05218125620ac13e16d481baaa1e803477e16a811a.
+Exact failing binary case is being isolated before any proposed repair. Separate
+worktree /home/marshall/src/worktrees/s3drive-scoped-source-operations-repair,
+branch codex/scoped-source-operations-repair, starts at same a3028bf; original
+329 source stays frozen in its live CI. No local Cargo currently running; read
+live process state first. Expected eventual full state counts460Linux/455Windows,
+one ignored each, and24publication. Its runtime is not promoted. Frozen329 map
 /tmp/s3drive-scoped-operations-candidate3-frozen.json. W5b2/3 pins/retry retirement/
 reclamation, fresh external-base adoption, explicit origins/W6 and provider/
 physical session acceptance remain. Goal ACTIVE/progress.
