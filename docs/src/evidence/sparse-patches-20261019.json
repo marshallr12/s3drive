@@ -166,5 +166,30 @@
     "all284_frozen_inputs_unchanged": true,
     "schema": 31,
     "scope": "full local portable gate only; own combined platform/native gate still required"
+  },
+  "publication": {
+    "date": "2026-10-19",
+    "source": "d37096cc9c1ba9b55b73fb30d1edfb2fa7ca0955",
+    "branch": "codex/sparse-patches",
+    "schema": 31,
+    "local_gate": 40129,
+    "local_gate_exit_code": 0,
+    "runtime_inputs": 284,
+    "all_working_and_committed_hashes_match": true,
+    "accepted_main_ancestor": "5c9c3058087f6d8bf8a540b83040e0dc2a1130cc",
+    "baseline": "76e3dba98a64e2a83eb02fffba09e525fa1517ee",
+    "parent_cohort": "39205603137 failed Linux reader accounting; not accepted; repair and own controlled test included",
+    "run_id": 39209163191,
+    "attempt": 1,
+    "status": "in_progress",
+    "jobs": {
+      "book": 117918472018,
+      "windows": 117918472313,
+      "linux": 117918472383
+    },
+    "watch_session": 55135,
+    "hosted_accepted": false,
+    "main_runtime": "accepted B1/schema29",
+    "visibility": "PUBLIC, read-only verified; no visibility mutation"
   }
 }

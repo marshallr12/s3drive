@@ -78,7 +78,16 @@ includes failed parent/harness source, all failed/passed focused/gate evidence,
 final runtime sources/maps, literals and reviewed SVG/PNG. One-use archive already
 ran; do not repeat. All /tmp/s3drive-sparse-patches-* paths retained. Publish this
 exact source for its own combined real Windows/Linux/native/reference gates before
-acceptance. Parent schema30 remains failed/unaccepted; main stays accepted B1/29.
+acceptance. Published runtime d37096cc9c1ba9b55b73fb30d1edfb2fa7ca0955 includes
+accepted main5c9c305 ancestry and matches all284 working/committed hashes. Own
+run39209163191 attempt1 LIVE: book117918472018,Windows117918472313,
+Linux117918472383. Watch55135 LIVE -> /tmp/s3drive-sparse-patches-hosted-watch.log.
+Proof /tmp/s3drive-sparse-patches-publication.json. Strict own-source checker,
+PowerShell project oracles, raw comparison and one-use hosted archiver are prepared
+under /tmp/s3drive-{check-sparse-patches-hosted.py,sparse-patches-hosted-*}; NOT run.
+Require all3 terminal success/raw review/own ZIP API digest/typed21+14/project/
+all35 raw fields+types, including all25 sparse tests and reader-accounting control.
+Never reuse older artifacts. Current source is local green only. Parent schema30 remains failed/unaccepted; main stays accepted B1/29.
 W2c composition, W3/W4 mixed publication, W5 settlement, legacy/metadata-empty
 recovery and W6 native chunk writes remain. No provider or credential mutation.
 

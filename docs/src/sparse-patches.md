@@ -113,3 +113,11 @@ let-chain cleanup changed before the fresh full run. The
 verified members, including failed focused/full runs, the failed parent's exact
 reader fixture and Linux log, final sources, literal vectors, source maps and the
 reviewed diagram. No earlier hosted artifact certifies this changed source.
+
+
+Published source `d37096c` matches all284 locally gated runtime inputs and includes
+accepted main ancestry. Its
+[own Windows/Linux/book run](https://github.com/marshallr12/s3drive/actions/runs/39209163191)
+is in progress. Main remains accepted base-view/schema29. This publication does
+not establish native chunk writes, combined platform acceptance, provider behavior
+or physical workstation reboot/session acceptance.
