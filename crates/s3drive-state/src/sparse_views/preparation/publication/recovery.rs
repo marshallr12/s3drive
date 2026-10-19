@@ -16,6 +16,7 @@ fn metadata(db: &Connection) -> Result<ledger::Meta> {
         return Err(Failure::Invalid.into());
     }
     crate::sparse_views::scoped::enabled(db)?;
+    crate::sparse_views::pins::validate_headers(db)?;
     check_schema(db)?;
     let tables:i64=db.query_row("SELECT count(*) FROM sqlite_schema WHERE type='table' AND name IN ('sparse_publication_role','sparse_publications','sparse_publication_checks','sparse_view_role','sparse_preparations')",[],|r|r.get(0))?;
     if tables != 5 {

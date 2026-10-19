@@ -29,27 +29,28 @@ Use target-specific platform dependencies. SQLite state stays outside the mount.
 
 ## Accepted canonical implementation
 
-Main runtime includes accepted epoch-scoped source operations with verified upload
-batching, schema36/all329 exact inputs. Latest accepted hosted source is
-44f0ee19077c7623465faf62834858821cd1ee47 (CI39286027359 attempt1).
-Its full local gate and own raw/source/artifact/native acceptance passed; details
-are in the scoped phase below. Earlier epoch prerequisites remain historical.
-Epoch prerequisite integration: 0ff32cf72f8dfc8006d4f599c6104255160f3c75.
-Epoch hosted source: a3574998138d0e4dfa2c62a28c2ada1e18099732.
-CI39263559455 attempt1: book118097200982, Linux118097201820 and Windows118097201387
-all succeeded. Local full gate3 passed with all324 unchanged. Own raw logs/source,
-API ZIP digests, independent typed21+14/project/all35 raw fields and JSON types
-were checked. Native legacy FUSE9/WinFsp7, manifest ranges/remount and paired
-no-systemd/Windows startup passed. Actual images: Ubuntu24.04 20261012.334.1;
-WindowsServer2025 windows-2025-vs2026 20261007.264.1. These are not native chunk
-write, Wasabi or physical desktop/reboot proofs.
+Main runtime includes accepted managed-reader guards and verified batching,
+schema37/all337 exact inputs. Own tested source:
+903ade67e21cd71bb7ab02716c098993d9f6e82f (CI39289349689 attempt1).
+Full local gate passed at16:50:32Z with all337 unchanged. Own book118185617231,
+Linux118185616746 and Windows118185617331 succeeded. Complete raw/source/API ZIP,
+independent typed21+14/project/all35 raw fields and JSON types passed. Actual
+native FUSE9, WinFsp7, manifest reads/remount and paired startup checks passed.
+Actual images Ubuntu24.04 20261012.334.1 and WindowsServer2025
+windows-2025-vs2026 20261007.264.1. These are not mounted chunk-write, Wasabi or
+physical desktop/reboot proofs.
 
-[Accepted epoch evidence](docs/src/mixed-clean-epochs.md) includes indexed local
-archive SHA9c46f7b89c352a5b3b97297c39c7fd5aca4980b4683d85bdc6254d07acbcb48b
-and hosted archive SHA2dbf5b3c542b57f7dff302cea67ccb210a38f4dcac08768b20539dd1fc37de9a.
-Completed one-use acceptance/archivers must NEVER be rerun. Current canonical
-publication proof: /tmp/s3drive-canonical-scoped-batched-publication.json. Ordinary
-later documentation commits do not change the accepted runtime.
+[Combined acceptance](docs/src/managed-reader-guards.md) records indexed local
+archive SHA3927d8dda7400c685e17d7cb44c35f76acf5aee5c1c299c4fd75dccd224745d1
+and hosted archive SHAa5f64762435bcb81f33f7c25a26b6d9f773587bb127aa310d0efc23b4cf08e2b.
+All one-use acceptance/comparator/archivers are DONE; NEVER rerun. Canonical
+publication proof: /tmp/s3drive-canonical-managed-batched-publication.json.
+Ordinary later documentation commits do not change the accepted runtime.
+Parent36 accepted source44f0ee19077c7623465faf62834858821cd1ee47/run39286027359;
+parent35 sourcea3574998138d0e4dfa2c62a28c2ada1e18099732/run39263559455.
+Historical component records below preserve their original scopes, not current
+promotion blockers. Three locked disposable Windows profiles had dummy credentials
+removed; final profile deletion was deferred to hosted VM destruction.
 
 The accepted path includes authenticated manifest reads, immutable local patches,
 mixed plans/dependency uploads, exact root publication/recovery, local lineage and
@@ -105,8 +106,8 @@ a concrete phase contract before code. Old readers must retain their exact view.
    never rerun. Own source/API ZIP digests/independent typed21+14/project/all35 raw
    fields/types passed. Hosted104-member archive SHA
    5da274104d631b59c0d951917f617d11d6b7c19d3bfd765a90f7b009196527bd.
-   All329 current runtime inputs now match this accepted source exactly. Source37
-   guard/batching work remains isolated and needs own full acceptance.
+   All329 inputs matched at schema36 promotion. Schema37 combined acceptance
+   below supersedes this runtime with all337 exact inputs.
    [Original scoped contract](docs/src/scoped-source-operations.md).
 
 3. **Manual pin registry** — worktree
@@ -146,7 +147,7 @@ a concrete phase contract before code. Old readers must retain their exact view.
    [Managed reader evidence](docs/src/managed-reader-guards.md). This is not its full
    workspace/platform acceptance. After batch/scoped parent integration, adapt the
    new batch private chunk-read path to the guard and require fresh full/platform
-   source acceptance. Main is now accepted schema36/all329.
+   source acceptance. Main is now accepted schema37/all337.
 
 6. **Managed-reader/batch integration** — isolated worktree
    /home/marshall/src/worktrees/s3drive-managed-reader-batched,
@@ -159,13 +160,15 @@ a concrete phase contract before code. Old readers must retain their exact view.
    format/Clippy/build/87MD/80chapters passed at normal four threads. Verified348-
    member local archive SHA3927d8dda7400c685e17d7cb44c35f76acf5aee5c1c299c4fd75dccd224745d1.
    One-use local archiver DONE, never rerun. No local Cargo remains from this run.
-   Own CI source903ade67e21cd71bb7ab02716c098993d9f6e82f, run39289349689 attempt1:
-   book118185617231 succeeded; Linux118185616746 and Windows118185617331 running.
-   GET-only observer1101033/startticks143551012 in
-   /tmp/s3drive-managed-batched-hosted-watch-{running,result}.json. Own checker/
-   comparator/archive prepared, NOT executed; full raw review required first.
-   Parent36 and own full acceptance required before promotion. Source337 frozen.
-   [Current evidence](docs/src/managed-reader-guards.md). Main is now accepted schema36/all329.
+   Own accepted source903ade67e21cd71bb7ab02716c098993d9f6e82f, CI39289349689
+   attempt1 all3 success: book118185617231/Linux118185616746/Windows118185617331.
+   Observer1101033 CLOSED0/all_success17:24:27Z. One-use checker45561 and comparator/
+   hosted archive44680 CLOSED0; DONE, never rerun. Full raw/source/API ZIP/
+   independent typed21+14/project/all35 raw fields/types passed. Hosted104-member
+   archive SHAa5f64762435bcb81f33f7c25a26b6d9f773587bb127aa310d0efc23b4cf08e2b.
+   Own artifacts replacement12204512424/disposition12205563584; no parent reuse.
+   Exactly26 runtime deltas integrated; all337 inputs match tested source.
+   [Current acceptance](docs/src/managed-reader-guards.md). Main schema37/all337.
    [Native boundary review](docs/src/native-chunk-integration.md) maps the actual
    config/writer/state-role/origin/unlinked-root gaps; the new SVG was rendered and
    visually inspected. It is a proposed bridge, not driver activation or GC.
@@ -178,8 +181,8 @@ No subagents are authorized for the current continuation.
 
 ## Remaining work toward the full goal
 
-Connect every managed reader to clone-sharing guards before reclamation. Define
-clean-anchor witnesses and close every source/preparation/root/physical retry
+Managed edited readers/preparations now share accepted guards. Before reclamation,
+define clean-anchor witnesses and close every source/preparation/root/physical retry
 namespace before deleting records or bytes. See [retention plan](docs/src/mixed-retention-plan.md).
 No arbitrary dirty-view seal or copied hash proves a safe cut.
 

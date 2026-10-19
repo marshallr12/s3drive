@@ -1,7 +1,7 @@
 {
   "date": "2026-10-19",
   "phase": "managed reader guards with verified upload batching",
-  "status": "complete local gate passed; parent and own hosted/platform/source/artifact acceptance required",
+  "status": "accepted: complete local gate and own hosted/platform/source/artifact checks passed",
   "schema": 37,
   "source_checkpoint": "efb2ab4",
   "runtime_inputs": 337,
@@ -28,7 +28,7 @@
     "sha256": "a4ee7d335147c38bdeb4ecae0f79e4707d0cb9816ba10fd7010e92cd1906b20d"
   },
   "local_archive": {
-    "scope": "complete local gate only; parent and own hosted/platform/source/native acceptance required",
+    "scope": "complete local gate; paired with separately verified own hosted acceptance",
     "path": "evidence/managed-batched-local-20261019.tar.gz",
     "sha256": "3927d8dda7400c685e17d7cb44c35f76acf5aee5c1c299c4fd75dccd224745d1",
     "bytes": 5148220,
@@ -77,7 +77,7 @@
     "hosted_archive_sha256": "5da274104d631b59c0d951917f617d11d6b7c19d3bfd765a90f7b009196527bd"
   },
   "own_hosted": {
-    "status": "in progress; book succeeded; Linux and Windows running",
+    "status": "accepted; all three jobs succeeded and raw/source/artifact checks passed",
     "parent_or_prototype_artifact_reuse_permitted": false,
     "source": "903ade67e21cd71bb7ab02716c098993d9f6e82f",
     "run_id": 39289349689,
@@ -86,7 +86,57 @@
       "book": 118185617231,
       "linux": 118185616746,
       "windows": 118185617331
-    }
+    },
+    "archive": {
+      "path": "evidence/managed-batched-hosted-20261019.tar.gz",
+      "sha256": "a5f64762435bcb81f33f7c25a26b6d9f773587bb127aa310d0efc23b4cf08e2b",
+      "bytes": 399826,
+      "members": 104,
+      "all_indexed_members_verified": true,
+      "source": "903ade67e21cd71bb7ab02716c098993d9f6e82f",
+      "run_id": 39289349689,
+      "run_attempt": 1,
+      "independent_typed_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "all_raw_fields_and_types_equal": true
+    },
+    "artifacts": {
+      "replacement": 12204512424,
+      "disposition": 12205563584
+    },
+    "raw_review": {
+      "slow_tests_all_completed": true,
+      "windows_interleaved_reference_tests": 15,
+      "locked_disposable_profiles": 3,
+      "dummy_credentials_removed": true,
+      "profile_deletion_deferred_to_vm_destruction": true
+    },
+    "images": {
+      "linux_and_book": "Ubuntu24.04 image20261012.334.1",
+      "windows": "WindowsServer2025 windows-2025-vs2026 image20261007.264.1"
+    },
+    "counts": {
+      "linux_state": 481,
+      "windows_state": 476,
+      "publication": 24,
+      "reader": 23,
+      "state_ignored": 1,
+      "reader_native_only_ignored": 1
+    },
+    "native": {
+      "linux_existing_driver_cases": 9,
+      "linux_seconds": 73.44,
+      "windows_existing_driver_cases": 7,
+      "windows_seconds": 97.07,
+      "manifest_linux_seconds": 1.8,
+      "manifest_windows_seconds": 2.39,
+      "paired_linux_no_systemd_seconds": 24.17,
+      "paired_windows_seconds": 78.74,
+      "physical_reboot_proven": false
+    },
+    "tools": "One-use source checker, raw comparator and hosted archiver completed; never rerun."
   },
   "native_chunk_writes": false,
   "reclamation": false

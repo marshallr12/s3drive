@@ -96,10 +96,7 @@ impl EditedFile {
         length: u64,
     ) -> Result<PreparedChunk> {
         // Full local ledger and dirty-block verification ends before network I/O.
-        let pieces = self
-            .local
-            .read(self.view.id(), offset, length as usize)
-            .await?;
+        let pieces = self.view.read(offset, length as usize).await?;
         Box::pin(self.base.authorize_sparse()).await?;
         self.prepare_material(chunk, offset, length, pieces).await
     }
@@ -151,10 +148,7 @@ impl super::planning::DependencySession<'_> {
         length: u64,
     ) -> Result<PreparedChunk> {
         let edited = self.edited();
-        let pieces = edited
-            .local
-            .read(edited.view.id(), offset, length as usize)
-            .await?;
+        let pieces = edited.view.read(offset, length as usize).await?;
         edited.prepare_material(chunk, offset, length, pieces).await
     }
 }

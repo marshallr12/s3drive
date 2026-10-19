@@ -79,7 +79,7 @@ impl BaseFile {
 pub struct EditedFile {
     base: BaseFile,
     local: sparse_views::Client,
-    view: Arc<View>,
+    view: sparse_views::ReadGuard,
 }
 impl fmt::Debug for EditedFile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -115,7 +115,7 @@ impl Reader {
         id: Id,
         snapshot: OwnedSemaphorePermit,
     ) -> Result<EditedFile> {
-        let view = local.view(id).await?;
+        let view = local.guard(id).await?;
         let descriptor = BaseDescriptor::decode(&view.binding().base()?.encode())?;
         if descriptor.volume() != self.0.volume {
             return Err(ReadFailure::Binding.into());
@@ -124,11 +124,7 @@ impl Reader {
         if base.sparse_binding()? != *view.binding() {
             return Err(ReadFailure::Binding.into());
         }
-        Ok(EditedFile {
-            base,
-            local,
-            view: Arc::new(view),
-        })
+        Ok(EditedFile { base, local, view })
     }
 }
 impl EditedFile {
@@ -166,7 +162,7 @@ impl EditedFile {
     }
     async fn read_inner(&self, offset: u64, length: usize) -> Result<Vec<u8>> {
         // Owner releases its transaction before this future receives pieces.
-        let pieces = self.local.read(self.view.id(), offset, length).await?;
+        let pieces = self.view.read(offset, length).await?;
         Box::pin(self.base.authorize_sparse()).await?;
         self.compose(pieces, length).await
     }

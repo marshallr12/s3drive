@@ -1,6 +1,7 @@
 # Bounded local retention for managed chunks
 
-Research and design proposal,2026-10-19. **Reclamation is not implemented; pin/guard prototypes have separate acceptance records.**
+Research and design proposal,2026-10-19. **Reclamation is not implemented. Pins and managed-reader guards are now accepted;
+see [combined acceptance](managed-reader-guards.md).**
 This follows [clean epochs](mixed-clean-epochs.md) and
 [scoped source operations](scoped-source-operations.md). It is required before
 continuous mounted chunk writes can exceed the current retained-history quotas.
@@ -16,7 +17,7 @@ found these dependencies. Paths below are relative to their crate's `src/`.
 |---|---|---|
 | Source views and original requests | One chain is reconstructed from the current head; derived spans require their parents | Validated clean anchors and explicit permitted cut edges |
 | Original write blocks | Every historical write request contributes block references, even when later spans overwrite them | Retire the request and its required history, or preserve its blocks |
-| Open edited reads | Accepted `EditedFile` holds an immutable view and shared snapshot permit; isolated schema37 adds clone-sharing SQLite pins | Same-owner source pin shared by clones |
+| Open edited reads | Accepted schema37 `EditedFile` and preparation clones share a SQLite read guard and snapshot permit | Same-owner source pin shared by clones |
 | Preparations and object rows | Plans retain their source view and complete dependency/transfer proofs | Durable plan/recovery pin and explicit terminal retirement |
 | Physical staging and upload intents | Transfer rows map exact staging generations and physical receipts; unknown attempts may still recover | Exact terminal receipt and no remaining recovery/source dependency |
 | Root records and checks | Acknowledgment/rebase and publication lineage cross-check retained records | A validated compact anchor format and closed retry identities |

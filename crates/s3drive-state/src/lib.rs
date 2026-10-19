@@ -25,7 +25,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 36;
+pub const SCHEMA_VERSION: i32 = 37;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
@@ -37,6 +37,7 @@ pub struct State {
     connection: Connection,
     _directory: Option<directory::OwnedDirectory>,
     incarnation: Option<String>,
+    source_pin_witness: Option<[u8; 32]>,
 }
 
 #[derive(Debug)]
@@ -49,6 +50,7 @@ pub struct StateInfo {
 impl State {
     fn verify_staging_storage(&self) -> Result<()> {
         self.verify_client_state()?;
+        sparse_views::pins::verify_owner(self)?;
         self._directory
             .as_ref()
             .ok_or("staging requires managed local state")?
@@ -303,6 +305,9 @@ impl State {
             if version <= 35 {
                 tx.execute_batch(include_str!("../migrations/036.sql"))?;
             }
+            if version <= 36 {
+                tx.execute_batch(include_str!("../migrations/037.sql"))?;
+            }
             // Version34 admits explicit local predecessor edges in format2 root
             // records. Existing schema33 rows/hashes remain byte-for-byte intact.
             // Version35 admits exact source acknowledgments and immutable rebase
@@ -358,6 +363,7 @@ impl State {
             connection,
             _directory: None,
             incarnation: None,
+            source_pin_witness: None,
         })
     }
 

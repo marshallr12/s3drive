@@ -88,7 +88,7 @@ fn schema_thirty_five_preserves_old_records_and_rejects_new_ack_formats_under_ol
             .contains("acknowledgment")
     );
     s.connection
-        .execute_batch("DROP TABLE sparse_scoped_mode")
+        .execute_batch("DROP TABLE source_read_pins; DROP TABLE source_read_pin_session; DROP TABLE sparse_scoped_mode")
         .unwrap();
     s.connection
         .pragma_update(None, "user_version", 34)

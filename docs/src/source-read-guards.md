@@ -1,5 +1,10 @@
 # Clone-sharing source reader guards
 
+Current status,2026-10-19: this component is included in the accepted combined
+schema37 runtime. See [own full/platform acceptance](managed-reader-guards.md).
+The declarations and component-only evidence below retain their historical scope.
+
+
 Declared 2026-10-19. Proposed component phase from the isolated, component-tested
 read-pin registry. Its schema37 parent is not accepted for promotion. This phase
 owns the state worker, a new guard module, the sparse client constructor, focused

@@ -7,6 +7,8 @@ mod native;
 
 #[path = "chunk_reader/composition.rs"]
 mod composition;
+#[path = "chunk_reader/guards.rs"]
+mod guards;
 #[path = "chunk_reader/mixed_plans.rs"]
 mod mixed_plans;
 #[path = "chunk_reader/pages.rs"]
@@ -23,6 +25,7 @@ use s3drive_core::manifest::{
     Entry, Page, Reference,
     objects::{Namespace, Role},
 };
+use s3drive_managed::chunks::EditedFile;
 use s3drive_managed::chunks::{ReadFailure, ReadOptions, Reader};
 use s3drive_s3::S3Reader;
 use sha2::{Digest, Sha256};
@@ -748,6 +751,7 @@ async fn manifest_reader_child() {
         "preparation" => Box::pin(preparation::flow(&mut f, &path)).await,
         "preparation-faults" => Box::pin(preparation::faults(&f, &path)).await,
         "preparation-limits" => Box::pin(preparation::limits(&f, &path)).await,
+        "guards" => Box::pin(guards::flow(&f, &path)).await,
         "composition" => Box::pin(composition::flow(&mut f, &path)).await,
         "composition-faults" => Box::pin(composition::faults(&f, &path)).await,
         "composition-limits" => Box::pin(composition::limits(&f, &path)).await,
@@ -945,4 +949,10 @@ async fn mixed_plans_refuse_forged_context_faults_principals_and_share_limits_wi
 async fn mixed_plans_verify_full_old_tails_unicode_partial_zero_runs_empty_roots_and_sparse_growth()
 {
     run("mixed-plans-boundaries").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn edited_read_guards_keep_clone_and_preparation_lifetimes_and_release_failed_or_canceled_opens()
+ {
+    run("guards").await;
 }

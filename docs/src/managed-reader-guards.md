@@ -113,11 +113,36 @@ source's own native/platform/source/artifact gates remain required before promot
 No mounted chunk writes, source reclamation or physical reboot proof follows.
 
 
-Own combined source903ade67e21cd71bb7ab02716c098993d9f6e82f is published in
+## Combined source acceptance (2026-10-19)
+
+Own source903ade67e21cd71bb7ab02716c098993d9f6e82f passed
 [run39289349689](https://github.com/marshallr12/s3drive/actions/runs/39289349689),
-attempt1: book118185617231 succeeded; Linux118185616746 and Windows118185617331
-are running. GET-only observer1101033 tracks these jobs. Own acceptance tools
-are prepared, not executed. Besides the fourteen scoped cases, they require all
-thirteen pin cases, seven guard cases, pinned metadata-only recovery and the SDK
-lifetime case,481/476 state counts,24publication,23reader and exact337 inputs.
-Both parent36 and this source's own full acceptance remain required for promotion.
+attempt1: book118185617231, Linux118185616746 and Windows118185617331 all
+succeeded. Parent36 is independently accepted. All337 frozen runtime inputs
+match this own tested source and the working candidate. Complete raw logs,
+API ZIP digests, independent typed21+14 records, project oracles and all35 raw
+record fields and JSON types passed. Artifacts12204512424/12205563584 are this
+source's own replacement/disposition reports; no parent artifact was reused.
+
+The [indexed hosted archive](evidence/managed-batched-hosted-20261019.tar.gz)
+contains104 verified members/399826bytes, SHA-256
+`a5f64762435bcb81f33f7c25a26b6d9f773587bb127aa310d0efc23b4cf08e2b`.
+Local and hosted one-use checkers/comparator/archivers are DONE; never rerun.
+Observer1101033 CLOSED0/all_success at17:24:27Z. The prepared checker had one
+inherited reader-count assertion corrected from22 to23 before its first execution;
+its original is retained locally and the archived checker requires23.
+
+Own Linux481/Windows476 state cases (one diagnostic ignored each),24publication,
+23reader (one native-only ignored),37core and62S3 passed. All six Linux and ten
+Windows slow cases completed successfully. Fifteen interleaved Windows reference
+tests had explicit successful completion. Separate actual native runs passed
+FUSE9/73.44s, WinFsp7/97.07s, manifest reads/remount1.80s/2.39s, and paired Linux
+without-systemd24.17s/Windows78.74s. Actual images were Ubuntu24.04
+20261012.334.1 and WindowsServer2025 windows-2025-vs2026 20261007.264.1.
+
+Three disposable Windows profiles stayed locked; dummy credentials were removed
+and profile deletion deferred to hosted VM destruction. Unused WinFsp delay-import
+linker warnings and tooling deprecations were retained and reviewed. These results
+accept the guarded reader/batching libraries and existing driver regressions;
+they do not enable mounted chunk writes or reclamation and do not prove real
+Wasabi writes, physical MX/Windows10/11 reboot or production failover.

@@ -2,7 +2,7 @@
 
 Source review,2026-10-19. **Proposed implementation plan; native chunk writes are
 not enabled.** The reviewed filesystem paths match accepted source
-`2fc45fed5a15c1a24f0f9713ab7caca02569ec5b`. The isolated schema37 libraries add
+`2fc45fed5a15c1a24f0f9713ab7caca02569ec5b`. The accepted schema37 libraries add
 retention guards but do not change these mounted callbacks.
 
 ![Existing mounted writer and proposed chunk bridge, with local SQLite, Rust S3 client, shared coordinator and S3 service](images/native-chunk-integration.svg)
@@ -27,8 +27,8 @@ These are code observations, not a claim that a proposed bridge has passed tests
 
 ## Proposed sequence and evidence
 
-First finish the scoped-operation and guarded-reader source/platform gates.
-Then define clean external-base observation and a validated retention cut before
+Scoped-operation and guarded-reader source/platform gates are accepted; see
+[combined evidence](managed-reader-guards.md). Next define clean external-base observation and a validated retention cut before
 continuous large writes can exhaust the retained-history limits. See
 [clean epochs](mixed-clean-epochs.md) and [retention dependencies](mixed-retention-plan.md).
 A count-bounded transient pin registry does not reserve dirty-window capacity or

@@ -10,6 +10,9 @@ pub use model::{Binding, MAX_FILE_BYTES, MAX_RANGE_BYTES, Range, View};
 use model::{BlockRef, Change, Record, Request};
 mod ledger;
 use ledger::{File, Saved, inspect};
+mod guards;
+pub mod pins;
+pub use guards::ReadGuard;
 pub mod scoped;
 pub use scoped::Operation as ScopedOperation;
 mod mutations;
@@ -175,6 +178,7 @@ fn isolation(db: &Connection) -> Result<()> {
 /// mixed uploads. No old complete-snapshot publication may adopt these views.
 pub(crate) fn require_legacy(db: &Connection) -> Result<()> {
     scoped::require_legacy(db)?;
+    pins::require_legacy(db)?;
     preparation::require_legacy(db)?;
     for table in TABLES {
         if db.query_row(&format!("SELECT EXISTS(SELECT 1 FROM {table})"), [], |r| {
@@ -195,6 +199,7 @@ fn check_legacy_schema(db: &Connection) -> Result<()> {
 pub(crate) fn check_schema(db: &Connection) -> Result<()> {
     check_legacy_schema(db)?;
     scoped::check_schema(db)?;
+    pins::check_schema(db)?;
     db.prepare("SELECT block,data FROM sparse_view_blocks LIMIT 0")?;
     Ok(())
 }

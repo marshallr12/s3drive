@@ -3390,3 +3390,16 @@ observation from acknowledgment of our own publication. It calls for clean-head
 CAS, explicit unresolved-work refusal, retained old readers and exact retry.
 Record format, terminal-work predicate and no-change semantics remain open; no
 adoption code or native write activation is claimed.
+
+
+### Guarded reader/batching promotion (2026-10-19)
+
+Combined source903ade67e21cd71bb7ab02716c098993d9f6e82f/schema37 accepted after
+its full local gate and own CI39289349689 attempt1 all3 success. Complete raw logs,
+source/API ZIP digests, independent typed21+14/project/all35 raw fields and types
+passed. Hosted104-member archive SHAa5f64762435bcb81f33f7c25a26b6d9f773587bb127aa310d0efc23b4cf08e2b
+verified. Exactly26 runtime deltas promoted; all337 runtime inputs match the tested
+source. [Acceptance and limitations](managed-reader-guards.md). Earlier pending
+statuses above describe their historical checkpoints. Shared reader/preparation
+pins are implemented; clean external observation, retention cuts, mounted chunk
+writes and provider/physical session acceptance remain outstanding.

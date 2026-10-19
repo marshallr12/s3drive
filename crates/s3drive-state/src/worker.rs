@@ -5,11 +5,13 @@ use journal::{Base, Generation, GenerationId, Journal, Receipt, Target};
 use std::{fmt, path::Path, sync::Arc, time::Duration};
 use tokio::sync::{mpsc, oneshot};
 
+mod read_pins;
 const QUEUE_SIZE: usize = 8;
 const DEADLINE: Duration = Duration::from_secs(30);
 type Work = Box<dyn FnOnce(&mut cache::Store) + Send>;
 enum Command {
     Work(Work),
+    WakeReadPins,
     Close(oneshot::Sender<()>),
 }
 
@@ -62,6 +64,8 @@ impl Storage {
         let directory = directory.to_path_buf();
         let (sender, mut receiver) = mpsc::channel(QUEUE_SIZE);
         let (ready, started) = oneshot::channel();
+        let read_pins = Arc::new(read_pins::Pending::default());
+        let worker_pins = read_pins.clone();
         std::thread::Builder::new()
             .name("s3drive-state".into())
             .spawn(move || {
@@ -77,15 +81,19 @@ impl Storage {
                 }
                 let mut closing = None;
                 while let Some(command) = receiver.blocking_recv() {
+                    worker_pins.drain(&mut store);
                     match command {
                         Command::Work(work) => work(&mut store),
+                        Command::WakeReadPins => worker_pins.woke(),
                         Command::Close(reply) => {
                             receiver.close();
                             closing = Some(reply);
                             break;
                         }
                     }
+                    worker_pins.drain(&mut store);
                 }
+                worker_pins.drain(&mut store);
                 // Do not acknowledge close until the DB and its directory lock
                 // have been released. Unwinding also releases ownership, but
                 // cannot acknowledge a successful close.
@@ -99,7 +107,7 @@ impl Storage {
             .map_err(|_| "local storage initialization timed out")?
             .map_err(|_| "local storage worker stopped during initialization")??;
         Ok(Self {
-            owner: Owner { sender },
+            owner: Owner { sender, read_pins },
             cache_options,
             staging_options,
         })
@@ -257,6 +265,7 @@ impl Uploads {
 #[derive(Clone)]
 pub(crate) struct Owner {
     sender: mpsc::Sender<Command>,
+    read_pins: Arc<read_pins::Pending>,
 }
 impl Owner {
     pub(crate) async fn call<T: Send + 'static>(

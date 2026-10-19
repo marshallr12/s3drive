@@ -1,5 +1,10 @@
 # Transient source read-pin registry
 
+Current status,2026-10-19: this component is included in the accepted combined
+schema37 runtime. See [own full/platform acceptance](managed-reader-guards.md).
+The declarations and component-only evidence below retain their historical scope.
+
+
 Declared W5b2b1 contract,2026-10-19. **Component checks passed; parent/full/platform acceptance pending.**
 ![Prototype registry, owner witness, local SQLite and separate cloud access](images/source-read-pins.svg)
 

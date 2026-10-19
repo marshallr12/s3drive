@@ -343,3 +343,50 @@ fn scoped_ack_closes_epoch_and_retained_old_tokens_replay_without_rebasing_twice
 }
 
 mod scoped_crash;
+
+#[test]
+fn recorded_ack_with_read_pins_recovers_without_source_bodies_or_session_rotation() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("pinned recovery");
+    let mut s = State::open_managed(&path).unwrap();
+    let f = fixture();
+    let r = first(&mut s, &f);
+    let r = commit(&mut s, r);
+    let p = r.input.plan;
+    let a = j(&mut s)
+        .acknowledge([40; 32], p, crate::sparse_views::Options::default())
+        .unwrap();
+    vj(&mut s).pin(r.input.view).unwrap();
+    let header: Vec<u8> = s
+        .connection
+        .query_row("SELECT state_hash FROM source_read_pin_session", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    s.connection
+        .execute(
+            "UPDATE sparse_view_blocks SET data=zeroblob(length(data))",
+            [],
+        )
+        .unwrap();
+    drop(s);
+    assert!(State::open_managed(&path).is_err());
+    let mut recovery = RecoveryStore::open(&path).unwrap();
+    assert_eq!(recovery.acknowledged(p).unwrap(), Some(a));
+    drop(recovery);
+    let db = Connection::open(path.join("metadata.sqlite3")).unwrap();
+    assert_eq!(
+        db.query_row("SELECT state_hash FROM source_read_pin_session", [], |r| {
+            r.get::<_, Vec<u8>>(0)
+        })
+        .unwrap(),
+        header
+    );
+    assert_eq!(
+        db.query_row("SELECT count(*) FROM source_read_pins", [], |r| r
+            .get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
+    assert!(State::open_managed(&path).is_err());
+}

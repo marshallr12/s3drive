@@ -30,6 +30,7 @@ impl Saved {
 }
 #[derive(Clone, Default, PartialEq, Eq)]
 pub(super) struct Ledger {
+    pub read_pins: pins::Ledger,
     pub files: BTreeMap<Id, File>,
     pub records: BTreeMap<Id, Saved>,
     pub blocks: BTreeMap<Id, Vec<u8>>,
@@ -96,6 +97,9 @@ fn load(db: &Connection, patches: bool) -> Result<Ledger> {
         scoped::enabled(db)?;
     }
     let mut out = Ledger::default();
+    if patches {
+        out.read_pins = pins::load(db)?;
+    }
     if counts == [0; 5] {
         return Ok(out);
     }

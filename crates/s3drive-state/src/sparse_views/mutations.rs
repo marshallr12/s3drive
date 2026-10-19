@@ -106,6 +106,23 @@ impl<'a> Journal<'a> {
         tx.commit()?;
         Ok(Self { state, options })
     }
+    /// Explicit manual retention. This token is not an automatic file handle.
+    pub fn pin(&mut self, view: Id) -> Result<pins::Pin> {
+        pins::acquire(self.state, view)
+    }
+    pub fn release_pin(&mut self, pin: &pins::Pin) -> Result<bool> {
+        pins::release(self.state, pin)
+    }
+    /// Local pieces only; the caller still needs provider/history authorization.
+    pub fn read_pinned(
+        &mut self,
+        pin: &pins::Pin,
+        offset: u64,
+        length: usize,
+    ) -> Result<Vec<Piece>> {
+        pins::check(self.state, pin)?;
+        self.read(pin.view_id(), offset, length)
+    }
     pub fn enable_scoped(&mut self) -> Result<()> {
         scoped::enable(self.state)
     }
@@ -481,6 +498,22 @@ pub struct Client {
     options: Options,
 }
 impl Client {
+    pub(super) fn release_guard(&self, pin: pins::Pin) {
+        self.owner.release_read_pin(pin, self.options);
+    }
+    /// All clones share one local retention pin; last drop queues bounded cleanup.
+    pub async fn guard(&self, id: Id) -> Result<super::ReadGuard> {
+        let client = self.clone();
+        let options = self.options;
+        self.owner
+            .call(move |s| {
+                let mut journal = Journal::new(&mut s.state, options)?;
+                let view = journal.view(id)?;
+                let pin = journal.pin(id)?;
+                Ok(super::guards::ReadGuard::new(client, view, pin))
+            })
+            .await
+    }
     /// Same private owner as the immutable views; no second SQLite connection.
     pub fn preparations(&self, options: preparation::Options) -> Result<preparation::Client> {
         preparation::Client::new(self.owner.clone(), options)
@@ -506,6 +539,34 @@ impl Client {
         let options = self.options;
         self.owner
             .call(move |s| Journal::new(&mut s.state, options)?.head(&binding))
+            .await
+    }
+    /// An unknown reply preserves any admitted pin; this manual API does not
+    /// make canceled file handles or clones automatically release retention.
+    pub async fn pin(&self, view: Id) -> Result<pins::Pin> {
+        let options = self.options;
+        self.owner
+            .call(move |s| Journal::new(&mut s.state, options)?.pin(view))
+            .await
+    }
+    pub async fn release_pin(&self, pin: pins::Pin) -> Result<bool> {
+        let options = self.options;
+        self.owner
+            .call(move |s| Journal::new(&mut s.state, options)?.release_pin(&pin))
+            .await
+    }
+    pub async fn read_pinned(
+        &self,
+        pin: pins::Pin,
+        offset: u64,
+        length: usize,
+    ) -> Result<Vec<Piece>> {
+        if length > MAX_RANGE_BYTES {
+            return Err(Failure::Bounds.into());
+        }
+        let options = self.options;
+        self.owner
+            .call(move |s| Journal::new(&mut s.state, options)?.read_pinned(&pin, offset, length))
             .await
     }
     pub async fn enable_scoped(&self) -> Result<()> {

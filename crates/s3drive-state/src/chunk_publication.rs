@@ -69,6 +69,8 @@ fn name(value: &str) -> bool {
 // namespace removal tables are authority state and are excluded as well.
 const EXCLUDED: &[&str] = &[
     "sparse_scoped_mode",
+    "source_read_pin_session",
+    "source_read_pins",
     "sparse_publication_role",
     "sparse_publications",
     "sparse_publication_checks",
