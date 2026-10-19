@@ -97,6 +97,9 @@ proposal for the next implementation, not current behavior or acceptance.
 Published source `8141996` includes accepted main ancestry and matches all276
 locally gated runtime inputs. Its
 [own Windows/Linux/book run](https://github.com/marshallr12/s3drive/actions/runs/39205603137)
-is in progress. This is publication evidence, not hosted acceptance. Main remains
-on accepted base-view runtime/schema29; this follow-up schema30 source needs its
-own complete native and reference-artifact checks.
+completed with Linux failure at an existing reader-fixture byte-count race;
+Windows and book passed. The schema30 source is not accepted. The
+[patch-version follow-up](sparse-patches.md) carries the migration with a bounded
+accounting-settlement repair and controlled post-body test. That new schema31
+source requires its own complete combined/native gates; the failed parent's
+partial results cannot certify it. Main remains accepted base-view/schema29.

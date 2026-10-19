@@ -69,6 +69,7 @@ fn rows(db: &Connection) -> Vec<Vec<String>> {
         "SELECT quote(target)||','||quote(binding)||','||quote(head)||','||quote(state_hash) FROM sparse_view_files ORDER BY target",
         "SELECT quote(view_id)||','||quote(target)||','||quote(record)||','||quote(state_hash) FROM sparse_views ORDER BY view_id",
         "SELECT quote(operation)||','||quote(view_id)||','||quote(request)||','||quote(state_hash) FROM sparse_view_operations ORDER BY operation",
+        "SELECT quote(block)||','||quote(data) FROM sparse_view_blocks ORDER BY block",
     ].iter().map(|sql| {
         db.prepare(sql).unwrap().query_map([],|r|r.get(0)).unwrap().collect::<rusqlite::Result<Vec<String>>>().unwrap()
     }).collect()
@@ -225,3 +226,7 @@ fn narrowed_file_quota_preserves_old_views_and_exact_replay() {
     failure(j.begin([9; 32], binding(4, 0), 0), Failure::Quota);
     failure(j.view([0; 32]), Failure::NotFound);
 }
+
+mod integrity;
+mod patches;
+mod recovery;

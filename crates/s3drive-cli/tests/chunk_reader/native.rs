@@ -457,6 +457,7 @@ async fn blocking<T: Send + 'static>(
 pub async fn native(f: &Fixture, root: &Path) {
     use std::io::{Read, Seek, SeekFrom};
     let (_cfg, _tree) = prepare(f, root).await;
+    f.s3.settle().await;
     let before = f.s3.served.load(Ordering::SeqCst);
     let mut mount = Mount::start(root).await;
     let file_path = mount.path.join(NAME);
@@ -508,6 +509,7 @@ pub async fn native(f: &Fixture, root: &Path) {
         file
     })
     .await;
+    f.s3.settle().await;
     assert!(
         f.s3.served.load(Ordering::SeqCst) - before < 16 * C,
         "native reads downloaded too much data"

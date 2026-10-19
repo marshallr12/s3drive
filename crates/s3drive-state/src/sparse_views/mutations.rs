@@ -1,0 +1,456 @@
+//! Atomic local mutations. Successful results never acknowledge a remote root.
+use super::*;
+use std::{collections::BTreeMap, sync::Arc};
+#[derive(Clone, PartialEq, Eq)]
+pub enum Piece {
+    /// Unauthenticated base intent: W2c must reopen and authorize the exact base.
+    Base {
+        offset: u64,
+        length: u64,
+    },
+    Zero {
+        length: u64,
+    },
+    /// Full-block digest checked before copying this bounded local slice.
+    Local(Vec<u8>),
+}
+impl fmt::Debug for Piece {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Base { offset, length } => f
+                .debug_struct("BaseIntent")
+                .field("offset", offset)
+                .field("length", length)
+                .finish(),
+            Self::Zero { length } => f.debug_struct("Zero").field("length", length).finish(),
+            Self::Local(bytes) => write!(f, "Local([private bytes; {}])", bytes.len()),
+        }
+    }
+}
+fn write_bounds(offset: u64, bytes: &[u8]) -> Result<()> {
+    if bytes.is_empty() {
+        return Err(Failure::Invalid.into());
+    }
+    if bytes.len() > MAX_RANGE_BYTES
+        || offset
+            .checked_add(bytes.len() as u64)
+            .is_none_or(|n| n > MAX_FILE_BYTES)
+    {
+        return Err(Failure::Bounds.into());
+    }
+    Ok(())
+}
+fn resize_bounds(size: u64) -> Result<()> {
+    if size > MAX_FILE_BYTES {
+        Err(Failure::Bounds.into())
+    } else {
+        Ok(())
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Boundary {
+    BlockStored,
+    ViewStored,
+    OperationStored,
+    HeadUpdated,
+    Validated,
+    Committed,
+}
+fn store_record(
+    db: &Connection,
+    saved: &Saved,
+    hook: &mut impl FnMut(Boundary) -> Result<()>,
+) -> Result<()> {
+    let r = &saved.record;
+    if db.execute(
+        "INSERT INTO sparse_views VALUES(?1,?2,?3,?4)",
+        params![
+            r.id.as_slice(),
+            saved.target.as_slice(),
+            &saved.raw,
+            hash(b"s3drive-sparse-view-v1\0", r)?.as_slice()
+        ],
+    )? != 1
+    {
+        return Err(Failure::Corrupt.into());
+    }
+    hook(Boundary::ViewStored)?;
+    if db.execute(
+        "INSERT INTO sparse_view_operations VALUES(?1,?2,?3,?4)",
+        params![
+            r.operation.as_slice(),
+            r.id.as_slice(),
+            &saved.request,
+            hash(b"s3drive-sparse-request-v1\0", &(r.operation, &r.request))?.as_slice()
+        ],
+    )? != 1
+    {
+        return Err(Failure::Corrupt.into());
+    }
+    hook(Boundary::OperationStored)?;
+    Ok(())
+}
+pub struct Journal<'a> {
+    state: &'a mut State,
+    options: Options,
+}
+impl<'a> Journal<'a> {
+    pub fn new(state: &'a mut State, options: Options) -> Result<Self> {
+        options.validate()?;
+        state.verify_staging_storage()?;
+        let tx = state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred)?;
+        isolation(&tx)?;
+        inspect(&tx)?;
+        tx.commit()?;
+        Ok(Self { state, options })
+    }
+    pub fn begin(&mut self, operation: Id, binding: Binding, size: u64) -> Result<View> {
+        let record = Record::new(
+            operation,
+            Request {
+                format: 1,
+                binding,
+                size,
+                edit: None,
+            },
+        )?;
+        let tx = self
+            .state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        isolation(&tx)?;
+        let before = inspect(&tx)?;
+        if let Some(old) = before.operation(operation) {
+            if old.request != record.request {
+                return Err(Failure::Conflict.into());
+            }
+            let result = View(old.clone());
+            tx.commit()?;
+            return Ok(result);
+        }
+        let target = record.request.binding.target()?;
+        if before.files.contains_key(&target) {
+            return Err(Failure::Conflict.into());
+        }
+        let raw = encode(&record.request.binding)?;
+        if raw.len() > BINDING_BYTES {
+            return Err(Failure::Bounds.into());
+        }
+        let saved = Saved::new(record.clone())?;
+        let mut expected = before.clone();
+        expected.files.insert(
+            target,
+            File {
+                binding: record.request.binding.clone(),
+                raw: raw.clone(),
+                head: record.id,
+            },
+        );
+        expected.records.insert(record.id, saved.clone());
+        expected.admit(self.options)?;
+        if before.files.is_empty()
+            && tx.execute(
+                "INSERT INTO sparse_view_role VALUES(1,1,?1)",
+                [role_hash()?.as_slice()],
+            )? != 1
+        {
+            return Err(Failure::Corrupt.into());
+        }
+        if tx.execute(
+            "INSERT INTO sparse_view_files VALUES(?1,?2,?3,?4)",
+            params![
+                target.as_slice(),
+                raw,
+                record.id.as_slice(),
+                hash(b"s3drive-sparse-binding-v1\0", &record.request.binding)?.as_slice()
+            ],
+        )? != 1
+        {
+            return Err(Failure::Corrupt.into());
+        }
+        store_record(&tx, &saved, &mut |_| Ok(()))?;
+        if inspect(&tx)? != expected {
+            return Err(Failure::Corrupt.into());
+        }
+        tx.commit()?;
+        Ok(View(record))
+    }
+    pub fn write(&mut self, operation: Id, parent: Id, offset: u64, bytes: &[u8]) -> Result<View> {
+        self.write_inner(operation, parent, offset, bytes, |_| Ok(()))
+    }
+    pub(super) fn write_inner(
+        &mut self,
+        operation: Id,
+        parent: Id,
+        offset: u64,
+        bytes: &[u8],
+        hook: impl FnMut(Boundary) -> Result<()>,
+    ) -> Result<View> {
+        write_bounds(offset, bytes)?;
+        let mut data = BTreeMap::new();
+        let mut blocks = Vec::new();
+        for chunk in bytes.chunks(PATCH_BYTES) {
+            let block = digest(chunk);
+            blocks.push(BlockRef {
+                block,
+                length: chunk.len() as u64,
+            });
+            if let Some(old) = data.insert(block, chunk.to_vec())
+                && old != chunk
+            {
+                return Err(Failure::Corrupt.into());
+            }
+        }
+        self.change(
+            operation,
+            Change::Write {
+                parent,
+                offset,
+                blocks,
+            },
+            None,
+            data,
+            hook,
+        )
+    }
+    pub fn resize(&mut self, operation: Id, parent: Id, size: u64) -> Result<View> {
+        resize_bounds(size)?;
+        self.change(
+            operation,
+            Change::Resize { parent },
+            Some(size),
+            BTreeMap::new(),
+            |_| Ok(()),
+        )
+    }
+    fn change(
+        &mut self,
+        operation: Id,
+        change: Change,
+        size: Option<u64>,
+        data: BTreeMap<Id, Vec<u8>>,
+        mut hook: impl FnMut(Boundary) -> Result<()>,
+    ) -> Result<View> {
+        if operation == [0; 32] {
+            return Err(Failure::Invalid.into());
+        }
+        let tx = self
+            .state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        isolation(&tx)?;
+        let before = inspect(&tx)?;
+        // Known operations are compared before head admission or new quotas.
+        if let Some(old) = before.operation(operation) {
+            if old.request.edit.as_ref() != Some(&change)
+                || size.is_some_and(|n| old.request.size != n)
+                || data
+                    .iter()
+                    .any(|(id, bytes)| before.blocks.get(id) != Some(bytes))
+            {
+                return Err(Failure::Conflict.into());
+            }
+            let result = View(old.clone());
+            tx.commit()?;
+            return Ok(result);
+        }
+        let parent = before.record(change.parent())?;
+        let target = parent.request.binding.target()?;
+        if before.files.get(&target).ok_or(Failure::Corrupt)?.head != parent.id {
+            return Err(Failure::Conflict.into());
+        }
+        let size = match &change {
+            Change::Resize { .. } => size.ok_or(Failure::Invalid)?,
+            Change::Write { offset, blocks, .. } => parent
+                .request
+                .size
+                .max(*offset + blocks.iter().map(|b| b.length).sum::<u64>()),
+        };
+        let record = Record::child(
+            operation,
+            Request {
+                format: 2,
+                binding: parent.request.binding.clone(),
+                size,
+                edit: Some(change),
+            },
+            parent,
+        )?;
+        let saved = Saved::new(record.clone())?;
+        let mut expected = before.clone();
+        for (block, bytes) in &data {
+            if let Some(old) = expected.blocks.get(block) {
+                if old != bytes {
+                    return Err(Failure::Corrupt.into());
+                }
+            } else {
+                expected.blocks.insert(*block, bytes.clone());
+            }
+        }
+        if expected.records.insert(record.id, saved.clone()).is_some() {
+            return Err(Failure::Corrupt.into());
+        }
+        expected
+            .files
+            .get_mut(&target)
+            .ok_or(Failure::Corrupt)?
+            .head = record.id;
+        expected.admit(self.options)?;
+        for (block, bytes) in &data {
+            if !before.blocks.contains_key(block)
+                && tx.execute(
+                    "INSERT INTO sparse_view_blocks VALUES(?1,?2)",
+                    params![block.as_slice(), bytes],
+                )? != 1
+            {
+                return Err(Failure::Corrupt.into());
+            }
+        }
+        hook(Boundary::BlockStored)?;
+        store_record(&tx, &saved, &mut hook)?;
+        if tx.execute(
+            "UPDATE sparse_view_files SET head=?1 WHERE target=?2 AND head=?3",
+            params![
+                record.id.as_slice(),
+                target.as_slice(),
+                parent.id.as_slice()
+            ],
+        )? != 1
+        {
+            return Err(Failure::Corrupt.into());
+        }
+        hook(Boundary::HeadUpdated)?;
+        if inspect(&tx)? != expected {
+            return Err(Failure::Corrupt.into());
+        }
+        hook(Boundary::Validated)?;
+        tx.commit()?;
+        hook(Boundary::Committed)?;
+        Ok(View(record))
+    }
+    pub fn view(&mut self, id: Id) -> Result<View> {
+        let tx = self
+            .state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred)?;
+        isolation(&tx)?;
+        let ledger = inspect(&tx)?;
+        let result = View(ledger.record(id)?.clone());
+        tx.commit()?;
+        Ok(result)
+    }
+    /// Explicit inspection only: write/resize still require the returned exact ID.
+    pub fn head(&mut self, binding: &Binding) -> Result<View> {
+        binding.validate()?;
+        let target = binding.target()?;
+        let tx = self
+            .state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred)?;
+        isolation(&tx)?;
+        let ledger = inspect(&tx)?;
+        let file = ledger.files.get(&target).ok_or(Failure::NotFound)?;
+        if &file.binding != binding {
+            return Err(Failure::Conflict.into());
+        }
+        let result = View(ledger.record(file.head)?.clone());
+        tx.commit()?;
+        Ok(result)
+    }
+    /// Local pieces are structurally bound and digest-checked; this method does
+    /// not authorize a filesystem read or fetch any remote base content.
+    pub fn read(&mut self, id: Id, offset: u64, length: usize) -> Result<Vec<Piece>> {
+        if length > MAX_RANGE_BYTES {
+            return Err(Failure::Bounds.into());
+        }
+        let tx = self
+            .state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred)?;
+        isolation(&tx)?;
+        let ledger = inspect(&tx)?;
+        let mut out = Vec::new();
+        for range in View(ledger.record(id)?.clone()).range(offset, length)? {
+            out.push(match range {
+                Range::Base { offset, length } => Piece::Base { offset, length },
+                Range::Zero { length } => Piece::Zero { length },
+                Range::Patch {
+                    block,
+                    offset,
+                    length,
+                } => {
+                    let bytes = ledger.blocks.get(&block).ok_or(Failure::Corrupt)?;
+                    let end = offset.checked_add(length).ok_or(Failure::Corrupt)?;
+                    let piece = bytes
+                        .get(offset as usize..end as usize)
+                        .ok_or(Failure::Corrupt)?;
+                    Piece::Local(piece.to_vec())
+                }
+            });
+        }
+        tx.commit()?;
+        Ok(out)
+    }
+}
+#[derive(Clone)]
+pub struct Client {
+    owner: Owner,
+    options: Options,
+}
+impl Client {
+    pub(crate) fn new(owner: Owner, options: Options) -> Result<Self> {
+        options.validate()?;
+        Ok(Self { owner, options })
+    }
+    pub async fn begin(&self, operation: Id, binding: Binding, size: u64) -> Result<View> {
+        let options = self.options;
+        self.owner
+            .call(move |s| Journal::new(&mut s.state, options)?.begin(operation, binding, size))
+            .await
+    }
+    pub async fn view(&self, id: Id) -> Result<View> {
+        let options = self.options;
+        self.owner
+            .call(move |s| Journal::new(&mut s.state, options)?.view(id))
+            .await
+    }
+    pub async fn head(&self, binding: Binding) -> Result<View> {
+        let options = self.options;
+        self.owner
+            .call(move |s| Journal::new(&mut s.state, options)?.head(&binding))
+            .await
+    }
+    pub async fn write(
+        &self,
+        operation: Id,
+        parent: Id,
+        offset: u64,
+        bytes: Arc<[u8]>,
+    ) -> Result<View> {
+        write_bounds(offset, &bytes)?;
+        let options = self.options;
+        self.owner
+            .call(move |s| {
+                Journal::new(&mut s.state, options)?.write(operation, parent, offset, &bytes)
+            })
+            .await
+    }
+    pub async fn resize(&self, operation: Id, parent: Id, size: u64) -> Result<View> {
+        resize_bounds(size)?;
+        let options = self.options;
+        self.owner
+            .call(move |s| Journal::new(&mut s.state, options)?.resize(operation, parent, size))
+            .await
+    }
+    pub async fn read(&self, id: Id, offset: u64, length: usize) -> Result<Vec<Piece>> {
+        if length > MAX_RANGE_BYTES {
+            return Err(Failure::Bounds.into());
+        }
+        let options = self.options;
+        self.owner
+            .call(move |s| Journal::new(&mut s.state, options)?.read(id, offset, length))
+            .await
+    }
+}

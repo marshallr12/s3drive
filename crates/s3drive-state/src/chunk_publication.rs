@@ -72,6 +72,7 @@ const EXCLUDED: &[&str] = &[
     "sparse_view_files",
     "sparse_views",
     "sparse_view_operations",
+    "sparse_view_blocks",
     "managed_publications",
     "managed_rejections",
     "logical_files",

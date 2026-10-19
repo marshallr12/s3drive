@@ -40,6 +40,7 @@
 - [Reopening a pinned manifest base](manifest-base-reopen.md)
 - [Local immutable base views](sparse-base-views.md)
 - [Preserving base views across migration](sparse-view-migration.md)
+- [Immutable patches and write versions](sparse-patches.md)
 - [Native manifest reads](native-manifest-reads.md)
 - [Implemented Linux read-only mount](linux-mount.md)
 - [Windows read-only drive](windows-mount.md)

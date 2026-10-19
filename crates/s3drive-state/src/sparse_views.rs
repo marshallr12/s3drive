@@ -1,5 +1,5 @@
-//! Private immutable initial views and exact local-operation replay. No network,
-//! patch writes, clean settlement, authority capability or native activation.
+//! Private immutable base/patch views and exact local-operation replay.
+//! No network, clean settlement, authority capability or native activation.
 use crate::{Result, State, worker::Owner};
 use rusqlite::{Connection, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
@@ -7,16 +7,31 @@ use sha2::{Digest, Sha256};
 use std::fmt;
 mod model;
 pub use model::{Binding, MAX_FILE_BYTES, MAX_RANGE_BYTES, Range, View};
-use model::{Record, Request};
+use model::{BlockRef, Change, Record, Request};
+mod ledger;
+use ledger::{File, Saved, inspect};
+mod mutations;
+pub use mutations::{Client, Journal, Piece};
 pub type Id = [u8; 32];
 const HARD_FILES: u32 = 256;
+const HARD_VIEWS: u32 = 4096;
+const HARD_EXTENTS: u32 = 32768;
+const HARD_METADATA: u64 = 32 * 1024 * 1024;
+const HARD_DIRTY: u64 = 256 * 1024 * 1024;
+const HARD_BLOCKS: usize = 32768;
+pub const PATCH_BYTES: usize = 1024 * 1024;
+const MAX_VIEW_EXTENTS: usize = 4096;
+fn digest(bytes: &[u8]) -> Id {
+    Sha256::digest(bytes).into()
+}
 const BINDING_BYTES: usize = 4096;
 const RECORD_BYTES: usize = 1_048_576;
-const TABLES: [&str; 4] = [
+const TABLES: [&str; 5] = [
     "sparse_view_role",
     "sparse_view_files",
     "sparse_views",
     "sparse_view_operations",
+    "sparse_view_blocks",
 ];
 const EXCLUDED: &[&str] = &[
     "managed_publications",
@@ -67,21 +82,62 @@ impl fmt::Display for Failure {
     }
 }
 impl std::error::Error for Failure {}
+/// Admission quotas only. Narrowing them never discards or hides old work.
+#[derive(Clone, Copy, Debug)]
+pub struct Limits {
+    pub views: u32,
+    pub operations: u32,
+    pub extents: u32,
+    pub metadata_bytes: u64,
+    pub dirty_bytes: u64,
+}
+impl Default for Limits {
+    fn default() -> Self {
+        Self {
+            views: 512,
+            operations: 512,
+            extents: 8192,
+            metadata_bytes: 8 * 1024 * 1024,
+            dirty_bytes: 64 * 1024 * 1024,
+        }
+    }
+}
 #[derive(Clone, Copy, Debug)]
 pub struct Options {
     max_files: u32,
+    limits: Limits,
 }
 impl Default for Options {
     fn default() -> Self {
-        Self { max_files: 64 }
+        Self {
+            max_files: 64,
+            limits: Limits::default(),
+        }
     }
 }
 impl Options {
     pub fn new(max_files: u32) -> Result<Self> {
-        if !(1..=HARD_FILES).contains(&max_files) {
+        Self {
+            max_files,
+            ..Self::default()
+        }
+        .validate()
+    }
+    pub fn with_limits(self, limits: Limits) -> Result<Self> {
+        Self { limits, ..self }.validate()
+    }
+    fn validate(self) -> Result<Self> {
+        let l = self.limits;
+        if !(1..=HARD_FILES).contains(&self.max_files)
+            || !(1..=HARD_VIEWS).contains(&l.views)
+            || !(1..=HARD_VIEWS).contains(&l.operations)
+            || !(1..=HARD_EXTENTS).contains(&l.extents)
+            || !(1..=HARD_METADATA).contains(&l.metadata_bytes)
+            || !(1..=HARD_DIRTY).contains(&l.dirty_bytes)
+        {
             return Err(Failure::Invalid.into());
         }
-        Ok(Self { max_files })
+        Ok(self)
     }
 }
 fn encode<T: Serialize>(v: &T) -> Result<Vec<u8>> {
@@ -121,110 +177,17 @@ pub(crate) fn require_legacy(db: &Connection) -> Result<()> {
     }
     Ok(())
 }
-pub(crate) fn check_schema(db: &Connection) -> Result<()> {
+fn check_legacy_schema(db: &Connection) -> Result<()> {
     db.prepare("SELECT singleton,format,state_hash FROM sparse_view_role LIMIT 0")?;
     db.prepare("SELECT target,binding,head,state_hash FROM sparse_view_files LIMIT 0")?;
     db.prepare("SELECT view_id,target,record,state_hash FROM sparse_views LIMIT 0")?;
     db.prepare("SELECT operation,view_id,request,state_hash FROM sparse_view_operations LIMIT 0")?;
     Ok(())
 }
-/// Caller holds a single read/write transaction. Count and length prechecks run
-/// in that same snapshot before any untrusted BLOB is copied into a Rust Vec.
-fn inspect(db: &Connection) -> Result<Vec<Record>> {
-    let mut counts = [0u32; 4];
-    for (i, table) in TABLES.iter().enumerate() {
-        counts[i] = db.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get(0))?;
-    }
-    if counts == [0; 4] {
-        return Ok(Vec::new());
-    }
-    if counts[0] != 1
-        || counts[1] == 0
-        || counts[1] > HARD_FILES
-        || counts[1] != counts[2]
-        || counts[1] != counts[3]
-    {
-        return Err(Failure::Corrupt.into());
-    }
-    isolation(db)?;
-    let bad:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM sparse_view_role WHERE typeof(singleton)!='integer' OR singleton!=1 OR typeof(format)!='integer' OR format!=1 OR typeof(state_hash)!='blob' OR length(state_hash)!=32)",[],|r|r.get(0))?;
-    if bad {
-        return Err(Failure::Corrupt.into());
-    }
-    let role: Vec<u8> = db.query_row(
-        "SELECT state_hash FROM sparse_view_role WHERE singleton=1",
-        [],
-        |r| r.get(0),
-    )?;
-    if role != role_hash()? {
-        return Err(Failure::Corrupt.into());
-    }
-    for sql in [
-        "SELECT EXISTS(SELECT 1 FROM sparse_view_files WHERE typeof(target)!='blob' OR length(target)!=32 OR typeof(binding)!='blob' OR length(binding) NOT BETWEEN 1 AND 4096 OR typeof(head)!='blob' OR length(head)!=32 OR typeof(state_hash)!='blob' OR length(state_hash)!=32)",
-        "SELECT EXISTS(SELECT 1 FROM sparse_views WHERE typeof(view_id)!='blob' OR length(view_id)!=32 OR typeof(target)!='blob' OR length(target)!=32 OR typeof(record)!='blob' OR length(record) NOT BETWEEN 1 AND 1048576 OR typeof(state_hash)!='blob' OR length(state_hash)!=32)",
-        "SELECT EXISTS(SELECT 1 FROM sparse_view_operations WHERE typeof(operation)!='blob' OR length(operation)!=32 OR typeof(view_id)!='blob' OR length(view_id)!=32 OR typeof(request)!='blob' OR length(request) NOT BETWEEN 1 AND 4096 OR typeof(state_hash)!='blob' OR length(state_hash)!=32)",
-    ] {
-        if db.query_row(sql, [], |r| r.get::<_, bool>(0))? {
-            return Err(Failure::Corrupt.into());
-        }
-    }
-    let mut statement =
-        db.prepare("SELECT target,binding,head,state_hash FROM sparse_view_files ORDER BY target")?;
-    let rows = statement.query_map([], |r| {
-        Ok((
-            r.get::<_, Vec<u8>>(0)?,
-            r.get::<_, Vec<u8>>(1)?,
-            r.get::<_, Vec<u8>>(2)?,
-            r.get::<_, Vec<u8>>(3)?,
-        ))
-    })?;
-    let mut out = Vec::new();
-    for row in rows {
-        let (target, raw, head, binding_hash) = row?;
-        let binding: Binding = decode(&raw)?;
-        binding.validate().map_err(|_| Failure::Corrupt)?;
-        if target != binding.target()?
-            || binding_hash != hash(b"s3drive-sparse-binding-v1\0", &binding)?
-        {
-            return Err(Failure::Corrupt.into());
-        }
-        let (actual_target, raw, record_hash): (Vec<u8>, Vec<u8>, Vec<u8>) = db
-            .query_row(
-                "SELECT target,record,state_hash FROM sparse_views WHERE view_id=?1",
-                [&head],
-                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-            )
-            .map_err(|_| Failure::Corrupt)?;
-        let record: Record = decode(&raw)?;
-        record.validate()?;
-        if actual_target != target
-            || record.id.as_slice() != head
-            || record.request.binding != binding
-            || record_hash != hash(b"s3drive-sparse-view-v1\0", &record)?
-        {
-            return Err(Failure::Corrupt.into());
-        }
-        let (operation, raw, request_hash): (Vec<u8>, Vec<u8>, Vec<u8>) = db
-            .query_row(
-                "SELECT operation,request,state_hash FROM sparse_view_operations WHERE view_id=?1",
-                [&head],
-                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-            )
-            .map_err(|_| Failure::Corrupt)?;
-        let request: Request = decode(&raw)?;
-        if operation != record.operation
-            || request != record.request
-            || request_hash
-                != hash(
-                    b"s3drive-sparse-request-v1\0",
-                    &(record.operation, &request),
-                )?
-        {
-            return Err(Failure::Corrupt.into());
-        }
-        out.push(record);
-    }
-    Ok(out)
+pub(crate) fn check_schema(db: &Connection) -> Result<()> {
+    check_legacy_schema(db)?;
+    db.prepare("SELECT block,data FROM sparse_view_blocks LIMIT 0")?;
+    Ok(())
 }
 /// Rebuild only after validating the old rows. Do not execute user-attached
 /// DELETE/INSERT triggers while moving cyclic references through an empty state.
@@ -235,8 +198,8 @@ pub(crate) fn migrate_thirty(db: &Connection) -> Result<()> {
     if !foreign_keys {
         return Err(Failure::Corrupt.into());
     }
-    check_schema(db)?;
-    let before = inspect(db)?;
+    check_legacy_schema(db)?;
+    let before = ledger::inspect_initial(db)?;
     let triggers: bool = db.query_row(
         "SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='trigger' AND tbl_name IN ('sparse_view_role','sparse_view_files','sparse_views','sparse_view_operations'))",
         [], |r| r.get(0),
@@ -259,7 +222,7 @@ pub(crate) fn migrate_thirty(db: &Connection) -> Result<()> {
             return Err(Failure::Corrupt.into());
         }
     }
-    if inspect(db)? != before {
+    if ledger::inspect_initial(db)? != before {
         return Err(Failure::Corrupt.into());
     }
     Ok(())
@@ -269,155 +232,5 @@ pub(crate) fn validate_all(db: &Connection) -> Result<()> {
     inspect(db).map(|_| ())
 }
 
-pub struct Journal<'a> {
-    state: &'a mut State,
-    options: Options,
-}
-impl<'a> Journal<'a> {
-    pub fn new(state: &'a mut State, options: Options) -> Result<Self> {
-        Options::new(options.max_files)?;
-        state.verify_staging_storage()?;
-        let tx = state
-            .connection
-            .transaction_with_behavior(TransactionBehavior::Deferred)?;
-        isolation(&tx)?;
-        inspect(&tx)?;
-        tx.commit()?;
-        Ok(Self { state, options })
-    }
-    /// Atomically persist one immutable initial local view and its exact result.
-    /// Replays bypass newly narrowed admission quotas, but never binding checks.
-    pub fn begin(&mut self, operation: Id, binding: Binding, size: u64) -> Result<View> {
-        let request = Request {
-            format: 1,
-            binding,
-            size,
-        };
-        let record = Record::new(operation, request)?;
-        let tx = self
-            .state
-            .connection
-            .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        isolation(&tx)?;
-        let before = inspect(&tx)?;
-        if let Some(old) = before.iter().find(|r| r.operation == operation) {
-            if old.request != record.request {
-                return Err(Failure::Conflict.into());
-            }
-            let result = View(old.clone());
-            tx.commit()?;
-            return Ok(result);
-        }
-        let target = record.request.binding.target()?;
-        for old in &before {
-            if old.request.binding.target()? == target {
-                return Err(Failure::Conflict.into());
-            }
-        }
-        if before.len() >= self.options.max_files as usize {
-            return Err(Failure::Quota.into());
-        }
-        let binding = &record.request.binding;
-        let binding_bytes = encode(binding)?;
-        let request_bytes = encode(&record.request)?;
-        let record_bytes = encode(&record)?;
-        if binding_bytes.len() > BINDING_BYTES
-            || request_bytes.len() > BINDING_BYTES
-            || record_bytes.len() > RECORD_BYTES
-        {
-            return Err(Failure::Bounds.into());
-        }
-        if before.is_empty()
-            && tx.execute(
-                "INSERT INTO sparse_view_role VALUES(1,1,?1)",
-                [role_hash()?.as_slice()],
-            )? != 1
-        {
-            return Err(Failure::Corrupt.into());
-        }
-        if tx.execute(
-            "INSERT INTO sparse_view_files VALUES(?1,?2,?3,?4)",
-            params![
-                target.as_slice(),
-                binding_bytes,
-                record.id.as_slice(),
-                hash(b"s3drive-sparse-binding-v1\0", binding)?.as_slice()
-            ],
-        )? != 1
-            || tx.execute(
-                "INSERT INTO sparse_views VALUES(?1,?2,?3,?4)",
-                params![
-                    record.id.as_slice(),
-                    target.as_slice(),
-                    record_bytes,
-                    hash(b"s3drive-sparse-view-v1\0", &record)?.as_slice()
-                ],
-            )? != 1
-            || tx.execute(
-                "INSERT INTO sparse_view_operations VALUES(?1,?2,?3,?4)",
-                params![
-                    operation.as_slice(),
-                    record.id.as_slice(),
-                    request_bytes,
-                    hash(
-                        b"s3drive-sparse-request-v1\0",
-                        &(operation, &record.request)
-                    )?
-                    .as_slice()
-                ],
-            )? != 1
-        {
-            return Err(Failure::Corrupt.into());
-        }
-        let mut expected = before
-            .into_iter()
-            .map(|r| Ok((r.request.binding.target()?, r)))
-            .collect::<Result<Vec<_>>>()?;
-        expected.push((target, record.clone()));
-        expected.sort_by_key(|(target, _)| *target);
-        let expected = expected.into_iter().map(|(_, r)| r).collect::<Vec<_>>();
-        if inspect(&tx)? != expected {
-            return Err(Failure::Corrupt.into());
-        }
-        tx.commit()?;
-        Ok(View(record))
-    }
-    pub fn view(&mut self, id: Id) -> Result<View> {
-        let tx = self
-            .state
-            .connection
-            .transaction_with_behavior(TransactionBehavior::Deferred)?;
-        isolation(&tx)?;
-        let record = inspect(&tx)?
-            .into_iter()
-            .find(|r| r.id == id)
-            .ok_or(Failure::NotFound)?;
-        tx.commit()?;
-        Ok(View(record))
-    }
-}
-#[derive(Clone)]
-pub struct Client {
-    owner: Owner,
-    options: Options,
-}
-impl Client {
-    pub(crate) fn new(owner: Owner, options: Options) -> Result<Self> {
-        Options::new(options.max_files)?;
-        Ok(Self { owner, options })
-    }
-    pub async fn begin(&self, operation: Id, binding: Binding, size: u64) -> Result<View> {
-        let options = self.options;
-        self.owner
-            .call(move |s| Journal::new(&mut s.state, options)?.begin(operation, binding, size))
-            .await
-    }
-    pub async fn view(&self, id: Id) -> Result<View> {
-        let options = self.options;
-        self.owner
-            .call(move |s| Journal::new(&mut s.state, options)?.view(id))
-            .await
-    }
-}
 #[cfg(test)]
 mod tests;

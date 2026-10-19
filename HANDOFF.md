@@ -25,7 +25,75 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
-## Current W2b2a immutable-version migration prerequisite (2026-10-19)
+## Current W2b2b immutable patches and mutations — local green (2026-10-19)
+
+Worktree /home/marshall/src/worktrees/s3drive-sparse-patches,
+branch codex/sparse-patches from locally green76e3dba (runtime8141996/schema30).
+Parent's own39205603137 has FAILED Linux117907640741 at reader flow accounting
+(delta9438058 vs9437184); Windows remains live in its frozen checkout. Preserve
+all276 parent inputs. Fixture increment follows completed body + async shutdown;
+new source fixes this with bounded active-handler accounting settlement and an
+owned post-body accounting gate control, retaining exact nine-chunk assertion.
+Parent source8141996 is NOT accepted. Failure/raw/exact old fixture/reader saved
+under /tmp/s3drive-sparse-migration-{hosted-linux*,failed-*}. Current schema31 must
+pass its own complete combined/native source, including this narrow harness fix;
+main remains accepted B1/schema29. Do not edit either parent's runtime inputs.
+PUBLIC intentional. No voice handoff capability available.
+
+Done contract: schema31 immutable <=1MiB patch BLOBs; initial bytes/hash/IDs stay
+unchanged; exact-parent write/resize transactions with durable exact replay after
+newer heads, complete retained linear history, normalized base/zero/patch maps,
+no tail resurrection, verified bounded local read pieces and private worker APIs.
+No S3/provider/native writes or clean settlement. W2c and W3-W6 remain required.
+Explicit independent file/view/operation/extent/metadata/dirty quotas; hard bounds
+before BLOB copies, no local-file-length allocation. Initial-only migration30
+validation must remain usable before new patch-table creation. Inspect every
+role/table/snapshot/old-fixture/schema assertion list before moving schema.
+
+Planned footprint: sparse model/ledger/mutation modules and tests; migration031;
+state migration ordering; reciprocal namespace/chunk-publication/snapshot guards,
+old-schema fixture helper and both Windows schema assertions. Full rollback,
+SQLite-full, corruption, replay/races, sparse64GiB, process-kill and worker reopen
+controls required before full local gate. Focused1 41997 CLOSED101 at u64 FromSql (resolved build lacks fallible_uint),
+fixed with checked i64 conversion. Focused2 25190 CLOSED0:12tests1.58s; focused3
+25158 CLOSED0:17tests8.71s. Parent Linux117907640741 failed reader byte accounting;
+whole39205603137 now FAILED (Windows/book success), watch21371 CLOSED1. Parent
+remains frozen/unaccepted. New bounded accounting settlement + deliberately gated
+post-body control preserves exact9-chunk assertion; reader83126 CLOSED0:12pass/
+1nativeignored7.76s. Focused4 59661 CLOSED101:20pass/1 new positive preflight
+fixture wrong policy, corrected to persisted volume.name_policy. Focused5 10544
+CLOSED0:25tests9.54s, including6 actual kill boundaries,48-model edit history,
+11 new corruption cases/8 trigger cases/SQLiteFull and worker/migration controls.
+Diagram XML/native render and visual review passed after arrow/text cleanup.
+
+Full gate1 27051 CLOSED101 at Clippy collapsible_if, all284 inputs unchanged;
+failed map and exact mutations.rs retained. Only let-chain cleanup changed, no
+assertion suppression. Full gate2 40129 CLOSED EXIT0 (PTY/four test threads),all284 frozen inputs
+unchanged.393state1ignored/37core/12reader1nativeignored/62S3 plus all format/
+Clippy/build/73MD links/69book chapters passed. Map
+/tmp/s3drive-sparse-patches-frozen.json; result
+/tmp/s3drive-sparse-patches-gate2-result.json. Indexed44-member local archive
+407415bytes SHA342c2ecab291c8720afdd2cf364b30cf8b2f2bcef4294e98749f513064406b9f
+includes failed parent/harness source, all failed/passed focused/gate evidence,
+final runtime sources/maps, literals and reviewed SVG/PNG. One-use archive already
+ran; do not repeat. All /tmp/s3drive-sparse-patches-* paths retained. Publish this
+exact source for its own combined real Windows/Linux/native/reference gates before
+acceptance. Parent schema30 remains failed/unaccepted; main stays accepted B1/29.
+W2c composition, W3/W4 mixed publication, W5 settlement, legacy/metadata-empty
+recovery and W6 native chunk writes remain. No provider or credential mutation.
+
+Next implementation W2c: inspect actual managed/chunks/reader.rs and reader/base.rs
+APIs and the current fs read/auth policy. Compose storage base/zero/local pieces
+only after fresh authorization of the exact historical base, matching actual
+size/store/source fingerprint/root; do not bypass auth when every requested piece
+is local/zero. Keep SQL work inside Owner calls and release it before network I/O;
+share bounded range/snapshot/deadline/cancellation controls. Old pinned views must
+remain exact across remote replacement and credential rotation. Add meaningful
+owned end-to-end SDK/authority/local-journal composition controls, then full gate
+and own combined platform source. Legacy and metadata-empty restart/admission
+contracts remain required before W6; a manifest-only prototype is not the goal.
+
+## Historical W2b2a migration source — own cohort failed (2026-10-19)
 
 Worktree /home/marshall/src/worktrees/s3drive-sparse-mutations,
 branch codex/sparse-mutations from local-green base-view checkpoint ebfc56c.
@@ -63,12 +131,14 @@ Clippy/build/72MD links/68book chapters passed. Frozen map
 retains failed gate/exact old fixture, experiment, repaired source/maps and pass.
 Published runtime8141996a4bba443ae09430aa39e2268167372485 includes accepted main
 5c9c305 ancestry, with documentation/evidence-only merge delta from local-green
-c2d96e6. All276 working/committed hashes match. Own run39205603137 attempt1 LIVE:
-Windows117907640424,book117907640714,Linux117907640741. Watch21371 LIVE ->
+c2d96e6. All276 working/committed hashes match. Own run39205603137 attempt1 FAILED: Linux117907640741 reader accounting race;
+Windows117907640424/book117907640714 success. Watch21371 CLOSED1 ->
 /tmp/s3drive-sparse-migration-hosted-watch.log; publication proof
 /tmp/s3drive-sparse-migration-publication.json. Require own all3 raw log review,
 ZIP API digests/strict typed21+14/project oracles/all35 raw fields+types before
-acceptance; never reuse older artifacts. Current source remains local green only.
+acceptance; never reuse older artifacts. This source never gained hosted
+acceptance; do not promote it or rerun unchanged source to chase green. The new
+schema31 source above carries the controlled harness repair and new own gates.
 Main is accepted B1/schema29. No runtime changes since the successful freeze.
 Local acceptance is not native/provider acceptance.
 

@@ -468,6 +468,7 @@ pub(crate) fn existing_identity(db: &Connection, id: &str, policy: &str) -> Resu
         "sparse_view_files",
         "sparse_views",
         "sparse_view_operations",
+        "sparse_view_blocks",
         "chunk_client_role",
         "chunk_publications",
         "chunk_source_role",
@@ -734,7 +735,8 @@ impl State {
                         (SELECT count(*) FROM sparse_view_role) +
                         (SELECT count(*) FROM sparse_view_files) +
                         (SELECT count(*) FROM sparse_views) +
-                        (SELECT count(*) FROM sparse_view_operations)",
+                        (SELECT count(*) FROM sparse_view_operations) +
+                        (SELECT count(*) FROM sparse_view_blocks)",
                 [],
                 |r| r.get(0),
             ))?;

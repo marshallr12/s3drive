@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="760" viewBox="0 0 1100 760" role="img" aria-labelledby="title desc">
+<title id="title">Immutable local patch views and future remote composition</title>
+<desc id="desc">The Rust worker atomically commits patch bytes, immutable views, operation results and a file head in private SQLite. Old versions remain readable. Future composition joins verified local pieces with the existing authenticated manifest reader, Rust S3 client, shared Rust authority and S3-compatible storage.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#426585" stroke-width="1.5"/></marker></defs>
+<rect width="1100" height="760" rx="18" fill="#f5f8fc"/>
+<g font-family="sans-serif" fill="#172d43">
+<text x="32" y="38" font-size="24" font-weight="700">Local patch mutations, with exact immutable history</text>
+<text x="32" y="64" font-size="15">W2b2b implementation • local disk only • no provider writes or clean acknowledgment</text>
+<rect x="24" y="88" width="1052" height="340" rx="15" fill="#eef8f2" stroke="#83ae96"/>
+<text x="44" y="115" font-size="16" font-weight="700">IMPLEMENTED LOCAL STORAGE API — not yet connected to mounted chunk writes</text>
+<rect x="44" y="134" width="270" height="264" rx="12" fill="white" stroke="#83ae96"/>
+<text x="60" y="162" font-size="19" font-weight="700">Rust worker</text>
+<text x="60" y="193" font-size="15">Bounded owner queue</text>
+<text x="60" y="220" font-size="15">write / resize exact parent</text>
+<text x="60" y="247" font-size="15">Compare current file head</text>
+<text x="60" y="274" font-size="15">Exact operation replay</text>
+<text x="60" y="301" font-size="15">Full-block digest checks</text>
+<text x="60" y="328" font-size="15">Old views remain readable</text>
+<text x="60" y="367" font-size="14" fill="#47624f">Limits refuse new work;</text>
+<text x="60" y="386" font-size="14" fill="#47624f">existing dirty bytes stay.</text>
+<path d="M314 259H350" stroke="#426585" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="354" y="134" width="355" height="264" rx="12" fill="white" stroke="#83ae96"/>
+<text x="371" y="162" font-size="19" font-weight="700">Private local SQLite</text>
+<text x="371" y="191" font-size="14">Outside the mounted tree • WAL / FULL</text>
+<text x="371" y="221" font-size="15">role + file binding + current head</text>
+<text x="371" y="248" font-size="15">immutable views and parent links</text>
+<text x="371" y="275" font-size="15">operation arguments + exact results</text>
+<text x="371" y="302" font-size="15">immutable patch BLOBs ≤ 1 MiB</text>
+<rect x="369" y="326" width="325" height="54" rx="8" fill="#e6f2eb"/>
+<text x="382" y="348" font-size="14" font-weight="700">One immediate transaction</text>
+<text x="382" y="369" font-size="14">bytes + view + operation + head</text>
+<rect x="737" y="134" width="319" height="264" rx="12" fill="white" stroke="#83ae96"/>
+<text x="754" y="162" font-size="18" font-weight="700">Example retained views</text>
+<text x="754" y="196" font-size="15">V0: base[0..17]</text>
+<text x="754" y="232" font-size="15">V1: base[0..12] + patch[5]</text>
+<text x="754" y="268" font-size="15">V2: shrink → base[0..8]</text>
+<text x="754" y="304" font-size="15">V3: grow → base[0..8] + zero[9]</text>
+<text x="754" y="349" font-size="14" fill="#47624f">V1 keeps its bytes. V3 cannot</text>
+<text x="754" y="371" font-size="14" fill="#47624f">resurrect the truncated tail.</text>
+<path d="M290 399V470H338" fill="none" stroke="#426585" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+<text x="44" y="455" font-size="14">base / zero / verified local pieces</text>
+<rect x="344" y="444" width="365" height="66" rx="10" fill="#fff7e8" stroke="#bf9c58" stroke-dasharray="6 4"/>
+<text x="360" y="471" font-size="18" font-weight="700">W2c composer — next phase</text>
+<text x="360" y="495" font-size="14">Authorize the exact base before returning file bytes</text>
+<rect x="24" y="535" width="1052" height="172" rx="15" fill="#edf3fc" stroke="#8fa9ca"/>
+<text x="44" y="562" font-size="16" font-weight="700">EXISTING VERIFIED REMOTE READER — composition link above is still planned</text>
+<rect x="44" y="579" width="249" height="102" rx="10" fill="white" stroke="#8fa9ca"/>
+<text x="59" y="604" font-size="17" font-weight="700">Shared Rust authority</text>
+<text x="59" y="630" font-size="14">Exact historical file identity</text>
+<text x="59" y="653" font-size="14">SQLite; Turso optional in design</text>
+<rect x="335" y="579" width="214" height="102" rx="10" fill="white" stroke="#8fa9ca"/>
+<text x="350" y="604" font-size="17" font-weight="700">Manifest reader</text>
+<text x="350" y="630" font-size="14">Fresh auth, pinned root</text>
+<text x="350" y="653" font-size="14">Complete chunk hashes</text>
+<rect x="589" y="579" width="184" height="102" rx="10" fill="white" stroke="#8fa9ca"/>
+<text x="604" y="604" font-size="17" font-weight="700">Rust S3 client</text>
+<text x="604" y="630" font-size="14">Bounded HEAD/GET</text>
+<text x="604" y="653" font-size="14">Pinned credentials</text>
+<rect x="815" y="579" width="241" height="102" rx="10" fill="white" stroke="#8fa9ca"/>
+<text x="830" y="604" font-size="17" font-weight="700">S3-compatible service</text>
+<text x="830" y="630" font-size="14">Bucket(s): chunks + manifests</text>
+<text x="830" y="653" font-size="14">Wasabi is the provider target</text>
+<path d="M293 628H330" stroke="#426585" stroke-width="2" marker-end="url(#arrow)"/><path d="M549 628H584" stroke="#426585" stroke-width="2" marker-end="url(#arrow)"/><path d="M773 628H810" stroke="#426585" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M442 510V532M442 570V574" stroke="#426585" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+<text x="32" y="738" font-size="15" font-weight="700">Local view receipt ≠ remote publication receipt. Mixed publication and settlement remain later phases.</text>
+</g></svg>

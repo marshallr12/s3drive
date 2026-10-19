@@ -64,11 +64,13 @@ async fn flow(f: &Fixture) {
     map.insert(129, pattern(129, 17));
     let tree = f.tree(10, 129 * C + 17, map).await;
     let before = f.s3.events().len();
+    f.s3.settle().await;
     let served = f.s3.served.load(Ordering::SeqCst);
     let old = r.open_file(&id(10)).await.unwrap();
     assert_eq!(old.size(), tree.size);
     assert_eq!(old.metadata().name, "café 日本語 🦀.bin");
     assert_eq!(f.s3.events().len() - before, 2);
+    f.s3.settle().await;
     assert_eq!(
         f.s3.served.load(Ordering::SeqCst) - served,
         tree.root_bytes as u64
@@ -134,11 +136,13 @@ async fn flow(f: &Fixture) {
     let full = f.tree(12, 10 * C, data(0, 10)).await;
     assert_eq!(full.data.len(), 10);
     let file = r.open_file(&id(12)).await.unwrap();
+    f.s3.settle().await;
     let before = f.s3.served.load(Ordering::SeqCst);
     let gets = data_gets(f);
     let out = file.read_range(1, 8 * C as usize).await.unwrap();
     assert_eq!(out.len(), 8 * C as usize);
     assert_eq!(data_gets(f) - gets, 9);
+    f.s3.settle().await;
     assert_eq!(f.s3.served.load(Ordering::SeqCst) - before, 9 * C);
     assert!(
         out.iter().enumerate().all(|(i, b)| {
@@ -731,6 +735,7 @@ async fn manifest_reader_child() {
     let mut f = Fixture::open(&path, mode == "flow").await;
     match mode.as_str() {
         "flow" => Box::pin(flow(&f)).await,
+        "accounting" => Box::pin(accounting(&f)).await,
         "proofs" => Box::pin(proofs::flow(&f)).await,
         "pages" => Box::pin(pages::flow(&f)).await,
         "reopen" => Box::pin(reopen::flow(&mut f, &path)).await,
@@ -843,4 +848,38 @@ async fn manifest_base_descriptors_reopen_exact_history_with_fresh_auth_and_shar
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn manifest_base_reopen_worker() {
     reopen::worker().await;
+}
+
+async fn accounting(f: &Fixture) {
+    let tree = f.tree(10, C, data(0, 1)).await;
+    let r = f.reader().await;
+    f.s3.settle().await;
+    let before = f.s3.served.load(Ordering::SeqCst);
+    f.s3.fault(Target::Exact(tree.root.clone()), Fault::AccountingGate);
+    let file = r.open_file(&id(10)).await.unwrap();
+    f.s3.wait(1).await;
+    assert_eq!(
+        f.s3.served.load(Ordering::SeqCst),
+        before,
+        "owned gate did not delay post-body accounting"
+    );
+    let settled = f.s3.settle();
+    tokio::pin!(settled);
+    tokio::select! {biased;
+        _=&mut settled=>panic!("settlement returned while response accounting remained gated"),
+        _=tokio::task::yield_now()=>(),
+    }
+    f.s3.permits.add_permits(1);
+    settled.await;
+    assert_eq!(
+        f.s3.served.load(Ordering::SeqCst) - before,
+        tree.root_bytes as u64
+    );
+    f.s3.clear();
+    assert_eq!(file.read_range(0, 3).await.unwrap(), pattern(0, 3));
+    f.s3.settle().await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn response_accounting_waits_for_owned_handler_after_client_body_completion() {
+    run("accounting").await;
 }

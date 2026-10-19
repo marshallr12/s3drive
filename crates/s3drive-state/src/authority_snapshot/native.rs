@@ -153,6 +153,7 @@ fn identity(
         "sparse_view_files",
         "sparse_views",
         "sparse_view_operations",
+        "sparse_view_blocks",
         "legacy_cached_objects_v1",
         "source_bindings",
         "clean_blobs",
@@ -635,6 +636,7 @@ mod tests {
             "PRAGMA foreign_keys=OFF; INSERT INTO sparse_view_files VALUES(zeroblob(32),x'7b',zeroblob(32),zeroblob(32))".to_owned(),
             "PRAGMA foreign_keys=OFF; INSERT INTO sparse_views VALUES(zeroblob(32),zeroblob(32),x'7b',zeroblob(32))".to_owned(),
             "PRAGMA foreign_keys=OFF; INSERT INTO sparse_view_operations VALUES(zeroblob(32),zeroblob(32),x'7b',zeroblob(32))".to_owned(),
+            "INSERT INTO sparse_view_blocks VALUES(zeroblob(32),x'01')".to_owned(),
         ] {
             let case = tempfile::tempdir().unwrap();
             let source = case.path().join("bad");

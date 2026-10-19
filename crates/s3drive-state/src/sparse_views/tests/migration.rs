@@ -39,7 +39,7 @@ fn schema_twenty_nine_keeps_old_dirty_bytes_and_migration_collisions_roll_back()
             assert_eq!(value, b"\0\xffx");
         } else {
             let mut s = State::open_managed(&path).unwrap();
-            assert_eq!(s.info().unwrap().schema_version, 30);
+            assert_eq!(s.info().unwrap().schema_version, 31);
             assert_eq!(
                 journal::Journal::new(&mut s, journal::Options::default())
                     .unwrap()
@@ -118,6 +118,9 @@ fn original_twenty_nine(path: &std::path::Path) -> (State, Vec<View>) {
         )))
         .unwrap();
     s.connection
+        .execute_batch(include_str!("../../../migrations/031.sql"))
+        .unwrap();
+    s.connection
         .pragma_update(None, "user_version", 29)
         .unwrap();
     let mut j = Journal::new(&mut s, Options::default()).unwrap();
@@ -151,9 +154,12 @@ fn schema_thirty_preserves_populated_cyclic_views_byte_for_byte_and_removes_only
         db.query_row("SELECT count(*) FROM pragma_index_list('sparse_views') AS i JOIN pragma_index_info(i.name) AS c WHERE i.\"unique\"=1 AND c.name='target'", [], |r| r.get(0)).unwrap()
     };
     assert_eq!(indexes(&s.connection), 1);
+    s.connection
+        .execute_batch("DROP TABLE sparse_view_blocks")
+        .unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
-    assert_eq!(s.info().unwrap().schema_version, 30);
+    assert_eq!(s.info().unwrap().schema_version, 31);
     assert_eq!(
         rows(&s.connection),
         before,
@@ -269,9 +275,12 @@ fn schema_thirty_migration_sql_failure_rolls_back_copies_and_refuses_attached_tr
             s.connection
                 .execute_batch("DROP TABLE temp.sparse_views_copy_v30")
                 .unwrap();
+            s.connection
+                .execute_batch("DROP TABLE sparse_view_blocks")
+                .unwrap();
             drop(s);
             let s = State::open_managed(&path).unwrap();
-            assert_eq!(s.info().unwrap().schema_version, 30);
+            assert_eq!(s.info().unwrap().schema_version, 31);
             assert_eq!(rows(&s.connection), before);
         }
     }

@@ -2693,3 +2693,53 @@ dirty retention and successful retry. The failed source/log and repaired full
 pass are retained in the indexed21-member local archive. No mutation API or native
 chunk-write activation. Publish this exact schema30 source for its own combined
 gates; W2b2b remains next. See [migration evidence](sparse-view-migration.md).
+
+
+### W2b2b immutable patches and mutations (declared2026-10-19)
+
+Build in codex/sparse-patches from local-green8141996, keeping its own CI source
+frozen. Add schema31 and <=1MiB immutable raw-digest blocks, multiple retained
+versions, exact-parent/head writes and resizes with exact-operation replay after
+newer edits. Old root serialization/IDs remain unchanged. Reconstruct every child
+from its request and parent; require one complete chain to the head, no orphan/
+fork/cycle, and every block referenced by a retained write. Preserve old literal
+record/request BLOBs in post-write comparisons. Normalize spans and never revive
+a removed tail. Return bounded local bytes only after full-block verification;
+base/zero pieces remain metadata until W2c authenticates actual remote content.
+
+Use separate soft file/view/operation/extent/metadata/dirty quotas, hard ceilings,
+8MiB mutations/ranges and64GiB logical files. Quota refusal retains all old bytes
+and exact replays bypass newly narrowed admission limits. Add the patch table to
+all role/snapshot/legacy guards and update both Windows schema assertions. The
+old schema30 migration must validate initial rows without requiring a patch table
+that does not exist yet. Require realistic populated migration, exact replay and
+competing-head controls, overlaps/truncate/regrow/64GiB holes, corruption, actual
+SQLite-full/trigger rollback, worker and process-kill recovery, then the complete
+local gate. No native chunk writes or clean settlement in this slice.
+
+
+W2b2b local result,2026-10-19: full gate2 40129 passed all284 frozen inputs,
+393state1ignored/37core/12reader1nativeignored/62S3 plus all format/Clippy/build/
+73MD links/69book checks. Immutable patches, exact-parent write/resize/replay,
+retained chains, verified bounded local pieces and independent quotas now have
+local controls including six actual process-death boundaries,48 independent-model
+edits,35 combined corruption cases, trigger/SQLite-full rollback and worker races.
+The schema30 parent's own Linux cohort failed a post-body accounting race in the
+existing reader fixture; its Windows/book success is not acceptance. This source
+adds bounded owned-handler settlement and a deliberately delayed accounting
+control, preserving the exact nine-chunk assertion. Gate1 was only a Clippy
+let-chain cleanup; failed and passed sources/logs and the reviewed diagram are
+retained in the indexed44-member local archive. Publish this exact schema31 source
+for its own combined native/reference gates. See [patch evidence](sparse-patches.md).
+W2c and W3-W6/legacy/metadata-empty recovery remain; no mounted chunk writes yet.
+
+
+W2c next: inspect the implemented reader/base APIs and filesystem authorization
+policy before coding composition. Freshly authorize the exact historical base
+and compare actual size/store/source fingerprint/root before serving edited file
+bytes, including all-local/all-zero requests. Never hold the SQLite owner across
+network waits. Preserve pinned older views, bounded shared resources/deadlines,
+cancellation and credential-rotation behavior. Verify through owned SDK + real
+Rust authority + local-journal fixtures and the complete local/own combined gates.
+Legacy and metadata-empty admission/restart contracts remain required before W6;
+this sequence does not narrow the final drive to existing manifest files only.

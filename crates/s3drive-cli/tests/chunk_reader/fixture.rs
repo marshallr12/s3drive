@@ -70,6 +70,7 @@ pub enum Fault {
     Short,
     Extra,
     Gate,
+    AccountingGate,
 }
 #[derive(Clone)]
 pub enum Target {
@@ -86,6 +87,7 @@ pub struct S3State {
     notice: Arc<Notify>,
     pub permits: Arc<Semaphore>,
     pub served: Arc<AtomicU64>,
+    active: Arc<AtomicUsize>,
     pub expected_key: Arc<Mutex<String>>,
 }
 impl S3State {
@@ -107,6 +109,22 @@ impl S3State {
                 version: None,
             },
         );
+    }
+    /// A client may finish before the server's post-response accounting. Wait
+    /// for owned handlers, never compensate by loosening byte-count assertions.
+    pub async fn settle(&self) {
+        tokio::time::timeout(Duration::from_secs(10), async {
+            while self.active.load(Ordering::SeqCst) != 0 {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap_or_else(|_| {
+            panic!(
+                "response accounting has {} active handlers",
+                self.active.load(Ordering::SeqCst)
+            )
+        });
     }
     pub async fn wait(&self, n: usize) {
         tokio::time::timeout(Duration::from_secs(10), async {
@@ -137,7 +155,15 @@ async fn response(
     let _ = socket.shutdown().await;
     true
 }
+struct ActiveResponse(Arc<AtomicUsize>);
+impl Drop for ActiveResponse {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
+    }
+}
 async fn serve(mut socket: TcpStream, s: S3State) {
+    s.active.fetch_add(1, Ordering::SeqCst);
+    let _active = ActiveResponse(s.active.clone());
     let request = tokio::time::timeout(Duration::from_secs(10), async {
         let mut raw = Vec::new();
         while !raw.ends_with(b"\r\n\r\n") {
@@ -302,6 +328,12 @@ async fn serve(mut socket: TcpStream, s: S3State) {
     )
     .await
     {
+        if fault == Some(Fault::AccountingGate) {
+            s.arrived.fetch_add(1, Ordering::SeqCst);
+            s.notice.notify_one();
+            let permit = s.permits.acquire().await.unwrap();
+            permit.forget();
+        }
         s.served.fetch_add(body.len() as u64, Ordering::SeqCst);
     }
 }
@@ -434,6 +466,7 @@ impl Fixture {
             notice: Arc::new(Notify::new()),
             permits: Arc::new(Semaphore::new(0)),
             served: Arc::new(AtomicU64::new(0)),
+            active: Arc::new(AtomicUsize::new(0)),
             expected_key: Arc::new(Mutex::new("TESTPROFILE".into())),
         };
         let l = TcpListener::bind("127.0.0.1:0").await.unwrap();

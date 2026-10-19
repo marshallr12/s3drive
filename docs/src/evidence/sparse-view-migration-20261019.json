@@ -4,7 +4,7 @@
   "branch": "codex/sparse-mutations",
   "baseline": "ebfc56c98c888588007528f15e00bba956392771",
   "schema": 30,
-  "status": "full local gate2 passed; own combined platform/native acceptance required",
+  "status": "local gate passed; own hosted cohort failed Linux reader accounting; not accepted; superseded by schema31 follow-up",
   "scope": "remove target uniqueness without changing existing initial view bytes, IDs, hashes or replay; no patch writes",
   "experiment": {
     "path": "/tmp/s3drive-sparse-migration-experiment.log",
@@ -165,5 +165,23 @@
     "hosted_accepted": false,
     "main_runtime": "accepted base views1681ee6/schema29",
     "visibility": "PUBLIC preserved; no visibility mutation"
-  }
+  },
+  "hosted_failure": {
+    "date": "2026-10-19",
+    "source": "8141996a4bba443ae09430aa39e2268167372485",
+    "run_id": 39205603137,
+    "attempt": 1,
+    "job": 117907640741,
+    "conclusion": "failure",
+    "accepted": false,
+    "log": "/tmp/s3drive-sparse-migration-hosted-linux.log",
+    "sha256": "94b70339e2d81a5604e594bd8540ea708bf121e6c9e355d96ac8e6ae05e3f628",
+    "failure": "manifest_ranges_sparse_unicode_empty_cross_page_pins_and_maximum: actual byte delta9438058 expected9437184",
+    "observed_fixture_issue": "served increment follows response body and async shutdown; client result can precede server accounting",
+    "all276_parent_inputs_unchanged": true,
+    "remaining_job": "Windows still live; do not restart or reuse this cohort for new schema31",
+    "cohort_terminal": "failure; Windows/book success",
+    "watch_exit_code": 1
+  },
+  "superseded_by": "codex/sparse-patches schema31, with controlled response accounting repair; own full combined gates required"
 }
