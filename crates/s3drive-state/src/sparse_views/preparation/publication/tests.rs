@@ -308,7 +308,7 @@ fn additive_schema_thirty_three_preserves_dirty_ids_and_rolls_back_collisions() 
             );
         } else {
             let mut s = opened.unwrap();
-            assert_eq!(s.info().unwrap().schema_version, 33);
+            assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
             assert!(super::super::ledger::inspect(&s.connection).unwrap() == before);
             assert_eq!(
                 pj(&mut s).info(info.id().unwrap()).unwrap().view(),
@@ -358,3 +358,5 @@ fn restricted_recovery_replays_saved_metadata_despite_source_corruption_without_
 }
 mod crash;
 mod faults;
+
+mod lineage;

@@ -3174,3 +3174,13 @@ corrected final sources are in the675-member local archive (SHA
 756f32f0ecc4694ff44c2a9282e013c5c4c4674258fc4826e8aec53a0c07a2e9).
 [Root evidence](evidence/mixed-roots-20261019.json). Own hosted/native/source
 acceptance remains required. W5/origins/W6 are not replaced by root publication.
+
+
+### W5a exact publication lineage (declared, 2026-10-19)
+
+Implement the [lineage contract](mixed-publication-lineage.md) in the isolated
+`codex/mixed-publication-lineage` worktree. Existing W4b2 inputs stay frozen for
+their own acceptance. W5a enables subsequent descendant publications against an
+exact known local root, with strict foreign-content refusal and byte-preserved
+old intents. W5b still must add clean-base epochs and bounded local retirement;
+W5a alone must not be exposed as a successful native clean flush.

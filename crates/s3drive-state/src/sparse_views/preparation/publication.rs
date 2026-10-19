@@ -14,6 +14,7 @@ use model::Check;
 pub use model::{Input, Physical, Record, Rejection};
 mod journal;
 mod ledger;
+mod lineage;
 pub use journal::{Client, DataNeed, Journal};
 mod recovery;
 pub use recovery::{RecoveryClient, RecoveryStore};

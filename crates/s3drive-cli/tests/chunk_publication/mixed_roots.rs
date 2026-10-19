@@ -414,3 +414,205 @@ pub async fn controls(config: &s3drive_core::Config, root: &Path, s: &Server) {
     }
     seed.storage().close().await.unwrap();
 }
+
+/// Consecutive edits keep their original authenticated source, with each new CAS
+/// bound only to an actual prior local publication. No clean-state claim.
+pub async fn lineage(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    let seed = setup(config, root, s).await;
+    let old = publisher(&seed, s).await;
+    let original = (0..32).map(|n| n as u8).collect::<Vec<_>>();
+    let (p, _) = plan(&seed, s, 10, 40, &original, None, 0).await;
+    old.begin(p, id(41)).await.unwrap();
+    old.resume(p).await.unwrap();
+    let volume = info(&s.direct).await.id;
+    let mut binding: Option<sparse_views::Binding> = None;
+    let mut previous = None;
+    let mut expected = original;
+    let mut future = None;
+    for round in 0..4u8 {
+        let st = storage(root, "lineage").await;
+        let local = st.sparse_views(sparse_views::Options::default()).unwrap();
+        let e = executor(config, st.clone(), false, false).await;
+        let reader = Reader::open(s.wire.clone(), volume.clone(), vec![(id(200), e.reader())])
+            .await
+            .unwrap();
+        let parent = if let Some(b) = &binding {
+            local.head(b.clone()).await.unwrap()
+        } else {
+            let base = reader.open_file(&id(10)).await.unwrap().pinned_base();
+            let b = base.sparse_binding().unwrap();
+            binding = Some(b.clone());
+            local.begin([1; 32], b, base.size()).await.unwrap()
+        };
+        let view = if round == 2 {
+            assert_eq!(parent.id(), future.take().unwrap());
+            parent
+        } else {
+            let bytes = if round == 0 {
+                "café".as_bytes()
+            } else {
+                "日本".as_bytes()
+            };
+            let offset = 2 + usize::from(round) * 5;
+            expected[offset..offset + bytes.len()].copy_from_slice(bytes);
+            local
+                .write(
+                    [10 + round; 32],
+                    parent.id(),
+                    offset as u64,
+                    Arc::from(bytes),
+                )
+                .await
+                .unwrap()
+        };
+        let edit = reader
+            .reopen_edited(local.clone(), view.id())
+            .await
+            .unwrap();
+        let prep = edit
+            .begin_preparation(
+                [30 + round; 32],
+                [130 + round; 16],
+                plans::Options::default(),
+            )
+            .await
+            .unwrap();
+        prep.prepare().await.unwrap();
+        assert_eq!(
+            prep.uploader(e.clone())
+                .unwrap()
+                .upload_tree()
+                .await
+                .unwrap()
+                .new_objects(),
+            2
+        );
+        let publisher = prep.publisher(e, roots::Limits::default()).unwrap();
+        publisher.check_semantics().await.unwrap();
+        if round == 3 {
+            let rival = b"other machine retained its bytes";
+            let (p, _) = plan(&seed, s, 10, 70, rival, None, 0).await;
+            old.begin(p, id(71)).await.unwrap();
+            old.resume(p).await.unwrap();
+            s.proxy.clear();
+            let error = publisher.begin(id(1103)).await.err().unwrap();
+            assert_eq!(
+                error.downcast_ref::<s3drive_managed::chunks::MixedRootFailure>(),
+                Some(&s3drive_managed::chunks::MixedRootFailure::BaseChanged)
+            );
+            assert!(s.proxy.applies().is_empty());
+            assert_eq!(local.head(binding.clone().unwrap()).await.unwrap(), view);
+            assert_eq!(
+                reader
+                    .open_file(&id(10))
+                    .await
+                    .unwrap()
+                    .read_range(0, 64)
+                    .await
+                    .unwrap(),
+                rival
+            );
+            st.close().await.unwrap();
+            break;
+        }
+        let input = publisher.begin(id(1100 + u64::from(round))).await.unwrap();
+        assert_eq!(input.input().predecessor(), previous);
+        let expected_head = if round == 1 {
+            let more = "🦀".as_bytes();
+            let next = local
+                .write([90; 32], view.id(), 24, Arc::from(more))
+                .await
+                .unwrap();
+            future = Some(next.id());
+            next
+        } else {
+            view.clone()
+        };
+        let done = if round == 1 {
+            s.proxy.mode.store(2, Ordering::SeqCst);
+            assert!(publisher.resume().await.is_err());
+            let client = local
+                .preparations(plans::Options::default())
+                .unwrap()
+                .publications(roots::Limits::default())
+                .unwrap();
+            let saved = client.get(prep.id()).await.unwrap();
+            assert!(saved.receipt().is_none());
+            assert_eq!(
+                local.head(binding.clone().unwrap()).await.unwrap(),
+                expected_head
+            );
+            st.close().await.unwrap();
+            let recovery = MixedRootRecovery::open_existing(
+                &root.join("lineage"),
+                s.wire.clone(),
+                volume.clone(),
+                id(200),
+            )
+            .await
+            .unwrap();
+            s.proxy.clear();
+            let done = recovery.recover(prep.id()).await.unwrap();
+            only_exact_apply(s, saved.publication().unwrap());
+            s.proxy.clear();
+            assert_eq!(recovery.recover(prep.id()).await.unwrap(), done);
+            assert!(s.proxy.requests().is_empty());
+            recovery.close().await.unwrap();
+            let reopened = storage(root, "lineage").await;
+            assert_eq!(
+                reopened
+                    .sparse_views(sparse_views::Options::default())
+                    .unwrap()
+                    .head(binding.clone().unwrap())
+                    .await
+                    .unwrap(),
+                expected_head
+            );
+            reopened.close().await.unwrap();
+            done
+        } else {
+            let done = publisher.resume().await.unwrap();
+            s.proxy.clear();
+            assert_eq!(
+                publisher.resume().await.unwrap().metadata(),
+                done.metadata()
+            );
+            assert!(s.proxy.requests().is_empty());
+            assert_eq!(
+                local.head(binding.clone().unwrap()).await.unwrap(),
+                expected_head
+            );
+            let r = done.record().clone();
+            st.close().await.unwrap();
+            r
+        };
+        assert_eq!(done.input().view(), view.id());
+        assert_eq!(
+            reader
+                .open_file(&id(10))
+                .await
+                .unwrap()
+                .read_range(0, 64)
+                .await
+                .unwrap(),
+            expected
+        );
+        if round == 1 {
+            expected[24..28].copy_from_slice("🦀".as_bytes());
+        }
+        previous = Some(prep.id());
+        if round == 0 {
+            change(
+                &s.direct,
+                60,
+                Mutation::Move {
+                    node: id(10),
+                    parent: s3drive_authority::ROOT.into(),
+                    name: "renamed 日本語 🦀.bin".into(),
+                },
+            )
+            .await;
+        }
+    }
+    seed.storage().close().await.unwrap();
+}

@@ -12,7 +12,7 @@ pub struct RecoveryStore {
 fn metadata(db: &Connection) -> Result<ledger::Meta> {
     let app: i32 = db.pragma_query_value(None, "application_id", |r| r.get(0))?;
     let version: i32 = db.pragma_query_value(None, "user_version", |r| r.get(0))?;
-    if app != crate::APPLICATION_ID || version != 33 {
+    if app != crate::APPLICATION_ID || !matches!(version, 33..=crate::SCHEMA_VERSION) {
         return Err(Failure::Invalid.into());
     }
     check_schema(db)?;
@@ -35,6 +35,9 @@ fn metadata(db: &Connection) -> Result<ledger::Meta> {
         return Err(Failure::Corrupt.into());
     }
     let meta = ledger::inspect(db)?;
+    if version == 33 && meta.records.values().any(|r| r.input.predecessor.is_some()) {
+        return Err(Failure::Corrupt.into());
+    }
     if meta.records.is_empty() {
         return Err(Failure::Missing.into());
     }

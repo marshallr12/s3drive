@@ -4,6 +4,14 @@ use std::{
     time::{Duration, Instant},
 };
 fn baseline(s: &mut State, f: &Fixture, kind: &str) -> Info {
+    if kind == "lineage_begin" {
+        let a = super::lineage::first(s, f);
+        let a = super::lineage::commit(s, a);
+        let mut bytes = f.bytes.clone();
+        bytes[5] = 255;
+        bytes[6] = 20;
+        return super::lineage::next(s, f, a.input.view, 20, 6, bytes);
+    }
     let info = prepare(s, f, false);
     let p = info.id().unwrap();
     if kind == "check" {
@@ -31,6 +39,23 @@ fn baseline(s: &mut State, f: &Fixture, kind: &str) -> Info {
 fn action(s: &mut State, f: &Fixture, info: &Info, kind: &str) {
     let p = info.id().unwrap();
     match kind {
+        "lineage_begin" => {
+            let prior = j(s)
+                .records()
+                .unwrap()
+                .into_iter()
+                .find(|r| r.receipt().is_some())
+                .unwrap();
+            let receipt = prior.receipt().unwrap();
+            j(s).begin(
+                p,
+                receipt.node.clone(),
+                f.store.clone(),
+                receipt.sequence,
+                hex(&[22; 16]),
+            )
+            .unwrap();
+        }
         "check" => j(s).check(p, 0, Some(&proof(f))).unwrap(),
         "begin" => {
             j(s).begin(p, f.node.clone(), f.store.clone(), 5, hex(&[10; 16]))
@@ -72,6 +97,7 @@ fn killed_root_owners_roll_back_every_boundary_and_replay_committed_exact_operat
     for kind in [
         "check",
         "begin",
+        "lineage_begin",
         "reserved",
         "prepare",
         "published",
@@ -124,13 +150,14 @@ fn killed_root_owners_roll_back_every_boundary_and_replay_committed_exact_operat
             assert!(!child.wait().unwrap().success());
             let mut s = State::open_managed(&path).unwrap();
             let f = fixture();
-            let info = pj(&mut s).operation([9; 32]).unwrap().unwrap();
+            let n = if kind == "lineage_begin" { 21 } else { 9 };
+            let info = pj(&mut s).operation([n; 32]).unwrap().unwrap();
             let p = info.id().unwrap();
             let meta = ledger::inspect(&s.connection).unwrap();
             let committed = point == "Committed";
             match kind {
                 "check" => assert_eq!(meta.checks.contains_key(&(p, 0)), committed),
-                "begin" => assert_eq!(meta.records.contains_key(&p), committed),
+                "begin" | "lineage_begin" => assert_eq!(meta.records.contains_key(&p), committed),
                 "reserved" => assert_eq!(meta.records[&p].reservation().is_some(), committed),
                 "prepare" => assert_eq!(meta.records[&p].publication().is_some(), committed),
                 "published" => assert_eq!(meta.records[&p].receipt().is_some(), committed),
@@ -142,8 +169,11 @@ fn killed_root_owners_roll_back_every_boundary_and_replay_committed_exact_operat
                 let r = j(&mut s).get(p).unwrap();
                 assert_eq!(r.input().plan(), p);
                 assert_eq!(r.input().view(), info.view().id());
-                assert_eq!(r.input().reserve().operation, hex(&[9; 16]));
-                assert_eq!(r.input().publish_operation(), hex(&[10; 16]));
+                assert_eq!(r.input().reserve().operation, hex(&[n; 16]));
+                assert_eq!(
+                    r.input().publish_operation(),
+                    hex(&[if kind == "lineage_begin" { 22 } else { 10 }; 16])
+                );
             }
             assert_eq!(
                 crate::sparse_views::Journal::new(&mut s, crate::sparse_views::Options::default())

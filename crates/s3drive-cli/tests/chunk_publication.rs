@@ -1075,6 +1075,7 @@ async fn chunk_child() {
         )
         .unwrap();
         match mode.as_str() {
+            "mixed_lineage" => Box::pin(mixed_roots::lineage(&config, &root, &s)).await,
             "mixed_roots_controls" => Box::pin(mixed_roots::controls(&config, &root, &s)).await,
             "mixed_roots_rivals" => Box::pin(mixed_roots::rivals(&config, &root, &s)).await,
             "mixed_roots_crash" => Box::pin(mixed_roots::crash(&config, &root, &s)).await,
@@ -1326,6 +1327,7 @@ async fn run(mode: &str) {
         }
     }
     let expected = match mode {
+        "mixed_lineage" => 12,
         "mixed_roots_controls" => 9,
         "mixed_roots_rivals" => 8,
         "mixed_roots_crash" | "mixed_uploads" => 7,
@@ -1478,4 +1480,10 @@ async fn mixed_roots_independent_clients_preserve_rival_conflict_and_refuse_chan
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn mixed_roots_publish_empty_zero_partial_unicode_and_preserve_exact_local_view() {
     run("mixed_roots_controls").await;
+}
+
+#[tokio::test]
+async fn mixed_publication_lineage_repeats_after_restart_recovers_exact_reply_and_refuses_foreign_root()
+ {
+    run("mixed_lineage").await;
 }

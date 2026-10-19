@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-19",
+  "phase": "W5a",
+  "status": "implemented; full local and own hosted acceptance pending",
+  "schema": 34,
+  "scope": "exact retained local root predecessor for strict descendant; no clean settlement or reclamation",
+  "focused": [
+    {
+      "attempt": 1,
+      "state_tests": 12,
+      "result": "passed",
+      "scope": "before new lineage tests"
+    },
+    {
+      "attempt": 2,
+      "state_tests": 16,
+      "result": "passed",
+      "warning": "unused fixture result, removed"
+    },
+    {
+      "attempt": 3,
+      "state_tests": 16,
+      "result": "failed",
+      "reason": "new lineage Committed test checkpoint still used begin label; fixed test hook naming",
+      "retained_source": "/tmp/s3drive-mixed-lineage-focused3-{journal,crash}.rs"
+    },
+    {
+      "attempt": 4,
+      "result": "compile failed",
+      "reason": "test attempted private RecoveryStore connection access; now verifies schema via independent connection after close",
+      "retained_source": "/tmp/s3drive-mixed-lineage-focused4-tests.rs"
+    },
+    {
+      "attempt": 5,
+      "state_tests": 16,
+      "result": "passed",
+      "root_owner_kill_boundaries": 28,
+      "scope": "precedes added schema33 pending-publish recovery case"
+    }
+  ],
+  "sdk": [
+    {
+      "attempt": 1,
+      "result": "compile failed",
+      "reason": "missing explicit Option<Binding> test annotation",
+      "retained_source": "/tmp/s3drive-mixed-lineage-sdk1-tests.rs"
+    },
+    {
+      "attempt": 2,
+      "result": "passed",
+      "cases": 1,
+      "seconds": 6.35,
+      "fixture_puts": 12,
+      "scope": "three descendant roots; restarts; renamed Unicode file; newer head; lost applied publication reply; exact metadata recovery; fourth edit refuses actual independent foreign root; retained bytes"
+    }
+  ],
+  "acceptance_remaining": [
+    "full unchanged-source local gate",
+    "own hosted Linux Windows book native source artifact cohort",
+    "clean-base epochs and bounded local retention (W5b)",
+    "explicit legacy and metadata-empty origins",
+    "native chunk writes (W6)",
+    "provider and physical session/reboot gates"
+  ]
+}

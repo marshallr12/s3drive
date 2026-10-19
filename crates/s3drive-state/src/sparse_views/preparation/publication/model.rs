@@ -13,6 +13,8 @@ pub struct Input {
     pub(super) store: ns::Store,
     pub(super) reserve: ns::Apply,
     pub(super) publish_operation: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) predecessor: Option<Id>,
 }
 impl fmt::Debug for Input {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -20,6 +22,9 @@ impl fmt::Debug for Input {
     }
 }
 impl Input {
+    pub fn predecessor(&self) -> Option<Id> {
+        self.predecessor
+    }
     pub fn plan(&self) -> Id {
         self.plan
     }
@@ -111,7 +116,7 @@ impl Input {
             || self.base.revision > self.reserve.expected_sequence
             || guard.detached
             || guard.removal.is_some()
-            || guard.expected.as_deref() != Some(base.payload_reference())
+            || guard.expected != ns::payload_reference(&self.base.payload)
             || self.base.id != base.node()
             || self.base.kind != ns::Kind::File
             || self.base.deleted
@@ -123,20 +128,25 @@ impl Input {
                 .as_ref()
                 .is_some_and(|s| s != &self.store)
             || !old.valid()
-            || old.reservation.id != base.reservation()
             || old.reservation.volume != base.volume()
             || old.reservation.node != base.node()
             || old.reservation.store != self.store
-            || old
-                .reservation
-                .manifest
-                .as_ref()
-                .ok_or(Failure::Corrupt)?
-                .root()
-                .map_err(|_| Failure::Corrupt)?
-                != original
-            || ns::payload_reference(&self.base.payload).as_deref()
-                != Some(base.payload_reference())
+            || match self.predecessor {
+                None => {
+                    old.reservation.id != base.reservation()
+                        || old
+                            .reservation
+                            .manifest
+                            .as_ref()
+                            .ok_or(Failure::Corrupt)?
+                            .root()
+                            .map_err(|_| Failure::Corrupt)?
+                            != original
+                        || ns::payload_reference(&self.base.payload).as_deref()
+                            != Some(base.payload_reference())
+                }
+                Some(p) => p == [0; 32] || p == self.plan,
+            }
             || self.publish_operation == ns::ROOT
             || !id(&self.publish_operation)
             || self.publish_operation == self.reserve.operation
@@ -263,7 +273,12 @@ impl Record {
     }
     pub(super) fn validate(&self) -> Result<()> {
         let expected = self.input.reservation()?;
-        if self.format != 1
+        if self.format
+            != if self.input.predecessor.is_some() {
+                2
+            } else {
+                1
+            }
             || self.physical.operation == [0; 32]
             || self.physical.size != expected.size
             || hex(&self.physical.sha256) != expected.sha256

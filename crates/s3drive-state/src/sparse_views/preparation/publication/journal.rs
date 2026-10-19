@@ -39,6 +39,19 @@ impl<'a> Journal<'a> {
         tx.commit()?;
         Ok(rows)
     }
+    /// Observational fresh-base admission only. begin repeats it atomically.
+    pub fn check_base(&mut self, plan: Id, node: &ns::Node) -> Result<()> {
+        let tx = self
+            .state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred)?;
+        let meta = ledger::inspect(&tx)?;
+        ledger::validate_source(&tx, &meta)?;
+        let s = super::super::ledger::inspect(&tx)?;
+        lineage::select(&meta, &s, plan, node)?;
+        tx.commit()?;
+        Ok(())
+    }
     pub fn unchecked(&mut self, plan: Id, after: Option<u64>, limit: u16) -> Result<Vec<DataNeed>> {
         if limit == 0 || limit > 128 {
             return Err(Failure::Invalid.into());
@@ -134,6 +147,7 @@ impl<'a> Journal<'a> {
         let tree = super::super::transfers::inspect_tree(&tx, plan)?;
         let root = tree.root().clone();
         let physical = Physical::from_tree(&tree)?;
+        let predecessor = lineage::select(&before, &s, plan, &base)?;
         let input = Input {
             plan,
             operation: info.operation(),
@@ -149,20 +163,21 @@ impl<'a> Journal<'a> {
                 operation: hex(info.generation()),
                 expected_sequence: sequence,
                 mutation: ns::Mutation::ReserveManifest {
-                    node: base.id,
+                    node: base.id.clone(),
                     expected_revision: base.revision,
                     store: store.id,
                     size: physical.size,
                     sha256: hex(&physical.sha256),
                     manifest: Box::new(ns::ManifestRoot::new(root).map_err(|_| Failure::Invalid)?),
                     guard: ns::ContentGuard {
-                        expected: Some(info.view().binding().base()?.payload_reference().into()),
+                        expected: ns::payload_reference(&base.payload),
                         detached: false,
                         removal: None,
                     },
                 },
             },
             publish_operation,
+            predecessor,
         };
         input.reservation()?;
         if let Some(old) = before.records.get(&plan) {
@@ -172,7 +187,7 @@ impl<'a> Journal<'a> {
             return Err(Failure::Conflict.into());
         }
         let r = Record {
-            format: 1,
+            format: if predecessor.is_some() { 2 } else { 1 },
             input,
             physical,
             semantics: before.semantic_hash(plan)?,
@@ -186,7 +201,14 @@ impl<'a> Journal<'a> {
         after.admit(self.limits)?;
         ledger::save(&tx, &before, &after, true)?;
         tx.commit()?;
-        checkpoint("begin", "Committed");
+        checkpoint(
+            if predecessor.is_some() {
+                "lineage_begin"
+            } else {
+                "begin"
+            },
+            "Committed",
+        );
         Ok(r)
     }
     pub fn reserved(&mut self, plan: Id, receipt: ns::Receipt) -> Result<Record> {
@@ -308,6 +330,9 @@ impl Client {
     }
     pub async fn records(&self) -> Result<Vec<Record>> {
         self.call(move |j| j.records()).await
+    }
+    pub async fn check_base(&self, plan: Id, node: ns::Node) -> Result<()> {
+        self.call(move |j| j.check_base(plan, &node)).await
     }
     pub async fn unchecked(
         &self,

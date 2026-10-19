@@ -373,12 +373,11 @@ impl MixedPublisher {
                 if node.id != descriptor.node() {
                     return Err(MixedRootFailure::Binding.into());
                 }
-                if node.deleted
-                    || node.kind != Kind::File
-                    || s3drive_authority::payload_reference(&node.payload).as_deref()
-                        != Some(descriptor.payload_reference())
-                {
-                    return Err(MixedRootFailure::BaseChanged.into());
+                if let Err(e) = self.0.client.check_base(self.plan(), node.clone()).await {
+                    if e.downcast_ref::<roots::Failure>() == Some(&roots::Failure::Conflict) {
+                        return Err(MixedRootFailure::BaseChanged.into());
+                    }
+                    return Err(e);
                 }
                 let Reply::Info(volume) = reply(authority.request(&Request::Info {}).await?)?
                 else {

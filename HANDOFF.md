@@ -25,6 +25,32 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## W5a declared next slice: exact local publication lineage (2026-10-19)
+
+Ownership: codex/mixed-publication-lineage in
+/home/marshall/src/worktrees/s3drive-mixed-publication-lineage. W4b2's own317
+inputs remain frozen in their separate worktree while hosted acceptance runs.
+Read the [lineage contract](docs/src/mixed-publication-lineage.md).
+Done: a later immutable descendant can use an exactly retained, successfully
+published local predecessor as its content CAS base; another writer's payload,
+missing/unknown/conflicted predecessor, wrong source/file/store and nonancestor
+must fail without new request/overwrite. Preserve schema33 record bytes, exact
+saved-request recovery and newer dirty heads. Schema34 versions the new format
+without rewriting old rows. Verify state graph/refusal/migration tests and actual
+SDK consecutive publications/restart/conflict, then full local and own hosted
+native regression gates before promotion. No clean acknowledgment, reclamation,
+base-epoch switch, new origin or native activation is claimed by this slice.
+W5b clean epochs/retention remains necessary for bounded continuous writes.
+Implemented schema34, format2 optional predecessor with format1 omission preserved,
+normal source ancestry validation, complete metadata-only predecessor validation,
+fresh managed admission, same exact replay and schema33/34 metadata recovery.
+Focused5 EXIT0/16state incl28 actual kills; SDK2 EXIT0/one6.35s/12ownedPUT case.
+New schema33 damaged-source pending-Publish recovery case awaits full gate.
+Harness failures: SDK1 explicit Option type; focused3 Committed hook label;
+focused4 private fixture field access. Exact failed sources/logs retained in/tmp.
+Final319 inputs frozen at/tmp/s3drive-mixed-lineage-frozen.json. Full local gate
+is next; no runtime promotion and no new live provider/native mutation claim.
+
 ## Current W4b2 mixed-root publication — focused green, full gates pending (2026-10-19)
 
 Exact final runtime d72f6652e4bece2be0706785a698cac66a94596c, schema33/all317.

@@ -40,6 +40,7 @@ impl Meta {
         let mut operations = BTreeSet::new();
         for (plan, r) in &self.records {
             r.validate()?;
+            lineage::validate(self, r)?;
             if *plan != r.input.plan
                 || !operations.insert(&r.input.reserve.operation)
                 || !operations.insert(&r.input.publish_operation)
@@ -226,6 +227,12 @@ pub(super) fn validate_source(db: &Connection, meta: &Meta) -> Result<()> {
         if !r.input.matches(&s.info(*plan)?)? {
             return Err(Failure::Corrupt.into());
         }
+        if let Some(p) = r.input.predecessor {
+            let prior = meta.records.get(&p).ok_or(Failure::Corrupt)?;
+            if !lineage::ancestor(&s, prior.input.view, r.input.view)? {
+                return Err(Failure::Corrupt.into());
+            }
+        }
         coverage(meta, &s, *plan)?;
         let tree = super::super::transfers::inspect_tree(db, *plan)?;
         if Physical::from_tree(&tree)? != r.physical {
@@ -239,7 +246,15 @@ pub(super) fn kind(before: &Meta, after: &Meta) -> &'static str {
         return "check";
     }
     if after.records.len() > before.records.len() {
-        return "begin";
+        return if after
+            .records
+            .iter()
+            .any(|(p, r)| !before.records.contains_key(p) && r.input.predecessor.is_some())
+        {
+            "lineage_begin"
+        } else {
+            "begin"
+        };
     }
     for (p, r) in &after.records {
         if let Some(old) = before.records.get(p) {
