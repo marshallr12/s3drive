@@ -1,9 +1,9 @@
 # Local immutable base views
 
-Implementation/research date: **2026-10-19**. W2b1 draft in
+Implementation/research date: **2026-10-19**. W2b1 accepted in
 `codex/sparse-edit-views`, based on the locally gated core identity codec.
-Focused storage/migration controls and the full local gate passed. This new
-combined source still requires its own platform/native acceptance. This is the first SQLite slice of W2,
+Focused storage/migration controls, the full local gate and the exact source
+Windows/Linux/book cohort passed, including own raw/artifact checks. This is the first SQLite slice of W2,
 not complete editable storage or mounted chunk-write support.
 
 ![A private Rust worker atomically stores role, file binding, immutable base/zero view and operation result in SQLite. Later phases connect to the verified reader, Rust authority and S3 service.](images/sparse-base-view.svg)
@@ -77,10 +77,21 @@ production deadlines. It passed with all275 frozen inputs unchanged:378state
 (one ignored),37core,11reader (one native ignored),62S3 and all format/Clippy/
 build/documentation checks. The [indexed local archive](evidence/sparse-base-views-local-20261019.tar.gz)
 retains37 verified members, including both incomplete runs, the failed snapshot
-source, repaired source and reviewed architecture diagram. No older hosted cohort
-certifies the changed schema29 source; its own platform gate remains required.
+source, repaired source and reviewed architecture diagram. The schema29 source also passed its own hosted cohort, as recorded below;
+no older artifact was reused.
 
 Published source `1681ee6` includes current main ancestry and exactly matches all
 275 locally gated runtime inputs. Its
 [own platform/book run](https://github.com/marshallr12/s3drive/actions/runs/39203016390)
-is in progress. This is publication evidence; combined hosted acceptance remains pending.
+passed all3 jobs. Raw logs were reviewed; own ZIP API digests, independent typed
+21+14 records, project oracles and all35 raw fields/types matched. The
+[indexed hosted archive](evidence/sparse-base-views-hosted-20261019.tar.gz) retains
+44 verified members. Linux378state and Windows373state (one ignored each),37core,
+11reader (one native ignored) and62S3 passed. The ten new sparse controls passed
+on both platforms. Real manifest FUSE/remount1.62s and WinFsp/remount2.71s passed;
+Linux no-systemd HTTP/privateCA24.21s and paired native recovery passed, Windows
+paired startup82.82s. These are correctness observations, not performance claims.
+Windows used hosted Server2025 image20261007.264.1, with three locked disposable
+profiles whose dummy credentials were removed and deletion deferred to VM
+destruction. This does not establish physical workstation reboot acceptance or
+new native chunk writes. W2b2a schema30 is a separate follow-up source.
