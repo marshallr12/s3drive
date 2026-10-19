@@ -2781,3 +2781,14 @@ is in progress; all3 full raw/source/own-artifact checks remain required before
 integration. Main retains accepted patch runtime d37096c/schema31 unchanged284
 inputs. Native chunk writes, W3-W6, legacy/metadata-empty and provider/physical
 workstation acceptance remain required.
+
+W3a published,2026-10-19: [source9544193 architecture and implementation](https://github.com/marshallr12/s3drive/blob/9544193908967ea2852121bef7d91cdce89ed042/docs/src/incremental-data.md)
+prepares one authenticated exact-view chunk as unchanged reachability proof,
+verified new bytes/hash or verified zero hole. A changed final length never
+inherits an old object prefix. Full local gate81440 passed all288 exact inputs:
+393state1ignored/37core/19reader1nativeignored/62S3 and format/Clippy/build/book.
+Its own [run39215314627](https://github.com/marshallr12/s3drive/actions/runs/39215314627)
+is running. Parent W2c39213440204 book/Linux passed with raw review, Windows is
+still running. Both need own full combined acceptance; main retains accepted
+patch runtime d37096c/schema31/all284 exact inputs. W3b durable mixed graph/cursor/
+subtree reuse, W4-W6, legacy/metadata-empty and provider/physical acceptance remain.

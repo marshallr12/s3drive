@@ -25,6 +25,34 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Current W3a incremental data preparation — published (2026-10-19)
+
+Worktree /home/marshall/src/worktrees/s3drive-incremental-data,
+branch codex/incremental-data, frozen source9544193908967ea2852121bef7d91cdce89ed042.
+Full local gate81440 CLOSED0, all288 runtime/contract inputs unchanged:
+393state1ignored/37core/19reader1nativeignored/62S3 plus format/Clippy/build/
+75MD links/71book chapters. Focused21549 CLOSED0:3tests3.83s. Local archive16
+members255987bytes SHAeae55482f0cfdb2b9dc56dd0378cfac0a127e7c8adc31b8ac22ff5c9fc51b485.
+One privately constructed exact-view-bound chunk candidate: authenticated
+unchanged same-length proof without data GET, changed verified bytes/hash or
+verified zero hole. Fresh local ledger/history/rootHEAD and one shared reader
+permit/deadline; no SQL held over network. Tests prove one-byte fetch isolation,
+127/128 boundaries, partial shrink/growth/unread-tail verification,64GiB hole,
+retained versions/restart, every-kind auth/corruption and concurrency controls.
+SVG XML/native render/visual review passed. Original planner/receipts unchanged.
+
+Own39215314627 attempt1:book117937677538/Linux117937677524/Windows117937677247
+running. Watch3007 LIVE, /tmp/s3drive-incremental-data-hosted-watch.log. Prepared
+one-use source/artifact/typed21+14/project/raw comparer/archive NOT executed;
+see feature HANDOFF. Await all3 complete/full raw review before acceptance.
+Parent W2c39213440204 book/Linux SUCCESS (own raw reviewed), Windows still runs;
+watch65839 LIVE. Partial review /tmp/s3drive-sparse-composition-hosted-partial-review.json.
+Both runtime maps remain frozen. Primary stays accepted d37096c/schema31/all284
+inputs unchanged. Neither pending feature is integrated here. W3b durable mixed
+graph/cursor/subtree reuse, W4 exact-CAS, W5 exact-view settlement, legacy/
+metadata-empty and W6 native chunk writes remain, plus provider/physical sessions.
+PUBLIC read-only verified. GoalACTIVE; previous turn concrete progress.
+
 ## Current W2c composition — published, own checks pending (2026-10-19)
 
 Worktree /home/marshall/src/worktrees/s3drive-sparse-composition,
