@@ -27,6 +27,17 @@ include main's policy commit; the c7fca789 feature lineage includes that rule.
 
 ## Current W1c2 combined baseline (2026-10-18)
 
+Canonical /home/marshall/src/s3drive is now clean on main at
+35abcc909f42d9aac1dc12847cfaa569e1aaef8a, exactremote and PUBLIC. It contains
+acceptedbf2e6ae runtime only:261 hashes/all268 non-document paths equal2e7b6ca,
+with final docs checks; history/reopen code is NOT on main. Proof
+/tmp/s3drive-primary-native-integration-publication.json. This draft branch
+currently diverges only in intended new authority code plus docs from that main;
+include the current main ancestry before eventual promotion, preserve user edits.
+No live CI/Cargo process remains; implement W1c2 next rather than repeat accepted
+cohorts. New reader code still needs its own full/hosted/native acceptance.
+
+
 Local W1c1 e18d6f5 is now combined with accepted W1b2e7b6ca. Runtime merge is a
 new draft, baseline all-target check9230 CLOSED0 and focused reader77295 CLOSED0
 (9pass/1nativeignored10.69s). All264 inputs unchanged in
