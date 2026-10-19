@@ -2435,3 +2435,76 @@ run39187701991 native/raw/artifact acceptance and local gate68162 apply to that
 runtime; final book/link checks cover the documentation-only integration delta.
 See [integration evidence](evidence/canonical-manifest-read-integration-20261018.json).
 The history/reopen draft remains separate, with no native-write activation.
+
+### W2 proposal: bounded immutable SQLite edit views (2026-10-18)
+
+Planning only, while W1c2's own hosted gate is pending. No schema or write path
+is activated by this section. The existing `logical.rs` whole-file writer and
+`chunked.rs` full-snapshot planner remain intact. The new layer must not pass a
+remote-backed sparse view to either as if it were a complete local snapshot.
+
+Proposed first representation: each immutable view has its original manifest
+base identity, logical length, parent view, operation identity and an ordered,
+nonoverlapping extent map covering exactly its logical length. Extents refer to
+verified base ranges, immutable local patch bytes or explicit zeros. One base or
+zero extent can cover many gigabytes without allocating those bytes. A write
+splits only intersecting extents and substitutes patch ranges; a truncate removes
+the tail; later growth appends zeros. Removing tail extents on shrink prevents
+old remote or patched bytes from reappearing after regrowth. Pinned older views
+retain their original extent maps and bytes.
+
+Store bounded immutable patch blocks in the same local SQLite transaction as the
+new view, extent map, operation result and compare-and-set head transition. This
+is a proposed simple first backend: it avoids a new filesystem/SQLite dual-commit
+protocol. Measure database/WAL growth and commit behavior before selecting final
+block and quota defaults. Candidate bounds are one-MiB patch blocks and at most
+eight MiB per mutation/read, matching the current chunk geometry and read bound;
+they are proposals, not public guarantees. No allocation or row count may scale
+with a sparse file's full logical byte length.
+
+Require explicit independent quotas for dirty patch bytes, views, operations,
+extents and bounded traversal. A materialized per-view extent map is acceptable
+for the first slice only with a small, documented metadata ceiling and measured
+copy cost. Exhaustion must reject the entire mutation while preserving every
+old view, head and operation receipt. No automatic dirty eviction, hidden full-
+file copy or unbounded ancestor scan. Patches shared by several views count once
+in byte accounting, and no reclamation is authorized merely because the live
+head changed. Reclamation and settlement require separate proven retention rules.
+
+A mutation carries an operation key, immutable target/base identity, expected
+parent/head and exact arguments. Persist the result atomically. Repeating the
+same key and arguments returns that operation's original view, even after a
+newer edit; a reused key with changed arguments fails. A competing head change
+fails explicitly without regenerating the operation key or rebasing the base.
+Verify the complete persisted map, identity, lengths, local block hashes and
+receipt binding before returning a successful replay. Corrupt or missing rows
+must not be silently repaired or recreated from the caller's request.
+
+The descriptor codec currently lives in the managed reader, which depends on
+state; state cannot import managed without a dependency cycle. Plan a small W2a
+prerequisite moving the pure descriptor representation/codec into core and
+re-exporting the existing managed API. Preserve its exact88-byte format and
+failure behavior, and require its own gate. The SQLite layer records local
+intent; neither a decoded descriptor nor a locally hashed view proves remote
+authorization. The managed composer must reauthorize the exact historical base
+with the accepted reader, compare volume/node/base reference and configured
+route, then supply verified base bytes. Persist no credential or synthesized Node.
+
+For read-your-writes, select a bounded range of extents and compose into a bounded
+output buffer. Verify each local patch block before returning any of its bytes;
+fetch and verify complete remote data chunks before using partial bytes. Zero
+extents need no provider access. Missing or revoked base access remains an error
+for requested base ranges; it never substitutes a newer root. A fully local
+patched range can be read without fetching unrelated base data. Cached proofs
+remain reachability evidence, not upload or settlement receipts.
+
+Proposed independently green slices: W2a codec/layering; W2b SQLite identity,
+immutable maps, patches, mutation replay and bounds; W2c managed composition and
+exact-base restart recovery. Before acceptance, prove64GiB sparse grow/shrink/
+regrow, overlapping writes, zero-length/EOF/overflow cases, pinned older views,
+same-key lost-reply replay, competing heads, process death on both sides of
+commit, SQLite-full rollback, trigger/row/block corruption and bounded quota
+exhaustion. Show measured dirty byte and metadata growth, and reject accidental
+whole-file staging. Legacy and metadata-empty bases still need an explicit
+recovery contract before eventual native write acceptance. W2 supplies no root
+publication or clean acknowledgment; W3-W6 remain required.

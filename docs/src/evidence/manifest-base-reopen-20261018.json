@@ -104,5 +104,26 @@
     "members": 21,
     "all_indexed_members_verified": true,
     "scope": "W1c2 portable local only"
+  },
+  "publication": {
+    "source": "0d2dfceb5585c82453dd7214ebdbf98aad9c19af",
+    "branch": "codex/payload-history-authority",
+    "remote_source": "0d2dfceb5585c82453dd7214ebdbf98aad9c19af",
+    "clean": true,
+    "runtime_inputs": 266,
+    "all_working_and_committed_hashes_match": true,
+    "main_ancestry": true,
+    "local_gate_exit": 0,
+    "local_gate_session": 95974,
+    "merge_delta": "documentation only; book/link checks passed",
+    "visibility": "PUBLIC; verified by read-only requests before and after push",
+    "run_id": 39194683513,
+    "run_status": "in_progress",
+    "jobs": {
+      "book": 117874763365,
+      "linux": 117874763541,
+      "windows": 117874763565
+    },
+    "hosted_accepted": false
   }
 }

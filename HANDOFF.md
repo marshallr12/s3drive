@@ -27,12 +27,26 @@ include main's policy commit; the c7fca789 feature lineage includes that rule.
 
 ## Current W1c2 combined baseline (2026-10-18)
 
+Published source0d2dfceb5585c82453dd7214ebdbf98aad9c19af (local implementation
+1c41802 plus main35abcc9 documentation-only merge), exactremote and clean before
+planning updates. All266 working/committed runtime hashes match full local gate.
+Own run39194683513 attempt1 RUNNING: Linux117874763541, Windows117874763565,
+book117874763365. Watch31680 LIVE -> /tmp/s3drive-base-reopen-hosted-watch.log.
+Proof /tmp/s3drive-base-reopen-publication.json. Own raw/API artifacts/typed21+14/
+project oracles/all35 fields+types review still REQUIRED; no hosted acceptance.
+Prepared one-use checker /tmp/s3drive-check-base-reopen-hosted.py, reference
+PowerShell and raw comparator use prefix /tmp/s3drive-base-reopen-hosted.
+Do not execute checker until all3 terminal success and own raw logs reviewed.
+Main remains accepted35abcc9; do not change visibility. W2 proposal is docs only,
+with no schema change; no W2 runtime until W1c2 accepted. No provider mutation.
+
+
 Canonical /home/marshall/src/s3drive is now clean on main at
 35abcc909f42d9aac1dc12847cfaa569e1aaef8a, exactremote and PUBLIC. It contains
 acceptedbf2e6ae runtime only:261 hashes/all268 non-document paths equal2e7b6ca,
 with final docs checks; history/reopen code is NOT on main. Proof
 /tmp/s3drive-primary-native-integration-publication.json. This draft branch
-currently diverges only in intended new authority code plus docs from that main;
+contains the new history/reader code and documentation beyond that main.
 Current main ancestry is merged below; the merge changes only documentation
 and preserves this locally gated runtime. Own hosted acceptance still required.
 Implement W1c2 in this worktree rather than repeat accepted cohorts. Current
@@ -301,7 +315,7 @@ This promotes scoped read-only manifest support/proofs. W1c1/e18 and W1c2/523
 history/reopen code remains solely in its worktree; it is NOT in canonical runtime.
 Full sparse edits/mixed publication/settlement/native chunk writes still required.
 
-## Current W1c2 combined baseline (2026-10-18)
+## Historical W1c2 preparation checkpoint (2026-10-18)
 
 ACTIVE /home/marshall/src/worktrees/s3drive-payload-history-authority,
 codex/payload-history-authority, local5231113f1ba07ebb3e5a51619f4478805981f85f,

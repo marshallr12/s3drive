@@ -81,3 +81,8 @@ source's own Linux/Windows native/raw/artifact cohort remains required. No new l
 mutation or physical reboot is claimed. Sparse durable views, mixed inherited/
 new-object publication, exact-view settlement and actual native chunk writes
 remain later phases.
+
+Published source `0d2dfce` includes the current public main ancestry with a
+documentation-only merge; all266 locally gated source inputs remain identical.
+Its [own hosted run](https://github.com/marshallr12/s3drive/actions/runs/39194683513)
+is in progress. This is publication evidence, not native acceptance.
