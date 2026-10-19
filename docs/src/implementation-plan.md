@@ -3434,3 +3434,13 @@ verified; own Windows and complete hosted raw/source/artifact checks remain.
 Separate facadea8cc73e passed2worker32.01s/3SDK30.05s, then Clippy rejected the
 large preflight enum. Repair9913dd8 boxes known metadata; the same focused cases
 and Clippy are running as SDK2. [Exact scope](external-clean-reader.md). Main37.
+
+
+### Guarded live-observation final candidate (2026-10-19)
+
+Source12a2f2a/all342 passed3 strengthened SDK cases30.61s and Clippy2.89s, unchanged.
+Its production/state paths match SDK2, which passed2worker31.39s/3SDK30.55s and
+workspace Clippy35.04s after fixing the large preflight enum. Final SDK cases prove
+late provider revocation/ETag change after a good root fetch is refused, in addition
+to live/local races and retained reads. [Evidence](external-clean-reader.md).
+Own full gate1181132/1181137 and CI39298010083 attempt1 are running; main remains37.

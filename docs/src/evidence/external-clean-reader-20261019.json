@@ -1,0 +1,265 @@
+{
+  "date": "2026-10-19",
+  "phase": "authenticated clean-version observation",
+  "status": "focused checks passed; own full local/hosted/platform/source/artifact acceptance running",
+  "schema": 38,
+  "source": "12a2f2a7d836aab518c7b0d60675234d6470ef97",
+  "runtime_inputs": 342,
+  "attempts": {
+    "1": {
+      "pid": 1153483,
+      "start_ticks": "143841804",
+      "source": "a8cc73e",
+      "runtime_inputs": 342,
+      "started": "2026-10-19T17:43:34.634602+00:00",
+      "cwd": "/home/marshall/src/worktrees/s3drive-external-clean-reader",
+      "stage": "clippy_failed",
+      "parent_runner": 1114325,
+      "parent_start_ticks": "143781754",
+      "legs": [
+        {
+          "label": "state",
+          "command": [
+            "cargo",
+            "test",
+            "-p",
+            "s3drive-state",
+            "observation_preflight",
+            "--locked"
+          ],
+          "pid": 1172602,
+          "start_ticks": "143858818",
+          "log": "/tmp/s3drive-external-clean-reader-sdk1-state.log",
+          "started": "2026-10-19T17:46:24.660388+00:00",
+          "exit_code": 0,
+          "finished": "2026-10-19T17:47:24.345753+00:00",
+          "all_inputs_unchanged": true,
+          "changed_inputs": [],
+          "sha256": "cd9cd17db3f9d1105cd08bb7264e715d06045e979ab2793b5351f56bd5ccfa6d"
+        },
+        {
+          "label": "sdk",
+          "command": [
+            "cargo",
+            "test",
+            "-p",
+            "s3drive-cli",
+            "--test",
+            "chunk_reader",
+            "clean_observation",
+            "--locked"
+          ],
+          "pid": 1173655,
+          "start_ticks": "143864788",
+          "log": "/tmp/s3drive-external-clean-reader-sdk1-sdk.log",
+          "started": "2026-10-19T17:47:24.359638+00:00",
+          "exit_code": 0,
+          "finished": "2026-10-19T17:48:32.533867+00:00",
+          "all_inputs_unchanged": true,
+          "changed_inputs": [],
+          "sha256": "8e87496148708317c49060cce4f1a7df06b9eee4290254c2ca586754492ac4a3"
+        },
+        {
+          "label": "clippy",
+          "command": [
+            "cargo",
+            "clippy",
+            "--workspace",
+            "--all-targets",
+            "--locked",
+            "--",
+            "-D",
+            "warnings"
+          ],
+          "pid": 1175861,
+          "start_ticks": "143871607",
+          "log": "/tmp/s3drive-external-clean-reader-sdk1-clippy.log",
+          "started": "2026-10-19T17:48:32.547942+00:00",
+          "exit_code": 101,
+          "finished": "2026-10-19T17:48:50.282444+00:00",
+          "all_inputs_unchanged": true,
+          "changed_inputs": [],
+          "sha256": "99ba16abe26b6fcbe5a567c6ebbc74f9c3be92647e03910cf8ce086c85e769f7"
+        }
+      ],
+      "exit_code": 101,
+      "finished": "2026-10-19T17:48:50.282498+00:00"
+    },
+    "2": {
+      "pid": 1176459,
+      "start_ticks": "143875922",
+      "source": "9913dd87584caa716a9003ce1d846f3af24cc90a",
+      "runtime_inputs": 342,
+      "started": "2026-10-19T17:49:15.766151+00:00",
+      "cwd": "/home/marshall/src/worktrees/s3drive-external-clean-reader",
+      "stage": "complete",
+      "parent_runner": 1114325,
+      "parent_start_ticks": "143781754",
+      "legs": [
+        {
+          "label": "state",
+          "command": [
+            "cargo",
+            "test",
+            "-p",
+            "s3drive-state",
+            "observation_preflight",
+            "--locked"
+          ],
+          "pid": 1176462,
+          "start_ticks": "143875931",
+          "log": "/tmp/s3drive-external-clean-reader-sdk2-state.log",
+          "started": "2026-10-19T17:49:15.787347+00:00",
+          "exit_code": 0,
+          "finished": "2026-10-19T17:49:52.661409+00:00",
+          "all_inputs_unchanged": true,
+          "changed_inputs": [],
+          "sha256": "751ed9a5a0df019442f9eca788f703e444c0b4f248ca7a6ceaf2a1ce47e41f59"
+        },
+        {
+          "label": "sdk",
+          "command": [
+            "cargo",
+            "test",
+            "-p",
+            "s3drive-cli",
+            "--test",
+            "chunk_reader",
+            "clean_observation",
+            "--locked"
+          ],
+          "pid": 1176842,
+          "start_ticks": "143879620",
+          "log": "/tmp/s3drive-external-clean-reader-sdk2-sdk.log",
+          "started": "2026-10-19T17:49:52.675462+00:00",
+          "exit_code": 0,
+          "finished": "2026-10-19T17:50:31.960711+00:00",
+          "all_inputs_unchanged": true,
+          "changed_inputs": [],
+          "sha256": "323a096dede3571368fb2c8a1845ade199e2a53e6def9db796045b35db391cc8"
+        },
+        {
+          "label": "clippy",
+          "command": [
+            "cargo",
+            "clippy",
+            "--workspace",
+            "--all-targets",
+            "--locked",
+            "--",
+            "-D",
+            "warnings"
+          ],
+          "pid": 1178754,
+          "start_ticks": "143883550",
+          "log": "/tmp/s3drive-external-clean-reader-sdk2-clippy.log",
+          "started": "2026-10-19T17:50:31.974810+00:00",
+          "exit_code": 0,
+          "finished": "2026-10-19T17:51:07.147640+00:00",
+          "all_inputs_unchanged": true,
+          "changed_inputs": [],
+          "sha256": "93ee3cbf64604a918b4ec7d31550fca17a4a191dc8f91ba0a31d418ea83014fa"
+        }
+      ],
+      "exit_code": 0,
+      "all_inputs_unchanged": true,
+      "finished": "2026-10-19T17:51:07.147700+00:00"
+    },
+    "3": {
+      "pid": 1179683,
+      "start_ticks": "143892817",
+      "source": "12a2f2a7d836aab518c7b0d60675234d6470ef97",
+      "runtime_inputs": 342,
+      "started": "2026-10-19T17:52:04.736584+00:00",
+      "cwd": "/home/marshall/src/worktrees/s3drive-external-clean-reader",
+      "stage": "complete",
+      "parent_runner": 1114325,
+      "parent_start_ticks": "143781754",
+      "legs": [
+        {
+          "label": "sdk",
+          "command": [
+            "cargo",
+            "test",
+            "-p",
+            "s3drive-cli",
+            "--test",
+            "chunk_reader",
+            "clean_observation",
+            "--locked"
+          ],
+          "pid": 1179686,
+          "start_ticks": "143892829",
+          "log": "/tmp/s3drive-external-clean-reader-sdk3-sdk.log",
+          "started": "2026-10-19T17:52:04.763342+00:00",
+          "exit_code": 0,
+          "finished": "2026-10-19T17:52:41.416810+00:00",
+          "all_inputs_unchanged": true,
+          "changed_inputs": [],
+          "sha256": "3fc5ab5c6c668bc677e75f472748bac013eb8706c730905e52ee26941432d371"
+        },
+        {
+          "label": "clippy",
+          "command": [
+            "cargo",
+            "clippy",
+            "--workspace",
+            "--all-targets",
+            "--locked",
+            "--",
+            "-D",
+            "warnings"
+          ],
+          "pid": 1180451,
+          "start_ticks": "143896496",
+          "log": "/tmp/s3drive-external-clean-reader-sdk3-clippy.log",
+          "started": "2026-10-19T17:52:41.430698+00:00",
+          "exit_code": 0,
+          "finished": "2026-10-19T17:52:44.459220+00:00",
+          "all_inputs_unchanged": true,
+          "changed_inputs": [],
+          "sha256": "67fd77cdd323a71b164d6ecd536b923c95348ab67c94d71894e87a8850f032a5"
+        }
+      ],
+      "exit_code": 0,
+      "all_inputs_unchanged": true,
+      "finished": "2026-10-19T17:52:44.459273+00:00"
+    }
+  },
+  "sdk3_delta_from_sdk2": "only strengthened SDK fixture; all production/state-test bytes unchanged",
+  "local_gate": {
+    "runner_pid": 1181132,
+    "runner_start_ticks": "143903102",
+    "child_pid": 1181137,
+    "child_start_ticks": "143903111",
+    "started": "2026-10-19T17:53:47.589297+00:00",
+    "command": [
+      "bash",
+      "scripts/gate.sh"
+    ],
+    "cwd": "/home/marshall/src/worktrees/s3drive-external-clean-reader",
+    "runtime_inputs": 342,
+    "frozen_map": "/tmp/s3drive-external-clean-reader-candidate1-frozen.json",
+    "tty": false,
+    "rust_test_threads": 4,
+    "log": "/tmp/s3drive-external-clean-reader-gate1.log"
+  },
+  "own_hosted": {
+    "run_id": 39298010083,
+    "attempt": 1,
+    "jobs": {
+      "book": 118215485753,
+      "linux": 118215486002,
+      "windows": 118215486257
+    },
+    "tools_executed": false,
+    "parent_artifact_reuse_permitted": false
+  },
+  "parent": {
+    "source": "67a75e3047a867e2499ef08ded64fe00b72a4aa9",
+    "full_local_gate_passed": true,
+    "own_hosted_acceptance_pending": true
+  },
+  "native_chunk_writes": false,
+  "reclamation": false
+}

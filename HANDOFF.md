@@ -83,17 +83,28 @@ before marker/checker/comparison/archive. Own expected state494Linux/489Windows,
 24publication/23reader. Parent337 artifacts12204512424/12205563584 forbidden reuse.
 The remote facade is now separately implemented in worktree
 /home/marshall/src/worktrees/s3drive-external-clean-reader, branchcodex/external-clean-reader,
-source9913dd87584caa716a9003ce1d846f3af24cc90a/all342. It adds guarded preflight and
-Reader::observe_clean, with final live payload/root checks and3 SDK/2 state cases.
-[Contract](docs/src/external-clean-reader.md). SDK1 sourcea8cc73e passed2state32.01s
-and3SDK30.05s, but workspace Clippy failed large_enum_variant (344-byte View versus
-8-byte guard). Runner1153483 CLOSED101/all342 unchanged; exact maps/source/logs
-retained. SDK2 boxes the known metadata View; no assertions weakened. Own verifier
-1176459 runs the same2state/3SDK/workspaceClippy legs serially; same-prefix SDK2
-running/result and per-leg logs are in /tmp/s3drive-external-clean-reader-sdk2-*.
-Its exact342 map/source are frozen; do not edit until terminal. No other Cargo.
-Parent340 own Linux/book succeeded; own Windows workspace tests remain live.
-Book/Linux raw logs retained. Own one-use raw review/checker/archiver NOT executed.
+own source12a2f2a7d836aab518c7b0d60675234d6470ef97/all342. SDK1 sourcea8cc73e
+passed2state32.01s/3SDK30.05s, Clippy failed large_enum_variant; runner1153483
+CLOSED101, all342 unchanged. SDK2 compact-box repair9913dd8 passed2state31.39s/
+3SDK30.55s/workspaceClippy35.04s; runner1176459 CLOSED0/all342 unchanged.
+SDK3 changes only the SDK fixture, requiring a second provider HEAD after a gated
+valid root response and refusing late access revocation/ETag change. Source12a2f2a
+passed3SDK30.61s/Clippy2.89s; runner1179683 CLOSED0/all342 unchanged. All failed/
+passing source maps/archives/logs/runners/results retained, same-prefix SDK1/2/3.
+[Exact contract/evidence](docs/src/external-clean-reader.md).
+Full gate1 runner1181132/startticks143903102, child1181137/startticks143903111 LIVE,
+started17:53:47Z, exact342 candidate1 frozen map/source. Same-prefix gate1-running/
+result/log. No other local Cargo. Do not edit candidate runtime while it lives.
+Own CI39298010083 attempt1: book118215485753/Linux118215486002/Windows118215486257
+running. GET-only observer1184928/startticks143907161. Own checker/raw comparator/
+archiver are prepared/compiled, NOT executed; complete raw review required first.
+One-use full342 local archiver prepared (not executed) at
+/tmp/s3drive-external-clean-reader-local-archive.py; requires own terminal green
+gate and verified parent340 local+hosted archives. PS oracle syntax parsed only.
+Own expected496Linux/491Windows state,26reader1nativeignored,24publication,
+plus all inherited and new2worker/3SDK cases. Parent340 artifacts12209851124/
+12207128174 forbidden reuse. Parent340 own Windows has passed workspace tests and
+is now running actual driver acceptance; retain exact cohort until terminal.
 Main remains accepted schema37/all337. Do not edit frozen candidate runtime or
 start another local Cargo while this gate lives. The next remote facade must add
 fresh live-node/root authentication and final observation checks; see proposal.

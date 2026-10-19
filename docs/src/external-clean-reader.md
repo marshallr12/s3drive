@@ -71,3 +71,29 @@ Source9913dd8 boxes only that known metadata View and updates the private consum
 and assertion; no behavior or test expectation was weakened. SDK2 repeats both
 focused legs and Clippy on its separately frozen342 inputs, runner1176459.
 The complete own local/platform gate remains required; main stays schema37.
+
+
+## Compact result and final revalidation checks (2026-10-19)
+
+SDK2 source9913dd8 passed both worker cases31.39s, all three SDK cases30.55s and
+workspace all-target Clippy35.04s, all342 inputs unchanged. SDK3 source12a2f2a
+changes only the SDK case to require a second provider HEAD after a gated good
+root response, then revoke access or change its ETag. Both late changes must
+refuse adoption without moving the head or admitting the operation. Production
+and state-test paths remain byte-identical to the passing SDK2 source.
+SDK3 passed the same three strengthened SDK cases30.61s and Clippy2.89s with all342
+unchanged. The exact SDK1/2/3 source maps, archives, runners and logs are retained.
+
+The complete gate1 now runs on frozen342-input source
+12a2f2a7d836aab518c7b0d60675234d6470ef97, runner1181132/child1181137,
+started2026-10-19T17:53:47Z. Own
+[CI39298010083](https://github.com/marshallr12/s3drive/actions/runs/39298010083),
+attempt1: book118215485753/Linux118215486002/Windows118215486257 running.
+GET-only observer1184928 tracks those exact jobs. Own acceptance tools are
+prepared, not executed. Expected496/491 state,26reader and24publication cases;
+all inherited controls plus the new2 worker/3 SDK cases are required. Parent340
+artifacts12209851124/12207128174 cannot be reused. Main remains accepted37 until
+all required own/parent checks finish. No native chunk-write/GC activation.
+
+[Dated candidate evidence](evidence/external-clean-reader-20261019.json) retains
+the three focused attempts and exact current full-gate/cohort identities.
