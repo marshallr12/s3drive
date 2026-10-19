@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-18",
+  "runtime_source": "0d2dfceb5585c82453dd7214ebdbf98aad9c19af",
+  "previous_main": "35abcc909f42d9aac1dc12847cfaa569e1aaef8a",
+  "own_run_id": 39194683513,
+  "attempt": 1,
+  "own_linux_windows_book_raw_and_artifact_acceptance": "passed",
+  "runtime_inputs": 266,
+  "all_working_inputs_match_tested_source": true,
+  "integration_delta": "documentation/evidence only beyond the tested runtime",
+  "visibility_policy": "PUBLIC; never repair visibility",
+  "publication_method": "normal fast-forward; verify remote and clean primary checkout after publication",
+  "publication_receipt": "/tmp/s3drive-canonical-history-publication.json",
+  "not_claimed": [
+    "native chunk writes",
+    "SQLite sparse views",
+    "live Wasabi or physical workstation reboot acceptance"
+  ]
+}

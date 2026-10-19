@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "W1c2 full portable local gate passed; own hosted/native acceptance pending",
+  "status": "Accepted W1c2 exact historical-base reader: full local and own Linux/Windows/book cohort passed",
   "branch": "codex/payload-history-authority",
   "baseline": "5231113f1ba07ebb3e5a51619f4478805981f85f",
   "scope": "exact manifest base reopening and shared immutable content handles; no sparse-view schema, native write activation or provider mutation",
@@ -91,7 +91,6 @@
     }
   },
   "not_claimed": [
-    "own native/hosted acceptance",
     "persistent SQLite sparse views",
     "legacy/metadata-empty base recovery",
     "native chunk writes",
@@ -130,7 +129,7 @@
     "run_id": 39194683513,
     "run_attempt": 1,
     "source": "0d2dfceb5585c82453dd7214ebdbf98aad9c19af",
-    "status": "Windows job live; overall acceptance pending",
+    "status": "completed success; all3 raw logs reviewed; own artifact/API/digest/typed/project/raw checks passed",
     "reviewed_jobs": {
       "linux": {
         "job_id": 117874763541,
@@ -188,7 +187,92 @@
         "markdown_files": 70,
         "schema": 28,
         "notice": "checkout Node20 forced Node24 deprecation; no build/test errors"
+      },
+      "windows": {
+        "job_id": 117874763565,
+        "run_attempt": 1,
+        "reviewed": true,
+        "log": "/tmp/s3drive-base-reopen-hosted-windows.log",
+        "sha256": "7c7097c74eeb320976e2f957167c80d5d5bca26f2b668698579561e5df77ee77",
+        "platform": "Windows Server 2025 windows-2025-vs2026/20261007.264.1",
+        "reader": {
+          "passed": 11,
+          "ignored": 1,
+          "seconds": 7.4
+        },
+        "state": {
+          "passed": 363,
+          "ignored": 1,
+          "seconds": 306.39
+        },
+        "s3": {
+          "passed": 62,
+          "seconds": 17.93
+        },
+        "legacy_native": {
+          "passed": 7,
+          "seconds": 85.82
+        },
+        "manifest_native": {
+          "passed": 1,
+          "seconds": 1.96
+        },
+        "paired_startup": {
+          "passed": 1,
+          "seconds": 81.7
+        },
+        "notices": [
+          "3 locked disposable fixture profiles; dummy credentials removed, deletion deferred to VM destruction",
+          "unused WinFsp delay import warnings: 11 workspace executables plus explicit chunk-reader rebuild",
+          "long state/coordinator tests completed successfully",
+          "expected403 and rival-content conflict retained dirty data",
+          "Node20 forced24, punycode and url.parse action deprecations",
+          "cache compression took several minutes; tests remained successful"
+        ],
+        "not_claimed": [
+          "new native chunk writes",
+          "Wasabi behavior",
+          "physical workstation reboot",
+          "performance acceptance"
+        ]
       }
     }
+  },
+  "hosted_archive": {
+    "path": "evidence/manifest-base-reopen-hosted-20261018.tar.gz",
+    "sha256": "f03c5a6d1c9783bb5b443b22e1748f3fbb1321f33f30ba67ce4b547b715c8313",
+    "bytes": 179877,
+    "members": 34,
+    "all_indexed_members_verified": true,
+    "source": "0d2dfceb5585c82453dd7214ebdbf98aad9c19af",
+    "run_id": 39194683513,
+    "run_attempt": 1,
+    "independent_typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true
+  },
+  "hosted_acceptance": {
+    "source": "0d2dfceb5585c82453dd7214ebdbf98aad9c19af",
+    "run_id": 39194683513,
+    "run_attempt": 1,
+    "watch_session": 31680,
+    "watch_exit_code": 0,
+    "checker_session": 3370,
+    "checker_exit_code": 0,
+    "own_artifact_ids": {
+      "replacement": 12161348483,
+      "disposition": 12161588927
+    },
+    "zip_digests_match_github_api": true,
+    "independent_types_and_project_oracles": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all35_raw_record_fields_and_types_equal": true,
+    "older_artifacts_reused": false,
+    "runtime_inputs": 266,
+    "all_working_and_committed_hashes_match": true
   }
 }

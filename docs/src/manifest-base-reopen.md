@@ -1,8 +1,8 @@
 # Reopening a pinned manifest base
 
-Implementation/research date: **2026-10-18**. W1c2 draft on
-`codex/payload-history-authority`; not yet accepted by its own complete gates.
-The accepted read/proof runtime remains on main separately. This slice neither
+Implementation/research date: **2026-10-18**. W1c2 source `0d2dfce` passed its
+full local gate and its own Linux/Windows/book acceptance cohort. This slice
+adds exact historical-base reopening to the read/proof foundation. It neither
 activates native chunk writes nor adds a sparse-edit SQLite schema.
 
 ![A future SQLite edit view persists an 88-byte descriptor. The Rust reader authenticates history through the Rust authority and its SQLite database, then verifies the original S3 root with fresh credentials.](images/manifest-base-reopen.svg)
@@ -77,7 +77,7 @@ The fresh full local gate passed with all266 runtime inputs unchanged:
 namespace tests,12publication tests,62S3 tests and all format/Clippy/build/book
 checks. The [indexed local archive](evidence/manifest-base-reopen-local-20261018.tar.gz)
 retains21 verified members, including failures and exact source. This combined
-source's own Linux/Windows native/raw/artifact cohort remains required. No new live-provider
+source's own Linux/Windows native/raw/artifact cohort also passed below. No new live-provider
 mutation or physical reboot is claimed. Sparse durable views, mixed inherited/
 new-object publication, exact-view settlement and actual native chunk writes
 remain later phases.
@@ -85,8 +85,22 @@ remain later phases.
 Published source `0d2dfce` includes the current public main ancestry with a
 documentation-only merge; all266 locally gated source inputs remain identical.
 Its [own hosted run](https://github.com/marshallr12/s3drive/actions/runs/39194683513)
-is in progress. Linux and book jobs passed and their raw logs were reviewed:
-Linux11reader/1nativeignored6.36s,368state/1ignored,62S3,9existing native tests,
-explicit manifest FUSE/remount1.60s, no-systemd startup and paired recovery.
-Windows is still running. The combined source is not accepted until its Windows
-job and own raw/artifact checks also pass.
+passed all three jobs. All raw logs were reviewed. Both platforms passed eleven
+reader tests (one native test separately executed), exact history HTTP/state
+controls,62S3 tests and the existing native/recovery suites. Linux passed368state
+tests (one ignored), explicit manifest FUSE/remount1.60s, no-systemd startup and
+paired recovery. Windows Server2025 passed363state tests (one ignored), explicit
+manifest WinFsp/remount1.96s and paired startup/recovery81.70s.
+
+The own-source artifact ZIP digests match GitHub metadata. Independent typed and
+project checks passed21replacement and14disposition records; every raw record's
+fields and types match those artifacts. No earlier artifact was reused. The
+[indexed hosted archive](evidence/manifest-base-reopen-hosted-20261018.tar.gz)
+retains34 verified members, including exact tested sources and all three raw logs.
+All266 locally gated working and committed runtime inputs remain identical.
+
+Windows retained three locked disposable test profiles after removing dummy
+credentials; profile deletion was deferred to hosted-VM destruction. Unused
+WinFsp delay-import warnings, completed long tests and Node action deprecations
+are retained in the evidence. These runner tests do not establish physical
+workstation reboot behavior, live Wasabi conformance or native chunk writes.

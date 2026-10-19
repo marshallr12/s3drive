@@ -25,7 +25,37 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
-## Current W1c2 combined baseline (2026-10-18)
+## Current accepted W1c2 history/reader (2026-10-18)
+
+Runtime source0d2dfceb5585c82453dd7214ebdbf98aad9c19af accepted in own run
+39194683513 attempt1 ALL3 SUCCESS. Watch31680 CLOSED0; checker3370 CLOSED0.
+All3 raw logs reviewed. Linux FUSE1.60s, Windows WinFsp1.96s;11reader/1native
+ignored,62S3, Linux368state1ignored,Windows363state1ignored. Own ZIP API digests,
+independent typed21+14/project oracles/all35 raw fields and types passed; no older
+artifacts reused. Windows Server2025 image20261007.264.1; three locked disposable
+profiles, dummy credentials removed, profile deletion deferred to VM destruction.
+Unused delay-import/long-test/action deprecation notices retained. Linux no-systemd
+HTTP/privateCA24.07s and pairedFUSE recovery passed; Windows paired81.70s.
+Indexed34-member hosted archive179877bytes SHA
+f03c5a6d1c9783bb5b443b22e1748f3fbb1321f33f30ba67ce4b547b715c8313.
+All266 frozen working/committed inputs match /tmp/s3drive-base-reopen-frozen.json.
+Fresh local full gate95974 CLOSED0 and indexed21-member local archive passed.
+New history/read APIs are accepted; no native chunk writes or SQLite sparse views.
+Canonical main/primary integration uses this accepted runtime with docs-only
+changes. Verify remote/current clean primary against all266 tested inputs; receipt
+/tmp/s3drive-canonical-history-publication.json records actual publication. This
+section supersedes preserved historical pending statuses. PUBLIC intentional.
+
+Next implement W2a descriptor layering in a separate clean worktree based on
+this accepted checkpoint: core untrusted codec plus managed wrapper preserving
+ReadFailure/API/88-byte format. Read the W2 proposal/detail in implementation plan.
+Then W2b durable SQLite immutable patches/zero/base extents with bounded maps,
+exact replay and dirty retention, W2c verified read composition. W3 mixed-tree
+proofs/publication, W5 exact-view acknowledgment and W6 native chunk writes remain.
+No provider mutation is authorized by these runner tests; physical MX startup/
+reboot and actual Wasabi acceptance remain separate. Goal ACTIVE; not complete.
+
+## Historical W1c2 implementation checkpoint (2026-10-18)
 
 Published source0d2dfceb5585c82453dd7214ebdbf98aad9c19af (local implementation
 1c41802 plus main35abcc9 documentation-only merge), exactremote and clean before

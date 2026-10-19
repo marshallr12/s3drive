@@ -2522,3 +2522,20 @@ State can use the core representation without depending on authority or managed.
 No dependency change is required for the pure codec. Keep the authority-backed
 lookup and fresh S3 root verification in managed. This corrects the earlier
 shorthand "re-export"; preserving the managed API includes its error semantics.
+
+
+W1c2 accepted checkpoint,2026-10-18: runtime `0d2dfce` passed own
+[run39194683513](https://github.com/marshallr12/s3drive/actions/runs/39194683513),
+all3 jobs/raw review/own ZIP API digests/independent typed21+14/project oracles/
+all35 raw fields and types. Linux manifest FUSE/remount1.60s; Windows manifest
+WinFsp/remount1.96s, paired startup81.70s. Linux368state1ignored/Windows363state
+1ignored,11reader1nativeignored and62S3 passed. Indexed34-member hosted archive
+and all266 frozen runtime inputs verified. See [base reopen evidence](manifest-base-reopen.md).
+W2 consumers may now be implemented against this accepted base. Begin the pure
+core codec/managed error-preserving wrapper prerequisite, then bounded SQLite
+sparse views and verified composition. New native chunk writes remain unsupported.
+
+Canonical history/reader integration uses the accepted0d2dfce runtime unchanged;
+see [integration evidence](evidence/canonical-manifest-history-integration-20261018.json).
+Only documentation/evidence follow the tested source. Publish by normal fast-
+forward and verify remote/main and the clean primary checkout against all266 inputs.
