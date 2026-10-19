@@ -88,6 +88,34 @@ private prepared candidates; future W4 revalidates source/policy before sends.
 Complete W3b requires actual mixed roots/restart/refusal/quota/SQL/crash tests,
 managed integration, full local and own combined gates. W4-W6/legacy-empty remain.
 
+## Accepted W3a bounded incremental data preparation (2026-10-19)
+
+Runtime9544193908967ea2852121bef7d91cdce89ed042, own39215314627 attempt1 ALL3
+SUCCESS. Watch3007 CLOSED0; checker4975 CLOSED0. Full raw/source/own API ZIP
+digests/independent typed21+14/project/all35 raw field/type checks passed. Own
+artifacts replacement12169308606/disposition12170136893. Indexed64-member
+hosted archive274318bytes SHA
+ac643ed8c7de9acaae932a308d78cf0d20aa80500b63840524a7f13d463e6c19.
+All288 frozen runtime/contract working+committed hashes unchanged. Linux393state/
+Windows388state1ignored,37core/19reader1nativeignored/62S3; all3 new preparation
+cases and inherited read cases passed. Real legacy Linux9/Windows7, manifest
+FUSE1.66s/WinFsp2.08s, paired Windows78.10s and Linux HTTP/TLS24.35s passed.
+Windows2 delay-import link groups (11 test executables+reader),3 locked disposable
+profiles: dummy credentials removed; final profile deletion by VM destruction.
+Node notices, completed long tests and expected403/conflicts retained. Full dated
+implementation/evidence/diagram in docs/src/incremental-data.md. No complete mixed
+tree, publication, clean settlement, native edited writes, provider or physical
+reboot/session acceptance follows. One-use acceptance/archiver already executed.
+
+Next W3b worktree /home/marshall/src/worktrees/s3drive-mixed-plans,
+branch codex/mixed-plans fromc1f7fbb. Local draft only: state sparse_views/
+preparation.rs + preparation/{model,proof}.rs are NOT wired, compiled or tested;
+ledger/journal modules do not exist yet. Do not mistake baseline gate for draft
+coverage. Full declared phase is in that worktree's implementation-plan tail.
+Need schema032, complete ledger/cursor/tree/controller + refusal/recovery tests
+and full local/own combined gates before any acceptance. Existing main source
+remains schema31. GoalACTIVE; concrete progress. W4-W6 and legacy/empty remain.
+
 ## Accepted W2c authenticated sparse composition (2026-10-19)
 
 Runtime84da0ee633871f862f4a84a276af5ac3322cff42, own39213440204 attempt1 ALL3
@@ -113,7 +141,7 @@ Parent source d37096c remains historical patch acceptance. New W3a source9544193
 is separate/frozen288 inputs; its own39215314627 book/Linux SUCCESS, Windows
 still running. Keep its runtime unchanged. W3b/W4-W6 and legacy/empty remain.
 
-## Published W3a — own combined checks pending (2026-10-19)
+## Historical W3a publication — superseded by acceptance above (2026-10-19)
 
 Source9544193908967ea2852121bef7d91cdce89ed042 pushed to codex/incremental-data;
 all288 working/committed frozen inputs unchanged. Mainabdda37 is an ancestor;
@@ -130,7 +158,7 @@ complete raw logs, then own source/ZIP digests/typed21+14/project/all35 raw fiel
 and types checks and archive. Keep288 runtime inputs frozen. No native chunk
 write activation or complete mixed-tree/publication/settlement claim follows.
 
-## Current W3a incremental data preparation — local green (2026-10-19)
+## Historical W3a local-green checkpoint (2026-10-19)
 
 Worktree /home/marshall/src/worktrees/s3drive-incremental-data,
 branch codex/incremental-data fromb884a1a. No schema/wire/legacy planner/provider/

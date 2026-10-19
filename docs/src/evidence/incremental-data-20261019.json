@@ -3,7 +3,7 @@
   "phase": "W3a bounded authenticated incremental data preparation",
   "branch": "codex/incremental-data",
   "baseline": "b884a1a9f979b72649cd508647c7bcb465b01534",
-  "status": "full portable local gate passed; own combined platform/native acceptance required",
+  "status": "full portable local and own combined platform/native/source acceptance passed",
   "schema": 31,
   "focus": {
     "session": 21549,
@@ -120,5 +120,147 @@
     "run_id": 39213440204,
     "all_three_raw_source_own_artifacts": "passed",
     "feature_runtime_inputs_unchanged": 288
+  },
+  "hosted_acceptance": {
+    "source": "9544193908967ea2852121bef7d91cdce89ed042",
+    "run_id": 39215314627,
+    "attempt": 1,
+    "all_three_jobs": "success",
+    "watch_session": 3007,
+    "watch_exit_code": 0,
+    "checker_session": 4975,
+    "checker_exit_code": 0,
+    "raw_review": {
+      "source": "9544193908967ea2852121bef7d91cdce89ed042",
+      "run_id": 39215314627,
+      "run_attempt": 1,
+      "reviewed": true,
+      "status": "all3 terminal success/full raw/source reviews; own artifact checks pending",
+      "jobs": {
+        "117937677538": {
+          "source": "9544193908967ea2852121bef7d91cdce89ed042",
+          "job_id": 117937677538,
+          "run_attempt": 1,
+          "reviewed": true,
+          "log": "/tmp/s3drive-incremental-data-hosted-book.log",
+          "sha256": "f3531d10a68e2f85e0b3966b9d08960162bfd5099c62a2c91cd8484cf7cb4c2b",
+          "platform": "Ubuntu24.04 image20261012.334.1",
+          "markdown_files": 75,
+          "chapters": 71
+        },
+        "117937677524": {
+          "source": "9544193908967ea2852121bef7d91cdce89ed042",
+          "job_id": 117937677524,
+          "run_attempt": 1,
+          "reviewed": true,
+          "log": "/tmp/s3drive-incremental-data-hosted-linux.log",
+          "sha256": "a4388dcffc30766c29e2e5b3a2d8a7338c296c9ed388c0ca5a87c2b7b9e2b50e",
+          "platform": "Ubuntu24.04 image20261012.334.1",
+          "state": {
+            "passed": 393,
+            "ignored": 1,
+            "seconds": 136.52
+          },
+          "reader": {
+            "passed": 19,
+            "ignored": 1,
+            "seconds": 12.51
+          },
+          "core": {
+            "passed": 37,
+            "seconds": 0.04
+          },
+          "s3": {
+            "passed": 62,
+            "seconds": 17.5
+          },
+          "legacy_native": {
+            "passed": 9,
+            "seconds": 73.11
+          },
+          "manifest_native": {
+            "passed": 1,
+            "seconds": 1.66
+          },
+          "no_systemd_http_tls": {
+            "passed": 1,
+            "seconds": 24.35
+          },
+          "paired_native_recovery": "passed"
+        },
+        "117937677247": {
+          "source": "9544193908967ea2852121bef7d91cdce89ed042",
+          "job_id": 117937677247,
+          "run_attempt": 1,
+          "reviewed": true,
+          "log": "/tmp/s3drive-incremental-data-hosted-windows.log",
+          "sha256": "2123696f90b8ccb1d53680d4705243cb94fb772218b483a9416f7ce19cb8eab2",
+          "platform": "Windows Server2025 windows-2025-vs2026/20261007.264.1",
+          "state": {
+            "passed": 388,
+            "ignored": 1,
+            "seconds": 322.73
+          },
+          "reader": {
+            "passed": 19,
+            "ignored": 1,
+            "seconds": 14.53
+          },
+          "core": {
+            "passed": 37,
+            "seconds": 0.02
+          },
+          "s3": {
+            "passed": 62,
+            "seconds": 15.66
+          },
+          "legacy_native": {
+            "passed": 7,
+            "seconds": 86.09
+          },
+          "manifest_native": {
+            "passed": 1,
+            "seconds": 2.08
+          },
+          "paired_recovery": {
+            "passed": 1,
+            "seconds": 78.1
+          },
+          "locked_disposable_profiles": 3,
+          "dummy_credentials_removed": true,
+          "profile_deletion_deferred_to_vm_destruction": true,
+          "winfsp_unused_delay_import_link_groups": 2,
+          "warned_executables_in_first_group": 11
+        }
+      },
+      "retained_notes": [
+        "book rustup override and Node20-forced24 notices retained",
+        "Linux expected403/rival conflict controls preserve local and remote bytes",
+        "actual tested image Ubuntu24.04; no provider/physical/new native chunk-write claim",
+        "Windows2 unused WinFsp delay-import groups (11 test executables and reader rebuild), completed long tests, Node punycode/url.parse notices",
+        "Windows3 locked disposable profiles; dummy credentials removed; remaining profile deletion by VM destruction",
+        "watch3007 CLOSED EXIT0; no native edited writes/provider/physical reboot claim"
+      ]
+    },
+    "own_artifact_ids": {
+      "replacement": 12169308606,
+      "disposition": 12170136893
+    },
+    "own_api_zip_digests_typed21_14_project_and_all_raw_fields_types": "passed",
+    "archive": {
+      "path": "evidence/incremental-data-hosted-20261019.tar.gz",
+      "sha256": "ac643ed8c7de9acaae932a308d78cf0d20aa80500b63840524a7f13d463e6c19",
+      "bytes": 274318,
+      "members": 64,
+      "all_indexed_members_verified": true,
+      "source": "9544193908967ea2852121bef7d91cdce89ed042",
+      "run_id": 39215314627,
+      "run_attempt": 1,
+      "independent_typed_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "all_raw_fields_and_types_equal": true
+    }
   }
 }

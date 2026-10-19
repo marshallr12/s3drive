@@ -2879,6 +2879,15 @@ with docs/evidence-only delta from source9544193 and all288 inputs unchanged.
 Its own39215314627 book/Linux passed, Windows is running. Parent acceptance does
 not substitute for this source's own combined checks.
 
+W3a accepted,2026-10-19: runtime9544193 passed own39215314627 all3/full raw/source/
+own API ZIP digests/typed21+14/project/all35 raw field/type checks. Indexed64-member
+hosted archive retained; all288 frozen inputs exact. Linux393state/Windows388state
+1ignored,37core/19reader1nativeignored/62S3; real legacy mounts, manifest FUSE/WinFsp
+remount and paired/no-systemd recovery passed. See [preparation evidence](incremental-data.md).
+Next W3b local draft in /home/marshall/src/worktrees/s3drive-mixed-plans is unwired,
+uncompiled and untested. Existing source remains schema31; no mixed publication,
+settlement or native edited writes are activated by this integration.
+
 ### W3b durable mixed-tree preparation — declared phase (2026-10-19)
 
 Implement in isolated `codex/mixed-plans` from `c1f7fbb`; keep parent W3a9544193
@@ -2919,3 +2928,11 @@ reference reuse, partial-final edits,127/128 boundary/height growth, sparse64GiB
 wrong proofs/bindings/quota/corrupt media/SQL/crash/replay controls, full local gate
 and its own combined platform/native/source acceptance. W4-W6 and legacy/empty
 admission remain required for the full drive goal.
+
+W3b draft checkpoint,2026-10-19: local `codex/mixed-plans` contains an unwired
+format and offline witness-validation draft in sparse_views/preparation.rs and
+preparation/{model,proof}.rs. Explicit rustfmt parsed/formatted these three files;
+no Rust type checking, schema, ledger/journal/controller or tests exist for this
+draft yet. Do not claim a baseline gate covers it. Full acceptance remains the
+complete declared W3b phase above. Its current HANDOFF records the exact next
+work and validation conditions. Parent W3a9544193 is now accepted as main3086038.
