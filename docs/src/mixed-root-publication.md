@@ -1,8 +1,8 @@
 # Publishing an edited manifest root
 
 Design review: 2026-10-19. **Root publication remains proposed.**
-The W4b1 offline data-check prerequisite is locally implemented below; its own
-hosted acceptance is pending.
+The W4b1 offline data-check prerequisite is accepted below; root publication
+is being implemented separately as W4b2.
 The user selected immutable chunks and authenticated manifests for large managed
 files (decision D041). [Mixed dependency uploads](mixed-uploads.md) implements
 physical object transfer separately. This chapter specifies the missing transition
@@ -174,7 +174,7 @@ being reported as corruption rather than an invalid Data-candidate request.
 The validator now distinguishes that request from corrupted retained metadata.
 Failed and corrected logs/sources are retained under
 `/tmp/s3drive-mixed-semantics-*`. The full local gate passed on306 frozen
-runtime/contract inputs; hosted and native acceptance are still pending.
+runtime/contract inputs; its own hosted acceptance subsequently passed below.
 
 
 The full local gate runner271909 exited0 at10:42:39Z, retaining all306 input
@@ -190,4 +190,27 @@ acceptance remain required.
 
 Exact source `5112fd25452d0a262ed380c688e45b39d28c4370` is published for its
 [own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39239546495).
-Acceptance is pending. Parent W4a artifacts cannot substitute for this source.
+All three jobs passed on attempt1. Parent W4a artifacts did not substitute for this source.
+
+
+## W4b1 own acceptance
+
+Exact source5112fd2/schema32/all306 inputs passed own run39239546495 attempt1:
+book118016754945/Linux118016754543/Windows118016754819. Complete raw/source/own
+API ZIP digests, independent typed21+14/project oracles and all35 raw-field/type
+comparisons passed. One-use checking and archival are complete. The
+[own hosted archive](evidence/mixed-semantics-hosted-20261019.tar.gz) contains86
+verified indexed members,346729bytes, SHA-256
+`d2b9ca34b9520b52359389b32fcabb7181a96173487557b03295ec11c7f1ae04`.
+Artifacts replacement12180169543/disposition12181478025 are from this cohort.
+
+Linux417state/Windows412state (one ignored each),37core/22reader (one native
+ignored)/62S3/18publication cases passed. Actual legacy FUSE9/71.77s and
+WinFsp7/96.13s, manifest remount1.81s/10.93s and paired no-systemd24.15s/Windows
+managed92.42s passed. Runners were Ubuntu24.04 image20261012.334.1 and Windows
+Server2025 `windows-2025-vs2026` image20261007.264.1. Three locked disposable
+profiles had dummy credentials removed; final deletion relies on VM destruction.
+Tooling notices and two unused WinFsp delay-import groups remain in raw evidence.
+All long-running tests completed. These checks accept the offline verifier and
+existing native regressions, not mounted chunk writes or physical reboot/session
+acceptance. W4b2 publication/recovery, W5 settlement and W6 native activation remain.

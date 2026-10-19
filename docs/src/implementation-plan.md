@@ -3130,3 +3130,12 @@ Clippy/build/78Markdown/74chapters. Source dbdfd61 plus documentation-only accep
 parent merge8220555; indexed source/focused/failed/full evidence retained.
 [Verifier evidence](evidence/mixed-semantics-20261019.json). Own hosted/native/
 source cohort pending. W4b2 root journal/controller/recovery still unimplemented.
+
+
+W4b1 accepted,2026-10-19: runtime5112fd2/schema32/all306 inputs; own39239546495
+attempt1 book/Linux/Windows SUCCESS, complete raw/source/own API ZIP/typed21+14/
+project/all35 raw fields/types passed. Indexed86-member hosted archive346729bytes
+SHAd2b9ca34b9520b52359389b32fcabb7181a96173487557b03295ec11c7f1ae04.
+Linux417state/Windows412state and inherited native/session regressions passed;
+see [acceptance evidence](evidence/mixed-semantics-20261019.json). No root commit,
+clean receipt or native chunk write follows. W4b2 remains separately unaccepted.

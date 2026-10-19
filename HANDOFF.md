@@ -25,54 +25,39 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
-## Current W4b1 exact-data verification — local gate passed (2026-10-19)
+## Accepted W4b1 exact-data verification (2026-10-19)
 
-Worktree /home/marshall/src/worktrees/s3drive-mixed-publication,
-codex/mixed-publication. Runtime dbdfd61c574de4dfcf1a3455ab3b1c5aa473f9a2,
-schema32/all306 frozen inputs. Accepted parent main00606e9/W4a runtime3fd2a87;
-merge8220555 changed docs/evidence only. The verifier and private-worker API
-compare completed plans' actual Data candidates with immutable view ranges,
-full original chunk proof/length/digest, local patches and zeros. No source/root
-authentication, durable semantic seal, root commit or clean acknowledgment.
-Read docs/src/mixed-root-publication.md for the W4b2 contract before implementing.
+Runtime5112fd25452d0a262ed380c688e45b39d28c4370, schema32/all306 frozen inputs.
+Own39239546495 attempt1 ALL3 SUCCESS: book118016754945/Linux118016754543/
+Windows118016754819. Owned watch326311/child326313 CLOSED0. Checker83234 CLOSED0;
+raw comparison/archive2142 CLOSED0. Complete raw/source/own API ZIP SHA/independent
+ typed21+14/project/all35 raw fields/types passed. Own artifacts replacement
+12180169543/disposition12181478025. Indexed86-member archive346729bytes SHA
+ d2b9ca34b9520b52359389b32fcabb7181a96173487557b03295ec11c7f1ae04;
+all indexed members verified. One-use acceptance/archive executed; never rerun.
 
-Focused1 session90389 EXIT0 (earlier4 cases); focused2 session55846 EXIT101 (4/1,
-inherited subtree position reported as corruption); exact failed sources retained.
-Corrected missing/non-Data candidate admission to Invalid while corrupt retained
-metadata still refuses. Focused3 session15916 EXIT0:5 cases/0.46s, including
-complete discarded tails, false base/zero bytes, all-local/hole/zero/growth,
-two-level ancestry, wrong proof geometry, worker restart and unchanged state.
+Linux417state/Windows412state (one ignored each),37core/22reader1nativeignored/
+62S3/18publication cases passed. All5 new byte-verifier cases passed. Local full
+gate1 CLOSED0,306 unchanged, indexed321-member local archive951994bytes SHA
+7b6927a0a5a45e814cd08563d8011de079646d7254f5b7f6a80840da645e5de7.
+Retained expanded-test refusal-classification failure and exact failed sources.
+Actual legacy FUSE9/71.77s, WinFsp7/96.13s, manifest1.81s/10.93s and paired
+no-systemd24.15s/Windows managed92.42s passed; these are regressions, not chunk
+native writes/performance promises. Actual Ubuntu24.04 image20261012.334.1 /
+Windows Server2025 windows-2025-vs2026 image20261007.264.1. Three locked profiles:
+dummy credentials removed, final deletion by VM destruction. Two unused delay-
+import groups/tooling notices and completed long tests retained.
 
-Full local gate1 runner271909/child271911 CLOSED EXIT0 at10:42:39Z. All306 inputs
-unchanged:417state1ignored/37core/22reader1nativeignored/62S3/18publication,
-format/Clippy/build/78Markdown/74chapters. Map /tmp/s3drive-mixed-semantics-frozen.json;
-result/log /tmp/s3drive-mixed-semantics-gate1-*, logSHA
- d6b055ce28634c28afc19ddfbb7e85f1fd24a77976e5e8a2ae04181715826182.
-Indexed321-member951994byte local source/evidence archive SHA
-7b6927a0a5a45e814cd08563d8011de079646d7254f5b7f6a80840da645e5de7;
-all members verified. One-use local archiver executed; never rerun. Dated JSON
-at docs/src/evidence/mixed-semantics-20261019.json preserves failures and scope.
-Own hosted/native/source acceptance is next; keep all306 runtime inputs frozen.
-Do not promote this slice merely from parent/native or portable results.
-
-Published exact own source5112fd25452d0a262ed380c688e45b39d28c4370.
-Own39239546495 attempt1 in progress: Linux118016754543/Windows118016754819/
-book118016754945. Owned observer326311/child326313 confirmed live with matching
-start ticks; metadata /tmp/s3drive-mixed-semantics-hosted-watch-running.json.
-Observer log/result /tmp/s3drive-mixed-semantics-hosted-watch{.log,-result.json}.
-Get API terminal state before acceptance; observation timeout never authorizes
-restart. Four own one-use checker/oracle/raw-comparer/archive scripts prepared
-under /tmp/s3drive-{check-mixed-semantics-hosted.py,mixed-semantics-hosted-*},
-NOT executed. Own artifacts must not reuse parent12179067044/12179218793.
-After all3 terminal success: download/review full raw logs (21-record replacement
-block before ok), strict source/API ZIP SHA/typed21+14/project/all35 raw-field/type
-checks, one-use archive. Keep all306 working and committed inputs frozen.
-
-Next W4b2 must persist complete semantic coverage, exact ReserveManifest/Publish
-requests and narrow metadata-only recovery; normal State opening remains strict.
-No S3 capability or fresh-work admission in saved-request recovery. W5 exact-view
-settlement/retention, legacy/empty origins and W6 mounted chunk writes remain.
-Provider/physical sign-in/reboot/SSH/tmux gates are separate. Goal ACTIVE/progress.
+Accepted offline byte correspondence to frozen root, full original digest/length
+including discarded tails, exact local/zero spans and same-owner worker checks.
+It returns no durable seal, remote permission, root commit or clean receipt.
+Successor W4b2 draft in /home/marshall/src/worktrees/s3drive-mixed-root-journal,
+codex/mixed-root-journal: schema33 root journal/semantic coverage/private metadata
+recovery/publisher implemented;10 focused state tests incl24 kill boundaries and
+2 actual SDK root/recovery/rival cases pass. First Clippy failed2 collapsible-if
+suggestions, fixed without suppression; second full Clippy passed. Full local and
+own hosted acceptance still required before W4b2 promotion. W5/origins/W6/provider/
+physical session gates remain. Goal ACTIVE/progress.
 
 ## Accepted W4a mixed dependency uploads (2026-10-19)
 
