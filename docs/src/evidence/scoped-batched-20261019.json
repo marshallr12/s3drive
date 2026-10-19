@@ -1,0 +1,93 @@
+{
+  "date": "2026-10-19",
+  "phase": "scoped source operations with verified upload batching",
+  "status": "complete local gate passed; own hosted/platform/source/artifact acceptance pending",
+  "schema": 36,
+  "source_checkpoint": "6115775",
+  "runtime_inputs": 329,
+  "local_gate": {
+    "runner_pid": 978816,
+    "runner_start_ticks": "143323634",
+    "child_pid": 978818,
+    "child_start_ticks": "143323642",
+    "started": "2026-10-19T16:17:12.899049+00:00",
+    "command": [
+      "bash",
+      "scripts/gate.sh"
+    ],
+    "cwd": "/home/marshall/src/worktrees/s3drive-scoped-source-operations-batched",
+    "runtime_inputs": 329,
+    "frozen_map": "/tmp/s3drive-scoped-batched-candidate1-frozen.json",
+    "tty": false,
+    "rust_test_threads": 4,
+    "log": "/tmp/s3drive-scoped-batched-gate1.log",
+    "exit_code": 0,
+    "finished": "2026-10-19T16:29:24.364403+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": [],
+    "sha256": "4e1371bf2b4d85876224847b119af4df02355164823315a03e0bc00473b2c5cf"
+  },
+  "local_archive": {
+    "scope": "complete local gate only; own hosted/platform/source/native acceptance required",
+    "path": "evidence/scoped-batched-local-20261019.tar.gz",
+    "sha256": "aa3ecd77ca9c1539ef612db05fb23d057bd1b92040eb123fdb1a81d5a4929143",
+    "members": 348,
+    "bytes": 3372098,
+    "all_indexed_members_verified": true,
+    "runtime_inputs": 329,
+    "source_checkpoint": "6115775",
+    "gate_exit_code": 0,
+    "gate_log_sha256": "4e1371bf2b4d85876224847b119af4df02355164823315a03e0bc00473b2c5cf",
+    "rust_test_threads": 4,
+    "reduced_sdk_admission": false,
+    "counts": {
+      "publication": {
+        "passed": 24,
+        "ignored": 0,
+        "seconds": 164.37
+      },
+      "state": {
+        "passed": 460,
+        "ignored": 1,
+        "seconds": 240.76
+      },
+      "reader": {
+        "passed": 22,
+        "ignored": 1,
+        "seconds": 29.24
+      },
+      "core": {
+        "passed": 37,
+        "ignored": 0,
+        "seconds": 0.05
+      },
+      "s3": {
+        "passed": 62,
+        "ignored": 0,
+        "seconds": 21.12
+      }
+    },
+    "prior_failed_contexts": 3,
+    "each_prior_failed_inputs": 329
+  },
+  "reduced_sdk_admission": false,
+  "own_hosted": {
+    "status": "queued",
+    "parent_or_prototype_artifact_reuse_permitted": false,
+    "source": "44f0ee19077c7623465faf62834858821cd1ee47",
+    "run_id": 39286027359,
+    "attempt": 1,
+    "jobs": {
+      "book": 118172159855,
+      "linux": 118172161091,
+      "windows": 118172161013
+    }
+  },
+  "unimplemented": [
+    "source retention/reclamation",
+    "native chunk write activation",
+    "fresh external-base adoption",
+    "new origins",
+    "physical target desktop/session acceptance"
+  ]
+}

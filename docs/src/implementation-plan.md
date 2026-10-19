@@ -3335,3 +3335,12 @@ Its one-use archiver is DONE. Combined scoped source6115775/all329 full gate1 is
 now active (runner978816/child978818), normal four test threads; source frozen.
 No schema36/37 promotion follows from the component regression. Parent integration
 and exact full/platform/source gates remain required before mounted activation.
+
+
+Combined scoped source6115775/all329 full gate1 CLOSED0 at2026-10-19T16:29:24Z:
+24publication/164.37s,460state1ignored/37core/22reader1nativeignored/62S3, format/
+Clippy/build/83MD/79chapters, all329 unchanged. Indexed348-member local archive
+SHAaa3ecd77ca9c1539ef612db05fb23d057bd1b92040eb123fdb1a81d5a4929143 verified.
+[Current evidence](scoped-batched-repair.md). Published source44f0ee1 now has its
+own CI39286027359 attempt1 queued. No schema36/37 promotion follows until its own
+hosted/native/source/artifact gates pass. Main remains accepted schema35/all324.

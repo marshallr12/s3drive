@@ -87,10 +87,18 @@ their cause. Never equate portable unit tests with an actual mount or flush.
    was removed. Ordinary four test threads, old30s operations/180s child deadlines.
    [Combined contract](docs/src/scoped-batched-repair.md). Frozen candidate1 map/source
    /tmp/s3drive-scoped-batched-candidate1-frozen.json and -source.tar.gz.
-   Full gate runner978816/child978818 is LIVE, startticks143323634/143323642,
-   started16:17:12Z. Inspect /tmp/s3drive-scoped-batched-gate1-{running,result}.json
-   and .log. Source329 is frozen; do not edit it or start another Cargo. Require own complete
-   local and hosted/native/source/artifact gates before promoting schema36.
+   Full gate runner978816/child978818 CLOSED0 at16:29:24Z, all329 unchanged.
+   Publication24/164.37s,460state1ignored/37core/22reader1nativeignored/62S3 plus
+   format/Clippy/build/83MD/79chapters passed at normal four threads. Indexed348-
+   member local archive SHAaa3ecd77ca9c1539ef612db05fb23d057bd1b92040eb123fdb1a81d5a4929143.
+   One-use local archiver DONE, never rerun. No local Cargo remains from that run.
+   Own published source44f0ee19077c7623465faf62834858821cd1ee47; CI39286027359
+   attempt1 queued: book118172159855/Linux118172161091/Windows118172161013.
+   GET-only observer1040546/startticks143419257, tracked in
+   /tmp/s3drive-scoped-batched-hosted-watch-{running,result}.json. Prepared own
+   checker/raw comparator/archive NOT executed. Do not restart jobs on observation
+   errors or reuse old artifacts. Own full hosted/native/source acceptance required
+   before schema36 promotion. Source329 remains frozen.
    [Original scoped contract](docs/src/scoped-source-operations.md).
 
 3. **Manual pin registry** — worktree
