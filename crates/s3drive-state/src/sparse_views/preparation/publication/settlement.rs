@@ -135,18 +135,30 @@ fn descends(s: &Ledger, older: Id, newer: Id) -> Result<bool> {
     }
     Err(Failure::Corrupt.into())
 }
+// Old supported migration fixtures predate the publication tables. A current
+// schema must never forget acknowledgment identities when a table is lost.
+fn legacy_without_publication(db: &Connection) -> Result<bool> {
+    let exists: bool = db.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='table' AND name='sparse_publications')", [], |q| q.get(0))?;
+    if exists {
+        return Ok(false);
+    }
+    let version: i32 = db.pragma_query_value(None, "user_version", |q| q.get(0))?;
+    if (29..=32).contains(&version) {
+        return Ok(true);
+    }
+    Err(Failure::Corrupt.into())
+}
 /// Called once per source snapshot. Only metadata inspection is allowed here;
 /// calling root validate_source would recurse through preparation/source loading.
 pub(in crate::sparse_views) fn validate_views(db: &Connection, s: &Ledger) -> Result<()> {
-    let exists:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='table' AND name='sparse_publications')",[],|r|r.get(0))?;
-    if !exists {
+    if legacy_without_publication(db)? {
         if s.records
             .values()
             .any(|v| matches!(v.record.request.edit, Some(Change::Rebase { .. })))
         {
             return Err(Failure::Corrupt.into());
         }
-        return Ok(()); // Deliberate pre-publication-schema migration inspection only.
+        return Ok(());
     }
     let meta = ledger::inspect(db)?;
     for r in meta.records.values() {
@@ -187,6 +199,9 @@ pub(in crate::sparse_views) fn validate_views(db: &Connection, s: &Ledger) -> Re
 }
 /// Historical acknowledgments reserve operation IDs even without a new view.
 pub(in crate::sparse_views) fn guard_operation(db: &Connection, op: Id) -> Result<()> {
+    if legacy_without_publication(db)? {
+        return Ok(());
+    }
     let meta = ledger::inspect(db)?;
     if meta
         .records

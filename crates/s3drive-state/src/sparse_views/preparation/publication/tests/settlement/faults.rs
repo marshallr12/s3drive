@@ -172,3 +172,46 @@ fn self_consistent_missing_or_historical_ack_metadata_cannot_hide_a_rebase_or_ch
         assert!(State::open_managed(&path).is_err());
     }
 }
+
+#[test]
+fn missing_publication_table_never_forgets_current_schema_ack_identities_or_adopts_old_data() {
+    for historical in [false, true] {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("missing metadata");
+        let mut s = State::open_managed(&path).unwrap();
+        let f = fixture();
+        let r = first(&mut s, &f);
+        let r = commit(&mut s, r);
+        let p = r.input.plan;
+        if historical {
+            vj(&mut s).write([41; 32], r.input.view, 6, &[88]).unwrap();
+        }
+        j(&mut s)
+            .acknowledge([40; 32], p, crate::sparse_views::Options::default())
+            .unwrap();
+        s.connection
+            .execute_batch("DROP TABLE sparse_publications")
+            .unwrap();
+        assert_eq!(s.info().unwrap().schema_version, 35);
+        assert!(
+            crate::sparse_views::preparation::publication::settlement::guard_operation(
+                &s.connection,
+                [40; 32]
+            )
+            .is_err()
+        );
+        assert!(
+            crate::sparse_views::Journal::new(&mut s, crate::sparse_views::Options::default())
+                .is_err()
+        );
+        assert!(
+            s.connection
+                .query_row("SELECT count(*) FROM sparse_view_blocks", [], |q| q
+                    .get::<_, i64>(0))
+                .unwrap()
+                > 0
+        );
+        drop(s);
+        assert!(State::open_managed(&path).is_err());
+    }
+}

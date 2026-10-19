@@ -49,6 +49,30 @@
       "seconds": 74.36,
       "owned_fixture_puts": 13,
       "scope": "four3MiB+17 sparse edit/publish/ack cycles; restart; old reads; chunk reuse; newer head; empty base; no ack RPC;8KiB future bound"
+    },
+    {
+      "name": "migration1",
+      "result": "old-source reproduction failed after editor substitution did not apply; no source change",
+      "failed": 2
+    },
+    {
+      "name": "migration2",
+      "exit_code": 0,
+      "passed": 2,
+      "seconds": 0.23
+    },
+    {
+      "name": "focused6",
+      "result": "compile failed in added test module path",
+      "retained_source": "/tmp/s3drive-mixed-epochs-focused6-faults.rs"
+    },
+    {
+      "name": "focused7",
+      "exit_code": 0,
+      "passed": 12,
+      "seconds": 7.88,
+      "epoch_kill_boundaries": 11,
+      "scope": "includes current-schema missing-publication-table refusal"
     }
   ],
   "acceptance_remaining": [
@@ -71,6 +95,21 @@
       "reason": "unneeded unit expression in new format3 match arm; removed without warning suppression or semantic change",
       "log_sha256": "673573a5dcbb525c5bc71ffd839cd3d35bcfb85b06160097097fd4282b0fbf15",
       "retained_source": "/tmp/s3drive-mixed-epochs-failed-gate1-model.rs"
+    },
+    {
+      "attempt": 2,
+      "source": "3d5de01",
+      "result": "failed at two old-schema migration cases",
+      "exit_code": 101,
+      "all_inputs_unchanged": 324,
+      "passed_state": 443,
+      "failed_state": 2,
+      "ignored_state": 1,
+      "passed_publication": 23,
+      "log_sha256": "0b977ec9d72871dee7f615b73474159a5ac965b832d6dfbfafbade66c9fa48f1",
+      "reason": "new operation-ID guard queried publication tables before schema33 in deliberate schema29/30 mutation fixtures",
+      "repair": "explicit version29..32 missing-table compatibility; current schemas still fail closed",
+      "retained_source": "/tmp/s3drive-mixed-epochs-failed-gate2-settlement.rs"
     }
   ]
 }

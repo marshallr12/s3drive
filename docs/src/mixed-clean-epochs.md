@@ -94,3 +94,13 @@ The first complete local gate retained all324 inputs and stopped at one Clippy
 style diagnostic: an unnecessary unit expression in the new rebase-format match
 arm. Removed that expression without changing the predicate or suppressing the
 warning. Exact failed source/map/log retained. A fresh complete gate is required.
+
+
+The second full gate retained324 unchanged inputs and passed all23 SDK/publication
+cases, but two old schema29/30 migration fixtures failed: their mutation setup
+predates the publication tables queried by the new identity guard. The guard now
+explicitly recognizes those pre-publication versions; a current-schema missing
+table still fails closed. Both failed migration cases passed afterward, as did
+all12 acknowledgment cases including a new current-schema missing-table test.
+An initially misqualified test-only module path was corrected; its failed source
+and compile log are retained. A fresh complete gate follows these final changes.

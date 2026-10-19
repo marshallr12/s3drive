@@ -105,9 +105,15 @@ scope failure/source retained; corrected interval, no assertion suppression.
 
 Full gate1 runner547274 CLOSED101 at one redundant unit Clippy diagnostic, all324
 unchanged. Removed only expression; exact source60e11a8/map/log/model retained.
-Owned full gate2 runner547943 is live (child/start ticks in
-/tmp/s3drive-mixed-epochs-gate2-running.json); result/log same stem. Keep324 frozen
-at/tmp/s3drive-mixed-epochs-final2-frozen.json. Full local and own hosted/native/
+Full gate2 runner547943 CLOSED101, all324 unchanged:443state/2failed/1ignored,
+23publication passed. Both failures were old schema29/30 mutation fixtures before
+publication tables existed. Added explicit29..32 missing-table compatibility;
+current schemas still refuse missing metadata. Migration2 passed2/0.23s; focused7
+passed12/7.88s incl11 kills and new current-schema table-loss refusal. Focused6
+module-path compile failure retained and fixed; no suppressed assertions.
+Exact failed source3d5de01/map/log/settlement copy retained. Fresh owned full gate3
+uses final3 map324 at/tmp/s3drive-mixed-epochs-final3-frozen.json. Read its live
+running/result/log before continuing; never restart a live owner from a timeout. Full local and own hosted/native/
 source gates before promotion. W5b2/3 pins, retry retirement and reclamation,
 authoritative external clean-base observation, explicit origins, W6 and provider/
 physical session/reboot acceptance remain required; no native chunk writes claimed.
