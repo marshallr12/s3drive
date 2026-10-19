@@ -395,7 +395,7 @@ fn source_schema_upgrade_preserves_history_and_conflicting_shape_rolls_back() {
         let mut f = Fixture::new(false);
         let original = committed(&mut f);
         let id = f.input.id;
-        f.client.connection.execute_batch("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; PRAGMA user_version=27").unwrap();
+        f.client.connection.execute_batch(&crate::test_schema::legacy_sql("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; PRAGMA user_version=27")).unwrap();
         if conflict {
             f.client.connection.execute_batch("CREATE TABLE chunk_source_settlements(keep TEXT); INSERT INTO chunk_source_settlements VALUES('preserve')").unwrap();
         }

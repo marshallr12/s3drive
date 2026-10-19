@@ -2601,3 +2601,26 @@ read-your-writes plans, older pinned views, newer-head replay, process death,
 SQLite-full rollback and bounded dirty/metadata quotas. W2c supplies verified
 network/local composition. W2b1 alone is not editable storage or native-write
 acceptance. W3-W6 and legacy/metadata-empty recovery remain in scope.
+
+W2b2 migration constraint from the actual W2b1 source: schema29 intentionally
+admits one initial view/operation per file. `sparse_views.target` is UNIQUE and
+the validator requires equal file/view/operation counts. Editable immutable
+versions require a real migration and validator change, preserving existing
+root record bytes, hashes, operation results and stable volume/file targets.
+Do not invent another target for the same file to evade the constraint. Test
+migration with populated cyclic file-head/view references and actual foreign-key
+enforcement; preserve strict collision rollback. New child views need explicit
+parent/head comparison and exact request identity, plus independent view,
+operation, extent and dirty-byte quotas. A local mutation result remains distinct
+from a provider root receipt and clean acknowledgment.
+
+
+W2b1 local-green checkpoint,2026-10-19: full gate3 96485 passed all275 frozen
+inputs unchanged.378state1ignored/37core/11reader1nativeignored/62S3 plus all
+format/Clippy/build/71MD link/67book chapter checks passed. First gate exposed
+and repaired the narrow snapshot allowlist omission; second actually terminated
+143, cause unknown. The complete third run used a PTY/four libtest threads with
+unchanged source/deadlines/assertions. Indexed37-member local archive verified.
+See [local base-view evidence](sparse-base-views.md). Publish this exact new source
+for its own platform gates before acceptance. W2b2 remains a real multi-version
+migration and patch-mutation implementation, not an activation of W2b1 metadata.

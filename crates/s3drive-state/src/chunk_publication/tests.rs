@@ -775,7 +775,7 @@ fn schema_twenty_six_migration_preserves_existing_plan_and_collision_rolls_back(
         let plan = f.input.id;
         let path = f.path.clone();
         let before = chunked::inspect_info(&f.client.connection, plan).unwrap();
-        f.client.connection.execute_batch("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role; PRAGMA user_version=26").unwrap();
+        f.client.connection.execute_batch(&crate::test_schema::legacy_sql("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role; PRAGMA user_version=26")).unwrap();
         if collision {
             f.client.connection.execute_batch("CREATE TABLE chunk_publications(keep TEXT); INSERT INTO chunk_publications VALUES('untouched')").unwrap();
         }

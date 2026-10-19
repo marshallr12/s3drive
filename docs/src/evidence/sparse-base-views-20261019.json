@@ -1,0 +1,175 @@
+{
+  "date": "2026-10-19",
+  "status": "W2b1 full portable local gate passed; own combined platform/native acceptance pending",
+  "branch": "codex/sparse-edit-views",
+  "baseline": "e90d791812b63adfc53501c23c24979b37c881c5",
+  "scope": "local immutable initial base/zero metadata, exact begin replay, private owner, schema29 and reciprocal isolation; no patch writes or provider access",
+  "runs": {
+    "first": {
+      "exit_code": 0,
+      "session": 24321,
+      "passed": 1,
+      "seconds": 0.06,
+      "log": "/tmp/s3drive-sparse-views-focused1.log",
+      "sha256": "686d24295e605d00b1d1f99da149f064ad9b9523bc5f9ecebbef95ee5578d4e8"
+    },
+    "focused": {
+      "exit_code": 0,
+      "session": 4248,
+      "passed": 10,
+      "seconds": 1.42,
+      "log": "/tmp/s3drive-sparse-views-focused2.log",
+      "sha256": "70df3f5e89d78170e57807a2c7232503a10abd58d8adcdcd082380f0444c4806"
+    },
+    "migrations": {
+      "exit_code": 0,
+      "session": 23874,
+      "passed": 27,
+      "seconds": 30.11,
+      "log": "/tmp/s3drive-sparse-views-migrations.log",
+      "sha256": "8a09b7ba1a7f70771b571cf4323aef1d216f3ac647ff3d62c1bf95bb9e7ead47"
+    },
+    "focused3": {
+      "exit_code": 0,
+      "session": 74652,
+      "passed": 10,
+      "corruption_cases": 24,
+      "seconds": 1.47,
+      "log": "/tmp/s3drive-sparse-views-focused3.log",
+      "sha256": "6cc7d89459a51b57c6ee90f3ea4046bdfee4e2d895108dd89c7b6885e90928fa"
+    },
+    "gate1": {
+      "exit_code": 101,
+      "session": 48732,
+      "log": "/tmp/s3drive-sparse-views-gate.log",
+      "sha256": "25cf0659ab4cddde91912559da69b999d14bf6805fd253919a46f7b2f83f8dc1",
+      "stage": "authority_snapshots CLI test after Clippy/early workspace tests",
+      "failure": "cli_snapshot_round_trip_preserves_receipts_and_never_authorizes_restore: Snapshot(Validation)",
+      "inputs": 275,
+      "all_frozen_inputs_unchanged": true,
+      "accepted": false
+    },
+    "snapshot_cli": {
+      "exit_code": 0,
+      "session": 16719,
+      "passed": 2,
+      "seconds": 0.2,
+      "log": "/tmp/s3drive-sparse-views-snapshot-cli.log",
+      "sha256": "63480b2907570191c12cde95efc603bbf28db206eb3fa2c029d2591dc1128bb4"
+    },
+    "snapshot_state1": {
+      "exit_code": 101,
+      "session": 76518,
+      "passed": 8,
+      "failed": 1,
+      "log": "/tmp/s3drive-sparse-views-snapshot-state.log",
+      "sha256": "235f69d22848ec6dcc693fe2f84fcfc3df1f685c19d7c0a03004efbba71a9156",
+      "reason": "synthetic orphan setup hit FK enforcement before snapshot validator; disable FK only in these owned malformed input fixtures"
+    },
+    "snapshot_state2": {
+      "exit_code": 0,
+      "session": 14905,
+      "passed": 9,
+      "seconds": 0.99,
+      "log": "/tmp/s3drive-sparse-views-snapshot-state2.log",
+      "sha256": "aa6ad9a5aa531fcff3287bd7406a5fff8d4668d7e49fab48e5f67c9537035488"
+    },
+    "gate2": {
+      "exit_code": 143,
+      "session": 44679,
+      "log": "/tmp/s3drive-sparse-views-gate2.log",
+      "sha256": "8cfbfc9f7d0c0dfcfc58af7573035292552d565b338bebf1d04a5b9509a7d56f",
+      "stage": "state tests, after repaired snapshot CLI and earlier workspace groups",
+      "reason": "terminated; cause not established; no assertion failure reported in log",
+      "all275_frozen_inputs_unchanged": true,
+      "accepted": false
+    },
+    "gate3": {
+      "date": "2026-10-19",
+      "exit_code": 0,
+      "session": 96485,
+      "log": "/tmp/s3drive-sparse-views-gate3.log",
+      "sha256": "225de46e55cecfbbcaeb67a16dbe3bf78127e6a7eddac190aaec39dd65660f73",
+      "frozen_inputs": 275,
+      "all_frozen_inputs_unchanged": true,
+      "tty": true,
+      "top_level_test_threads": 4,
+      "schema": 29,
+      "state_passed": 378,
+      "state_ignored": 1,
+      "core_passed": 37,
+      "test_summaries": [
+        "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.26s",
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.81s",
+        "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 20.62s",
+        "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.22s",
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.55s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 10 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 10.56s",
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s",
+        "test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 60.13s",
+        "test result: ok. 11 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 10.11s",
+        "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s",
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.24s",
+        "test result: ok. 2 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 8.58s",
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.81s",
+        "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.91s",
+        "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 19.34s",
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.42s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.09s",
+        "test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+        "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.39s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 20.45s",
+        "test result: ok. 378 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 172.26s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ],
+      "schema_format_clippy_workspace_tests_build_doc_links_book_build_and_test": "passed",
+      "scope": "W2b1 portable local only; own hosted/native acceptance still required"
+    }
+  },
+  "pre_gate_hardening": "Explicit root length guard before cloning; role SQLite integer type checks; oversized root input control added. Full gate will verify final source. Final quota scenario additionally admits independent files from distinct store/source/route bindings.",
+  "not_claimed": [
+    "own combined platform/native acceptance",
+    "patch writes",
+    "verified byte composition",
+    "root publication or clean view acknowledgment",
+    "native chunk writes",
+    "Wasabi or physical reboot acceptance"
+  ],
+  "diagram": {
+    "xml": "passed",
+    "renderer": "system Rsvg+Cairo",
+    "visual_review": "rendered PNG viewed after correcting heading size; labels fit",
+    "svg_sha256": "0af1ebae25d9b3adf418228a5cd815465fb3ff185550be3c2d6cb335adee36c4",
+    "png_sha256": "bf0c0885caa77ca27eb6510063a1d8d8baa858a5ced74886807f8264265d8a85"
+  },
+  "scope_expansion": "Authority snapshot native validator: recognize four known empty local tables while preserving unknown/nonempty/view/64-table rejection; add four explicit nonempty-table controls.",
+  "next_gate_settings": {
+    "tty": true,
+    "RUST_TEST_THREADS": 4,
+    "scope": "same full script; no tests skipped, assertions or production deadlines changed",
+    "reason": "previous run actually terminated143; cause not established, no surviving children"
+  },
+  "local_archive": {
+    "path": "evidence/sparse-base-views-local-20261019.tar.gz",
+    "sha256": "d2e1e894ee830ff96f8e98cc87b6353255b12e306c58179c45ed8eae59356120",
+    "bytes": 309769,
+    "members": 37,
+    "all_indexed_members_verified": true,
+    "scope": "W2b1 portable local only"
+  }
+}

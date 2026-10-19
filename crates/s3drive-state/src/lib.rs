@@ -18,16 +18,19 @@ pub mod multipart;
 pub mod namespace;
 pub mod namespace_client;
 pub mod remote;
+pub mod sparse_views;
 pub mod worker;
 
 use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 28;
+pub const SCHEMA_VERSION: i32 = 29;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
+#[cfg(test)]
+mod test_schema;
 
 pub struct State {
     // Drop the connection before releasing exclusive directory ownership.
@@ -280,6 +283,11 @@ impl State {
             if version <= 27 {
                 tx.execute_batch(include_str!("../migrations/028.sql"))?;
             }
+            if version <= 28 {
+                tx.execute_batch(include_str!("../migrations/029.sql"))?;
+            }
+            sparse_views::check_schema(&tx)?;
+            sparse_views::validate_all(&tx)?;
             chunk_publication::check_schema(&tx)?;
             chunk_publication::validate_all(&tx)?;
             chunked::check_schema(&tx)?;

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="620" viewBox="0 0 1000 620" role="img" aria-labelledby="title desc">
+<title id="title">W2b1 local SQLite base-view admission</title>
+<desc id="desc">A Rust client uses the existing private SQLite worker. One transaction stores a role marker, immutable target and base identity, an initial base and zero extent view, and an operation key with exact request and result. It returns metadata range plans only. Later composition connects to the verified manifest reader, Rust metadata authority and S3-compatible buckets; W2b1 makes no provider requests and does not activate native writes.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#315f85"/></marker></defs>
+<rect width="1000" height="620" fill="#f3f7fb"/>
+<g font-family="DejaVu Sans, sans-serif" fill="#17344d">
+<text x="35" y="42" font-size="25" font-weight="bold">Local base-view admission</text>
+<text x="35" y="69" font-size="14">W2b1 draft • exact local intent and immutable metadata • full/platform acceptance pending</text>
+<rect x="35" y="103" width="265" height="223" rx="12" fill="#e4eff9" stroke="#527ca0" stroke-width="2"/>
+<text x="52" y="135" font-size="16" font-weight="bold">Rust client / state worker</text>
+<text x="52" y="167" font-size="14">begin(operation, binding, size)</text>
+<text x="52" y="194" font-size="14">88-byte base identity</text>
+<text x="52" y="221" font-size="14">Private directory + one owner</text>
+<text x="52" y="248" font-size="14">Bounded existing worker queue</text>
+<text x="52" y="290" font-size="14" font-weight="bold">Returns metadata range plans</text>
+<rect x="415" y="103" width="550" height="252" rx="12" fill="#e6f3ec" stroke="#41795c" stroke-width="2"/>
+<text x="433" y="135" font-size="19" font-weight="bold">Local SQLite • schema 29 • outside mount</text>
+<rect x="433" y="152" width="245" height="80" rx="6" fill="white"/>
+<rect x="697" y="152" width="250" height="80" rx="6" fill="white"/>
+<rect x="433" y="246" width="245" height="89" rx="6" fill="white"/>
+<rect x="697" y="246" width="250" height="89" rx="6" fill="white"/>
+<text x="446" y="177" font-size="15" font-weight="bold">Role</text><text x="446" y="202" font-size="13">Reciprocal isolation marker</text><text x="446" y="221" font-size="13">No authority / legacy adoption</text>
+<text x="710" y="177" font-size="15" font-weight="bold">Files</text><text x="710" y="202" font-size="13">Stable target + original binding</text><text x="710" y="221" font-size="13">Head points at exact local view</text>
+<text x="446" y="273" font-size="15" font-weight="bold">Immutable views</text><text x="446" y="298" font-size="13">Base / zero extent metadata</text><text x="446" y="319" font-size="13">64 GiB size, no full-file buffer</text>
+<text x="710" y="273" font-size="15" font-weight="bold">Operations</text><text x="710" y="298" font-size="13">Key + exact request + result</text><text x="710" y="319" font-size="13">Same-key replay; no replacement</text>
+<path d="M302 174H410" stroke="#315f85" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="317" y="153" font-size="13">One atomic</text><text x="317" y="169" font-size="13">transaction</text>
+<path d="M411 278H305" stroke="#315f85" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="317" y="304" font-size="13">Bounded plan</text>
+<text x="35" y="390" font-size="15" font-weight="bold">This phase has no patch writes, remote calls or clean acknowledgment.</text>
+<rect x="35" y="422" width="930" height="156" rx="10" fill="#edf0f3" stroke="#7c8993" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="52" y="448" font-size="16" font-weight="bold">Later composition and publication phases</text>
+<rect x="53" y="467" width="276" height="85" rx="7" fill="white" stroke="#8a9ca9"/>
+<rect x="360" y="467" width="277" height="85" rx="7" fill="white" stroke="#8a9ca9"/>
+<rect x="668" y="467" width="277" height="85" rx="7" fill="white" stroke="#8a9ca9"/>
+<text x="67" y="495" font-size="15" font-weight="bold">Verified reader + S3 client</text><text x="67" y="521" font-size="13">Reauthorize exact base; verify bytes</text>
+<text x="374" y="495" font-size="15" font-weight="bold">Rust authority + SQLite</text><text x="374" y="521" font-size="13">Historical metadata; guarded CAS</text>
+<text x="682" y="495" font-size="15" font-weight="bold">S3-compatible buckets</text><text x="682" y="521" font-size="13">Immutable roots, pages and chunks</text>
+<text x="35" y="605" font-size="13">A decoded descriptor or stored view is intent, not authorization to read content, upload or settle an edit.</text>
+</g></svg>

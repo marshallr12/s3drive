@@ -464,6 +464,10 @@ pub(crate) fn existing_identity(db: &Connection, id: &str, policy: &str) -> Resu
     }
     // Compatible with older authority schemas where these tables are absent.
     for table in [
+        "sparse_view_role",
+        "sparse_view_files",
+        "sparse_views",
+        "sparse_view_operations",
         "chunk_client_role",
         "chunk_publications",
         "chunk_source_role",
@@ -726,7 +730,11 @@ impl State {
                         (SELECT count(*) FROM chunk_client_role) +
                         (SELECT count(*) FROM chunk_publications) +
                         (SELECT count(*) FROM chunk_source_role) +
-                        (SELECT count(*) FROM chunk_source_settlements)",
+                        (SELECT count(*) FROM chunk_source_settlements) +
+                        (SELECT count(*) FROM sparse_view_role) +
+                        (SELECT count(*) FROM sparse_view_files) +
+                        (SELECT count(*) FROM sparse_views) +
+                        (SELECT count(*) FROM sparse_view_operations)",
                 [],
                 |r| r.get(0),
             ))?;

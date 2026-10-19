@@ -25,16 +25,45 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
-## Current W2b1 SQLite base-view admission — preparation (2026-10-19)
+## Current W2b1 SQLite base-view admission — local green (2026-10-19)
 
 Worktree /home/marshall/src/worktrees/s3drive-sparse-edit-views,
 branch codex/sparse-edit-views from core checkpointc759250 (runtimec279e0f).
-Core own CI39198380488 is running in its frozen separate checkout; do not edit
-that checkout's267 runtime inputs. Main remains accepted41188dd. Core full local
+Core own CI39198380488 passed all3/raw/own artifacts and is accepted; do not edit
+that checkout's267 runtime inputs. Main is now accepted core docs checkpoint3ddafbc (runtimec279e0f), still schema28. Core full local
 gate33550 EXIT0 is complete; local-only storage may build on its intent codec.
-Read implementation plan before implementation. No storage code changed yet.
+Read implementation plan and docs/src/sparse-base-views.md. Draft implemented:
+new schema29, immutable base/zero model, atomic begin/exact replay, private worker,
+reciprocal role/preflight isolation. Shared test-only legacy fixture helper wraps
+36 old-schema SQL statements in22 files; two Windows schema assertions updated.
+Focused1 24321 CLOSED0 (1test0.06s), focused2 4248 CLOSED0 (10tests/23corruption
+cases1.42s), migration23874 CLOSED0 (27tests30.11s). Final pre-gate hardening adds
+root-length check before clone and integer role-type guards. Focused3 74652 CLOSED0 (10tests/24corruption cases1.47s). Diagram XML/native
+render and visual review passed. Final quota fixture adds two store/source
+bindings. Full gate1 48732 CLOSED101 at offline CLI snapshot round trip:
+Snapshot(Validation), after Clippy and early workspace tests. All275 inputs
+unchanged; /tmp/s3drive-sparse-views-gate1-failure.json and -gate1-frozen.json
+preserve evidence. Newly found snapshot native.rs allowlist must include four
+known EMPTY local tables; keep unknown/nonempty/view/64-table rejection strict.
+Add explicit four-table nonempty rejection controls before a fresh full gate.
+Snapshot CLI16719 CLOSED0 (2tests0.20s). State snapshot76518 CLOSED101:
+8pass/1new malformed-fixture setup FK failure, fixed by disabling FK only in
+owned synthetic orphan inputs; production constraints unchanged. Snapshot state2 14905 CLOSED0 (9tests0.99s);
+all snapshot CLI/state controls now pass. Full gate2 44679 CLOSED143 during state worker cases without assertion failure;
+cause unknown. All275 inputs unchanged; termination record/map/log preserved.
+No surviving Cargo/test children and26GiB available memory were verified. Fresh
+gate3 uses a PTY and RUST_TEST_THREADS=4, same complete script/production
+deadlines/assertions. Final275 inputs remain frozen in
+/tmp/s3drive-sparse-views-frozen.json. Gate3 96485 CLOSED EXIT0 -> /tmp/s3drive-sparse-views-gate3.log. All275
+inputs unchanged:378state1ignored/37core/11reader1nativeignored/62S3 plus
+format/Clippy/workspace build/71MD links/67book chapters passed. Indexed37-member
+local archive309769bytes SHA
+d2e1e894ee830ff96f8e98cc87b6353255b12e306c58179c45ed8eae59356120.
+Current source is local green only. Commit, merge current main ancestry (docs
+only relative to core baseline), verify all275 runtime hashes, then publish own
+combined platform cohort. Do not substitute the older codec run for this source.
 
-Next concrete slice W2b1: private SQLite identity/base-view admission, immutable
+This completed local slice W2b1: private SQLite identity/base-view admission, immutable
 bounded base/zero extent model, exact begin-operation replay, read-only range
 planning, schema/role isolation and migration checks. It must persist and reopen
 a base identity and its initial view without a full-file buffer or authenticated-

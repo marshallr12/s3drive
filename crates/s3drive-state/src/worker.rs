@@ -150,6 +150,13 @@ impl Storage {
     pub fn chunk_publications(&self) -> crate::chunk_publication::Client {
         crate::chunk_publication::Client::new(self.owner.clone())
     }
+    /// Local immutable base/zero view metadata, never an upload or clean receipt.
+    pub fn sparse_views(
+        &self,
+        options: crate::sparse_views::Options,
+    ) -> Result<crate::sparse_views::Client> {
+        crate::sparse_views::Client::new(self.owner.clone(), options)
+    }
     pub fn uploads(&self) -> Uploads {
         Uploads {
             owner: self.owner.clone(),
