@@ -8,19 +8,29 @@ gate with `bash scripts/gate.sh`; native/provider/recovery gates are separate.
 
 Repair checkpoint2026-10-19: isolated worktree
 /home/marshall/src/worktrees/s3drive-scoped-source-operations-repair, branch
-codex/scoped-source-operations-repair, head85262c8 (query repaira89b0f7 plus
-canonical main documentation). Only sparse_views/scoped.rs differs among329
-runtime inputs from faileda3028bf. Original exact failing binary passed alone
-1/88.68s; workload sensitivity is supported, cause still unproven. A bounded typed
-row query replaces redundant disabled-mode catalog/schema/count checks; no
-production deadline or quota increase. All14 scoped state tests passed12.06s,
-including14 killed-owner boundaries and actual SQLITE_FULL. Repair full gate1
-runner745423/child745432 is LIVE, started14:29:08Z; inspect
-/tmp/s3drive-scoped-repair-gate1-{running,result}.json and .log before any local
-Cargo. Frozen329: /tmp/s3drive-scoped-repair-final1-frozen.json; source tar retained.
-No repaired source has its own hosted cohort yet; do not accept originala302 CI
-as evidence for this changed query. Main accepted324 inputs are exact to W5b1;
-proof /tmp/s3drive-canonical-clean-epochs-publication.json. Goal ACTIVE/progress.
+codex/scoped-source-operations-repair, runtime source170979e. Two329-input files
+now differ from originala3028bf: scoped-mode query validation and the SDK fixture
+admission harness. Repair gate1 (query only) CLOSED101 with all329 unchanged:
+22publication passed/2 existing inner upload Timeouts in202.09s; logSHA
+ dcf1f125500f10dfe20bc462b03f4ce504e8563053d14f02fa913750e69089e6.
+Original gate1 was254.48s; exact failing original binary passed alone88.68s.
+Do not claim the query change solved the timeouts. New SDK harness holds at most
+2 independent fixture process families, acquired before any fixture resources;
+a separate600s queue budget leaves existing30s operation/180s child deadlines,
+internal race/concurrency assertions, receipts and cleanup unchanged. Resolved
+Tokio1.53.3 semaphore signatures were inspected locally. Query repair state tests
+passed14/12.06s including14 kills and SQLITE_FULL; full repair not yet accepted.
+
+Owned repair gate2 runner757539/child757549 is LIVE, started14:37:55Z. Inspect
+/tmp/s3drive-scoped-repair-gate2-{running,result}.json and .log before any Cargo;
+NEVER restart a live owner from observation timeout. One local Cargo at a time,
+shared target. Frozen329 map/source:
+/tmp/s3drive-scoped-repair-final2-frozen.json and -source.tar.gz. All prior maps,
+exact source tars and failed logs remain retained. Originala3028bf own CI39267986023
+has book/Linux success and Windows still running at last API check. It cannot
+prove the changed repair; no repaired own hosted cohort has been published yet.
+Main remains accepted W5b1/schema35/all324, integration0ff32cf. Pins/retirement/GC,
+external-base adoption, origins/W6/provider/physical gates remain. Goal ACTIVE.
 
 Retention research2026-10-19 is in docs/src/mixed-retention-plan.md. Actual
 source/preparation/root/physical dependencies are mapped; pins without GC first,

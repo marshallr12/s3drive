@@ -84,3 +84,12 @@ Cargo. Frozen329: /tmp/s3drive-scoped-repair-final1-frozen.json; source tar reta
 No repaired source has its own hosted cohort yet; do not accept originala302 CI
 as evidence for this changed query. Main accepted324 inputs are exact to W5b1;
 proof /tmp/s3drive-canonical-clean-epochs-publication.json. Goal ACTIVE/progress.
+
+Latest repair170979e,2026-10-19: the query-only full gate also stopped101 with
+329 unchanged inputs,22publication passed/2 existing inner upload Timeouts in
+202.09s. The next candidate bounds independent SDK fixture families to2 and adds
+a finite600s queue admission budget before fixture creation. Existing30s production
+operation and180s child deadlines, internal concurrency/race checks and receipts
+remain unchanged. Full gate2 runner757539/child757549 is live against329 frozen
+final2 inputs. No repaired own CI cohort or acceptance yet; originala3028bf CI
+cannot substitute for these two changed source files.

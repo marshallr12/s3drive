@@ -47,6 +47,11 @@ SSH disconnect or a lost RPC reply cannot prove a reader is gone. This preserves
 the requested tmux/remote-session lifetime. A failed asynchronous drop/release
 must preserve the pin; explicit release or proven owner replacement recovers it.
 No deletion is enabled by this first slice, even after release succeeds.
+Pin admission must account for retained bytes and metadata and reserve space for
+the active write window and its acknowledgment. If a new long-lived read would
+consume that reserve, refuse acquisition before exposing the handle; never evict
+an existing pin. The online window size must fit within the configured cache
+budget after pin reservations rather than raising that budget implicitly.
 
 ## Proposed cut points and remaining protocol work
 
