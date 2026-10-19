@@ -2,6 +2,9 @@
 //! owned local memory. No provider uploads or mounted chunk acceptance.
 #[path = "chunk_reader/fixture.rs"]
 mod fixture;
+#[path = "chunk_reader/native.rs"]
+mod native;
+
 #[path = "chunk_reader/pages.rs"]
 mod pages;
 #[path = "chunk_reader/proofs.rs"]
@@ -645,6 +648,8 @@ async fn budgets(f: &Fixture) {
     failed(file.read_range(0, 4).await, ReadFailure::Busy);
     failed(file.prove_chunk(0).await, ReadFailure::Busy);
     failed(r.open_file(&id(11)).await, ReadFailure::Busy);
+    failed(r.node(&id(11)).await, ReadFailure::Busy);
+    failed(r.list(s3drive_authority::ROOT).await, ReadFailure::Busy);
     assert!(file.read_range(u64::MAX, 1).await.unwrap().is_empty());
     assert_eq!(events, f.s3.events().len());
     assert_eq!(meta, f.requests());
@@ -729,6 +734,10 @@ async fn manifest_reader_child() {
         "integrity" => Box::pin(integrity(&f)).await,
         "transport" => Box::pin(transport(&f)).await,
         "budgets" => Box::pin(budgets(&f)).await,
+        "engine" => Box::pin(native::engine(&f, &path)).await,
+        "formats" => Box::pin(native::formats(&f, &path)).await,
+        #[cfg(any(target_os = "linux", windows))]
+        "native" => Box::pin(native::native(&f, &path)).await,
         _ => panic!(),
     };
     f.close().await;

@@ -48,6 +48,13 @@ artifacts; see [separate repeat evidence](evidence/dispatch-repeat-20261018.json
 The historical transport cause remains unresolved. These checks do not certify
 the newer manifest codec or promote runtime main.
 
+**Accepted manifest-read checkpoint:** [read-only native manifest integration](native-manifest-reads.md)
+at `c633d02` passed its own real Linux FUSE and Windows WinFsp controls, all three
+hosted jobs and strict source-bound artifact/raw-log checks. It supports bounded
+large/sparse-file reads and pinned old handles. This feature branch is ahead of
+runtime main. Incremental chunk writes and provider/reboot acceptance remain
+separate work; the W1a reference-proof foundation is still in development.
+
 **Current large-file work:** the [representation study](large-managed-files.md) audits
 the remaining whole-file boundaries and compares one-object generations with
 immutable chunks and authenticated manifests. The recommendation and diagram

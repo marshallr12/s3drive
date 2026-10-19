@@ -1,6 +1,6 @@
 //! Bounded, authenticated manifest snapshots. No persistent cache, native
 //! activation, arbitrary descriptor constructor or write/settlement effects.
-use s3drive_authority::{Kind, Node, Reply, Request, Store, WireClient};
+use s3drive_authority::{Kind, Listing, Node, Reply, Request, Store, WireClient};
 use s3drive_core::{
     manifest::{
         self, Entry, VerifiedPage,
@@ -244,6 +244,92 @@ impl Reader {
         }
         Ok(())
     }
+    /// Validated live namespace metadata, including legacy payloads. This does
+    /// not authorize S3 bytes or consume a retained file-snapshot permit.
+    pub async fn node(&self, node: &str) -> Result<Node> {
+        if !identifier(node) {
+            return Err(ReadFailure::Bounds.into());
+        }
+        let _active = self
+            .0
+            .active
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| ReadFailure::Busy)?;
+        bounded(self.0.options, Box::pin(self.load_node(node))).await
+    }
+    async fn load_node(&self, id: &str) -> Result<Node> {
+        let Reply::Node(node) = reply(
+            self.0
+                .authority
+                .request(&Request::Node {
+                    volume: self.0.volume.clone(),
+                    node: id.into(),
+                })
+                .await?,
+        )?
+        else {
+            return Err(ReadFailure::Protocol.into());
+        };
+        if node.id != id {
+            return Err(ReadFailure::Binding.into());
+        }
+        self.validate(&node)?;
+        if node.deleted {
+            return Err(ReadFailure::NotFound.into());
+        }
+        Ok(node)
+    }
+    /// One bounded authenticated namespace listing. Every child is validated
+    /// before any listing is returned; no S3 requests or partial results.
+    pub async fn list(&self, parent: &str) -> Result<Listing> {
+        if !identifier(parent) {
+            return Err(ReadFailure::Bounds.into());
+        }
+        let _active = self
+            .0
+            .active
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| ReadFailure::Busy)?;
+        bounded(self.0.options, Box::pin(self.list_inner(parent))).await
+    }
+    async fn list_inner(&self, parent: &str) -> Result<Listing> {
+        let Reply::List(list) = reply(
+            self.0
+                .authority
+                .request(&Request::List {
+                    volume: self.0.volume.clone(),
+                    parent: parent.into(),
+                })
+                .await?,
+        )?
+        else {
+            return Err(ReadFailure::Protocol.into());
+        };
+        if list.sequence > i64::MAX as u64 || list.children.len() > 1000 {
+            return Err(ReadFailure::Protocol.into());
+        }
+        let mut names = HashSet::new();
+        let mut ids = HashSet::new();
+        for child in &list.children {
+            self.validate(child)?;
+            let name = if self.0.policy == names::PORTABLE {
+                names::collision_key(&child.name).ok_or(ReadFailure::Protocol)?
+            } else {
+                child.name.clone()
+            };
+            if child.deleted
+                || child.parent.as_deref() != Some(parent)
+                || child.id == parent
+                || !names.insert(name)
+                || !ids.insert(&child.id)
+            {
+                return Err(ReadFailure::Protocol.into());
+            }
+        }
+        Ok(list)
+    }
     /// Obtain live authority metadata and independently HEAD/GET/verify the
     /// complete bounded root. No child page or file data is fetched at open.
     pub async fn open_file(&self, node: &str) -> Result<File> {
@@ -265,25 +351,7 @@ impl Reader {
         bounded(self.0.options, Box::pin(self.open_inner(node, snapshot))).await
     }
     async fn open_inner(&self, id: &str, snapshot: OwnedSemaphorePermit) -> Result<File> {
-        let Reply::Node(node) = reply(
-            self.0
-                .authority
-                .request(&Request::Node {
-                    volume: self.0.volume.clone(),
-                    node: id.into(),
-                })
-                .await?,
-        )?
-        else {
-            return Err(ReadFailure::Protocol.into());
-        };
-        if node.id != id {
-            return Err(ReadFailure::Binding.into());
-        }
-        self.validate(&node)?;
-        if node.deleted {
-            return Err(ReadFailure::NotFound.into());
-        }
+        let node = self.load_node(id).await?;
         if node.kind == Kind::Directory {
             return Err(ReadFailure::IsDirectory.into());
         }
