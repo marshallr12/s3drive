@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "repair full portable local gate passed; native acceptance pending",
+  "status": "repair full portable gate and own Linux native job passed; Windows acceptance pending",
   "branch": "codex/manifest-snapshot-inodes",
   "base": "755da0f",
   "failed_source": "d98ea2ff2ec9cc72b55458190d657bb53642d227",
@@ -128,5 +128,44 @@
     "visibility_checks_read_only": true,
     "main": "1a93b5f7248892fec96dc8da4438ee7967692e77",
     "native_acceptance": "pending own completed and reviewed cohort"
+  },
+  "linux_review": {
+    "source": "c633d02d47ccf2da20cfadd50e0b8e11f6e06811",
+    "run_id": 39178517491,
+    "run_attempt": 1,
+    "job_id": 117826123544,
+    "reviewed": true,
+    "log": "/tmp/s3drive-snapshot-inodes-c633-linux.log",
+    "sha256": "3dcc6ef285d86f4a38be42c36772698aa58ec46926cd59090184b2f6dcbf2cb3",
+    "native_manifest_seconds": 1.22,
+    "existing_native_tests": 9,
+    "existing_native_seconds": 63.27,
+    "state_tests": 365,
+    "state_ignored": 1,
+    "state_seconds": 106.66,
+    "coordinator_no_systemd_http_and_tls_seconds": 23.97,
+    "frozen_inputs": 257,
+    "scope": "Linux FUSE manifest read/old handle/remount acceptance and existing regression only; Windows and combined artifact acceptance pending",
+    "notices": [
+      "expected injected PermissionDenied and stopped-authority ConnectionRefused preserve local data",
+      "finally stop after startup removal reports missing startup.json",
+      "Node20 actions forced to24"
+    ]
+  },
+  "book_review": {
+    "source": "c633d02d47ccf2da20cfadd50e0b8e11f6e06811",
+    "run_id": 39178517491,
+    "run_attempt": 1,
+    "job_id": 117826123692,
+    "reviewed": true,
+    "log": "/tmp/s3drive-snapshot-inodes-c633-book.log",
+    "sha256": "299180f67f3a56007bfde2e301ee8e345425b13b314939f3da24fdbb311517c2",
+    "result": "schema28/twofixtures,69MD,65chapters,book build/test passed",
+    "notices": [
+      "pinned toolchain override during mdbook installation",
+      "Git default-branch hints",
+      "checkout Node20 forced to24"
+    ],
+    "scope": "book only; native and combined review remain pending"
   }
 }

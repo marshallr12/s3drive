@@ -4,7 +4,8 @@ Implementation and source-review date: **2026-10-18**. The isolated draft on
 `codex/native-manifest-reads` adds manifest reads to version-3 read-only managed
 mounts. The original portable gate passed, but its Linux native control
 failed. A repair is in progress on `codex/manifest-snapshot-inodes`; actual FUSE
-and WinFsp acceptance of the repair is pending. No successful native chunk mount is claimed.
+acceptance passed on the repair's own Linux runner; WinFsp acceptance is pending.
+No cross-platform acceptance is claimed.
 The prerequisite reader source `88d02f7` has passed its own Linux/Windows/book
 cohort and strict reference-artifact checks at checkpoint `7c2b454`.
 
@@ -141,3 +142,13 @@ Its [own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actio
 is running. Public visibility and the unchanged main tip were verified read-only;
 all 257 working and committed source hashes match. This is a pending native gate,
 not mounted-manifest acceptance.
+
+The repaired source's Linux job `117826123544` completed successfully. Its
+explicit real FUSE manifest-read/remount control passed in 1.22 seconds, including
+same-name replacement and the retained old-handle size/bytes assertions. Nine
+existing native controls passed in 63.27 seconds. No-systemd desktop/SSH and
+coordinator HTTP/private-CA startup/recovery controls also passed. Raw logs are
+hash-bound in the [repair evidence](evidence/manifest-snapshot-inodes-20261018.json).
+Windows and combined artifact review remain pending. These timings identify
+executions and support no performance claim. Provider mutations and a physical
+reboot were not part of these loopback runner tests.
