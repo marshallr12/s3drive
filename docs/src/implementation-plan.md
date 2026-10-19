@@ -3471,3 +3471,13 @@ contains exactly those accepted runtime inputs. Earlier pending statuses are
 historical. Mounted chunk writes and retention remain outstanding. The separate
 atomic empty-manifest creation candidate0c7f8b7/schema39/all349 is undergoing its
 own complete local and hosted gates; it has not been promoted.
+
+
+### Empty-manifest creation repair cohort (2026-10-19)
+
+[Candidate contract and architecture image](atomic-empty-manifest-create.md).
+First full cohort failed an inherited migration test expecting schema38 instead
+of39;504 state cases passed and one failed. Repaired source29eb237 changes only
+that current-version expectation; the focused migration case passed. Its complete
+local gate and own CI39304491982 are running. No promotion or provider/native
+creation acceptance is claimed.

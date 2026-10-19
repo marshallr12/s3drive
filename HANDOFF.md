@@ -105,12 +105,26 @@ runtime deltas promoted; canonical main matches accepted source12a2f2a/all342.
 
 New isolated atomic empty-manifest creation candidate: worktree
 /home/marshall/src/worktrees/s3drive-empty-manifest-create, branchcodex/empty-manifest-create,
-source0c7f8b72bcea830760f437036d201eb9c077ea1b/schema39/all349 frozen.
-Core2/state9/HTTP1 focused cases and workspace all-target Clippy passed.
-Full local gate1253500/child1253506 and own CI39302692507 attempt1 are running.
-Exact status/log/frozen inputs: /tmp/s3drive-empty-create-{gate1,candidate1}-*.
+Repaired source29eb23782d7b3e0484c4ae8200fb419ecfa50279/schema39/all349 frozen.
+Candidate1 source0c7f8b7 failed full gate (504state passed/1failed/1ignored,
+269.21s), runner1253500 CLOSED101 at18:39:47Z unchanged. Own CI39302692507
+Linux failed the same inherited schema37 migration current-version assertion
+(39 actual versus38 expected); book passed; Windows still running at last check.
+Repair changes only the inherited test current-version expectation to
+SCHEMA_VERSION; literal37, byte preservation and laundering refusal remain.
+Focused repaired case passed1/0.11s. Full failed source/map/logs retained.
+New full local gate2 runner1305346/start144183301, child1305347/start144183309
+began18:40:29Z. Own CI39304491982 attempt1 source29eb237: book118237889657,
+Linux118237890146, Windows118237890166 running; observer1306049 GET-only.
+Exact local status/log/map: /tmp/s3drive-empty-create-{gate2,candidate2}-*.
+Hosted status/checkers: /tmp/s3drive-empty-create2-hosted-* and
+/tmp/s3drive-check-empty-create2-hosted.py. Candidate2 checkers/archivers prepared,
+NOT executed; require terminal raw review before marker. Candidate1 acceptance
+scripts never executed; do not use them for candidate2 or reuse parent artifacts.
 Check live PID/startticks/results before touching runtime; one shared local Cargo.
+[Candidate contract and diagram](docs/src/atomic-empty-manifest-create.md).
 No S3 upload or native creation enabled. Authenticated publisher remains next.
+
 
 
 Next native prerequisite investigation: source/open namespace journals use compact

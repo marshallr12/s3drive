@@ -87,3 +87,5 @@
 - [Development and verification](development.md)
 - [Decisions and open questions](decisions.md)
 - [Research sources](sources.md)
+
+- [Atomic empty-manifest creation candidate](atomic-empty-manifest-create.md)
