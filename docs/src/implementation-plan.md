@@ -2976,3 +2976,17 @@ Own [Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/r
 is running. Main stays accepted W3b/runtimee140508; own source/artifact/native
 acceptance remains required before W4a promotion. Root CAS, exact-view settlement
 and native chunk writes are still later work, not implied by physical completion.
+
+
+### W4b edited manifest root publication — design checkpoint (2026-10-19)
+
+User reaffirmed immutable chunks plus manifests (D041). The next phase must
+prove exact-view semantics, reserve the new manifest with the original base
+payload guard, and durably replay exact saved authority requests after unknown
+replies. Read the [publication design and acceptance contract](mixed-root-publication.md)
+before implementation. The metadata-only recovery owner must not depend on a
+normal state open that validates potentially damaged source BLOBs. Schema33,
+semantic-check ledger and publisher/recovery controller are proposals, not
+implemented behavior. W4a304-input runtime remains frozen in its separate
+worktree pending its own complete hosted cohort. No native activation or local
+clean transition is authorized by a physical upload receipt.

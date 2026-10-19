@@ -25,6 +25,24 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## W4b publication design checkpoint (2026-10-19)
+
+User reaffirmed chunks/manifests D041. New docs/src/mixed-root-publication.md
+and rendered/visually-reviewed SVG specify exact-view semantic coverage,
+content-guarded ReserveManifest/Publish and restricted metadata-only replay after
+unknown replies. All W4b runtime/schema33 details remain PROPOSED. Design branch
+codex/mixed-publication80c56fd, worktree /home/marshall/src/worktrees/s3drive-mixed-publication.
+First main link check caught absent feature-only mixed-uploads.md; retained
+failed log and changed that reference to the feature-branch page. Second link
+check (77 Markdown files), build and73 chapter tests passed; logs at
+/tmp/s3drive-main-mixed-root-design-{links2,book2,book-test2}.log.
+This main update promotes docs
+only; all300 accepted W3b runtime/contract inputs remain unchanged. Own W4a run
+39235506209: Linux/book SUCCESS, Windows still in cargo test at10:27Z. Keep
+W4a's304 inputs frozen, finish own raw/source/artifact/native acceptance before
+promoting that runtime. Next implement W4b against accepted source, then W5/W6.
+No new provider writes, chunk-native activation or physical reboot claim.
+
 ## Accepted W3b durable mixed-tree preparation (2026-10-19)
 
 Runtimee140508b19aef4082f9565990402852d4f27cdb4, schema32/all300 frozen inputs.
