@@ -226,6 +226,45 @@ fn inspect(db: &Connection) -> Result<Vec<Record>> {
     }
     Ok(out)
 }
+/// Rebuild only after validating the old rows. Do not execute user-attached
+/// DELETE/INSERT triggers while moving cyclic references through an empty state.
+/// The caller owns the opening transaction; every failure rolls back the schema,
+/// copied bytes and user_version together. Foreign-key enforcement stays on.
+pub(crate) fn migrate_thirty(db: &Connection) -> Result<()> {
+    let foreign_keys: bool = db.pragma_query_value(None, "foreign_keys", |r| r.get(0))?;
+    if !foreign_keys {
+        return Err(Failure::Corrupt.into());
+    }
+    check_schema(db)?;
+    let before = inspect(db)?;
+    let triggers: bool = db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='trigger' AND tbl_name IN ('sparse_view_role','sparse_view_files','sparse_views','sparse_view_operations'))",
+        [], |r| r.get(0),
+    )?;
+    if triggers {
+        return Err(Failure::Corrupt.into());
+    }
+    db.execute_batch(include_str!("../migrations/030.sql"))?;
+    for table in [
+        "sparse_view_files",
+        "sparse_views",
+        "sparse_view_operations",
+    ] {
+        let bad: bool = db.query_row(
+            &format!("SELECT EXISTS(SELECT 1 FROM pragma_foreign_key_check('{table}'))"),
+            [],
+            |r| r.get(0),
+        )?;
+        if bad {
+            return Err(Failure::Corrupt.into());
+        }
+    }
+    if inspect(db)? != before {
+        return Err(Failure::Corrupt.into());
+    }
+    Ok(())
+}
+
 pub(crate) fn validate_all(db: &Connection) -> Result<()> {
     inspect(db).map(|_| ())
 }

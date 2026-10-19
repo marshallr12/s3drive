@@ -25,6 +25,51 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Current W2b2a immutable-version migration prerequisite (2026-10-19)
+
+Worktree /home/marshall/src/worktrees/s3drive-sparse-mutations,
+branch codex/sparse-mutations from local-green base-view checkpoint ebfc56c.
+Parent runtime1681ee6 passed the full local gate and own CI39203016390, all3
+raw/own artifact/typed21+14/project/all35-field checks. Main is accepted B1
+checkpoint5c9c305/schema29. This schema30 source requires its own combined gates. Do not
+edit the parent checkout's275 inputs. PUBLIC remains intentional.
+
+The cyclic-FK experiment against the resolved SQLite showed that replacing only
+sparse_views fails commit787 even with a clean final FK check. Copy/empty/rebuild/
+restore of all three related tables passed with FK enforcement on. This merits
+its own independently green prerequisite before adding bytes/mutations. Schema30
+removes target uniqueness while preserving old BLOBs, IDs, hashes, heads and
+operation results. State opening explicitly enables FK before migration; local
+migration checks old records, rejects attached triggers, defers checks within the
+transaction and compares restored records. No FK-off or writable_schema path.
+Both Windows assertions move together. No new public mutation API yet.
+
+Focused run7771 CLOSED0:12tests1.58s before the final explicit FK initialization
+hardening. Final focused53101 CLOSED0:12tests1.55s -> /tmp/s3drive-sparse-migration-focused-final.log.
+Actual29 DDL, populated cyclic references, byte-exact reopen/replay, retained SQL
+constraints, mid-copy failure rollback and trigger refusal are covered. Read
+[the migration discussion](docs/src/sparse-view-migration.md). Full gate1 82297 CLOSED101:379state passed/1 failed/1ignored173.43s. The old
+managed disk-full test incorrectly expected max_page_count alone to force failure;
+ack succeeded with available space. Preserved log,276 map and exact old test.
+Only owned managed/tests.rs fixture changed: AFTER receipt UPDATE pressure trigger
+forces real SQLITE_FULL independently of freelist/layout. All old rollback/dirty/
+receipt checks retained, plus no pressure rows; focused86638 CLOSED0:1test0.13s.
+Full gate2 6893 CLOSED EXIT0 (PTY/four test threads),all276 frozen inputs
+unchanged.380state1ignored/37core/11reader1nativeignored/62S3 plus all format/
+Clippy/build/72MD links/68book chapters passed. Frozen map
+/tmp/s3drive-sparse-migration-frozen.json; result
+/tmp/s3drive-sparse-migration-gate2-result.json. Indexed21-member local archive
+101699bytes SHA5410de90111b2d9fd16d830ce652a4a96b384758c5447b3aa3675e0cb990a1ef
+retains failed gate/exact old fixture, experiment, repaired source/maps and pass.
+Publication and own combined platform gates remain required. No runtime changes
+since the successful freeze. Local acceptance is not native/provider acceptance.
+
+W2b2b remains the declared next implementation: multiple immutable versions,
+bounded patch bytes, exact operation replay and expected-head checks, normalized
+write/resize maps without tail resurrection, independent quotas, old-view reads,
+worker/process-kill and SQLite-full controls. W2c/W3-W6 and legacy/metadata-empty
+recovery remain required. No remote/native activation or provider writes.
+
 ## Current W2b1 SQLite base-view admission — local green (2026-10-19)
 
 Worktree /home/marshall/src/worktrees/s3drive-sparse-edit-views,

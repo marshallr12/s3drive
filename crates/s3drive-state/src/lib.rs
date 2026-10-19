@@ -25,7 +25,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 29;
+pub const SCHEMA_VERSION: i32 = 30;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
@@ -158,6 +158,8 @@ impl State {
             )?
         };
         connection.busy_timeout(Duration::from_secs(5))?;
+        // Migrations must not depend on SQLite's compile-time FK default.
+        connection.pragma_update(None, "foreign_keys", true)?;
         {
             let tx = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
             let app: i32 = tx.pragma_query_value(None, "application_id", |r| r.get(0))?;
@@ -285,6 +287,9 @@ impl State {
             }
             if version <= 28 {
                 tx.execute_batch(include_str!("../migrations/029.sql"))?;
+            }
+            if version <= 29 {
+                sparse_views::migrate_thirty(&tx)?;
             }
             sparse_views::check_schema(&tx)?;
             sparse_views::validate_all(&tx)?;

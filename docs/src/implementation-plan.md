@@ -2640,3 +2640,45 @@ unchanged source/deadlines/assertions. Indexed37-member local archive verified.
 See [local base-view evidence](sparse-base-views.md). Publish this exact new source
 for its own platform gates before acceptance. W2b2 remains a real multi-version
 migration and patch-mutation implementation, not an activation of W2b1 metadata.
+
+
+### W2b2 patch mutations — declared next phase (2026-10-19)
+
+Implement in an isolated worktree from locally green W2b1, keeping its hosted
+source frozen. Verify populated cyclic-FK migration before choosing SQL. Preserve
+old root records, request/result bytes, hashes and IDs. Add bounded immutable
+patch blocks and multiple versions; each write/resize names the exact parent/head
+and operation key. Repeating a known operation returns its own old result after
+a newer head; changed arguments conflict. Mutation, head update and receipt are
+one transaction. No remote rebasing, clean acknowledgment or provider access.
+
+Compose new extent maps from the parent: replace writes at their offsets, append
+explicit zeros across holes, truncate removed tails, and keep growth zeroed after
+shrinking. Read pieces return verified local patch bytes and bounded base/zero
+placeholders; W2c must authorize and fetch the exact remote base. Enforce separate
+file/version/extent/metadata/dirty-byte limits, bounded individual mutation/range
+sizes and blocks. Preserve older views and unknown/conflicting dirty work. Require
+SQL-full/trigger rollback, corruption, concurrent/late replay, restart/process
+kill and sparse64GiB controls before the full gate. New role tables join all
+snapshot/authority/legacy isolation checks and native schema assertions.
+
+
+W2b2 refinement,2026-10-19: the actual SQLite experiment exposed commit787 for
+single-table replacement with deferred FKs. First deliver W2b2a, a schema30
+copy/empty/rebuild/restore prerequisite with FK enforcement on and byte-exact
+populated29 migration/replay/rollback controls. Keep initial-only validation and
+public APIs until W2b2b supplies complete multi-version/patch semantics. This
+small independently green checkpoint does not reduce the declared W2b2 contract.
+See [migration discussion](sparse-view-migration.md). No new bytes or native writes
+are activated by relaxing the SQL target constraint alone.
+
+
+W2b2a local result,2026-10-19: full gate2 6893 passed all276 frozen inputs,
+380state1ignored/37core/11reader1nativeignored/62S3 plus all format/Clippy/build/
+72MD links/68book checks. Gate1 failed only an older page-layout-dependent
+managed disk-full fixture (ack succeeded with available space). A narrow test-only
+receipt-update pressure trigger now forces real SQLITE_FULL and verifies rollback,
+dirty retention and successful retry. The failed source/log and repaired full
+pass are retained in the indexed21-member local archive. No mutation API or native
+chunk-write activation. Publish this exact schema30 source for its own combined
+gates; W2b2b remains next. See [migration evidence](sparse-view-migration.md).

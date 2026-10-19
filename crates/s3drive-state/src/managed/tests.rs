@@ -210,6 +210,20 @@ fn full_disk_during_logical_ack_preserves_verified_blob_and_pending_intent() {
     let mut s = State::open_managed(&dir.path().join("client")).unwrap();
     let r = verified(&mut s, 1000, true);
     let receipt = metadata(&r);
+    // Schema rebuilds can leave reusable pages. Force a real SQLite allocation
+    // failure after the receipt UPDATE, independent of the freelist/layout.
+    s.connection
+        .execute_batch("CREATE TABLE owned_ack_pressure(data BLOB)")
+        .unwrap();
+    let page_count: i64 = s
+        .connection
+        .pragma_query_value(None, "page_count", |r| r.get(0))
+        .unwrap();
+    let page_size: i64 = s
+        .connection
+        .pragma_query_value(None, "page_size", |r| r.get(0))
+        .unwrap();
+    s.connection.execute_batch(&format!("CREATE TRIGGER owned_ack_full AFTER UPDATE ON managed_publications WHEN NEW.receipt IS NOT NULL BEGIN INSERT INTO owned_ack_pressure VALUES(zeroblob({})); END", (page_count + 64) * page_size)).unwrap();
     s.connection
         .execute_batch("PRAGMA wal_checkpoint(TRUNCATE)")
         .unwrap();
@@ -228,6 +242,11 @@ fn full_disk_during_logical_ack_preserves_verified_blob_and_pending_intent() {
         crate::cache::is_disk_full(error.as_ref()),
         "must reach SQLITE_FULL, got {error}"
     );
+    let pressure_rows: u32 = s
+        .connection
+        .query_row("SELECT count(*) FROM owned_ack_pressure", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(pressure_rows, 0, "failed statement retained pressure bytes");
     let pending = Journal::new(&mut s, journal::Options::default())
         .unwrap()
         .get(&id(1000))
@@ -250,6 +269,9 @@ fn full_disk_during_logical_ack_preserves_verified_blob_and_pending_intent() {
     );
     s.connection
         .pragma_update(None, "max_page_count", pages + 100)
+        .unwrap();
+    s.connection
+        .execute_batch("DROP TRIGGER owned_ack_full")
         .unwrap();
     Journal::new(&mut s, journal::Options::default())
         .unwrap()

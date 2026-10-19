@@ -39,6 +39,7 @@
 - [Verified manifest range reader](manifest-range-reader.md)
 - [Reopening a pinned manifest base](manifest-base-reopen.md)
 - [Local immutable base views](sparse-base-views.md)
+- [Preserving base views across migration](sparse-view-migration.md)
 - [Native manifest reads](native-manifest-reads.md)
 - [Implemented Linux read-only mount](linux-mount.md)
 - [Windows read-only drive](windows-mount.md)
