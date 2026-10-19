@@ -3491,3 +3491,13 @@ namespace journal neither admits the new operation nor composes with sparse stat
 The next implementation must durably connect upload proof, exact metadata request
 recovery and the ordinary native edit path. Native acceptance must exercise files
 beyond8MiB and lifecycle recovery; a library-only create is insufficient.
+
+
+### Atomic empty-manifest complete local gate (2026-10-19)
+
+Repaired source29eb237/schema39/all349 passed the complete local gate unchanged
+at18:51:46Z:505state+1ignored,24publication,26reader+1nativeignored,39core,62S3,
+formatting/workspaceClippy/build/book. [381-member indexed local archive and
+13-member failed-cohort archive](atomic-empty-manifest-create.md) retained. Own
+CI39304491982 book/Linux succeeded; own Windows and complete raw/source/artifact
+acceptance remain pending. Canonical runtime remains accepted schema38/all342.

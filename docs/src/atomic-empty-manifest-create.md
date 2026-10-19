@@ -99,3 +99,36 @@ and its own hosted cohort before promotion. Main remains accepted source12a2f2a.
 
 Focused repaired migration check passed1 case/0.11s. All349 candidate2 inputs
 are frozen; only the inherited test expectation differs from candidate1.
+
+
+## Complete repaired local gate (2026-10-19)
+
+Source29eb23782d7b3e0484c4ae8200fb419ecfa50279/schema39 passed the complete
+local gate at18:51:46Z, all349 inputs unchanged. Publication24/172.92s,
+state505 (one diagnostic ignored)/259.60s, reader26 (one native-only ignored)/69.42s,
+39core/62S3, formatting, workspace all-target Clippy, build and book checks passed.
+The log records92 Markdown files and88 chapter-test entries. Ordinary four test
+threads and unchanged operation bounds were used.
+
+The [indexed local archive](evidence/empty-create-local-20261019.tar.gz) contains
+381 verified members/14504484bytes, SHA-256
+`cc8f21b1d0ea061e172280ebf0be6d024f7ef878f1e30a972480d6dd79625f7a`.
+It retains exact349 source, the gate/map/runner, focused and failed source contexts,
+and independently indexed parent342 local/hosted and first failed-cohort archives.
+Full gate log SHA-256
+`bb77bad8acb2d23109d9018b918332c5614450b80a24c63bf475b2f585dff5cb`.
+Local archiver20230 DONE; never rerun.
+
+[First failed cohort](evidence/empty-create-failed1-20261019.tar.gz):13 verified
+members/998889bytes, SHA-256
+`4f3c2953358ffa2050b885351ae8486b3e8b87c4b0c5721d5566789d1f052105`.
+Own Windows118231698174 also failed the inherited assertion (39 actual/38
+expected):499state passed/1failed/1ignored,378.44s. Both OSes failed at the same
+assertion; no native acceptance from that cohort is claimed. One-use failed
+archiver45994 DONE; never rerun.
+
+Repaired own CI39304491982 attempt1: book118237889657 and Linux118237890146
+succeeded. Windows118237890166 and the complete own raw/source/artifact acceptance
+remain pending. Parent342 is accepted. This does not upload an S3 root, enable
+native chunk creation/writes or prove physical desktop/reboot behavior. Earlier
+pending local statuses above are historical.

@@ -108,34 +108,39 @@ New isolated atomic empty-manifest creation candidate: worktree
 Repaired source29eb23782d7b3e0484c4ae8200fb419ecfa50279/schema39/all349 frozen.
 Candidate1 source0c7f8b7 failed full gate (504state passed/1failed/1ignored,
 269.21s), runner1253500 CLOSED101 at18:39:47Z unchanged. Own CI39302692507
-Linux failed the same inherited schema37 migration current-version assertion
-(39 actual versus38 expected); book passed; Windows still running at last check.
+Linux/Windows failed the same inherited schema37 migration assertion (39 actual/
+38 expected); book passed. Windows499state passed/1failed/1ignored,378.44s.
+Observer1263444 CLOSED0/all_success=false18:50:38Z. Indexed13-member failed
+archive SHA4f3c2953358ffa2050b885351ae8486b3e8b87c4b0c5721d5566789d1f052105;
+one-use failed archiver45994 DONE, never rerun. Old full raw logs retained.
 Repair changes only the inherited test current-version expectation to
 SCHEMA_VERSION; literal37, byte preservation and laundering refusal remain.
-Focused repaired case passed1/0.11s. Full failed source/map/logs retained.
-New full local gate2 runner1305346/start144183301, child1305347/start144183309
-began18:40:29Z. Own CI39304491982 attempt1 source29eb237: book118237889657,
-Linux118237890146, Windows118237890166 running; observer1306049 GET-only.
+Focused repaired case passed1/0.11s.
+
+Full local gate2 runner1305346/child1305347 CLOSED0 at18:51:46Z, all349 unchanged.
+Publication24/172.92s,state505+1ignored/259.60s,reader26+1nativeignored/69.42s,
+39core/62S3/fmt/workspaceClippy/build/92Markdown/88chapter entries passed.
+Indexed381-member local archive SHA-256:
+cc8f21b1d0ea061e172280ebf0be6d024f7ef878f1e30a972480d6dd79625f7a.
+Contains exact349, all focused/failed contexts and independently indexed parent342
+local/hosted plus failed-first-cohort archives. One-use local archiver20230 DONE;
+never rerun. No owned local Cargo remains from gate2; check before next build.
 Exact local status/log/map: /tmp/s3drive-empty-create-{gate2,candidate2}-*.
-Hosted status/checkers: /tmp/s3drive-empty-create2-hosted-* and
-/tmp/s3drive-check-empty-create2-hosted.py. Candidate2 checkers/archivers prepared,
-NOT executed; require terminal raw review before marker. Candidate1 acceptance
+
+Own CI39304491982 attempt1 source29eb237: book118237889657/Linux118237890146
+succeeded; Windows118237890166 running; observer1306049/start144186109 GET-only.
+Complete book/Linux raw logs retained under /tmp/s3drive-empty-create2-hosted-*.
+Hosted source checker /tmp/s3drive-check-empty-create2-hosted.py, raw reviewer,
+comparator, PS project oracle and hosted archiver prepared, NOT executed. Require
+terminal own Windows raw review before marker/checker. Candidate1 acceptance
 scripts never executed; do not use them for candidate2 or reuse parent artifacts.
-Check live PID/startticks/results before touching runtime; one shared local Cargo.
+Only candidate2 maps349/source29eb237 apply for repaired acceptance.
 [Candidate contract and diagram](docs/src/atomic-empty-manifest-create.md).
 No S3 upload or native creation enabled. Authenticated publisher remains next.
 [Source-reviewed client integration proposal](docs/src/empty-manifest-publisher.md)
 binds upload, exact metadata recovery and native acceptance into one path. Do not
 widen the legacy namespace journal without typed source/open composition.
-Candidate2 book succeeded; Linux/Windows and local gate2 remain live. Last actual
-process check: runner1305346/child1305347 and observer1306049 live; candidate1
-observer1263444 still follows its old Windows job. The failed1 archive builder
-/tmp/s3drive-empty-create-failed1-archive.py is prepared, NOT executed. Require old
-cohort terminal state and fetch complete old Windows raw log first; existing old
-book/Linux raw logs are already retained. New candidate2 hosted raw reviewer,
-source checker, comparator, PS project oracle and hosted/local archivers are
-prepared; PS parsed. None executed. Only candidate2 maps349/source29eb237 apply
-for new acceptance; candidate1 artifacts may never substitute for it.
+
 
 
 

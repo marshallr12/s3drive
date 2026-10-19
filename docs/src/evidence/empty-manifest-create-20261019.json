@@ -1,0 +1,107 @@
+{
+  "research_date": "2026-10-19",
+  "phase": "atomic-empty-manifest-create",
+  "status": "complete-local-gate-passed-own-Windows-and-hosted-acceptance-pending",
+  "source": "29eb23782d7b3e0484c4ae8200fb419ecfa50279",
+  "schema": 39,
+  "runtime_inputs": 349,
+  "parent_accepted_source": "12a2f2a7d836aab518c7b0d60675234d6470ef97",
+  "local_gate": {
+    "runner_pid": 1305346,
+    "runner_start_ticks": "144183301",
+    "child_pid": 1305347,
+    "child_start_ticks": "144183309",
+    "started": "2026-10-19T18:40:29.563464+00:00",
+    "command": [
+      "bash",
+      "scripts/gate.sh"
+    ],
+    "cwd": "/home/marshall/src/worktrees/s3drive-empty-manifest-create",
+    "runtime_inputs": 349,
+    "frozen_map": "/tmp/s3drive-empty-create-candidate2-frozen.json",
+    "tty": false,
+    "rust_test_threads": 4,
+    "log": "/tmp/s3drive-empty-create-gate2.log",
+    "exit_code": 0,
+    "finished": "2026-10-19T18:51:46.396244+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": [],
+    "sha256": "bb77bad8acb2d23109d9018b918332c5614450b80a24c63bf475b2f585dff5cb"
+  },
+  "local_archive": {
+    "scope": "complete local gate only; parent and own hosted/platform/source/native acceptance required",
+    "path": "evidence/empty-create-local-20261019.tar.gz",
+    "sha256": "cc8f21b1d0ea061e172280ebf0be6d024f7ef878f1e30a972480d6dd79625f7a",
+    "bytes": 14504484,
+    "members": 381,
+    "all_indexed_members_verified": true,
+    "runtime_inputs": 349,
+    "source_checkpoint": "29eb237",
+    "schema": 39,
+    "gate_exit_code": 0,
+    "gate_log_sha256": "bb77bad8acb2d23109d9018b918332c5614450b80a24c63bf475b2f585dff5cb",
+    "rust_test_threads": 4,
+    "reduced_sdk_admission": false,
+    "counts": {
+      "publication": {
+        "passed": 24,
+        "ignored": 0,
+        "seconds": 172.92
+      },
+      "state": {
+        "passed": 505,
+        "ignored": 1,
+        "seconds": 259.6
+      },
+      "reader": {
+        "passed": 26,
+        "ignored": 1,
+        "seconds": 69.42
+      },
+      "core": {
+        "passed": 39,
+        "ignored": 0,
+        "seconds": 0.05
+      },
+      "s3": {
+        "passed": 62,
+        "ignored": 0,
+        "seconds": 20.88
+      }
+    },
+    "parent_archives_independently_verified": 3
+  },
+  "failed_first_cohort_archive": {
+    "source": "0c7f8b72bcea830760f437036d201eb9c077ea1b",
+    "run": 39302692507,
+    "path": "evidence/empty-create-failed1-20261019.tar.gz",
+    "sha256": "4f3c2953358ffa2050b885351ae8486b3e8b87c4b0c5721d5566789d1f052105",
+    "bytes": 998889,
+    "members": 13,
+    "all_members_verified": true,
+    "scope": "failed first cohort only; not acceptance"
+  },
+  "hosted": {
+    "run_id": 39304491982,
+    "attempt": 1,
+    "book": {
+      "job": 118237889657,
+      "status": "success"
+    },
+    "linux": {
+      "job": 118237890146,
+      "status": "success"
+    },
+    "windows": {
+      "job": 118237890166,
+      "status": "pending"
+    },
+    "full_raw_source_artifact_acceptance": "pending"
+  },
+  "capabilities": {
+    "canonical_codec_and_atomic_metadata": true,
+    "provider_upload_exercised": false,
+    "native_chunk_create_enabled": false,
+    "physical_reboot_proved": false
+  }
+}
