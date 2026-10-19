@@ -94,3 +94,9 @@ verified members, including failed/passed compile/focused controls, final source
 source map, full gate and reviewed diagram. The parent patch source `d37096c` is
 accepted in main `6c9f0b5`, with its own complete Windows/Linux cohort and284-input
 proof. That acceptance does not certify this changed composition implementation.
+
+Published source `84da0ee633871f862f4a84a276af5ac3322cff42` includes accepted main
+ancestry and preserves all286 frozen inputs. Its own
+[Linux/Windows/book run39213440204](https://github.com/marshallr12/s3drive/actions/runs/39213440204)
+is in progress; combined acceptance is pending. Later documentation-only commits
+do not replace that runtime source or reuse the parent's platform results.

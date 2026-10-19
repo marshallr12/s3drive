@@ -141,5 +141,24 @@
     "run_id": 39209163191,
     "all3_raw_own_artifacts": "passed",
     "runtime_inputs": 284
+  },
+  "publication": {
+    "source": "84da0ee633871f862f4a84a276af5ac3322cff42",
+    "run_id": 39213440204,
+    "attempt": 1,
+    "jobs": {
+      "book": 117931758993,
+      "linux": 117931759166,
+      "windows": 117931759092
+    },
+    "status": "in progress; no combined acceptance",
+    "watch_session": 65839,
+    "watch_log": "/tmp/s3drive-sparse-composition-hosted-watch.log",
+    "prepared_not_executed": [
+      "/tmp/s3drive-check-sparse-composition-hosted.py",
+      "/tmp/s3drive-sparse-composition-hosted-reference-check.ps1",
+      "/tmp/s3drive-sparse-composition-hosted-raw-compare.py",
+      "/tmp/s3drive-sparse-composition-hosted-archive.py"
+    ]
   }
 }

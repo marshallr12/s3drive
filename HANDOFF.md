@@ -25,6 +25,22 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Published W2c — own combined checks pending (2026-10-19)
+
+Frozen source84da0ee633871f862f4a84a276af5ac3322cff42 is pushed to
+codex/sparse-composition; all286 working/committed inputs match the successful
+local gate. Accepted main6c9f0b5 is an ancestor; merge delta was docs/evidence only.
+Own run39213440204 attempt1 jobs:book117931758993, Linux117931759166,
+Windows117931759092. All currently in progress; watch65839 LIVE, log
+/tmp/s3drive-sparse-composition-hosted-watch.log. Do not infer acceptance from
+local green or parent's run. Keep all286 inputs unchanged. One-use checker,
+project oracle, raw comparer and archiver prepared under
+/tmp/s3drive-{check-sparse-composition-hosted.py,sparse-composition-hosted-*};
+NOT executed. First await all3 terminal outcomes, review each complete raw log,
+create own review marker with digests, then run own source/artifact/typed21+14/
+raw-record checks and archive. Retain failures; do not rerun unchanged source.
+No W2c/new native write activation yet. Goal ACTIVE, substantive progress.
+
 ## Current W2c authenticated sparse composition — local green (2026-10-19)
 
 Worktree /home/marshall/src/worktrees/s3drive-sparse-composition,
