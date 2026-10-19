@@ -81,3 +81,9 @@ workspace build,75Markdown links and71book chapters. The
 verified members: focused/full logs, exact source map/results, changed runtime
 sources and reviewed architecture image. This is portable local evidence; this
 new source still needs its own combined Windows/Linux/native regression checks.
+
+W3a publication,2026-10-19: frozen source `9544193908967ea2852121bef7d91cdce89ed042`
+is pushed with mainabdda37 ancestry and all288 exact inputs from the green gate.
+Its own [run39215314627](https://github.com/marshallr12/s3drive/actions/runs/39215314627)
+is running; all3/raw/own-artifact/source acceptance remains pending. Documentation-
+only follow-ups preserve the frozen source; prior cohorts do not certify it.

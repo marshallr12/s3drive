@@ -2850,3 +2850,9 @@ is still pending. No runtime source changed during the gates. W3a full result:39
 37core/19reader1nativeignored/62S3 plus format/Clippy/build/75MD links/71book
 chapters. Indexed16-member local archive verified. Publish exact source for its
 own combined platform/native/source checks; parent source remains distinct.
+
+W3a publication,2026-10-19: frozen source `9544193908967ea2852121bef7d91cdce89ed042`
+is pushed with mainabdda37 ancestry and all288 exact inputs from the green gate.
+Its own [run39215314627](https://github.com/marshallr12/s3drive/actions/runs/39215314627)
+is running; all3/raw/own-artifact/source acceptance remains pending. Documentation-
+only follow-ups preserve the frozen source; prior cohorts do not certify it.

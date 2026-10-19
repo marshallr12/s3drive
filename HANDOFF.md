@@ -25,6 +25,19 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Published W3a — own combined checks pending (2026-10-19)
+
+Source9544193908967ea2852121bef7d91cdce89ed042 pushed to codex/incremental-data;
+all288 working/committed frozen inputs unchanged. Mainabdda37 is an ancestor;
+merge from local-green6f4afb7 changed docs only. Own run39215314627 attempt1:
+book117937677538, Linux117937677524, Windows117937677247 currently running.
+Watch3007 LIVE, /tmp/s3drive-incremental-data-hosted-watch.log. Four one-use
+checkers prepared under /tmp/s3drive-{check-incremental-data-hosted.py,
+incremental-data-hosted-*}; NOT executed. Await all3 terminal outcomes, review
+complete raw logs, then own source/ZIP digests/typed21+14/project/all35 raw fields
+and types checks and archive. Keep288 runtime inputs frozen. No native chunk
+write activation or complete mixed-tree/publication/settlement claim follows.
+
 ## Current W3a incremental data preparation — local green (2026-10-19)
 
 Worktree /home/marshall/src/worktrees/s3drive-incremental-data,
@@ -52,7 +65,7 @@ runtime/contract inputs unchanged.393state1ignored/37core/19reader1nativeignored
 SHAeae55482f0cfdb2b9dc56dd0378cfac0a127e7c8adc31b8ac22ff5c9fc51b485,
 all members verified. One-use archiver already executed; do not rerun. SVG XML/
 native render/visual review passed. No runtime edits after successful freeze.
-Next publish exact source for own combined acceptance. W3b persisted mixed graph/
+Published9544193 now needs own combined acceptance. W3b persisted mixed graph/
 cursor/subtree reuse, W4 exact-CAS publication, W5 exact-view settlement, legacy/
 metadata-empty support and W6 actual native writes remain. Goal ACTIVE/progress.
 

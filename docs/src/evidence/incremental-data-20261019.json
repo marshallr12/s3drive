@@ -94,5 +94,19 @@
     "all_indexed_members_verified": true,
     "all288_frozen_inputs_unchanged": true,
     "scope": "portable local data preparation only; own combined/native gates required"
+  },
+  "publication": {
+    "source": "9544193908967ea2852121bef7d91cdce89ed042",
+    "run_id": 39215314627,
+    "attempt": 1,
+    "jobs": {
+      "book": 117937677538,
+      "linux": 117937677524,
+      "windows": 117937677247
+    },
+    "status": "running; combined acceptance pending",
+    "watch_session": 3007,
+    "watch_log": "/tmp/s3drive-incremental-data-hosted-watch.log",
+    "prepared_checkers_not_executed": true
   }
 }
