@@ -9,6 +9,8 @@ mod native;
 mod composition;
 #[path = "chunk_reader/pages.rs"]
 mod pages;
+#[path = "chunk_reader/preparation.rs"]
+mod preparation;
 #[path = "chunk_reader/proofs.rs"]
 mod proofs;
 #[path = "chunk_reader/reopen.rs"]
@@ -738,6 +740,9 @@ async fn manifest_reader_child() {
     match mode.as_str() {
         "flow" => Box::pin(flow(&f)).await,
         "accounting" => Box::pin(accounting(&f)).await,
+        "preparation" => Box::pin(preparation::flow(&mut f, &path)).await,
+        "preparation-faults" => Box::pin(preparation::faults(&f, &path)).await,
+        "preparation-limits" => Box::pin(preparation::limits(&f, &path)).await,
         "composition" => Box::pin(composition::flow(&mut f, &path)).await,
         "composition-faults" => Box::pin(composition::faults(&f, &path)).await,
         "composition-limits" => Box::pin(composition::limits(&f, &path)).await,
@@ -905,4 +910,17 @@ async fn edited_views_share_reader_limits_cancel_deadline_and_release_sql_owner_
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn edited_view_reopen_worker() {
     composition::worker().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn incremental_chunks_reuse_exact_unchanged_proofs_and_rebuild_changed_partial_boundaries() {
+    run("preparation").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn incremental_chunks_authorize_every_kind_and_reject_corrupt_retained_or_remote_bytes() {
+    run("preparation-faults").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn incremental_chunks_share_limits_cancel_deadline_and_release_sql_before_network() {
+    run("preparation-limits").await;
 }

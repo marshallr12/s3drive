@@ -2,6 +2,8 @@
 use super::*;
 use s3drive_core::manifest::{Reference, base::Descriptor};
 use s3drive_state::sparse_views::{self, Binding, Id, Piece, View};
+mod preparation;
+pub use preparation::{ChunkContent, PreparedChunk};
 
 impl BaseFile {
     /// Actual pinned source and verified manifest metadata, not caller intent.
@@ -155,6 +157,9 @@ impl EditedFile {
         // Owner releases its transaction before this future receives pieces.
         let pieces = self.local.read(self.view.id(), offset, length).await?;
         Box::pin(self.base.authorize_sparse()).await?;
+        self.compose(pieces, length).await
+    }
+    async fn compose(&self, pieces: Vec<Piece>, length: usize) -> Result<Vec<u8>> {
         let mut output = Vec::with_capacity(length);
         let mut session = Session::new(&self.base)?;
         for piece in pieces {

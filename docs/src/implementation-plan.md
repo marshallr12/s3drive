@@ -2813,3 +2813,40 @@ all286 inputs exact from green gate56076. Its own
 is in progress. Retain frozen source; require all3 terminal outcomes, full raw
 review, own artifact digests/typed21+14/project/all35-record checks before
 integration. W3-W6 and legacy/metadata-empty remain; no native writes activated.
+
+### W3a bounded data preparation — declared contract (2026-10-19)
+
+Implement in isolated `codex/incremental-data` from composition `b884a1a`;
+parent runtime84da0ee remains frozen for own run39213440204. Prepare one logical
+chunk of one pinned immutable edited view. Fresh local ledger validation and
+exact-history/rootHEAD authorization precede every nonempty result. A wholly
+unchanged same-length chunk returns its opaque authenticated reachability proof,
+with zero data GETs; it is not a new upload receipt or current data-health proof.
+Changed/truncated/grown chunks compose <=1MiB exact bytes, verifying complete old
+data objects before slicing. Return a hole only after verified zero content.
+Bind the result to exact view ID, full base binding, offset and logical length;
+private result constructors prevent arbitrary-reference adoption. Share reader
+active limits/deadline; release SQL before any network wait. No file-wide buffer.
+
+Done evidence: one-byte edit downloads only its original changed chunk; unchanged
+siblings and authenticated holes download no data; partial final shrink/growth
+never reuses a prefix;127/128 chunk boundary and64GiB sparse tail; old-view result
+after newer head/reopen; authorization/corrupt-tail/late-denial controls; shared
+busy/cancel/deadline and independent SQL progress. Then full local and this new
+source's own combined gates. W3a is the data-preparation building block, not all
+W3: persisted cursor/mixed graph and subtree reuse remain W3b, then W4 exact-CAS
+publication, W5 exact-view settlement and W6 native writes. Retain the old full-
+snapshot planner/verifier unchanged; never manufacture its upload/source receipts.
+
+W3a focused result,2026-10-19:3 tests passed in3.83s against real authority/SDK/
+private SQLite. Full local gate81440 passed with288 frozen inputs unchanged. The candidate
+module adds no schema or dependency; it reuses the existing composer and private
+proof traversal under the same permit/deadline. New final-length controls reject
+old-object prefix reuse, verify unread old tails and preserve truncated bytes as
+zeros after regrowth. Updated [architecture and contract](incremental-data.md)
+explain pending W3b mixed-tree persistence and W4-W6. Parent W2c own39213440204
+book/Linux passed (raw reviewed); Windows remains running, so parent acceptance
+is still pending. No runtime source changed during the gates. W3a full result:393state1ignored/
+37core/19reader1nativeignored/62S3 plus format/Clippy/build/75MD links/71book
+chapters. Indexed16-member local archive verified. Publish exact source for its
+own combined platform/native/source checks; parent source remains distinct.

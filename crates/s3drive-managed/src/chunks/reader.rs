@@ -22,7 +22,7 @@ use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 mod base;
 mod composition;
 pub use base::BaseDescriptor;
-pub use composition::EditedFile;
+pub use composition::{ChunkContent, EditedFile, PreparedChunk};
 mod provenance;
 pub use provenance::{ChunkProof, MAX_CHUNK_PROOF_BYTES, MAX_PAGE_PROOF_BYTES, PageProof};
 

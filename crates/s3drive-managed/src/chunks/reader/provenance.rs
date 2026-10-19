@@ -93,7 +93,7 @@ impl BaseFile {
         )
         .await
     }
-    async fn prove_chunk_inner(&self, chunk: u64, offset: u64) -> Result<ChunkProof> {
+    pub(super) async fn prove_chunk_inner(&self, chunk: u64, offset: u64) -> Result<ChunkProof> {
         let Content::Manifest {
             root,
             handle,

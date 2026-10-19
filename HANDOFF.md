@@ -25,6 +25,37 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Current W3a incremental data preparation — local green (2026-10-19)
+
+Worktree /home/marshall/src/worktrees/s3drive-incremental-data,
+branch codex/incremental-data fromb884a1a. No schema/wire/legacy planner/provider/
+native activation. Parent composition84da0ee stays frozen286 inputs; own
+39213440204 book/Linux SUCCESS with full raw reviews retained at
+/tmp/s3drive-sparse-composition-hosted-partial-review.json; Windows still running.
+Watch65839 LIVE. Parent has no all3/source/artifact acceptance yet.
+
+W3a implemented: private exact-view/full-binding/offset/length candidate returns
+opaque inherited proof without data GET only for complete same-length unchanged
+chunks; changed bytes/full hash or verified zero hole from bounded composer.
+Fresh local ledger/history/rootHEAD authorization for every kind, one shared
+reader active permit/deadline, no SQL held over network. Never inherit an old
+partial-object prefix. Original planner/receipts remain unchanged. Local evidence
+covers one-byte edit/zero unchanged downloads,127/128 boundary, partial shrink/
+growth/unread tail corruption,64GiB hole, old view/authority+local restart,
+every-kind auth/retained corruption, busy/cancel/deadline and SQL progress.
+
+Focused21549 CLOSED0:3tests3.83s. Full gate81440 CLOSED EXIT0, all288 frozen
+runtime/contract inputs unchanged.393state1ignored/37core/19reader1nativeignored/
+62S3, format/Clippy/build/75MD links/71book chapters passed. Map
+/tmp/s3drive-incremental-data-frozen.json; result
+/tmp/s3drive-incremental-data-gate-result.json. Local archive16members255987bytes,
+SHAeae55482f0cfdb2b9dc56dd0378cfac0a127e7c8adc31b8ac22ff5c9fc51b485,
+all members verified. One-use archiver already executed; do not rerun. SVG XML/
+native render/visual review passed. No runtime edits after successful freeze.
+Next publish exact source for own combined acceptance. W3b persisted mixed graph/
+cursor/subtree reuse, W4 exact-CAS publication, W5 exact-view settlement, legacy/
+metadata-empty support and W6 actual native writes remain. Goal ACTIVE/progress.
+
 ## Published W2c — own combined checks pending (2026-10-19)
 
 Frozen source84da0ee633871f862f4a84a276af5ac3322cff42 is pushed to

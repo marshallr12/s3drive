@@ -6,7 +6,7 @@ use s3drive_state::{
     worker::Storage,
 };
 use std::{path::Path, sync::Arc};
-async fn storage(path: &Path) -> (Storage, Client) {
+pub(super) async fn storage(path: &Path) -> (Storage, Client) {
     let s = Storage::open(
         path,
         s3drive_state::cache::Options::default(),
