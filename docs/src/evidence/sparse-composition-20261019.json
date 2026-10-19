@@ -3,7 +3,7 @@
   "phase": "W2c authenticated immutable sparse composition",
   "branch": "codex/sparse-composition",
   "baseline": "6456e9c75b20164248bca0760a3f049763e404e7",
-  "status": "full portable local gate passed; own combined platform/native acceptance required",
+  "status": "full portable local and own combined platform/native/source acceptance passed",
   "scope": "authenticated edited reads from exact historical manifest/local patches/zeros; no schema/wire/provider/native write activation",
   "runs": {
     "check1": {
@@ -160,5 +160,146 @@
       "/tmp/s3drive-sparse-composition-hosted-raw-compare.py",
       "/tmp/s3drive-sparse-composition-hosted-archive.py"
     ]
+  },
+  "hosted_acceptance": {
+    "source": "84da0ee633871f862f4a84a276af5ac3322cff42",
+    "run_id": 39213440204,
+    "attempt": 1,
+    "all_three_jobs": "success",
+    "watch_session": 65839,
+    "watch_exit_code": 0,
+    "checker_session": 7518,
+    "checker_exit_code": 0,
+    "raw_review": {
+      "source": "84da0ee633871f862f4a84a276af5ac3322cff42",
+      "run_id": 39213440204,
+      "run_attempt": 1,
+      "reviewed": true,
+      "status": "all three terminal success, complete raw/source reviews retained; artifact checks pending",
+      "jobs": {
+        "117931758993": {
+          "source": "84da0ee633871f862f4a84a276af5ac3322cff42",
+          "job_id": 117931758993,
+          "run_attempt": 1,
+          "reviewed": true,
+          "log": "/tmp/s3drive-sparse-composition-hosted-book.log",
+          "sha256": "ce6a9865e8210f299aef97124a1bd76ac5917473c88de2eef5e2019f7661386d",
+          "platform": "Ubuntu24.04 image20261012.334.1",
+          "markdown_files": 74,
+          "chapters": 70
+        },
+        "117931759166": {
+          "source": "84da0ee633871f862f4a84a276af5ac3322cff42",
+          "job_id": 117931759166,
+          "run_attempt": 1,
+          "reviewed": true,
+          "log": "/tmp/s3drive-sparse-composition-hosted-linux.log",
+          "sha256": "c095bcf70a68a17630f2c5e412da578e5c17efda8784331907bd0576627e9ec7",
+          "platform": "Ubuntu24.04 image20261012.334.1",
+          "state": {
+            "passed": 393,
+            "ignored": 1,
+            "seconds": 105.88
+          },
+          "reader": {
+            "passed": 16,
+            "ignored": 1,
+            "seconds": 9.22
+          },
+          "core": {
+            "passed": 37,
+            "seconds": 0.02
+          },
+          "s3": {
+            "passed": 62,
+            "seconds": 12.97
+          },
+          "legacy_native": {
+            "passed": 9,
+            "seconds": 65.45
+          },
+          "manifest_native": {
+            "passed": 1,
+            "seconds": 1.42
+          },
+          "no_systemd_http_tls": {
+            "passed": 1,
+            "seconds": 24.22
+          },
+          "paired_native_recovery": "passed"
+        },
+        "117931759092": {
+          "source": "84da0ee633871f862f4a84a276af5ac3322cff42",
+          "job_id": 117931759092,
+          "run_attempt": 1,
+          "reviewed": true,
+          "log": "/tmp/s3drive-sparse-composition-hosted-windows.log",
+          "sha256": "e2a1e1f16b47bd978059b1794fea4a4c955d07bba6c3d543270224b590805e56",
+          "platform": "Windows Server2025 windows-2025-vs2026/20261007.264.1",
+          "state": {
+            "passed": 388,
+            "ignored": 1,
+            "seconds": 330.33
+          },
+          "reader": {
+            "passed": 16,
+            "ignored": 1,
+            "seconds": 15.91
+          },
+          "core": {
+            "passed": 37,
+            "seconds": 0.03
+          },
+          "s3": {
+            "passed": 62,
+            "seconds": 22.97
+          },
+          "legacy_native": {
+            "passed": 7,
+            "seconds": 90.79
+          },
+          "manifest_native": {
+            "passed": 1,
+            "seconds": 2.43
+          },
+          "paired_recovery": {
+            "passed": 1,
+            "seconds": 79.98
+          },
+          "locked_disposable_profiles": 3,
+          "dummy_credentials_removed": true,
+          "profile_deletion_deferred_to_vm_destruction": true,
+          "winfsp_unused_delay_import_warnings": 2
+        }
+      },
+      "retained_notes": [
+        "book rustup default-toolchain override and both Node20-forced24 notices",
+        "expected Linux403/rival conflict controls preserved local and remote bytes",
+        "no provider/physical workstation/new native chunk-write acceptance",
+        "Windows2 unused WinFsp delay-import link warnings (including reader rebuild), Node punycode/url.parse notices and long completed tests",
+        "Windows3 locked disposable fixture profiles; dummy credentials removed; remaining profile cleanup by VM destruction",
+        "watch65839 CLOSED EXIT0; Ubuntu26 label-migration annotation does not change actual tested Ubuntu24.04 image"
+      ]
+    },
+    "own_artifact_ids": {
+      "replacement": 12168917157,
+      "disposition": 12169760536
+    },
+    "own_api_zip_digests_typed21_14_project_and_all_raw_fields_types": "passed",
+    "archive": {
+      "path": "evidence/sparse-composition-hosted-20261019.tar.gz",
+      "sha256": "00aa618e7b4929140cc6337b5c697aafe504798c89b470a8c883625a4a84d737",
+      "bytes": 270208,
+      "members": 62,
+      "all_indexed_members_verified": true,
+      "source": "84da0ee633871f862f4a84a276af5ac3322cff42",
+      "run_id": 39213440204,
+      "run_attempt": 1,
+      "independent_typed_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "all_raw_fields_and_types_equal": true
+    }
   }
 }

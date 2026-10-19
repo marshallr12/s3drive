@@ -2,8 +2,7 @@
 
 Implementation date: **2026-10-19**. W2c in `codex/sparse-composition` joins
 immutable local patch views with an authenticated historical manifest base.
-All16 portable reader tests and the full local gate passed. This changed
-source still requires its own combined platform/native/source checks. No mounted chunk writes, publication or clean acknowledgment
+All16 portable reader tests, the full local gate and this source's own combined platform/native/source checks passed. No mounted chunk writes, publication or clean acknowledgment
 are enabled by this source.
 
 ![A Rust read composer revalidates local SQLite view pieces, authorizes exact history and a pinned root HEAD, and joins local patches and zeros with verified S3 chunks. One deadline and shared reader limits cover the operation; native integration is pending.](images/sparse-composition.svg)
@@ -98,5 +97,31 @@ proof. That acceptance does not certify this changed composition implementation.
 Published source `84da0ee633871f862f4a84a276af5ac3322cff42` includes accepted main
 ancestry and preserves all286 frozen inputs. Its own
 [Linux/Windows/book run39213440204](https://github.com/marshallr12/s3drive/actions/runs/39213440204)
-is in progress; combined acceptance is pending. Later documentation-only commits
+completed successfully; all3 raw/source/own-artifact acceptance passed. Later documentation-only commits
 do not replace that runtime source or reuse the parent's platform results.
+
+Own combined acceptance completed2026-10-19 for source `84da0ee`: all three jobs
+in [run39213440204](https://github.com/marshallr12/s3drive/actions/runs/39213440204)
+succeeded. Full raw logs, both own API artifact ZIP digests, independent typed
+21+14 records, project oracles and all35 raw record fields/types passed. All286
+frozen working/committed inputs remain exact. The
+[indexed hosted archive](evidence/sparse-composition-hosted-20261019.tar.gz)
+contains62 verified members (270208bytes, SHA-256
+`00aa618e7b4929140cc6337b5c697aafe504798c89b470a8c883625a4a84d737`).
+
+Linux Ubuntu24.04 image20261012.334.1 passed393state (one ignored),37core,
+16reader (one native ignored),62S3, real legacy FUSE acceptance (9tests), manifest
+FUSE remount and paired/no-systemd recovery. Windows Server2025 image
+windows-2025-vs2026/20261007.264.1 passed388state (one ignored),37core,16reader
+(one native ignored),62S3, real legacy native acceptance (7tests), manifest WinFsp
+remount and paired startup/recovery. Native manifest times were1.42s/2.43s;
+these are execution observations, not performance promises. All four new edited
+read cases passed on both platforms, including the independent-process helper.
+
+Retained notes: three Windows disposable fixture profiles remained locked;
+dummy credentials were removed and profile deletion deferred to VM destruction.
+Two unused WinFsp delay-import linker warnings, completed long-running tests,
+expected403/rival conflicts, Node deprecation notices and an Ubuntu26 label-
+migration annotation remain in the evidence. The actual tested Linux image was
+Ubuntu24.04. No current Wasabi, physical workstation/reboot, native edited reads/
+writes, publication or clean settlement acceptance follows from these checks.

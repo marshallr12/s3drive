@@ -25,75 +25,80 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
-## Published W2c — own combined checks pending (2026-10-19)
+## Accepted W2c authenticated sparse composition (2026-10-19)
 
-Frozen source84da0ee633871f862f4a84a276af5ac3322cff42 is pushed to
-codex/sparse-composition; all286 working/committed inputs match the successful
-local gate. Accepted main6c9f0b5 is an ancestor; merge delta was docs/evidence only.
-Own run39213440204 attempt1 jobs:book117931758993, Linux117931759166,
-Windows117931759092. All currently in progress; watch65839 LIVE, log
-/tmp/s3drive-sparse-composition-hosted-watch.log. Do not infer acceptance from
-local green or parent's run. Keep all286 inputs unchanged. One-use checker,
-project oracle, raw comparer and archiver prepared under
-/tmp/s3drive-{check-sparse-composition-hosted.py,sparse-composition-hosted-*};
-NOT executed. First await all3 terminal outcomes, review each complete raw log,
-create own review marker with digests, then run own source/artifact/typed21+14/
-raw-record checks and archive. Retain failures; do not rerun unchanged source.
-No W2c/new native write activation yet. Goal ACTIVE, substantive progress.
+Runtime84da0ee633871f862f4a84a276af5ac3322cff42, own39213440204 attempt1 ALL3
+SUCCESS. Watch65839 CLOSED0; checker7518 CLOSED0. All full raw/source reviews,
+own API ZIP digests, independent typed21+14/project oracles/all35 raw fields and
+types passed. Own artifacts replacement12168917157/disposition12169760536.
+Indexed62-member hosted archive270208bytes SHA
+00aa618e7b4929140cc6337b5c697aafe504798c89b470a8c883625a4a84d737.
+All286 frozen runtime/contract working+committed hashes must remain exact across
+canonical integration. Linux393state/Windows388state1ignored,37core/16reader
+1nativeignored/62S3 passed. Native legacy Linux9/Windows7 passed; manifest
+FUSE1.42s/WinFsp2.43s, paired Windows79.98s and Linux no-systemd HTTP/TLS24.22s.
+Windows3 locked disposable fixture profiles had dummy credentials removed; final
+profile deletion deferred to VM destruction. Two delay-import warnings, completed
+long tests, expected403/conflicts and Node/Ubuntu-label notices retained. Actual
+Linux image Ubuntu24.04/20261012.334.1; Windows Server2025 image20261007.264.1.
 
-## Current W2c authenticated sparse composition — local green (2026-10-19)
+This accepts authenticated historical manifest/local patch/zero composition and
+its regressions, not native edited reads/writes, mixed publication, settlement,
+provider or physical reboot/session behavior. Full dated evidence and diagram:
+docs/src/sparse-composition.md and evidence/sparse-composition-20261019.json.
+Parent source d37096c remains historical patch acceptance. New W3a source9544193
+is separate/frozen288 inputs; its own39215314627 book/Linux SUCCESS, Windows
+still running. Keep its runtime unchanged. W3b/W4-W6 and legacy/empty remain.
+
+## Current W3a incremental data preparation — published (2026-10-19)
+
+Worktree /home/marshall/src/worktrees/s3drive-incremental-data,
+branch codex/incremental-data, frozen source9544193908967ea2852121bef7d91cdce89ed042.
+Full local gate81440 CLOSED0, all288 runtime/contract inputs unchanged:
+393state1ignored/37core/19reader1nativeignored/62S3 plus format/Clippy/build/
+75MD links/71book chapters. Focused21549 CLOSED0:3tests3.83s. Local archive16
+members255987bytes SHAeae55482f0cfdb2b9dc56dd0378cfac0a127e7c8adc31b8ac22ff5c9fc51b485.
+One privately constructed exact-view-bound chunk candidate: authenticated
+unchanged same-length proof without data GET, changed verified bytes/hash or
+verified zero hole. Fresh local ledger/history/rootHEAD and one shared reader
+permit/deadline; no SQL held over network. Tests prove one-byte fetch isolation,
+127/128 boundaries, partial shrink/growth/unread-tail verification,64GiB hole,
+retained versions/restart, every-kind auth/corruption and concurrency controls.
+SVG XML/native render/visual review passed. Original planner/receipts unchanged.
+
+Own39215314627 attempt1:book117937677538/Linux117937677524/Windows117937677247
+running. Watch3007 LIVE, /tmp/s3drive-incremental-data-hosted-watch.log. Prepared
+one-use source/artifact/typed21+14/project/raw comparer/archive NOT executed;
+see feature HANDOFF. Await all3 complete/full raw review before acceptance.
+Parent W2c39213440204 ALL3/source/raw/own artifacts ACCEPTED; watch65839 CLOSED0.
+Review /tmp/s3drive-sparse-composition-hosted-raw-reviewed.json.
+Both runtime maps remain frozen. Primary now integrates accepted composition84da0ee/schema31/all286
+inputs exact. W3a preparation is not integrated here. W3b durable mixed
+graph/cursor/subtree reuse, W4 exact-CAS, W5 exact-view settlement, legacy/
+metadata-empty and W6 native chunk writes remain, plus provider/physical sessions.
+PUBLIC read-only verified. GoalACTIVE; previous turn concrete progress.
+
+## Current W2c composition — published, own checks pending (2026-10-19)
 
 Worktree /home/marshall/src/worktrees/s3drive-sparse-composition,
-branch codex/sparse-composition from local-green6456e9c (runtime d37096c/schema31).
-Parent own39209163191 completed all3/raw/own artifacts and is accepted as main
-6c9f0b5/schema31, runtime d37096c unchanged284 inputs. PUBLIC intentional, never repair
-visibility. Prior turn was concrete progress, not a blocked/no-progress turn.
-
-Done contract: derive actual sparse binding from authenticated BaseFile; reopen
-stored view through exact-history authority + root verification; reject actual
-size/store/source fingerprint/root/principal mismatch. Return one bounded range
-combining base/zero/local only after fresh exact-history and pinned-root HEAD,
-including all-local/all-zero nonempty reads. One shared active permit and overall
-deadline covers owner read/auth/network; no SQL owner held across network waits.
-Use request-local verified page/data caches and one traversal/data budget for all
-base fragments (never reset per fragment); compare full reference + size on cache
-reuse because object keys omit digest. No partial bytes on late failure. Preserve
-older versions and credential isolation; different principal reopens fail binding
-without rewriting dirty state. Snapshot/active limits shared with existing reader.
-
-Footprint: new reader/composition module + reexports; owned chunk_reader integration
-module/cases using existing fixture. No schema/wire/provider/native mutation.
-Need mixed bytes and fragmented-cache bounds, all-local/zero auth denials,
-wrong bindings, retained versions/restart, corruption/late faults, busy/cancel/
-deadline and SQLite-owner progress controls, then full gate and own combined
-platform/native/source cohort. Legacy/metadata-empty and W3-W6 remain required.
-
-W2c results: check82762 CLOSED101 at sibling-private reopen_inner; changed only
-its internal visibility to pub(super), check82651 CLOSED0. Focused90420 CLOSED101:
-1pass/2 new fixture expectation failures (child page body235 bytes omitted;
-BadEtag fault affects GET not HEAD). Corrected exact page accounting + actual
-HEAD revision control. Focused59779 CLOSED0:3tests9.24s; full portable reader83893
-CLOSED0:16pass1nativeignored13.23s. Added unread remote chunk-tail corruption
-behind a local prefix; focused1598 CLOSED0:3tests9.75s. Diagram XML/native render
-and visual review passed. Full gate56076 CLOSED EXIT0 (PTY/four test threads), all286 frozen inputs
-unchanged.393state1ignored/37core/16reader1nativeignored/62S3 and all format/
-Clippy/build/74MD links/70book checks passed. Map
-/tmp/s3drive-sparse-composition-frozen.json; result
-/tmp/s3drive-sparse-composition-gate-result.json. Indexed19-member local archive
-275670bytes SHA3db1b72b6c8ad76b1e116ecd43a21377bc38728d170e040b96e77894230ff909
-verified all members. One-use archiver already ran; do not repeat. No runtime
-changes since the successful freeze. Publish this exact new source for own
-combined real Windows/Linux/native/typed reference/source acceptance. No native
-chunk-write, provider or physical reboot acceptance follows.
-
-Parent d37096c is now ACCEPTED: own39209163191 all3/raw/API ZIP digests/typed21+14/
-project/all35 fields/types passed, checker44350 CLOSED0, watch55135 CLOSED0,
-indexed60-member hosted archive261313bytes SHA628c49e4c389cbcbfc821e8afd1bfc67b855ccee57a7f6db0d7424e0dc98d72f.
-Canonical main6c9f0b5 schema31 includes that unchanged284-input runtime. Do not
-conflate that acceptance with this W2c source; this286-input composition needs
-its own combined source before activation. Primary proof
-/tmp/s3drive-canonical-sparse-patches-publication.json.
-
+branch codex/sparse-composition, published frozen source
+84da0ee633871f862f4a84a276af5ac3322cff42. Local gate56076 PASSED, all286
+runtime/contract inputs unchanged:393state1ignored/37core/16reader1nativeignored/
+62S3 plus format/Clippy/build/74Markdown links/70book chapters. Local archive19
+members275670bytes SHA3db1b72b6c8ad76b1e116ecd43a21377bc38728d170e040b96e77894230ff909.
+Authenticated edited reads compose historical base/local patches/zeros with fresh
+history and rootHEAD, shared limits/deadline, no SQL owner across network, exact
+cache reference checks and no partial bytes. Restart/corruption/Unicode/late
+fault/principal/shared-resource controls passed. Own run39213440204 attempt1:
+book117931758993, Linux117931759166, Windows117931759092 currently in progress.
+Watch65839 LIVE; /tmp/s3drive-sparse-composition-hosted-watch.log. Prepared one-use
+checker/oracles/raw comparer/archiver NOT executed; see feature HANDOFF. Await
+all3 outcomes and review full raw logs + own artifacts before acceptance. Keep
+all286 feature inputs frozen. This primary checkout remains accepted patch
+runtime d37096c/schema31/all284 inputs unchanged; composition is not integrated.
+W3-W6, legacy/metadata-empty and provider/physical workstation acceptance remain.
+No new native chunk writes activated. PUBLIC retained/read-only verified. Goal
+ACTIVE; concrete progress, not a blocked/no-progress turn.
 
 ## Current accepted W2b2b immutable patches and mutations (2026-10-19)
 
@@ -112,9 +117,9 @@ main72ee64f ancestry with only docs/evidence changes after tested source.
 
 Next separate W2c worktree /home/marshall/src/worktrees/s3drive-sparse-composition,
 codex/sparse-composition: authenticated edited reads implemented,16portable reader
-controls and full local gate56076 passed with286 frozen inputs unchanged. Read that
-checkout's current HANDOFF/implementation plan. It has no combined acceptance yet.
-Main moves to accepted schema31;
+controls and full local gate56076 passed with286 frozen inputs unchanged. Read
+that checkout's current HANDOFF/implementation plan and pending own run39213440204.
+It has no combined acceptance yet. Main moves to accepted schema31;
 composition/new native chunk writes are NOT activated by this promotion.
 
 Worktree /home/marshall/src/worktrees/s3drive-sparse-patches,

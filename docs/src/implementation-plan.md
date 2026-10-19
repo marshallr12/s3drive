@@ -2744,42 +2744,6 @@ Rust authority + local-journal fixtures and the complete local/own combined gate
 Legacy and metadata-empty admission/restart contracts remain required before W6;
 this sequence does not narrow the final drive to existing manifest files only.
 
-
-### W2c composition — declared contract (2026-10-19)
-
-Implement in isolated codex/sparse-composition from local-green d37096c, freezing
-its own live CI source. Derive binding from authenticated BaseFile, reopen a stored
-view via exact history/root verification and compare actual size/store/source/
-fingerprint/root/principal. Compose bounded local pieces with verified base
-chunks under one shared reader active permit, snapshot permit and overall
-operation deadline. Fresh authority history and pinned-root HEAD must precede
-returning any nonempty bytes, including all-local/zero reads. EOF/zero-length
-reads may retain the existing network-free policy because no bytes escape.
-
-A per-fragment call to read_range would reset budgets and duplicate downloads.
-Use one request-local verified page/data cache, one traversal/data budget and
-exact reference/length validation on cache hits (S3 object keys omit hashes).
-Never hold SQL owner across network waits or expose partial output on late
-faults. Bound ranges/resources and preserve older views; never silently rebind
-credential generations. Verify through owned SDK + real Rust authority + private
-SQLite worker, then full local and own combined platform/native gates. No native
-chunk-write/publication/settlement activation. Legacy/metadata-empty support and
-W3-W6 remain in the final goal.
-
-
-W2c local result,2026-10-19: authenticated sparse composition full gate56076
-passed all286 frozen inputs unchanged:393state1ignored/37core/16reader1native
-ignored/62S3 plus all format/Clippy/build/74MD links/70book checks. Controls cover
-mixed/page-boundary and40-fragment reads, exact nine-chunk8MiB output,64GiB zero
-tails, all-local/zero authorization, wrong bindings/principals, late denied or
-corrupt data, local corruption after open, independent-process/authority restart,
-shared active/snapshot limits, cancellation/deadline and SQL progress under a
-network gate. Indexed19-member local archive and reviewed architecture SVG are
-retained. Publish this exact source for its own combined gates; accepted parent
-main6c9f0b5/runtimed37096c is unchanged and does not certify this new code. See
-[composition evidence](sparse-composition.md). W3-W6 and legacy/metadata-empty
-support remain; native chunk writes stay disabled.
-
 Historical main72ee64f pointer (superseded by accepted checkpoint below):
 
 Current follow-up,2026-10-19: immutable patches and exact-parent write/resize
@@ -2807,9 +2771,41 @@ keeps these runtime inputs unchanged. Separate codex/sparse-composition adds W2c
 and has full local gate56076 green, including16reader1nativeignored.
 It needs its own combined acceptance. W3-W6 and legacy/metadata-empty remain.
 
-W2c publication,2026-10-19: source84da0ee includes accepted main6c9f0b5 ancestry,
-all286 inputs exact from green gate56076. Its own
-[run39213440204](https://github.com/marshallr12/s3drive/actions/runs/39213440204)
-is in progress. Retain frozen source; require all3 terminal outcomes, full raw
-review, own artifact digests/typed21+14/project/all35-record checks before
-integration. W3-W6 and legacy/metadata-empty remain; no native writes activated.
+W2c published,2026-10-19: frozen source `84da0ee` in `codex/sparse-composition`
+composes authenticated historical manifest ranges, immutable local patches and
+zeros. All286 inputs match its full green local gate56076:393state1ignored/
+37core/16reader1nativeignored/62S3 plus format/Clippy/build/book checks. See the
+[feature implementation and architecture image](https://github.com/marshallr12/s3drive/blob/84da0ee633871f862f4a84a276af5ac3322cff42/docs/src/sparse-composition.md).
+Its own [run39213440204](https://github.com/marshallr12/s3drive/actions/runs/39213440204)
+is in progress; all3 full raw/source/own-artifact checks remain required before
+integration. Main retains accepted patch runtime d37096c/schema31 unchanged284
+inputs. Native chunk writes, W3-W6, legacy/metadata-empty and provider/physical
+workstation acceptance remain required.
+
+W3a published,2026-10-19: [source9544193 architecture and implementation](https://github.com/marshallr12/s3drive/blob/9544193908967ea2852121bef7d91cdce89ed042/docs/src/incremental-data.md)
+prepares one authenticated exact-view chunk as unchanged reachability proof,
+verified new bytes/hash or verified zero hole. A changed final length never
+inherits an old object prefix. Full local gate81440 passed all288 exact inputs:
+393state1ignored/37core/19reader1nativeignored/62S3 and format/Clippy/build/book.
+Its own [run39215314627](https://github.com/marshallr12/s3drive/actions/runs/39215314627)
+is running. Parent W2c39213440204 book/Linux passed with raw review, Windows is
+still running. Both need own full combined acceptance; main retains accepted
+patch runtime d37096c/schema31/all284 exact inputs. W3b durable mixed graph/cursor/
+subtree reuse, W4-W6, legacy/metadata-empty and provider/physical acceptance remain.
+
+W2c accepted,2026-10-19: source84da0ee passed own39213440204 all3 full raw/source/
+own ZIP API digests/typed21+14/project/all35 field/type checks. Indexed62-member
+hosted archive retained. All286 inputs exact; canonical integration changes only
+docs/evidence after the tested runtime. Linux393state/Windows388state1ignored,
+37core/16reader1nativeignored/62S3 and real manifest FUSE/WinFsp remount, legacy
+native and paired/no-systemd recovery passed. See [composition evidence](sparse-composition.md).
+Separate W3a9544193/288 inputs has own39215314627 book/Linux green and Windows
+running; no W3a/native chunk writes activated by this promotion. W3b/W4-W6 and
+legacy/metadata-empty/provider/physical acceptance remain.
+
+W3b source finding,2026-10-19: reader cache identity and upload Session.binding_id
+both call credential_binding with the full configuration fingerprint and pinned
+credentials. Therefore compare Executor.recovery_target to the exact sparse base
+source/fingerprint and generated object key; do not use storage routing identity
+alone or silently rotate credentials. The persisted journal proves local intent/
+integrity; the controller must reauthorize historical provenance before uploads.
