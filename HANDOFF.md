@@ -44,14 +44,17 @@ implementation/evidence/diagram in docs/src/incremental-data.md. No complete mix
 tree, publication, clean settlement, native edited writes, provider or physical
 reboot/session acceptance follows. One-use acceptance/archiver already executed.
 
-Next W3b worktree /home/marshall/src/worktrees/s3drive-mixed-plans,
-branch codex/mixed-plans fromc1f7fbb. Local draft only: state sparse_views/
-preparation.rs + preparation/{model,proof}.rs are NOT wired, compiled or tested;
-ledger/journal modules do not exist yet. Do not mistake baseline gate for draft
-coverage. Full declared phase is in that worktree's implementation-plan tail.
-Need schema032, complete ledger/cursor/tree/controller + refusal/recovery tests
-and full local/own combined gates before any acceptance. Existing main source
-remains schema31. GoalACTIVE; concrete progress. W4-W6 and legacy/empty remain.
+Successor W3b is locally green in /home/marshall/src/worktrees/s3drive-mixed-plans,
+codex/mixed-plans. Published runtimee140508b19aef4082f9565990402852d4f27cdb4,
+schema32/all300 frozen inputs, full gate34846 CLOSED0 (408state/22reader, one
+ignored each;37core/62S3;76Markdown/72chapters). Own39225921755 attempt1 running:
+Linux117972061091/book117972061466/Windows117972061489, watch74306 LIVE at
+/tmp/s3drive-mixed-plans-hosted-watch.log. Own checkers prepared, NOT executed.
+Feature HANDOFF and mixed-plans.md have exact contract, retained failed runs,
+local indexed329-member archive and next gates. Keep runtime frozen. Main stays
+accepted schema31/runtime9544193 until own all3 raw/source/artifact acceptance.
+No uploads, clean settlement or native chunk writes activated. W4-W6 and
+legacy/metadata-empty origins/provider/physical session gates remain. Goal ACTIVE.
 
 ## Accepted W2c authenticated sparse composition (2026-10-19)
 

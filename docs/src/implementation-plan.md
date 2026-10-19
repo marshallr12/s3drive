@@ -2928,3 +2928,11 @@ reference reuse, partial-final edits,127/128 boundary/height growth, sparse64GiB
 wrong proofs/bindings/quota/corrupt media/SQL/crash/replay controls, full local gate
 and its own combined platform/native/source acceptance. W4-W6 and legacy/empty
 admission remain required for the full drive goal.
+
+W3b successor publication,2026-10-19: isolated `codex/mixed-plans` source
+`e140508b19aef4082f9565990402852d4f27cdb4` adds schema32 durable mixed
+preparation and authenticated semantic dependency checks. Full local gate passed
+on300 frozen inputs; own [Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39225921755)
+is running. Main remains accepted W3a/schema31. Feature mdBook contains the
+contract, architecture diagram and indexed failed/successful evidence. No
+publisher, settlement or native chunk write activation follows; W4-W6 remain.
