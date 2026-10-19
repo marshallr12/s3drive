@@ -9,6 +9,7 @@ use model::{Input, Kind, Object};
 mod journal;
 mod ledger;
 mod proof;
+pub mod publication;
 mod semantics;
 pub use semantics::OriginalChunk;
 mod transfers;
@@ -42,6 +43,7 @@ pub(crate) fn check_schema(db: &Connection) -> Result<()> {
     Ok(())
 }
 pub(crate) fn require_legacy(db: &Connection) -> Result<()> {
+    publication::require_legacy(db)?;
     for table in TABLES {
         if db.query_row(&format!("SELECT EXISTS(SELECT 1 FROM {table})"), [], |r| {
             r.get::<_, bool>(0)

@@ -1,5 +1,5 @@
-//! Bounded, authenticated manifest snapshots. No persistent cache, native
-//! activation, arbitrary authorized-snapshot constructor or write/settlement effects.
+//! Bounded authenticated manifest snapshots and exact-view mixed publication.
+//! No arbitrary snapshot constructor, clean settlement or native chunk activation.
 use s3drive_authority::{Kind, Listing, Node, Payload, Reply, Request, Store, WireClient};
 use s3drive_core::{
     manifest::{
@@ -23,8 +23,9 @@ mod base;
 mod composition;
 pub use base::BaseDescriptor;
 pub use composition::{
-    ChunkContent, EditedFile, MixedRecovery, MixedRecoveryFailure, MixedUploader, Preparation,
-    PreparedChunk, PreparedDependency,
+    ChunkContent, EditedFile, MixedPublisher, MixedRecovery, MixedRecoveryFailure, MixedRootCommit,
+    MixedRootFailure, MixedRootRecovery, MixedUploader, Preparation, PreparedChunk,
+    PreparedDependency,
 };
 mod provenance;
 pub use provenance::{ChunkProof, MAX_CHUNK_PROOF_BYTES, MAX_PAGE_PROOF_BYTES, PageProof};

@@ -149,6 +149,9 @@ fn identity(
         "namespace_removal_events",
     ];
     let local = [
+        "sparse_publication_role",
+        "sparse_publications",
+        "sparse_publication_checks",
         "sparse_preparations",
         "sparse_preparation_objects",
         "sparse_preparation_blobs",
@@ -643,6 +646,9 @@ mod tests {
             "PRAGMA foreign_keys=OFF; INSERT INTO sparse_preparations VALUES(zeroblob(32),zeroblob(32),zeroblob(32),x'7b',x'7b',zeroblob(32))".to_owned(),
             "PRAGMA foreign_keys=OFF; INSERT INTO sparse_preparation_objects VALUES(zeroblob(32),-1,0,x'7b',zeroblob(32))".to_owned(),
             "INSERT INTO sparse_preparation_blobs VALUES(zeroblob(32),x'01')".to_owned(),
+            "INSERT INTO sparse_publication_role VALUES(1,0,0,zeroblob(32))".to_owned(),
+            "PRAGMA foreign_keys=OFF; INSERT INTO sparse_publications VALUES(zeroblob(32),'11111111111111111111111111111111','22222222222222222222222222222222',x'7b',zeroblob(32))".to_owned(),
+            "PRAGMA foreign_keys=OFF; INSERT INTO sparse_publication_checks VALUES(zeroblob(32),0,x'7b',zeroblob(32))".to_owned(),
         ] {
             let case = tempfile::tempdir().unwrap();
             let source = case.path().join("bad");

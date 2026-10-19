@@ -1,0 +1,450 @@
+//! Mixed-root authority requests. Distinct historical commit, never file flush.
+use super::*;
+use s3drive_s3::uploads::Executor;
+use s3drive_state::sparse_views::preparation::{self as plans, publication as roots};
+use std::path::Path;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MixedRootFailure {
+    Binding,
+    BaseChanged,
+    Busy,
+    NotPrepared,
+    Protocol,
+    UnsupportedFeature,
+    RetainedConflict,
+}
+impl fmt::Display for MixedRootFailure {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "mixed root {:?}; exact requests and dirty data retained",
+            self
+        )
+    }
+}
+impl std::error::Error for MixedRootFailure {}
+pub struct MixedRootCommit {
+    record: roots::Record,
+}
+impl fmt::Debug for MixedRootCommit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("HistoricalMixedRootCommit([not file flush])")
+    }
+}
+impl MixedRootCommit {
+    pub fn plan(&self) -> Id {
+        self.record.input().plan()
+    }
+    pub fn view_id(&self) -> Id {
+        self.record.input().view()
+    }
+    pub fn record(&self) -> &roots::Record {
+        &self.record
+    }
+    pub fn metadata(&self) -> &s3drive_authority::Receipt {
+        self.record.receipt().expect("validated mixed root commit")
+    }
+}
+fn committed(record: roots::Record) -> Result<MixedRootCommit> {
+    if record.receipt().is_none() || record.publication().is_none() {
+        return Err(MixedRootFailure::NotPrepared.into());
+    }
+    Ok(MixedRootCommit { record })
+}
+#[derive(Clone)]
+enum Log {
+    Normal(roots::Client),
+    Recovery(roots::RecoveryClient),
+}
+impl Log {
+    async fn get(&self, p: Id) -> Result<roots::Record> {
+        match self {
+            Self::Normal(c) => c.get(p).await,
+            Self::Recovery(c) => c.get(p).await,
+        }
+    }
+    async fn reserved(&self, p: Id, r: s3drive_authority::Receipt) -> Result<roots::Record> {
+        match self {
+            Self::Normal(c) => c.reserved(p, r).await,
+            Self::Recovery(c) => c.reserved(p, r).await,
+        }
+    }
+    async fn published(&self, p: Id, r: s3drive_authority::Receipt) -> Result<roots::Record> {
+        match self {
+            Self::Normal(c) => c.published(p, r).await,
+            Self::Recovery(c) => c.published(p, r).await,
+        }
+    }
+    async fn reject(&self, p: Id, request: s3drive_authority::Apply) -> Result<roots::Record> {
+        match self {
+            Self::Normal(c) => {
+                c.reject(p, request, s3drive_authority::Error::Conflict)
+                    .await
+            }
+            Self::Recovery(c) => {
+                c.reject(p, request, s3drive_authority::Error::Conflict)
+                    .await
+            }
+        }
+    }
+}
+struct Recovery {
+    log: Log,
+    authority: WireClient,
+    volume: String,
+    store: String,
+    slots: Semaphore,
+}
+/// Replays only requests already saved on the original private journal. No S3
+/// client, Preparation, fresh feature/source probes or request-preparation API.
+#[derive(Clone)]
+pub struct MixedRootRecovery(Arc<Recovery>);
+impl MixedRootRecovery {
+    fn build(log: Log, authority: WireClient, volume: String, store: String) -> Result<Self> {
+        if !identifier(&volume)
+            || volume == s3drive_authority::ROOT
+            || !identifier(&store)
+            || store == s3drive_authority::ROOT
+        {
+            return Err(MixedRootFailure::Binding.into());
+        }
+        Ok(Self(Arc::new(Recovery {
+            log,
+            authority,
+            volume,
+            store,
+            slots: Semaphore::new(1),
+        })))
+    }
+    pub async fn open_existing(
+        directory: &Path,
+        authority: WireClient,
+        volume: String,
+        store: String,
+    ) -> Result<Self> {
+        let c = roots::RecoveryClient::open(directory).await?;
+        Self::build(Log::Recovery(c), authority, volume, store)
+    }
+    pub async fn close(&self) -> Result<()> {
+        if let Log::Recovery(c) = &self.0.log {
+            c.close().await?;
+        }
+        Ok(())
+    }
+    fn scope(&self, r: &roots::Record) -> Result<()> {
+        if r.input().reserve().volume != self.0.volume || r.input().store().id != self.0.store {
+            return Err(MixedRootFailure::Binding.into());
+        }
+        Ok(())
+    }
+    /// A saved Reserve may be recovered to a reservation only. This does not
+    /// invent a Publish or imply a root commit; inspect receipt() on the record.
+    pub async fn recover(&self, plan: Id) -> Result<roots::Record> {
+        let _slot = self
+            .0
+            .slots
+            .try_acquire()
+            .map_err(|_| MixedRootFailure::Busy)?;
+        let r = self.0.log.get(plan).await?;
+        self.scope(&r)?;
+        if r.rejection().is_some() {
+            return Err(MixedRootFailure::RetainedConflict.into());
+        }
+        if r.receipt().is_some() {
+            return Ok(r);
+        }
+        let (request, publish) = if let Some(p) = r.publication() {
+            (p.clone(), true)
+        } else if r.reservation().is_none() {
+            (r.input().reserve().clone(), false)
+        } else {
+            return Ok(r);
+        };
+        match self
+            .0
+            .authority
+            .request(&Request::Apply {
+                request: request.clone(),
+            })
+            .await?
+        {
+            Reply::Applied(receipt) => {
+                if publish {
+                    self.0.log.published(plan, receipt).await
+                } else {
+                    self.0.log.reserved(plan, receipt).await
+                }
+            }
+            Reply::Error(s3drive_authority::Error::Conflict) => {
+                self.0.log.reject(plan, request).await?;
+                Err(MixedRootFailure::RetainedConflict.into())
+            }
+            Reply::Error(e) => Err(ReadFailure::Authority(e).into()),
+            _ => Err(MixedRootFailure::Protocol.into()),
+        }
+    }
+}
+struct Publisher {
+    preparation: Preparation,
+    executor: Executor,
+    client: roots::Client,
+    recovery: MixedRootRecovery,
+    slots: Semaphore,
+}
+#[derive(Clone)]
+pub struct MixedPublisher(Arc<Publisher>);
+impl fmt::Debug for MixedPublisher {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("MixedRootPublisher([private; no clean settlement])")
+    }
+}
+impl Preparation {
+    /// Constructor performs no fresh network admission, so saved requests can be
+    /// replayed before source/policy checks. New work validates them per operation.
+    pub fn publisher(&self, executor: Executor, limits: roots::Limits) -> Result<MixedPublisher> {
+        if !self.client.same_storage(&executor.storage()) {
+            return Err(MixedRootFailure::Binding.into());
+        }
+        let client = self.client.publications(limits)?;
+        let reader = &self.edited.base.0.reader.0;
+        let store = self
+            .edited
+            .view
+            .binding()
+            .store()
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+        let recovery = MixedRootRecovery::build(
+            Log::Normal(client.clone()),
+            reader.authority.clone(),
+            reader.volume.clone(),
+            store,
+        )?;
+        Ok(MixedPublisher(Arc::new(Publisher {
+            preparation: self.clone(),
+            executor,
+            client,
+            recovery,
+            slots: Semaphore::new(1),
+        })))
+    }
+}
+impl MixedPublisher {
+    pub fn plan(&self) -> Id {
+        self.0.preparation.id
+    }
+    pub fn recovery(&self) -> MixedRootRecovery {
+        self.0.recovery.clone()
+    }
+    async fn check_one(&self, need: roots::DataNeed) -> Result<()> {
+        let prep = &self.0.preparation;
+        let base = &prep.edited.base;
+        let _active = base
+            .0
+            .reader
+            .0
+            .active
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| ReadFailure::Busy)?;
+        bounded(
+            base.0.reader.0.options,
+            Box::pin(async {
+                prep.info().await?;
+                Box::pin(base.authorize_sparse()).await?;
+                let original = if need.uses_base {
+                    let offset = need
+                        .slot
+                        .checked_mul(manifest::CHUNK_BYTES)
+                        .ok_or(ReadFailure::Bounds)?;
+                    let proof = Box::pin(base.prove_chunk_inner(need.slot, offset)).await?;
+                    let bytes = if proof.reference().is_some() {
+                        let mut bytes = Vec::with_capacity(proof.length() as usize);
+                        let mut session = Session::new(base)?;
+                        Box::pin(session.append(offset, proof.length() as usize, &mut bytes))
+                            .await?;
+                        Some(bytes)
+                    } else {
+                        None
+                    };
+                    Some(plans::OriginalChunk {
+                        witness: proof.encode(),
+                        bytes,
+                    })
+                } else {
+                    None
+                };
+                self.0.client.check(self.plan(), need.slot, original).await
+            }),
+        )
+        .await
+    }
+    /// Bounded per-chunk steps; structural holes/subtrees are never enumerated as
+    /// absent descendant chunks. Each checked candidate is retained transactionally.
+    pub async fn check_semantics(&self) -> Result<()> {
+        let _slot = self
+            .0
+            .slots
+            .try_acquire()
+            .map_err(|_| MixedRootFailure::Busy)?;
+        loop {
+            let needs = self.0.client.unchecked(self.plan(), None, 128).await?;
+            if needs.is_empty() {
+                return Ok(());
+            }
+            for need in needs {
+                self.check_one(need).await?;
+            }
+        }
+    }
+    async fn fresh(&self) -> Result<(Node, Store, u64)> {
+        let prep = &self.0.preparation;
+        let base = &prep.edited.base;
+        let reader = &base.0.reader.0;
+        let _active = reader
+            .active
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| ReadFailure::Busy)?;
+        bounded(
+            reader.options,
+            Box::pin(async {
+                let info = prep.info().await?;
+                let tree = prep.client.tree_receipt(self.plan()).await?;
+                if tree.plan().view() != info.view()
+                    || tree.root() != &info.root()?.ok_or(MixedRootFailure::NotPrepared)?
+                {
+                    return Err(MixedRootFailure::Binding.into());
+                }
+                let target = self
+                    .0
+                    .executor
+                    .recovery_target(tree.root_receipt().info().target.object_key())?;
+                if target != tree.root_receipt().info().target {
+                    return Err(MixedRootFailure::Binding.into());
+                }
+                self.0
+                    .executor
+                    .check_create(target.object_key(), tree.root_receipt().info().size)?;
+                Box::pin(base.authorize_sparse()).await?;
+                let authority = &reader.authority;
+                let Reply::Features(features) =
+                    reply(authority.request(&Request::Features {}).await?)?
+                else {
+                    return Err(MixedRootFailure::Protocol.into());
+                };
+                if !features.iter().any(|x| x == "manifest-root-v1")
+                    || !features.iter().any(|x| x == "content-cas-v1")
+                {
+                    return Err(MixedRootFailure::UnsupportedFeature.into());
+                }
+                let binding = info.view().binding();
+                let descriptor = binding.base()?;
+                let Reply::Store(store) = reply(
+                    authority
+                        .request(&Request::Store {
+                            volume: descriptor.volume().into(),
+                            store: self.0.recovery.0.store.clone(),
+                        })
+                        .await?,
+                )?
+                else {
+                    return Err(MixedRootFailure::Protocol.into());
+                };
+                if !store.valid()
+                    || store.id != self.0.recovery.0.store
+                    || store.root != binding.root()
+                    || store.route != self.0.executor.reader().storage_fingerprint()
+                {
+                    return Err(MixedRootFailure::Binding.into());
+                }
+                let Reply::Node(node) = reply(
+                    authority
+                        .request(&Request::Node {
+                            volume: descriptor.volume().into(),
+                            node: descriptor.node().into(),
+                        })
+                        .await?,
+                )?
+                else {
+                    return Err(MixedRootFailure::Protocol.into());
+                };
+                if node.id != descriptor.node() {
+                    return Err(MixedRootFailure::Binding.into());
+                }
+                if node.deleted
+                    || node.kind != Kind::File
+                    || s3drive_authority::payload_reference(&node.payload).as_deref()
+                        != Some(descriptor.payload_reference())
+                {
+                    return Err(MixedRootFailure::BaseChanged.into());
+                }
+                let Reply::Info(volume) = reply(authority.request(&Request::Info {}).await?)?
+                else {
+                    return Err(MixedRootFailure::Protocol.into());
+                };
+                if volume.id != reader.volume || volume.name_policy != reader.policy {
+                    return Err(MixedRootFailure::Binding.into());
+                }
+                Ok((node, store, volume.sequence))
+            }),
+        )
+        .await
+    }
+    /// Save the exact reserve; never sends a mutation from this method.
+    pub async fn begin(&self, publish_operation: String) -> Result<roots::Record> {
+        let _slot = self
+            .0
+            .slots
+            .try_acquire()
+            .map_err(|_| MixedRootFailure::Busy)?;
+        match self.0.client.get(self.plan()).await {
+            Ok(r) => {
+                self.0.recovery.scope(&r)?;
+                if r.input().publish_operation() != publish_operation {
+                    return Err(MixedRootFailure::Binding.into());
+                }
+                return Ok(r);
+            }
+            Err(e) if e.downcast_ref::<roots::Failure>() == Some(&roots::Failure::Missing) => {}
+            Err(e) => return Err(e),
+        }
+        if !self
+            .0
+            .client
+            .unchecked(self.plan(), None, 1)
+            .await?
+            .is_empty()
+        {
+            return Err(MixedRootFailure::NotPrepared.into());
+        }
+        let (node, store, sequence) = self.fresh().await?;
+        self.0
+            .client
+            .begin(self.plan(), node, store, sequence, publish_operation)
+            .await
+    }
+    /// Observe/replay saved requests first. Preparing a new Publish then requires
+    /// fresh source/create admission; saved Publish recovery never uses those APIs.
+    pub async fn resume(&self) -> Result<MixedRootCommit> {
+        let _slot = self
+            .0
+            .slots
+            .try_acquire()
+            .map_err(|_| MixedRootFailure::Busy)?;
+        let r = self.0.recovery.recover(self.plan()).await?;
+        if r.receipt().is_some() {
+            return committed(r);
+        }
+        if r.publication().is_some() {
+            return Err(MixedRootFailure::NotPrepared.into());
+        }
+        let (_, store, sequence) = self.fresh().await?;
+        if &store != r.input().store() {
+            return Err(MixedRootFailure::Binding.into());
+        }
+        self.0.client.prepare_publish(self.plan(), sequence).await?;
+        committed(self.0.recovery.recover(self.plan()).await?)
+    }
+}

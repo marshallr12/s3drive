@@ -396,50 +396,55 @@ impl Journal<'_> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Deferred)?;
-        let s = inspect(&tx)?;
-        let checked = remote::checked_flushes(&tx)?;
-        let i = ready(&s, plan)?;
-        let root = i.root()?.ok_or(Failure::Invalid)?;
-        let mut root_receipt = None;
-        let mut new_objects = 0;
-        let mut inherited_objects = 0;
-        let mut hole_records = 0;
-        for ((_, level, slot), o) in s.objects.range((plan, -1, 0)..=(plan, 2, u64::MAX)) {
-            if let Some(t) = transfer(
-                &tx,
-                &s,
-                &i,
-                Position {
-                    level: *level,
-                    slot: *slot,
-                },
-            )? {
-                let r = check_receipt(&tx, &checked, &t)?;
-                new_objects += 1;
-                if t.reference() == root.page() {
-                    root_receipt = Some(r);
-                }
-            } else if s.reference(&i, &o.object)?.is_none() {
-                hole_records += 1;
-            } else {
-                inherited_objects += 1;
-            }
-        }
-        // Every raw record and every new-object receipt was inspected in this
-        // one owner command. No cached graph proof crosses a mutation/await.
-        let result = TreeReceipt {
-            plan: i,
-            root,
-            root_receipt: root_receipt.ok_or(Failure::Corrupt)?,
-            new_objects,
-            inherited_objects,
-            hole_records,
-        };
-        drop(checked);
+        let result = inspect_tree(&tx, plan)?;
         tx.commit()?;
         Ok(result)
     }
 }
+pub(super) fn inspect_tree(db: &Connection, plan: Id) -> Result<TreeReceipt> {
+    let s = inspect(db)?;
+    let checked = remote::checked_flushes(db)?;
+    let i = ready(&s, plan)?;
+    let root = i.root()?.ok_or(Failure::Invalid)?;
+    let mut root_receipt = None;
+    let mut new_objects = 0;
+    let mut inherited_objects = 0;
+    let mut hole_records = 0;
+    for ((_, level, slot), o) in s.objects.range((plan, -1, 0)..=(plan, 2, u64::MAX)) {
+        if let Some(t) = transfer(
+            db,
+            &s,
+            &i,
+            Position {
+                level: *level,
+                slot: *slot,
+            },
+        )? {
+            let r = check_receipt(db, &checked, &t)?;
+            new_objects += 1;
+            if t.reference() == root.page() {
+                root_receipt = Some(r);
+            }
+        } else if s.reference(&i, &o.object)?.is_none() {
+            hole_records += 1;
+        } else {
+            inherited_objects += 1;
+        }
+    }
+    // Every raw record and every new-object receipt was inspected in this
+    // one owner command. No cached graph proof crosses a mutation/await.
+    let result = TreeReceipt {
+        plan: i,
+        root,
+        root_receipt: root_receipt.ok_or(Failure::Corrupt)?,
+        new_objects,
+        inherited_objects,
+        hole_records,
+    };
+    drop(checked);
+    Ok(result)
+}
+
 impl Client {
     pub fn same_storage(&self, storage: &Storage) -> bool {
         storage.same_owner(&self.owner)

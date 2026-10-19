@@ -2,6 +2,8 @@
 //! fixtures/dummy profiles only. No provider or mounted chunk-format acceptance.
 #[path = "support/fixture.rs"]
 pub mod fixture;
+#[path = "chunk_publication/mixed_roots.rs"]
+mod mixed_roots;
 #[path = "chunk_publication/mixed_uploads.rs"]
 mod mixed_uploads;
 #[path = "chunk_publication/source_settlement.rs"]
@@ -1073,6 +1075,9 @@ async fn chunk_child() {
         )
         .unwrap();
         match mode.as_str() {
+            "mixed_roots_rivals" => Box::pin(mixed_roots::rivals(&config, &root, &s)).await,
+            "mixed_roots_crash" => Box::pin(mixed_roots::crash(&config, &root, &s)).await,
+            "mixed_roots_recover" => Box::pin(mixed_roots::recover(&root, &s)).await,
             "mixed_conflict" => Box::pin(mixed_uploads::conflict(&config, &root, &s)).await,
             "mixed_concurrency" => Box::pin(mixed_uploads::concurrency(&config, &root, &s)).await,
             "mixed_controls" => Box::pin(mixed_uploads::controls(&config, &root, &s)).await,
@@ -1105,6 +1110,7 @@ async fn run(mode: &str) {
     let mut mixed_recovery_window = None;
     let mut mixed_corrupt_tail = None;
     for stage in match mode {
+        "mixed_roots_crash" => vec!["mixed_roots_crash", "mixed_roots_recover"],
         "crash" => vec!["crash", "recover"],
         "source_crash" => vec!["source_crash", "source_recover_unknown"],
         "source_ack_crash" => vec!["source_ack_crash", "source_recover_known"],
@@ -1249,13 +1255,42 @@ async fn run(mode: &str) {
         let err = errors.await.unwrap();
         assert!(
             result.is_ok()
-                && if matches!(stage, "crash" | "source_crash" | "source_ack_crash") {
+                && if matches!(
+                    stage,
+                    "crash" | "source_crash" | "source_ack_crash" | "mixed_roots_crash"
+                ) {
                     killed && !status.success()
                 } else {
                     status.success() && !killed
                 },
             "case {stage}: {status}: {err}"
         );
+        if stage == "mixed_roots_crash" {
+            assert_eq!(puts(&f), 7);
+            let db =
+                rusqlite::Connection::open(tmp.path().join("mixed-root/metadata.sqlite3")).unwrap();
+            db.execute(
+                "UPDATE sparse_view_blocks SET data=zeroblob(length(data))",
+                [],
+            )
+            .unwrap();
+            drop(db);
+            std::fs::rename(&setup.credentials, tmp.path().join("credentials.disabled")).unwrap();
+            std::fs::rename(
+                tmp.path().join("policy.toml"),
+                tmp.path().join("policy.disabled"),
+            )
+            .unwrap();
+            counts = Some(f.requests.lock().unwrap().len());
+        }
+        if stage == "mixed_roots_recover" {
+            assert_eq!(
+                f.requests.lock().unwrap().len(),
+                counts.unwrap(),
+                "root recovery accessed S3"
+            );
+            assert_eq!(puts(&f), 7);
+        }
         if matches!(stage, "crash" | "source_crash" | "source_ack_crash") {
             assert_eq!(puts(&f), if stage == "source_ack_crash" { 2 } else { 4 });
             let db = raw(tmp.path());
@@ -1290,7 +1325,8 @@ async fn run(mode: &str) {
         }
     }
     let expected = match mode {
-        "mixed_uploads" => 7,
+        "mixed_roots_rivals" => 8,
+        "mixed_roots_crash" | "mixed_uploads" => 7,
         "mixed_conflict" => 3,
         "mixed_concurrency" => 8,
         "mixed_controls" => 10,
@@ -1423,4 +1459,16 @@ async fn mixed_concurrent_uploads_bound_slots_release_sql_and_recover_cancelled_
 async fn mixed_racing_creator_retains_rejected_identity_dirty_bytes_and_rival_object_after_restart()
 {
     run("mixed_conflict").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn mixed_roots_exact_cas_rename_lost_replies_and_killed_metadata_recovery_without_source_bytes()
+ {
+    run("mixed_roots_crash").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn mixed_roots_independent_clients_preserve_rival_conflict_and_refuse_changed_or_deleted_base()
+ {
+    run("mixed_roots_rivals").await;
 }

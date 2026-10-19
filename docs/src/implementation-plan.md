@@ -3130,3 +3130,38 @@ Clippy/build/78Markdown/74chapters. Source dbdfd61 plus documentation-only accep
 parent merge8220555; indexed source/focused/failed/full evidence retained.
 [Verifier evidence](evidence/mixed-semantics-20261019.json). Own hosted/native/
 source cohort pending. W4b2 root journal/controller/recovery still unimplemented.
+
+
+W4b1 accepted,2026-10-19: runtime5112fd2/schema32/all306 inputs; own39239546495
+attempt1 book/Linux/Windows SUCCESS, complete raw/source/own API ZIP/typed21+14/
+project/all35 raw fields/types passed. Indexed86-member hosted archive346729bytes
+SHAd2b9ca34b9520b52359389b32fcabb7181a96173487557b03295ec11c7f1ae04.
+Linux417state/Windows412state and inherited native/session regressions passed;
+see [acceptance evidence](evidence/mixed-semantics-20261019.json). No root commit,
+clean receipt or native chunk write follows. W4b2 remains separately unaccepted.
+
+
+### W4b2 durable mixed-root publication — declared2026-10-19
+
+Implement in codex/mixed-root-journal, separate from the frozen306-input W4b1
+own cohort. Own additive schema033, prep/publication journal and semantic
+coverage, same private owner API plus restricted existing-only metadata recovery
+owner, managed publisher/recovery and exact authority/SDK/fault/restart tests.
+Follow [the complete publication contract](mixed-root-publication.md). Preserve
+strict normal state opening and old full-snapshot contracts. Exact original
+content guard, physical receipt and semantic coverage precede saved Reserve/
+Publish; after saved requests recover those exact operations before fresh
+source/policy probes. Never replace IDs or invent clean receipts. Migration,
+SQLite-full/quota/trigger/corruption, wrong owner/root/route and two-client
+conflicts must retain dirty bytes. Empty-only snapshot and native fixture schema
+expectations move together. Full local plus own platform/native/source acceptance
+required. W5 clean transition/reclamation, origins and W6 native writes remain.
+
+
+W4b2 implementation checkpoint,2026-10-19: schema33 state publication/semantic
+coverage journal, same-owner API, restricted existing-only metadata owner and
+managed publisher/recovery are wired in codex/mixed-root-journal. Eleven focused
+state tests (including24 killed-owner boundaries) and two authenticated SDK/
+authority cases passed; retained earlier import, isolation, harness and Clippy
+failures are documented. Full local and own platform/native/source gates remain
+required. This does not settle sparse views or activate native chunk writes.

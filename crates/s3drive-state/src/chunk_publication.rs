@@ -68,6 +68,12 @@ fn name(value: &str) -> bool {
 // Includes retained/orphaned records, not just active operations. Shared
 // namespace removal tables are authority state and are excluded as well.
 const EXCLUDED: &[&str] = &[
+    "sparse_publication_role",
+    "sparse_publications",
+    "sparse_publication_checks",
+    "sparse_preparations",
+    "sparse_preparation_objects",
+    "sparse_preparation_blobs",
     "sparse_view_role",
     "sparse_view_files",
     "sparse_views",

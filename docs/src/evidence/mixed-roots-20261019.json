@@ -1,0 +1,148 @@
+{
+  "date": "2026-10-19",
+  "phase": "W4b2 mixed-root publication",
+  "status": "implemented draft; focused state/SDK tests pass; full local and own platform acceptance pending",
+  "schema": 33,
+  "branch": "codex/mixed-root-journal",
+  "accepted_parent": "95f72cc",
+  "parent_runtime": "5112fd25452d0a262ed380c688e45b39d28c4370",
+  "runs": [
+    {
+      "name": "check1",
+      "session": 23480,
+      "exit_code": 101,
+      "log": "/tmp/s3drive-mixed-roots-check1.log",
+      "sha256": "6d6f31b53158325ae9986b3803d2106b934bb52a16cf827f9b7a9bc6200c68d9",
+      "summaries": []
+    },
+    {
+      "name": "check2",
+      "session": 75690,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-roots-check2.log",
+      "sha256": "270a0dcca73b7cb78853f094a2d093284688a83a7da5712ceeb4f7fd9d13f554",
+      "summaries": []
+    },
+    {
+      "name": "managed-check1",
+      "session": 44294,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-roots-managed-check1.log",
+      "sha256": "64dd219544eed2bde11fa01c981d1265ca4542c04c52fbfda2a44dbcd9cb4962",
+      "summaries": []
+    },
+    {
+      "name": "focused1",
+      "session": 17816,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-roots-focused1.log",
+      "sha256": "6dde7ab80832bb7081e1ea3c10037f439627807a66932f06ece8f6c3d234aa16",
+      "summaries": [
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 418 filtered out; finished in 0.63s"
+      ]
+    },
+    {
+      "name": "focused2",
+      "session": 99725,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-roots-focused2.log",
+      "sha256": "a5d575c38c369cf0fe3617a7e968917177555735025468e1dcf2f5d6676e2c73",
+      "summaries": [
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 418 filtered out; finished in 0.70s"
+      ]
+    },
+    {
+      "name": "focused3",
+      "session": 57432,
+      "exit_code": 101,
+      "log": "/tmp/s3drive-mixed-roots-focused3.log",
+      "sha256": "eb76929b1562869a05140d43fcc1e665dbe5c943f316a213a6f009bd735f56f4",
+      "summaries": [
+        "test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 418 filtered out; finished in 1.69s"
+      ]
+    },
+    {
+      "name": "focused4",
+      "session": 27146,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-roots-focused4.log",
+      "sha256": "d239e77ef6c1b9a54edf7ad1762518b8016b157b128443d607ce7bc525578408",
+      "summaries": [
+        "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 418 filtered out; finished in 1.69s"
+      ]
+    },
+    {
+      "name": "focused5",
+      "session": 98384,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-roots-focused5.log",
+      "sha256": "88ae5a1d02acb5af9fe41076ecc53ce7097221666bafa5b973117a6f11c9760a",
+      "summaries": [
+        "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 418 filtered out; finished in 7.45s"
+      ]
+    },
+    {
+      "name": "focused6",
+      "session": 16212,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-roots-focused6.log",
+      "sha256": "118261b38be971f0563508a578645dd2b248d84c7ac6330c562985c468fe2036",
+      "summaries": [
+        "test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 418 filtered out; finished in 7.36s"
+      ]
+    },
+    {
+      "name": "sdk1",
+      "session": 42020,
+      "exit_code": 101,
+      "log": "/tmp/s3drive-mixed-roots-sdk1.log",
+      "sha256": "d8ec523bcbc2c2ca00dc3374614c88a7f71e23ae5209428fad07203d322e2060",
+      "summaries": []
+    },
+    {
+      "name": "sdk2",
+      "session": 60760,
+      "exit_code": 101,
+      "log": "/tmp/s3drive-mixed-roots-sdk2.log",
+      "sha256": "608958b8afaf521ec9ce704daa6475577d42befec3863ab17f1008db57a50438",
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 18 filtered out; finished in 75.06s"
+      ]
+    },
+    {
+      "name": "sdk3",
+      "session": 33366,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-roots-sdk3.log",
+      "sha256": "05b1d122d5e7aa06a56690a0941bc27ba6e9e155a26b9008086d67f026c1a7be",
+      "summaries": [
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 74.96s"
+      ]
+    },
+    {
+      "name": "clippy1",
+      "session": 11260,
+      "exit_code": 101,
+      "log": "/tmp/s3drive-mixed-roots-clippy1.log",
+      "sha256": "191cf4ece05a427e9da176518df235a6b8f95bd6b5198dc0c347b754bc0e946e",
+      "summaries": []
+    },
+    {
+      "name": "clippy2",
+      "session": 56063,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-roots-clippy2.log",
+      "sha256": "7ac87e878449a54920c9ab9c5e727d20630f853cf80e84a44f1fd34157734605",
+      "summaries": []
+    }
+  ],
+  "not_claimed": [
+    "full local gate",
+    "Windows or native acceptance for this source",
+    "sparse clean settlement or reclamation",
+    "legacy/metadata-empty origins",
+    "native chunk writes",
+    "Wasabi acceptance",
+    "physical reboot/sign-in/SSH/tmux acceptance"
+  ]
+}

@@ -1,7 +1,10 @@
-//! Authenticated immutable sparse reads. No publisher, settlement or native writes.
+//! Authenticated sparse reads, preparation and explicit mixed-root publication.
+//! No clean settlement or native chunk-write activation.
 use super::*;
 use s3drive_core::manifest::{Reference, base::Descriptor};
 use s3drive_state::sparse_views::{self, Binding, Id, Piece, Range, View};
+mod publication;
+pub use publication::{MixedPublisher, MixedRootCommit, MixedRootFailure, MixedRootRecovery};
 mod recovery;
 pub use recovery::{MixedRecovery, MixedRecoveryFailure};
 mod uploading;

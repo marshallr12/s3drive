@@ -15,7 +15,7 @@ impl fmt::Debug for OriginalChunk {
     }
 }
 impl OriginalChunk {
-    fn bounds(&self) -> Result<()> {
+    pub(super) fn bounds(&self) -> Result<()> {
         if self.witness.len() < 49
             || self.witness.len() > 50 + 2 * (2 + manifest::MAX_PAGE_BYTES)
             || self
@@ -31,7 +31,12 @@ impl OriginalChunk {
 
 /// Deliberately reusable inside the later publication ledger's transaction.
 /// The returned unit is not a token that can outlive the validated snapshot.
-fn check(snapshot: &Snapshot, plan: Id, slot: u64, original: Option<&OriginalChunk>) -> Result<()> {
+pub(super) fn check(
+    snapshot: &Snapshot,
+    plan: Id,
+    slot: u64,
+    original: Option<&OriginalChunk>,
+) -> Result<()> {
     let info = snapshot.info(plan)?;
     if info.root()?.is_none() {
         return Err(Failure::Invalid.into());

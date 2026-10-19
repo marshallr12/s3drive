@@ -1,7 +1,7 @@
 {
   "date": "2026-10-19",
   "phase": "W4b1 offline exact-view data check",
-  "status": "full local gate passed; own hosted/native/source acceptance pending",
+  "status": "W4b1 accepted: full local and own Linux/Windows/book/native/source cohort passed",
   "runtime_source": "dbdfd61",
   "branch": "codex/mixed-publication",
   "accepted_parent": "00606e9e25e3f9f25e314721525f48b7339bba31",
@@ -92,7 +92,7 @@
       "windows": 118016754819,
       "book": 118016754945
     },
-    "status": "all3 in progress; acceptance pending",
+    "status": "all3 success; accepted after own source/raw/artifact/native checks",
     "observer": {
       "source": "5112fd25452d0a262ed380c688e45b39d28c4370",
       "run_id": 39239546495,
@@ -105,5 +105,106 @@
       "started": "2026-10-19T10:44:45.254543+00:00"
     },
     "own_one_use_acceptance_scripts": "prepared and syntax checked, NOT executed"
+  },
+  "hosted_acceptance": {
+    "source": "5112fd25452d0a262ed380c688e45b39d28c4370",
+    "run_id": 39239546495,
+    "attempt": 1,
+    "jobs": {
+      "linux": 118016754543,
+      "windows": 118016754819,
+      "book": 118016754945
+    },
+    "all_three_jobs": "success",
+    "checker_session": 83234,
+    "checker_exit": 0,
+    "raw_comparison_and_archive_session": 2142,
+    "exit_code": 0,
+    "watch": {
+      "source": "5112fd25452d0a262ed380c688e45b39d28c4370",
+      "run_id": 39239546495,
+      "run_attempt": 1,
+      "runner_pid": 326311,
+      "runner_start_ticks": "141328871",
+      "child_pid": 326313,
+      "child_start_ticks": "141328878",
+      "log": "/tmp/s3drive-mixed-semantics-hosted-watch.log",
+      "started": "2026-10-19T10:44:45.254543+00:00",
+      "observer_exit_code": 0,
+      "finished": "2026-10-19T11:12:35.421337+00:00",
+      "observed_run": {
+        "id": 39239546495,
+        "head_sha": "5112fd25452d0a262ed380c688e45b39d28c4370",
+        "run_attempt": 1,
+        "status": "completed",
+        "conclusion": "success"
+      },
+      "identity_matches": true
+    },
+    "archive": {
+      "path": "evidence/mixed-semantics-hosted-20261019.tar.gz",
+      "sha256": "d2b9ca34b9520b52359389b32fcabb7181a96173487557b03295ec11c7f1ae04",
+      "bytes": 346729,
+      "members": 86,
+      "all_indexed_members_verified": true,
+      "source": "5112fd25452d0a262ed380c688e45b39d28c4370",
+      "run_id": 39239546495,
+      "run_attempt": 1,
+      "independent_typed_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "all_raw_fields_and_types_equal": true
+    },
+    "own_artifacts": [
+      {
+        "kind": "disposition",
+        "id": 12181478025,
+        "source": "5112fd25452d0a262ed380c688e45b39d28c4370",
+        "run_id": 39239546495,
+        "run_attempt": 1,
+        "windows_job": 118016754819,
+        "zip_sha256": "2fffb97d76e177cabbdfe54759c8c5cfef7b0102cb0c728a0d2f1386a811c9de",
+        "json_sha256": "664a40652fbbde4dda9fafeb845352abd6ee5e6355d52902afa1be083679cc58",
+        "primary_artifact_reused": false
+      },
+      {
+        "kind": "replacement",
+        "id": 12180169543,
+        "source": "5112fd25452d0a262ed380c688e45b39d28c4370",
+        "run_id": 39239546495,
+        "run_attempt": 1,
+        "windows_job": 118016754819,
+        "zip_sha256": "8d1388db1add97881d89605d601351e1a0f11641c62b551829db4ce039744437",
+        "json_sha256": "4b4a7efe4f80de2b3fbf8d4d13a81b8f31ef281e9235f9a6cce06608e09c77c6",
+        "primary_artifact_reused": false
+      }
+    ],
+    "all306_working_and_committed_inputs_exact": true,
+    "independent_typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true,
+    "state_tests": {
+      "linux": 417,
+      "windows": 412,
+      "ignored_each": 1
+    },
+    "regressions": {
+      "linux_legacy_tests": 9,
+      "linux_legacy_seconds": 71.77,
+      "windows_legacy_tests": 7,
+      "windows_legacy_seconds": 96.13,
+      "linux_manifest_seconds": 1.81,
+      "windows_manifest_seconds": 10.93,
+      "linux_paired_no_systemd_seconds": 24.15,
+      "windows_paired_managed_seconds": 92.42
+    },
+    "runners": {
+      "linux": "Ubuntu24.04 image20261012.334.1",
+      "windows": "Windows Server2025 windows-2025-vs2026 image20261007.264.1"
+    },
+    "warnings": "All raw tooling notices, two unused WinFsp delay-import groups and three disposable locked-profile warnings retained. Dummy credentials removed; final profile deletion by VM destruction. Slow tests completed successfully."
   }
 }
