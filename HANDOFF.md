@@ -47,9 +47,13 @@ Next worktree /home/marshall/src/worktrees/s3drive-sparse-edit-views,
 codex/sparse-edit-views from local preparatione90d791 based on this same core
 runtime. W2b1 draft now implements schema29, immutable initial base/zero metadata,
 atomic begin/replay, range plans, private worker and reciprocal isolation.10new
-controls/24corruption cases1.47s plus27migration controls30.11s passed. Full local
-gate48732 LIVE -> /tmp/s3drive-sparse-views-gate.log; all275 inputs frozen in
-/tmp/s3drive-sparse-views-frozen.json. No runtime changes until it closes. Read
+controls/24corruption cases1.47s plus27migration controls30.11s passed. First full local gate48732 CLOSED101 at snapshot validation: new empty local
+tables were absent from the explicit allowlist. Fixed narrow allowlist + four
+nonempty refusal controls; snapshot CLI2 and state9 controls passed. Synthetic
+orphan fixtures explicitly disable FK only in their disposable input databases.
+Fresh full gate2 44679 LIVE -> /tmp/s3drive-sparse-views-gate2.log, final275
+inputs in /tmp/s3drive-sparse-views-frozen.json; original failure/map preserved.
+No runtime changes in that checkout until it closes. Read
 that checkout's HANDOFF and plan/chapter; its new source is NOT accepted by this
 codec cohort. Main stays on accepted codec/schema28 until that phase's own gates.
 W2b2 patch mutations, W2c composition, W3/W4 mixed publication, W5 settlement,

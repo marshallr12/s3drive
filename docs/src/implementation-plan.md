@@ -2586,3 +2586,9 @@ Linux manifest FUSE/remount1.19s, Windows WinFsp/remount14.11s;37core/11reader
 integration keeps that runtime unchanged. W2b1 is a separate schema29 draft in
 codex/sparse-edit-views; focused storage/migration controls passed and its full
 local gate48732 is running. That new source has no hosted acceptance yet.
+
+W2b1 progress: its first full gate48732 exposed the native snapshot local-table
+allowlist missing the four new EMPTY tables. The narrow repair retains unknown/
+nonempty/view/64-table refusals. Snapshot CLI2 and state9 controls passed after
+correcting only the synthetic orphan fixtures. Fresh full gate44679 is running
+against275 frozen inputs in its isolated checkout. No schema29 acceptance yet.
