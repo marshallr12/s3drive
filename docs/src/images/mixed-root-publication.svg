@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="700" viewBox="0 0 1120 700" role="img" aria-labelledby="title desc">
+<title id="title">Proposed publication of an edited chunk manifest</title>
+<desc id="desc">Local SQLite retains the immutable edited view, semantic evidence and exact authority requests. New chunks and manifests are uploaded to S3, then the authority conditionally publishes the root. A narrow recovery owner replays saved authority requests without accessing source bytes or S3. Local settlement remains a later phase.</desc>
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#43657d"/></marker></defs>
+<rect width="1120" height="700" fill="#f4f7fb"/>
+<g font-family="sans-serif" fill="#172f43">
+<text x="36" y="42" font-size="25" font-weight="bold">Edited manifest publication</text>
+<text x="36" y="69" font-size="16">W4b proposal · 2026-10-19 · no mounted chunk-write or flush acceptance implied</text>
+<rect x="26" y="94" width="690" height="457" rx="15" fill="#fff" stroke="#b6c6d4"/>
+<text x="48" y="126" font-size="19" font-weight="bold">Local workstation · same account, private state directory</text>
+<rect x="48" y="148" width="293" height="110" rx="9" fill="#e9f1ff" stroke="#7696c3"/>
+<text x="64" y="176" font-size="18" font-weight="bold">Immutable edited view</text>
+<text x="64" y="202" font-size="16">Original base + patches + zeros</text>
+<text x="64" y="227" font-size="16">Newer local edits stay separate</text>
+<rect x="375" y="148" width="315" height="110" rx="9" fill="#e5f5f1" stroke="#6b9c92"/>
+<text x="391" y="176" font-size="18" font-weight="bold">Exact-view semantic checks</text>
+<text x="391" y="202" font-size="16">Full original chunk verification</text>
+<text x="391" y="227" font-size="16">Compare actual candidate bytes</text>
+<path d="M342 202 H369" fill="none" stroke="#43657d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="48" y="305" width="642" height="104" rx="9" fill="#fff1d8" stroke="#b79557"/>
+<text x="64" y="333" font-size="18" font-weight="bold">SQLite journal · outside the mounted tree</text>
+<text x="64" y="359" font-size="16">Frozen identities + physical receipts + semantic coverage</text>
+<text x="64" y="385" font-size="16">Save exact ReserveManifest / Publish request before each RPC</text>
+<path d="M532 259 V299" fill="none" stroke="#43657d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="48" y="449" width="642" height="78" rx="9" fill="#f3eafa" stroke="#9b7caf"/>
+<text x="64" y="476" font-size="18" font-weight="bold">Restricted metadata-only recovery owner</text>
+<text x="64" y="502" font-size="16">Existing saved requests only · no source BLOB reads or S3 client</text>
+<path d="M369 448 V415" fill="none" stroke="#43657d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="763" y="111" width="325" height="174" rx="13" fill="#e6f3fa" stroke="#729cb5"/>
+<text x="782" y="143" font-size="20" font-weight="bold">S3-compatible service</text>
+<text x="782" y="176" font-size="16">Immutable new chunks + pages</text>
+<text x="782" y="202" font-size="16">Reuse unchanged references</text>
+<text x="782" y="229" font-size="16">Upload receipt ≠ visible version</text>
+<text x="782" y="258" font-size="16">W4a physical transfer layer</text>
+<path d="M691 171 H756" fill="none" stroke="#43657d" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="710" y="160" font-size="13">SDK</text>
+<rect x="763" y="328" width="325" height="199" rx="13" fill="#e5f5f1" stroke="#6b9c92"/>
+<text x="782" y="360" font-size="20" font-weight="bold">Shared Rust authority</text>
+<text x="782" y="393" font-size="16">Compare original content guard</text>
+<text x="782" y="420" font-size="16">Atomically publish manifest root</text>
+<text x="782" y="447" font-size="16">Replay exact operation after timeout</text>
+<text x="782" y="474" font-size="16">Conflict preserves local edits</text>
+<text x="782" y="501" font-size="16">No S3 credentials required here</text>
+<path d="M691 356 H756" fill="none" stroke="#43657d" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M691 488 H756" fill="none" stroke="#43657d" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="708" y="345" font-size="13">RPC</text>
+<rect x="26" y="579" width="1062" height="91" rx="12" fill="#fff" stroke="#b6c6d4"/>
+<text x="48" y="610" font-size="18" font-weight="bold">Later acceptance boundaries</text>
+<text x="48" y="638" font-size="17">W5: acknowledge exactly the published local view. W6: native writes, truncate, append and flush.</text>
+</g></svg>
