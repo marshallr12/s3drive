@@ -3,7 +3,7 @@
   "phase": "W3b durable mixed-tree preparation",
   "branch": "codex/mixed-plans",
   "baseline": "cdf7de8fb3231a227e3a617a30e120ce2c849a11",
-  "status": "full local gate passed on all300 frozen inputs; own combined acceptance pending",
+  "status": "W3b accepted: full local and own combined/native/source/artifact cohort passed",
   "schema": 32,
   "runs": {
     "check1": {
@@ -244,8 +244,104 @@
       "windows": 117972061489
     },
     "watch_session": 74306,
-    "status": "running; own acceptance pending",
+    "status": "all3 completed success; accepted",
     "url": "https://github.com/marshallr12/s3drive/actions/runs/39225921755",
-    "checkers": "prepared; not executed"
+    "checkers": "prepared; not executed",
+    "watch_sessions": [
+      {
+        "session": 74306,
+        "exit_code": 143,
+        "scope": "observer only; CI still live"
+      },
+      {
+        "session": 86036,
+        "exit_code": 0
+      }
+    ]
+  },
+  "hosted_archive": {
+    "path": "evidence/mixed-plans-hosted-20261019.tar.gz",
+    "sha256": "dc9fe9b4381633f403525a79943a645d8196606b62964c2acc78b2bb2e7364f1",
+    "bytes": 306210,
+    "members": 78,
+    "all_indexed_members_verified": true,
+    "source": "e140508b19aef4082f9565990402852d4f27cdb4",
+    "run_id": 39225921755,
+    "run_attempt": 1,
+    "independent_typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true
+  },
+  "hosted_acceptance": {
+    "checker_attempt1": {
+      "session": 22853,
+      "exit_code": 1,
+      "reason": "review marker absent after helper rejected15 interleaved reference lines; artifact directory not created"
+    },
+    "checker_attempt2": {
+      "session": 82089,
+      "exit_code": 0
+    },
+    "artifacts": [
+      {
+        "kind": "disposition",
+        "id": 12176705608,
+        "source": "e140508b19aef4082f9565990402852d4f27cdb4",
+        "run_id": 39225921755,
+        "run_attempt": 1,
+        "windows_job": 117972061489,
+        "zip_sha256": "93bd6787e2c5a8be8a6521a6b82d41626b925d9e8db4144ce5af11e3137c1634",
+        "json_sha256": "38c82f0eab41877d8c5e33e4c5d14ad0b1fbb24a6cc46b3825772e31852a2668",
+        "primary_artifact_reused": false
+      },
+      {
+        "kind": "replacement",
+        "id": 12173449348,
+        "source": "e140508b19aef4082f9565990402852d4f27cdb4",
+        "run_id": 39225921755,
+        "run_attempt": 1,
+        "windows_job": 117972061489,
+        "zip_sha256": "82cfc37d90c9f426f07b719548409f8893b178d2ae4ff477b4bb3ec9e72aeecf",
+        "json_sha256": "7b1ec74c6236f12038b05373f70a9d702d838880fe794dc687f65b5084728cb3",
+        "primary_artifact_reused": false
+      }
+    ],
+    "raw_comparison": [
+      {
+        "kind": "replacement",
+        "records": 21,
+        "all_fields_and_types_equal": true,
+        "duplicate_keys_or_nonfinite_json_rejected": true
+      },
+      {
+        "kind": "disposition",
+        "records": 14,
+        "all_fields_and_types_equal": true,
+        "duplicate_keys_or_nonfinite_json_rejected": true
+      }
+    ],
+    "linux_state": 408,
+    "windows_state": 403,
+    "state_ignored_each": 1,
+    "core": 37,
+    "reader": 22,
+    "reader_native_ignored_each": 1,
+    "s3": 62,
+    "linux_native_legacy": 9,
+    "windows_native_legacy": 7,
+    "manifest_linux_seconds": 1.66,
+    "manifest_windows_seconds": 2.7,
+    "paired_windows_seconds": 80.71,
+    "linux_supervised_http_tls_seconds": 24.19,
+    "warnings": [
+      "3 locked disposable profiles, dummy credentials removed, deletion by VM destruction",
+      "2 WinFsp unused delay-import warning groups",
+      "completed slow tests",
+      "Node action and Ubuntu label notices",
+      "deliberate authorization/conflict/stopped-authority connection failures"
+    ],
+    "scope": "W3b preparation and regressions only, no native chunk writes/provider/physical reboot acceptance"
   }
 }

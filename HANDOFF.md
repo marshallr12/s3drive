@@ -25,76 +25,56 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
-## Current W3b durable mixed-tree preparation — local green (2026-10-19)
+## Accepted W3b durable mixed-tree preparation (2026-10-19)
 
-Worktree /home/marshall/src/worktrees/s3drive-mixed-plans,
-branch codex/mixed-plans fromcdf7de8. Accepted main3086038 stays schema31 with
-runtime9544193/all288 inputs exact; this isolated phase is schema32. Previous
-turn concrete progress, not blocked. Goal ACTIVE. No uploads/native writes enabled.
+Runtimee140508b19aef4082f9565990402852d4f27cdb4, schema32/all300 frozen inputs.
+Own39225921755 attempt1 ALL3 SUCCESS: book117972061466/Linux117972061091/
+Windows117972061489. Watch74306 exited143 as an observer while CI remained live;
+replacement86036 CLOSED0; no workflow rerun. Checker22853 failed before artifact
+directory creation because the first review helper rejected15 interleaved typed
+reference test lines. Fixed review classification, retained failure, fresh
+checker82089 CLOSED0. Full raw/source/own API ZIP SHA/independent typed21+14/
+project/all35 raw field/type comparisons passed. Own artifacts replacement
+12173449348/disposition12176705608. Indexed78-member hosted archive306210bytes
+SHAdc9fe9b4381633f403525a79943a645d8196606b62964c2acc78b2bb2e7364f1;
+all members verified. One-use acceptance/archive executed; do not rerun.
 
-Implemented/wired: additive032 DDL, complete bounded plan/object/blob ledger,
-exact view/op/generation/original root freeze, coverage and bottom-up page cursor,
-new data/page vs inherited chunk/subtree tags, shared SHA-addressed BLOBs, bulk
-zero runs, strict whole-object length/geometry and store/file/role proof checks.
-New output root identity; old roots reused only as exact children. Every mutation
-checks exact expected post-snapshot; attached prep-table triggers are refused
-before writes. Inspection/replay ignore narrowed admission; saved local operation
-lookup recovers an unknown begin reply without credentials. It grants no network
-ownership. Schema migration/native assertions/test-only old-schema fixtures move
-together; old sparse BLOBs/IDs preserved. Existing full-snapshot planner/receipts
-unchanged. State output is offline intent, not auth/upload/clean receipt.
+Linux408state/Windows403state, one ignored each;37core/22reader1nativeignored/
+62S3. All15 new state and3 new managed SDK/controller cases passed. Local full
+gate34846 CLOSED0:300 inputs exact,76Markdown/72chapters, indexed329-member
+local source/evidence archive (see mixed-plans.md). Initial focused digest bug
+and first full gate snapshot-schema failure are retained with failed sources.
+Narrow snapshot adaptation permits only EMPTY preparation tables, with populated
+role refusals. Main integration resolves only the two owned doc-pointer conflicts
+from1a87e1e; no runtime delta from successful frozen source is authorized here.
 
-Managed Preparation shares private SQL owner and reader permit/deadline, releases
-SQL before network, authenticates exact history/rootHEAD and compares full stored
-binding/root on reopen. It prepares real changed bytes and unchanged witnesses;
-false persisted root claims fail. PreparedDependency is privately constructed:
-it rechecks new bytes/hole semantics against the exact source view; correct-root
-false body/hole claims also fail. Pages remain structural and need W4 ordered
-child receipts/provenance. Completed root metadata is not an upload or flush.
-Local/authority restart and remote replacement/rename/removal never rebase.
+Real Linux legacy FUSE9/75.94s, manifest1.66s and no-systemd HTTP/TLS24.19s passed.
+Real Windows legacy WinFsp7/95.17s, manifest2.70s, paired independent-logon TLS
+recovery80.71s passed. Actual Ubuntu24.04 image20261012.334.1 and Windows Server2025
+windows-2025-vs2026/20261007.264.1; no physical workstation reboot claim. Three
+locked disposable Windows profiles: dummy credentials removed, final deletion
+by VM destruction. Two unused delay-import link warning groups, completed long
+tests, Node/Ubuntu-label notices and deliberate authorization/conflict/stopped-
+authority connect errors retained. These durations are not performance promises.
 
-Verification so far: check51042 CLOSED0; initial focused1369 CLOSED101:
-3pass/2fail121.97s, wrong raw BLOB SHA used instead of page-domain digest. It
-finished before attempted stop (no process killed). Saved old ledger/journal/map
-and log. Fixed page references/root to Page.digest; also avoided repeated scans
-of all rows for inherited covers and iterating a whole structural-zero chunk run.
-Focused13839 CLOSED0:5tests60.16s. Refusals20151 CLOSED0:5tests1.27s; recovery13199
-CLOSED0:2tests8.37s (14 owned killed-process boundaries); clippy33388 CLOSED0 for
-then-current state source. Managed check60312 CLOSED0. First managed75463 CLOSED0:
-2tests15.01s. Dedup41507 CLOSED0:1/5.24s; orphan+partial boundary85743 CLOSED0:
-1/0.04s and1/3.14s. Two-level84275 CLOSED0:1/0.15s. Final managed60758 CLOSED0:
-3tests15.76s incl checked dependencies. Later operation lookup is covered by the
-upcoming full gate; do not claim intermediate Clippy covers later edits.
-All paths/timings/hashes in docs/src/evidence/mixed-plans-20261019.json.
-Diagram XML/native render/visual review passed. Full phase contract at plan end.
+Accepted behavior: exact view/op/generation/base context, bounded cursor/tagged
+new/inherited dependencies, subtree/zero reuse, shared BLOBs, SQLite-full/quota/
+corruption/trigger refusal and14 process-kill boundaries. Managed reopen and
+checked dependency semantics reject false base/root/data/hole claims; same
+private owner/reader bounds, fresh exact history/root checks, SQL before network.
+This is preparation, not a send permission, root commit, clean receipt or native
+chunk-write activation. W4 publication, W5 settlement/retention/reclamation,
+legacy/metadata-empty origins and W6 mounted chunk writes remain. Provider and
+physical sign-in/reboot/SSH/tmux gates remain separate. Goal ACTIVE/progress.
 
-Full gate80227 CLOSED101 at authority snapshot round-trip: new empty schema32
-local tables absent from snapshot allowlist. All300 frozen inputs unchanged on
-failure; old log/map/result and old validator source retained under
-/tmp/s3drive-mixed-plans-{gate1*,failed-gate1-frozen.json,failed-snapshot-validator.rs}.
-Added only the three constant local-table names, still empty-only, with three
-new nonempty-role refusal cases. Snapshot focus32148 CLOSED0:9state1.09s/2CLI0.29s.
-Full gate2 session34846 CLOSED EXIT0. All300 runtime/contract inputs match
-/tmp/s3drive-mixed-plans-frozen.json. Schema32, plain pipes, four test threads.
-408state1ignored/37core/22reader1nativeignored/62S3, format/Clippy/build,
-76Markdown links and72book chapters passed. Exact result/log:
-/tmp/s3drive-mixed-plans-gate-result.json and gate2.log. Indexed329-member local
-archive1046139bytes SHA363badd8492a7f492ad8fcf209933969ec3c4175b2cb745ee6b5faa304d2588f
-contains all300 source inputs, successful/failed logs, old sources and diagram
-review. Archive verified; one-use archiver already executed, do not rerun.
-Published sourcee140508b19aef4082f9565990402852d4f27cdb4 to codex/mixed-plans.
-Own39225921755 attempt1: Linux117972061091, book117972061466,
-Windows117972061489. All currently running. Watch74306 LIVE, log
-/tmp/s3drive-mixed-plans-hosted-watch.log. All300 working/committed inputs must
-remain exact. One-use checker/oracle/raw-comparer/archiver prepared under
-/tmp/s3drive-{check-mixed-plans-hosted.py,mixed-plans-hosted-*}; NOT executed.
-Await all3 terminal results, review complete raw logs, then own source/API ZIP
-SHA/independent typed21+14/project/all35 raw-field/type acceptance and archive.
-No runtime changes since successful gate freeze. Main3086038 remains accepted
-schema31 until own acceptance. Never reuse parent artifacts or infer Wasabi,
-physical reboot or native chunk-write success from these regression checks.
-W4 exact CAS/dependency sends/unknown recovery, W5 exact-view settlement and
-retention/reclamation, legacy/metadata-empty admission and W6 native writes remain.
+Successor worktree /home/marshall/src/worktrees/s3drive-mixed-uploads,
+codex/mixed-uploads fromdd9147f. Draft exact physical mapping/dependency uploader
+uses generic staging on the same worker. SDK1 passed113.48s, revised walk73.02s;
+four state controls passed1.71s including quota/actual SQLite-full/same-ID resume.
+Current full gate86906 LIVE at /tmp/s3drive-mixed-uploads-gate1.log on frozen303
+inputs. Preserve runtime while live. Independent observation-only restart recovery
+without authenticated Preparation reopen is a known remaining W4a acceptance gap;
+see its HANDOFF and plan. Do not promote or call W4a accepted from these results.
 
 ## Accepted W3a bounded incremental data preparation (2026-10-19)
 

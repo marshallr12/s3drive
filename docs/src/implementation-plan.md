@@ -2949,5 +2949,19 @@ Full local gate34846 passed on all300 frozen inputs (408state/22reader, one
 ignored each;37core/62S3;76Markdown/72chapters). Empty-only snapshot-table schema
 adaptation and its nonempty refusal cases are included. The indexed329-member
 local archive preserves exact source and both failed and successful runs. Own
-combined gates are pending. Parent main3086038 stays accepted
+combined gates subsequently passed; see the dated acceptance below. Parent main3086038 was accepted
 schema31; this source does not activate uploads, settlement or native writes.
+
+
+W3b accepted,2026-10-19: exact runtimee140508b19aef4082f9565990402852d4f27cdb4,
+schema32, all300 frozen runtime/contract inputs unchanged. Own39225921755 attempt1
+book/Linux/Windows SUCCESS, full raw/source/own API ZIP/independent typed21+14/
+project/all35 raw-field/type acceptance passed. Linux408state, Windows403state,
+37core/22reader/62S3 plus native legacy/manifests and paired session/supervisor
+regressions passed; ignored tests and warnings remain documented. Indexed78-member
+hosted archive306210bytes SHAdc9fe9b4381633f403525a79943a645d8196606b62964c2acc78b2bb2e7364f1.
+See [mixed preparation](mixed-plans.md) and dated evidence. Main's doc-only
+successor pointer is reconciled without runtime changes. W4a is a separate draft
+with a live local gate and a known observation-only restart-construction gap;
+W4b/W5/W6, legacy/metadata-empty origins and provider/physical session acceptance
+remain. No chunk writes or file-flush semantics follow from W3b preparation.
