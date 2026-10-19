@@ -25,6 +25,28 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Current W4b design checkpoint (2026-10-19)
+
+Worktree /home/marshall/src/worktrees/s3drive-mixed-publication,
+codex/mixed-publication, baseline803a534 (W4a runtime3fd2a87/schema32).
+Documentation-only source review and acceptance contract at
+docs/src/mixed-root-publication.md; user reaffirmed chunks/manifests D041.
+No new runtime/schema code yet. Implement complete exact-view semantic proof,
+content-guarded ReserveManifest/Publish and narrow metadata-only saved-request
+recovery as specified there before claiming W4b. Normal State opening validates
+source BLOBs and cannot serve the damaged-source recovery promise. Keep strict
+normal opening; the proposed narrow owner exposes no new work or S3 capability.
+W4a's independent Windows cohort is still pending; keep that source frozen.
+W5 settlement, native W6, origins/provider/physical session gates remain.
+Links (78 Markdown files), mdbook build and all chapter tests passed for this
+doc-only change; SVG rendered and visually reviewed at1120x700. No runtime
+changes or new full-gate claim. Logs /tmp/s3drive-mixed-root-design-{links,book,
+book-test}.log. First resume: read the publication design, check own W4a run
+39235506209, finish its separate acceptance, then implement W4b against the exact
+accepted source. Never rerun completed one-use source/artifact archivers.
+
+## Inherited W4a validation checkpoint
+
 ## Current W4a mixed dependency uploads — focused green, final gates pending (2026-10-19)
 
 Worktree /home/marshall/src/worktrees/s3drive-mixed-uploads, codex/mixed-uploads.
