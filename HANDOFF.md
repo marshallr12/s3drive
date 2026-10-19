@@ -58,7 +58,7 @@ This remains a historical root commit, not local clean settlement or a file flus
 Normal source opening is strict; no lost-operation rebase or overwrite fallback.
 Manifest origins only; legacy/metadata-empty origins still need explicit formats.
 
-## Current successor W5a exact local lineage — local gate pending
+## Current W5a exact local lineage — complete local gate, own cohort running
 
 Worktree /home/marshall/src/worktrees/s3drive-mixed-publication-lineage,
 branch codex/mixed-publication-lineage, runtime71242f5 (schema34/all319 final2).
@@ -71,10 +71,33 @@ foreign-conflict case passed. First full gate1 CLOSED101 at old source_flow chil
 stack overflow after new scenario expanded shared dispatch; all319 unchanged,
 21other publication cases passed. Non-inlined future factory fixes construction
 without larger stacks; failing default-stack case passed5.69s. Exact failed source
-and logs retained. Owned full gate2 runner478318/child478320 currently live,
+and logs retained. Owned full gate2 runner478318/child478320 CLOSED EXIT0 at12:36:50Z,
 /tmp/s3drive-mixed-lineage-gate2-{running,result}.json and .log. Keep319 frozen at
-/tmp/s3drive-mixed-lineage-final2-frozen.json. Read its HANDOFF before continuing;
-new schema33 damaged-source saved-Publish case is included in that gate. Full local
+/tmp/s3drive-mixed-lineage-final2-frozen.json. Read docs/src/mixed-publication-lineage.md before continuing;
+new schema33 damaged-source saved-Publish case passed in that gate. All319
+unchanged;434state1ignored/37core/22reader1nativeignored/62S3/22publication,
+format/Clippy/build/79MD/75chapters passed. Log SHA
+b14a48b1e9ebd3bd583fed0add8d2ff57c3653f24d50d20cae9f3264b023eb3b.
+One-use local archive DONE:663members1690240bytes SHA
+33d07eb2df7f6742dd7bc56a70d86cbb182400de6feb19e3b24e0f3256543359,
+all members verified including exact final319 and failed gate1 source319. NEVER
+rerun completed local archiver. Own source50ee01c73b8ed75182903aed808611783ac24885 is published; all319 committed
+and working inputs exact. Own39253634685 attempt1 in progress:
+book118063332761/Linux118063333285/Windows118063333172. Owned observer530666;
+child/start ticks in/tmp/s3drive-mixed-lineage-hosted-watch-running.json.
+Four one-use checker/oracle/raw-comparer/archive scripts prepared, NOT executed;
+review aid also prepared. First resume: authoritative own API jobs; after all3
+terminal success, review complete raw logs, validate source/API ZIP SHA/typed21+14/
+project/all35 raw fields/types, then archive once. Required434Linux/429Windowsstate,
+22publication, five new lineage state cases and SDK consecutive-publication case.
+Do not reuse parent artifacts12184468560/12185592238 or prior earlier artifacts.
+Never rerun completed local archive. Keep all319 frozen through own acceptance.
+Done contract: a later strict descendant may use an exactly retained successful
+local predecessor; wrong source/store/file, nonancestor, missing/unknown/conflicted
+predecessors and foreign current content must fail without admitting a new remote
+request. Preserve old literal IDs/hashes, exact saved recovery and newer heads.
+The concrete source remains71242f5/all319 while accepted main26757a1 docs/evidence
+are merged. The implementation declaration and full design are in the mdBook. Full local
 and own hosted/native/source acceptance precede W5a promotion. Its mdBook chapter
 also gives concrete W5b clean-epoch/pin/retry-retirement/reclamation proposals.
 W5b, explicit origins, W6 and provider/physical gates remain. Goal ACTIVE/progress.

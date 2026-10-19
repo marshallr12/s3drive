@@ -3185,3 +3185,29 @@ manifest/paired startup passed. [Exact evidence](mixed-root-publication.md).
 W5a successor in codex/mixed-publication-lineage has schema34 repeated-local-root
 lineage; its full local gate2 is pending after an isolated test-dispatch factory
 fix. W5b clean epochs and bounded retirement, origins and W6 remain.
+
+
+### W5a exact publication lineage (declared, 2026-10-19)
+
+Implement the [lineage contract](mixed-publication-lineage.md) in the isolated
+`codex/mixed-publication-lineage` worktree. Existing W4b2 inputs stay frozen for
+their own acceptance. W5a enables subsequent descendant publications against an
+exact known local root, with strict foreign-content refusal and byte-preserved
+old intents. W5b still must add clean-base epochs and bounded local retirement;
+W5a alone must not be exposed as a successful native clean flush.
+
+
+W5a complete local gate passed2026-10-19: exact71242f5/schema34/all319,
+434state1ignored/37core/22reader1nativeignored/62S3/22publication; schema fixtures,
+format/Clippy/build/79MD/75chapters passed. A non-inlined scenario factory fixed
+a retained old test-dispatch stack overflow without increasing stack limits.
+[Local lineage evidence](mixed-publication-lineage.md) includes both exact319
+sources in the663-member archive SHA
+33d07eb2df7f6742dd7bc56a70d86cbb182400de6feb19e3b24e0f3256543359.
+Own hosted/native/source acceptance remains required before W5a runtime promotion.
+W5b clean epochs/retention and explicit origins/W6 remain.
+
+
+W5a own cohort39253634685 attempt1 is running for exact source50ee01c/schema34.
+Main runtime remains accepted W4b2/schema33 until full own source/native/artifact
+acceptance. [Current successor evidence](mixed-publication-lineage.md).
