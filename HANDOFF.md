@@ -6,31 +6,36 @@ implementation. Keep research/decisions/status/plans in docs/src/. Run the local
 gate with `bash scripts/gate.sh`; native/provider/recovery gates are separate.
 
 
-Repair checkpoint2026-10-19: isolated worktree
-/home/marshall/src/worktrees/s3drive-scoped-source-operations-repair, branch
-codex/scoped-source-operations-repair, runtime source170979e. Two329-input files
-now differ from originala3028bf: scoped-mode query validation and the SDK fixture
-admission harness. Repair gate1 (query only) CLOSED101 with all329 unchanged:
-22publication passed/2 existing inner upload Timeouts in202.09s; logSHA
- dcf1f125500f10dfe20bc462b03f4ce504e8563053d14f02fa913750e69089e6.
-Original gate1 was254.48s; exact failing original binary passed alone88.68s.
-Do not claim the query change solved the timeouts. New SDK harness holds at most
-2 independent fixture process families, acquired before any fixture resources;
-a separate600s queue budget leaves existing30s operation/180s child deadlines,
-internal race/concurrency assertions, receipts and cleanup unchanged. Resolved
-Tokio1.53.3 semaphore signatures were inspected locally. Query repair state tests
-passed14/12.06s including14 kills and SQLITE_FULL; full repair not yet accepted.
+Current independent phase: mixed upload authorization batch,2026-10-19.
+Runtime checkpointd4a46c5; no promotion or own hosted cohort yet.
+Worktree /home/marshall/src/worktrees/s3drive-mixed-upload-auth-batch, branch
+codex/mixed-upload-auth-batch, based on canonical1b0b692/schema35/accepted324.
+Read docs/src/mixed-upload-authorization-batch.md. Managed planning/preparation/
+uploading and SDK root case/harness only; no schema or dependency change. Private
+exact-preparation authorization scope owns one family permit; sequential full
+child semantics; opening/closing fresh base authorization; unchanged outer30s
+deadline and physical recovery before any fresh authorization. Public dependency
+API unchanged, source SQL transactions end before network. No native chunk writes.
 
-Owned repair gate2 runner757539/child757549 is LIVE, started14:37:55Z. Inspect
-/tmp/s3drive-scoped-repair-gate2-{running,result}.json and .log before any Cargo;
-NEVER restart a live owner from observation timeout. One local Cargo at a time,
-shared target. Frozen329 map/source:
-/tmp/s3drive-scoped-repair-final2-frozen.json and -source.tar.gz. All prior maps,
-exact source tars and failed logs remain retained. Originala3028bf own CI39267986023
-has book/Linux success and Windows still running at last API check. It cannot
-prove the changed repair; no repaired own hosted cohort has been published yet.
-Main remains accepted W5b1/schema35/all324, integration0ff32cf. Pins/retirement/GC,
-external-base adoption, origins/W6/provider/physical gates remain. Goal ACTIVE.
+Workspace check1 passed20.76s. SDK1 passed78.26s, SDK2 passed79.54s with closing
+authorization denial: two history checks and no staging generation; restored
+normal upload proved exactly six history/six base HEAD checks for three objects.
+Old lost-reply/killed-owner/recovery/Unicode/tail/newer-head assertions passed.
+Frozen324 map/source /tmp/s3drive-upload-auth-batch-candidate2-frozen.json and
+-source.tar.gz. Candidate1 retained. Upcoming owned full gate1 uses
+/tmp/s3drive-upload-auth-batch-gate1-{running,result}.json and .log; inspect its
+actual process state before any other Cargo. Runner770061/child770062 LIVE; one Cargo at a time.
+No reduced SDK concurrency on this branch: normal four test threads. Full local
+and own hosted/native/source acceptance required before promotion.
+
+Scoped source170979e repair remains isolated and UNACCEPTED. Repair gate2 CLOSED101,
+all329 unchanged:23SDK passed/1 root inner upload Timeout in277.44s. SHA
+ a700c0ccce6a66ca84b78d2392c6f033c18b10e6941e6b9718b81923e54f46ca.
+Both original failures passed alone88.68s/89.91s; query change and two-case fixture
+admission did not resolve all timeouts. Originala3028bf CI39267986023 still saving
+Windows cache at last GET; book/Linux success. Its results cannot establish this
+changed batch or repair. Main remains accepted W5b1/schema35/all324. Pins/retirement/
+GC, fresh external-base adoption, origins/W6/provider/physical gates remain.
 
 Retention research2026-10-19 is in docs/src/mixed-retention-plan.md. Actual
 source/preparation/root/physical dependencies are mapped; pins without GC first,

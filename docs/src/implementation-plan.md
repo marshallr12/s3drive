@@ -3278,3 +3278,11 @@ come first; clean-anchor witness formats and all operation retry namespaces must
 be closed before transactional reclamation. Logical read pins must not hold open
 SQLite transactions across network/file-handle lifetimes. This proposal does not
 activate deletion or expand any quota/deadline.
+
+Declared2026-10-19: [mixed upload authorization batching](mixed-upload-authorization-batch.md)
+in codex/mixed-upload-auth-batch from accepted main/schema35. Own only managed
+composition planning/preparation/uploading and the existing SDK root case/harness.
+Private exact-preparation scope, one family permit, unchanged outer deadline,
+complete child semantics, start/end fresh authorization and unchanged unknown
+physical recovery. This independent performance slice must prove six base checks
+for three new objects in the130-chunk case before own full/platform acceptance.
