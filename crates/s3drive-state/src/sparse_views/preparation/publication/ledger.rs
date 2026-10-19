@@ -61,22 +61,15 @@ impl Meta {
         Ok(())
     }
     pub fn admit(&self, limits: Limits) -> Result<()> {
-        let bytes = self
-            .records
-            .values()
-            .map(serde_json::to_vec)
-            .collect::<std::result::Result<Vec<_>, _>>()?
-            .iter()
-            .map(|x| x.len() as u64)
-            .sum::<u64>()
-            + self
-                .checks
-                .values()
-                .map(serde_json::to_vec)
-                .collect::<std::result::Result<Vec<_>, _>>()?
-                .iter()
-                .map(|x| x.len() as u64)
-                .sum::<u64>();
+        // Reserve each admitted request's full maximum record footprint. Later
+        // authenticated replies may grow it; recovery must not need a fresh
+        // metadata-admission quota after the original request was saved.
+        let mut bytes = (self.records.len() as u64) * (MAX_RECORD as u64);
+        for check in self.checks.values() {
+            bytes = bytes
+                .checked_add(serde_json::to_vec(check)?.len() as u64)
+                .ok_or(Failure::Corrupt)?;
+        }
         if self.records.len() > limits.plans
             || self.checks.len() > limits.checks
             || bytes > limits.metadata_bytes

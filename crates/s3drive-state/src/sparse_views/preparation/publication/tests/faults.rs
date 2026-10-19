@@ -280,3 +280,63 @@ fn self_consistent_substituted_check_metadata_cannot_report_semantic_completion(
         raw
     );
 }
+
+#[test]
+fn admission_reserves_full_record_growth_and_later_replies_ignore_narrowed_limits() {
+    let t = tempfile::tempdir().unwrap();
+    let mut s = State::open_managed(&t.path().join("receipt budget")).unwrap();
+    let f = fixture();
+    let info = prepare(&mut s, &f, false);
+    let p = info.id().unwrap();
+    j(&mut s).check(p, 0, Some(&proof(&f))).unwrap();
+    physical(&mut s, p);
+    let before = ledger::inspect(&s.connection).unwrap();
+    let check_bytes = serde_json::to_vec(&before.checks[&(p, 0)]).unwrap().len() as u64;
+    let reserved_bytes = check_bytes + MAX_RECORD as u64;
+    let short = Limits {
+        plans: 1,
+        checks: 1,
+        metadata_bytes: reserved_bytes - 1,
+    };
+    let error = Journal::new(&mut s, short)
+        .unwrap()
+        .begin(p, f.node.clone(), f.store.clone(), 5, hex(&[10; 16]))
+        .unwrap_err();
+    assert_eq!(error.downcast_ref::<Failure>(), Some(&Failure::Quota));
+    assert!(ledger::inspect(&s.connection).unwrap() == before);
+    let exact = Limits {
+        metadata_bytes: reserved_bytes,
+        ..short
+    };
+    let r = Journal::new(&mut s, exact)
+        .unwrap()
+        .begin(p, f.node.clone(), f.store.clone(), 5, hex(&[10; 16]))
+        .unwrap();
+    let initial = serde_json::to_vec(&r).unwrap().len();
+    let tiny = Limits {
+        metadata_bytes: 1,
+        ..short
+    };
+    let mut response = reserved(&r);
+    response.node.name = "r".repeat(255);
+    let r = Journal::new(&mut s, tiny)
+        .unwrap()
+        .reserved(p, response)
+        .unwrap();
+    let r = Journal::new(&mut s, tiny)
+        .unwrap()
+        .prepare_publish(p, r.reservation().unwrap().sequence)
+        .unwrap();
+    let mut response = published(&r);
+    response.node.name = "p".repeat(255);
+    let r = Journal::new(&mut s, tiny)
+        .unwrap()
+        .published(p, response)
+        .unwrap();
+    assert!(serde_json::to_vec(&r).unwrap().len() > initial);
+    ledger::inspect(&s.connection)
+        .unwrap()
+        .admit(exact)
+        .unwrap();
+    assert_eq!(Journal::new(&mut s, tiny).unwrap().get(p).unwrap(), r);
+}

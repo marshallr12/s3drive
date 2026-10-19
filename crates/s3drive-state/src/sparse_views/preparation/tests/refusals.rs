@@ -225,7 +225,7 @@ fn additive_schema_thirty_two_preserves_old_dirty_blobs_and_collision_rolls_back
             assert!(super::super::super::ledger::inspect(&db).unwrap() == before);
         } else {
             let mut s = State::open_managed(&path).unwrap();
-            assert_eq!(s.info().unwrap().schema_version, 32);
+            assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
             assert!(super::super::super::ledger::inspect(&s.connection).unwrap() == before);
             let original =
                 super::super::super::Journal::new(&mut s, super::super::super::Options::default())

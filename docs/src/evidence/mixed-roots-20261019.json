@@ -144,6 +144,16 @@
       "summaries": [
         "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 20 filtered out; finished in 3.78s"
       ]
+    },
+    {
+      "name": "focused7",
+      "session": 1962,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-roots-focused7.log",
+      "sha256": "d11372ed050a245eab88ed34502d65ef0820cadbea753e8e3c2950c1af37babe",
+      "summaries": [
+        "test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 394 filtered out; finished in 66.10s"
+      ]
     }
   ],
   "not_claimed": [
@@ -155,5 +165,29 @@
     "Wasabi acceptance",
     "physical reboot/sign-in/SSH/tmux acceptance"
   ],
-  "focused_scope": "Focused results precede final complete gate; later create-policy recheck/expired-policy control and shared-owner close refusal must be covered by final gate."
+  "focused_scope": "Focused results precede final complete gate; later create-policy recheck/expired-policy control and shared-owner close refusal must be covered by final gate.",
+  "failed_full_gate": {
+    "runner_pid": 346464,
+    "runner_start_ticks": "141610909",
+    "child_pid": 346469,
+    "child_start_ticks": "141610918",
+    "started": "2026-10-19T11:31:45.654003+00:00",
+    "command": [
+      "bash",
+      "scripts/gate.sh"
+    ],
+    "cwd": "/home/marshall/src/worktrees/s3drive-mixed-root-journal",
+    "runtime_inputs": 317,
+    "frozen_map": "/tmp/s3drive-mixed-roots-frozen.json",
+    "tty": false,
+    "rust_test_threads": 4,
+    "log": "/tmp/s3drive-mixed-roots-gate1.log",
+    "exit_code": 101,
+    "finished": "2026-10-19T11:41:01.558561+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": [],
+    "sha256": "4bdb733376ae8fad4d9f343a07bd537e710eca59f78548828cc6f1f3af56de1a",
+    "reason": "Older schema32 migration test asserted final version32 instead of current33. All317 runtime inputs unchanged;427 pass/1 fail/1 ignored."
+  },
+  "receipt_growth_budget": "Admission now reserves64KiB per root record, so later replies do not consume fresh admission quota. New regression passes exact-bound admission and narrowed-limit reply retention."
 }

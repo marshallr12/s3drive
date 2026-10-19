@@ -268,3 +268,14 @@ transition and bounded retention/reclamation. Legacy and metadata-empty origins
 still need explicit admission formats; this draft supports existing manifest
 origins only. W6 native chunk-write/flush behavior and provider/physical session
 acceptance remain separate requirements.
+
+
+The first full gate retained317 unchanged inputs and stopped at an older
+migration fixture's hard-coded final schema32 assertion after current-schema
+reopen correctly produced33. The assertion now follows `SCHEMA_VERSION`; its
+data/collision/rollback checks remain. Review also tightened quota accounting:
+admission reserves the full64KiB maximum per root record so later replies can
+grow without a new admission budget. A regression verifies exact-bound admission
+and receipt updates after the configured budget is narrowed. All36 preparation
+tests passed, including12 publication cases and both root/preparation process-kill
+suites. A fresh complete gate is required for these final changes.

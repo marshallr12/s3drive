@@ -2565,3 +2565,19 @@ Windows117793655137. Watch43951 /tmp/s3drive-pinned-related-fef-watch.log. Its
 252map/ROOT areisolatedworktree, notprimary253. 474controllerisaccepted above.
 Next accepthelperowncohort thenmergecodewithcontroller andimplementfullreader;
 fullcontract/budgets alreadydocumented. Primaryruntime253stillunchanged.
+
+
+## Latest W4b2 full-gate continuation (2026-10-19)
+
+Gate1 runner346464/child346469 CLOSED EXIT101 at11:41:01Z, all317 frozen inputs
+unchanged.427state pass/1 fail/1 ignored: old schema32 migration test asserted32
+after full current-schema reopen (actual33). Corrected only its final assertion
+to SCHEMA_VERSION; preserved rollback/data checks. Failed map/source/log/result
+retained /tmp/s3drive-mixed-roots-failed-gate1-*. Review also found future receipt
+size must be reserved at admission: charge64KiB per admitted root record instead
+of its initial serialized length; later reply updates ignore narrowed admission
+limits. New exact-bound/narrowed-limit regression passes. Focused7 session1962
+CLOSED0:36 preparation tests/66.10s, including all old migrations,12 publication
+cases,24 root kill boundaries and14 preparation kill boundaries. Full gate2 next
+on a fresh317 map; do not reuse gate1 as final success. Parent W4b1 accepted and
+pushed main95f72cc, source5112fd2. Root worktree current code remains unaccepted.
