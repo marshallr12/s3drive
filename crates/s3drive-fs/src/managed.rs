@@ -3,7 +3,22 @@ pub(super) mod writes;
 use s3drive_authority::{Token, WireClient};
 pub(super) struct Backend {
     pub reader: s3drive_managed::Reader,
+    pub chunks: Option<s3drive_managed::chunks::Reader>,
     pub writes: Option<Arc<writes::Writes>>,
+}
+impl Backend {
+    pub async fn node(&self, id: &str) -> Result<s3drive_authority::Node> {
+        match &self.chunks {
+            Some(r) => r.node(id).await.map_err(error),
+            None => self.reader.node(id).await.map_err(error),
+        }
+    }
+    pub async fn list(&self, parent: &str) -> Result<s3drive_authority::Listing> {
+        match &self.chunks {
+            Some(r) => r.list(parent).await.map_err(error),
+            None => self.reader.list(parent).await.map_err(error),
+        }
+    }
 }
 pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
     let settings = config.managed.as_ref().ok_or(Error::Configuration)?;
@@ -106,6 +121,33 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
         }
         bindings.push((mapping.id.clone(), reader));
     }
+    // Chunk snapshots are read-only until their separate mutation/recovery
+    // lifecycle is accepted. Valid capability absence retains legacy behavior;
+    // transport/protocol failures never silently disable validation.
+    let chunks = if config.writes.is_none() {
+        let s3drive_authority::Reply::Features(features) = authority
+            .request(&s3drive_authority::Request::Features {})
+            .await
+            .map_err(error)?
+        else {
+            return Err(Error::Configuration);
+        };
+        if features.iter().any(|f| f == "manifest-root-v1") {
+            Some(
+                s3drive_managed::chunks::Reader::open(
+                    authority.clone(),
+                    settings.volume.clone(),
+                    bindings.clone(),
+                )
+                .await
+                .map_err(error)?,
+            )
+        } else {
+            None
+        }
+    } else {
+        None
+    };
     let reader =
         s3drive_managed::Reader::open(authority.clone(), settings.volume.clone(), bindings)
             .await
@@ -138,6 +180,7 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
         kind: Kind::Directory,
         source: None,
         key: s3drive_authority::ROOT.into(),
+        snapshot: None,
     });
     Ok(ReadOnlyFs {
         readers: Vec::new(),
@@ -152,7 +195,11 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
         aliases: Vec::new(),
         cache: None,
         writes: None,
-        managed: Some(Arc::new(Backend { reader, writes })),
+        managed: Some(Arc::new(Backend {
+            reader,
+            chunks,
+            writes,
+        })),
     })
 }
 impl Nodes {
@@ -161,13 +208,44 @@ impl Nodes {
         n: &s3drive_authority::Node,
         parent: u64,
     ) -> Result<Arc<Node>> {
+        self.insert_managed_version(n, parent, false)
+    }
+    pub(super) fn insert_managed_snapshot(
+        &mut self,
+        n: &s3drive_authority::Node,
+        parent: u64,
+    ) -> Result<Arc<Node>> {
+        self.insert_managed_version(n, parent, true)
+    }
+    fn insert_managed_version(
+        &mut self,
+        n: &s3drive_authority::Node,
+        parent: u64,
+        snapshot: bool,
+    ) -> Result<Arc<Node>> {
         validate_name(&n.name)?;
         let kind = if n.kind == s3drive_authority::Kind::Directory {
             Kind::Directory
         } else {
             Kind::File
         };
-        let identity = (usize::MAX, n.id.clone(), kind);
+        let view = if snapshot && kind == Kind::File {
+            Some(SnapshotView {
+                reference: s3drive_authority::payload_reference(&n.payload),
+                metadata: logical_metadata(n)?,
+            })
+        } else {
+            None
+        };
+        let key = match &view {
+            Some(view) => format!(
+                "snapshot/{}/{}",
+                n.id,
+                view.reference.as_deref().unwrap_or("empty")
+            ),
+            None => n.id.clone(),
+        };
+        let identity = (usize::MAX, key, kind);
         let id = if let Some(id) = self.by_key.get(&identity) {
             *id
         } else {
@@ -186,10 +264,21 @@ impl Nodes {
             kind,
             source: None,
             key: n.id.clone(),
+            snapshot: view,
         });
         self.by_id.insert(id, node.clone());
         Ok(node)
     }
+}
+pub(super) fn check_snapshot(node: &Node, live: &s3drive_authority::Node) -> Result<()> {
+    let expected = node.snapshot.as_ref().ok_or(Error::Internal)?;
+    if live.id != node.key
+        || live.kind == s3drive_authority::Kind::Directory
+        || expected.reference != s3drive_authority::payload_reference(&live.payload)
+    {
+        return Err(Error::Conflict);
+    }
+    Ok(())
 }
 pub(super) fn metadata(node: &s3drive_authority::Node) -> ObjectMetadata {
     ObjectMetadata {
@@ -202,8 +291,36 @@ pub(super) fn metadata(node: &s3drive_authority::Node) -> ObjectMetadata {
         modified_unix_seconds: None,
     }
 }
+pub(super) fn logical_metadata(node: &s3drive_authority::Node) -> Result<ObjectMetadata> {
+    let mut result = metadata(node);
+    if let Some(manifest) = node
+        .payload
+        .as_ref()
+        .and_then(|p| p.reservation.manifest.as_ref())
+    {
+        result.size = manifest.root().map_err(|_| Error::Configuration)?.length();
+    }
+    Ok(result)
+}
 pub(super) fn error<E: Into<Box<dyn std::error::Error + Send + Sync>>>(e: E) -> Error {
     let e = e.into();
+    if let Some(f) = e.downcast_ref::<s3drive_managed::chunks::ReadFailure>() {
+        use s3drive_managed::chunks::ReadFailure;
+        return match f {
+            ReadFailure::Bounds => Error::TooLarge,
+            ReadFailure::Busy => Error::Busy,
+            ReadFailure::NotFound => Error::NotFound,
+            ReadFailure::IsDirectory => Error::IsDirectory,
+            ReadFailure::Timeout => Error::Timeout,
+            ReadFailure::Authority(e) => error(s3drive_managed::Failure::Authority(*e)),
+            ReadFailure::UnsupportedContent => Error::Storage(s3drive_s3::Error {
+                operation: "manifest-read",
+                kind: s3drive_s3::ErrorKind::Unsupported,
+                http_status: None,
+            }),
+            _ => Error::Managed(e),
+        };
+    }
     if let Some(f) = e.downcast_ref::<s3drive_managed::Failure>() {
         use s3drive_managed::Failure;
         return match f {

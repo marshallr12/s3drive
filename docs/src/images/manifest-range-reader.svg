@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="670" viewBox="0 0 1080 670" role="img" aria-labelledby="title desc">
+<title id="title">Verified manifest range reader</title>
+<desc id="desc">A Rust reader gets authenticated metadata from the coordinator and pins a manifest root. Related S3 requests reuse its credential generation. Page and whole chunk hashes are verified before a bounded range is returned. Holes alone yield zeros. Native chunk mounts remain future work.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#415b72"/></marker></defs>
+<rect width="1080" height="670" rx="16" fill="#f3f6fa"/>
+<g font-family="sans-serif" fill="#17324d">
+<text x="32" y="42" font-size="25" font-weight="bold">Read only the requested range, verify every returned byte</text>
+<text x="32" y="70" font-size="15">Implemented Rust library path • Native chunk mounts and write lifecycle remain future work</text>
+<rect x="24" y="94" width="624" height="470" rx="12" fill="white" stroke="#adc0d0"/>
+<text x="44" y="124" font-size="19" font-weight="bold">Local workstation: Linux or Windows</text>
+<rect x="48" y="148" width="240" height="96" rx="9" fill="#e5efff" stroke="#6790bd"/>
+<text x="64" y="176" font-size="18" font-weight="bold">Rust manifest reader</text>
+<text x="64" y="200" font-size="15">open_file → pinned snapshot</text>
+<text x="64" y="223" font-size="15">read_range → bytes or error</text>
+<rect x="368" y="148" width="254" height="96" rx="9" fill="#e9f5ed" stroke="#73a88a"/>
+<text x="385" y="175" font-size="18" font-weight="bold">Coordinator + SQLite</text>
+<text x="385" y="199" font-size="15">Authenticated Node + root</text>
+<text x="385" y="222" font-size="15">Local or remote service</text>
+<path d="M288 195H365" fill="none" stroke="#415b72" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="309" y="182" font-size="13">TLS*</text>
+<rect x="48" y="289" width="574" height="105" rx="9" fill="#fff4db" stroke="#b99b4f"/>
+<text x="65" y="317" font-size="18" font-weight="bold">Verify before returning a private output buffer</text>
+<text x="65" y="343" font-size="15">Root: published revision + physical hash + page hash + identity</text>
+<text x="65" y="369" font-size="15">Children: hash / scope / interval / level; data: whole chunk hash</text>
+<path d="M169 244V286" fill="none" stroke="#415b72" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="48" y="433" width="574" height="104" rx="9" fill="#e5efff" stroke="#6790bd"/>
+<text x="65" y="461" font-size="18" font-weight="bold">Local S3 client: root + related ReadHandles</text>
+<text x="65" y="486" font-size="15">Captured credentials • fresh HEAD • pinned range GET</text>
+<text x="65" y="512" font-size="15">No persistent reader cache • no silent zero/overwrite fallback</text>
+<path d="M335 394V430" fill="none" stroke="#415b72" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="722" y="148" width="330" height="389" rx="12" fill="#e9f5ed" stroke="#73a88a"/>
+<text x="745" y="181" font-size="21" font-weight="bold">S3-compatible service</text>
+<text x="745" y="208" font-size="15">One or more mapped buckets</text>
+<rect x="745" y="239" width="284" height="58" rx="8" fill="white" stroke="#73a88a"/>
+<text x="763" y="274" font-size="17">Immutable manifest root</text>
+<rect x="745" y="327" width="284" height="58" rx="8" fill="white" stroke="#73a88a"/>
+<text x="763" y="362" font-size="17">Intersected child pages</text>
+<rect x="745" y="415" width="284" height="88" rx="8" fill="white" stroke="#73a88a"/>
+<text x="763" y="446" font-size="17">Whole immutable chunks</text>
+<text x="763" y="477" font-size="15">Unchanged chunks can be reused</text>
+<path d="M885 297V324M885 385V412" fill="none" stroke="#415b72" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M622 477H718" fill="none" stroke="#415b72" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="658" y="462" font-size="13">HTTPS</text>
+<text x="32" y="598" font-size="17" font-weight="bold">Bounded: 4 active operations • 256 snapshots • 8 MiB output • 1 MiB chunks • 30 s deadline</text>
+<text x="32" y="626" font-size="15">Only authenticated holes produce zeros. Missing, denied or corrupt objects fail the entire read.</text>
+<text x="32" y="651" font-size="13">* Remote coordinator uses TLS; controlled local development may use loopback HTTP. SQLite stays outside the mount.</text>
+</g></svg>

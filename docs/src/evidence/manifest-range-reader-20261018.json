@@ -1,0 +1,198 @@
+{
+  "date": "2026-10-18",
+  "status": "full combined local gate and own source-bound hosted cohort accepted",
+  "branch": "codex/manifest-range-reader",
+  "worktree": "/home/marshall/src/worktrees/s3drive-manifest-range-reader",
+  "combined_checkpoint": "ef117bcc3e8e8bfbbc4deb3d97241d66474d6d51",
+  "accepted_prerequisites": {
+    "controller": "474601edd5582ebed9316d04cf4524db6d72694b",
+    "s3_helper": "fef944268c89d2c0b1d859a6a86d0f6761c24361"
+  },
+  "focused": {
+    "session": 78806,
+    "exit_code": 0,
+    "passed": 5,
+    "elapsed_seconds": 4.68,
+    "log_sha256": "2d21e859df9f02601595c0d214aa0aa7a3822238fcd70d2d7e0ce507cd36adc5"
+  },
+  "prior_focused": {
+    "session": 61736,
+    "exit_code": 101,
+    "passed": 4,
+    "failed": 1,
+    "cause": "fixture expected GET version mismatch without HEAD expected version; fixture supplied version, no production relaxation",
+    "log_sha256": "eab2b96afe084d05884d335edb1b73b8f0ca8ae1709ac0c7fcc9f6ea94ccd470"
+  },
+  "focused_clippy": {
+    "session": 75607,
+    "exit_code": 0,
+    "log_sha256": "9bd014db8945b40070a1e555525351860fc8f005212f2861bb33f53abcc1f71e"
+  },
+  "frozen_source": {
+    "count": 256,
+    "map_sha256": "2aff69552178c0881e75f09bfb1fa94c84a8a1443941e5a850cfa1f7bd1dc49b"
+  },
+  "local_gate": {
+    "session": 84960,
+    "exit_code": 0,
+    "tested_runtime_checkpoint": "ef117bcc3e8e8bfbbc4deb3d97241d66474d6d51",
+    "all_frozen_hashes_unchanged": true,
+    "frozen_count": 256,
+    "frozen_map_sha256": "2aff69552178c0881e75f09bfb1fa94c84a8a1443941e5a850cfa1f7bd1dc49b",
+    "log_sha256": "1766197333b078b036f5f728b0996e89efe845a6ac0c584b490ca83a68360093",
+    "test_summaries": [
+      "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.27s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.78s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 20.62s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.22s",
+      "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.56s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 10.55s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s",
+      "test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 61.28s",
+      "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.94s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.25s",
+      "test result: ok. 2 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 8.23s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.68s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.76s",
+      "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 19.92s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.09s",
+      "test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+      "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.34s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 20.19s",
+      "test result: ok. 365 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 171.79s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ],
+    "book_chapters": 64,
+    "long_test_notices": [
+      "test namespace_client::opens::tests::session::obsolete_full_open_quota_can_be_retained_without_synthesizing_closing_callbacks has been running for over 60 seconds"
+    ],
+    "native_provider_reboot_acceptance": false
+  },
+  "self_review": {
+    "date": "2026-10-18",
+    "review": "implementation self-review; not independent agent review",
+    "checks": [
+      "No delta to legacy reader/schema/wire/codec/native callbacks",
+      "Combined controller474 production delta is additive reader export only; helper S3 code matches acceptedfef",
+      "Root is derived from authenticated live Node; both raw physical and domain page hashes verified",
+      "Child and data keys use bound file/store/role namespace and captured credentials; fresh HEAD on every requested object",
+      "All loaded page references checked for store scope; decreasing levels and exact intervals verified by codec",
+      "Complete data hash before slice; private output discarded on late error; only authenticated holes zero-fill",
+      "Whole operation semaphore and snapshot ownership are shared across clones and released by cancellation",
+      "8MiB output / 1MiB data / 27visits / 9objects, no persistent cache, max30s inclusive deadline",
+      "Owned isolated dummy-profile subprocess, ephemeral ports, bounded fixture collection and teardown; no real provider mutations"
+    ],
+    "limitations": [
+      "No mounted manifest reads/writes or migration",
+      "No new provider/physical reboot acceptance",
+      "No total SDK/RSS or native runtime-stack guarantee",
+      "No independently executed adversarial agent review"
+    ],
+    "files": {
+      "crates/s3drive-managed/src/chunks/reader.rs": "4246ea52114d761060c77a06f48f4f1cf4e9251f3bc70aada1c80c043a83d22c",
+      "crates/s3drive-cli/tests/chunk_reader.rs": "70a68135e201adfd4684cdfbbcbc90ce677c1188e71a9ffe6d7c9ed86cc95d15",
+      "crates/s3drive-cli/tests/chunk_reader/fixture.rs": "903f6b0b0e8c059786122e94d31bbbc1ba97d4273d6e22e8e1b2f8f9b4648e87"
+    }
+  },
+  "diagram": {
+    "path": "images/manifest-range-reader.svg",
+    "sha256": "03b1b671b723f6434512e98f5dbd237dd0195abfcc8454b382bd2214dc2acb54",
+    "xml_valid": true,
+    "librsvg_cairo_rendered": true,
+    "visually_reviewed": true,
+    "initial_render_type_error": "Rsvg.Rectangle did not accept keyword arguments; initialized its fields and rerendered"
+  },
+  "scope": "managed library only, real SDK HEAD/GET and authenticated temporary SQLite authority; S3 fixture seeded in memory; no S3 upload, mounted chunks, Wasabi mutation or physical reboot claim",
+  "local_archive": {
+    "path": "evidence/manifest-range-reader-local-20261018.tar.gz",
+    "sha256": "a1737729817e21d78c356c699987e1d4129f128172c71363007b04d9bb4a2ffd",
+    "bytes": 72706,
+    "members": 14,
+    "all_indexed_members_verified": true,
+    "acceptance": "local gate only"
+  },
+  "publication": {
+    "head": "88d02f7a6605bf13bfd212d67c6609ae16b0ebfd",
+    "remote": "88d02f7a6605bf13bfd212d67c6609ae16b0ebfd",
+    "clean": true,
+    "all256_hashes_unchanged": true,
+    "visibility": "PUBLIC",
+    "main": "1a93b5f7248892fec96dc8da4438ee7967692e77",
+    "run_id": 39171113280,
+    "run_attempt": 1,
+    "jobs": [
+      {
+        "id": 117804178631,
+        "name": "rust (windows-latest)",
+        "status": "in_progress",
+        "conclusion": null
+      },
+      {
+        "id": 117804178819,
+        "name": "rust (ubuntu-latest)",
+        "status": "in_progress",
+        "conclusion": null
+      },
+      {
+        "id": 117804178853,
+        "name": "book",
+        "status": "in_progress",
+        "conclusion": null
+      }
+    ]
+  },
+  "hosted_acceptance": {
+    "source": "88d02f7a6605bf13bfd212d67c6609ae16b0ebfd",
+    "run_id": 39171113280,
+    "run_attempt": 1,
+    "jobs": {
+      "windows": 117804178631,
+      "linux": 117804178819,
+      "book": 117804178853
+    },
+    "all_jobs_success": true,
+    "all_raw_logs_reviewed": true,
+    "artifacts": {
+      "replacement": 12152741226,
+      "disposition": 12153275892
+    },
+    "independent_typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true,
+    "archive": {
+      "path": "evidence/manifest-reader-88d-hosted-20261018.tar.gz",
+      "sha256": "994942870840d5efd3082d61dd3533e89dbf0bd154844f5b3d2d93b7b37428ac",
+      "bytes": 118459,
+      "members": 22,
+      "all_indexed_members_verified": true,
+      "source": "88d02f7a6605bf13bfd212d67c6609ae16b0ebfd",
+      "run_id": 39171113280,
+      "run_attempt": 1,
+      "independent_typed_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "all_raw_fields_and_types_equal": true
+    },
+    "scope": "managed library reader and existing-format native regression; no mounted manifests/new provider/physical reboot"
+  }
+}

@@ -1,0 +1,263 @@
+{
+  "date": "2026-10-18",
+  "status": "combined W1b own Linux/Windows/book cohort accepted with raw and source-bound artifact checks",
+  "branch": "codex/manifest-page-proofs",
+  "base": "ed2e93b973ea3099ba5906261d3e8360cebf0184",
+  "scope": "page reachability helper; no uploads, receipts, historical reopen, schema, authority wire or native activation",
+  "runs": {
+    "initial_check": {
+      "exit_code": 101,
+      "log": "/tmp/s3drive-page-proofs-check.log",
+      "sha256": "f4284e7150fd5c6359450379072f56ea5479004895ca05f8baaaddce7a27da83",
+      "reason": "authority Error does not implement StdError; explicit existing-style Integrity conversion added"
+    },
+    "focused1": {
+      "exit_code": 101,
+      "log": "/tmp/s3drive-page-proofs-focused.log",
+      "sha256": "f1391193a1d21fbaeab1ff8bdbf45e165bdc45c7d014b93532a260ac41053dfe",
+      "reason": "positive fixture used level-one root at two-chunk canonical level-zero size; production reader correctly rejected it"
+    },
+    "focused2": {
+      "exit_code": 0,
+      "log": "/tmp/s3drive-page-proofs-focused2.log",
+      "sha256": "22f7808d5bb113dbf4ab117b980be48a18a3377daee4cc06800a07072647ef0f",
+      "passed": 7,
+      "seconds": 5.54,
+      "controls": "canonical 128-to-129 old-root reuse, invalid child span, cross-kind/base/hash/size/shape/bounds, metadata-only 64GiB, shared admission/cancellation/deadline"
+    }
+  },
+  "gate": {
+    "exit_code": 0,
+    "session": 95188,
+    "log": "/tmp/s3drive-page-proofs-gate.log",
+    "log_sha256": "2c8be85522ccdea589f4072cf0a09ff8b2c15b47d9d90b057b415484c1306a30",
+    "frozen_count": 260,
+    "frozen_map_sha256": "a48c29007c954741e2a15cdc49b9ce96590f6b87584a10ff56a425bf60308921",
+    "all_frozen_inputs_unchanged": true,
+    "environment": {
+      "RUST_TEST_THREADS": "2",
+      "tty": true
+    },
+    "test_summaries": [
+      "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.56s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.21s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.38s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.27s",
+      "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.75s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 13.43s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s",
+      "test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 64.59s",
+      "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.65s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.41s",
+      "test result: ok. 2 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 9.00s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.94s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.75s",
+      "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 30.10s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.42s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.34s",
+      "test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+      "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.84s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 21.95s",
+      "test result: ok. 365 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 246.59s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ],
+    "scope": "W1b independent local library gate; no own hosted acceptance or mounted writes"
+  },
+  "not_claimed": [
+    "historical base reopening",
+    "mixed publication",
+    "mounted chunk writes"
+  ],
+  "local_archive": {
+    "path": "evidence/manifest-page-proofs-local-20261018.tar.gz",
+    "sha256": "cc54ea160c8c9bf36ae4c8daf8c6ca24663a5efaf5845a391dc1ea35d962f902",
+    "bytes": 61969,
+    "members": 16,
+    "all_indexed_members_verified": true,
+    "scope": "W1b portable local only"
+  },
+  "combined_gate": {
+    "source": "bf2e6aed16d32c62e094082a50769141f8f90ef6",
+    "exit_code": 0,
+    "session": 68162,
+    "log": "/tmp/s3drive-page-proofs-combined-gate.log",
+    "log_sha256": "f69f09b123eeb24e48213384f3365cb6589972d001730c9ba9fe7707bd1e1231",
+    "frozen_count": 261,
+    "frozen_map_sha256": "0dc7dba7a6e6c75f74fa8039c6ca269f26af4feedca267e43404db36b5d46c3f",
+    "all_frozen_inputs_unchanged": true,
+    "environment": {
+      "RUST_TEST_THREADS": "2",
+      "tty": true
+    },
+    "test_summaries": [
+      "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.54s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.28s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.46s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.29s",
+      "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.75s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 14.70s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s",
+      "test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 69.11s",
+      "test result: ok. 9 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 10.13s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.47s",
+      "test result: ok. 2 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 9.20s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.89s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.44s",
+      "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 34.72s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.50s",
+      "test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s",
+      "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.07s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 24.66s",
+      "test result: ok. 365 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 260.76s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ],
+    "scope": "W1b combined with accepted8c3448f native snapshots; portable local only, own hosted acceptance pending"
+  },
+  "combined_archive": {
+    "path": "evidence/manifest-page-proofs-combined-local-20261018.tar.gz",
+    "sha256": "333f2722f4672361a9bcf2304fb92061df42813c001bcebfe4066facd8b7cb8e",
+    "bytes": 100784,
+    "members": 19,
+    "all_indexed_members_verified": true,
+    "scope": "W1b portable local only"
+  },
+  "publication": {
+    "source": "bf2e6aed16d32c62e094082a50769141f8f90ef6",
+    "branch": "codex/manifest-page-proofs",
+    "run_id": 39187701991,
+    "run_attempt": 1,
+    "jobs": {
+      "linux": 117853515918,
+      "windows": 117853515627,
+      "book": 117853515963
+    },
+    "watch_session": 7139,
+    "watch_log": "/tmp/s3drive-page-proofs-bf2-watch.log",
+    "frozen_inputs": 261,
+    "frozen_map": "/tmp/s3drive-page-proofs-combined-frozen.json",
+    "acceptance": "own all3/native/raw reviewed; API artifact ZIP digests, typed21+14/project oracles/all35 raw fields and types matched",
+    "watch_exit_code": 0
+  },
+  "hosted_archive": {
+    "path": "evidence/manifest-page-proofs-bf2-hosted-20261018.tar.gz",
+    "sha256": "7ea07240c7ab082534754536d2809b90168b0f53342cd955c3a0ddc0d8ea3096",
+    "bytes": 172177,
+    "members": 31,
+    "all_indexed_members_verified": true,
+    "source": "bf2e6aed16d32c62e094082a50769141f8f90ef6",
+    "run_id": 39187701991,
+    "run_attempt": 1,
+    "independent_typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true
+  },
+  "hosted_raw_reviews": {
+    "linux": {
+      "source": "bf2e6aed16d32c62e094082a50769141f8f90ef6",
+      "run_id": 39187701991,
+      "run_attempt": 1,
+      "job_id": 117853515918,
+      "reviewed": true,
+      "log": "/tmp/s3drive-page-proofs-bf2-linux.log",
+      "sha256": "a487d3e9ffbed30e5a69aa68b326b21fdb9c028ce97f82e1f94a6db26fba56ab",
+      "native_manifest_seconds": 1.13,
+      "existing_native_tests": 9,
+      "existing_native_seconds": 51.0,
+      "state_tests": 365,
+      "state_ignored": 1,
+      "state_seconds": 62.22,
+      "reader_tests": 9,
+      "reader_ignored": 1,
+      "reader_seconds": 3.68,
+      "coordinator_no_systemd_http_and_tls_seconds": 23.71,
+      "frozen_inputs": 261,
+      "scope": "Linux FUSE all-format read/remount plus W1b portable proof acceptance only; Windows and combined artifact acceptance pending",
+      "notices": [
+        "expected injected PermissionDenied/stopped-authority ConnectionRefused retain local data",
+        "finally stop after startup removal reports missing startup.json",
+        "Node20 actions forced24",
+        "cache Node punycode/url.parse deprecations"
+      ]
+    },
+    "windows": {
+      "source": "bf2e6aed16d32c62e094082a50769141f8f90ef6",
+      "run_id": 39187701991,
+      "run_attempt": 1,
+      "job_id": 117853515627,
+      "reviewed": true,
+      "log": "/tmp/s3drive-page-proofs-bf2-windows.log",
+      "sha256": "a33841823ceaa84629352fd67c81eceff473cb2f80cebad45d9c5b0a555d14d5",
+      "native_manifest_seconds": 3.04,
+      "existing_native_tests": 7,
+      "existing_native_seconds": 98.54,
+      "state_tests": 360,
+      "state_ignored": 1,
+      "state_seconds": 458.88,
+      "reader_tests": 9,
+      "reader_ignored": 1,
+      "reader_seconds": 7.57,
+      "paired_managed_startup_seconds": 80.16,
+      "frozen_inputs": 261,
+      "scope": "own Windows WinFsp all-format snapshots/read/remount plus W1b portable proof acceptance; strict artifacts pending",
+      "notices": [
+        "three disposable profiles locked; dummy credentials removed, removal deferred to VM destruction",
+        "unused WinFsp DELAYLOAD linker warning on11 unique workspace targets plus standalone chunk-reader rebuild",
+        "injected PermissionDenied/rival conflict/stopped-authority ConnectionRefused preserve local data",
+        "Node20 actions forced24 and cache punycode/url.parse deprecations",
+        "long test notices subsequently completed successfully"
+      ],
+      "runner": "Windows Server2025, windows-2025-vs2026/20261007.264.1"
+    },
+    "book": {
+      "source": "bf2e6aed16d32c62e094082a50769141f8f90ef6",
+      "run_id": 39187701991,
+      "run_attempt": 1,
+      "job_id": 117853515963,
+      "reviewed": true,
+      "log": "/tmp/s3drive-page-proofs-bf2-book.log",
+      "sha256": "a634a103d1215bc1d897611e55d177d0d23c212eee2094de3439e036fbcbb2e2",
+      "result": "schema28/two fixtures,69MD,65chapters,book build/test passed",
+      "notices": [
+        "pinned toolchain override installing mdbook",
+        "Git default-branch hints",
+        "Node20 checkout forced24"
+      ],
+      "scope": "book only; native and combined artifact/raw review pending"
+    }
+  }
+}

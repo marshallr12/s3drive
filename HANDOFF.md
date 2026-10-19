@@ -60,6 +60,22 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
+## Canonical accepted runtime integration (2026-10-18)
+
+The canonical /home/marshall/src/s3drive checkout now integrates accepted
+checkpoint2e7b6ca/runtimebf2e6ae. All261 frozen runtime/contract hashes and all268
+non-document tracked paths exactly match that accepted checkpoint; the only
+integration changes are handoff, implementation-plan and integration-evidence
+records. Own run39187701991 ALL3/native/raw/typed21+14/projectoracles/raw35
+accepted; indexed31-member hosted archive verified. Final docs checks accompany
+integration. Do not repeat runtime gates for this documentation-only delta.
+Publication is a normal fast-forward, preserving PUBLIC and main's policy.
+See docs/src/evidence/canonical-manifest-read-integration-20261018.json and
+/tmp/s3drive-primary-native-integration-publication.json for exact publication.
+This promotes scoped read-only manifest support/proofs. W1c1/e18 and W1c2/523
+history/reopen code remains solely in its worktree; it is NOT in canonical runtime.
+Full sparse edits/mixed publication/settlement/native chunk writes still required.
+
 ## Current W1c2 combined baseline (2026-10-18)
 
 ACTIVE /home/marshall/src/worktrees/s3drive-payload-history-authority,
@@ -132,7 +148,7 @@ profiles locked, dummy credentials removed before VM-disposal deferral; unused
 delay-import/long-test/Node notices retained. No physical reboot/provider claim.
 Linux no-systemd HTTP/privateCA23.71s; Windows paired recovery80.16s. Proof
 /tmp/s3drive-page-proofs-bf2-acceptance-publication.json. PUBLIC retained, main
-1a93b5f unchanged. No live W1b CI remains; do not re-run one-use checkers/archive.
+1a93b5f was unchanged at W1b publication; canonical integration now proceeds. No live W1b CI remains; do not re-run one-use checkers/archive.
 Next reader integration is in the combined history worktree above.
 
 Accepted prerequisite runtime8c3448f478f9ab62fe1a23ce965907546be5d10c, clean
@@ -157,7 +173,7 @@ Writable/direct/fallback scope unchanged. Negative empty-fstat4-vs0, stale-fixtu
 and unchanged legacy4-snapshot-cap failures preserved; no assertion/quota relaxed.
 W1a chunk-reference proofs accepted in8c3448f; W1b accepted separately inbf2e6ae.
 
-Goal ACTIVE. Primary253 runtime unchanged. Complete historical base reopening,
+Goal ACTIVE. Canonical runtime261 now matches acceptedbf2e6ae. Complete historical base reopening,
 sparse SQLite edit views, mixed inherited/new-object publication, exact-view
 settlement and actual native chunk writes. Provider conformance and physical
 workstation reboot/session acceptance remain separate. Read active worktree's

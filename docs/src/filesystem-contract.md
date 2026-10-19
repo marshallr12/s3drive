@@ -114,3 +114,13 @@ timeouts to retryable I/O errors, and local disk exhaustion to no-space. A HEAD
 request may return 403 instead of 404 when listing permission is absent; do not
 infer that such an object is missing or safe to overwrite.
 [HeadObject permissions](https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html)
+
+
+In the current combined read-only chunk-capable draft, distinguish the stable
+logical authority node ID from a content-version inode. After a publication,
+applications resolve the path again to obtain the replacement inode; stale
+inode opens fail explicitly. Existing descriptors retain pinned bytes and
+attributes, and a rename with unchanged content preserves the version identity.
+The engine regression now checks both distinct version inodes and unchanged
+logical IDs. This draft still requires its own real platform gates; it does not
+change the writable lifecycle identity contract.

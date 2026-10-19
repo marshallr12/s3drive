@@ -1,6 +1,12 @@
 //! Isolated immutable-tree publication. Root commits are not logical file
 //! flushes. Explicit source acknowledgment is historical metadata only.
 //! No native activation, detached/removal mode or payload reclamation.
+mod reader;
+pub use reader::{
+    ChunkProof, File, MAX_CHUNK_PROOF_BYTES, MAX_PAGE_PROOF_BYTES, PageProof, ReadFailure,
+    ReadOptions, Reader,
+};
+
 use s3drive_authority::{Apply, Error, Reply, Request, Store, WireClient};
 use s3drive_s3::uploads::{Executor, chunks::Uploader};
 use s3drive_state::{

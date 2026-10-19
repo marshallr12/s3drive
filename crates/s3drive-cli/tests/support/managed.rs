@@ -948,7 +948,9 @@ pub async fn child() {
         "lifecycle-open-race" => Box::pin(lifecycle::open_race(c)).await,
         "producer" => {
             use std::io::BufRead;
-            println!("PRODUCER_READY");
+            // Keep this protocol marker independent of serial libtest's
+            // unterminated test-name prefix.
+            println!("\nPRODUCER_READY");
             std::io::stdout().flush().unwrap();
             for command in std::io::stdin().lock().lines() {
                 match command.unwrap().as_str() {
@@ -1432,8 +1434,18 @@ pub async fn child() {
             wrong.sources[0].bucket = "other-bucket".into();
             assert!(s3drive_fs::ReadOnlyFs::new(&wrong).await.is_err());
             publish(&root, &w, "first", 200, 11, 1040, &data(1)).await;
+            // Inodes identify immutable content versions; a new path lookup
+            // selects the replacement. The logical global file ID stays fixed.
+            assert!(matches!(
+                fs.open(n.id).await,
+                Err(s3drive_fs::Error::Conflict)
+            ));
+            let fresh = fs.lookup(d.id, FILE).await.unwrap();
+            assert_ne!(fresh.id, n.id);
+            assert_eq!(fs.metadata(n.id).await.unwrap().unwrap().key, id(11));
+            assert_eq!(fs.metadata(fresh.id).await.unwrap().unwrap().key, id(11));
             assert_eq!(
-                fs.open(n.id).await.unwrap().read(0, 100).await.unwrap(),
+                fs.open(fresh.id).await.unwrap().read(0, 100).await.unwrap(),
                 data(1)[..100]
             );
             assert_eq!(old.read(0, 100).await.unwrap(), data(0)[..100]);
@@ -1448,8 +1460,9 @@ pub async fn child() {
             )
             .await;
             assert!(fs.lookup(d.id, FILE).await.is_err());
-            assert_eq!(fs.lookup(d.id, MOVED).await.unwrap().id, n.id);
+            assert_eq!(fs.lookup(d.id, MOVED).await.unwrap().id, fresh.id);
             change(&w, 3042, Mutation::Remove { node: id(11) }).await;
+            assert!(fs.open(fresh.id).await.is_err());
             assert!(fs.open(n.id).await.is_err());
             assert_eq!(old.read(0, 100).await.unwrap(), data(0)[..100]);
         }

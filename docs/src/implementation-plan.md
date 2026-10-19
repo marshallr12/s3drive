@@ -1971,6 +1971,284 @@ next implementation work is the separately scoped source-settlement persistence
 contract above, followed by controller integration. Existing native regression
 does not activate mounted chunks or establish physical reboot/provider acceptance.
 
+### Independent preparation: pinned related-object reads (2026-10-18)
+
+Source settlement is accepted at checkpoint `20706cd`; controller work proceeds
+separately on `codex/chunk-source-controller`. Read-only design inspection for
+the future manifest reader identified an independent S3 API gap. Add
+`ReadHandle::open_related(key)` on the captured credential generation, with fresh
+online HEAD, existing scope/deadline/revision checks and no exposed credentials.
+Keep the primary controller checkout frozen while this preparation is tested in
+an isolated checkout from the accepted S3 baseline. No managed reader or native
+activation follows from this helper. See [contract and controls](pinned-related-reads.md).
+
+Done criteria: injected rotation through chained root/child/data operations,
+independent new generation, exact scope and GET preconditions, fresh denial and
+absence refusal, invalid input before requests and bounded future layout; then
+the full local gate and this source's own hosted cohort before integration.
+The focused S3 suite passed 62 controls. The full local gate passed with
+252 frozen hashes unchanged, 62 S3 / 365 state tests and 63 book chapters.
+Its own source-bound cohort 39167583915 has passed all three jobs and strict
+21/14 artifact plus raw35 comparisons. Both prerequisites are accepted.
+
+### Verified manifest range reader (2026-10-18)
+
+Implement the [reader contract](manifest-range-reader.md) in an isolated checkout.
+Controller and helper acceptance are complete; combine their accepted sources
+before the full reader gate. Scope: new managed chunk-reader child module/export,
+dedicated owned real-SDK/authenticated-authority read fixture and book/evidence.
+Keep legacy Reader/FileSnapshot, schemas, wire/codec vectors and native callbacks
+unchanged. Done: declared range/integrity/authorization/budget/cancellation
+controls, full local gate and its own hosted cohort before native activation.
+Focused reader controls passed 5/5 in 4.68s, including sparse 64 GiB metadata.
+
+
+Next proposed slice after this reader's own acceptance: expose authenticated
+manifest metadata and bounded read-only snapshots through the filesystem layer.
+Current managed namespace validation explicitly refuses manifests, file handles
+hold the whole-byte FileSnapshot, and writes use that legacy snapshot. Therefore
+native integration must cover lookup/list/getattr logical sizes as well as open
+and range-read dispatch; merely switching the byte-read call is insufficient.
+Keep legacy empty/one-object behavior compatible, retain pinned handles across
+rename/republication, map Busy/integrity/authorization errors explicitly and
+refuse chunk writes until their independent acceptance. Require dedicated real
+FUSE and WinFsp chunk-read controls with Unicode, two stores, sparse/cross-page
+ranges, late corruption, denied objects and no whole-file download. This is a
+source-inspection plan, not mounted acceptance or a finalized public API.
+
+Reader result: combined full local gate84960 EXIT0, all256 frozen hashes
+unchanged, 12 publication/source +5 reader +62 S3 +365state/1ignored,64chapters.
+The 14-member local archive is indexed and verified. Own hosted cohort
+39171113280 passed all3 jobs, reviewed raw logs and strict21/14 + raw35 checks.
+The indexed22-member hosted archive is verified. Native integration follows
+in codex/native-manifest-reads; portable controls do not activate native chunks.
+
+### Draft native manifest reads (2026-10-18)
+
+Worktree /home/marshall/src/worktrees/s3drive-native-manifest-reads, branch
+codex/native-manifest-reads, from b3e30f0. The reader256 runtime remains frozen
+in its own worktree; CI39171113280 is accepted. The native local gate passed
+with257 hashes unchanged, and actual FUSE/WinFsp acceptance follows on its own source. See
+[native read integration contract](native-manifest-reads.md) for footprint,
+compatibility, failure behavior and engine/FUSE/WinFsp done criteria.
+
+### Next write integration: load-bearing source findings (2026-10-18)
+
+Proposal, pending native read acceptance. The existing logical writer explicitly
+rejects manifest bases and caps a file at8MiB (`logical::Binding::validate` and
+`MAX_BYTES`). Raising that constant would retain whole-file buffering and hashing.
+The offline chunk planner accepts a64GiB logical size but currently prepares a
+complete local staging snapshot under configured object/scan quotas; it has no
+authenticated remote-reference overlay.
+These are distinct boundaries. See the accepted source's
+[logical binding](https://github.com/marshallr12/s3drive/blob/88d02f7a6605bf13bfd212d67c6609ae16b0ebfd/crates/s3drive-state/src/logical.rs),
+[full-snapshot planner](https://github.com/marshallr12/s3drive/blob/88d02f7a6605bf13bfd212d67c6609ae16b0ebfd/crates/s3drive-state/src/chunked.rs)
+and existing bounded range composer in crates/s3drive-fs/src/edits.rs.
+
+The write design therefore needs a durable sparse edit view based on an
+authenticated pinned manifest, bounded changed-chunk staging and reuse of
+unchanged authenticated references. Persist the exact base content CAS guard,
+local dirty identity and eventual publication request before network mutations.
+Keep root commit and source acknowledgment distinct; retain conflicting or unknown
+work after restart. Do not reinterpret a manifest root hash as a whole-file SHA
+or silently route chunks through the legacy logical writer.
+
+Boundary edits/truncation must verify complete old chunks before using their
+bytes. A shortened final data object requires new bytes/hash/length; a prefix of
+an old object is not a valid unchanged reference. Growth can change tree height.
+A previous root may be reused as a child page when its authenticated identity,
+start, length and level match the new parent: roots already use the page-key
+namespace. Reuse still needs inherited-base provenance, not a fabricated fresh
+upload receipt. Existing reader controls allow older generations/ordinals while
+enforcing same store/file/role scope. Preserve those checks during reuse.
+
+Plan independently green storage/edit/publication/controller phases before native
+write callbacks. Keep one-object writes compatible and make new format activation
+explicit. Required eventual controls include sparse growth to64GiB without whole-
+file allocation, small edits with measured unchanged-chunk reuse, truncate/append,
+rename during dirty edits, unknown root replies, killed owners, SQLite-full rollback,
+local/remote conflict retention and real FUSE/WinFsp flush/read/restart behavior.
+This section records source findings and proposals, not an implemented write API.
+
+### Incremental writes: proof and settlement boundaries (2026-10-18)
+
+Source inspection at `c633d02`, proposal only. Reusing old references needs a
+separate mixed-tree proof, not just an edit overlay. The current
+[`require_dependencies` and `inspect_tree_receipt`](https://github.com/marshallr12/s3drive/blob/c633d02d47ccf2da20cfadd50e0b8e11f6e06811/crates/s3drive-state/src/chunked/transfers.rs)
+require a mapped local generation and exact historical flush receipt for every
+non-hole object. `inspect_transfer` derives that mapping from this complete plan's
+snapshot and object identity. A reference from another machine's authenticated
+manifest has no such local upload history. Do not invent a local receipt, adopt
+an arbitrary bucket object, or weaken the existing full-snapshot verifier.
+
+The current [source settlement validator](https://github.com/marshallr12/s3drive/blob/c633d02d47ccf2da20cfadd50e0b8e11f6e06811/crates/s3drive-state/src/chunk_publication/sources.rs)
+also requires a sealed local journal generation with the complete source size and
+manifest. A sparse view with remote-backed unchanged ranges is not that snapshot.
+It needs its own exact-view acknowledgment, preserving newer dirty heads and
+unknown/conflicting work. A remote root commit alone must not mark a local edit
+view clean. The [reader](https://github.com/marshallr12/s3drive/blob/c633d02d47ccf2da20cfadd50e0b8e11f6e06811/crates/s3drive-managed/src/chunks/reader.rs)
+currently exposes metadata and verified bytes, not an opaque, persistable
+provenance export for inherited references.
+
+Implement after repaired native-read acceptance, in independently green phases:
+
+| Phase | Concrete contract | Required evidence |
+| --- | --- | --- |
+| W1 authenticated base provenance | Export bounded manifest paths from an authorized pinned File; bind inherited data/page references to volume, file, store, role, exact base descriptor and content CAS guard; no arbitrary-reference constructor | Wrong file/store/role, forged/short paths, older valid generations, valid/invalid old-root child shapes, bounded traversal/cancellation; no data download for unchanged-reference discovery |
+| W2 durable sparse edit views | SQLite stores exact base binding plus immutable local patches/zero ranges, size and view lineage; persist operation keys before changes; retain dirty bytes across restart | 64 GiB sparse growth with bounded memory/disk growth, competing/lost-reply edits, process kills, corrupt rows/media and SQLite-full rollback; bounded read-your-writes composition |
+| W3 incremental tree preparation | New changed objects plus tagged inherited references; persist bounded preparation cursor and new/mixed proof format; retain old full-snapshot planner/verifier | Measured one-byte edit reuses unchanged data, authenticated path coverage, final partial-chunk truncate/growth, 127/128 chunk boundary, tree-height growth and holes; no manufactured flush receipts |
+| W4 mixed-tree publication | Upload new dependencies before pages/root; inherited dependencies require validated base provenance; persist exact original CAS and operation identities; recover unknown results without unconditional PUT | Two-machine base conflict, lost reserve/PUT/root replies, renamed/deleted base, restart and quota failure; unchanged chunks produce zero PUTs and no full-file download |
+| W5 exact edit-view settlement | Separate root commitment from acknowledgment of one immutable sparse view; preserve ancestors/newer drafts according to explicit coverage rules; no generic full-snapshot acknowledgment substitution | Kill/response-loss around both acknowledgments, newer dirty head, corrupt proof, disk-full rollback; repeat acknowledgment recovers the same result and cannot clear another view |
+| W6 native chunk writes | Explicitly activate shared engine and FUSE/WinFsp write/truncate/append/flush through the accepted mixed-tree controller; keep one-object compatibility | Actual mounted Unicode, large/sparse/random edits, application save/replace, open-unlinked/rename, restart/conflict/uncertainty, measured reuse; separately authorized Wasabi conformance and sign-in/reboot/session checks |
+
+For W3/W4, inherited proof establishes reachability from the authenticated frozen
+base, not current object availability or permission to reclaim it. Missing/denied
+objects remain explicit errors; reference retention and future garbage collection
+must honor pinned bases and dirty views. Earlier planning text incorrectly
+assigned a distinct physical root role. In the actual
+[`Namespace::root_key`](https://github.com/marshallr12/s3drive/blob/c633d02d47ccf2da20cfadd50e0b8e11f6e06811/crates/s3drive-core/src/manifest/objects.rs)
+implementation, roots use `Role::Page`. Reusing an old root as a child is eligible
+when the new parent's expected hash, file identity, start, length and level pass
+[`VerifiedPage::verify_child`](https://github.com/marshallr12/s3drive/blob/c633d02d47ccf2da20cfadd50e0b8e11f6e06811/crates/s3drive-core/src/manifest.rs).
+This does not convert its historical receipt into a new upload receipt; the new
+mixed-tree verifier must admit explicit inherited provenance. Shrinking/growing
+a partial data object changes its length
+and hash, so verify the complete old chunk and prepare new bytes. Preserve the
+existing root/page and whole-payload/page-digest distinctions.
+
+On restart, never rebase a dirty view onto the coordinator's latest payload.
+Retain its original binding and CAS guard; a different current payload is a
+conflict. Define and test authorized re-opening of the persisted historical base
+in W1/W2, including revoked/rotated credentials, missing root and changed source
+route. Persist no credentials. An inherited-reference proof is not a network
+send permit; W4 still requires the configured, source-bound provider write policy.
+
+These phases are a proposed implementation sequence, not implemented APIs,
+schema migrations, mounted write support or provider acceptance. W1-W5 must
+converge on W6; library-only milestones do not complete the drive goal.
+
+### Native snapshot identity repair (2026-10-18)
+
+Actual source d98 Linux CI reached the real FUSE test and failed after a new
+4-byte root publication: fstat on an old130MiB handle returned4. The shared inode
+identity and path-refresh metadata are insufficient when the kernel omits a file
+handle or updates shared inode attributes. Do not remove the old-size assertion.
+
+Repair draft in codex/manifest-snapshot-inodes: read-only manifest node identities
+include their authenticated payload reference; rename without content change
+keeps identity. Cache only the validated lookup version's metadata on that inode.
+New path lookup and file open still authenticate online. Check the expected
+payload reference both before and after fresh snapshot open, refusing a race
+instead of opening a different version under the old inode. Legacy/mutable file
+identities remain unchanged. Add portable publication/rename/race controls and
+retain the actual native size/bytes check on Linux and Windows. Source d98's
+cohort is terminal FAILURE (Windows native passed2.39s; Linux native failed);
+its artifacts cannot certify the repair. The original watcher closed exit1.
+
+Repair checkpoint: full local gate passed (session68406, unchanged257inputs),
+including both stale/open-race controls and all existing portable regressions.
+The13member indexed local archive retains the old failed cohort and negative
+control alongside the corrected source. Actual repaired native acceptance is
+pending; do not activate chunk writes or promote this source on the local gate.
+
+
+Native read acceptance checkpoint (2026-10-18): repaired source `c633d02` has
+completed own run39178517491 attempt1 with all3 jobs successful, both dedicated
+real native manifest controls passing, reviewed raw logs, own strict21/14
+artifacts/project oracles and all35 raw-field/type matches. Indexed26member hosted
+evidence is verified; see the [native read contract](native-manifest-reads.md).
+This is scoped native read acceptance. Independent W1a development proceeds from
+the accepted library reader in its own checkout while preserving this source;
+chunk writes, provider conformance and actual reboot remain later requirements.
+
+
+### W1a independent reference-proof foundation (2026-10-18)
+
+Develop from accepted reader7c2b454 in codex/manifest-reference-proofs while the
+separate repaired native cohort39178517491 finishes. Scope is an opaque proof
+of one data/hole chunk's reachability from an authorized File snapshot, bounded
+metadata-only export and pure revalidation against the same exact base. Encoded
+proofs contain no credentials and confer no upload authority or byte-health
+receipt. Rename preserves content identity; a changed root or another file must
+reject the proof. Aggregate holes still yield one clipped logical chunk.
+This is W1a, not complete inherited-page reuse, historical base reopening,
+sparse durable edits, new publication proofs or mounted writes. Native integration
+continues to require acceptance of its own frozen source. Require focused real
+SDK/authority controls and full local/own hosted gates before integration.
+
+
+Source correction for later page reuse: `Namespace::root_key` delegates to
+`key(Role::Page, ...)`; roots do not have a separate physical key role. An old
+root can be inherited as a child when the new parent expects its exact file,
+start, length, level and hash (`VerifiedPage::verify_child`). Do not require
+unconditional re-materialization merely because it was once a root. New mixed
+publication proofs still need explicit inherited provenance, not a fabricated
+new upload receipt. W1a's data/hole witness does not yet export subtree reuse.
+
+
+### Combined read-only snapshot format audit (2026-10-18)
+
+Merge accepted native52f591c and locally green W1a ed2e93b. Add controls for old
+metadata-empty and legacy snapshots across manifest publication, legacy
+republication and format reversal. Compare inode attributes and old bytes with
+fresh lookup/open; reject stale opens and races before returning a mismatched
+snapshot. First reproduce any failure without changing production code. If
+confirmed, extend version identities/lookup attributes to all files in the
+read-only chunk-capable backend and guard both manifest and legacy reader opens.
+Keep direct, writable and missing-capability fallback behavior scoped unchanged.
+Require real Linux/Windows controls plus a fresh combined local/hosted cohort;
+prerequisite artifacts cannot certify this source.
+
+Result: combined source8c3448f passed its full local gate and its own hosted
+run39184629344, all3 jobs/raw reviewed. Actual FUSE1.63s and WinFsp2.53s include
+all-format snapshots and original old-handle assertions. Own artifact ZIP
+digests, strict21+14/project oracles and all35 raw fields/types passed; no prior
+artifacts reused. The indexed29-member hosted archive is verified. W1b page
+reachability passed independent local gate95188 and now combines
+this accepted source; require its own combined gate before integration. Native chunk
+writes, sparse SQLite views, historical bases and mixed-tree proofs remain later.
+
+### W1b independent page reachability (2026-10-18)
+
+Build from local-green W1a ed2e93b while combined8c3448f runs its own native
+cohort. Export opaque root/subtree PageProof witnesses, bounded to two metadata
+pages and revalidated against an authorized File. Prove a page containing a
+requested offset at a specified level; return its complete authenticated span.
+Encoded witnesses identify the actual page start/level, never an arbitrary
+relocated subrange. Root pages already use Role::Page, so test valid old-root
+reuse as a child plus invalid geometry, without fabricated upload receipts.
+Published-empty manifests have a root page even though no data chunk exists;
+metadata-empty files have no root page. No data GET/HEAD during proof export,
+shared operation capacity/deadlines/cancellation, strict cross-kind/foreign-base
+and malformed witness refusal, local/own hosted gates required. Historical base
+reopen, sparse SQLite views, mixed publication and settlement remain separate.
+
+W1b independent result: full local gate95188 EXIT0, all260 frozen inputs
+unchanged;7reader,12publication,62S3,365state/1ignored,fmt/clippy/build/book.
+Indexed16-member local archive verified. Combine accepted snapshot/proof
+checkpoint da84d3a (runtime8c3448f, own all3/native/raw/typed21+14/raw35 passed),
+then require a fresh exact combined gate and own hosted cohort.
+
+Combined W1b candidate bf2e6ae includes accepted snapshot/proof checkpoint
+da84d3a. Its own full gate68162 passed with261 unchanged frozen runtime inputs,
+9reader/format1nativeignored,12publication,62S3,365state1ignored and all book/build
+checks. The indexed19-member combined local archive is verified;
+independent3890584 local evidence alone does not accept the combined source.
+Own hosted Linux/Windows/book native and artifact acceptance is still required.
+
+Candidatebf2e6ae is published on codex/manifest-page-proofs. Its
+[own Linux/Windows/book run](https://github.com/marshallr12/s3drive/actions/runs/39187701991)
+is in progress with the actual native checks retained. Frozen261 runtime hashes
+match the tested local source. Own source-bound raw/artifact acceptance remains
+pending; accepted8c3448f artifacts cannot certify this new helper.
+
+W1b result: runtimebf2e6ae own run39187701991 ALL3 SUCCESS, all raw reviewed,
+both actual native controls and own ZIP digests/typed21+14/project oracles/all35
+raw fields/types passed. Indexed31-member hosted archive verified. No older
+artifacts reused; all261 frozen inputs match. Next combine this accepted source
+with local-green W1c1 e18d6f5, then implement its documented W1c2 reader reopen
+contract before sparse edit views. W1b does not activate writes or provider calls.
+
 
 Reader implementation checkpoint (2026-10-18): controller474 and helperfef are
 accepted and combined in source `88d02f7` on `codex/manifest-range-reader`.
@@ -2064,3 +2342,11 @@ unchanged. Reader implementation has not begun. The combination is not yet hoste
 accepted. Implement the documented metadata-free pinned version/88-byte untrusted
 descriptor and authority-bound original-root re-open contract, retaining original
 own-payload CAS and current provider auth; then require own full/hosted gates.
+
+Canonical integration,2026-10-18: marshallr12/s3drive main and the primary checkout
+receive accepted checkpoint2e7b6ca/runtimebf2e6ae. All261 frozen runtime inputs
+and all268 non-document tracked files match the accepted source exactly. Own
+run39187701991 native/raw/artifact acceptance and local gate68162 apply to that
+runtime; final book/link checks cover the documentation-only integration delta.
+See [integration evidence](evidence/canonical-manifest-read-integration-20261018.json).
+The history/reopen draft remains separate, with no native-write activation.

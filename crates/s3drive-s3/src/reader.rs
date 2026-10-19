@@ -381,6 +381,14 @@ pub(crate) fn scoped_key(source: &Source, key: &str) -> Result<String> {
 }
 
 impl ReadHandle {
+    /// Open another key in this handle's exact source using its captured
+    /// credential generation. This performs a fresh online HEAD; the original
+    /// object's authorization does not authorize the related object. Callers
+    /// must still validate the expected key, metadata and content themselves.
+    pub async fn open_related(&self, key: &str) -> Result<ReadHandle> {
+        Box::pin(self.reader.open(key)).await
+    }
+
     /// Configuration of this pinned handle, including its exact prefix dialect.
     pub fn configuration_fingerprint(&self) -> &str {
         &self.reader.fingerprint

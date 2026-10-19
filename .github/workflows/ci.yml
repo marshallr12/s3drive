@@ -122,6 +122,9 @@ jobs:
           S3DRIVE_DISPOSABLE_WINDOWS_VM: '1'
         # Both skipped cases already run explicitly above on this same source.
         run: cargo test -p s3drive-cli --test windows_mount --locked -- --ignored --nocapture --test-threads=1 --skip actual_managed_windows_disposition_lifecycle --skip actual_managed_metadata_flush_burst
+      - name: Verify native manifest ranges and remount
+        timeout-minutes: 5
+        run: cargo test -p s3drive-cli --test chunk_reader native::actual_native_manifest_reads_and_remount --locked -- --ignored --nocapture --exact
       - name: Verify Linux startup without systemd
         if: runner.os == 'Linux'
         timeout-minutes: 5
