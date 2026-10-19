@@ -3344,3 +3344,13 @@ SHAaa3ecd77ca9c1539ef612db05fb23d057bd1b92040eb123fdb1a81d5a4929143 verified.
 [Current evidence](scoped-batched-repair.md). Published source44f0ee1 now has its
 own CI39286027359 attempt1 queued. No schema36/37 promotion follows until its own
 hosted/native/source/artifact gates pass. Main remains accepted schema35/all324.
+
+
+Declared isolated integrationefb2ab4/schema37/all337 combines the guarded-reader
+component with accepted batching while parent36 CI remains active. Five-path merge
+verified; all managed composition byte reads, including the private dependency
+batch path, use the shared ReadGuard. Full local gate1 started2026-10-19T16:37:55Z
+(runner1041992/child1041993),337 inputs frozen. See [integration contract](managed-reader-guards.md).
+Both parent acceptance and this source's own full/platform/source acceptance are
+required before promotion. Source guards and scoped batching remain library work;
+mounted chunk writes and reclamation remain disabled.

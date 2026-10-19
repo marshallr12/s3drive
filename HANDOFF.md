@@ -93,7 +93,8 @@ their cause. Never equate portable unit tests with an actual mount or flush.
    member local archive SHAaa3ecd77ca9c1539ef612db05fb23d057bd1b92040eb123fdb1a81d5a4929143.
    One-use local archiver DONE, never rerun. No local Cargo remains from that run.
    Own published source44f0ee19077c7623465faf62834858821cd1ee47; CI39286027359
-   attempt1 queued: book118172159855/Linux118172161091/Windows118172161013.
+   attempt1 live: book118172159855 queued; Linux118172161091 and
+   Windows118172161013 in progress at the latest GET.
    GET-only observer1040546/startticks143419257, tracked in
    /tmp/s3drive-scoped-batched-hosted-watch-{running,result}.json. Prepared own
    checker/raw comparator/archive NOT executed. Do not restart jobs on observation
@@ -139,6 +140,20 @@ their cause. Never equate portable unit tests with an actual mount or flush.
    workspace/platform acceptance. After batch/scoped parent integration, adapt the
    new batch private chunk-read path to the guard and require fresh full/platform
    source acceptance. Main remains accepted schema35/all324.
+
+6. **Managed-reader/batch integration** — isolated worktree
+   /home/marshall/src/worktrees/s3drive-managed-reader-batched,
+   branch codex/managed-reader-batched, checkpointefb2ab4/schema37/all337.
+   Five-path merge from guard component8b29461; four paths match scoped6115775
+   exactly, and preparation keeps guard reads in ordinary/private batch paths.
+   No managed composition .local.read bypass remains. SDK admission limiter removed.
+   Full gate1 runner1041992/child1041993 LIVE, startticks143447847/143447855,
+   started16:37:55Z. Frozen337 map/source:
+   /tmp/s3drive-managed-batched-candidate1-frozen.json and -source.tar.gz.
+   Inspect /tmp/s3drive-managed-batched-gate1-{running,result}.json and .log.
+   No runtime edits or second Cargo while live. Parent36 own CI and this source's
+   fresh full/platform acceptance are required before promotion. No native chunk
+   activation or GC. [Declared integration](docs/src/managed-reader-guards.md).
 
 One local Cargo at a time. All worktrees share /home/marshall/src/s3drive/target.
 Inspect actual PID/startticks or terminal result, not only a lock/status file.

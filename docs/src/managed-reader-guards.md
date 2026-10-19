@@ -66,3 +66,28 @@ SHA-256 `4a1324c00285c6d887987e3cf2de0abc9e09ef5ad888b88c7a47564ee86ee8c6`.
 The one-use archiver is complete and must not be rerun. Parent acceptance and
 integration with the accepted batch private-read path remain required before a
 fresh full workspace/platform cohort. Mounted chunk writes and GC remain disabled.
+
+## Declared integration with verified batching (2026-10-19)
+
+Prepare codex/managed-reader-batched from8b29461 while the separate schema36
+candidate44f0ee1 runs its own CI. Its full local gate passed, but it is not yet
+accepted for promotion. The earlier schema37 guard component passed its state/
+reader checks; neither result establishes this new combined337-input runtime.
+This integration remains isolated until both parent acceptance and its own full
+local/platform/source/artifact acceptance are complete.
+
+Apply the accepted batching changes with a three-way merge, preserve the guard
+in EditedFile/preparation reads, and change the new private DependencySession
+chunk-read path to ReadGuard::read. No composition byte read may bypass the local
+retention guard. Metadata-only unknown recovery remains before new upload
+validation. Do not change source formats, schema37, dependency APIs, deadlines,
+per-child semantics, provider authorization, worker cleanup or native activation.
+Remove the inherited unsuccessful SDK admission semaphore so publication tests
+run at ordinary four-thread concurrency, as in the combined scoped candidate.
+
+Ownership: the five batch runtime paths plus resolution of its private chunk-read
+path; removal of fixture admission; this contract and source/gate records. Existing
+source/guard code remains the component-tested implementation. Verify the exact
+337-input merge, run the new lifetime SDK check and full workspace gate, then
+require this combined source's own native/platform/artifact cohort. Keep native
+chunk writes and GC disabled. A passing parent cohort cannot accept these changes.
