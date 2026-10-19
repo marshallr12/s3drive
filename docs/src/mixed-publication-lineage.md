@@ -1,7 +1,7 @@
 # Repeated edited-file publications
 
 Design and implementation contract, 2026-10-19. **Implemented in an isolated
-worktree; full local gate passed, own hosted acceptance pending.**
+worktree; full local and own hosted acceptance passed.**
 The user selected immutable chunks plus manifests. Small edits should reuse
 unchanged chunks. Ordinary drive names remain metadata in the shared authority.
 
@@ -187,3 +187,30 @@ Exact source `50ee01c73b8ed75182903aed808611783ac24885` is published for
 Acceptance is pending. Parent native artifacts and source cannot substitute for
 this schema34 runtime. Main's accepted runtime remains W4b2/schema33; publication
 of this successor does not activate native chunk writes or clean settlement.
+
+
+## Own hosted acceptance (2026-10-19)
+
+Exact `50ee01c73b8ed75182903aed808611783ac24885`, schema34/all319, passed
+[its own run](https://github.com/marshallr12/s3drive/actions/runs/39253634685)
+attempt1: all3 jobs succeeded. Complete raw/source/own API ZIP SHA-256, independent
+typed21+14/project checks and all35 raw records' fields and JSON types matched.
+Own replacement12186786596/disposition12187983013 artifacts were used; no parent
+artifact substitution. The [indexed hosted archive](evidence/mixed-lineage-hosted-20261019.tar.gz)
+contains99 verified members,378809bytes, SHA-256
+`3509706b384b8943e24512bb08019f3465f433050eb6a23b8feeba6d40b0e9f2`.
+
+Linux434state/Windows429state (one ignored each),37core,22reader (one native
+ignored),62S3 and22publication cases passed. All five new state cases and actual
+SDK repeated-publication scenario passed. Real legacy FUSE9/67.06s, WinFsp7/79.17s,
+manifest1.43s/2.89s and paired no-systemd24.07s/Windows managed78.55s passed on
+Ubuntu24.04 image20261012.334.1 and WindowsServer2025 windows-2025-vs2026
+image20261007.264.1. Three disposable profiles remained locked: dummy credentials
+removed, final deletion deferred to VM destruction. Two unused WinFsp delay-import
+warning groups, tooling notices and all completed slow tests remain in evidence.
+
+This accepts exact local predecessor publication/recovery and existing native
+regressions. W5b clean epochs, explicit pins/retry retirement, bounded reclamation,
+fresh authoritative external-base adoption, explicit origins and W6 native chunk
+writes remain separate acceptance requirements. Wasabi and physical MX/Windows
+reboot/sign-in/SSH behavior are not established by these hosted tests.

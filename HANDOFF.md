@@ -58,77 +58,59 @@ This remains a historical root commit, not local clean settlement or a file flus
 Normal source opening is strict; no lost-operation rebase or overwrite fallback.
 Manifest origins only; legacy/metadata-empty origins still need explicit formats.
 
-## W5b1 declared clean-epoch successor (2026-10-19)
+## Accepted W5a exact local publication lineage (2026-10-19)
 
-Ownership: codex/mixed-clean-epochs in
-/home/marshall/src/worktrees/s3drive-mixed-clean-epochs. Read
- docs/src/mixed-clean-epochs.md before implementation. W5a's source319 stays frozen
-in its separate worktree while own39253634685 runs. W5b1 must atomically acknowledge
-an exact root/view, rebase only the matching current head, and preserve historical
-acknowledgments/newer edits/old immutable IDs and reads. Extend root/source record
-formats in schema35, with no old-row rewrite; root metadata helper must not recurse
-into source validation. Add shared operation-ID guards, scoped current head, managed
-same-owner local ack and SDK/fault/kill/migration tests. Workspace check1 EXIT0; inherited focused1 17passed. New focused5 11passed/
-9.15s incl11 actual epoch-kill boundaries, SQLite-full, migration, corrupt graph/
-metadata/BLOB refusal, operation IDs, limits/triggers and owner race. SDK2 EXIT0/
-one74.36s/13ownedPUT case: four3MiB+17 sparse cycles, old reads, base reuse, newer
-head preservation, restart/metadata ack recovery and empty base;8KiB future bound.
-SDK1 failed an observation interval that included earlier authenticated reads;
-scoped before replay, assertion retained; exact failed source/log under/tmp.
-Root receipts use a small shared immutable Arc; no body data copied into a new
-base. No new tables/dependencies, only schema35 format marker; old-format bytes
-omit acknowledgment and stay unchanged. Full gate1 runner547274 CLOSED101 at one Clippy unused-unit diagnostic; all324
-unchanged. Removed only redundant unit expression, no semantic change/suppression.
-Exact source60e11a8/frozen map/log and failed model copy retained. Fresh gate2 on
-final2 map324 is next. Source publication and full acceptance remain pending.
-Fresh remote clean-base adoption is additionally required before W6; it cannot
-reuse our-own-publication acknowledgment to invent an external receipt. Own hosted acceptance remains required
-before promotion. W5b2/3 bounded retention, origins, W6 and provider/
-physical acceptance remain. Goal ACTIVE/progress; no clean or native claim yet.
+Runtime50ee01c73b8ed75182903aed808611783ac24885, schema34/all319 frozen inputs.
+Own39253634685 attempt1 ALL3 SUCCESS: book118063332761/Linux118063333285/
+Windows118063333172. Watch530666/child530667 CLOSED0; checker10925 CLOSED0;
+raw comparator/archive29737 CLOSED0. Complete raw/source/own API ZIP SHA,
+independent typed21+14/project/all35 raw fields/types passed. Own artifacts
+replacement12186786596/disposition12187983013. Indexed99-member378809byte archive
+SHA3509706b384b8943e24512bb08019f3465f433050eb6a23b8feeba6d40b0e9f2;
+all members verified. One-use hosted/local acceptance and archives DONE; NEVER rerun.
 
-## Current W5a exact local lineage — complete local gate, own cohort running
+Linux434state/Windows429state1ignored each,37core/22reader1nativeignored/62S3/
+22publication passed. All five new state cases and SDK consecutive-publication
+case passed. Exact local final gate2 CLOSED0/all319,663-member1690240byte local
+archive SHA33d07eb2df7f6742dd7bc56a70d86cbb182400de6feb19e3b24e0f3256543359.
+First failed gate's exact319 source retained; dispatch factory fixed old source_flow
+stack overflow without increasing stack limits. Native old FUSE9/67.06s, WinFsp7/
+79.17s, manifest1.43s/2.89s and paired no-systemd24.07s/Windowsmanaged78.55s passed.
+Actual Ubuntu24.04 image20261012.334.1 / WindowsServer2025 windows-2025-vs2026
+image20261007.264.1. Three locked profiles: dummy credentials removed, final deletion
+by VM destruction; two unused WinFsp delay-import groups/tooling notices and all
+completed slow tests retained. These are legacy regressions, not native chunk writes.
 
-Worktree /home/marshall/src/worktrees/s3drive-mixed-publication-lineage,
-branch codex/mixed-publication-lineage, runtime71242f5 (schema34/all319 final2).
-Later descendants may CAS against an exact retained local predecessor; complete
-metadata graph and actual source ancestry validate separately. Old format1 bytes
-stay unchanged; restricted recovery also resolves schema33 saved requests without
-migration. No clean epoch, payload reclamation or native activation in W5a.
-Focused16 state incl28 kill boundaries and actual SDK3-root/restart/lost-reply/
-foreign-conflict case passed. First full gate1 CLOSED101 at old source_flow child
-stack overflow after new scenario expanded shared dispatch; all319 unchanged,
-21other publication cases passed. Non-inlined future factory fixes construction
-without larger stacks; failing default-stack case passed5.69s. Exact failed source
-and logs retained. Owned full gate2 runner478318/child478320 CLOSED EXIT0 at12:36:50Z,
-/tmp/s3drive-mixed-lineage-gate2-{running,result}.json and .log. Keep319 frozen at
-/tmp/s3drive-mixed-lineage-final2-frozen.json. Read docs/src/mixed-publication-lineage.md before continuing;
-new schema33 damaged-source saved-Publish case passed in that gate. All319
-unchanged;434state1ignored/37core/22reader1nativeignored/62S3/22publication,
-format/Clippy/build/79MD/75chapters passed. Log SHA
-b14a48b1e9ebd3bd583fed0add8d2ff57c3653f24d50d20cae9f3264b023eb3b.
-One-use local archive DONE:663members1690240bytes SHA
-33d07eb2df7f6742dd7bc56a70d86cbb182400de6feb19e3b24e0f3256543359,
-all members verified including exact final319 and failed gate1 source319. NEVER
-rerun completed local archiver. Own source50ee01c73b8ed75182903aed808611783ac24885 is published; all319 committed
-and working inputs exact. Own39253634685 attempt1 in progress:
-book118063332761/Linux118063333285/Windows118063333172. Owned observer530666;
-child/start ticks in/tmp/s3drive-mixed-lineage-hosted-watch-running.json.
-Four one-use checker/oracle/raw-comparer/archive scripts prepared, NOT executed;
-review aid also prepared. First resume: authoritative own API jobs; after all3
-terminal success, review complete raw logs, validate source/API ZIP SHA/typed21+14/
-project/all35 raw fields/types, then archive once. Required434Linux/429Windowsstate,
-22publication, five new lineage state cases and SDK consecutive-publication case.
-Do not reuse parent artifacts12184468560/12185592238 or prior earlier artifacts.
-Never rerun completed local archive. Keep all319 frozen through own acceptance.
-Done contract: a later strict descendant may use an exactly retained successful
-local predecessor; wrong source/store/file, nonancestor, missing/unknown/conflicted
-predecessors and foreign current content must fail without admitting a new remote
-request. Preserve old literal IDs/hashes, exact saved recovery and newer heads.
-The concrete source remains71242f5/all319 while accepted main26757a1 docs/evidence
-are merged. The implementation declaration and full design are in the mdBook. Full local
-and own hosted/native/source acceptance precede W5a promotion. Its mdBook chapter
-also gives concrete W5b clean-epoch/pin/retry-retirement/reclamation proposals.
-W5b, explicit origins, W6 and provider/physical gates remain. Goal ACTIVE/progress.
+Accepted exact retained local predecessor, actual strict source ancestry, complete
+metadata-only predecessor graph, schema33 saved-request recovery without migration
+and old literal bytes/hashes. Another writer's root, wrong identities, unknown/
+missing/rejected predecessor or nonancestor never becomes an overwrite fallback.
+No clean epoch, reclamation, fresh external-base adoption, new-file origins or
+native chunk activation follows from W5a acceptance. Goal ACTIVE/progress.
+
+## Current W5b1 clean-epoch successor — local gate running
+
+Worktree /home/marshall/src/worktrees/s3drive-mixed-clean-epochs,
+codex/mixed-clean-epochs. Read docs/src/mixed-clean-epochs.md there; preserve the exact head/binding
+transition and separately retained historical receipt. No native activation. Source3d5de01,
+schema35/all324 final2 frozen. Exact local acknowledgments, same-head immutable
+rebase, historical/newer-head preservation, shared source-operation ID guards,
+scoped head facade, small immutable receipts, metadata-only recorded-ack recovery
+and managed APIs implemented. Four3MiB+17 actual SDK cycles preserve old reads,
+reuse new bases, retain newer edits and support empty manifests:13ownedPUT/74.36s.
+Eleven focused state cases incl11 real epoch-kill boundaries, SQLite-full,
+migration/refusal, self-consistent metadata corruption, source damage, narrowed
+limits/triggers, ID collision and private owner races passed. SDK1 observation
+scope failure/source retained; corrected interval, no assertion suppression.
+
+Full gate1 runner547274 CLOSED101 at one redundant unit Clippy diagnostic, all324
+unchanged. Removed only expression; exact source60e11a8/map/log/model retained.
+Owned full gate2 runner547943 is live (child/start ticks in
+/tmp/s3drive-mixed-epochs-gate2-running.json); result/log same stem. Keep324 frozen
+at/tmp/s3drive-mixed-epochs-final2-frozen.json. Full local and own hosted/native/
+source gates before promotion. W5b2/3 pins, retry retirement and reclamation,
+authoritative external clean-base observation, explicit origins, W6 and provider/
+physical session/reboot acceptance remain required; no native chunk writes claimed.
 
 ## Accepted W4b1 exact-data verification (2026-10-19)
 

@@ -1,7 +1,7 @@
 {
   "date": "2026-10-19",
   "phase": "W5a",
-  "status": "W5a complete local gate passed; own Linux/Windows/book/native/source cohort required before promotion",
+  "status": "W5a complete local and own hosted/native/source/artifact cohort accepted; no clean/native chunk activation",
   "schema": 34,
   "scope": "exact retained local root predecessor for strict descendant; no clean settlement or reclamation",
   "focused": [
@@ -55,9 +55,9 @@
     }
   ],
   "acceptance_remaining": [
-    "own hosted Linux Windows book native source artifact cohort",
     "clean-base epochs and bounded local retention (W5b)",
     "explicit legacy and metadata-empty origins",
+    "fresh authoritative external-base adoption for proven clean heads",
     "native chunk writes (W6)",
     "provider and physical session/reboot gates"
   ],
@@ -120,8 +120,25 @@
       "linux": 118063333285,
       "windows": 118063333172
     },
-    "status": "pending",
-    "checker_oracle_raw_comparer_archive_executed": false,
-    "parent_artifact_reuse_permitted": false
+    "status": "accepted",
+    "checker_oracle_raw_comparer_archive_executed": true,
+    "parent_artifact_reuse_permitted": false,
+    "all_three_jobs": "success",
+    "all319_inputs_exact": true,
+    "independent_typed": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true,
+    "own_artifacts": {
+      "replacement": 12186786596,
+      "disposition": 12187983013
+    },
+    "archive": {
+      "path": "evidence/mixed-lineage-hosted-20261019.tar.gz",
+      "members": 99,
+      "bytes": 378809,
+      "sha256": "3509706b384b8943e24512bb08019f3465f433050eb6a23b8feeba6d40b0e9f2"
+    }
   }
 }
