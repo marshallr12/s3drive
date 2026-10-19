@@ -36,6 +36,19 @@ fn header(raw: &[u8]) -> Result<(bool, usize, usize)> {
     }
 }
 impl Witness {
+    pub fn encode(&self, blobs: &BTreeMap<Id, Vec<u8>>) -> Result<Vec<u8>> {
+        let mut out = self.header.clone();
+        for id in &self.pages {
+            let b = blobs.get(id).ok_or(Failure::Corrupt)?;
+            if !(64..=manifest::MAX_PAGE_BYTES).contains(&b.len()) {
+                return Err(Failure::Corrupt.into());
+            }
+            out.extend_from_slice(&(b.len() as u16).to_le_bytes());
+            out.extend_from_slice(b);
+        }
+        Ok(out)
+    }
+
     pub fn admit(raw: &[u8], page: bool, blobs: &mut BTreeMap<Id, Vec<u8>>) -> Result<Self> {
         let (kind, h, count) = header(raw)?;
         if kind != page

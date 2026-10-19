@@ -149,6 +149,9 @@ fn identity(
         "namespace_removal_events",
     ];
     let local = [
+        "sparse_preparations",
+        "sparse_preparation_objects",
+        "sparse_preparation_blobs",
         "sparse_view_role",
         "sparse_view_files",
         "sparse_views",
@@ -637,6 +640,9 @@ mod tests {
             "PRAGMA foreign_keys=OFF; INSERT INTO sparse_views VALUES(zeroblob(32),zeroblob(32),x'7b',zeroblob(32))".to_owned(),
             "PRAGMA foreign_keys=OFF; INSERT INTO sparse_view_operations VALUES(zeroblob(32),zeroblob(32),x'7b',zeroblob(32))".to_owned(),
             "INSERT INTO sparse_view_blocks VALUES(zeroblob(32),x'01')".to_owned(),
+            "PRAGMA foreign_keys=OFF; INSERT INTO sparse_preparations VALUES(zeroblob(32),zeroblob(32),zeroblob(32),x'7b',x'7b',zeroblob(32))".to_owned(),
+            "PRAGMA foreign_keys=OFF; INSERT INTO sparse_preparation_objects VALUES(zeroblob(32),-1,0,x'7b',zeroblob(32))".to_owned(),
+            "INSERT INTO sparse_preparation_blobs VALUES(zeroblob(32),x'01')".to_owned(),
         ] {
             let case = tempfile::tempdir().unwrap();
             let source = case.path().join("bad");

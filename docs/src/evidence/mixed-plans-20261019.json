@@ -1,0 +1,237 @@
+{
+  "date": "2026-10-19",
+  "phase": "W3b durable mixed-tree preparation",
+  "branch": "codex/mixed-plans",
+  "baseline": "cdf7de8fb3231a227e3a617a30e120ce2c849a11",
+  "status": "full local gate passed on all300 frozen inputs; own combined acceptance pending",
+  "schema": 32,
+  "runs": {
+    "check1": {
+      "session": 51042,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-plans-check1.log",
+      "sha256": "df24135a1a86e11f112bac1d8a6666ee0153e70c0535261cbecb2c7b48604589",
+      "test_summaries": []
+    },
+    "focused1": {
+      "session": 1369,
+      "exit_code": 101,
+      "log": "/tmp/s3drive-mixed-plans-focused1.log",
+      "sha256": "ccbce882afe7f05af5e249a69da1d3c96992d4a721a470d43d123a3e17e74c9b",
+      "test_summaries": [
+        "test result: FAILED. 3 passed; 2 failed; 0 ignored; 0 measured; 394 filtered out; finished in 121.97s"
+      ]
+    },
+    "focused2": {
+      "session": 13839,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-plans-focused2.log",
+      "sha256": "2371e9b90d2acea7bb5d6a9e363553fdd498fe38715ae4acd432d03532a2a0a6",
+      "test_summaries": [
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 394 filtered out; finished in 60.16s"
+      ]
+    },
+    "refusals1": {
+      "session": 20151,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-plans-refusals1.log",
+      "sha256": "2765b0bd9f44def52e29243103953a57ba6f5c5c44b12055ac52683efa711c18",
+      "test_summaries": [
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 399 filtered out; finished in 1.27s"
+      ]
+    },
+    "recovery1": {
+      "session": 13199,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-plans-recovery1.log",
+      "sha256": "cd3bb1f904bb562dd28996405e79b56ed06d6f6bd4dee177b4d004530dfe04d8",
+      "test_summaries": [
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 404 filtered out; finished in 8.37s"
+      ]
+    },
+    "clippy1": {
+      "session": 33388,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-plans-clippy1.log",
+      "sha256": "b5c31cb3a618020904132f5428e24d79474de5b2f15773bd311609ea43ffe2df",
+      "test_summaries": []
+    },
+    "managed_check1": {
+      "session": 60312,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-plans-managed-check1.log",
+      "sha256": "c0a1b2a9ed304c9110631de7d214e4f286889a43b7fd79e40535e7eafa87a41e",
+      "test_summaries": []
+    },
+    "managed_focused1": {
+      "session": 75463,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-plans-managed-focused1.log",
+      "sha256": "a5ef65feaee1c306ce95845bf0883b57e3c01294ed60a9168909b85059a772d8",
+      "test_summaries": [
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 20 filtered out; finished in 15.01s"
+      ]
+    },
+    "dedup1": {
+      "session": 41507,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-plans-dedup1.log",
+      "sha256": "1a0e9f8fbf8b8c8c5ed933ee0c3ec581fe7b8bd4e218785f0e57bf93c99063ba",
+      "test_summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 407 filtered out; finished in 5.24s"
+      ]
+    },
+    "orphan1": {
+      "session": 85743,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-plans-orphan1.log",
+      "sha256": "c4ec548578d6b98892342e8b859545b7d9d05fb1907c74ba61df73ec1300b205",
+      "test_summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 407 filtered out; finished in 0.04s"
+      ]
+    },
+    "boundaries1": {
+      "session": 85743,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-plans-boundaries1.log",
+      "sha256": "35ab2557e048ffeea8b42eb6007faf555159cc6b7fa674d0b2039fffda914e6e",
+      "test_summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 22 filtered out; finished in 3.14s"
+      ]
+    },
+    "two_level1": {
+      "session": 84275,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-plans-two-level1.log",
+      "sha256": "f7a43baed239aad4ca8292f083955f839ce3a2364a619762e4e9b93e0f543731",
+      "test_summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 408 filtered out; finished in 0.15s"
+      ]
+    },
+    "managed_focused2": {
+      "session": 60758,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-plans-managed-focused2.log",
+      "sha256": "65ac03078443e86317471ad403687f1be67c710165452e600126952a64a0a6a7",
+      "test_summaries": [
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 20 filtered out; finished in 15.76s"
+      ]
+    },
+    "snapshot-state1": {
+      "session": 32148,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-plans-snapshot-state1.log",
+      "sha256": "4b9456b726b17bc1eec18430ed903271126f4825d02d960207123b635884dde8",
+      "test_summaries": [
+        "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 400 filtered out; finished in 1.09s"
+      ]
+    },
+    "snapshot-cli1": {
+      "session": 32148,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-plans-snapshot-cli1.log",
+      "sha256": "e21bcf4e6da52e637fc904c83868f25f372fc7c3157102df372d59bf264f3429",
+      "test_summaries": [
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s"
+      ]
+    }
+  },
+  "not_claimed": [
+    "object upload/root CAS publication",
+    "logical clean settlement/reclamation",
+    "legacy/metadata-empty origin admission",
+    "native edited writes",
+    "Wasabi/physical workstation/reboot/session acceptance"
+  ],
+  "diagram": {
+    "source": "images/mixed-plans.svg",
+    "xml_native_render_visual_review": "passed",
+    "review_png": "/tmp/s3drive-mixed-plans-diagram-review.png"
+  },
+  "full_local_gate": {
+    "session": 34846,
+    "exit_code": 0,
+    "log": "/tmp/s3drive-mixed-plans-gate2.log",
+    "sha256": "13cb4283a58540ddb27b42d911147cc0dd27e650850cc81383761c1ad3e5dfce",
+    "schema": 32,
+    "runtime_inputs": 300,
+    "all_inputs_unchanged": true,
+    "tty": false,
+    "rust_test_threads": 4,
+    "test_summaries": [
+      "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.29s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.81s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 20.62s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.22s",
+      "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.56s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 10.61s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s",
+      "test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 60.74s",
+      "test result: ok. 22 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 28.51s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.24s",
+      "test result: ok. 2 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 8.31s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.67s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.78s",
+      "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 19.32s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.11s",
+      "test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+      "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.68s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 21.06s",
+      "test result: ok. 408 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 203.00s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ],
+    "markdown_files": 76,
+    "book_chapters": 72,
+    "frozen_map": "/tmp/s3drive-mixed-plans-frozen.json",
+    "delta_from_failed_gate1": [
+      "crates/s3drive-state/src/authority_snapshot/native.rs"
+    ]
+  },
+  "initial_failure": {
+    "tests": "3 passed/2 failed/121.97s; first run finished before the attempted stop; no process was killed",
+    "cause": "new page references/root used raw blob SHA rather than domain-separated page digest; actual core verification refused roots",
+    "additional_fix": "restrict inherited-cover lookup to inherited pages and consume structural zero runs without per-chunk work",
+    "old_source_snapshots": [
+      "/tmp/s3drive-mixed-plans-failed-ledger.rs",
+      "/tmp/s3drive-mixed-plans-failed-journal.rs"
+    ],
+    "input_hashes": "/tmp/s3drive-mixed-plans-focused1-inputs.json"
+  },
+  "failed_full_gate1": {
+    "session": 80227,
+    "exit_code": 101,
+    "runtime_inputs": 300,
+    "all_inputs_unchanged": true,
+    "log": "/tmp/s3drive-mixed-plans-gate1.log",
+    "sha256": "2550e4448e9be4c59b2ce1093654bd7c1b392d9aadad9391c2b5ffe968f75c2d",
+    "failed_case": "cli_snapshot_round_trip_preserves_receipts_and_never_authorizes_restore",
+    "reason": "new empty schema32 preparation tables missing from authority-snapshot local-table allowlist; preserve empty-only/nonempty-role refusal semantics",
+    "format_workspace_clippy": "passed"
+  },
+  "local_archive": {
+    "path": "evidence/mixed-plans-local-20261019.tar.gz",
+    "sha256": "363badd8492a7f492ad8fcf209933969ec3c4175b2cb745ee6b5faa304d2588f",
+    "bytes": 1046139,
+    "members": 329,
+    "all_indexed_members_verified": true,
+    "all300_frozen_inputs_unchanged": true,
+    "scope": "full portable local mixed preparation only; own combined/native gates still required"
+  }
+}

@@ -11,6 +11,7 @@ use model::{BlockRef, Change, Record, Request};
 mod ledger;
 use ledger::{File, Saved, inspect};
 mod mutations;
+pub mod preparation;
 pub use mutations::{Client, Journal, Piece};
 pub type Id = [u8; 32];
 const HARD_FILES: u32 = 256;
@@ -168,6 +169,7 @@ fn isolation(db: &Connection) -> Result<()> {
 /// Constructor guard only; generic cache/staging remains available for future
 /// mixed uploads. No old complete-snapshot publication may adopt these views.
 pub(crate) fn require_legacy(db: &Connection) -> Result<()> {
+    preparation::require_legacy(db)?;
     for table in TABLES {
         if db.query_row(&format!("SELECT EXISTS(SELECT 1 FROM {table})"), [], |r| {
             r.get::<_, bool>(0)

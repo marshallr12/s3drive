@@ -2936,3 +2936,18 @@ no Rust type checking, schema, ledger/journal/controller or tests exist for this
 draft yet. Do not claim a baseline gate covers it. Full acceptance remains the
 complete declared W3b phase above. Its current HANDOFF records the exact next
 work and validation conditions. Parent W3a9544193 is now accepted as main3086038.
+
+W3b implementation checkpoint,2026-10-19: schema32 ledger/cursor/tree builder and
+managed producer/reopen/checked dependency boundary are wired and focused tests
+passed. State remains offline intent. False root context and correct-root false
+new bytes/holes fail at the managed boundary. Fourteen killed-process boundaries,
+SQLite-full, rollback, corruption, quota, path sharing/two-level proofs,64GiB zero
+coverage and real authority/SDK restart/authorization/resource controls passed.
+A page-domain-vs-raw-SHA bug was caught by core root verification and corrected;
+failed and successful evidence retained. See [implementation and diagram](mixed-plans.md).
+Full local gate34846 passed on all300 frozen inputs (408state/22reader, one
+ignored each;37core/62S3;76Markdown/72chapters). Empty-only snapshot-table schema
+adaptation and its nonempty refusal cases are included. The indexed329-member
+local archive preserves exact source and both failed and successful runs. Own
+combined gates are pending. Parent main3086038 stays accepted
+schema31; this source does not activate uploads, settlement or native writes.

@@ -9,7 +9,7 @@ use model::{Input, Kind, Object};
 mod journal;
 mod ledger;
 mod proof;
-pub use journal::{Client, Journal};
+pub use journal::{Client, Dependency, Journal};
 const MAX_PLANS: usize = 256;
 const MAX_OBJECTS: usize = 262_144;
 const MAX_METADATA: u64 = 32 * 1024 * 1024;
@@ -50,3 +50,6 @@ pub(crate) fn require_legacy(db: &Connection) -> Result<()> {
 pub(crate) fn validate_all(db: &Connection) -> Result<()> {
     ledger::inspect(db).map(|_| ())
 }
+
+#[cfg(test)]
+mod tests;

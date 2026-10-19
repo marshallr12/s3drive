@@ -25,68 +25,69 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
-## Current W3b durable mixed-tree preparation — local draft (2026-10-19)
+## Current W3b durable mixed-tree preparation — local green (2026-10-19)
 
 Worktree /home/marshall/src/worktrees/s3drive-mixed-plans,
-branch codex/mixed-plans fromc1f7fbb. Full declared phase at implementation-plan
-end. Parent W3a9544193 now ACCEPTED as main3086038 (all3/source/raw/own artifacts,
-checker4975 CLOSED0/watch3007 CLOSED0); all288 inputs exact. GoalACTIVE/progress.
+branch codex/mixed-plans fromcdf7de8. Accepted main3086038 stays schema31 with
+runtime9544193/all288 inputs exact; this isolated phase is schema32. Previous
+turn concrete progress, not blocked. Goal ACTIVE. No uploads/native writes enabled.
 
-Owned draft files: sparse_views/preparation.rs and preparation/{model,proof}.rs.
-They are NOT wired into sparse_views.rs and are NOT compiled or tested. The
-preparation module declares ledger/journal modules that do not exist yet. Only
-explicit rustfmt --edition2024 --config skip_children=true on these three files
-has passed syntax/formatting; that is not Rust type checking or a local gate.
-No schema, runtime API, uploads, native writes or claimed receipt is activated.
-Do not run a baseline gate and call the unwired draft covered.
+Implemented/wired: additive032 DDL, complete bounded plan/object/blob ledger,
+exact view/op/generation/original root freeze, coverage and bottom-up page cursor,
+new data/page vs inherited chunk/subtree tags, shared SHA-addressed BLOBs, bulk
+zero runs, strict whole-object length/geometry and store/file/role proof checks.
+New output root identity; old roots reused only as exact children. Every mutation
+checks exact expected post-snapshot; attached prep-table triggers are refused
+before writes. Inspection/replay ignore narrowed admission; saved local operation
+lookup recovers an unknown begin reply without credentials. It grants no network
+ownership. Schema migration/native assertions/test-only old-schema fixtures move
+together; old sparse BLOBs/IDs preserved. Existing full-snapshot planner/receipts
+unchanged. State output is offline intent, not auth/upload/clean receipt.
 
-Implemented draft model: versioned Input pins operation/view/new generation,
-original root descriptor and root-page blob ID; Progress has input offset and
-bottom-up page level/slot plus optional new root; Candidate distinguishes new
-bytes, structural zero run, inherited chunk and inherited page. Object Kind
-retains new data/page blobs vs inherited Witness. Witness stores exact old wire
-header + deduplicated page blob IDs, validates original payload-reference binding,
-root/path geometry/store/file and full data length; no arbitrary upload receipt.
-It parses existing S3DCREF1/S3DPREF1 bounded paths (at most2 pages). All are offline
-intent: managed producer/reopen and W4 must authenticate the actual root context.
+Managed Preparation shares private SQL owner and reader permit/deadline, releases
+SQL before network, authenticates exact history/rootHEAD and compares full stored
+binding/root on reopen. It prepares real changed bytes and unchanged witnesses;
+false persisted root claims fail. PreparedDependency is privately constructed:
+it rechecks new bytes/hole semantics against the exact source view; correct-root
+false body/hole claims also fail. Pages remain structural and need W4 ordered
+child receipts/provenance. Completed root metadata is not an upload or flush.
+Local/authority restart and remote replacement/rename/removal never rebase.
 
-Next implement ledger.rs/journal.rs and migration032, wire only with a compiling
-coherent slice, then meaningful tests/controller/full gates. Ledger snapshot must
-preflight row counts/types/BLOB lengths/total bytes BEFORE allocation; validate
-blob SHA, canonical frozen inputs/state hashes, unique operations/new namespace
-+generation, exact sparse-view lineage and no orphan blobs/rows. Check level/slot
-bounds BEFORE span/offset arithmetic on decoded Object (currently unchecked
-helper assumes a validated level). Candidate coverage must be contiguous and
-match cursor. Stale append must compare the saved candidate at that input cursor,
-not falsely acknowledge a different payload. Generated-page steps may return
-actual progress for stale cursors because the input is computed in the owner.
-Every mutation compares full expected post-snapshot to catch ignored/rewrite/
-foreign trigger effects, then commits atomically. Preserve exact old input BLOBs.
+Verification so far: check51042 CLOSED0; initial focused1369 CLOSED101:
+3pass/2fail121.97s, wrong raw BLOB SHA used instead of page-domain digest. It
+finished before attempted stop (no process killed). Saved old ledger/journal/map
+and log. Fixed page references/root to Page.digest; also avoided repeated scans
+of all rows for inherited covers and iterating a whole structural-zero chunk run.
+Focused13839 CLOSED0:5tests60.16s. Refusals20151 CLOSED0:5tests1.27s; recovery13199
+CLOSED0:2tests8.37s (14 owned killed-process boundaries); clippy33388 CLOSED0 for
+then-current state source. Managed check60312 CLOSED0. First managed75463 CLOSED0:
+2tests15.01s. Dedup41507 CLOSED0:1/5.24s; orphan+partial boundary85743 CLOSED0:
+1/0.04s and1/3.14s. Two-level84275 CLOSED0:1/0.15s. Final managed60758 CLOSED0:
+3tests15.76s incl checked dependencies. Later operation lookup is covered by the
+upcoming full gate; do not claim intermediate Clippy covers later edits.
+All paths/timings/hashes in docs/src/evidence/mixed-plans-20261019.json.
+Diagram XML/native render/visual review passed. Full phase contract at plan end.
 
-Use shared blob table for root/witness pages and new bytes (raw SHA256 key,
-<=1MiB); de-duplicate repeated proof paths. Three planned tables: preparations
-(plan/op/view/input/progress/state hash), objects (plan/level/slot/record/hash),
-blobs (hash/data). Sparse role permits preparations; require_legacy must refuse
-any new prep rows even if sparse role missing. Add separate new-table validation
-without changing TABLES's existing fixed5 ledger layout or migration30 initial
-inspection. test_schema helper must drop new tables before sparse views when
-constructing older schemas. Schema assertions in two native PowerShell fixtures
-must move with032; no claim until schema migration/role/refusal tests pass.
-
-Input coverage admits chunk results, whole unchanged inherited subtrees only
-below the output-root level, and structural long zero runs. Output root is always
-new (do not adopt an old physical root as new reservation); old root may be a new
-child only at exact level/span. Coverage records avoid enumerating64GiB holes;
-CPU steps build <=128 child references into one page. Skip levels covered by a
-retained inherited subtree; rebuild affected ancestors bottom-up. Validate every
-produced page against retained children, both while in progress and on reopen.
-Use an intent-only View span helper for unbounded metadata coverage (existing
-range() caps byte requests at8MiB); the managed producer still revalidates SQL and
-fresh authorization, never trusts the pure helper as a send/read capability.
-No SQL owner across network. Controller compares full binding/root and uses
-private prepared candidates; future W4 revalidates source/policy before sends.
-Complete W3b requires actual mixed roots/restart/refusal/quota/SQL/crash tests,
-managed integration, full local and own combined gates. W4-W6/legacy-empty remain.
+Full gate80227 CLOSED101 at authority snapshot round-trip: new empty schema32
+local tables absent from snapshot allowlist. All300 frozen inputs unchanged on
+failure; old log/map/result and old validator source retained under
+/tmp/s3drive-mixed-plans-{gate1*,failed-gate1-frozen.json,failed-snapshot-validator.rs}.
+Added only the three constant local-table names, still empty-only, with three
+new nonempty-role refusal cases. Snapshot focus32148 CLOSED0:9state1.09s/2CLI0.29s.
+Full gate2 session34846 CLOSED EXIT0. All300 runtime/contract inputs match
+/tmp/s3drive-mixed-plans-frozen.json. Schema32, plain pipes, four test threads.
+408state1ignored/37core/22reader1nativeignored/62S3, format/Clippy/build,
+76Markdown links and72book chapters passed. Exact result/log:
+/tmp/s3drive-mixed-plans-gate-result.json and gate2.log. Indexed329-member local
+archive1046139bytes SHA363badd8492a7f492ad8fcf209933969ec3c4175b2cb745ee6b5faa304d2588f
+contains all300 source inputs, successful/failed logs, old sources and diagram
+review. Archive verified; one-use archiver already executed, do not rerun.
+Own combined Linux/Windows/book acceptance is pending. Next publish this exact
+source and retain all300 hashes while its own cohort runs. Never reuse parent
+artifacts or claim real Wasabi/physical reboot success. No runtime changes since
+successful gate freeze. Main3086038 remains accepted schema31 until own acceptance.
+W4 exact CAS/dependency sends/unknown recovery, W5 exact-view settlement and
+retention/reclamation, legacy/metadata-empty admission and W6 native writes remain.
 
 ## Accepted W3a bounded incremental data preparation (2026-10-19)
 
@@ -107,14 +108,8 @@ implementation/evidence/diagram in docs/src/incremental-data.md. No complete mix
 tree, publication, clean settlement, native edited writes, provider or physical
 reboot/session acceptance follows. One-use acceptance/archiver already executed.
 
-Next W3b worktree /home/marshall/src/worktrees/s3drive-mixed-plans,
-branch codex/mixed-plans fromc1f7fbb. Local draft only: state sparse_views/
-preparation.rs + preparation/{model,proof}.rs are NOT wired, compiled or tested;
-ledger/journal modules do not exist yet. Do not mistake baseline gate for draft
-coverage. Full declared phase is in that worktree's implementation-plan tail.
-Need schema032, complete ledger/cursor/tree/controller + refusal/recovery tests
-and full local/own combined gates before any acceptance. Existing main source
-remains schema31. GoalACTIVE; concrete progress. W4-W6 and legacy/empty remain.
+The W3b successor is now locally green in codex/mixed-plans; see the current
+section above. Its own combined acceptance remains separate from this W3a proof.
 
 ## Accepted W2c authenticated sparse composition (2026-10-19)
 

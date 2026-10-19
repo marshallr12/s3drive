@@ -400,6 +400,11 @@ pub struct Client {
     options: Options,
 }
 impl Client {
+    /// Same private owner as the immutable views; no second SQLite connection.
+    pub fn preparations(&self, options: preparation::Options) -> Result<preparation::Client> {
+        preparation::Client::new(self.owner.clone(), options)
+    }
+
     pub(crate) fn new(owner: Owner, options: Options) -> Result<Self> {
         options.validate()?;
         Ok(Self { owner, options })

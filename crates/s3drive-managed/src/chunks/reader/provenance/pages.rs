@@ -108,7 +108,11 @@ impl BaseFile {
         )
         .await
     }
-    async fn prove_page_inner(&self, offset: u64, level: u8) -> Result<PageProof> {
+    pub(in crate::chunks::reader) async fn prove_page_inner(
+        &self,
+        offset: u64,
+        level: u8,
+    ) -> Result<PageProof> {
         let Content::Manifest {
             root,
             handle,

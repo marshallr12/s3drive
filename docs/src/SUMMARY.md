@@ -43,6 +43,7 @@
 - [Immutable patches and write versions](sparse-patches.md)
 - [Authenticated edited-file reads](sparse-composition.md)
 - [Incremental data preparation](incremental-data.md)
+- [Durable mixed-tree preparation](mixed-plans.md)
 - [Native manifest reads](native-manifest-reads.md)
 - [Implemented Linux read-only mount](linux-mount.md)
 - [Windows read-only drive](windows-mount.md)

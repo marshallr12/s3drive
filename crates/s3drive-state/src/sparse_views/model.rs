@@ -400,6 +400,35 @@ pub enum Range {
     Patch { block: Id, offset: u64, length: u64 },
 }
 impl View {
+    /// One remaining structural span, without reading bytes or authorizing
+    /// anything. Unlike range(), this metadata hint is not an 8-MiB byte read.
+    /// Consumers must revalidate the immutable view on the private owner.
+    pub fn intent_span(&self, offset: u64) -> Option<Range> {
+        if offset >= self.size() {
+            return None;
+        }
+        let mut at = 0;
+        for span in &self.0.spans {
+            let end = at + span.length();
+            if offset < end {
+                return Some(match span.slice(offset - at, end - offset) {
+                    Span::Base { offset, length } => Range::Base { offset, length },
+                    Span::Zero { length } => Range::Zero { length },
+                    Span::Patch {
+                        block,
+                        offset,
+                        length,
+                    } => Range::Patch {
+                        block,
+                        offset,
+                        length,
+                    },
+                });
+            }
+            at = end;
+        }
+        None
+    }
     pub fn id(&self) -> Id {
         self.0.id
     }

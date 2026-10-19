@@ -7,6 +7,8 @@ mod native;
 
 #[path = "chunk_reader/composition.rs"]
 mod composition;
+#[path = "chunk_reader/mixed_plans.rs"]
+mod mixed_plans;
 #[path = "chunk_reader/pages.rs"]
 mod pages;
 #[path = "chunk_reader/preparation.rs"]
@@ -740,6 +742,9 @@ async fn manifest_reader_child() {
     match mode.as_str() {
         "flow" => Box::pin(flow(&f)).await,
         "accounting" => Box::pin(accounting(&f)).await,
+        "mixed-plans-boundaries" => Box::pin(mixed_plans::boundaries(&f, &path)).await,
+        "mixed-plans" => Box::pin(mixed_plans::flow(&mut f, &path)).await,
+        "mixed-plans-faults" => Box::pin(mixed_plans::faults(&f, &path)).await,
         "preparation" => Box::pin(preparation::flow(&mut f, &path)).await,
         "preparation-faults" => Box::pin(preparation::faults(&f, &path)).await,
         "preparation-limits" => Box::pin(preparation::limits(&f, &path)).await,
@@ -923,4 +928,21 @@ async fn incremental_chunks_authorize_every_kind_and_reject_corrupt_retained_or_
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn incremental_chunks_share_limits_cancel_deadline_and_release_sql_before_network() {
     run("preparation-limits").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn mixed_plans_reuse_chunks_subtrees_and_original_history_after_local_and_authority_restart()
+{
+    run("mixed-plans").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn mixed_plans_refuse_forged_context_faults_principals_and_share_limits_without_sql_over_network()
+ {
+    run("mixed-plans-faults").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn mixed_plans_verify_full_old_tails_unicode_partial_zero_runs_empty_roots_and_sparse_growth()
+{
+    run("mixed-plans-boundaries").await;
 }

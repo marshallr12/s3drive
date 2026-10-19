@@ -39,7 +39,7 @@ fn schema_twenty_nine_keeps_old_dirty_bytes_and_migration_collisions_roll_back()
             assert_eq!(value, b"\0\xffx");
         } else {
             let mut s = State::open_managed(&path).unwrap();
-            assert_eq!(s.info().unwrap().schema_version, 31);
+            assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
             assert_eq!(
                 journal::Journal::new(&mut s, journal::Options::default())
                     .unwrap()
@@ -159,7 +159,7 @@ fn schema_thirty_preserves_populated_cyclic_views_byte_for_byte_and_removes_only
         .unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
-    assert_eq!(s.info().unwrap().schema_version, 31);
+    assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
     assert_eq!(
         rows(&s.connection),
         before,
@@ -280,7 +280,7 @@ fn schema_thirty_migration_sql_failure_rolls_back_copies_and_refuses_attached_tr
                 .unwrap();
             drop(s);
             let s = State::open_managed(&path).unwrap();
-            assert_eq!(s.info().unwrap().schema_version, 31);
+            assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
             assert_eq!(rows(&s.connection), before);
         }
     }

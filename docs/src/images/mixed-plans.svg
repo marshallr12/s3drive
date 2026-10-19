@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="720" viewBox="0 0 1100 720" role="img" aria-labelledby="title desc">
+<title id="title">Durable mixed-tree preparation</title>
+<desc id="desc">The Rust plan controller persists tagged dependencies and a resumable cursor on the private SQLite owner, reauthorizes exact history and the pinned S3 root, and prepares changed bytes or unchanged references. Publication and native writes remain pending.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#426585" stroke-width="1.5"/></marker></defs>
+<rect width="1100" height="720" rx="18" fill="#f5f8fc"/>
+<g font-family="sans-serif" fill="#172d43">
+<text x="32" y="38" font-size="24" font-weight="700">Durable mixed-tree preparation</text>
+<text x="32" y="65" font-size="15">Rust • schema 32 • resumable steps • distinct local preparation and remote publication</text>
+<rect x="25" y="88" width="1050" height="350" rx="16" fill="#eef8f2" stroke="#83ae96"/>
+<text x="44" y="115" font-size="16" font-weight="700">LOCAL COMPONENTS</text>
+<rect x="44" y="140" width="285" height="110" rx="10" fill="white" stroke="#83ae96"/>
+<text x="60" y="166" font-size="18" font-weight="700">Private SQLite worker</text>
+<text x="60" y="191" font-size="15">Views, cursor and tagged objects</text>
+<text x="60" y="214" font-size="15">Deduplicated BLOBs · one owner</text>
+<text x="60" y="236" font-size="14">Rows verified before / after writes</text>
+<rect x="400" y="140" width="300" height="110" rx="10" fill="#d8f0e1" stroke="#528465"/>
+<text x="418" y="167" font-size="18" font-weight="700">Rust plan controller</text>
+<text x="418" y="192" font-size="15">Exact historical base + binding</text>
+<text x="418" y="215" font-size="15">Fresh pinned-root HEAD per step</text>
+<text x="418" y="237" font-size="14">No SQL held across network</text>
+<rect x="770" y="140" width="285" height="110" rx="10" fill="white" stroke="#83ae96"/>
+<text x="787" y="167" font-size="18" font-weight="700">Rust S3 client (read only)</text>
+<text x="787" y="192" font-size="15">Verify complete changed chunks</text>
+<text x="787" y="215" font-size="15">Export unchanged data / page proofs</text>
+<text x="787" y="237" font-size="14">Shared reader permit + step deadline</text>
+<path d="M329 195H397M700 195H767" stroke="#426585" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<path d="M550 250V281" stroke="#426585" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<rect x="235" y="285" width="630" height="125" rx="10" fill="white" stroke="#528465"/>
+<text x="255" y="312" font-size="18" font-weight="700">Persisted plan with a resumable cursor</text>
+<text x="255" y="340" font-size="15">New bytes / pages and inherited witnesses keep separate tags</text>
+<text x="255" y="365" font-size="15">Bulk zero runs and whole unchanged subtrees reduce work</text>
+<text x="255" y="390" font-size="15">New root intent; original content guard stays frozen</text>
+<rect x="44" y="480" width="440" height="110" rx="12" fill="#eaf1ff" stroke="#7897c5"/>
+<text x="62" y="507" font-size="18" font-weight="700">Shared Rust metadata authority</text>
+<text x="62" y="533" font-size="15">Exact historical payload and original content guard</text>
+<text x="62" y="558" font-size="15">SQLite; optional Turso backend is separate work</text>
+<text x="62" y="580" font-size="14">A newer current head never replaces the dirty base</text>
+<rect x="650" y="480" width="405" height="110" rx="12" fill="#eaf1ff" stroke="#7897c5"/>
+<text x="669" y="508" font-size="18" font-weight="700">S3-compatible service</text>
+<text x="669" y="534" font-size="15">Immutable manifest pages and data objects</text>
+<text x="669" y="559" font-size="15">Inherited proof establishes reachability only</text>
+<text x="669" y="581" font-size="14">No uploads or deletes in this phase</text>
+<path d="M410 252V270H202V462H90V477M995 252V477" stroke="#426585" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<rect x="44" y="625" width="1011" height="67" rx="10" fill="#fff5df" stroke="#c7a65f" stroke-dasharray="6 4"/>
+<text x="62" y="651" font-size="17" font-weight="700">NEXT: exact-CAS publication → exact-view settlement → FUSE / WinFsp writes</text>
+<text x="62" y="676" font-size="15">Raw BLOB SHA-256 and manifest page digests serve different roles; no upload or clean receipt is invented.</text>
+</g></svg>

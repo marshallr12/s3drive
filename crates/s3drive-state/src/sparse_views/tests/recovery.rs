@@ -240,7 +240,9 @@ fn additive_schema_thirty_one_keeps_populated_thirty_literal_blobs_and_migration
         }
         let before = original_blobs(&s.connection, &root);
         s.connection
-            .execute_batch("DROP TABLE sparse_view_blocks; PRAGMA user_version=30")
+            .execute_batch(&crate::test_schema::before_preparation(
+                "DROP TABLE sparse_view_blocks; PRAGMA user_version=30",
+            ))
             .unwrap();
         if collision {
             s.connection.execute_batch("CREATE TABLE sparse_view_blocks(keep TEXT); INSERT INTO sparse_view_blocks VALUES('untouched')").unwrap();
@@ -261,7 +263,7 @@ fn additive_schema_thirty_one_keeps_populated_thirty_literal_blobs_and_migration
             assert_eq!(original_blobs(&db, &root), before);
         } else {
             let mut s = State::open_managed(&path).unwrap();
-            assert_eq!(s.info().unwrap().schema_version, 31);
+            assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
             assert_eq!(original_blobs(&s.connection, &root), before);
             let mut j = Journal::new(&mut s, Options::default()).unwrap();
             assert_eq!(

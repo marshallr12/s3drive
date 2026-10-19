@@ -1,7 +1,9 @@
 //! Authenticated immutable sparse reads. No publisher, settlement or native writes.
 use super::*;
 use s3drive_core::manifest::{Reference, base::Descriptor};
-use s3drive_state::sparse_views::{self, Binding, Id, Piece, View};
+use s3drive_state::sparse_views::{self, Binding, Id, Piece, Range, View};
+mod planning;
+pub use planning::{Preparation, PreparedDependency};
 mod preparation;
 pub use preparation::{ChunkContent, PreparedChunk};
 

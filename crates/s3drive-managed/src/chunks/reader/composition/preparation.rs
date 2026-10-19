@@ -35,6 +35,15 @@ impl fmt::Debug for PreparedChunk {
     }
 }
 impl PreparedChunk {
+    pub(super) fn into_candidate(self) -> s3drive_state::sparse_views::preparation::Candidate {
+        use s3drive_state::sparse_views::preparation::Candidate;
+        match self.content {
+            Content::Inherited(proof) => Candidate::InheritedChunk(proof.encode()),
+            Content::Hole => Candidate::Bytes(vec![0; self.length as usize]),
+            Content::Bytes { bytes, .. } => Candidate::Bytes(bytes),
+        }
+    }
+
     pub fn view_id(&self) -> Id {
         self.view
     }
@@ -80,7 +89,12 @@ impl EditedFile {
         )
         .await
     }
-    async fn prepare_inner(&self, chunk: u64, offset: u64, length: u64) -> Result<PreparedChunk> {
+    pub(super) async fn prepare_inner(
+        &self,
+        chunk: u64,
+        offset: u64,
+        length: u64,
+    ) -> Result<PreparedChunk> {
         // Full local ledger and dirty-block verification ends before network I/O.
         let pieces = self
             .local
