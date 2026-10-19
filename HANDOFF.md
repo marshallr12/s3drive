@@ -25,6 +25,28 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Current W2c composition — published, own checks pending (2026-10-19)
+
+Worktree /home/marshall/src/worktrees/s3drive-sparse-composition,
+branch codex/sparse-composition, published frozen source
+84da0ee633871f862f4a84a276af5ac3322cff42. Local gate56076 PASSED, all286
+runtime/contract inputs unchanged:393state1ignored/37core/16reader1nativeignored/
+62S3 plus format/Clippy/build/74Markdown links/70book chapters. Local archive19
+members275670bytes SHA3db1b72b6c8ad76b1e116ecd43a21377bc38728d170e040b96e77894230ff909.
+Authenticated edited reads compose historical base/local patches/zeros with fresh
+history and rootHEAD, shared limits/deadline, no SQL owner across network, exact
+cache reference checks and no partial bytes. Restart/corruption/Unicode/late
+fault/principal/shared-resource controls passed. Own run39213440204 attempt1:
+book117931758993, Linux117931759166, Windows117931759092 currently in progress.
+Watch65839 LIVE; /tmp/s3drive-sparse-composition-hosted-watch.log. Prepared one-use
+checker/oracles/raw comparer/archiver NOT executed; see feature HANDOFF. Await
+all3 outcomes and review full raw logs + own artifacts before acceptance. Keep
+all286 feature inputs frozen. This primary checkout remains accepted patch
+runtime d37096c/schema31/all284 inputs unchanged; composition is not integrated.
+W3-W6, legacy/metadata-empty and provider/physical workstation acceptance remain.
+No new native chunk writes activated. PUBLIC retained/read-only verified. Goal
+ACTIVE; concrete progress, not a blocked/no-progress turn.
+
 ## Current accepted W2b2b immutable patches and mutations (2026-10-19)
 
 Accepted runtime d37096cc9c1ba9b55b73fb30d1edfb2fa7ca0955, own run39209163191
@@ -42,9 +64,9 @@ main72ee64f ancestry with only docs/evidence changes after tested source.
 
 Next separate W2c worktree /home/marshall/src/worktrees/s3drive-sparse-composition,
 codex/sparse-composition: authenticated edited reads implemented,16portable reader
-controls passed and full local gate56076 is LIVE with286 frozen inputs. Read that
-checkout's current HANDOFF/implementation plan. Do not edit its runtime while the
-gate lives; it has no combined acceptance yet. Main moves to accepted schema31;
+controls and full local gate56076 passed with286 frozen inputs unchanged. Read
+that checkout's current HANDOFF/implementation plan and pending own run39213440204.
+It has no combined acceptance yet. Main moves to accepted schema31;
 composition/new native chunk writes are NOT activated by this promotion.
 
 Worktree /home/marshall/src/worktrees/s3drive-sparse-patches,

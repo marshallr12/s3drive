@@ -2768,5 +2768,16 @@ Indexed60-member hosted archive and all284 source inputs verified. Linux393state
 Windows388state1ignored,37core/12reader1nativeignored/62S3 passed; real manifest
 FUSE1.60s/WinFsp2.38s and paired/no-systemd recovery passed. Canonical integration
 keeps these runtime inputs unchanged. Separate codex/sparse-composition adds W2c
-and has focused16reader1nativeignored green; its full local gate56076 is live.
+and has full local gate56076 green, including16reader1nativeignored.
 It needs its own combined acceptance. W3-W6 and legacy/metadata-empty remain.
+
+W2c published,2026-10-19: frozen source `84da0ee` in `codex/sparse-composition`
+composes authenticated historical manifest ranges, immutable local patches and
+zeros. All286 inputs match its full green local gate56076:393state1ignored/
+37core/16reader1nativeignored/62S3 plus format/Clippy/build/book checks. See the
+[feature implementation and architecture image](https://github.com/marshallr12/s3drive/blob/84da0ee633871f862f4a84a276af5ac3322cff42/docs/src/sparse-composition.md).
+Its own [run39213440204](https://github.com/marshallr12/s3drive/actions/runs/39213440204)
+is in progress; all3 full raw/source/own-artifact checks remain required before
+integration. Main retains accepted patch runtime d37096c/schema31 unchanged284
+inputs. Native chunk writes, W3-W6, legacy/metadata-empty and provider/physical
+workstation acceptance remain required.
