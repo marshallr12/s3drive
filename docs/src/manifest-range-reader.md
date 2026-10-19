@@ -209,3 +209,41 @@ retains both runs, the diagnostic, frozen inputs and exact helper/test source.
 Every indexed member was verified. Own combined-source hosted acceptance remains
 pending. The separate native c633 cohort is now accepted; this does not accept
 W1a or activate writes.
+
+## W1b authenticated page reachability (2026-10-18)
+
+Draft on `codex/manifest-page-proofs`, based on local-green W1a `ed2e93b`.
+`File::prove_root()` returns a witness for its already validated manifest root
+without refetching metadata. `File::prove_page_containing(offset, level)` walks
+at most two authenticated child pages, returning the complete containing page's
+actual start, length, level and reference. Both share the reader's four active
+slots and overall deadline; neither fetches data objects. A published-empty
+manifest has a root witness; a metadata-empty file has no manifest root.
+
+`File::verify_page_proof()` performs bounded pure revalidation against the
+authorized File. Its distinct `S3DPREF1` encoding contains a 50-byte header and
+at most two length-prefixed pages, at most 20,918 bytes. The root witness needs
+only the header. Verification reconstructs the reference from the trusted root
+and authenticated parent chain; no supplied object reference is trusted. It
+rejects wrong bases, kinds, counts, lengths, hashes, spans and trailing bytes.
+The base identity is shared with chunk witnesses, but their encodings cannot be
+interchanged. As with W1a, a witness proves pinned reachability rather than
+current data health, write permission or an upload receipt.
+
+An old root can become a child because both use the Page key namespace. The
+positive fixture grows a 128-chunk leaf root into a 129-chunk level-one root and
+inherits the original leaf with its exact span, level, file scope and digest.
+The containing new parent's proof authenticates the old object; relabeling the
+old standalone root witness to the new base fails. A parent declaring the wrong
+child span is refused. Root height must still match its canonical size-derived
+ordinal. The initial two-chunk parent fixture violated that rule and was
+correctly rejected; production validation was preserved.
+
+Seven focused real-SDK/authority reader controls passed in 5.54 seconds,
+including root reuse, a 64 GiB sparse metadata tree, cross-kind/base refusal,
+cancellation, shared admission and deadline recovery. The full local gate passed with all260 frozen runtime inputs unchanged; [dated evidence](evidence/manifest-page-proofs-20261018.json)
+retains both initial failures and the corrected focused result. The [indexed16-member local archive](evidence/manifest-page-proofs-local-20261018.tar.gz)
+retains both initial failures, the passing focused/full runs and exact helper/test
+source. Every indexed member was verified. This checkout has no own hosted acceptance. Historical base
+reopening, sparse SQLite edit views, mixed inherited/new-object publication,
+exact-view settlement and native chunk writes remain separate work.

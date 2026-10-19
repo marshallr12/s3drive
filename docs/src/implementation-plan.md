@@ -2046,3 +2046,25 @@ start, length, level and hash (`VerifiedPage::verify_child`). Do not require
 unconditional re-materialization merely because it was once a root. New mixed
 publication proofs still need explicit inherited provenance, not a fabricated
 new upload receipt. W1a's data/hole witness does not yet export subtree reuse.
+
+
+### W1b independent page reachability (2026-10-18)
+
+Build from local-green W1a ed2e93b while combined8c3448f runs its own native
+cohort. Export opaque root/subtree PageProof witnesses, bounded to two metadata
+pages and revalidated against an authorized File. Prove a page containing a
+requested offset at a specified level; return its complete authenticated span.
+Encoded witnesses identify the actual page start/level, never an arbitrary
+relocated subrange. Root pages already use Role::Page, so test valid old-root
+reuse as a child plus invalid geometry, without fabricated upload receipts.
+Published-empty manifests have a root page even though no data chunk exists;
+metadata-empty files have no root page. No data GET/HEAD during proof export,
+shared operation capacity/deadlines/cancellation, strict cross-kind/foreign-base
+and malformed witness refusal, local/own hosted gates required. Historical base
+reopen, sparse SQLite views, mixed publication and settlement remain separate.
+
+W1b independent result: full local gate95188 EXIT0, all260 frozen inputs
+unchanged;7reader,12publication,62S3,365state/1ignored,fmt/clippy/build/book.
+Indexed16-member local archive verified. Combine accepted snapshot/proof
+checkpoint da84d3a (runtime8c3448f, own all3/native/raw/typed21+14/raw35 passed),
+then require a fresh exact combined gate and own hosted cohort.

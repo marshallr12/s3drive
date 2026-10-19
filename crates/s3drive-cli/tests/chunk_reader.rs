@@ -2,6 +2,8 @@
 //! owned local memory. No provider uploads or mounted chunk acceptance.
 #[path = "chunk_reader/fixture.rs"]
 mod fixture;
+#[path = "chunk_reader/pages.rs"]
+mod pages;
 #[path = "chunk_reader/proofs.rs"]
 mod proofs;
 use fixture::*;
@@ -723,6 +725,7 @@ async fn manifest_reader_child() {
     match mode.as_str() {
         "flow" => Box::pin(flow(&f)).await,
         "proofs" => Box::pin(proofs::flow(&f)).await,
+        "pages" => Box::pin(pages::flow(&f)).await,
         "integrity" => Box::pin(integrity(&f)).await,
         "transport" => Box::pin(transport(&f)).await,
         "budgets" => Box::pin(budgets(&f)).await,
@@ -811,4 +814,9 @@ async fn manifest_ranges_bound_slots_snapshots_cancel_and_overall_deadline() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn manifest_chunk_proofs_bind_snapshot_without_data_reads_and_reject_forgery() {
     run("proofs").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn manifest_page_proofs_bind_subtrees_and_reuse_old_root_without_data_reads() {
+    run("pages").await;
 }

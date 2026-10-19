@@ -25,6 +25,33 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Current W1b page-proof foundation (2026-10-18)
+
+Isolated /home/marshall/src/worktrees/s3drive-manifest-page-proofs,
+branch codex/manifest-page-proofs from local-green W1a ed2e93b (not hosted-
+accepted separately). Combined candidate8c3448f is accepted in its own checkout at da84d3a;
+run39184629344 ALL3/raw/artifacts passed; this does not automatically accept W1b.
+Scope: opaque PageProof metadata witness, reader exports, real SDK/authority
+fixture controls and book. No native activation, schema/wire changes, writes or
+receipt conversions. Data and page witnesses share a base identity but distinct
+encodings. Prove root/canonical and noncanonical subtrees, published-empty root,
+base/kind/shape/corruption/trailing refusal, shared capacity/deadline/cancel and
+actual reuse of a prior root as a child with zero data reads during proof export.
+Focused7/7 passed5.54s, log /tmp/s3drive-page-proofs-focused2.log. Initial build
+needed explicit authority-error conversion; initial positive reuse fixture used
+a noncanonical level-one/two-chunk root and correctly failed. Corrected fixture
+uses canonical128-to129-chunk height growth and retains wrong-child-span refusal.
+Full local gate session95188 CLOSED EXIT0, /tmp/s3drive-page-proofs-gate.log,
+frozen260 /tmp/s3drive-page-proofs-frozen.json. Clippy,7reader and12publication
+controls passed with365state/1ignored,62S3,fmt/clippy/build/book. Runtime unchanged.
+Indexed16-member local archive61969bytes SHA
+cc54ea160c8c9bf36ae4c8daf8c6ca24663a5efaf5845a391dc1ea35d962f902.
+Combined8c3448f now ALL3/raw/typed21+14/raw35 accepted at da84d3a;
+watch73843 CLOSED0, checker68867 CLOSED0. Own W1b hosted gate still required.
+Require independent local gate then combine accepted prerequisites and own
+fresh source-bound hosted gate before integration. Full sparse edits/publication/
+settlement/native chunk writes remain later work. Read implementation plan.
+
 ## Current W1a foundation: authenticated chunk-reference proofs (2026-10-18)
 
 Isolated /home/marshall/src/worktrees/s3drive-manifest-reference-proofs,
