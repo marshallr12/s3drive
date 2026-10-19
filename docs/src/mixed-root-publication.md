@@ -1,6 +1,8 @@
 # Publishing an edited manifest root
 
-Design review: 2026-10-19. **Proposed W4b; not implemented or accepted.**
+Design review: 2026-10-19. **Root publication remains proposed.**
+The W4b1 offline data-check prerequisite is locally implemented below; its own
+hosted acceptance is pending.
 The user selected immutable chunks and authenticated manifests for large managed
 files (decision D041). [Mixed dependency uploads](mixed-uploads.md) implements
 physical object transfer separately. This chapter specifies the missing transition
@@ -171,5 +173,16 @@ also passed; the subsequent expanded test exposed an inherited subtree position
 being reported as corruption rather than an invalid Data-candidate request.
 The validator now distinguishes that request from corrupted retained metadata.
 Failed and corrected logs/sources are retained under
-`/tmp/s3drive-mixed-semantics-*`. The full local gate is running on306 frozen
+`/tmp/s3drive-mixed-semantics-*`. The full local gate passed on306 frozen
 runtime/contract inputs; hosted and native acceptance are still pending.
+
+
+The full local gate runner271909 exited0 at10:42:39Z, retaining all306 input
+hashes. It passed417state tests (one ignored),37core,22reader (one native ignored),
+62S3,18publication cases, formatting, Clippy, workspace build,78Markdown link
+checks and74book chapters. The actual log SHA-256 is
+`d6b055ce28634c28afc19ddfbb7e85f1fd24a77976e5e8a2ae04181715826182`.
+See [dated verifier evidence](evidence/mixed-semantics-20261019.json) and the
+[local exact-source archive](evidence/mixed-semantics-local-20261019.tar.gz).
+This verifies the W4b1 local slice; W4b2 publication/recovery and later mounted
+acceptance remain required.

@@ -25,38 +25,41 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
-## Current W4b design checkpoint (2026-10-19)
+## Current W4b1 exact-data verification — local gate passed (2026-10-19)
 
 Worktree /home/marshall/src/worktrees/s3drive-mixed-publication,
-codex/mixed-publication, baseline803a534 (W4a runtime3fd2a87/schema32).
-Documentation-only source review and acceptance contract at
-docs/src/mixed-root-publication.md; user reaffirmed chunks/manifests D041.
-W4b1 now owns a bounded offline exact-data verifier in preparation/semantics.rs,
-its synchronous/private-worker APIs and tests only. It checks completed plans'
-Data candidates against retained patches/zeros and complete original chunk
-witness/bytes, relative to the frozen root. No schema change, persisted semantic
-seal, authority authentication/request, root commit or clean acknowledgment.
-Done criterion: forged original spans and discarded-tail corruption refused,
-local/zero/growth/partial/multi-level proofs and exact replay after newer heads/
-restart pass, no state mutation, full local gate and independent hosted cohort.
-W4b2 must still implement the complete publication journal/controller and narrow
-metadata-only saved-request recovery specified in the chapter. Normal opening
-must remain strict.
-Five focused tests passed (focused3,0.46s), following an inherited-subtree
-request classification correction. Focused2 failed4/1; exact failed source/tests
-and log retained. Full local gate1 owned runner271909/child271911 is live,
-306 frozen inputs /tmp/s3drive-mixed-semantics-frozen.json. Logs/results at
-/tmp/s3drive-mixed-semantics-gate1-*; confirm PID+start ticks/result before
-continuation, never restart on observer timeout. Keep runtime frozen meanwhile.
-W4a's independent cohort is accepted and main00606e9 is pushed; all304
-parent runtime inputs are identical. This merge changes owned docs/evidence only.
-W5 settlement, native W6, origins/provider/physical session gates remain.
-Links (78 Markdown files), mdbook build and all chapter tests passed for this
-doc-only change; SVG rendered and visually reviewed at1120x700. No runtime
-changes or new full-gate claim. Logs /tmp/s3drive-mixed-root-design-{links,book,
-book-test}.log. First resume: read the publication design, check own W4a run
-39235506209 and the exact live local gate1 owner/result, finish their separate
-acceptance, then implement W4b2 against accepted source. Never rerun completed one-use source/artifact archivers.
+codex/mixed-publication. Runtime dbdfd61c574de4dfcf1a3455ab3b1c5aa473f9a2,
+schema32/all306 frozen inputs. Accepted parent main00606e9/W4a runtime3fd2a87;
+merge8220555 changed docs/evidence only. The verifier and private-worker API
+compare completed plans' actual Data candidates with immutable view ranges,
+full original chunk proof/length/digest, local patches and zeros. No source/root
+authentication, durable semantic seal, root commit or clean acknowledgment.
+Read docs/src/mixed-root-publication.md for the W4b2 contract before implementing.
+
+Focused1 session90389 EXIT0 (earlier4 cases); focused2 session55846 EXIT101 (4/1,
+inherited subtree position reported as corruption); exact failed sources retained.
+Corrected missing/non-Data candidate admission to Invalid while corrupt retained
+metadata still refuses. Focused3 session15916 EXIT0:5 cases/0.46s, including
+complete discarded tails, false base/zero bytes, all-local/hole/zero/growth,
+two-level ancestry, wrong proof geometry, worker restart and unchanged state.
+
+Full local gate1 runner271909/child271911 CLOSED EXIT0 at10:42:39Z. All306 inputs
+unchanged:417state1ignored/37core/22reader1nativeignored/62S3/18publication,
+format/Clippy/build/78Markdown/74chapters. Map /tmp/s3drive-mixed-semantics-frozen.json;
+result/log /tmp/s3drive-mixed-semantics-gate1-*, logSHA
+ d6b055ce28634c28afc19ddfbb7e85f1fd24a77976e5e8a2ae04181715826182.
+Indexed321-member951994byte local source/evidence archive SHA
+7b6927a0a5a45e814cd08563d8011de079646d7254f5b7f6a80840da645e5de7;
+all members verified. One-use local archiver executed; never rerun. Dated JSON
+at docs/src/evidence/mixed-semantics-20261019.json preserves failures and scope.
+Own hosted/native/source acceptance is next; keep all306 runtime inputs frozen.
+Do not promote this slice merely from parent/native or portable results.
+
+Next W4b2 must persist complete semantic coverage, exact ReserveManifest/Publish
+requests and narrow metadata-only recovery; normal State opening remains strict.
+No S3 capability or fresh-work admission in saved-request recovery. W5 exact-view
+settlement/retention, legacy/empty origins and W6 mounted chunk writes remain.
+Provider/physical sign-in/reboot/SSH/tmux gates are separate. Goal ACTIVE/progress.
 
 ## Accepted W4a mixed dependency uploads (2026-10-19)
 
@@ -85,12 +88,12 @@ Unicode/empty/partial/zero/forged/unread-tail/concurrent/cancel/rival controls.
 This is not root CAS, clean settlement, native chunk writes, Wasabi or physical
 reboot/sign-in/SSH/tmux acceptance. Goal ACTIVE/progress. Next W4b1 verifier source
 dbdfd61 in /home/marshall/src/worktrees/s3drive-mixed-publication has5 focused tests
-passed and an owned full local gate1 live on306 inputs; confirm PID/result before
-continuing. W4b2 journal/controller, W5, origins and W6 remain.
+passed and owned full local gate1 EXIT0 on306 inputs; its own hosted acceptance
+is next. W4b2 journal/controller, W5, origins and W6 remain.
 
 ## Inherited W4a validation checkpoint
 
-## Current W4a mixed dependency uploads — focused green, final gates pending (2026-10-19)
+## Historical W4a mixed dependency upload checkpoints — superseded above (2026-10-19)
 
 Worktree /home/marshall/src/worktrees/s3drive-mixed-uploads, codex/mixed-uploads.
 Baseline accepted main66ba186/runtimee140508/schema32/all300 exact. Own W3b cohort

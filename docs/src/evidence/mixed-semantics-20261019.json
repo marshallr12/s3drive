@@ -1,0 +1,85 @@
+{
+  "date": "2026-10-19",
+  "phase": "W4b1 offline exact-view data check",
+  "status": "full local gate passed; own hosted/native/source acceptance pending",
+  "runtime_source": "dbdfd61",
+  "branch": "codex/mixed-publication",
+  "accepted_parent": "00606e9e25e3f9f25e314721525f48b7339bba31",
+  "schema": 32,
+  "runtime_inputs": 306,
+  "local_gate": {
+    "runner_pid": 271909,
+    "runner_start_ticks": "141255929",
+    "child_pid": 271911,
+    "child_start_ticks": "141255939",
+    "started": "2026-10-19T10:32:35.863319+00:00",
+    "command": [
+      "bash",
+      "scripts/gate.sh"
+    ],
+    "cwd": "/home/marshall/src/worktrees/s3drive-mixed-publication",
+    "runtime_inputs": 306,
+    "frozen_map": "/tmp/s3drive-mixed-semantics-frozen.json",
+    "tty": false,
+    "rust_test_threads": 4,
+    "log": "/tmp/s3drive-mixed-semantics-gate1.log",
+    "exit_code": 0,
+    "finished": "2026-10-19T10:42:39.406523+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": [],
+    "sha256": "d6b055ce28634c28afc19ddfbb7e85f1fd24a77976e5e8a2ae04181715826182"
+  },
+  "local_archive": {
+    "source": "dbdfd61c574de4dfcf1a3455ab3b1c5aa473f9a2",
+    "archive": "/home/marshall/src/worktrees/s3drive-mixed-publication/docs/src/evidence/mixed-semantics-local-20261019.tar.gz",
+    "sha256": "7b6927a0a5a45e814cd08563d8011de079646d7254f5b7f6a80840da645e5de7",
+    "bytes": 951994,
+    "members": 321,
+    "all_members_verified": true,
+    "runtime_inputs": 306,
+    "local_gate_exit": 0
+  },
+  "focused": [
+    {
+      "session": 90389,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-semantics-focused1.log",
+      "sha256": "0e82f039d3b2e2e18575b376bff206aa01cca282f7b25e46aaf1e53a0a848ee6",
+      "results": [
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 413 filtered out; finished in 5.07s"
+      ]
+    },
+    {
+      "session": 55846,
+      "exit_code": 101,
+      "log": "/tmp/s3drive-mixed-semantics-focused2.log",
+      "sha256": "4a44d80c2fee34bb783eabd2cb86f4ecc6a33c5669b386044c0656973f006a01",
+      "results": [
+        "test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 413 filtered out; finished in 0.45s"
+      ]
+    },
+    {
+      "session": 15916,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-semantics-focused3.log",
+      "sha256": "f05f173b40baff7365cdbf6ae5a5bbe0cb5bed6f086b037f6b08f8c7a9dd8bb3",
+      "results": [
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 413 filtered out; finished in 0.46s"
+      ]
+    }
+  ],
+  "claims": [
+    "offline byte correspondence relative to frozen root",
+    "complete old object length and digest even for discarded tails",
+    "no state mutation or durable proof token",
+    "same-owner private-worker API"
+  ],
+  "not_claimed": [
+    "fresh source/root authentication",
+    "durable semantic seal",
+    "authority root publication or recovery",
+    "local clean settlement or reclamation",
+    "native chunk writes",
+    "Wasabi or physical reboot/session acceptance"
+  ]
+}

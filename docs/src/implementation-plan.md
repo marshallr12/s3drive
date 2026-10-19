@@ -3122,3 +3122,11 @@ legacy/manifests/paired sessions passed. See [mixed dependency uploads](mixed-up
 for scope, warnings, exact evidence and retained failures. Physical mixed upload
 completion is accepted; W4b root CAS, W5 settlement, origins and W6 mounted chunk
 writes remain. No new Wasabi or physical workstation session acceptance follows.
+
+
+W4b1 local gate passed,2026-10-19: runner271909 EXIT0,306 unchanged inputs,
+417state1ignored/37core/22reader1nativeignored/62S3/18publication cases, format/
+Clippy/build/78Markdown/74chapters. Source dbdfd61 plus documentation-only accepted
+parent merge8220555; indexed source/focused/failed/full evidence retained.
+[Verifier evidence](evidence/mixed-semantics-20261019.json). Own hosted/native/
+source cohort pending. W4b2 root journal/controller/recovery still unimplemented.
