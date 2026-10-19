@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1120" height="700" viewBox="0 0 1120 700" role="img" aria-labelledby="title desc">
-<title id="title">Proposed publication of an edited chunk manifest</title>
+<title id="title">Verified library publication of an edited chunk manifest</title>
 <desc id="desc">Local SQLite retains the immutable edited view, semantic evidence and exact authority requests. New chunks and manifests are uploaded to S3, then the authority conditionally publishes the root. A narrow recovery owner replays saved authority requests without accessing source bytes or S3. Local settlement remains a later phase.</desc>
 <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#43657d"/></marker></defs>
 <rect width="1120" height="700" fill="#f4f7fb"/>
 <g font-family="sans-serif" fill="#172f43">
 <text x="36" y="42" font-size="25" font-weight="bold">Edited manifest publication</text>
-<text x="36" y="69" font-size="16">W4b proposal · 2026-10-19 · no mounted chunk-write or flush acceptance implied</text>
+<text x="36" y="69" font-size="16">W4b2 library verified · 2026-10-19 · native chunk writes and flush are separate gates</text>
 <rect x="26" y="94" width="690" height="457" rx="15" fill="#fff" stroke="#b6c6d4"/>
 <text x="48" y="126" font-size="19" font-weight="bold">Local workstation · same account, private state directory</text>
 <rect x="48" y="148" width="293" height="110" rx="9" fill="#e9f1ff" stroke="#7696c3"/>

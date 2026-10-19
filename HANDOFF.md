@@ -25,109 +25,65 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
-## W5a declared next slice: exact local publication lineage (2026-10-19)
+## Accepted W4b2 mixed-root publication and recovery (2026-10-19)
 
-Ownership: codex/mixed-publication-lineage in
-/home/marshall/src/worktrees/s3drive-mixed-publication-lineage. W4b2's own317
-inputs remain frozen in their separate worktree while hosted acceptance runs.
-Read the [lineage contract](docs/src/mixed-publication-lineage.md).
-Done: a later immutable descendant can use an exactly retained, successfully
-published local predecessor as its content CAS base; another writer's payload,
-missing/unknown/conflicted predecessor, wrong source/file/store and nonancestor
-must fail without new request/overwrite. Preserve schema33 record bytes, exact
-saved-request recovery and newer dirty heads. Schema34 versions the new format
-without rewriting old rows. Verify state graph/refusal/migration tests and actual
-SDK consecutive publications/restart/conflict, then full local and own hosted
-native regression gates before promotion. No clean acknowledgment, reclamation,
-base-epoch switch, new origin or native activation is claimed by this slice.
-W5b clean epochs/retention remains necessary for bounded continuous writes.
-Implemented schema34, format2 optional predecessor with format1 omission preserved,
-normal source ancestry validation, complete metadata-only predecessor validation,
-fresh managed admission, same exact replay and schema33/34 metadata recovery.
-Focused5 EXIT0/16state incl28 actual kills; SDK2 EXIT0/one6.35s/12ownedPUT case.
-New schema33 damaged-source pending-Publish recovery case awaits full gate.
-Harness failures: SDK1 explicit Option type; focused3 Committed hook label;
-focused4 private fixture field access. Exact failed sources/logs retained in/tmp.
-First full gate1 runner466160 CLOSED101, all319 inputs unchanged. Formatting/
-Clippy passed;21publication passed, old source_flow child stack overflowed after
-new large scenario expanded shared dispatcher. Exact sourcee27c78c/map/log/result
-and copies retained. Isolated new future construction in non-inlined factory;
-no increased stack limit. Old failing default-stack case passed5.69s (dispatch1).
-Fresh full gate2 on final2 frozen319 is next. No runtime promotion/new live claim.
+Runtime2d9e21369c587f84cd20b9a11c85e7d822a4a957, schema33/all317 frozen inputs.
+Own39249045883 attempt1 ALL3 SUCCESS: book118048015714/Linux118048016109/
+Windows118048016468. Owned watch455646/child455647 CLOSED0. Checker45529 CLOSED0;
+raw comparison/archive49353 CLOSED0. Complete raw/source/own API ZIP SHA/independent
+ typed21+14/project/all35 raw fields/types passed. Own artifacts replacement
+12184468560/disposition12185592238. Indexed97-member archive371895bytes SHA
+ d09d4d8200ad89c9b9919f7e00f8b1fbb7627603e1c713b00be825b5d7d9bbe2;
+all indexed members verified. One-use acceptance/archive executed; NEVER rerun.
 
-## Current W4b2 mixed-root publication — focused green, full gates pending (2026-10-19)
+Linux429state/Windows424state (one ignored each),37core/22reader1nativeignored/
+62S3/21publication passed. Twelve new state cases include24 killed-owner boundaries,
+SQLite-full, role isolation, exact identities/receipts, migration and restricted
+metadata recovery with damaged source. All3 SDK root cases passed: subtree reuse,
+rename, lost replies, killed worker, credential/policy denial, source corruption,
+exact saved request/known-root no RPC, rival conflict and empty/zero/Unicode roots.
+Local full gate2 CLOSED0,317 unchanged,675-member local archive SHA
+756f32f0ecc4694ff44c2a9282e013c5c4c4674258fc4826e8aec53a0c07a2e9.
 
-Exact final runtime d72f6652e4bece2be0706785a698cac66a94596c, schema33/all317.
-Owned final gate2 runner399330/child399335 CLOSED EXIT0 at11:59:11Z. All317
-unchanged;429state1ignored/37core/22reader1nativeignored/62S3/21publication,
-format/Clippy/build/78Markdown/74chapters passed. Log SHA
-7803fae7caa1890c8fa25aa567faffb0545b106aee47bc4d5fbc5aa8b1c1c6ac.
-Indexed675-member1845921byte source/evidence archive SHA
-756f32f0ecc4694ff44c2a9282e013c5c4c4674258fc4826e8aec53a0c07a2e9,
-all members verified, including exact final317 source and failed gate1 source317.
-One-use local archiver already executed; NEVER rerun. Focused results and both
-failures/fixes remain in dated evidence. Own hosted/native/source cohort is next;
-keep317 runtime inputs frozen. No root acceptance from parent/native regressions.
+Actual legacy FUSE9/75.11s, WinFsp7/76.57s, manifest1.65s/1.99s and paired
+no-systemd24.14s/Windowsmanaged67.19s passed. Actual Ubuntu24.04 image20261012.334.1 /
+Windows Server2025 windows-2025-vs2026 image20261007.264.1. Three locked profiles:
+dummy credentials removed, final deletion by VM destruction. Two unused WinFsp
+delay-import groups/tooling notices and completed long tests retained. These are
+native regressions, not native chunk writes, Wasabi or physical session acceptance.
 
-Published own source2d9e21369c587f84cd20b9a11c85e7d822a4a957; all317 current
-and committed hashes exact. Own39249045883 attempt1 in progress:
-book118048015714/Linux118048016109/Windows118048016468. Owned observer455646;
-child PID/start ticks at /tmp/s3drive-mixed-roots-hosted-watch-running.json,
-confirmed live. Log/result /tmp/s3drive-mixed-roots-hosted-watch{.log,-result.json}.
-Four one-use own checker/oracle/raw-comparer/archive scripts prepared under
-/tmp/s3drive-{check-mixed-roots-hosted.py,mixed-roots-hosted-*}, NOT executed.
-After all3 terminal success: full raw review, exact317 source/API ZIP SHA/typed
-21+14/project/all35 raw fields/types, one-use archive. Require12 new state cases
-(including24 actual kill boundaries and budget reservation),3 new SDK cases and
-429state/424Windowsstate,21publication. Native fixture schema33 on both platforms.
-Never reuse parent artifacts12180169543/12181478025 or repair repository visibility.
-Keep all317 frozen until own cohort done. Source/recorded state remains draft.
+Accepted bounded semantic coverage/physical proof, exact content-CAS requests,
+same-owner APIs and existing-only metadata recovery without S3/source BLOB access.
+This remains a historical root commit, not local clean settlement or a file flush.
+Normal source opening is strict; no lost-operation rebase or overwrite fallback.
+Manifest origins only; legacy/metadata-empty origins still need explicit formats.
 
-Worktree /home/marshall/src/worktrees/s3drive-mixed-root-journal,
-codex/mixed-root-journal froma1e84e6. Parent W4b1 now accepted main95f72cc,
-exact5112fd2/schema32/all306. New draft schema33 adds bounded hash-bound semantic
-checks/root records/role commitment, complete physical/source coverage and exact
-ReserveManifest/Publish requests, same-owner normal API and restricted existing-
-only metadata recovery owner. Managed MixedPublisher/MixedRootRecovery/MixedRootCommit
-are wired; no cast to full-snapshot receipts or sparse clean settlement. Metadata
-recovery never opens normal State, migrates, prepares work or owns an S3 client.
-Normal opening remains strict; private existing directory/kernel lock is shared.
-RootPhase supports existing manifest origins only; legacy/metadata-empty origins
-are still required later, not synthesized by pretending a base object exists.
+## Current W5a exact local lineage — local gate pending
 
-Initial check1 failed private import/visibility; check2 and managed check1 passed.
-Focused1/2:4 state cases passed; focused3:7/1 found orphan-root role adoption by
-old full-snapshot constructor. Added reciprocal new mixed/preparation table
-exclusion; focused4:8 passed. Focused5:10 passed incl24 actual process-kill
-boundaries (row/role/final validation/commit for6 transitions). Focused6:11 passed
-in7.36s, including self-consistent substituted check metadata refusing completion.
-SQLite-full rollback/retry, narrowed quotas, triggers, wrong IDs/routes/receipts,
-migration collisions, missing/old DB refusal, source corruption and sync/async
-metadata owners passed. No warning suppression. Clippy1 failed2 collapsible-if
-suggestions, fixed; Clippy2 full workspace/all-targets EXIT0/29.09s precedes the
-last added skipped-check integrity check, which the final gate must cover.
-
-SDK1 failed test-harness read vs read_range; SDK2 completed scenario but failed
-final harness mode PUT-count dispatch. Both failed sources/logs retained.
-SDK3 session33366 EXIT0:2 cases/74.96s, actual SDK+authenticated authority;
-Unicode edit/subtree reuse, rename with old content guard, denied source/narrowed
-policy/wrong route/owner, lost Reserve/Publish replies, killed worker and fresh
-process with disabled source credentials/policy and corrupt source BLOBs, exact
-saved Publish only and known-root no RPC, newer head preserved. Two independent
-clients produce one winner and one retained conflict; third refuses changed/
-deleted base. Exact owned fixture counts7/8 PUTs. SDK3 precedes test-only crash
-hooks and final skipped-check validation; final full gate must cover all source.
-
-Current11 state cases and3 SDK scenarios are focused green. Latest controls1
-session14136 EXIT0/3.78s includes empty/zero/partial Unicode and9 owned PUTs.
-The final source also rechecks create policy after fresh probes, refuses closing
-a shared normal owner through the restricted close API and tests expired policy
-before preparing Publish. Freeze current runtime/contract inputs before full gate.
-Run only one Cargo owner; all prior focused/Clippy sessions are terminal.
-Full local and own hosted/native/source acceptance required before promotion.
-No native chunk writes, local clean receipt, reclaim, Wasabi or physical reboot/
-sign-in/SSH/tmux acceptance. W5 retention/clean-base transition, origins, W6 remain.
-See docs/src/mixed-root-publication.md and dated root evidence. Goal ACTIVE/progress.
+Worktree /home/marshall/src/worktrees/s3drive-mixed-publication-lineage,
+branch codex/mixed-publication-lineage, runtime71242f5 (schema34/all319 final2).
+Later descendants may CAS against an exact retained local predecessor; complete
+metadata graph and actual source ancestry validate separately. Old format1 bytes
+stay unchanged; restricted recovery also resolves schema33 saved requests without
+migration. No clean epoch, payload reclamation or native activation in W5a.
+Focused16 state incl28 kill boundaries and actual SDK3-root/restart/lost-reply/
+foreign-conflict case passed. First full gate1 CLOSED101 at old source_flow child
+stack overflow after new scenario expanded shared dispatch; all319 unchanged,
+21other publication cases passed. Non-inlined future factory fixes construction
+without larger stacks; failing default-stack case passed5.69s. Exact failed source
+and logs retained. Owned full gate2 runner478318/child478320 currently live,
+/tmp/s3drive-mixed-lineage-gate2-{running,result}.json and .log. Keep319 frozen at
+/tmp/s3drive-mixed-lineage-final2-frozen.json. Read docs/src/mixed-publication-lineage.md before continuing;
+new schema33 damaged-source saved-Publish case is included in that gate.
+Done contract: a later strict descendant may use an exactly retained successful
+local predecessor; wrong source/store/file, nonancestor, missing/unknown/conflicted
+predecessors and foreign current content must fail without admitting a new remote
+request. Preserve old literal IDs/hashes, exact saved recovery and newer heads.
+The concrete source remains71242f5/all319 while accepted main26757a1 docs/evidence
+are merged. The implementation declaration and full design are in the mdBook. Full local
+and own hosted/native/source acceptance precede W5a promotion. Its mdBook chapter
+also gives concrete W5b clean-epoch/pin/retry-retirement/reclamation proposals.
+W5b, explicit origins, W6 and provider/physical gates remain. Goal ACTIVE/progress.
 
 ## Accepted W4b1 exact-data verification (2026-10-19)
 
@@ -155,14 +111,6 @@ import groups/tooling notices and completed long tests retained.
 Accepted offline byte correspondence to frozen root, full original digest/length
 including discarded tails, exact local/zero spans and same-owner worker checks.
 It returns no durable seal, remote permission, root commit or clean receipt.
-Successor W4b2 draft in /home/marshall/src/worktrees/s3drive-mixed-root-journal,
-codex/mixed-root-journal: schema33 root journal/semantic coverage/private metadata
-recovery/publisher implemented;10 focused state tests incl24 kill boundaries and
-3 actual SDK root/recovery/rival/empty/zero/partial cases pass. First Clippy failed2 collapsible-if
-suggestions, fixed without suppression; second full Clippy passed. Full local and
-own hosted acceptance still required before W4b2 promotion. W5/origins/W6/provider/
-physical session gates remain. Goal ACTIVE/progress.
-
 ## Accepted W4a mixed dependency uploads (2026-10-19)
 
 Runtime3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2, schema32/all304 frozen inputs.
