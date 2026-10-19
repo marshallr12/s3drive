@@ -205,3 +205,29 @@ attempt1. Book118270052958 succeeded; Linux118270053086 and Windows118270053014
 remain running. Full acceptance is pending; accepted canonical runtime stays
 source29eb237/schema39/all349. No source, provider or native write capability
 from this candidate is reported as accepted.
+
+
+## Complete repaired local gate (2026-10-19)
+
+Sourcebb17161ecd60d31b34dfc90b341b5ea4d3d6d899/schema40 passed the full local
+gate at19:57:58Z, all354 frozen inputs unchanged. Publication24/158.91s,
+state520 (one diagnostic ignored)/252.87s, reader26 (one native-only ignored)/67.87s,
+39core/62S3, formatting/workspace all-target Clippy/build and book checks passed.
+The log records93 Markdown files and89 chapter-test entries; ordinary four
+threads and unchanged operation bounds were used.
+
+The [indexed local archive](evidence/empty-intent-local-20261019.tar.gz) contains
+403 verified members/23660725bytes, SHA-256
+`a66a26b0e73fa50afe0267e13ca8f7669cd9a2c5a19ec37cc15a9bd8a42e2d09`.
+It retains final354 source, full log/map/runner, all focused and failed source
+contexts and independently indexed parent349 local/hosted and first failed-cohort
+archives. Full gate log SHA-256
+`5423ef96e3169cdfef6fdad9f940a88f80174cadb226a44a57982ec9e7f1cc2b`.
+One-use local archiver63176 DONE; never rerun.
+
+Own CI39313836156 attempt1: book118270052958 and Linux118270053086 succeeded;
+Windows118270053014 remains running. Complete own raw/source/native/artifact
+acceptance remains required. Parent349 is accepted. These tests do not enable
+a network creation publisher or native chunk-create/write callbacks; source
+proofs in the new state-journal tests remain explicitly modeled local fixtures.
+Earlier pending local statuses above are historical.

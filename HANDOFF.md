@@ -185,21 +185,24 @@ Clippy3 session99420 CLOSED0/9.40s. Also changed latest-version test expectation
 to SCHEMA_VERSION; literal old39 and future version fences remain exact.
 Current repaired runtime354 differs from first candidate only in snapshot/native.rs
 and the creation test current-version expectation. Frozen published source
-bb17161ecd60d31b34dfc90b341b5ea4d3d6d899/schema40/all354. Full gate2 runner1433672/
-start144581925, child1433676/start144581933 began19:46:55Z and is LIVE; ordinary
-four test threads/common target. /tmp/s3drive-empty-intent-{gate2,candidate2}-*.
-Do not edit runtime while this exact gate is live. Main remains accepted349.
-Own CI39313836156 attempt1: book118270052958 succeeded; Linux118270053086 and
+bb17161ecd60d31b34dfc90b341b5ea4d3d6d899/schema40/all354. Full gate2 runner1433672/child1433676 CLOSED0 at19:57:58Z, all354 inputs unchanged.
+Publication24/158.91s,state520+1ignored/252.87s,reader26+1nativeignored/67.87s,
+39core/62S3/fmt/workspaceClippy/build/93Markdown/89chapter entries passed. Indexed
+403-member local archive SHAa66a26b0e73fa50afe0267e13ca8f7669cd9a2c5a19ec37cc15a9bd8a42e2d09,
+23660725bytes, includes exact354, focused/failed contexts and independently indexed
+parent349 local+hosted and failed-first-cohort archives. One-use archiver63176 DONE,
+never rerun. No owned local Cargo remains from gate2; verify before next build.
+/tmp/s3drive-empty-intent-{gate2,candidate2}-*. Main remains accepted349.
+Own CI39313836156 attempt1: book118270052958/Linux118270053086 succeeded;
 Windows118270053014 running. GET-only observer1442770/start144594863, status
 /tmp/s3drive-empty-intent2-hosted-watch-{running,result}.json. New source-specific
 raw reviewer, checker /tmp/s3drive-check-empty-intent2-hosted.py, comparator,
-PowerShell oracle and hosted/local archivers prepared; Python compiled/PS parsed,
-NONE executed. Prefix /tmp/s3drive-empty-intent2-*. Require own complete raw
+PowerShell oracle and hosted archiver prepared, Python compiled/PS parsed, not executed. Local archiver
+63176 DONE, never rerun. Prefix /tmp/s3drive-empty-intent2-*. Require own complete raw
 review before marker/checker; expect520Linux/515Windows state (one diagnostic
 ignored), all14 creation cases plus new snapshot isolation control and inherited
 native gates. Failed-first candidate artifacts count0. Parent39 artifacts
-12213307038/12215345023 remain forbidden reuse. Book/Linux/Windows raw logs for
-candidate2 not downloaded yet. [Contract](docs/src/empty-manifest-publisher.md).
+12213307038/12215345023 remain forbidden reuse. Complete own book/Linux raw logs retained; own Windows raw not yet available. [Contract](docs/src/empty-manifest-publisher.md).
 After acceptance: real SDK/authority creation facade, restricted metadata recovery,
 typed source/namespace/open composition and native callbacks. Do not widen legacy
 namespace roles or enable native writes prematurely.

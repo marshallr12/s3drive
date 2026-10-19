@@ -1,0 +1,109 @@
+{
+  "research_date": "2026-10-19",
+  "phase": "durable-empty-manifest-creation-intent",
+  "status": "full-local-and-hosted-Linux-passed-own-Windows-and-complete-hosted-acceptance-pending",
+  "source": "bb17161ecd60d31b34dfc90b341b5ea4d3d6d899",
+  "schema": 40,
+  "runtime_inputs": 354,
+  "accepted_parent_source": "29eb23782d7b3e0484c4ae8200fb419ecfa50279",
+  "local_gate": {
+    "runner_pid": 1433672,
+    "runner_start_ticks": "144581925",
+    "child_pid": 1433676,
+    "child_start_ticks": "144581933",
+    "started": "2026-10-19T19:46:55.802280+00:00",
+    "command": [
+      "bash",
+      "scripts/gate.sh"
+    ],
+    "cwd": "/home/marshall/src/worktrees/s3drive-empty-manifest-intent",
+    "runtime_inputs": 354,
+    "frozen_map": "/tmp/s3drive-empty-intent-candidate2-frozen.json",
+    "tty": false,
+    "rust_test_threads": 4,
+    "log": "/tmp/s3drive-empty-intent-gate2.log",
+    "exit_code": 0,
+    "finished": "2026-10-19T19:57:58.964842+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": [],
+    "sha256": "5423ef96e3169cdfef6fdad9f940a88f80174cadb226a44a57982ec9e7f1cc2b"
+  },
+  "local_archive": {
+    "scope": "complete local gate only; parent and own hosted/platform/source/native acceptance required",
+    "path": "evidence/empty-intent-local-20261019.tar.gz",
+    "sha256": "a66a26b0e73fa50afe0267e13ca8f7669cd9a2c5a19ec37cc15a9bd8a42e2d09",
+    "bytes": 23660725,
+    "members": 403,
+    "all_indexed_members_verified": true,
+    "runtime_inputs": 354,
+    "source_checkpoint": "bb17161",
+    "schema": 40,
+    "gate_exit_code": 0,
+    "gate_log_sha256": "5423ef96e3169cdfef6fdad9f940a88f80174cadb226a44a57982ec9e7f1cc2b",
+    "rust_test_threads": 4,
+    "reduced_sdk_admission": false,
+    "counts": {
+      "publication": {
+        "passed": 24,
+        "ignored": 0,
+        "seconds": 158.91
+      },
+      "state": {
+        "passed": 520,
+        "ignored": 1,
+        "seconds": 252.87
+      },
+      "reader": {
+        "passed": 26,
+        "ignored": 1,
+        "seconds": 67.87
+      },
+      "core": {
+        "passed": 39,
+        "ignored": 0,
+        "seconds": 0.04
+      },
+      "s3": {
+        "passed": 62,
+        "ignored": 0,
+        "seconds": 20.86
+      }
+    },
+    "parent_archives_independently_verified": 3
+  },
+  "failed_first_cohort": {
+    "source": "0ec7cfd600aeaba0b445f6b3842c7386a200dfdd",
+    "run": 39312392108,
+    "path": "evidence/empty-intent-failed1-20261019.tar.gz",
+    "sha256": "36ca0c7555201edc2cff0949e2c81337eafe9ca19775b2702e0dcf9ac48cec83",
+    "bytes": 902503,
+    "members": 13,
+    "all_members_verified": true,
+    "scope": "failed first cohort only; not acceptance"
+  },
+  "hosted": {
+    "run_id": 39313836156,
+    "attempt": 1,
+    "book": {
+      "job": 118270052958,
+      "status": "success"
+    },
+    "linux": {
+      "job": 118270053086,
+      "status": "success"
+    },
+    "windows": {
+      "job": 118270053014,
+      "status": "running"
+    },
+    "complete_raw_source_native_artifact_acceptance": "pending"
+  },
+  "capabilities": {
+    "local_intent_request_receipt_journal": true,
+    "new_physical_receipts_are_modeled_fixtures": true,
+    "network_creation_publisher": false,
+    "native_chunk_creation_enabled": false,
+    "new_real_provider_mutations": false,
+    "snapshot_restore_authorized": false
+  }
+}
