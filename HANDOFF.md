@@ -143,9 +143,9 @@ main72ee64f ancestry with only docs/evidence changes after tested source.
 
 Next separate W2c worktree /home/marshall/src/worktrees/s3drive-sparse-composition,
 codex/sparse-composition: authenticated edited reads implemented,16portable reader
-controls and full local gate56076 passed with286 frozen inputs unchanged. Read that
-checkout's current HANDOFF/implementation plan. It has no combined acceptance yet.
-Main moves to accepted schema31;
+controls and full local gate56076 passed with286 frozen inputs unchanged. Read
+that checkout's current HANDOFF/implementation plan and pending own run39213440204.
+It has no combined acceptance yet. Main moves to accepted schema31;
 composition/new native chunk writes are NOT activated by this promotion.
 
 Worktree /home/marshall/src/worktrees/s3drive-sparse-patches,
