@@ -1,5 +1,7 @@
 //! Real SDK + authenticated Rust authority + private SQLite, owned loopback
 //! fixtures/dummy profiles only. No provider or mounted chunk-format acceptance.
+#[path = "chunk_publication/composition.rs"]
+mod composition;
 #[path = "chunk_publication/empty_creation.rs"]
 mod empty_creation;
 #[path = "support/fixture.rs"]
@@ -1127,6 +1129,7 @@ fn dispatch<'a>(
     s: &'a Server,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + 'a>> {
     match mode {
+        "composition" => Box::pin(composition::flow(config, root, s)),
         "empty_deadline" => Box::pin(empty_creation::deadline(config, root, s)),
         "empty_physical" => Box::pin(empty_creation::physical(config, root, s)),
         "empty_crash" => Box::pin(empty_creation::crash(config, root, s)),
@@ -1443,6 +1446,7 @@ async fn run(mode: &str) {
     }
     let expected = match mode {
         "empty_flow" | "empty_recovery" | "empty_crash" | "empty_physical" | "empty_deadline" => 1,
+        "composition" => 1,
         "empty_controls" => 2,
         "mixed_epochs" | "mixed_scoped" => 13,
         "mixed_lineage" => 12,
@@ -1644,4 +1648,9 @@ async fn empty_manifest_creation_killed_owner_recovers_exact_request_with_corrup
 #[tokio::test]
 async fn empty_manifest_creation_deadline_retains_committed_request_and_releases_bounded_slot() {
     run("empty_deadline").await;
+}
+
+#[tokio::test]
+async fn chunk_client_composes_canonical_creation_sparse_large_edits_and_namespace_receipts() {
+    run("composition").await;
 }

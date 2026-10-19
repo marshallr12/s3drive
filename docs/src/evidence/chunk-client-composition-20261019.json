@@ -1,0 +1,244 @@
+{
+  "phase": "explicit chunk client composition",
+  "research_date": "2026-10-19",
+  "status": "accepted_library_composition",
+  "accepted": true,
+  "source": "66d78db94beabb666eb9cfeab2b99503de1af58e",
+  "schema_version": 41,
+  "runtime_inputs": 362,
+  "all_frozen_inputs": 681,
+  "local_gate": {
+    "head": "66d78db94beabb666eb9cfeab2b99503de1af58e",
+    "started": "2026-10-19T22:28:56.200807+00:00",
+    "finished": "2026-10-19T22:42:13.516132+00:00",
+    "elapsed_seconds": 797.32,
+    "exit_code": 0,
+    "inputs": 681,
+    "unchanged": true,
+    "changed": [],
+    "log_sha256": "7665b3f0257399d756e0b439382f9185ef9b9f1edb3f2f3c7b78119d91a8a8aa"
+  },
+  "test_results": {
+    "state": {
+      "passed": 538,
+      "ignored": 1,
+      "seconds": 272.48
+    },
+    "publication": {
+      "passed": 31,
+      "ignored": 0,
+      "seconds": 164.46
+    },
+    "reader": {
+      "passed": 26,
+      "ignored": 1,
+      "seconds": 70.48
+    },
+    "core": {
+      "passed": 39,
+      "ignored": 0
+    },
+    "s3": {
+      "passed": 62,
+      "ignored": 0
+    }
+  },
+  "focused": {
+    "composition_state": {
+      "passed": 13,
+      "seconds": 1.21,
+      "killed_owners": 7
+    },
+    "publication_namespace_barrier": {
+      "passed": 1,
+      "seconds": 0.57
+    },
+    "sdk_composition": {
+      "passed": 1,
+      "seconds": 1.18
+    }
+  },
+  "local_archive": {
+    "path": "chunk-client-composition-local-20261019.tar.gz",
+    "sha256": "690cf0e1fb7d84c4d187070b9e6fa6d38821b530b87de7d46e2e3e4ef1d527fc",
+    "members": 382,
+    "bytes": 989868,
+    "all_members_verified": true
+  },
+  "hosted": {
+    "run": 39335223526,
+    "attempt": 1,
+    "jobs": {
+      "linux": 118342911242,
+      "windows": 118342910955,
+      "book": 118342911228
+    },
+    "status": "complete_success_raw_source_artifact_review_passed",
+    "url": "https://github.com/marshallr12/s3drive/actions/runs/39335223526",
+    "raw_review": {
+      "source": "66d78db94beabb666eb9cfeab2b99503de1af58e",
+      "reviewed": true,
+      "reviewed_at": "2026-10-19T23:03:44.931054+00:00",
+      "run": 39335223526,
+      "attempt": 1,
+      "jobs": {
+        "118342911228": {
+          "sha256": "a03d327ccdc3a07f811406208f33eb0e06f9ebe850a44c9c366e3cce145e62d4",
+          "lines": 643,
+          "test_lines": 0
+        },
+        "118342911242": {
+          "sha256": "2502ba4f3df71b2f8e31c6fd4bdc2ed478879e3174790bb6f6a18b73a9aad7de",
+          "lines": 1549,
+          "test_lines": 851
+        },
+        "118342910955": {
+          "sha256": "d666bdf3250d8a557589422819ed299bb8b43e8711d6e91b0113a1ab7885ab6c",
+          "lines": 1921,
+          "test_lines": 916
+        }
+      },
+      "all_test_outcomes_parsed": true,
+      "slow_notices_completed": 17,
+      "interleaved_reference_completions": 15,
+      "test_faults": 0,
+      "warning_review": {
+        "disposable_locked_windows_profiles": 3,
+        "dummy_credentials_removed": true,
+        "profile_deletion_deferred_to_vm_destruction": true,
+        "disposable_profile_following_pass_lines_reviewed": true,
+        "tooling_deprecations_and_unused_delay_import_warnings_retained": true
+      },
+      "exact_remote_source_files_verified": 681,
+      "api_artifact_zip_digests_verified": true,
+      "independent_strict_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "project_oracles_passed": true,
+      "all_raw_record_fields_and_json_types_match": true,
+      "all_13_composition_state_tests_barrier_and_sdk_have_explicit_windows_completion": true,
+      "native_scope": "existing whole-generation mounted regressions; no native chunk callback acceptance",
+      "physical_MX_Windows10_11_reboot_acceptance": false
+    },
+    "api_proof": [
+      {
+        "kind": "replacement",
+        "id": 12226851699,
+        "zip_sha256": "fd4ff2de0030f423bd35c3fb067de553a9a3f9b8b78277fb88bb9fb0fadae3bd",
+        "api_digest_matches": true
+      },
+      {
+        "kind": "disposition",
+        "id": 12226874753,
+        "zip_sha256": "cf88f7696a05901b43679508b1958ae302fa43999b3c666bc05bc399a1e3e07b",
+        "api_digest_matches": true
+      },
+      {
+        "job": "windows",
+        "id": 118342910955,
+        "raw_log_sha256": "d666bdf3250d8a557589422819ed299bb8b43e8711d6e91b0113a1ab7885ab6c"
+      },
+      {
+        "job": "book",
+        "id": 118342911228,
+        "raw_log_sha256": "a03d327ccdc3a07f811406208f33eb0e06f9ebe850a44c9c366e3cce145e62d4"
+      },
+      {
+        "job": "linux",
+        "id": 118342911242,
+        "raw_log_sha256": "2502ba4f3df71b2f8e31c6fd4bdc2ed478879e3174790bb6f6a18b73a9aad7de"
+      }
+    ],
+    "strict_independent": [
+      {
+        "kind": "replacement",
+        "records": 21,
+        "source": "66d78db94beabb666eb9cfeab2b99503de1af58e",
+        "sha256": "7c930e7866103a33dc76038b43e6735c4d14c3797b2f853f34c497c20d6f5b00",
+        "strict_types_and_all_fields_match": true
+      },
+      {
+        "kind": "disposition",
+        "records": 14,
+        "source": "66d78db94beabb666eb9cfeab2b99503de1af58e",
+        "sha256": "877eb53fe160e44a85536bbc41a7c7f68448fc08decedf50ff11e39a60bcb5dd",
+        "strict_types_and_all_fields_match": true
+      }
+    ],
+    "raw_record_comparison": [
+      {
+        "kind": "replacement",
+        "records": 21,
+        "all_fields_and_types_equal": true,
+        "duplicate_keys_or_nonfinite_json_rejected": true
+      },
+      {
+        "kind": "disposition",
+        "records": 14,
+        "all_fields_and_types_equal": true,
+        "duplicate_keys_or_nonfinite_json_rejected": true
+      }
+    ],
+    "existing_native_regressions": {
+      "linux_fuse": {
+        "passed": 9,
+        "seconds": 80.03
+      },
+      "windows_winfsp": {
+        "passed": 7,
+        "seconds": 93.61
+      },
+      "manifest_remount_seconds": {
+        "linux": 1.74,
+        "windows": 2.44
+      },
+      "coordinator_startup_seconds": {
+        "linux_without_systemd": 24.46,
+        "windows_paired": 81.55
+      }
+    },
+    "state_results": {
+      "linux": {
+        "passed": 538,
+        "ignored": 1,
+        "seconds": 212.25
+      },
+      "windows": {
+        "passed": 533,
+        "ignored": 1,
+        "seconds": 411.82
+      }
+    },
+    "images": {
+      "linux": "Ubuntu24.04/20261012.334.1",
+      "windows": "WindowsServer2025/windows-2025-vs2026/20261007.264.1"
+    }
+  },
+  "remote_source_archive": {
+    "source": "66d78db94beabb666eb9cfeab2b99503de1af58e",
+    "all_source_files": 681,
+    "all_digests_match": true,
+    "zip_sha256": "0957f2ada021b486e5d799de4120e3edfaa5c4b8710e9cd5c116c03648b0f051"
+  },
+  "limits": [
+    "Library integration only; native chunk callbacks disabled.",
+    "Existing mounted whole-generation writer remains capped at8MiB.",
+    "No Wasabi writes, startup installation, hosting or visibility changes.",
+    "Deferred manifest creation, owned-unlinked publication and full retry-forest retention remain required.",
+    "Existing-only creation recovery with damaged composed sparse data has not gained a separate new SDK fixture in this phase.",
+    "Namespace/open clients still use normal Storage/State opening; cold metadata-only namespace/open recovery is not implemented."
+  ],
+  "failure_context": [
+    "SDK1 reached missing expected-PUT harness match; SDK2 passed after adding exact count1.",
+    "Clippy1 rejected helper placement after inline test module; moved without lint suppression.",
+    "Pre-final state4 passed532/1ignored/273.48s and is not final-source acceptance."
+  ],
+  "hosted_archive": {
+    "path": "chunk-client-composition-hosted-20261019.tar.gz",
+    "sha256": "7375d1a36588a12b6813620f181b3191d07b0e56d05732b6f02aefff84a0e006",
+    "members": 27,
+    "bytes": 140050,
+    "all_members_verified": true
+  }
+}

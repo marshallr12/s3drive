@@ -1,5 +1,11 @@
 # Mounted chunk writes: the remaining integration boundary
 
+Current status (2026-10-19): explicit same-owner client-state composition is
+accepted as a library at66d78db/schema41. Native chunk callbacks, cold metadata-only
+namespace/open recovery, deferred manifest creation and owned-unlinked chunk
+publication remain subsequent work. [Acceptance record](evidence/chunk-client-composition-20261019.json).
+
+
 Source review,2026-10-19. **Proposed implementation plan; native chunk writes are
 not enabled.** The reviewed filesystem paths match accepted source
 `2fc45fed5a15c1a24f0f9713ab7caca02569ec5b`. The accepted schema38 libraries add
@@ -111,3 +117,182 @@ historical authorization and preparation/publication semantics for a base with
 no provider object. The real-manifest bootstrap is the next option to evaluate
 because it can retain the existing manifest-only edit representation. Legacy
 payload conversion, bounded retirement and unlinked writes remain separate work.
+
+## Declared client-state composition phase (2026-10-19)
+
+Isolated `codex/chunk-client-composition` starts from the locally verified SDK
+source950479c, with documentation atb146f85. Its baseline SDK Windows/native/artifact
+acceptance has now passed at950479c; that evidence does not accept this phase. The SDK worktree stays
+unchanged. This phase will make existing sparse/creation, namespace and Windows
+open/session journals usable on one private SQLite owner through an explicit
+capability. Native filesystem callbacks remain pending until the full lifecycle
+is implemented and tested; this is not a new mounted write profile.
+
+The read-only review found more than constructor exclusions. Namespace `begin`
+and `acknowledge` unconditionally call the old logical-file journal's entry and
+observation helpers. That journal rejects sparse state. A new constructor alone
+cannot compose these systems. Manifest base descriptors deliberately contain only
+volume, node, reservation and payload reference, not cached parent/name metadata;
+namespace acknowledgments must preserve the exact sparse head and content epoch.
+Do not substitute a newer remote base or discard dirty bytes during rename/delete.
+
+Proposed implementation footprint:
+
+- Add one bounded, checksummed `chunk_mount_role` record in additive schema41,
+  binding one volume, permanent client identity and a retained registry of
+  store/source/configuration controls. Preserve all older BLOBs and hashes.
+- Admit the role and client identity atomically on the existing owner. Refuse
+  adoption of populated legacy logical/namespace/open state; compatible sparse
+  and creation intents must match every declared volume/store/source binding.
+  Exact known bindings replay before quotas; later controls may append without
+  changing a store's immutable route/root or dropping old retry dependencies.
+- Return an owner-bound capability for namespace and open/session clients.
+  Ordinary legacy constructors continue to reject the new role, including before
+  any sparse/creation row exists. Do not auto-select a weaker constructor.
+- Make sparse/creation isolation permit client tables only under a valid combined
+  role. Validate bounded metadata scope, identity, late triggers and cross-role
+  exclusion without requiring source-body reads for saved metadata recovery.
+  Authority admission/snapshot validation must still refuse populated client state.
+- Replace the old logical namespace barriers with explicit sparse head/reference
+  and unresolved-publication checks. Initially require clean, settled source data
+  for fresh namespace mutations; acknowledgments retain bindings/heads unchanged
+  when only names or deletion state change. Pending/dirty data must produce an
+  explicit retained conflict. Detached publication is a subsequent required step,
+  not an implicit linked-write fallback.
+- Reuse existing namespace/open event, cancellation, removal, session and retired
+  evidence validation. Bind all fresh inputs and retained outcomes to the same
+  volume, client identity and declared source controls. Preserve independent
+  destination controls for replacement across configured stores.
+
+Additional boundary discovered: `CreateEntry`/`CreateDeferredEntry` currently
+create metadata-empty files. A chunk-mode namespace capability must not quietly
+use those as manifest origins. Fresh files use the canonical manifest creator;
+directories can retain the existing namespace mutations. Deferred name reuse
+behind an owned removal fence needs an atomic deferred-manifest operation or a
+separately verified empty-origin promotion protocol before native save/replace
+can be enabled. Merely permitting metadata-empty creation is not completion.
+
+Done criterion: one owner can durably create/recover a canonical empty manifest,
+keep a sparse file view, and use scoped namespace and Windows open/session APIs
+without adopting old writer roles. Tests must cover fresh and compatible admission,
+reverse-order role refusal, wrong owner/volume/store/source, two stores, dirty or
+unknown-publication barriers, exact replay at capacity, append/restart, corruption,
+oversized fields, late triggers, actual owner kills/SQLITE_FULL, old schema/BLOB
+preservation and snapshot compatibility. Use owned SQLite/authority fixtures; no
+Wasabi or startup mutations. Run the complete local and own hosted gates before
+promotion. Then integrate the ordinary FUSE/WinFsp writer, deferred creation,
+owned-unlinked publication and retention, with actual >8MiB lifecycle acceptance.
+
+Initial write footprint: state role/migration/module registration; namespace,
+identity and open/session constructors/helpers; sparse namespace/scope inspection;
+creation isolation; worker capability factories; reciprocal legacy/authority and
+snapshot guards; test-only old-schema fixture setup; the two native schema-marker
+fixtures; this book and handoff. Platform dependencies and mount callbacks are
+outside this phase. Refine the footprint from actual sources before editing.
+
+
+### Composition implementation checkpoint (2026-10-19)
+
+The isolated worktree now implements additive schema41 and an explicit
+`Storage::chunk_mount(Input)` capability. It binds one volume, the permanent
+chunk-mode client identity and up to64 retained source/store controls on the
+existing SQLite owner. Namespace and open/session handles come from that
+capability; legacy constructors remain excluded even before the first sparse
+view exists. Admission is transactional; known subsets replay without an UPDATE,
+controls append without replacing store routes, and the independent identity
+checksum prevents a removed role marker from masquerading as an old writer.
+This role grants no S3 authorization.
+
+The new namespace path checks clean sparse heads, payload references and pending
+publication metadata before fresh mutations. Acknowledgments preserve sparse
+heads and content bindings, including newer dirty edits; saved metadata recovery
+does not read sparse file bodies. Chunk-mode metadata-empty file creation is
+explicitly refused. Canonical manifest creation and directory creation retain
+their distinct protocols. Open/session events keep the original checksummed
+history and retirement semantics. Existing-only creation recovery remains a
+separate capability.
+
+This is **accepted library composition** at66d78db after the complete local and
+own hosted/source/artifact checks below. New tests exercise killed real owners at
+identity/source/role/commit boundaries, full-disk rollback, capacity replay,
+retained-control append, schema40 BLOB preservation/collision rollback, session
+recovery across restart, late triggers, oversized role metadata, and independent
+identity witnesses. A new owned SDK/TCP case connects canonical Unicode creation,
+authority rename, a local sparse edit beyond8MiB, retained dirty-head acknowledgment
+and restart. These cases have terminal local/hosted completions recorded below. They do not
+claim real-provider or native chunk mount success.
+
+The complete local/hosted, source and evidence review passed. Unknown-publication
+barriers have a dedicated state case; scope/corruption coverage remains bounded
+by the documented tests. Native callbacks still
+use the older whole-generation writer. Deferred manifest creation, owned-unlinked
+chunk publication, retention and actual mounted >8MiB lifecycle tests remain
+subsequent work. No Wasabi writes, startup installation or repository visibility
+changes are part of this checkpoint.
+
+
+Focused terminal evidence (2026-10-19):13 composition state cases passed in1.21s,
+including seven killed owners; the publication barrier case passed in0.57s.
+The SDK composition case passed in1.18s after adding its expected one-PUT fixture
+count to the harness. Its first run reached that missing harness match and failed;
+that failure is retained in `/tmp/s3drive-chunk-composition-sdk1.log` rather than
+reported as a successful suite. Logs for the passing cases are state5, barrier1
+and sdk2 under `/tmp/s3drive-chunk-composition-*.log`. The pre-final broader run
+passed532 state cases/one diagnostic ignored in273.48s; it predates added coverage
+and cannot accept the final source. Initial workspace Clippy rejected helper
+placement after an inline test module; helpers were moved, without suppressing the
+lint. The final complete gate and hosted source acceptance subsequently passed below.
+
+
+Complete local gate (2026-10-19): source66d78db/schema41/all362 runtime inputs
+passed `bash scripts/gate.sh` at22:42:13Z. All681 tracked/nonignored inputs stayed
+unchanged. State538+1diagnostic ignored/272.48s, publication31/164.46s, reader26+
+1native-only ignored/70.48s, core39/S362, formatting, workspace Clippy/build and
+mdBook/link checks passed. This includes the new combined-role and unknown-root
+namespace barrier cases. [Machine-readable evidence](evidence/chunk-client-composition-20261019.json).
+The indexed382-member [local archive](evidence/chunk-client-composition-local-20261019.tar.gz)
+is verified, SHA690cf0e1fb7d84c4d187070b9e6fa6d38821b530b87de7d46e2e3e4ef1d527fc.
+The one-use local archiver is complete; never rerun it on later documentation.
+Own CI39335223526 and complete raw/source/artifact review subsequently passed
+as recorded below. Existing-only recovery under a damaged composed sparse tree has no
+separate new SDK fixture here; do not infer that extra Cartesian test coverage
+from the namespace corruption and pre-existing recovery tests.
+
+The [deferred manifest source review](deferred-manifest-integration.md) records
+remaining receipt/fence, saved-open admission and compatibility questions as a
+proposal; it is not a resolved protocol or implementation.
+
+
+Recovery boundary: namespace/open clients still use normal `Storage`/`State`
+opening, which validates retained source bodies. The saved-outcome path can avoid
+reading those bodies on an already open owner; its compatibility constructor is
+not a cold metadata-only namespace/open recovery API. That separate capability
+and native restart integration remain required. The creation SDK's existing-only
+recovery store is a distinct implemented API. Do not conflate these scopes.
+
+
+### Library composition acceptance (2026-10-19)
+
+Exact source66d78db94beabb666eb9cfeab2b99503de1af58e/schema41/all362 runtime files
+passed own [CI39335223526](https://github.com/marshallr12/s3drive/actions/runs/39335223526)
+attempt1: Linux118342911242, Windows118342910955 and book118342911228 all success.
+All681 source-archive files matched the locally frozen digests. Own artifact ZIP
+API digests, strict independent21 replacement/14 disposition records, project
+oracles and every raw-record field/JSON type matched. All17 slow notices and15
+interleaved reference endings have explicit completions. The13 composition state
+cases, namespace barrier and SDK case have explicit Windows completions too.
+
+Linux538/Windows533 state cases plus one diagnostic ignored each, publication31,
+reader26+1native-only ignored, core39/S362 passed. Existing real FUSE9/80.03s and
+WinFsp7/93.61s, manifest remount1.74s/2.44s and coordinator startup24.46s without
+systemd/81.55s paired Windows regressions passed. These are existing mounted
+operations, not new native chunk writes or physical MX/Windows10/11 reboot proof.
+
+Full raw review retained tooling/linker notices and exactly three disposable
+Windows locked-profile cleanup notices. Their dummy credentials were removed and
+profile deletion was deferred to VM destruction; following success lines were
+reviewed. No test faults were found. Actual images: Ubuntu24.04/20261012.334.1 and
+WindowsServer2025 windows-2025-vs2026/20261007.264.1.
+The indexed27-member [hosted archive](evidence/chunk-client-composition-hosted-20261019.tar.gz)
+is verified, SHA7375d1a36588a12b6813620f181b3191d07b0e56d05732b6f02aefff84a0e006.
+Both one-use archivers are complete; never rerun them on later documentation.

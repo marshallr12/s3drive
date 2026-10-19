@@ -478,6 +478,7 @@ pub(crate) fn existing_identity(db: &Connection, id: &str, policy: &str) -> Resu
     }
     // Compatible with older authority schemas where these tables are absent.
     for table in [
+        "chunk_mount_role",
         "manifest_creation_role",
         "manifest_creations",
         "sparse_view_role",

@@ -122,13 +122,29 @@ impl Storage {
     pub fn opens(&self) -> Opens {
         Opens {
             owner: self.owner.clone(),
+            chunk: None,
         }
     }
     pub fn namespace(&self) -> Namespace {
         Namespace {
             owner: self.owner.clone(),
             options: self.staging_options,
+            chunk: None,
         }
+    }
+    pub async fn chunk_mount(
+        &self,
+        input: crate::chunk_mount::Input,
+    ) -> Result<crate::chunk_mount::Client> {
+        let key = self
+            .owner
+            .call(move |store| crate::chunk_mount::admit(&mut store.state, input))
+            .await?;
+        Ok(crate::chunk_mount::Client::new(
+            self.owner.clone(),
+            self.staging_options,
+            key,
+        ))
     }
     pub fn logical(&self) -> Logical {
         Logical {
@@ -689,8 +705,20 @@ impl Logical {
 pub struct Namespace {
     owner: Owner,
     options: journal::Options,
+    chunk: Option<crate::chunk_mount::Key>,
 }
 impl Namespace {
+    pub(crate) fn chunk(
+        owner: Owner,
+        options: journal::Options,
+        key: crate::chunk_mount::Key,
+    ) -> Self {
+        Self {
+            owner,
+            options,
+            chunk: Some(key),
+        }
+    }
     pub async fn get(&self, id: String) -> Result<crate::namespace_client::Record> {
         self.call(move |j| j.get(&id)).await
     }
@@ -717,12 +745,15 @@ impl Namespace {
         work: impl FnOnce(&mut crate::namespace_client::Journal<'_>) -> Result<T> + Send + 'static,
     ) -> Result<T> {
         let options = self.options;
+        let chunk = self.chunk.clone();
         self.owner
             .call(move |store| {
-                work(&mut crate::namespace_client::Journal::with_options(
-                    &mut store.state,
-                    options,
-                )?)
+                let mut journal = if let Some(key) = chunk {
+                    crate::namespace_client::Journal::for_chunks(&mut store.state, options, &key)?
+                } else {
+                    crate::namespace_client::Journal::with_options(&mut store.state, options)?
+                };
+                work(&mut journal)
             })
             .await
     }
@@ -752,8 +783,15 @@ impl Namespace {
 #[derive(Clone)]
 pub struct Opens {
     owner: Owner,
+    chunk: Option<crate::chunk_mount::Key>,
 }
 impl Opens {
+    pub(crate) fn chunk(owner: Owner, key: crate::chunk_mount::Key) -> Self {
+        Self {
+            owner,
+            chunk: Some(key),
+        }
+    }
     pub async fn start_session(&self, session: String, volume: String) -> Result<()> {
         self.call(move |j| j.start_session(&session, &volume)).await
     }
@@ -820,11 +858,15 @@ impl Opens {
         + Send
         + 'static,
     ) -> Result<T> {
+        let chunk = self.chunk.clone();
         self.owner
             .call(move |store| {
-                work(&mut crate::namespace_client::opens::Journal::new(
-                    &mut store.state,
-                )?)
+                let mut journal = if let Some(key) = chunk {
+                    crate::namespace_client::opens::Journal::for_chunks(&mut store.state, &key)?
+                } else {
+                    crate::namespace_client::opens::Journal::new(&mut store.state)?
+                };
+                work(&mut journal)
             })
             .await
     }

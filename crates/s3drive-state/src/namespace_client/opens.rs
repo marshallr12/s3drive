@@ -436,10 +436,14 @@ fn reduce(db: &Connection, record: &mut OpenRecord, event: &Event) -> Result<()>
 }
 type RawRow = (String, Vec<u8>, i64, Option<Vec<u8>>, Vec<u8>);
 fn load(db: &Connection, key: &str) -> Result<Option<(Row, OpenRecord)>> {
+    let bad:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM windows_open_journal WHERE open_id=?1 AND (length(CAST(owner_id AS BLOB))!=32 OR typeof(input)!='blob' OR length(input) NOT BETWEEN 1 AND 16384 OR event_count NOT BETWEEN 0 AND 4096 OR length(state_hash)!=32 OR (head_hash IS NOT NULL AND length(head_hash)!=32))) OR EXISTS(SELECT 1 FROM windows_open_events WHERE open_id=?1 AND (typeof(action)!='blob' OR length(action) NOT BETWEEN 1 AND 16384 OR length(state_hash)!=32 OR length(CAST(event_id AS BLOB))!=32 OR (previous_hash IS NOT NULL AND length(previous_hash)!=32)))",[key],|r|r.get(0))?;
+    if bad {
+        return Err("per-open bounded metadata shape changed".into());
+    }
     let raw:Option<RawRow>=db.query_row("SELECT owner_id,input,event_count,head_hash,state_hash FROM windows_open_journal WHERE open_id=?",[key],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?))).optional()?;
     let retained: Option<Vec<u8>> = db
         .query_row(
-            "SELECT input_hash FROM retained_windows_opens WHERE open_id=?",
+            "SELECT CASE WHEN length(input_hash)=32 THEN input_hash END FROM retained_windows_opens WHERE open_id=?",
             [key],
             |r| r.get(0),
         )
@@ -577,16 +581,36 @@ fn controlled_slots(r: &OpenRecord) -> usize {
 
 pub struct Journal<'a> {
     state: &'a mut State,
+    chunk: Option<crate::chunk_mount::Key>,
 }
 impl<'a> Journal<'a> {
     pub fn new(state: &'a mut State) -> Result<Self> {
         state.verify_staging_storage()?;
         crate::chunk_publication::require_legacy(&state.connection)?;
-        Ok(Self { state })
+        Ok(Self { state, chunk: None })
+    }
+    pub fn for_chunks(state: &'a mut State, key: &crate::chunk_mount::Key) -> Result<Self> {
+        state.verify_staging_storage()?;
+        crate::chunk_mount::require(&state.connection, key)?;
+        Ok(Self {
+            state,
+            chunk: Some(key.clone()),
+        })
+    }
+    fn chunk_check(&self) -> Result<()> {
+        if let Some(key) = &self.chunk {
+            crate::chunk_mount::verify_key(&self.state.connection, key)?;
+            bounded(&self.state.connection)?;
+        }
+        Ok(())
     }
     pub fn prepare(&mut self, input: OpenInput) -> Result<OpenRecord> {
+        self.chunk_check()?;
         let owner = identity::ensure(self.state)?;
         valid_input(&input, &owner)?;
+        if let Some(key) = &self.chunk {
+            crate::chunk_mount::verify_key(&self.state.connection, key)?.open(&input)?;
+        }
         if input.session_bound {
             self.current_session(&input.session, &input.volume)?;
             for (_, old) in all(&self.state.connection)? {
@@ -640,6 +664,9 @@ impl<'a> Journal<'a> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        if let Some(key) = &self.chunk {
+            crate::chunk_mount::verify_key(&tx, key)?;
+        }
         let mut records = all(&tx)?;
         if records.len() >= OPEN_LIMIT {
             return Err("per-open limit reached; history retained".into());
@@ -666,17 +693,29 @@ impl<'a> Journal<'a> {
         Ok(record)
     }
     pub fn get(&self, key: &str) -> Result<OpenRecord> {
-        load(&self.state.connection, key)?
+        self.chunk_check()?;
+        let record = load(&self.state.connection, key)?
             .map(|(_, r)| r)
-            .ok_or_else(|| "per-open record not found".into())
+            .ok_or("per-open record not found")?;
+        if let Some(key) = &self.chunk {
+            let b = crate::chunk_mount::verify_key(&self.state.connection, key)?;
+            scope_record(&b, &record)?;
+        }
+        Ok(record)
     }
     pub fn records(&self) -> Result<Vec<OpenRecord>> {
-        Ok(all(&self.state.connection)?
-            .into_iter()
-            .map(|(_, r)| r)
-            .collect())
+        self.chunk_check()?;
+        let records = all(&self.state.connection)?;
+        if let Some(key) = &self.chunk {
+            let b = crate::chunk_mount::verify_key(&self.state.connection, key)?;
+            for (_, record) in &records {
+                scope_record(&b, record)?;
+            }
+        }
+        Ok(records.into_iter().map(|(_, r)| r).collect())
     }
     pub fn abandoned(&self, current_session: &str) -> Result<Vec<OpenRecord>> {
+        self.chunk_check()?;
         if !id(current_session) {
             return Err("invalid mount session identity".into());
         }
@@ -687,6 +726,7 @@ impl<'a> Journal<'a> {
             .collect())
     }
     pub fn activate(&mut self, key: &str, event: &str) -> Result<OpenRecord> {
+        self.chunk_check()?;
         let record = self.get(key)?;
         if record.active() {
             return self.append(
@@ -748,6 +788,7 @@ impl<'a> Journal<'a> {
         )
     }
     pub fn callback(&mut self, key: &str, event: &str, kind: Callback) -> Result<OpenRecord> {
+        self.chunk_check()?;
         self.append(
             key,
             Event {
@@ -763,6 +804,10 @@ impl<'a> Journal<'a> {
         callback: &str,
         input: Input,
     ) -> Result<OpenRecord> {
+        self.chunk_check()?;
+        if let Some(key) = &self.chunk {
+            crate::chunk_mount::verify_key(&self.state.connection, key)?.namespace(&input)?;
+        }
         let linked = Event {
             id: event.into(),
             action: Action::Link {
@@ -790,6 +835,7 @@ impl<'a> Journal<'a> {
         self.append(key, linked)
     }
     pub fn acknowledge(&mut self, key: &str, event: &str, operation: &str) -> Result<OpenRecord> {
+        self.chunk_check()?;
         let record = self.get(key)?;
         let input = record
             .events
@@ -820,6 +866,7 @@ impl<'a> Journal<'a> {
         callback: &str,
         error: Option<namespace::Error>,
     ) -> Result<OpenRecord> {
+        self.chunk_check()?;
         let record = self.get(key)?;
         if let Some(old) = record.events.iter().find(|e| e.id == event) {
             if !matches!(&old.action,Action::Reply{callback:c,error:old_error,..} if c==callback && *old_error==error)
@@ -859,6 +906,7 @@ impl<'a> Journal<'a> {
         )
     }
     pub fn complete(&mut self, key: &str, event: &str, callback: &str) -> Result<OpenRecord> {
+        self.chunk_check()?;
         self.append(
             key,
             Event {
@@ -874,6 +922,9 @@ impl<'a> Journal<'a> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        if let Some(key) = &self.chunk {
+            crate::chunk_mount::verify_key(&tx, key)?;
+        }
         let (mut row, mut record) = load(&tx, key)?.ok_or("per-open record not found")?;
         if let Some(old) = record.events.iter().find(|e| e.id == event.id) {
             if *old != event {
@@ -891,6 +942,9 @@ impl<'a> Journal<'a> {
         let previous = row.head.clone();
         let hash = event_hash(key, row.count + 1, &event, &previous)?;
         reduce(&tx, &mut record, &event)?;
+        if let Some(key) = &self.chunk {
+            scope_record(&crate::chunk_mount::verify_key(&tx, key)?, &record)?;
+        }
         row.count += 1;
         row.head = Some(hash.clone());
         let mut records = all(&tx)?;
@@ -915,5 +969,41 @@ impl<'a> Journal<'a> {
         Ok(record)
     }
 }
+
+fn bounded(db: &Connection) -> Result<()> {
+    let bad:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM windows_open_journal WHERE length(CAST(open_id AS BLOB))!=32 OR length(CAST(owner_id AS BLOB))!=32 OR typeof(input)!='blob' OR length(input) NOT BETWEEN 1 AND 16384 OR event_count NOT BETWEEN 0 AND 4096 OR length(state_hash)!=32 OR (head_hash IS NOT NULL AND length(head_hash)!=32)) OR EXISTS(SELECT 1 FROM windows_open_events WHERE length(CAST(open_id AS BLOB))!=32 OR length(CAST(event_id AS BLOB))!=32 OR typeof(action)!='blob' OR length(action) NOT BETWEEN 1 AND 16384 OR length(state_hash)!=32) OR EXISTS(SELECT 1 FROM retained_windows_opens WHERE length(CAST(open_id AS BLOB))!=32 OR length(input_hash)!=32)",[],|r|r.get(0))?;
+    if bad {
+        return Err("chunk open metadata bound failed".into());
+    }
+    Ok(())
+}
+fn scope_record(b: &crate::chunk_mount::Binding, r: &OpenRecord) -> Result<()> {
+    if r.owner != b.owner {
+        return Err("chunk open owner changed".into());
+    }
+    b.open(&r.input)?;
+    for e in &r.events {
+        match &e.action {
+            Action::Link { input, .. } => b.namespace(input)?,
+            Action::Activate { proof: Some(p) } | Action::Reply { proof: Some(p), .. } => {
+                b.namespace(&p.input)?
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+pub(super) fn chunk_scope(db: &Connection, b: &crate::chunk_mount::Binding) -> Result<()> {
+    bounded(db)?;
+    all(db)?;
+    let mut q = db.prepare("SELECT open_id FROM windows_open_journal ORDER BY open_id")?;
+    for row in q.query_map([], |r| r.get::<_, String>(0))? {
+        let key = row?;
+        let (_, record) = load(db, &key)?.ok_or("chunk open history missing")?;
+        scope_record(b, &record)?;
+    }
+    session::chunk_scope(db, b)
+}
+
 #[cfg(test)]
 mod tests;

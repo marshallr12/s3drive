@@ -9,14 +9,14 @@ fn hash(owner: &str) -> Vec<u8> {
 pub(super) fn read(db: &Connection) -> Result<Option<String>> {
     let identity: Option<(String, Vec<u8>)> = db
         .query_row(
-            "SELECT owner_id,state_hash FROM client_identity WHERE singleton=1",
+            "SELECT CASE WHEN typeof(owner_id)='text' AND length(CAST(owner_id AS BLOB))=32 THEN owner_id END, CASE WHEN typeof(state_hash)='blob' AND length(state_hash)=32 THEN state_hash END FROM client_identity WHERE singleton=1",
             [],
             |r| Ok((r.get(0)?, r.get(1)?)),
         )
         .optional()?;
     let anchor: Option<Vec<u8>> = db
         .query_row(
-            "SELECT state_hash FROM retained_client_identity WHERE singleton=1",
+            "SELECT CASE WHEN typeof(state_hash)='blob' AND length(state_hash)=32 THEN state_hash END FROM retained_client_identity WHERE singleton=1",
             [],
             |r| r.get(0),
         )
@@ -29,8 +29,10 @@ pub(super) fn read(db: &Connection) -> Result<Option<String>> {
                 owner: owner.clone(),
             }
             .valid()
-                && checksum == hash(&owner)
-                && anchor == checksum =>
+                && anchor == checksum
+                && (checksum == hash(&owner)
+                    || (checksum == crate::chunk_mount::identity_hash(&owner)
+                        && crate::chunk_mount::identity_marker(db, &owner)?)) =>
         {
             Ok(Some(owner))
         }
@@ -77,4 +79,16 @@ pub(super) fn ensure(state: &mut State) -> Result<String> {
     }
     tx.commit()?;
     Ok(owner)
+}
+
+// Shape checks precede allocation. A retained chunk-mode identity must not turn
+// into an old writer merely because its new role row/table was removed.
+pub(crate) fn has_chunk_witness(db: &Connection) -> Result<bool> {
+    let row:Option<(Option<String>,Option<Vec<u8>>)>=db.query_row("SELECT CASE WHEN length(CAST(owner_id AS BLOB))=32 THEN owner_id END,CASE WHEN length(state_hash)=32 THEN state_hash END FROM client_identity WHERE singleton=1",[],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
+    let Some((Some(owner), checksum)) = row else {
+        return Ok(false);
+    };
+    let anchor:Option<Vec<u8>>=db.query_row("SELECT CASE WHEN length(state_hash)=32 THEN state_hash END FROM retained_client_identity WHERE singleton=1",[],|r|r.get(0)).optional()?.flatten();
+    let expected = crate::chunk_mount::identity_hash(&owner);
+    Ok(checksum.as_ref() == Some(&expected) || anchor.as_ref() == Some(&expected))
 }

@@ -28,7 +28,7 @@ fn terminal(db: &Connection, row: &Row, record: &OpenRecord) -> Result<bool> {
 pub(super) fn check(db: &Connection, row: &Row, record: &OpenRecord) -> Result<()> {
     let seal: Option<Vec<u8>> = db
         .query_row(
-            "SELECT state_hash FROM retired_windows_opens WHERE open_id=?",
+            "SELECT CASE WHEN length(state_hash)=32 THEN state_hash END FROM retired_windows_opens WHERE open_id=?",
             [&row.input.id],
             |r| r.get(0),
         )
@@ -60,10 +60,14 @@ impl Journal<'_> {
     /// Complete original evidence remains available through `get` and exact
     /// callback replay. This never infers cleanup from a different session ID.
     pub fn retire(&mut self, key: &str) -> Result<()> {
+        self.chunk_check()?;
         let tx = self
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        if let Some(key) = &self.chunk {
+            crate::chunk_mount::verify_key(&tx, key)?;
+        }
         let (row, record) = load(&tx, key)?.ok_or("per-open record not found")?;
         if !terminal(&tx, &row, &record)? {
             return Err("unfinished open cannot be retired".into());

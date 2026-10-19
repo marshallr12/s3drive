@@ -1,6 +1,6 @@
 //! Client-local metadata intents. Persist exact admission and request before RPC.
 mod changes;
-mod identity;
+pub(crate) mod identity;
 pub mod opens;
 mod removals;
 use crate::{
@@ -201,6 +201,7 @@ pub(crate) fn pending_for_node(db: &Connection, volume: &str, node: &str) -> Res
 pub struct Journal<'a> {
     state: &'a mut State,
     options: crate::journal::Options,
+    chunk: Option<crate::chunk_mount::Key>,
 }
 impl<'a> Journal<'a> {
     pub fn new(state: &'a mut State) -> Result<Self> {
@@ -209,15 +210,47 @@ impl<'a> Journal<'a> {
     pub fn with_options(state: &'a mut State, options: crate::journal::Options) -> Result<Self> {
         state.verify_staging_storage()?;
         crate::chunk_publication::require_legacy(&state.connection)?;
-        Ok(Self { state, options })
+        Ok(Self {
+            state,
+            options,
+            chunk: None,
+        })
+    }
+    pub fn for_chunks(
+        state: &'a mut State,
+        options: crate::journal::Options,
+        key: &crate::chunk_mount::Key,
+    ) -> Result<Self> {
+        state.verify_staging_storage()?;
+        crate::chunk_mount::require(&state.connection, key)?;
+        Ok(Self {
+            state,
+            options,
+            chunk: Some(key.clone()),
+        })
+    }
+    fn chunk_check(&self) -> Result<Option<crate::chunk_mount::Binding>> {
+        self.chunk
+            .as_ref()
+            .map(|key| crate::chunk_mount::verify_key(&self.state.connection, key))
+            .transpose()
     }
     pub fn get(&self, id: &str) -> Result<Record> {
-        load(&self.state.connection, id)?.ok_or_else(|| "unknown namespace intent".into())
+        let binding = self.chunk_check()?;
+        let record = load(&self.state.connection, id)?.ok_or("unknown namespace intent")?;
+        if let Some(b) = binding {
+            b.namespace(&record.input)?;
+        }
+        Ok(record)
     }
     pub fn client_identity(&mut self) -> Result<String> {
+        self.chunk_check()?;
         identity::ensure(self.state)
     }
     pub fn owned_removal(&self, volume: &str, node: &str) -> Result<Option<OwnedRemoval>> {
+        if let Some(b) = self.chunk_check()? {
+            b.volume(volume)?;
+        }
         removals::owned(&self.state.connection, volume, node)
     }
     /// Inspect a verified cancellation without inventing the transition outcome.
@@ -225,10 +258,14 @@ impl<'a> Journal<'a> {
         &self,
         operation: &str,
     ) -> Result<Option<TransitionCancellation>> {
+        self.chunk_check()?;
         removals::transition_cancellation(&self.state.connection, operation)
     }
     pub fn begin(&mut self, input: Input) -> Result<Record> {
         input.validate()?;
+        if let Some(b) = self.chunk_check()? {
+            b.namespace(&input)?;
+        }
         if let Some(r) = load(&self.state.connection, &input.request.operation)? {
             if r.input != input {
                 return Err("namespace intent input changed".into());
@@ -249,6 +286,14 @@ impl<'a> Journal<'a> {
             }
         }
         for (i, entry) in input.entries.iter().enumerate() {
+            if self.chunk.is_some() {
+                crate::sparse_views::namespace_guard(
+                    &self.state.connection,
+                    &input.request.volume,
+                    entry,
+                )?;
+                continue;
+            }
             crate::logical::check_namespace_entry(
                 self.state,
                 self.options,
@@ -271,6 +316,12 @@ impl<'a> Journal<'a> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        if let Some(key) = &self.chunk {
+            crate::chunk_mount::verify_key(&tx, key)?.namespace(&r.input)?;
+            for entry in &r.input.entries {
+                crate::sparse_views::namespace_guard(&tx, &r.input.request.volume, entry)?;
+            }
+        }
         let count: i64 =
             tx.query_row("SELECT count(*) FROM namespace_intents", [], |r| r.get(0))?;
         if count >= LIMIT {
@@ -309,6 +360,15 @@ impl<'a> Journal<'a> {
                 let nodes = changes::effects(&r.input, receipt)?;
                 let mut updates = Vec::new();
                 for (entry, after) in r.input.entries.iter().zip(nodes.iter()) {
+                    if self.chunk.is_some() {
+                        if entry.reference != namespace::payload_reference(&after.payload)
+                            || entry.id != after.id
+                            || entry.placement != after.placement
+                        {
+                            return Err("namespace outcome cannot rebase sparse content".into());
+                        }
+                        continue;
+                    }
                     if let Some(update) = crate::logical::namespace_observation(
                         self.state,
                         self.options,
@@ -329,6 +389,9 @@ impl<'a> Journal<'a> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        if let Some(key) = &self.chunk {
+            crate::chunk_mount::verify_key(&tx, key)?.namespace(&r.input)?;
+        }
         let rows=tx.execute("UPDATE namespace_intents SET outcome=?1,state_hash=?2 WHERE operation_id=?3 AND outcome IS NULL",params![serde_json::to_vec(r.outcome.as_ref().unwrap())?,hash(&r)?,id])?;
         if rows != 1 {
             return Err("namespace receipt was not durably updated".into());
@@ -344,6 +407,7 @@ impl<'a> Journal<'a> {
         self.get(id)
     }
     pub fn pending(&self, after: Option<&str>, limit: u16) -> Result<Vec<Record>> {
+        self.chunk_check()?;
         if !(1..=1000).contains(&limit) {
             return Err("invalid namespace pending limit".into());
         }
@@ -368,6 +432,48 @@ impl<'a> Journal<'a> {
         }
         Ok(out)
     }
+}
+
+pub(crate) fn chunk_identity(db: &Connection) -> Result<Option<String>> {
+    let bad:bool=db.query_row("SELECT (SELECT count(*) FROM client_identity)>1 OR (SELECT count(*) FROM retained_client_identity)>1 OR EXISTS(SELECT 1 FROM client_identity WHERE singleton!=1 OR length(CAST(owner_id AS BLOB))!=32 OR length(state_hash)!=32) OR EXISTS(SELECT 1 FROM retained_client_identity WHERE singleton!=1 OR length(state_hash)!=32)",[],|r|r.get(0))?;
+    if bad {
+        return Err("chunk client identity shape changed".into());
+    }
+    let owner = identity::read(db)?;
+    if owner.is_some() && !identity::has_chunk_witness(db)? {
+        return Err("old identity cannot become a chunk mount identity".into());
+    }
+    Ok(owner)
+}
+pub(crate) fn install_chunk_identity(db: &Connection, owner: &str) -> Result<()> {
+    if chunk_identity(db)?.is_some() {
+        return Err("chunk identity already exists".into());
+    }
+    let hash = crate::chunk_mount::identity_hash(owner);
+    db.execute(
+        "INSERT INTO client_identity VALUES(1,?1,?2)",
+        params![owner, hash],
+    )?;
+    db.execute("INSERT INTO retained_client_identity VALUES(1,?1)", [hash])?;
+    if !identity::has_chunk_witness(db)? {
+        return Err("chunk identity readback mismatch".into());
+    }
+    Ok(())
+}
+pub(crate) fn chunk_scope(db: &Connection, b: &crate::chunk_mount::Binding) -> Result<()> {
+    let mut q=db.prepare("SELECT CASE WHEN length(CAST(operation_id AS BLOB))=32 THEN operation_id END FROM namespace_intents ORDER BY operation_id LIMIT 4097")?;
+    let ids = q
+        .query_map([], |r| r.get::<_, Option<String>>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    if ids.len() > LIMIT as usize {
+        return Err("chunk namespace history limit".into());
+    }
+    for id in ids {
+        let id = id.ok_or("chunk namespace ID shape changed")?;
+        let row = load(db, &id)?.ok_or("chunk namespace intent missing")?;
+        b.namespace(&row.input)?;
+    }
+    opens::chunk_scope(db, b)
 }
 
 #[cfg(test)]

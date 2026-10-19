@@ -3,6 +3,7 @@
 
 pub mod authority_snapshot;
 pub mod cache;
+pub mod chunk_mount;
 pub mod chunk_publication;
 pub mod chunked;
 mod directory;
@@ -26,7 +27,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 40;
+pub const SCHEMA_VERSION: i32 = 41;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
@@ -312,6 +313,11 @@ impl State {
             if version < 40 {
                 tx.execute_batch(include_str!("../migrations/040.sql"))?;
             }
+            if version < 41 {
+                tx.execute_batch(include_str!("../migrations/041.sql"))?;
+            }
+            chunk_mount::check_schema(&tx)?;
+            chunk_mount::validate_all(&tx)?;
             // Version38 admits distinct format4 external-clean observation intent.
             // No DDL or old BLOB changes. Pre-marker validation rejects format4
             // records in earlier schemas, and older binaries refuse version38.

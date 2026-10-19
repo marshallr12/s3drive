@@ -362,3 +362,61 @@ mod faults;
 mod lineage;
 
 mod settlement;
+
+#[test]
+fn chunk_namespace_barrier_retains_unknown_and_remotely_committed_roots_until_local_source_ack() {
+    let t = tempfile::tempdir().unwrap();
+    let path = t.path().join("state");
+    let mut s = State::open_managed(&path).unwrap();
+    let f = fixture();
+    let r = lineage::first(&mut s, &f);
+    let volume = f.binding.base().unwrap().volume().to_owned();
+    let node = f.binding.base().unwrap().node().to_owned();
+    let key = crate::chunk_mount::admit(
+        &mut s,
+        crate::chunk_mount::Input {
+            volume: volume.clone(),
+            controls: vec![crate::namespace_client::Control {
+                store: f.store.clone(),
+                source: *f.binding.source(),
+                fingerprint: f.binding.fingerprint().into(),
+            }],
+        },
+    )
+    .unwrap();
+    assert!(namespace_pending(&s.connection, &volume, &node).is_err());
+    assert!(namespace_pending(&s.connection, &volume, &hex(&[99; 16])).is_ok());
+    assert!(
+        crate::sparse_views::namespace_guard(
+            &s.connection,
+            &volume,
+            &crate::namespace_client::Entry::from_node(&f.node).unwrap()
+        )
+        .is_err()
+    );
+    let r = lineage::commit(&mut s, r);
+    assert!(
+        namespace_pending(&s.connection, &volume, &node).is_err(),
+        "remote commit is not local source acknowledgment"
+    );
+    drop(s);
+    let mut s = State::open_managed(&path).unwrap();
+    assert!(namespace_pending(&s.connection, &volume, &node).is_err());
+    let source = j(&mut s)
+        .acknowledge(
+            [44; 32],
+            r.input.plan,
+            crate::sparse_views::Options::default(),
+        )
+        .unwrap();
+    assert!(namespace_pending(&s.connection, &volume, &node).is_ok());
+    let after = &source.record().receipt().unwrap().node;
+    crate::sparse_views::namespace_guard(
+        &s.connection,
+        &volume,
+        &crate::namespace_client::Entry::from_node(after).unwrap(),
+    )
+    .unwrap();
+    crate::namespace_client::Journal::for_chunks(&mut s, crate::journal::Options::default(), &key)
+        .unwrap();
+}

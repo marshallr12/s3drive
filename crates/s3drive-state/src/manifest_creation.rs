@@ -177,6 +177,7 @@ fn preflight(db: &Connection) -> Result<()> {
     Ok(())
 }
 fn isolation(db: &Connection) -> Result<()> {
+    let combined = crate::chunk_mount::compatible(db)?;
     for table in [
         "namespace_volume",
         "namespace_nodes",
@@ -206,6 +207,9 @@ fn isolation(db: &Connection) -> Result<()> {
         "chunk_source_role",
         "chunk_source_settlements",
     ] {
+        if combined && crate::chunk_mount::CLIENT_TABLES.contains(&table) {
+            continue;
+        }
         if db.query_row(&format!("SELECT EXISTS(SELECT 1 FROM {table})"), [], |r| {
             r.get::<_, bool>(0)
         })? {
@@ -349,5 +353,17 @@ fn reject_record(r: &mut Record, request: &ns::Apply, error: ns::Error) -> Resul
         return Err(Failure::Conflict.into());
     }
     r.rejection = Some(error);
+    Ok(())
+}
+
+pub(crate) fn chunk_scope(db: &Connection, b: &crate::chunk_mount::Binding) -> Result<()> {
+    for r in inspect(db)?.into_values() {
+        b.volume(&r.input.volume)?;
+        b.control(&crate::namespace_client::Control {
+            store: r.input.store,
+            source: r.input.source,
+            fingerprint: r.input.fingerprint,
+        })?;
+    }
     Ok(())
 }

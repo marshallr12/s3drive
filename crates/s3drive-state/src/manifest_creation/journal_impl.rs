@@ -40,6 +40,14 @@ impl<'a> Journal<'a> {
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         preflight(&tx)?;
         isolation(&tx)?;
+        if let Some(b) = crate::chunk_mount::load(&tx)? {
+            b.volume(&input.volume)?;
+            b.control(&crate::namespace_client::Control {
+                store: input.store.clone(),
+                source: input.source,
+                fingerprint: input.fingerprint.clone(),
+            })?;
+        }
         let mut rows = inspect(&tx)?;
         if let Some(old) = rows.get(&input.operation) {
             if old.input != input {

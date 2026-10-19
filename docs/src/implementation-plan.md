@@ -3587,3 +3587,17 @@ accepted354 parent add the authenticated SDK path, existing-only recovery and
 independent physical-proof coherence checks. Native chunk create/write, typed
 same-owner namespace/open composition, deferred/unlinked publication and retention
 remain required; the existing8MiB mounted writer is unchanged.
+
+
+### Explicit client-state composition accepted (2026-10-19)
+
+Source66d78db/schema41/all362 passed the full local gate with all681 inputs
+unchanged and own CI39335223526 Linux/Windows/book all success. Raw/source/API ZIP,
+independent typed21+14/project/all35 raw field/type checks passed. [Contract and
+indexed local/hosted evidence](native-chunk-integration.md). Exactly27 runtime
+paths differ from the accepted357 parent; canonical promotion must preserve all362
+bytes. Typed same-owner namespace/open composition, reciprocal legacy exclusion,
+atomic role/identity/control admission and sparse namespace barriers are library
+features. Cold metadata-only namespace/open recovery, native chunk callbacks,
+[deferred manifest protocol](deferred-manifest-integration.md), owned-unlinked
+publication, retention, real-provider and physical startup acceptance remain.

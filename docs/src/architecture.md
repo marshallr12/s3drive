@@ -37,10 +37,16 @@ keys are separate from the paths shown in the mounted drive.
 [root publication](mixed-root-publication.md) and [clean base epochs](mixed-clean-epochs.md)
 have accepted library-level implementations. Mounted writes still use their older
 whole-generation path; the chunk pipeline is not yet enabled in filesystem
-callbacks. A [clone-sharing guard and cleanup prototype](source-read-guards.md) has passed
-component checks. Managed-reader integration and safe reclamation remain required. The [read-pin diagram](source-read-pins.md) shows the current prototype
-and the proposed driver integration; its component checks do not establish native
-chunk writes or garbage collection.
+callbacks. The [guarded managed-reader integration](managed-reader-guards.md) and
+[canonical empty-manifest creation SDK](empty-manifest-publisher.md) have accepted
+library implementations. [Explicit same-owner client-state composition](native-chunk-integration.md)
+now binds sparse views/creation, namespace and open/session journals in one private
+SQLite owner through a typed capability; its schema41 local and own Linux/Windows
+CI gates passed. The [read-pin diagram](source-read-pins.md) explains the retention
+mechanism. Native callback integration and safe reclamation remain required.
+[Deferred canonical creation and owned-unlinked publication](deferred-manifest-integration.md)
+remain proposals. These library results do not establish native chunk writes or
+physical reboot acceptance.
 
 The existing direct-layout implementation below has native read/cache, explicit
 existing-file writes and [guarded file creation](native-creation.md). It remains

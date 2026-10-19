@@ -149,6 +149,7 @@ fn identity(
         "namespace_removal_events",
     ];
     let local = [
+        "chunk_mount_role",
         "manifest_creation_role",
         "manifest_creations",
         "sparse_scoped_mode",
@@ -1156,7 +1157,11 @@ mod tests {
     }
     #[test]
     fn empty_creation_tables_are_allowed_but_each_nonempty_client_table_refuses_snapshot() {
-        for table in ["manifest_creation_role", "manifest_creations"] {
+        for table in [
+            "manifest_creation_role",
+            "manifest_creations",
+            "chunk_mount_role",
+        ] {
             let tmp = tempfile::tempdir().unwrap();
             let source = tmp.path().join("authority");
             let target = tmp.path().join("snapshot");
@@ -1166,6 +1171,13 @@ mod tests {
             assert_eq!(m.schema_version, SCHEMA_VERSION);
             let db = Connection::open(source.join("metadata.sqlite3")).unwrap();
             match table {
+                "chunk_mount_role" => {
+                    db.execute(
+                        "INSERT INTO chunk_mount_role VALUES(1,x'7b7d',zeroblob(32))",
+                        [],
+                    )
+                    .unwrap();
+                }
                 "manifest_creation_role" => {
                     db.execute(
                         "INSERT INTO manifest_creation_role VALUES(1,1,zeroblob(32))",

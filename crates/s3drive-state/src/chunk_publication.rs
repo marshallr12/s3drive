@@ -122,6 +122,7 @@ fn isolation(db: &Connection) -> Result<()> {
 }
 /// Reciprocal constructor guard; never put this in generic staging validation.
 pub(crate) fn require_legacy(db: &Connection) -> Result<()> {
+    crate::chunk_mount::require_legacy(db)?;
     crate::manifest_creation::require_legacy(db)?;
     crate::sparse_views::require_legacy(db)?;
     let used: bool = db.query_row("SELECT EXISTS(SELECT 1 FROM chunk_client_role) OR EXISTS(SELECT 1 FROM chunk_publications) OR EXISTS(SELECT 1 FROM chunk_source_role) OR EXISTS(SELECT 1 FROM chunk_source_settlements)", [], |r| r.get(0))?;

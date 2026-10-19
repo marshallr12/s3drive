@@ -182,3 +182,18 @@ pub(super) fn adoption_fence(
     }
     Ok(AdoptionFence(meta))
 }
+
+pub(in crate::sparse_views) fn namespace_pending(
+    db: &Connection,
+    volume: &str,
+    node: &str,
+) -> Result<()> {
+    let meta = ledger::inspect(db)?;
+    for r in meta.records.values() {
+        let base = r.input().binding().base()?;
+        if base.volume() == volume && base.node() == node && r.acknowledgment().is_none() {
+            return Err("recover pending sparse publication before namespace mutation".into());
+        }
+    }
+    Ok(())
+}

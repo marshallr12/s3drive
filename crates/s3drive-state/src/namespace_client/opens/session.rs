@@ -45,6 +45,14 @@ pub(super) fn check_schema(db: &Connection) -> Result<()> {
     Ok(())
 }
 pub(super) fn binding(db: &Connection, session: &str, volume: &str) -> Result<String> {
+    if !id(session) || !id(volume) {
+        return Err("invalid mount session binding".into());
+    }
+    let shape:bool=db.query_row("SELECT length(CAST(volume_id AS BLOB))=32 AND length(CAST(runtime_id AS BLOB))=32 AND length(CAST(owner_id AS BLOB))=32 AND length(state_hash)=32 FROM windows_mount_sessions WHERE session_id=?",[session],|r|r.get(0))?;
+    if !shape {
+        return Err("mount session metadata bound failed".into());
+    }
+
     let (v, r, owner, hash): (String,String,String,Vec<u8>) = db.query_row("SELECT volume_id,runtime_id,owner_id,state_hash FROM windows_mount_sessions WHERE session_id=?", [session], |row|Ok((row.get(0)?,row.get(1)?,row.get(2)?,row.get(3)?)))?;
     if !id(session)
         || !id(&r)
@@ -79,6 +87,11 @@ fn proof_for(db: &Connection, input: &Input) -> Result<ActivationProof> {
     })
 }
 fn recovery(db: &Connection, key: &str) -> Result<(RecoveryInput, Option<Proof>)> {
+    let shape:bool=db.query_row("SELECT length(CAST(volume_id AS BLOB))=32 AND length(CAST(node_id AS BLOB))=32 AND typeof(input)='blob' AND length(input) BETWEEN 1 AND 65536 AND (proof IS NULL OR (typeof(proof)='blob' AND length(proof) BETWEEN 1 AND 32768)) AND length(state_hash)=32 FROM windows_session_recoveries WHERE recovery_id=?",[key],|r|r.get(0))?;
+    if !shape {
+        return Err("session recovery metadata bound failed".into());
+    }
+
     let (volume,node,bytes,proof,hash):(String,String,Vec<u8>,Option<Vec<u8>>,Vec<u8>)=db.query_row("SELECT volume_id,node_id,input,proof,state_hash FROM windows_session_recoveries WHERE recovery_id=?",[key],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?)))?;
     let input: RecoveryInput = serde_json::from_slice(&bytes)?;
     let proof: Option<Proof> = proof.map(|b| serde_json::from_slice(&b)).transpose()?;
@@ -191,6 +204,10 @@ pub(super) fn check_index(db: &Connection) -> Result<()> {
 }
 impl Journal<'_> {
     pub fn start_session(&mut self, session: &str, volume: &str) -> Result<()> {
+        self.chunk_check()?;
+        if let Some(key) = &self.chunk {
+            crate::chunk_mount::verify_key(&self.state.connection, key)?.volume(volume)?;
+        }
         if !id(session) || !id(volume) {
             return Err("invalid mount session identity".into());
         }
@@ -200,6 +217,9 @@ impl Journal<'_> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        if let Some(key) = &self.chunk {
+            crate::chunk_mount::verify_key(&tx, key)?;
+        }
         let exists: bool = tx.query_row(
             "SELECT EXISTS(SELECT 1 FROM windows_mount_sessions WHERE session_id=?)",
             [session],
@@ -224,6 +244,10 @@ impl Journal<'_> {
         Ok(())
     }
     pub fn current_session(&self, session: &str, volume: &str) -> Result<()> {
+        self.chunk_check()?;
+        if let Some(key) = &self.chunk {
+            crate::chunk_mount::verify_key(&self.state.connection, key)?.volume(volume)?;
+        }
         current(
             &self.state.connection,
             &runtime(self.state)?,
@@ -232,9 +256,17 @@ impl Journal<'_> {
         )
     }
     pub fn obsolete_session(&self, session: &str, volume: &str) -> Result<bool> {
+        self.chunk_check()?;
+        if let Some(key) = &self.chunk {
+            crate::chunk_mount::verify_key(&self.state.connection, key)?.volume(volume)?;
+        }
         Ok(binding(&self.state.connection, session, volume)? != runtime(self.state)?)
     }
     pub fn pending_recovery(&self, volume: &str, node: &str) -> Result<Option<RecoveryRecord>> {
+        self.chunk_check()?;
+        if let Some(key) = &self.chunk {
+            crate::chunk_mount::verify_key(&self.state.connection, key)?.volume(volume)?;
+        }
         let key:Option<String>=self.state.connection.query_row("SELECT recovery_id FROM windows_session_recoveries WHERE volume_id=?1 AND node_id=?2 AND proof IS NULL",params![volume,node],|r|r.get(0)).optional()?;
         key.map(|k| {
             let (input, proof) = recovery(&self.state.connection, &k)?;
@@ -246,6 +278,7 @@ impl Journal<'_> {
         .transpose()
     }
     pub fn recovered(&self, key: &str) -> Result<bool> {
+        self.chunk_check()?;
         let (row, record) = load(&self.state.connection, key)?.ok_or("open missing")?;
         closed(&self.state.connection, &row, &record)
     }
@@ -256,6 +289,10 @@ impl Journal<'_> {
         node: &str,
         cancel: Option<Input>,
     ) -> Result<RecoveryRecord> {
+        self.chunk_check()?;
+        if let Some(key) = &self.chunk {
+            crate::chunk_mount::verify_key(&self.state.connection, key)?.volume(volume)?;
+        }
         self.current_session(session, volume)?;
         if self.pending_recovery(volume, node)?.is_some() {
             return Err("resume original session recovery request".into());
@@ -265,6 +302,9 @@ impl Journal<'_> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        if let Some(key) = &self.chunk {
+            crate::chunk_mount::verify_key(&tx, key)?;
+        }
         let records = all(&tx)?
             .into_iter()
             .filter(|(_, r)| r.input.volume == volume && r.input.node == node)
@@ -366,11 +406,15 @@ impl Journal<'_> {
         })
     }
     pub fn finish_recovery(&mut self, session: &str, key: &str) -> Result<RecoveryRecord> {
+        self.chunk_check()?;
         let runtime = runtime(self.state)?;
         let tx = self
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        if let Some(key) = &self.chunk {
+            crate::chunk_mount::verify_key(&tx, key)?;
+        }
         let (input, old) = recovery(&tx, key)?;
         current(&tx, &runtime, session, &input.volume)?;
         if old.is_some() {
@@ -421,4 +465,35 @@ impl Journal<'_> {
             finished: true,
         })
     }
+}
+
+pub(super) fn chunk_scope(db: &Connection, b: &crate::chunk_mount::Binding) -> Result<()> {
+    let bad:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM windows_mount_sessions WHERE length(CAST(session_id AS BLOB))!=32 OR length(CAST(volume_id AS BLOB))!=32 OR length(CAST(owner_id AS BLOB))!=32 OR length(CAST(runtime_id AS BLOB))!=32 OR length(state_hash)!=32) OR EXISTS(SELECT 1 FROM windows_session_recoveries WHERE length(CAST(recovery_id AS BLOB))!=32 OR length(CAST(volume_id AS BLOB))!=32 OR length(CAST(node_id AS BLOB))!=32 OR typeof(input)!='blob' OR length(input) NOT BETWEEN 1 AND 65536 OR (proof IS NOT NULL AND (typeof(proof)!='blob' OR length(proof) NOT BETWEEN 1 AND 32768)) OR length(state_hash)!=32)",[],|r|r.get(0))?;
+    if bad {
+        return Err("chunk session metadata bound failed".into());
+    }
+    let mut q = db.prepare("SELECT session_id,volume_id,owner_id FROM windows_mount_sessions")?;
+    for row in q.query_map([], |r| {
+        Ok((
+            r.get::<_, String>(0)?,
+            r.get::<_, String>(1)?,
+            r.get::<_, String>(2)?,
+        ))
+    })? {
+        let (session, volume, owner) = row?;
+        b.volume(&volume)?;
+        if owner != b.owner {
+            return Err("chunk session owner changed".into());
+        }
+        binding(db, &session, &volume)?;
+    }
+    let mut q = db.prepare("SELECT recovery_id FROM windows_session_recoveries")?;
+    for row in q.query_map([], |r| r.get::<_, String>(0))? {
+        let (input, _) = recovery(db, &row?)?;
+        b.volume(&input.volume)?;
+        if let Some(cancel) = input.cancel {
+            b.namespace(&cancel)?;
+        }
+    }
+    Ok(())
 }

@@ -15,7 +15,9 @@ pub use adoption::{Adoption, ObservationStart};
 mod guards;
 pub mod pins;
 pub use guards::ReadGuard;
+mod composition;
 pub mod scoped;
+pub(crate) use composition::{chunk_scope, namespace_guard};
 pub use scoped::Operation as ScopedOperation;
 mod mutations;
 pub mod preparation;
@@ -167,7 +169,11 @@ fn role_hash() -> Result<Id> {
     hash(b"s3drive-sparse-role-v1\0", &1u8)
 }
 fn isolation(db: &Connection) -> Result<()> {
+    let combined = crate::chunk_mount::compatible(db)?;
     for table in EXCLUDED {
+        if combined && crate::chunk_mount::CLIENT_TABLES.contains(table) {
+            continue;
+        }
         if db.query_row(&format!("SELECT EXISTS(SELECT 1 FROM {table})"), [], |r| {
             r.get::<_, bool>(0)
         })? {
