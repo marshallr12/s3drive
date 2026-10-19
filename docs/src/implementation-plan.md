@@ -3100,3 +3100,14 @@ semantic-check ledger and publisher/recovery controller are proposals, not
 implemented behavior. W4a304-input runtime remains frozen in its separate
 worktree pending its own complete hosted cohort. No native activation or local
 clean transition is authorized by a physical upload receipt.
+
+
+W4a accepted,2026-10-19: runtime3fd2a87/schema32/all304 frozen inputs. Own
+39235506209 attempt1 book/Linux/Windows SUCCESS; full raw/source/own API ZIP/
+independent typed21+14/project/all35 raw-field/type checks passed. Own84-member
+archive342113bytes SHAccafd84462a1d08c6814d5ef164811b668a94721a69b0e0d46bbe64ba2420e81.
+Linux412state/Windows407state,37core/22reader/62S3/18publication cases and real
+legacy/manifests/paired sessions passed. See [mixed dependency uploads](mixed-uploads.md)
+for scope, warnings, exact evidence and retained failures. Physical mixed upload
+completion is accepted; W4b root CAS, W5 settlement, origins and W6 mounted chunk
+writes remain. No new Wasabi or physical workstation session acceptance follows.

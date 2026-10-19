@@ -1,7 +1,7 @@
 {
   "date": "2026-10-19",
   "phase": "W4a mixed dependency uploads",
-  "status": "W4a final local gate passed; own Linux/Windows/book/native/source cohort pending",
+  "status": "W4a accepted: final local and own Linux/Windows/book/native/source cohort passed",
   "branch": "codex/mixed-uploads",
   "baseline": "dd9147fc3e0814451dc2656e2bde44d70045852d",
   "schema": 32,
@@ -134,9 +134,7 @@
     "review_png": "/tmp/s3drive-mixed-uploads-diagram-review.png",
     "status": "final SVG rendered and visually reviewed; labels/arrows clear"
   },
-  "remaining_acceptance": [
-    "own Linux/Windows/book/native exact-source cohort"
-  ],
+  "remaining_acceptance": [],
   "parent_cohort": {
     "run_id": 39225921755,
     "status": "all3 accepted; canonical main pushed",
@@ -281,5 +279,101 @@
     },
     "one_use_checkers": "prepared; not executed",
     "all304_working_and_committed_exact": true
+  },
+  "hosted_acceptance": {
+    "source": "3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2",
+    "run_id": 39235506209,
+    "attempt": 1,
+    "all_three_jobs": "success",
+    "jobs": {
+      "linux": 118003478261,
+      "windows": 118003478615,
+      "book": 118003478841
+    },
+    "watch_result": {
+      "source": "3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2",
+      "run_id": 39235506209,
+      "run_attempt": 1,
+      "runner_pid": 264673,
+      "runner_start_ticks": "141126326",
+      "child_pid": 264674,
+      "child_start_ticks": "141126334",
+      "log": "/tmp/s3drive-mixed-uploads-hosted-watch.log",
+      "started": "2026-10-19T10:10:59.812129+00:00",
+      "observer_exit_code": 0,
+      "finished": "2026-10-19T10:39:24.052143+00:00",
+      "observed_run": {
+        "id": 39235506209,
+        "head_sha": "3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2",
+        "run_attempt": 1,
+        "status": "completed",
+        "conclusion": "success"
+      },
+      "identity_matches": true
+    },
+    "checker_session": 4648,
+    "checker_exit": 0,
+    "raw_comparison_exit": 0,
+    "archive": {
+      "path": "evidence/mixed-uploads-hosted-20261019.tar.gz",
+      "sha256": "ccafd84462a1d08c6814d5ef164811b668a94721a69b0e0d46bbe64ba2420e81",
+      "bytes": 342113,
+      "members": 84,
+      "all_indexed_members_verified": true,
+      "source": "3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2",
+      "run_id": 39235506209,
+      "run_attempt": 1,
+      "independent_typed_records": {
+        "replacement": 21,
+        "disposition": 14
+      },
+      "all_raw_fields_and_types_equal": true
+    },
+    "artifacts": [
+      {
+        "kind": "disposition",
+        "id": 12179218793,
+        "source": "3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2",
+        "run_id": 39235506209,
+        "run_attempt": 1,
+        "windows_job": 118003478615,
+        "zip_sha256": "1bd4acbf4c241f758d0230c4561a66c198ca718cecaeae34e496b6c20a017453",
+        "json_sha256": "e60ff07f7264de4b079047fcd40503a770f9d8cc6b0456c5f3be4dc125cdd05d",
+        "primary_artifact_reused": false
+      },
+      {
+        "kind": "replacement",
+        "id": 12179067044,
+        "source": "3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2",
+        "run_id": 39235506209,
+        "run_attempt": 1,
+        "windows_job": 118003478615,
+        "zip_sha256": "a441d26b2aa79d7fa8db902ddef32a69d98f10ea9dc923426c19804b4f88cb93",
+        "json_sha256": "22deddeac2695f9c80526f4c438d8b4d98bd255d2f117f5e417b1736bd139cb0",
+        "primary_artifact_reused": false
+      }
+    ],
+    "all304_working_and_committed_inputs_exact": true,
+    "native_regression": {
+      "linux_legacy_fuse_tests": 9,
+      "linux_legacy_seconds": 77.42,
+      "linux_manifest_seconds": 1.65,
+      "linux_paired_no_systemd_seconds": 24.28,
+      "windows_legacy_winfsp_tests": 7,
+      "windows_legacy_seconds": 91.84,
+      "windows_manifest_seconds": 2.47,
+      "windows_paired_managed_seconds": 79.73
+    },
+    "runners": {
+      "linux": "Ubuntu24.04 image20261012.334.1",
+      "windows": "Windows Server2025 windows-2025-vs2026 image20261007.264.1"
+    },
+    "warnings": "Tooling notices; two unused WinFsp delay-import groups; three locked disposable profiles with dummy secrets removed and final deletion by VM destruction. Slow tests all completed. Raw review helper first assumed immediate completion after an interleaved21-record block; corrected before one-use checker, no CI rerun.",
+    "independent_typed_records": {
+      "replacement": 21,
+      "disposition": 14
+    },
+    "all_raw_fields_and_types_equal": true,
+    "visibility_policy": "read-only identity and visibility; public preserved"
   }
 }

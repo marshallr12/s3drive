@@ -1,11 +1,11 @@
 # Mixed dependency uploads
 
-Implementation in progress, **2026-10-19**, isolated `codex/mixed-uploads`.
-This draft builds on durable mixed preparation. It does not reserve or publish an
+Accepted physical-upload phase, **2026-10-19**, source `3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2`.
+This implementation builds on durable mixed preparation. It does not reserve or publish an
 authority root, settle an edit view, reclaim local bytes or activate native writes.
-Its full local and own platform acceptance have not passed.
+Its full local and own Linux/Windows/book acceptance passed.
 
-![Draft Rust upload controller, private SQLite worker and remote-attempt journal, Rust S3 client, immutable S3 objects and shared Rust authority. Root content-CAS and local settlement remain separate later phases.](images/mixed-uploads.svg)
+![Rust upload controller, private SQLite worker and remote-attempt journal, Rust S3 client, immutable S3 objects and shared Rust authority. Root content-CAS and local settlement remain separate later phases.](images/mixed-uploads.svg)
 
 The state handoff derives an exact staging operation from the frozen plan, root
 and object bytes. It uses the existing physical staging journal on the same
@@ -116,8 +116,8 @@ remained unacknowledged. A racing-creator test passed in1.23seconds: conditional
 PUT412 preserved the rival object, rejected operation and local bytes across
 worker restart; neither a parent nor an unconditional replacement was sent.
 
-These focused results cover the new source, but a new full local gate and own
-Linux/Windows/book/native cohort are still required. The earlier303-input full
+These focused results required a new full local gate and own
+Linux/Windows/book/native cohort, which subsequently passed as recorded below. The earlier303-input full
 local archive does not cover the added recovery API, controls or fixture gates.
 W4b root CAS, W5 exact-view settlement/retention and W6 native writes remain.
 
@@ -136,9 +136,40 @@ The [final local source/evidence archive](evidence/mixed-uploads-final-local-202
 contains324 verified members, including every304 runtime input, current focused
 and full logs, the failed Clippy source/map and preliminary evidence. Its SHA-256
 is `27fd5c537e227ca1e401140a42970755592b23f5474de86ba0a34617b3cfca53`.
-Own Linux/Windows/book/native acceptance remains pending. This is physical upload
+Own Linux/Windows/book/native acceptance subsequently passed, as recorded below. This is physical upload
 completion and recovery, not an authority root commit or local clean settlement.
 
 Exact source `3fd2a87f5d7a999218565e70a3bf9f2efaf14fd2` is published for its
 [own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39235506209).
-Acceptance is pending. No predecessor's artifacts stand in for these gates.
+All three jobs passed on attempt1; no predecessor's artifacts stand in for these gates.
+
+
+## Own hosted acceptance
+
+Run39235506209 attempt1 passed book118003478841, Linux118003478261 and
+Windows118003478615. All304 working and committed runtime/contract hashes matched
+the final local gate. The owned observer exited0. Full raw outcomes, exact source,
+own API ZIP digests, independent typed21/14 records, project oracles and every
+field/type of all35 raw reference records passed. The first raw-review helper
+incorrectly expected immediate `ok` after a reference record; the replacement
+test emits21 records before completion. Corrected the helper before acceptance;
+no checker or CI rerun was needed. One-use checking and archival are complete.
+
+Linux passed412state tests and Windows407state tests (one ignored each), plus
+37core,22reader (one native test ignored),62S3 and18publication cases. Actual
+legacy FUSE9/77.42s and WinFsp7/91.84s, manifest remount1.65s/2.47s and paired
+no-systemd24.28s/Windows managed independent-logon79.73s checks passed. These are
+regressions for the existing native paths, not native edited-chunk write tests
+or performance commitments. Runners were Ubuntu24.04 image20261012.334.1 and
+Windows Server2025 `windows-2025-vs2026` image20261007.264.1. Tooling notices, two
+unused delay-import warning groups and three locked disposable profile warnings
+are retained; dummy credentials were removed and final profile deletion relies
+on VM destruction. All reported long-running tests completed successfully.
+
+The [own hosted evidence archive](evidence/mixed-uploads-hosted-20261019.tar.gz)
+contains84 verified indexed members,342113bytes, SHA-256
+`ccafd84462a1d08c6814d5ef164811b668a94721a69b0e0d46bbe64ba2420e81`.
+Own replacement/disposition artifact IDs are12179067044/12179218793.
+W4b root publication, W5 exact-view settlement/retention, legacy/empty origins
+and W6 mounted chunk writes remain. Wasabi and physical session/reboot gates
+remain separate; this phase makes no new provider mutation or physical mount claim.
