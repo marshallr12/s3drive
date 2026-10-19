@@ -142,3 +142,19 @@ the published local view and handle retention/reclamation; W6 still must wire an
 verify native chunk writes, truncate, append and flush. Legacy/metadata-empty
 origins, provider conformance and physical session/reboot acceptance remain
 separate requirements for the complete drive goal.
+
+
+## Verifier successor checkpoint
+
+The separate `codex/mixed-publication` branch implements the W4b1 offline
+`check_data` prerequisite. It verifies each actual prepared Data candidate
+against the immutable view, complete original chunk digest/length and bounded
+ancestry, local patches and zeros. It returns no durable token, root commit or
+clean acknowledgment; the frozen root still requires independent authority
+authentication. Five focused cases and the full local gate passed on306 unchanged
+inputs (417state tests, one ignored). The exact source
+`5112fd25452d0a262ed380c688e45b39d28c4370` is running its
+[own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39239546495).
+See the [feature-branch implementation and evidence](https://github.com/marshallr12/s3drive/blob/codex/mixed-publication/docs/src/mixed-root-publication.md).
+Main remains accepted W4a; neither W4b1 platform acceptance nor W4b root
+publication is claimed.

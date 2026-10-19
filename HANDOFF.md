@@ -51,27 +51,36 @@ complete historical mixed receipt, observation-only independent process recovery
 Unicode/empty/partial/zero/forged/unread-tail/concurrent/cancel/rival controls.
 This is not root CAS, clean settlement, native chunk writes, Wasabi or physical
 reboot/sign-in/SSH/tmux acceptance. Goal ACTIVE/progress. Next W4b1 verifier source
-dbdfd61 in /home/marshall/src/worktrees/s3drive-mixed-publication has5 focused tests
-passed and an owned full local gate1 live on306 inputs; confirm PID/result before
-continuing. W4b2 journal/controller, W5, origins and W6 remain.
+5112fd2 in /home/marshall/src/worktrees/s3drive-mixed-publication passed5 focused
+tests and the full local gate on306 inputs; own hosted acceptance is pending. W4b2 journal/controller, W5, origins and W6 remain.
 
-## W4b publication design checkpoint (2026-10-19)
+## Current W4b1 verifier successor — own cohort pending (2026-10-19)
 
-User reaffirmed chunks/manifests D041. New docs/src/mixed-root-publication.md
-and rendered/visually-reviewed SVG specify exact-view semantic coverage,
-content-guarded ReserveManifest/Publish and restricted metadata-only replay after
-unknown replies. All W4b runtime/schema33 details remain PROPOSED. Design branch
-codex/mixed-publication80c56fd, worktree /home/marshall/src/worktrees/s3drive-mixed-publication.
-First main link check caught absent feature-only mixed-uploads.md; retained
-failed log and changed that reference to the feature-branch page. Second link
-check (77 Markdown files), build and73 chapter tests passed; logs at
-/tmp/s3drive-main-mixed-root-design-{links2,book2,book-test2}.log.
-This main update promotes docs
-only; all300 accepted W3b runtime/contract inputs remain unchanged. Own W4a run
-39235506209: Linux/book SUCCESS, Windows still in cargo test at10:27Z. Keep
-W4a's304 inputs frozen, finish own raw/source/artifact/native acceptance before
-promoting that runtime. Next implement W4b against accepted source, then W5/W6.
-No new provider writes, chunk-native activation or physical reboot claim.
+Exact source5112fd25452d0a262ed380c688e45b39d28c4370, codex/mixed-publication,
+worktree /home/marshall/src/worktrees/s3drive-mixed-publication. New bounded
+preparation check_data API compares actual Data candidates with immutable view
+ranges and full original witness/bytes; no durable seal, authority authentication,
+root request/commit or clean receipt. Schema32 unchanged. Main remains accepted
+W4a/runtime3fd2a87/all304; this pointer does not promote verifier runtime.
+
+Five focused tests passed after one refusal-path classification correction;
+failed expanded-test sources/log retained. Full local gate1 runner271909 CLOSED0
+on306 unchanged inputs:417state1ignored/37core/22reader1nativeignored/62S3/
+18publication, format/Clippy/build/78Markdown/74chapters. Indexed321-member local
+archive951994bytes SHA7b6927a0a5a45e814cd08563d8011de079646d7254f5b7f6a80840da645e5de7.
+Own39239546495 attempt1 in progress: Linux118016754543/Windows118016754819/
+book118016754945. Owned observer326311/child326313 confirmed live; metadata and
+actual log/result /tmp/s3drive-mixed-semantics-hosted-watch-*. Keep306 frozen.
+Four one-use own acceptance scripts prepared, NOT executed. First resume: get
+API state, then full raw/source/own API ZIP/typed21+14/project/all35 raw-field/type
+acceptance and archive only after all3 terminal success. No parent artifact reuse.
+
+Full dated findings, source/evidence and local gate in the successor worktree's
+HANDOFF/plan/mixed-root-publication.md. Root design diagram is in main. Initial
+main link check failure (feature-only page absent) was fixed before publication;
+failed/corrected logs retained in /tmp/s3drive-main-mixed-root-design-*.
+W4b2 exact root journal/controller/recovery, W5 settlement, origins and W6 remain.
+Provider and physical session/reboot acceptance remain separate. Goal ACTIVE.
 
 ## Historical W4a local/publication checkpoints — superseded by acceptance above (2026-10-19)
 

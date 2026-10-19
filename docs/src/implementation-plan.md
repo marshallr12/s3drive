@@ -3111,3 +3111,12 @@ legacy/manifests/paired sessions passed. See [mixed dependency uploads](mixed-up
 for scope, warnings, exact evidence and retained failures. Physical mixed upload
 completion is accepted; W4b root CAS, W5 settlement, origins and W6 mounted chunk
 writes remain. No new Wasabi or physical workstation session acceptance follows.
+
+
+W4b1 successor published,2026-10-19: source5112fd2 in codex/mixed-publication
+passed full local gate1 on306 unchanged inputs (417state1ignored,37core,22reader
+1nativeignored,62S3,18publication cases, formatting/Clippy/build/docs). Five new
+offline semantic-check cases cover complete original tails, false data/holes,
+local/zero/growth/ancestry and worker restart without mutation. Own39239546495
+Linux/Windows/book/native/source acceptance is pending; main remains accepted
+W4a. W4b2 durable root journal/controller/recovery is still required.
