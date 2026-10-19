@@ -251,9 +251,24 @@ correctly rejected; production validation was preserved.
 
 Seven focused real-SDK/authority reader controls passed in 5.54 seconds,
 including root reuse, a 64 GiB sparse metadata tree, cross-kind/base refusal,
-cancellation, shared admission and deadline recovery. The full local gate passed with all260 frozen runtime inputs unchanged; [dated evidence](evidence/manifest-page-proofs-20261018.json)
-retains both initial failures and the corrected focused result. The [indexed16-member local archive](evidence/manifest-page-proofs-local-20261018.tar.gz)
-retains both initial failures, the passing focused/full runs and exact helper/test
-source. Every indexed member was verified. This checkout has no own hosted acceptance. Historical base
-reopening, sparse SQLite edit views, mixed inherited/new-object publication,
+cancellation, shared admission and deadline recovery. The independent full local
+gate passed with all260 frozen runtime inputs unchanged. The
+[dated evidence](evidence/manifest-page-proofs-20261018.json) and
+[indexed16-member local archive](evidence/manifest-page-proofs-local-20261018.tar.gz)
+retain both initial failures, the passing focused/full runs and exact helper/test
+source. Every indexed member was verified. This checkout has no own hosted
+acceptance. Historical base reopening, sparse SQLite edit views, mixed publication,
 exact-view settlement and native chunk writes remain separate work.
+
+Combined source `bf2e6ae` includes accepted snapshot/proof checkpoint `da84d3a`.
+Its fresh full local gate passed with all261 frozen inputs unchanged, nine
+reader/format controls (one native ignored),12 publication controls,62 S3 tests,
+365 state tests/one ignored and formatting/Clippy/build/book checks. The
+[indexed19-member combined local archive](evidence/manifest-page-proofs-combined-local-20261018.tar.gz)
+retains the complete gate, frozen inputs and exact combined helper/native source;
+every indexed member was verified. Its own hosted/native acceptance is pending.
+
+The published candidate now runs its
+[own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39187701991).
+It must complete with raw-log and source-bound artifact review before acceptance;
+local results and earlier native artifacts do not substitute.

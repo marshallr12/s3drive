@@ -27,6 +27,25 @@ include main's policy commit; the c7fca789 feature lineage includes that rule.
 
 ## Current W1b page-proof foundation (2026-10-18)
 
+Combined local candidate bf2e6aed16d32c62e094082a50769141f8f90ef6 now includes
+accepted da84d3a, with both native/pages modules and both evidence histories.
+Fresh full gate68162 CLOSED EXIT0, /tmp/s3drive-page-proofs-combined-gate.log,
+frozen261 /tmp/s3drive-page-proofs-combined-frozen.json, all unchanged.
+9reader/format1nativeignored,12publication,62S3,365state1ignored,fmt/clippy/build/book.
+Indexed19-member combined local archive100784bytes SHA
+333f2722f4672361a9bcf2304fb92061df42813c001bcebfe4066facd8b7cb8e.
+Runtime stays frozen.
+Own run39187701991 attempt1 LIVE: Linux117853515918,Windows117853515627,
+book117853515963. Watch7139 -> /tmp/s3drive-page-proofs-bf2-watch.log.
+Continue same handle/cohort; do not restart on observation timeout. Need own
+all3 terminal/raw reviewed, both real native steps and own artifact API ZIP
+digests, typed21+14/project oracles/all35 raw fields+types. Earlier source
+artifacts cannot accept W1b. Prepared NOT EXECUTED:
+/tmp/s3drive-check-page-proofs-bf2.py,
+/tmp/s3drive-page-proofs-bf2-reference-check.ps1,
+/tmp/s3drive-page-proofs-bf2-raw-compare.py,/tmp/s3drive-page-proofs-bf2-archive.py.
+No raw-review marker or own artifacts directory yet. No new Wasabi mutations.
+
 Isolated /home/marshall/src/worktrees/s3drive-manifest-page-proofs,
 branch codex/manifest-page-proofs from local-green W1a ed2e93b (not hosted-
 accepted separately). Combined candidate8c3448f is accepted in its own checkout at da84d3a;

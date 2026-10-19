@@ -2228,3 +2228,16 @@ unchanged;7reader,12publication,62S3,365state/1ignored,fmt/clippy/build/book.
 Indexed16-member local archive verified. Combine accepted snapshot/proof
 checkpoint da84d3a (runtime8c3448f, own all3/native/raw/typed21+14/raw35 passed),
 then require a fresh exact combined gate and own hosted cohort.
+
+Combined W1b candidate bf2e6ae includes accepted snapshot/proof checkpoint
+da84d3a. Its own full gate68162 passed with261 unchanged frozen runtime inputs,
+9reader/format1nativeignored,12publication,62S3,365state1ignored and all book/build
+checks. The indexed19-member combined local archive is verified;
+independent3890584 local evidence alone does not accept the combined source.
+Own hosted Linux/Windows/book native and artifact acceptance is still required.
+
+Candidatebf2e6ae is published on codex/manifest-page-proofs. Its
+[own Linux/Windows/book run](https://github.com/marshallr12/s3drive/actions/runs/39187701991)
+is in progress with the actual native checks retained. Frozen261 runtime hashes
+match the tested local source. Own source-bound raw/artifact acceptance remains
+pending; accepted8c3448f artifacts cannot certify this new helper.

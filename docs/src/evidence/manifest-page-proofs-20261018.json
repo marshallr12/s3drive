@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "W1b full independent local gate passed; combine accepted8c3448f before own hosted acceptance",
+  "status": "independent and combined full local gates passed; own combined hosted acceptance pending",
   "branch": "codex/manifest-page-proofs",
   "base": "ed2e93b973ea3099ba5906261d3e8360cebf0184",
   "scope": "page reachability helper; no uploads, receipts, historical reopen, schema, authority wire or native activation",
@@ -92,5 +92,83 @@
     "members": 16,
     "all_indexed_members_verified": true,
     "scope": "W1b portable local only"
+  },
+  "combined_gate": {
+    "source": "bf2e6aed16d32c62e094082a50769141f8f90ef6",
+    "exit_code": 0,
+    "session": 68162,
+    "log": "/tmp/s3drive-page-proofs-combined-gate.log",
+    "log_sha256": "f69f09b123eeb24e48213384f3365cb6589972d001730c9ba9fe7707bd1e1231",
+    "frozen_count": 261,
+    "frozen_map_sha256": "0dc7dba7a6e6c75f74fa8039c6ca269f26af4feedca267e43404db36b5d46c3f",
+    "all_frozen_inputs_unchanged": true,
+    "environment": {
+      "RUST_TEST_THREADS": "2",
+      "tty": true
+    },
+    "test_summaries": [
+      "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.54s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.28s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.46s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.29s",
+      "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.75s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 14.70s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s",
+      "test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 69.11s",
+      "test result: ok. 9 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 10.13s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.47s",
+      "test result: ok. 2 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 9.20s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.89s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.44s",
+      "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 34.72s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.50s",
+      "test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s",
+      "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.07s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 24.66s",
+      "test result: ok. 365 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 260.76s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ],
+    "scope": "W1b combined with accepted8c3448f native snapshots; portable local only, own hosted acceptance pending"
+  },
+  "combined_archive": {
+    "path": "evidence/manifest-page-proofs-combined-local-20261018.tar.gz",
+    "sha256": "333f2722f4672361a9bcf2304fb92061df42813c001bcebfe4066facd8b7cb8e",
+    "bytes": 100784,
+    "members": 19,
+    "all_indexed_members_verified": true,
+    "scope": "W1b portable local only"
+  },
+  "publication": {
+    "source": "bf2e6aed16d32c62e094082a50769141f8f90ef6",
+    "branch": "codex/manifest-page-proofs",
+    "run_id": 39187701991,
+    "run_attempt": 1,
+    "jobs": {
+      "linux": 117853515918,
+      "windows": 117853515627,
+      "book": 117853515963
+    },
+    "watch_session": 7139,
+    "watch_log": "/tmp/s3drive-page-proofs-bf2-watch.log",
+    "frozen_inputs": 261,
+    "frozen_map": "/tmp/s3drive-page-proofs-combined-frozen.json",
+    "acceptance": "pending own all3/native/raw review and own strict artifacts"
   }
 }
