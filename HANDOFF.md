@@ -71,8 +71,12 @@ Successor worktree /home/marshall/src/worktrees/s3drive-mixed-uploads,
 codex/mixed-uploads fromdd9147f. Draft exact physical mapping/dependency uploader
 uses generic staging on the same worker. SDK1 passed113.48s, revised walk73.02s;
 four state controls passed1.71s including quota/actual SQLite-full/same-ID resume.
-Current full gate86906 LIVE at /tmp/s3drive-mixed-uploads-gate1.log on frozen303
-inputs. Preserve runtime while live. Independent observation-only restart recovery
+First full gate86906 ended143 during the state suite without a final result;
+no gate processes remained and all303 inputs stayed exact. Owned gate2 runner
+157304/child157310 are live; metadata /tmp/s3drive-mixed-uploads-gate2-running.json,
+log /tmp/s3drive-mixed-uploads-gate2.log, final actual exit will be in
+/tmp/s3drive-mixed-uploads-gate2-result.json. Preserve runtime while live. The
+worktree HANDOFF is authoritative for current W4a state. Independent observation-only restart recovery
 without authenticated Preparation reopen is a known remaining W4a acceptance gap;
 see its HANDOFF and plan. Do not promote or call W4a accepted from these results.
 
