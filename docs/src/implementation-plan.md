@@ -3512,3 +3512,26 @@ Exactly18 runtime deltas promoted; canonical main matches accepted349. Actual
 FUSE/WinFsp, manifest remount and paired startup regressions passed. This completes
 codec/atomic metadata creation; authenticated root upload, client intent recovery,
 typed native state composition and actual mounted chunk creation/writes remain.
+
+
+### Durable empty-create intent candidate (2026-10-19)
+
+[Isolated local journal](empty-manifest-publisher.md), schema40, adds exact
+creation/generation/physical-proof/request/receipt retention on the existing
+private owner.14 focused cases passed1.17s, including eight actual killed owners,
+SQLITE_FULL, lost worker reply, dirty sparse coexistence and malformed membership.
+35 migration cases passed37.04s. Complete local and own hosted gates remain
+required; network/native integration is not activated. Canonical main remains
+accepted source29eb237/schema39/all349.
+
+
+### Empty-create client snapshot compatibility repair (2026-10-19)
+
+Initial source0ec7cfd full gate failed an actual snapshot regression: the snapshot
+allowlist did not recognize the new empty client tables. Linux failed the same
+CLI case; Windows failed at profile cleanup with obscured primary cause. Retained
+failed source/logs are indexed in the [candidate record](empty-manifest-publisher.md).
+Repairbb17161 permits only the two known empty tables and adds nonempty-role
+refusal controls. CLI snapshots2 passed0.24s, snapshot library10 passed1.43s,
+workspace Clippy9.40s. Frozen354-input source now runs new local gate2 and own
+CI39313836156. These gates remain required before promotion.

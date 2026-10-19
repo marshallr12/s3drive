@@ -141,16 +141,70 @@ All one-use acceptance tools DONE; never rerun. Main now matches accepted349.
 [Candidate contract and diagram](docs/src/atomic-empty-manifest-create.md).
 No S3 upload or native creation enabled. Authenticated publisher remains next.
 
-Prepared next worktree /home/marshall/src/worktrees/s3drive-empty-manifest-intent,
-branchcodex/empty-manifest-intent, runtime base29eb237/all349 exact. Documentation
-only is uncommitted there: refreshed HANDOFF/implementation-plan and a declared
-first durable client-journal boundary appended to empty-manifest-publisher.md.
-No implementation or local Cargo started there. Keep this separate from the
-accepted frozen349 candidate. [Integration proposal](docs/src/empty-manifest-publisher.md).
-Next: implement bounded schema40 creation intent on existing Storage owner with
-exact generation/verified-proof/request/receipt recovery, then real SDK/authority
-publisher and typed source/namespace/open composition into native callbacks.
-Do not widen legacy namespace roles or enable native writes prematurely.
+Active worktree /home/marshall/src/worktrees/s3drive-empty-manifest-intent,
+branchcodex/empty-manifest-intent, based on accepted29eb237/all349. Isolated
+schema40 local creation journal implementation; currently354 runtime inputs
+(new040.sql, manifest_creation.rs/input.rs/journal_impl.rs/journal_impl/tests.rs).
+Existing Storage owner gains manifest_creations; exact Input/staging-key/generation/
+verified-proof/request/receipt membership is retained. Bounded record-growth slots,
+source/old-role isolation, same-owner dirty sparse coexistence, metadata replay
+without reading staged bodies and no network/native capability. Parent accepted
+local/hosted/failed-context archives copied into this branch's documentation.
+
+Focused14 passed1.17s; eight actual killed-owner boundaries, actual SQLITE_FULL,
+lost committed worker reply, real authority receipt, corrupted staged-body replay,
+bounded corruption, sparse coexistence and old/future marker refusal. Existing35
+migration cases passed37.04s. Initial all-target check1 failedE0624/E0277; check2
+passed30.27s before later tests/fixtures. State1 test compile failedE0061 with unused
+import; repaired before six passing cases. Further focused6/10/12/13/14 contexts
+retained. First all-target Clippy failed two collapsible_if diagnostics; repaired
+with let chains. Clippy2 session7923 CLOSED0, workspace all-target -Dwarnings32.25s.
+No concurrent Cargo; common target /home/marshall/src/s3drive/target.
+
+Logs /tmp/s3drive-empty-intent-{check1,check2,state1,state2,state3,state4,state5,
+state6,migrations1,clippy1,clippy2}.log. Exact retained source maps/tars forcheck1
+(353inputs) andstate1/2/3/4/5/6 (354inputs). Reusable snapshot helper:
+/tmp/s3drive-empty-intent-snapshot.py. All preceding owned focused/check/Clippy runs are terminal; verify actual owned
+process/session/results before next Cargo.
+First frozen/pushed source0ec7cfd600aeaba0b445f6b3842c7386a200dfdd/all354 failed
+full local gate1, runner1420230/child1420234 CLOSED101 at19:39:01Z unchanged.
+CLI snapshot round-trip Snapshot(Validation); missing two new empty tables from
+fixed snapshot allowlist. Own CI39312392108: book118265053149 success,
+Linux118265053615 same snapshot failure; Windows118265053602 failed earlier at
+locked-profile cleanup in coordinator-supervision77.91s, primary cause obscured.
+Observer1429329 CLOSED0/all_success=false19:41:46Z. Full raw logs retained.
+Indexed13-member failed archive SHA36ca0c7555201edc2cff0949e2c81337eafe9ca19775b2702e0dcf9ac48cec83.
+One-use failed archive99420 DONE, never rerun. Candidate1 acceptance tools prepared
+but NEVER executed; they cannot accept a later source.
+
+Repair adds only the two known tables to the snapshot local allowlist; requires
+both empty, keeps unknown/view/nonempty rejection and64-table bound. New snapshot
+control checks both populated creation tables are refused without clearing rows.
+CLI snapshot2 passed0.24s; snapshot library10 passed1.43s; workspace all-target
+Clippy3 session99420 CLOSED0/9.40s. Also changed latest-version test expectations
+to SCHEMA_VERSION; literal old39 and future version fences remain exact.
+Current repaired runtime354 differs from first candidate only in snapshot/native.rs
+and the creation test current-version expectation. Frozen published source
+bb17161ecd60d31b34dfc90b341b5ea4d3d6d899/schema40/all354. Full gate2 runner1433672/
+start144581925, child1433676/start144581933 began19:46:55Z and is LIVE; ordinary
+four test threads/common target. /tmp/s3drive-empty-intent-{gate2,candidate2}-*.
+Do not edit runtime while this exact gate is live. Main remains accepted349.
+Own CI39313836156 attempt1: book118270052958 succeeded; Linux118270053086 and
+Windows118270053014 running. GET-only observer1442770/start144594863, status
+/tmp/s3drive-empty-intent2-hosted-watch-{running,result}.json. New source-specific
+raw reviewer, checker /tmp/s3drive-check-empty-intent2-hosted.py, comparator,
+PowerShell oracle and hosted/local archivers prepared; Python compiled/PS parsed,
+NONE executed. Prefix /tmp/s3drive-empty-intent2-*. Require own complete raw
+review before marker/checker; expect520Linux/515Windows state (one diagnostic
+ignored), all14 creation cases plus new snapshot isolation control and inherited
+native gates. Failed-first candidate artifacts count0. Parent39 artifacts
+12213307038/12215345023 remain forbidden reuse. Book/Linux/Windows raw logs for
+candidate2 not downloaded yet. [Contract](docs/src/empty-manifest-publisher.md).
+After acceptance: real SDK/authority creation facade, restricted metadata recovery,
+typed source/namespace/open composition and native callbacks. Do not widen legacy
+namespace roles or enable native writes prematurely.
+
+
 
 
 

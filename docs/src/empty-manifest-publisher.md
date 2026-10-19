@@ -2,7 +2,7 @@
 
 Source review: 2026-10-19. **Proposed next integration phase; not implemented.**
 The [atomic authority operation](atomic-empty-manifest-create.md) is accepted
-at exact source29eb237/schema39 after its complete local and hosted gates. It deliberately cannot prove an S3 upload:
+at source29eb237/schema39 after its own complete local and hosted gates. It deliberately cannot prove an S3 upload:
 the client must make and verify that upload before submitting the metadata request.
 This work must lead into normal native create/write/flush, rather than introduce
 another disconnected write profile.
@@ -81,3 +81,127 @@ same existing-file chunk path must be used by created files. This integration
 must preserve the old read-only and whole-generation profile regression suites.
 A real Wasabi write test needs a fresh concrete user-approved fixture scope;
 physical MX Linux and Windows10/11 sign-in/reboot checks remain separate.
+
+
+## Declared durable-intent implementation boundary (2026-10-19)
+
+Worktree codex/empty-manifest-intent is based on exact repaired parent29eb237;
+parent hosted acceptance is complete; this child phase requires its own gates before promotion. This first implementation
+boundary is a client-local SQLite creation journal on the existing Storage owner.
+It must support intent admission, exact staging-generation linkage, preparation
+of the authority request from a verified local remote-intent receipt, and exact
+metadata receipt/rejection recovery. It grants no network or native callback rights.
+The subsequent managed facade must use these records and the existing Executor,
+then compose with the ordinary native edit path described above.
+
+Proposed schema40 adds bounded creation records and a checked membership projection,
+without modifying old request or outcome bytes. Bind volume, create operation,
+parent/revision, name, sequence, store, source and configuration fingerprint. Derive
+canonical bytes/key and a stable staging-operation key from those identities.
+Prepare the final metadata request only from the linked generation's verified
+create-only remote record, matching exact target,64-byte body SHA and proof fields.
+Known request/receipt recovery cannot require source bytes or credentials.
+
+Known exact retries precede narrowed admission quotas. Fresh and changed-request
+reuse, role adoption, triggers, corrupt membership/history or false SQL effects
+must fail explicitly and preserve every existing row. Keep generic physical staging
+available, allow the declared sparse source owner, and reciprocally exclude old
+logical, namespace/open and complete-generation publication roles. This does not
+remove their current isolation checks or enable native composition prematurely.
+
+Acceptance requires canonical independent parent vectors; Unicode; exact replay
+and changed binding refusal; same-owner async races/lost replies; actual process
+death around admission/link/request/receipt; real SQLITE_FULL and bounded quotas;
+old-schema byte preservation and migration rollback; source/authority isolation;
+self-consistent corrupt proof/receipt rejection; and metadata-only replay after
+staged-source loss. The network facade and native acceptance remain required
+before a mounted-create capability can be reported.
+
+
+## Local journal candidate implemented (2026-10-19)
+
+The isolated codex/empty-manifest-intent candidate implements the first boundary
+in Rust module manifest_creation, schema40. Existing Storage supplies one bounded
+worker/connection/lock. Input binds every create field, physical store and local
+source identity; canonical64-byte page, object key and staging-operation key are
+derived. Admission reserves bounded record-growth capacity. Known exact intent
+replays before narrowed admission quotas; changed input under an admitted operation
+conflicts without changing earlier rows.
+
+A sealed generation must use that exact staging key/target and canonical bytes.
+Only its verified create-only remote journal record can prepare the final authority
+request. The physical proof snapshot, exact request and later complete receipt or
+terminal rejection are retained. Metadata replay checks the retained staging header
+and operation binding without rereading staged bodies or acquiring credentials.
+This has been tested after staged-body corruption and restart; it is not permission
+to delete staging headers, operation bindings or other retry namespaces.
+
+The membership projection refuses orphan/missing rows, self-consistent rewritten
+request/proof fields, oversized values and unexpected role rows. Reads bound each
+value before Rust allocation. SQL triggers are refused before admission or replay.
+New role reciprocally excludes old logical, namespace/open and complete-generation
+publication journals; sparse dirty views and generic staging can coexist on the
+one private owner. Old source/authority isolation and all existing bytes remain.
+Migration uses additive040.sql without IF NOT EXISTS; collisions roll back the
+transaction and version marker. Test-only old-schema setup removes only the new
+empty tables rather than permitting production migration to adopt collisions.
+
+Fourteen focused cases passed in1.17s, including eight actual killed-owner
+boundaries, actual SQLITE_FULL rollback/retry, a deterministic lost committed
+worker reply, real authority receipt validation, corrupted staged-body recovery,
+sparse coexistence in both orders, bounded corruption checks and version fences.
+Thirty-five existing migration cases passed37.04s. Workspace all-target compilation
+passed30.27s before the later tests and fixture updates. Initial E0624/E0277
+visibility/error-conversion compile failures and an E0061 test call were retained;
+all assertions remain in place. The first workspace Clippy run rejected two nested
+conditionals; the style-only repair passed workspace all-target Clippy32.25s. Full local and own hosted
+source/native/artifact gates remain required before promotion.
+
+These are local intent tests: verified physical records are model fixtures, not
+new live S3 uploads. The authenticated S3/authority facade, restricted recovery
+bootstrap for otherwise unreadable source state, typed namespace/open composition,
+and real native chunk-create/write acceptance remain necessary. Native callbacks,
+startup settings, credentials and provider write permissions are unchanged.
+
+
+## First full cohort and snapshot integration repair (2026-10-19)
+
+Frozen source0ec7cfd600aeaba0b445f6b3842c7386a200dfdd/all354 failed its full
+local gate at19:39:01Z (exit101, every input unchanged). CLI snapshot round-trip
+failed with Snapshot(Validation): the offline authority snapshot validator did not
+recognize the two new empty client tables. Own CI39312392108 Linux failed the
+same test; book passed. Windows failed earlier at locked-profile cleanup in the
+coordinator-supervision fixture,77.91s; its primary failure cause was obscured. A
+later green cohort would not establish that earlier Windows failure's cause.
+
+[Indexed first failed cohort](evidence/empty-intent-failed1-20261019.tar.gz):13
+verified members/902503bytes, SHA-256
+`36ca0c7555201edc2cff0949e2c81337eafe9ca19775b2702e0dcf9ac48cec83`.
+It retains exact354 source, frozen map, complete local log/runner and all three raw
+hosted logs/API identities. One-use failed archiver99420 DONE; never rerun.
+
+The production repair adds only manifest_creation_role and manifest_creations to
+the snapshot's fixed local-table allowlist. Their rows must still be empty. Unknown
+tables, views, nonempty local tables, active owners and invalid artifacts remain
+refused; the64-table bound and restore prohibition are unchanged. A new native
+state test verifies each populated creation table blocks snapshotting without
+clearing client rows or producing an artifact. Tests of a latest-version seed use
+SCHEMA_VERSION; literal old39/downgraded/future-marker expectations stay exact.
+
+Original CLI snapshot cases passed2/0.24s; snapshot library cases passed10/1.43s,
+including real schema8 and the new client-table isolation control. Repaired
+workspace all-target Clippy passed9.40s. The repaired354-input source requires
+a new complete local and own hosted source/native/artifact cohort before promotion.
+Earlier pending statuses are historical. No network facade or native chunk-create
+capability has been enabled.
+
+
+## Repaired cohort running (2026-10-19)
+
+Frozen [sourcebb17161](https://github.com/marshallr12/s3drive/commit/bb17161ecd60d31b34dfc90b341b5ea4d3d6d899),
+schema40/all354, is undergoing a fresh full local gate and own
+[CI39313836156](https://github.com/marshallr12/s3drive/actions/runs/39313836156),
+attempt1. Book118270052958 succeeded; Linux118270053086 and Windows118270053014
+remain running. Full acceptance is pending; accepted canonical runtime stays
+source29eb237/schema39/all349. No source, provider or native write capability
+from this candidate is reported as accepted.
