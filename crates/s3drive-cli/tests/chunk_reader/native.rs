@@ -6,26 +6,17 @@ const NAME: &str = "café 日本語 🦀.bin";
 const LEGACY: &[u8] = b"legacy binary\0\xff";
 const OTHER: &[u8] = b"second store\0\xfe";
 
-async fn prepare(f: &Fixture, path: &Path) -> (s3drive_core::Config, Tree) {
-    let mut map = BTreeMap::new();
-    map.insert(127, pattern(127, C));
-    map.insert(128, pattern(128, C));
-    let tree = f.tree(10, 130 * C, map).await;
-    f.create(11, "empty 日本語", 200, false).await;
-    f.create(12, "published empty 🦀", 200, false).await;
-    f.tree(12, 0, BTreeMap::new()).await;
-    f.create(13, "legacy.bin", 200, false).await;
-    let legacy_bytes = LEGACY;
-    let n = f.node(13).await;
+async fn publish_legacy(f: &Fixture, node: u64, operation: u64, body: &[u8]) {
+    let n = f.node(node).await;
     let receipt = f
         .change(
-            180,
+            operation,
             Mutation::ReserveContent {
                 node: n.id,
                 expected_revision: n.revision,
                 store: id(200),
-                size: legacy_bytes.len() as u64,
-                sha256: Sha256::digest(legacy_bytes)
+                size: body.len() as u64,
+                sha256: Sha256::digest(body)
                     .iter()
                     .map(|b| format!("{b:02x}"))
                     .collect(),
@@ -36,21 +27,30 @@ async fn prepare(f: &Fixture, path: &Path) -> (s3drive_core::Config, Tree) {
     let Some(s3drive_authority::Artifact::Reservation(reservation)) = receipt.artifact else {
         panic!("fixture reservation receipt missing");
     };
-    f.s3.put(
-        f.absolute(&reservation.key),
-        legacy_bytes.to_vec(),
-        "legacy",
-    );
+    let tag = format!("legacy-{operation}");
+    f.s3.put(f.absolute(&reservation.key), body.to_vec(), &tag);
     f.change(
-        181,
+        operation + 1,
         Mutation::Publish {
-            reservation: id(180),
+            reservation: id(operation),
             upload_operation: "d".repeat(64),
-            etag: "\"legacy\"".into(),
+            etag: format!("\"{tag}\""),
             version: None,
         },
     )
     .await;
+}
+
+async fn prepare(f: &Fixture, path: &Path) -> (s3drive_core::Config, Tree) {
+    let mut map = BTreeMap::new();
+    map.insert(127, pattern(127, C));
+    map.insert(128, pattern(128, C));
+    let tree = f.tree(10, 130 * C, map).await;
+    f.create(11, "empty 日本語", 200, false).await;
+    f.create(12, "published empty 🦀", 200, false).await;
+    f.tree(12, 0, BTreeMap::new()).await;
+    f.create(13, "legacy.bin", 200, false).await;
+    publish_legacy(f, 13, 180, LEGACY).await;
     f.create(14, "64GiB sparse 🦀", 200, false).await;
     f.tree(14, 65536 * C, BTreeMap::new()).await;
     let mut other = f.source.clone();
@@ -554,6 +554,7 @@ pub async fn native(f: &Fixture, root: &Path) {
         );
     })
     .await;
+    native_formats(f, &mut mount).await;
     // Previously unread files prevent an OS cache hit from hiding a fault.
     for (node, name, fault) in [
         (16, "corrupt unseen 日本語", 0),
@@ -610,4 +611,246 @@ pub async fn native(f: &Fixture, root: &Path) {
 #[ignore = "native manifest acceptance: requires real FUSE or WinFsp; no mock substitute"]
 async fn actual_native_manifest_reads_and_remount() {
     super::run("native").await;
+}
+
+async fn pinned(
+    f: &Fixture,
+    fs: &ReadOnlyFs,
+    node: u64,
+    file: &s3drive_fs::OpenFile,
+    expected: &[u8],
+) {
+    let requests = f.requests();
+    let events = f.s3.events().len();
+    assert_eq!(
+        fs.metadata(node).await.unwrap().unwrap().size,
+        expected.len() as u64
+    );
+    assert_eq!(
+        f.requests(),
+        requests,
+        "snapshot attributes queried namespace"
+    );
+    assert_eq!(
+        f.s3.events().len(),
+        events,
+        "snapshot attributes fetched S3"
+    );
+    assert_eq!(file.current_metadata().unwrap().size, expected.len() as u64);
+    assert_eq!(file.read(0, 100).await.unwrap(), expected);
+}
+async fn stale(f: &Fixture, fs: &ReadOnlyFs, node: u64) {
+    let events = f.s3.events().len();
+    assert!(matches!(fs.open(node).await, Err(Error::Conflict)));
+    assert_eq!(events, f.s3.events().len(), "stale open fetched S3");
+}
+pub async fn formats(f: &Fixture, path: &Path) {
+    let (cfg, _) = prepare(f, path).await;
+    let fs = ReadOnlyFs::new(&cfg).await.unwrap();
+    let empty = fs.lookup(ROOT, "empty 日本語").await.unwrap();
+    let old = fs.open(empty.id).await.unwrap();
+    let legacy = fs.lookup(ROOT, "legacy.bin").await.unwrap();
+    let legacy_old = fs.open(legacy.id).await.unwrap();
+    f.change(
+        184,
+        Mutation::Move {
+            node: id(13),
+            parent: s3drive_authority::ROOT.into(),
+            name: "renamed legacy 日本語.bin".into(),
+        },
+    )
+    .await;
+    assert_eq!(
+        fs.lookup(ROOT, "renamed legacy 日本語.bin")
+            .await
+            .unwrap()
+            .id,
+        legacy.id
+    );
+    let original = f.node(13).await;
+    f.tree(11, 4, BTreeMap::from([(0, b"new!".to_vec())])).await;
+    f.tree(13, 4, BTreeMap::from([(0, b"root".to_vec())])).await;
+    pinned(f, &fs, empty.id, &old, b"").await;
+    pinned(f, &fs, legacy.id, &legacy_old, LEGACY).await;
+    stale(f, &fs, empty.id).await;
+    stale(f, &fs, legacy.id).await;
+    // First dispatch sees the old legacy snapshot; the second load sees a manifest.
+    f.reply_next_node(original);
+    assert!(fs.open(legacy.id).await.is_err());
+    let fresh = fs.lookup(ROOT, "empty 日本語").await.unwrap();
+    assert_ne!(empty.id, fresh.id);
+    assert_eq!(
+        fs.open(fresh.id).await.unwrap().read(0, 100).await.unwrap(),
+        b"new!"
+    );
+    drop(old);
+    let root = fs.lookup(ROOT, "renamed legacy 日本語.bin").await.unwrap();
+    let root_file = fs.open(root.id).await.unwrap();
+    publish_legacy(f, 13, 190, b"legacy after manifest").await;
+    pinned(f, &fs, root.id, &root_file, b"root").await;
+    stale(f, &fs, root.id).await;
+    let current = fs.lookup(ROOT, "renamed legacy 日本語.bin").await.unwrap();
+    assert_ne!(current.id, root.id);
+    assert_ne!(
+        current.id, legacy.id,
+        "legacy format reversal reused an old inode"
+    );
+    let current_file = fs.open(current.id).await.unwrap();
+    let before_replace = f.node(13).await;
+    publish_legacy(f, 13, 192, b"second legacy\0\xfd").await;
+    pinned(f, &fs, current.id, &current_file, b"legacy after manifest").await;
+    pinned(f, &fs, legacy.id, &legacy_old, LEGACY).await;
+    stale(f, &fs, current.id).await;
+    f.reply_next_node(before_replace);
+    assert!(
+        matches!(fs.open(current.id).await, Err(Error::Conflict)),
+        "legacy reader returned a racing publication"
+    );
+    let latest = fs.lookup(ROOT, "renamed legacy 日本語.bin").await.unwrap();
+    assert_ne!(latest.id, current.id);
+    assert_eq!(
+        fs.open(latest.id)
+            .await
+            .unwrap()
+            .read(0, 100)
+            .await
+            .unwrap(),
+        b"second legacy\0\xfd"
+    );
+    drop(current_file);
+    f.create(19, "empty to legacy 日本語", 200, false).await;
+    let e = fs.lookup(ROOT, "empty to legacy 日本語").await.unwrap();
+    let e_file = fs.open(e.id).await.unwrap();
+    publish_legacy(f, 19, 194, b"direct legacy").await;
+    pinned(f, &fs, e.id, &e_file, b"").await;
+    stale(f, &fs, e.id).await;
+    let published = fs.lookup(ROOT, "empty to legacy 日本語").await.unwrap();
+    assert_ne!(published.id, e.id);
+    assert_eq!(
+        fs.open(published.id)
+            .await
+            .unwrap()
+            .read(0, 100)
+            .await
+            .unwrap(),
+        b"direct legacy"
+    );
+    let e = fs.lookup(ROOT, "published empty 🦀").await.unwrap();
+    let e_file = fs.open(e.id).await.unwrap();
+    publish_legacy(f, 12, 196, b"from empty manifest").await;
+    pinned(f, &fs, e.id, &e_file, b"").await;
+    stale(f, &fs, e.id).await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn filesystem_format_transitions_pin_attributes_and_refuse_stale_opens() {
+    super::run("formats").await;
+}
+
+#[cfg(any(target_os = "linux", windows))]
+fn native_pinned(file: &mut std::fs::File, expected: &[u8]) {
+    use std::io::{Read, Seek, SeekFrom};
+    assert_eq!(file.metadata().unwrap().len(), expected.len() as u64);
+    file.seek(SeekFrom::Start(0)).unwrap();
+    let mut actual = Vec::new();
+    file.take(expected.len() as u64 + 1)
+        .read_to_end(&mut actual)
+        .unwrap();
+    assert_eq!(actual, expected);
+}
+#[cfg(any(target_os = "linux", windows))]
+async fn native_formats(f: &Fixture, mount: &mut Mount) {
+    let path = mount.path.clone();
+    let (mut empty, mut legacy, empty_manifest) = blocking(mount, move || {
+        (
+            std::fs::File::open(path.join("empty 日本語")).unwrap(),
+            std::fs::File::open(path.join("legacy.bin")).unwrap(),
+            std::fs::File::open(path.join("published empty 🦀")).unwrap(),
+        )
+    })
+    .await;
+    f.tree(11, 4, BTreeMap::from([(0, b"new!".to_vec())])).await;
+    f.tree(13, 4, BTreeMap::from([(0, b"root".to_vec())])).await;
+    let path = mount.path.clone();
+    let (legacy, mut empty_manifest, root) = blocking(mount, move || {
+        native_pinned(&mut empty, b"");
+        native_pinned(&mut legacy, LEGACY);
+        assert_eq!(std::fs::read(path.join("empty 日本語")).unwrap(), b"new!");
+        assert_eq!(std::fs::read(path.join("legacy.bin")).unwrap(), b"root");
+        let root = std::fs::File::open(path.join("legacy.bin")).unwrap();
+        (legacy, empty_manifest, root)
+    })
+    .await;
+    // Complete independent scenarios before opening more retained legacy buffers.
+    // The existing four-snapshot/32MiB legacy cap is deliberately unchanged.
+    publish_legacy(f, 12, 196, b"from empty manifest").await;
+    let path = mount.path.clone();
+    let (mut legacy, mut root) = blocking(mount, move || {
+        native_pinned(&mut empty_manifest, b"");
+        assert_eq!(
+            std::fs::read(path.join("published empty 🦀")).unwrap(),
+            b"from empty manifest"
+        );
+        (legacy, root)
+    })
+    .await;
+    f.create(19, "empty to legacy 日本語", 200, false).await;
+    let path = mount.path.clone();
+    let mut empty = blocking(mount, move || {
+        std::fs::File::open(path.join("empty to legacy 日本語")).unwrap()
+    })
+    .await;
+    publish_legacy(f, 19, 194, b"direct legacy").await;
+    let path = mount.path.clone();
+    blocking(mount, move || {
+        native_pinned(&mut empty, b"");
+        assert_eq!(
+            std::fs::read(path.join("empty to legacy 日本語")).unwrap(),
+            b"direct legacy"
+        );
+    })
+    .await;
+    publish_legacy(f, 13, 190, b"legacy after manifest").await;
+    let path = mount.path.clone();
+    let (mut legacy, mut root, mut current) = blocking(mount, move || {
+        native_pinned(&mut legacy, LEGACY);
+        native_pinned(&mut root, b"root");
+        let mut current = std::fs::File::open(path.join("legacy.bin")).unwrap();
+        native_pinned(&mut current, b"legacy after manifest");
+        (legacy, root, current)
+    })
+    .await;
+    publish_legacy(f, 13, 192, b"second legacy\0\xfd").await;
+    let path = mount.path.clone();
+    let (mut legacy, mut root, mut current) = blocking(mount, move || {
+        native_pinned(&mut legacy, LEGACY);
+        native_pinned(&mut root, b"root");
+        native_pinned(&mut current, b"legacy after manifest");
+        assert_eq!(
+            std::fs::read(path.join("legacy.bin")).unwrap(),
+            b"second legacy\0\xfd"
+        );
+        (legacy, root, current)
+    })
+    .await;
+    f.change(
+        198,
+        Mutation::Move {
+            node: id(13),
+            parent: s3drive_authority::ROOT.into(),
+            name: "renamed legacy 日本語.bin".into(),
+        },
+    )
+    .await;
+    let path = mount.path.clone();
+    blocking(mount, move || {
+        native_pinned(&mut legacy, LEGACY);
+        native_pinned(&mut root, b"root");
+        native_pinned(&mut current, b"legacy after manifest");
+        assert_eq!(
+            std::fs::read(path.join("renamed legacy 日本語.bin")).unwrap(),
+            b"second legacy\0\xfd"
+        );
+        assert!(std::fs::File::open(path.join("legacy.bin")).is_err());
+    })
+    .await;
 }

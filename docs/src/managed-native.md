@@ -155,3 +155,15 @@ Windows deferred deletion and full application compatibility remain required.
 Service supervision, multi-host/Turso deployment, large files, garbage collection
 and live-provider managed acceptance remain unfinished. Existing direct writable
 mount evidence does not certify those behaviors.
+
+
+Draft read-only snapshot projection (2026-10-18): the combined format-transition
+work additionally projects a file's content version into its inode/file index
+when the backend negotiates chunk support. Authority volume/node IDs remain
+stable logical identities. A fresh path lookup after publication selects the
+new inode; reopening an old inode explicitly conflicts. Rename without changing
+content keeps the inode. Old handles and inode attributes retain their captured
+version. This applies to empty, legacy and manifest files in that backend;
+writable/direct/capability-absent behavior remains scoped unchanged. See the
+[native manifest draft](native-manifest-reads.md#combined-format-transition-draft-2026-10-18)
+for evidence and pending native acceptance.

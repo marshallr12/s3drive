@@ -180,7 +180,7 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
         kind: Kind::Directory,
         source: None,
         key: s3drive_authority::ROOT.into(),
-        manifest: None,
+        snapshot: None,
     });
     Ok(ReadOnlyFs {
         readers: Vec::new(),
@@ -229,21 +229,20 @@ impl Nodes {
         } else {
             Kind::File
         };
-        let manifest = if snapshot
-            && n.payload
-                .as_ref()
-                .is_some_and(|p| p.reservation.manifest.is_some())
-        {
-            Some(ManifestView {
-                reference: s3drive_authority::payload_reference(&n.payload)
-                    .ok_or(Error::Internal)?,
+        let view = if snapshot && kind == Kind::File {
+            Some(SnapshotView {
+                reference: s3drive_authority::payload_reference(&n.payload),
                 metadata: logical_metadata(n)?,
             })
         } else {
             None
         };
-        let key = match &manifest {
-            Some(view) => format!("manifest/{}/{}", n.id, view.reference),
+        let key = match &view {
+            Some(view) => format!(
+                "snapshot/{}/{}",
+                n.id,
+                view.reference.as_deref().unwrap_or("empty")
+            ),
             None => n.id.clone(),
         };
         let identity = (usize::MAX, key, kind);
@@ -265,23 +264,18 @@ impl Nodes {
             kind,
             source: None,
             key: n.id.clone(),
-            manifest,
+            snapshot: view,
         });
         self.by_id.insert(id, node.clone());
         Ok(node)
     }
 }
 pub(super) fn check_snapshot(node: &Node, live: &s3drive_authority::Node) -> Result<()> {
-    let actual = if live
-        .payload
-        .as_ref()
-        .is_some_and(|p| p.reservation.manifest.is_some())
+    let expected = node.snapshot.as_ref().ok_or(Error::Internal)?;
+    if live.id != node.key
+        || live.kind == s3drive_authority::Kind::Directory
+        || expected.reference != s3drive_authority::payload_reference(&live.payload)
     {
-        s3drive_authority::payload_reference(&live.payload)
-    } else {
-        None
-    };
-    if node.manifest.as_ref().map(|v| v.reference.as_str()) != actual.as_deref() {
         return Err(Error::Conflict);
     }
     Ok(())

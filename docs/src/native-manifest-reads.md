@@ -29,8 +29,9 @@ This metadata does not authorize a new open or a provider read. Path lookup stay
 online; open checks live authority state both before and after obtaining its fresh
 snapshot and rejects a changed payload with a conflict. Existing handles keep
 their pinned version. Versions count toward the existing bounded inode table;
-exhaustion returns a resource error. Legacy and writable inode behavior remains
-unchanged.
+exhaustion returns a resource error. In prerequisite c633d02, legacy and writable
+inode behavior remained unchanged; the current draft below extends the read-only
+snapshot rule to empty and legacy files too.
 A concurrent format change can fail explicitly; it never causes a retry or write
 fallback. Manifest OpenFile holds the bounded reader File; legacy files retain
 their existing whole-byte FileSnapshot behavior. Empty metadata files and
@@ -175,3 +176,41 @@ logs. Dummy credentials were removed before profile disposal was deferred.
 These results accept the scoped read-only controls, not chunk writes, a physical
 workstation reboot, restore/failover or new Wasabi mutations. The later W1a
 reference-proof library has separate source and unfinished gates.
+
+
+## Combined format-transition draft (2026-10-18)
+
+The accepted c633 control started its old handle from a manifest. A new negative
+control found that a previously opened metadata-empty inode acquired a later
+manifest's4-byte size. The combined draft now gives every file in a read-only
+chunk-capable backend a content-version identity and lookup attributes: absent
+payload is an explicit empty version; legacy and manifest payloads use their
+domain-separated content references. Rename keeps the identity. Reversing from
+manifest to legacy or republishing legacy bytes cannot reuse a stale inode.
+New opens check identity/kind/payload before dispatch and after either reader
+returns its immutable snapshot. Snapshot attributes authorize no new data reads.
+Direct, writable and valid capability-absence fallback behavior retain their
+existing scope. This changes no schema or authority wire format.
+
+[Draft transition evidence](evidence/snapshot-format-transitions-20261018.json)
+records the negative control and eight passing portable controls. A first test
+fixture held too many completed legacy snapshots; its scenario lifetimes now
+respect the unchanged four-snapshot/32MiB legacy limit. The dedicated real mount
+control adds empty/legacy/manifest transitions, legacy republication and rename
+while retaining earlier old-size/bytes and remount assertions. These additional
+native assertions require the combined source's own Linux/Windows cohort;
+prerequisite c633's artifacts do not certify them. W1a proof exports are combined
+in the same draft and likewise need their own final source-bound acceptance.
+
+The combined full local gate passed with all259 frozen inputs unchanged:
+eight reader/format controls (one native control ignored),12 publication controls,
+62 S3 tests,365 state tests/one ignored,formatting,Clippy,build and book checks.
+The first combined gate exposed an older readonly engine fixture opening a stale
+inode to read replacement bytes. It now asserts a stale-open conflict, refreshes
+path lookup, and checks distinct snapshot inodes with unchanged logical file IDs;
+old-byte, rename and deletion assertions remain. Writable fixture cases are
+unchanged. The isolated updated engine test passed before the fresh full gate.
+The [indexed combined local archive](evidence/snapshot-format-transitions-local-20261018.tar.gz)
+retains failures, controls, all input hashes and exact combined source. Every
+indexed member was verified. This supports portable acceptance only; the new
+real native assertions need a fresh exact-source Linux/Windows cohort.

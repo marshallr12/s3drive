@@ -1,0 +1,130 @@
+{
+  "date": "2026-10-18",
+  "status": "full combined portable gate passed; fresh native/hosted acceptance pending",
+  "branch": "codex/manifest-reference-proofs",
+  "merge_base": "9c49fe4",
+  "prerequisites": {
+    "native_source": "c633d02d47ccf2da20cfadd50e0b8e11f6e06811",
+    "accepted_native_checkpoint": "52f591cc5b944f9fd2190bc9ec859579a99ba684",
+    "local_w1a": "ed2e93b973ea3099ba5906261d3e8360cebf0184"
+  },
+  "negative": {
+    "session": 55850,
+    "exit_code": 101,
+    "expected_old_size": 0,
+    "observed_old_size": 4,
+    "log": "/tmp/s3drive-formats-negative.log",
+    "sha256": "de06011c520521250289a7cec81c4401179cb4f40ed20099a6d96323422e539a"
+  },
+  "first_positive_empty": {
+    "session": 49289,
+    "exit_code": 0,
+    "seconds": 0.45,
+    "log": "/tmp/s3drive-formats-positive-empty.log",
+    "sha256": "8838fc02374e863c66111d8aa4a90d7400d79a037ed8493635524117bd81e8c5"
+  },
+  "fixture_capacity_failure": {
+    "exit_code": 101,
+    "reason": "expanded test held completed legacy snapshots beyond unchanged cap4",
+    "resolution": "release completed scenario handles; keep all required assertions and production limits",
+    "log": "/tmp/s3drive-formats-focused.log",
+    "sha256": "7b3750f1e89dd61a381d94d5dccab4333f8a7f053858feca0c42bcf9a84ee50a"
+  },
+  "focused": {
+    "session": 91719,
+    "exit_code": 0,
+    "passed": 8,
+    "ignored_native": 1,
+    "seconds": 6.49,
+    "warnings": "two unused-mut bindings subsequently removed",
+    "log": "/tmp/s3drive-formats-focused2.log",
+    "sha256": "52c4f93ed90fdc593fc49ab47b74b0e5af0c3117f192f68181f844c8ecac3228"
+  },
+  "clippy": {
+    "session": 30783,
+    "exit_code": 0,
+    "log": "/tmp/s3drive-formats-clippy.log",
+    "sha256": "cfa25a976b031d5b0b6b04978437da23b0bc5edec25994eb82615c80f376d272"
+  },
+  "new_native_assertions": "empty/legacy/manifest format changes, legacy republication and rename; compile/fresh real gates pending",
+  "scope": "read-only chunk-capable snapshot identity/attributes; no chunk writes",
+  "combined_gate1": {
+    "session": 38083,
+    "exit_code": 101,
+    "log": "/tmp/s3drive-formats-combined-gate.log",
+    "sha256": "59edf35318357c573fe57d4a2e4bf04464917c61857faf084bb4a10f3b5f8ae5",
+    "frozen_map_sha256": "5b71c1d71838d7818f22881a79ba0bf857813e7d35ab19565e026fa7dc4529ef",
+    "failed_test": "managed_engine_cli_authority_and_two_bucket_snapshots",
+    "location": "support/managed.rs:1438",
+    "reason": "readonly engine test reopens old inode as if it identified latest payload; new contract returns Conflict",
+    "scope": "fixture must refresh path lookup and retain old-byte/rename/delete assertions"
+  },
+  "engine_fixture_update": {
+    "changed_input": "crates/s3drive-cli/tests/support/managed.rs",
+    "scope": "readonly engine path refresh; no writable case changes; add stable logical ID and stale inode assertions",
+    "positive_exit_code": 0,
+    "positive_seconds": 1.83,
+    "positive_log_sha256": "873e3055bf18faa660866f51dfd71d7d47359a80fde93af953bf9f12010b9f7f"
+  },
+  "combined_gate2": {
+    "session": 81306,
+    "exit_code": 0,
+    "log": "/tmp/s3drive-formats-combined-gate2.log",
+    "log_sha256": "96c9f26c2ce8ab008f22e61a71fc0af4501526c0a39cd1f17cf1a8fed6c4fbeb",
+    "frozen_count": 259,
+    "frozen_map_sha256": "e18796835d07bdf376f312350debd7379009943f4b2ccdd3c291de2e67da3e6c",
+    "all_frozen_inputs_unchanged": true,
+    "environment": {
+      "RUST_TEST_THREADS": "2",
+      "tty": true
+    },
+    "test_summaries": [
+      "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.58s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.96s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.40s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.28s",
+      "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.73s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 12.75s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s",
+      "test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 63.50s",
+      "test result: ok. 8 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 7.63s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.32s",
+      "test result: ok. 2 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 8.72s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.79s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.41s",
+      "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 28.50s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.44s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.19s",
+      "test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+      "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.62s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.01s",
+      "test result: ok. 365 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 234.45s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ],
+    "scope": "combined portable local gate; new native transition assertions and W1a hosted acceptance pending"
+  },
+  "local_archive": {
+    "path": "evidence/snapshot-format-transitions-local-20261018.tar.gz",
+    "sha256": "d7ad206a5579ef5dcaaedb4ee3e7c82374c262093098f375208506bdf4076e5b",
+    "bytes": 116562,
+    "members": 25,
+    "all_indexed_members_verified": true,
+    "scope": "combined portable gate only; new exact-source native acceptance pending"
+  }
+}

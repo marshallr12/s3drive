@@ -25,15 +25,40 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
-## Current combined-source audit (2026-10-18)
+## Current combined-source snapshot-format repair (2026-10-18)
 
-Accepted native prerequisite52f591c is merged into local W1a ed2e93b. Both
-prerequisite runtimes stay frozen in their original checkpoints; combined source
-is not yet accepted. Next add negative controls for metadata-empty/legacy opened
-handles across format publication, then repair if demonstrated and run fresh
-combined local/hosted gates. Only read-only chunk-capable backends may acquire
-new content-snapshot inode semantics; writable/direct/fallback paths stay scoped.
-No new provider writes or native claim follows from the merge.
+Worktree /home/marshall/src/worktrees/s3drive-manifest-reference-proofs,
+branch codex/manifest-reference-proofs. Local merge9c49fe4 combines accepted
+native52f591c with local-green W1a ed2e93b. Combined source NOT accepted/pushed.
+Negative control55850 EXIT101: old metadata-empty inode reported4 instead of0
+following manifest publication; /tmp/s3drive-formats-negative.log. Production
+was unchanged for this control. Repair now snapshots all file content versions
+in read-only chunk-capable backends (empty/legacy/manifest), keeps directory
+identity stable, and guards both manifest and legacy factory results against
+stale payload/identity/kind. Direct, writable and capability-absent paths stay
+scoped unchanged. No schema, wire or provider mutation changes.
+
+Focused91719 EXIT0:8 passed/1 native ignored6.49s. Includes format reversal,
+legacy-to-legacy race, metadata-only attributes with zero namespace/S3 requests,
+old immutable bytes and early stale-open refusal. Initial expanded fixture hit
+unchanged legacy4-snapshot cap; completed scenarios now release handles before
+new independent scenarios. No production quota raised or assertions relaxed.
+Two unused-mut warnings were removed; Clippy30783 EXIT0. Native control extends
+same-name publication and retained fd sizes/bytes to empty/legacy/root formats,
+republication and rename, with existing teardown deadlines and legacy cap.
+New real OS assertions remain unverified until a fresh exact-source cohort.
+Combined gate1 session38083 CLOSED101 on existing readonly engine fixture
+reopening a stale inode. Updated only that engine case to refresh path lookup,
+assert stale-open Conflict and distinct snapshot inode, preserve global ID,
+old bytes, rename and deletion assertions. Writable cases unchanged. Its isolated
+positive26588 passed1.83s. Failure/map retained in /tmp/s3drive-formats-combined-gate1-failure.json
+and /tmp/s3drive-formats-combined-gate1-frozen.json. Full combined gate2
+session81306 CLOSED EXIT0 -> /tmp/s3drive-formats-combined-gate2.log; all259
+inputs unchanged in /tmp/s3drive-formats-combined-frozen.json. Eight reader/format
+controls/1nativeignored,12publication,62S3,365state/1ignored,fmt/clippy/build/book
+passed. Indexed25member local archive116562bytes SHA
+d7ad206a5579ef5dcaaedb4ee3e7c82374c262093098f375208506bdf4076e5b. Own fresh native/hosted cohort required. Previous
+W1a/native maps and archives retain their own source; do not reuse as acceptance.
 
 ## Current W1a foundation: authenticated chunk-reference proofs (2026-10-18)
 

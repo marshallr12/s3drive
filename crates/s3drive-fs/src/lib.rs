@@ -36,13 +36,13 @@ pub struct Node {
     pub kind: Kind,
     source: Option<usize>,
     key: String,
-    manifest: Option<ManifestView>,
+    snapshot: Option<SnapshotView>,
 }
 /// One immutable content version's inode attributes, authorized by lookup.
 /// This metadata does not grant permission to open or read provider objects.
 #[derive(Debug, Clone)]
-struct ManifestView {
-    reference: String,
+struct SnapshotView {
+    reference: Option<String>,
     metadata: ObjectMetadata,
 }
 
@@ -312,7 +312,7 @@ impl ReadOnlyFs {
             kind: Kind::Directory,
             source: None,
             key: String::new(),
-            manifest: None,
+            snapshot: None,
         });
         let mut nodes = Nodes {
             by_id: HashMap::from([(ROOT, root)]),
@@ -853,7 +853,7 @@ impl ReadOnlyFs {
 
     pub async fn metadata(&self, id: u64) -> Result<Option<ObjectMetadata>> {
         let node = self.node(id)?;
-        if let Some(view) = &node.manifest {
+        if let Some(view) = &node.snapshot {
             // The inode identifies this lookup version, not the latest content
             // under the global file ID. Kernels can omit a handle in getattr.
             return Ok(Some(view.metadata.clone()));
@@ -941,6 +941,9 @@ impl ReadOnlyFs {
                     None,
                 )
             };
+            if backend.chunks.is_some() {
+                managed::check_snapshot(&node, snapshot.metadata())?;
+            }
             let initial_metadata = managed::metadata(snapshot.metadata());
             return Ok(OpenFile {
                 initial_metadata,
@@ -1034,7 +1037,7 @@ impl Nodes {
             kind,
             source: Some(source),
             key,
-            manifest: None,
+            snapshot: None,
         });
         self.by_id.insert(id, node.clone());
         self.by_key.insert(identity, id);

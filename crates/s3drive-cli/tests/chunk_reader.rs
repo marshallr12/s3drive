@@ -732,6 +732,7 @@ async fn manifest_reader_child() {
         "transport" => Box::pin(transport(&f)).await,
         "budgets" => Box::pin(budgets(&f)).await,
         "engine" => Box::pin(native::engine(&f, &path)).await,
+        "formats" => Box::pin(native::formats(&f, &path)).await,
         #[cfg(any(target_os = "linux", windows))]
         "native" => Box::pin(native::native(&f, &path)).await,
         _ => panic!(),
