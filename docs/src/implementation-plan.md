@@ -2008,24 +2008,22 @@ its accepted controller source until the native phase is accepted. Chunk-write
 integration remains later work; continue in the native branch's isolated checkout.
 
 
-Snapshot-inode repair checkpoint (2026-10-18): source `c633d02` on
-codex/manifest-snapshot-inodes is accepted at checkpoint `52f591c`. Its
-[own real OS cohort](https://github.com/marshallr12/s3drive/actions/runs/39178517491)
-passed all3 jobs, both dedicated real native manifest controls, raw-log review,
-strict21/14 own artifacts/project oracles and all35 raw-field/type matches.
-The indexed26member hosted archive is verified. The earlier `d98ea2f` cohort
-failed Linux and remains separate negative evidence.
+Combined snapshot/proof checkpoint (2026-10-18): accepted nativec633 at52f591c
+and local W1a ed2e93b are combined with a demonstrated empty/legacy snapshot
+repair in source `8c3448f`, on codex/manifest-reference-proofs. An old empty
+inode's4-vs0 size failure was reproduced before production changes. Readonly
+chunk-capable inodes now represent every payload version, with attributes pinned
+and guards before/after both readers. Stable authority IDs remain distinct from
+version inodes. Existing writable/direct/fallback scope remains unchanged.
 
-The independent W1a library source `ed2e93b` is a clean local commit in
-`/home/marshall/src/worktrees/s3drive-manifest-reference-proofs`; it is not pushed
-or hosted-accepted yet. Full local gate passed with258 unchanged inputs, six
-reader controls and all existing portable regressions. An indexed16member local
-archive retains the interrupted first gate, diagnostic and complete second gate.
-Next combine the accepted native prerequisite and audit old empty/legacy handles
-across format publication before a fresh combined-source local/hosted cohort.
-Primary runtime remains unchanged until that integration is verified. The
-[W1-W6 incremental write plan](https://github.com/marshallr12/s3drive/blob/52f591c/docs/src/implementation-plan.md)
-continues through authenticated bases, sparse edits, mixed-tree proofs, exact-view
-settlement and actual native chunk writes. A source correction now permits prior
-roots as inherited children when their exact page geometry/provenance matches:
-root_key uses Role::Page. Provider conformance and physical reboot remain separate.
+The fresh full local gate passed all259 frozen inputs,8reader/format controls
+(one native ignored),12publication,62S3,365state/one ignored and book/build checks.
+An older readonly engine fixture now performs fresh path lookup after replacement
+and preserves global-ID/old-byte/rename/delete assertions. Indexed25member local
+evidence retains failures and exact source. The
+[own combined OS cohort](https://github.com/marshallr12/s3drive/actions/runs/39184629344)
+is running; its native control adds all-format fd snapshots and legacy rename.
+Earlier c633 native artifacts cannot accept this source. Continue in the isolated
+checkout; read its handoff/plan and finish own raw/artifact checks before promotion.
+W1b page proofs, historical base reopen, sparse SQLite edits, mixed-tree proofs,
+exact-view settlement, native chunk writes and provider/reboot acceptance remain.

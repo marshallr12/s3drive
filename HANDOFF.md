@@ -60,51 +60,57 @@ evidence stays bound to2575374. No main/runtime promotion. Verify publication
 with git status and ls-remote; repository visibility must remain PUBLIC.
 P0 table now reflects D040 public policy instead of stale privacy requirement.
 
-## Current work: accepted native reads and W1a reference proofs (2026-10-18)
+## Current work: combined snapshot/proof native gates (2026-10-18)
 
-Native source c633d02d47ccf2da20cfadd50e0b8e11f6e06811 ACCEPTED at pushed
-docs checkpoint52f591c on codex/manifest-snapshot-inodes. Own run39178517491
-attempt1 ALL3 SUCCESS/raw-reviewed: Linux117826123544, Windows117826123721,
-book117826123692. Both dedicated real native controls passed (Linux1.22s,
-Windows1.79s). Own finalized reference artifacts12155790591/12155504654 passed
-strict21+14/projectoracles/all35 raw fields+types. No older artifacts reused.
-Watch30345 CLOSED0, checker95100 CLOSED0, raw comparison/archive completed;
-do not rerun one-use mkdir/assert-not-exists scripts. Indexed26member hosted
-archive143913bytes SHA800057c4b01f08120681438acc67ce0099fe083ffdc476af37e0e6ce5ee912fd.
-All257 runtime hashes unchanged; PUBLIC preserved, main1a93b5f unchanged.
-Old d98 cohort failed Linux (old130MiB handle stat returned4); retained separately.
+ACTIVE checkout /home/marshall/src/worktrees/s3drive-manifest-reference-proofs,
+branch codex/manifest-reference-proofs. Runtime8c3448f478f9ab62fe1a23ce965907546be5d10c,
+docs29a4de1 pushed; clean exactremote/all259 working+committed hashes verified.
+Own run39184629344 attempt1 LIVE: Linux117844328637, Windows117844328867,
+book117844329388 (book already SUCCESS). Watch73843 ->
+/tmp/s3drive-formats-8c3-watch.log; resume same handle/cohort, do not restart or
+mutate frozen runtime. Frozen259 /tmp/s3drive-formats-combined-frozen.json.
+Publication proof /tmp/s3drive-formats-combined-publication.json.
 
-ACTIVE implementation checkout:
-/home/marshall/src/worktrees/s3drive-manifest-reference-proofs,
-branch codex/manifest-reference-proofs, clean LOCAL commit
-ed2e93b973ea3099ba5906261d3e8360cebf0184 from accepted reader7c2b454. NOT PUSHED
-or hosted-accepted yet. Exact258 working/committed hashes verified:
-/tmp/s3drive-reference-proofs-local-checkpoint.json and frozen map
-/tmp/s3drive-reference-proofs-frozen.json. New opaque data/hole chunk proofs
-export at most two metadata pages, no data reads; pure snapshot-bound validation
-and bounded encoding. This is W1a, not page-subtree reuse, historical-base reopen,
-sparse editing, upload permission, settlement or native chunk writes.
-Focused6 passed4.97s. Full local gate2 session98776 CLOSED0, all258 unchanged:
-12publication,6reader,62S3,365state/1ignored,fmt/clippy/build/book(68MD/64chapters).
-Indexed16member local archive53064bytes SHA
-b1af7908f2646d1f33436949897ae04ce22b093baade991cb137ff52530eee8a.
-Gate1 session93249 interrupted143/SIGTERM with no test-failure report, cause
-unknown; no Cargo/rustc remained. Pending TLS diagnostic passed alone10.58s;
-this does not identify the termination cause. Both logs retained in archive.
+This combines accepted nativec633/checkpoint52f591c and local-green W1a ed2e93b,
+plus a demonstrated snapshot-format fix. Negative55850 EXIT101: old metadata-
+empty inode reported4 after manifest publication instead of0. New readonly
+chunk-capable projection snapshots empty/legacy/manifest versions and guards
+both factories before returning a handle. Directory/logical IDs stay stable;
+stale inode opens conflict, a fresh path lookup selects replacement. Direct,
+writable and missing-capability fallback behavior stay scoped unchanged.
+W1a exports bounded opaque data/hole reference proofs, no data fetch or upload
+permission. Page-subtree proofs, historical-base reopen and writes remain later.
 
-NEXT: read that checkout's HANDOFF/plan. Combine accepted native prerequisite,
-audit opened empty/legacy snapshots across payload-format publication, and run
-a fresh exact-source combined local/hosted cohort before promoting runtime.
-Current native control starts its old-handle assertion from a manifest base;
-add empty/legacy transitions rather than assuming the same attributes stay pinned.
-Do not edit frozen source during running gates; all current handles are terminal.
-W1-W6 plan records required mixed-tree proof, sparse SQLite edits, exact-view
-settlement and actual native writes. Existing full-snapshot receipts require
-local upload history for every object and full sealed source snapshots; do not
-fabricate receipts for inherited refs. Root-key source correction: roots already
-use Role::Page; old roots may be inherited if exact child geometry/provenance
-matches. No forced rewrite merely because it was previously a root.
-Primary253 runtime unchanged; goal ACTIVE. Preserve intentional PUBLIC visibility.
+Fresh full local gate2 session81306 CLOSED0: all259 unchanged;8reader/format
+controls/1nativeignored,12publication,62S3,365state/1ignored,fmt/clippy/build/book.
+Indexed25member local archive116562bytes SHA
+d7ad206a5579ef5dcaaedb4ee3e7c82374c262093098f375208506bdf4076e5b.
+First gate38083 FAILED existing readonly engine fixture reopening stale inode;
+fixture now refreshes lookup, asserts stale conflict/distinct inode/stable global
+ID and retains old-byte/rename/delete assertions. Isolated positive1.83s then
+fresh full pass. Earlier fixture expansion exceeded unchanged legacy4-snapshot
+cap; completed scenarios release handles, no quota/assertion relaxed. Logs kept.
+The real native helper now tests empty/legacy/manifest publication/reversal,
+legacy republication+rename and retained fd size/bytes with existing teardown.
+These added assertions and W1a require THIS source's own native/raw/artifact gate.
+
+Prepared but NOT EXECUTED: /tmp/s3drive-check-formats-8c3.py,
+/tmp/s3drive-formats-8c3-reference-check.ps1,
+/tmp/s3drive-formats-8c3-raw-compare.py,/tmp/s3drive-formats-8c3-archive.py.
+Need all3 terminal/raw reviewed, both native steps successful and own finalized
+strict21+14/projectoracles/all35 raw fields+types. No own combined rawreview
+marker or artifact directory yet. Do not borrow older artifacts.
+
+Prerequisite native c633 own39178517491 all3/raw/strict21+14/raw35 accepted
+at52f591c; indexed26member archive143913bytes SHA
+800057c4b01f08120681438acc67ce0099fe083ffdc476af37e0e6ce5ee912fd. Watch30345/checker95100 CLOSED0.
+W1a base ed2e93b local258 full gate98776 passed;16member archive53064bytes SHA
+b1af7908f2646d1f33436949897ae04ce22b093baade991cb137ff52530eee8a. Earlier
+signal143 cause unknown retained separately, no source timeout/assertion changed.
+User goal ACTIVE. Primary253 runtime/main1a93b5f unchanged. PUBLIC intentional.
+Next after this cohort: finish authenticated page reuse and sparse chunk editing,
+mixed-tree publication/exact-view settlement and actual native chunk writes.
+Provider conformance and actual workstation reboot remain separate requirements.
 
 ## Historical native-read publication (failed cohort, 2026-10-18)
 
