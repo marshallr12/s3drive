@@ -3211,3 +3211,14 @@ W5b clean epochs/retention and explicit origins/W6 remain.
 W5a own cohort39253634685 attempt1 is running for exact source50ee01c/schema34.
 Main runtime remains accepted W4b2/schema33 until full own source/native/artifact
 acceptance. [Current successor evidence](mixed-publication-lineage.md).
+
+
+W5a own acceptance completed2026-10-19: exact50ee01c/schema34/all319,
+run39253634685 attempt1 all3 success. Full raw/source/own API ZIP SHA/independent
+typed21+14/project/all35 raw fields/types passed. Indexed99-member archive SHA
+3509706b384b8943e24512bb08019f3465f433050eb6a23b8feeba6d40b0e9f2.
+[Exact lineage acceptance](mixed-publication-lineage.md). W5b1 successor source
+3d5de01/schema35/all324 has11 focused state cases and actual SDK cycles passed;
+its full local gate2 is running after a single unused-unit Clippy fix. It does not
+activate native chunks. Bounded retention and fresh external-base adoption,
+explicit origins/W6 and provider/physical session gates remain required.
