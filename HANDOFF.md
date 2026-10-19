@@ -64,9 +64,10 @@ P0 table now reflects D040 public policy instead of stale privacy requirement.
 
 Continue in /home/marshall/src/worktrees/s3drive-manifest-snapshot-inodes,
 branch codex/manifest-snapshot-inodes. Runtime c633d02d47ccf2da20cfadd50e0b8e11f6e06811,
-docs checkpoint6c88e95 pushed; clean/exactremote/all257 working+committed hashes
+docs checkpoint876cd5e pushed; clean/exactremote/all257 working+committed hashes
 verified. Own run39178517491 attempt1: Linux117826123544,
-Windows117826123721, book117826123692. Watch30345 ->
+Windows117826123721, book117826123692. Linux and book SUCCESS/raw reviewed;
+Windows is live in workspace tests. Watch30345 ->
 /tmp/s3drive-snapshot-inodes-c633-watch.log; resume same handle/cohort.
 Read that checkout's HANDOFF/plan before implementation. Full gate68406 CLOSED
 EXIT0 (12publication,6reader/1nativeignored,62S3,365state/1ignored,fmt/clippy/build/book).
@@ -79,11 +80,22 @@ old130MiB fd stat returned4 after a4byte publication; Windows native passed2.39s
 book passed. Old watch24055 CLOSED EXIT1. Logs retained; no success checker or
 artifact acceptance for failed cohort. Do not borrow its artifacts for repair.
 Repair keeps old-size assertion and adds same-name publication before rename.
-Need own completed all3/native controls/rawreview and finalized Windows artifacts
-(strict21+14/projectoracles/raw35). Prepared but NOT executed:
+Linux repaired manifest native control passed1.22s,9existing native tests63.27s;
+no-systemd coordinator HTTP/TLS passed23.97s. Source-bound review markers:
+/tmp/s3drive-snapshot-inodes-c633-linux-reviewed.json and
+/tmp/s3drive-snapshot-inodes-c633-book-reviewed.json. Windows native and its
+own finalized artifacts remain pending; no combined marker/success checker yet.
+Need all3/native/rawreview and strict21+14/projectoracles/raw35. Prepared but NOT executed:
 /tmp/s3drive-check-snapshot-inodes-c633.py,
 /tmp/s3drive-snapshot-inodes-c633-reference-check.ps1,
-/tmp/s3drive-snapshot-inodes-c633-raw-compare.py. No own rawreview marker yet.
+/tmp/s3drive-snapshot-inodes-c633-raw-compare.py and
+/tmp/s3drive-snapshot-inodes-c633-archive.py. No combined rawreview marker yet.
+The isolated plan defines W1-W6 for actual chunk writes: authenticated base
+provenance, sparse SQLite views, mixed-tree proof, publication, exact-view
+settlement, native writes. Existing full-snapshot tree receipts require local
+upload history for every object; exact source ack requires a full local snapshot.
+Inherited references need separate explicit proofs/settlement, not fabricated
+upload receipts or weakened validators. Pending native read acceptance.
 Primary runtime unchanged; no main/visibility mutation. PUBLIC remains intentional.
 Chunk writes remain later work, goal ACTIVE. Supersedes the historical live notes below.
 

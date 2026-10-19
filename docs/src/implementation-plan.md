@@ -2016,5 +2016,10 @@ manifest payload-specific inode/attribute repair is published as `c633d02` on
 codex/manifest-snapshot-inodes. Negative control failed before repair; fresh full
 local gate passed with257 unchanged inputs, including stale and racing open checks.
 Its [own real OS cohort](https://github.com/marshallr12/s3drive/actions/runs/39178517491)
-is running. Continue in that branch's isolated checkout and read its plan/handoff.
-Primary runtime remains unchanged until actual repaired native acceptance.
+has passed Linux (including the repaired native manifest control and no-systemd
+startup) and book checks; Windows remains live. Continue in that isolated
+checkout and read its plan/handoff. Its
+[W1-W6 incremental write plan](https://github.com/marshallr12/s3drive/blob/876cd5ee67b6fcc2eba68d0e3c2603a12e1cd7f1/docs/src/implementation-plan.md)
+records the additional inherited-reference proof and sparse-view settlement
+boundaries. Those are proposals pending repaired read acceptance. Primary runtime
+remains unchanged until actual repaired native acceptance.
