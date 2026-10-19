@@ -121,3 +121,7 @@ The [dated evidence](evidence/base-identity-core-20261018.json) and
 [indexed12-member local archive](evidence/base-identity-core-local-20261019.tar.gz)
 retain exact source and results. Own hosted/native acceptance is still pending;
 W1c2's earlier cohort does not certify this newly changed source.
+
+W2a source `c279e0f` is published. Its
+[own platform/book run](https://github.com/marshallr12/s3drive/actions/runs/39198380488)
+is in progress; publication does not imply hosted/native acceptance.

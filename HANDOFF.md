@@ -40,8 +40,15 @@ all267 frozen inputs unchanged in /tmp/s3drive-base-identity-core-frozen.json.
 37core/368state1ignored/11reader1nativeignored/62S3 plus all format/Clippy/build/
 links/book checks passed. Indexed12-member local archive46819bytes SHA
 5e4b6ec73046762836d0959f2abec0d51b821f7f1ecc28d9177eda48b4bf1c11.
-Own hosted/native acceptance not yet claimed; publish this checkpoint and track
-its own cohort. Main remains accepted41188dd. PUBLIC intentionally unchanged.
+Published runtime c279e0fe20054b86d015b5899a96b1070c261e2e; all267
+committed/working hashes match local gate. Own run39198380488 attempt1 LIVE:
+Windows117885986696,book117885989603,Linux117885996299. Watch13536 LIVE ->
+/tmp/s3drive-base-identity-core-hosted-watch.log. Publication proof
+/tmp/s3drive-base-identity-core-publication.json. Own run-specific raw/API/typed/
+project/raw35 checkers prepared with prefix /tmp/s3drive-base-identity-core-hosted;
+main checker /tmp/s3drive-check-base-identity-core-hosted.py. Never reuse older
+artifacts or execute checker until all3 jobs succeed and raw logs are reviewed.
+Own hosted/native acceptance not yet claimed. Main remains accepted41188dd; PUBLIC.
 
 Next W2b may build the local-only SQLite view model against this locally gated
 pure codec in a separate clean worktree. Read W2 proposal, W2a layering detail
