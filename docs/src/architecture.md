@@ -18,11 +18,29 @@ CI39097275707, with source/platform-bound21/14 reference artifacts. The older
 timeout's cause remains unproven. Offline
 [snapshot creation/inspection](authority-backup-recovery.md) subsequently passed
 scoped native acceptance at mainbf9509e; writable restore/failover remain
-unsupported. The newer [owned client](owned-authority-client.md) passed portable
-controls but failed exact-source Windows flush acceptance. Its next diagnostic
-candidate observes HTTP driver and plaintext I/O progress; no fix is established.
-Remote deployment and optional Turso are still unprovisioned.
-No bucket migration or Turso service is enabled.
+unsupported. The [owned client](owned-authority-client.md) and later manifest/mixed-root
+work have since passed their documented exact-source hosted acceptance. Earlier
+failed cohorts remain part of the evidence; a passing later cohort does not prove
+the cause of an earlier transport failure. Remote deployment and optional Turso
+remain unprovisioned. No bucket migration or Turso service is enabled.
+
+## Selected large-file layout: chunks and manifests
+
+The user selected immutable chunks plus a manifest for large managed files.
+The coordinator stores normal filenames, directory entries and the current file
+root. The Rust client transfers immutable payload objects directly to the S3
+service. A manifest identifies the chunks and their integrity information;
+unchanged chunks can be reused by a later file generation. These internal object
+keys are separate from the paths shown in the mounted drive.
+
+[Mixed upload plans](mixed-plans.md), [dependency uploads](mixed-uploads.md),
+[root publication](mixed-root-publication.md) and [clean base epochs](mixed-clean-epochs.md)
+have accepted library-level implementations. Mounted writes still use their older
+whole-generation path; the chunk pipeline is not yet enabled in filesystem
+callbacks. Automatic reader retention, bounded cleanup and safe reclamation remain
+required. The [read-pin diagram](source-read-pins.md) shows the current prototype
+and the proposed driver integration; its component checks do not establish native
+chunk writes or garbage collection.
 
 The existing direct-layout implementation below has native read/cache, explicit
 existing-file writes and [guarded file creation](native-creation.md). It remains
