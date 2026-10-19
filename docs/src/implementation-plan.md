@@ -2030,9 +2030,13 @@ retains the indexed29-member hosted archive. Earlier artifacts were not reused.
 W1b3890584 independently passed the full local gate with260 unchanged inputs,
 7reader/12publication/62S3/365state1ignored and book/build checks. It exports
 bounded opaque PageProof witnesses and proves valid prior-root reuse as a child
-with invalid geometry refusal, no data fetch or receipt fabrication. The local
-combined sourcebf2e6ae now includes accepted da84d3a and runs fresh gate68162
-with261 frozen inputs. This combined source has no own hosted acceptance yet;
-continue in codex/manifest-page-proofs and finish its own gates before promotion.
+with invalid geometry refusal, no data fetch or receipt fabrication. The combined
+sourcebf2e6ae includes accepted da84d3a and passed fresh full gate68162 with261
+unchanged frozen inputs,9reader/format1nativeignored,12publication,62S3,
+365state1ignored and all book/build checks. Indexed19-member local archive verified.
+Published docschilda5a3021 retains the results. Its
+[own Linux/Windows/book cohort](https://github.com/marshallr12/s3drive/actions/runs/39187701991)
+is live; own native/raw/artifact acceptance remains pending. Continue in
+codex/manifest-page-proofs and finish its own gates before promotion.
 Historical base reopen, sparse SQLite edits, mixed-tree proofs, exact-view
 settlement, native chunk writes and provider/reboot acceptance remain.

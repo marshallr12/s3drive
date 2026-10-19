@@ -75,10 +75,22 @@ PageProof shares existing capacity/deadline; distinct from chunk-proof encoding.
 
 Combined with accepted da84d3a in local bf2e6aed16d32c62e094082a50769141f8f90ef6.
 All4 conflicts resolved retaining both native/pages test modules and evidence.
-Fresh combined full gate68162 LIVE, /tmp/s3drive-page-proofs-combined-gate.log,
-frozen261 /tmp/s3drive-page-proofs-combined-frozen.json. Resume same gate, do not
-mutate runtime; no own combined W1b hosted cohort yet. Need complete local gate,
-exact-source publication and own Linux/Windows/book native/raw/artifact checks.
+Fresh combined full gate68162 CLOSED EXIT0, /tmp/s3drive-page-proofs-combined-gate.log,
+frozen261 /tmp/s3drive-page-proofs-combined-frozen.json, all unchanged.9reader/format
+1nativeignored,12publication,62S3,365state1ignored,fmt/clippy/build/book passed.
+Indexed19member combined local archive100784bytes SHA
+333f2722f4672361a9bcf2304fb92061df42813c001bcebfe4066facd8b7cb8e.
+Runtimebf2e6ae published with docschilda5a3021 on codex/manifest-page-proofs.
+Own run39187701991 attempt1 LIVE: Linux117853515918,Windows117853515627,
+book117853515963. Watch7139 -> /tmp/s3drive-page-proofs-bf2-watch.log. Resume
+same handle/cohort; no runtime mutation or observation-timeout restart.
+Need all3 terminal/raw reviewed, both native steps successful and own finalized
+artifact ZIP API digests, typed21+14/project oracles/all35 raw fields+types.
+Prepared NOT EXECUTED /tmp/s3drive-check-page-proofs-bf2.py,
+/tmp/s3drive-page-proofs-bf2-reference-check.ps1,
+/tmp/s3drive-page-proofs-bf2-raw-compare.py,/tmp/s3drive-page-proofs-bf2-archive.py.
+No own raw-review marker/artifact directory yet; never borrow8c3448f artifacts.
+Publication /tmp/s3drive-page-proofs-publication.json. Keep source261 frozen.
 
 Accepted prerequisite runtime8c3448f478f9ab62fe1a23ce965907546be5d10c, clean
 exactremote docscheckpoint da84d3a05e0562bed00f77f3ea5aece935e52d32 on
