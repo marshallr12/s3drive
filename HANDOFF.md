@@ -25,6 +25,42 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Active follow-up: immutable local patches, W2b2b (2026-10-19)
+
+Read /home/marshall/src/worktrees/s3drive-sparse-patches/HANDOFF.md and that
+checkout's docs/src/implementation-plan.md before continuing implementation.
+Branch codex/sparse-patches, published runtime d37096cc9c1ba9b55b73fb30d1edfb2fa7ca0955,
+schema31, is full local green: gate2 40129 EXIT0, all284 frozen inputs unchanged,
+393state1ignored/37core/12reader1nativeignored/62S3 and all format/Clippy/build/
+73MD links/69book checks. Indexed44-member local archive407415bytes SHA
+342c2ecab291c8720afdd2cf364b30cf8b2f2bcef4294e98749f513064406b9f.
+
+Own run39209163191 attempt1 LIVE: book117918472018,Windows117918472313,
+Linux117918472383. Watch55135 -> /tmp/s3drive-sparse-patches-hosted-watch.log.
+Publication proof /tmp/s3drive-sparse-patches-publication.json. Require complete
+own raw/native/reference/ZIP API digests/typed21+14/project/all35 raw fields/types
+before acceptance. Keep the284 runtime inputs frozen in that checkout. Prepared
+strict checker/oracles/comparison/archive scripts use /tmp/s3drive-sparse-patches-*.
+Main remains accepted B1/schema29; new native chunk writes are NOT enabled.
+
+The schema30 parent runtime8141996 did NOT gain hosted acceptance. Own39205603137
+failed Linux117907640741 at an existing reader fixture's post-body accounting
+race (9438058 vs9437184); Windows/book succeeded, watch21371 CLOSED1. Its276
+inputs remain frozen. The schema31 source adds bounded response-handler settlement
+and a deliberately delayed accounting control, keeping the exact9-chunk assertion.
+Do not promote or rerun unchanged schema30 to chase green or reuse its artifacts.
+
+W2b2b now implements <=1MiB immutable patches, exact-parent writes/resizes and
+operation replay after newer heads, retained linear history, byte-exact old rows,
+normalized base/zero/patch maps, bounded verified local pieces and independent
+quotas. Controls include48 independent-model edits,35 corruption cases, SQL-full/
+trigger rollback,6 actual process-death boundaries and worker races/reopen.
+Next W2c composes freshly authenticated exact remote bases with local pieces;
+all-local/zero reads must not bypass authorization. Inspect actual reader/base
+APIs and filesystem policy; no SQL owner held over network waits. W3/W4 mixed
+publication, W5 settlement, legacy/metadata-empty restart and W6 real native chunk
+writes/provider/workstation acceptance remain. PUBLIC unchanged. Goal ACTIVE.
+
 ## Current accepted W2b1 SQLite base-view admission (2026-10-19)
 
 Runtime1681ee654e7f6d0b4f39ba3fb4b306bfdb505ea0 accepted in own run39203016390
@@ -40,13 +76,11 @@ removed; deletion deferred to VM destruction. No performance/physical reboot/
 provider/new native chunk-write acceptance. Main integration retains these275
 inputs, changing documentation/evidence only. PUBLIC remains intentional.
 
-Next local-green follow-up: /home/marshall/src/worktrees/s3drive-sparse-mutations,
-codex/sparse-mutations, schema30 immutable-version migration prerequisite W2b2a.
-Its full local gate2 6893 passed276inputs/380state1ignored/37core/11reader1native
-ignored/62S3 after a narrow owned disk-full fixture repair. Read that checkout's
-HANDOFF and migration discussion before continuing; publish its exact source for
-own combined gates. Main's accepted runtime remains schema29; patch bytes,
-mutations, W2c/W3-W6 and legacy/metadata-empty recovery remain required.
+The earlier schema30 local-green follow-up was superseded by the schema31
+patch source above after its own Linux cohort exposed the reader accounting
+fixture race. Main's accepted runtime remains schema29. Continue from the new
+patch checkout, not the failed parent. W2c/W3-W6 and legacy/metadata-empty
+recovery remain required.
 
 Worktree /home/marshall/src/worktrees/s3drive-sparse-edit-views,
 branch codex/sparse-edit-views from core checkpointc759250 (runtimec279e0f).
