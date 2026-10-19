@@ -2743,3 +2743,39 @@ cancellation and credential-rotation behavior. Verify through owned SDK + real
 Rust authority + local-journal fixtures and the complete local/own combined gates.
 Legacy and metadata-empty admission/restart contracts remain required before W6;
 this sequence does not narrow the final drive to existing manifest files only.
+
+
+### W2c composition — declared contract (2026-10-19)
+
+Implement in isolated codex/sparse-composition from local-green d37096c, freezing
+its own live CI source. Derive binding from authenticated BaseFile, reopen a stored
+view via exact history/root verification and compare actual size/store/source/
+fingerprint/root/principal. Compose bounded local pieces with verified base
+chunks under one shared reader active permit, snapshot permit and overall
+operation deadline. Fresh authority history and pinned-root HEAD must precede
+returning any nonempty bytes, including all-local/zero reads. EOF/zero-length
+reads may retain the existing network-free policy because no bytes escape.
+
+A per-fragment call to read_range would reset budgets and duplicate downloads.
+Use one request-local verified page/data cache, one traversal/data budget and
+exact reference/length validation on cache hits (S3 object keys omit hashes).
+Never hold SQL owner across network waits or expose partial output on late
+faults. Bound ranges/resources and preserve older views; never silently rebind
+credential generations. Verify through owned SDK + real Rust authority + private
+SQLite worker, then full local and own combined platform/native gates. No native
+chunk-write/publication/settlement activation. Legacy/metadata-empty support and
+W3-W6 remain in the final goal.
+
+
+W2c local result,2026-10-19: authenticated sparse composition full gate56076
+passed all286 frozen inputs unchanged:393state1ignored/37core/16reader1native
+ignored/62S3 plus all format/Clippy/build/74MD links/70book checks. Controls cover
+mixed/page-boundary and40-fragment reads, exact nine-chunk8MiB output,64GiB zero
+tails, all-local/zero authorization, wrong bindings/principals, late denied or
+corrupt data, local corruption after open, independent-process/authority restart,
+shared active/snapshot limits, cancellation/deadline and SQL progress under a
+network gate. Indexed19-member local archive and reviewed architecture SVG are
+retained. Publish this exact source for its own combined gates; accepted parent
+main6c9f0b5/runtimed37096c is unchanged and does not certify this new code. See
+[composition evidence](sparse-composition.md). W3-W6 and legacy/metadata-empty
+support remain; native chunk writes stay disabled.

@@ -5,6 +5,8 @@ mod fixture;
 #[path = "chunk_reader/native.rs"]
 mod native;
 
+#[path = "chunk_reader/composition.rs"]
+mod composition;
 #[path = "chunk_reader/pages.rs"]
 mod pages;
 #[path = "chunk_reader/proofs.rs"]
@@ -736,6 +738,9 @@ async fn manifest_reader_child() {
     match mode.as_str() {
         "flow" => Box::pin(flow(&f)).await,
         "accounting" => Box::pin(accounting(&f)).await,
+        "composition" => Box::pin(composition::flow(&mut f, &path)).await,
+        "composition-faults" => Box::pin(composition::faults(&f, &path)).await,
+        "composition-limits" => Box::pin(composition::limits(&f, &path)).await,
         "proofs" => Box::pin(proofs::flow(&f)).await,
         "pages" => Box::pin(pages::flow(&f)).await,
         "reopen" => Box::pin(reopen::flow(&mut f, &path)).await,
@@ -882,4 +887,22 @@ async fn accounting(f: &Fixture) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn response_accounting_waits_for_owned_handler_after_client_body_completion() {
     run("accounting").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn edited_views_compose_exact_history_local_patches_zeros_and_fragmented_chunks_after_restart()
+ {
+    run("composition").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn edited_views_refuse_wrong_bindings_auth_denials_late_faults_and_principal_rebinding() {
+    run("composition-faults").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn edited_views_share_reader_limits_cancel_deadline_and_release_sql_owner_before_network() {
+    run("composition-limits").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn edited_view_reopen_worker() {
+    composition::worker().await;
 }

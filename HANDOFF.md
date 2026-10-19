@@ -25,6 +25,59 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Current W2c authenticated sparse composition — local green (2026-10-19)
+
+Worktree /home/marshall/src/worktrees/s3drive-sparse-composition,
+branch codex/sparse-composition from local-green6456e9c (runtime d37096c/schema31).
+Parent own39209163191 completed all3/raw/own artifacts and is accepted as main
+6c9f0b5/schema31, runtime d37096c unchanged284 inputs. PUBLIC intentional, never repair
+visibility. Prior turn was concrete progress, not a blocked/no-progress turn.
+
+Done contract: derive actual sparse binding from authenticated BaseFile; reopen
+stored view through exact-history authority + root verification; reject actual
+size/store/source fingerprint/root/principal mismatch. Return one bounded range
+combining base/zero/local only after fresh exact-history and pinned-root HEAD,
+including all-local/all-zero nonempty reads. One shared active permit and overall
+deadline covers owner read/auth/network; no SQL owner held across network waits.
+Use request-local verified page/data caches and one traversal/data budget for all
+base fragments (never reset per fragment); compare full reference + size on cache
+reuse because object keys omit digest. No partial bytes on late failure. Preserve
+older versions and credential isolation; different principal reopens fail binding
+without rewriting dirty state. Snapshot/active limits shared with existing reader.
+
+Footprint: new reader/composition module + reexports; owned chunk_reader integration
+module/cases using existing fixture. No schema/wire/provider/native mutation.
+Need mixed bytes and fragmented-cache bounds, all-local/zero auth denials,
+wrong bindings, retained versions/restart, corruption/late faults, busy/cancel/
+deadline and SQLite-owner progress controls, then full gate and own combined
+platform/native/source cohort. Legacy/metadata-empty and W3-W6 remain required.
+
+W2c results: check82762 CLOSED101 at sibling-private reopen_inner; changed only
+its internal visibility to pub(super), check82651 CLOSED0. Focused90420 CLOSED101:
+1pass/2 new fixture expectation failures (child page body235 bytes omitted;
+BadEtag fault affects GET not HEAD). Corrected exact page accounting + actual
+HEAD revision control. Focused59779 CLOSED0:3tests9.24s; full portable reader83893
+CLOSED0:16pass1nativeignored13.23s. Added unread remote chunk-tail corruption
+behind a local prefix; focused1598 CLOSED0:3tests9.75s. Diagram XML/native render
+and visual review passed. Full gate56076 CLOSED EXIT0 (PTY/four test threads), all286 frozen inputs
+unchanged.393state1ignored/37core/16reader1nativeignored/62S3 and all format/
+Clippy/build/74MD links/70book checks passed. Map
+/tmp/s3drive-sparse-composition-frozen.json; result
+/tmp/s3drive-sparse-composition-gate-result.json. Indexed19-member local archive
+275670bytes SHA3db1b72b6c8ad76b1e116ecd43a21377bc38728d170e040b96e77894230ff909
+verified all members. One-use archiver already ran; do not repeat. No runtime
+changes since the successful freeze. Publish this exact new source for own
+combined real Windows/Linux/native/typed reference/source acceptance. No native
+chunk-write, provider or physical reboot acceptance follows.
+
+Parent d37096c is now ACCEPTED: own39209163191 all3/raw/API ZIP digests/typed21+14/
+project/all35 fields/types passed, checker44350 CLOSED0, watch55135 CLOSED0,
+indexed60-member hosted archive261313bytes SHA628c49e4c389cbcbfc821e8afd1bfc67b855ccee57a7f6db0d7424e0dc98d72f.
+Canonical main6c9f0b5 schema31 includes that unchanged284-input runtime. Do not
+conflate that acceptance with this W2c source; this286-input composition needs
+its own combined source before activation. Primary proof
+/tmp/s3drive-canonical-sparse-patches-publication.json.
+
 ## Current W2b2b immutable patches and mutations — local green (2026-10-19)
 
 Worktree /home/marshall/src/worktrees/s3drive-sparse-patches,

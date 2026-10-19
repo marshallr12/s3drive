@@ -88,7 +88,7 @@ impl Reader {
             .map_err(|_| ReadFailure::Busy)?;
         bounded(self.0.options, Box::pin(self.reopen_inner(base, snapshot))).await
     }
-    async fn reopen_inner(
+    pub(super) async fn reopen_inner(
         &self,
         base: &BaseDescriptor,
         snapshot: OwnedSemaphorePermit,

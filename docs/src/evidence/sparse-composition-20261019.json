@@ -1,0 +1,145 @@
+{
+  "date": "2026-10-19",
+  "phase": "W2c authenticated immutable sparse composition",
+  "branch": "codex/sparse-composition",
+  "baseline": "6456e9c75b20164248bca0760a3f049763e404e7",
+  "status": "full portable local gate passed; own combined platform/native acceptance required",
+  "scope": "authenticated edited reads from exact historical manifest/local patches/zeros; no schema/wire/provider/native write activation",
+  "runs": {
+    "check1": {
+      "session": 82762,
+      "exit_code": 101,
+      "log": "/tmp/s3drive-sparse-composition-check.log",
+      "sha256": "4e759edceab7c8932c8241e97458e8137891238ccc44753b3dc4c89c4e82fc7b",
+      "reason": "existing reopen_inner private to sibling base module; changed to pub(super), retaining private authenticated path"
+    },
+    "check2": {
+      "session": 82651,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-sparse-composition-check2.log",
+      "sha256": "6e79b114a848f4cb622c1c15d1a6f51585502fade9e0bff3933f0041c8a403d5"
+    },
+    "focused1": {
+      "session": 90420,
+      "exit_code": 101,
+      "log": "/tmp/s3drive-sparse-composition-focused1.log",
+      "sha256": "c23c9e48ccb37c6e5b81a56629fba3c1a6caf60974f84fa11068581004940e43",
+      "passed": 1,
+      "failed": 2,
+      "reason": "fixture expectation: child page bytes omitted; BadEtag affects GET not HEAD; corrected exact accounting and actual HEAD revision control"
+    },
+    "focused2": {
+      "session": 59779,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-sparse-composition-focused2.log",
+      "sha256": "7937b148ee234ffbee650de854decd96a1c621b607995ec6563aa5cfca6616e9",
+      "passed": 3,
+      "seconds": 9.24
+    },
+    "reader": {
+      "session": 83893,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-sparse-composition-reader.log",
+      "sha256": "4074258419f36037f0b97038e039153eeea46049facd7a59ef540a5ec01648bd",
+      "passed": 16,
+      "ignored_native": 1,
+      "seconds": 13.23
+    },
+    "focused3": {
+      "session": 1598,
+      "exit_code": 0,
+      "passed": 3,
+      "seconds": 9.75,
+      "log": "/tmp/s3drive-sparse-composition-focused3.log",
+      "sha256": "cbd05ad9a3d71f6347fdc21c5718c73800d6fd01a18f6f7d72de82d4d15f88eb",
+      "extra_control": "unread remote chunk tail corruption after local prefix rejects complete output"
+    }
+  },
+  "not_claimed": [
+    "native edited reads/writes",
+    "mixed-root publication or clean settlement",
+    "legacy/metadata-empty admission",
+    "Wasabi or physical reboot/session acceptance"
+  ],
+  "diagram": {
+    "source": "images/sparse-composition.svg",
+    "xml_native_render_visual_review": "passed",
+    "review_png": "/tmp/s3drive-sparse-composition-diagram-review.png"
+  },
+  "full_gate": {
+    "date": "2026-10-19",
+    "session": 56076,
+    "exit_code": 0,
+    "log": "/tmp/s3drive-sparse-composition-gate.log",
+    "sha256": "93d49d14acfe444d9fdad531a5a7af2df9b8a5c57569fef519e20abadbf9db53",
+    "runtime_inputs": 286,
+    "all_frozen_inputs_unchanged": true,
+    "schema": 31,
+    "state_passed": 393,
+    "state_ignored": 1,
+    "core_passed": 37,
+    "reader_passed": 16,
+    "reader_native_ignored": 1,
+    "s3_passed": 62,
+    "markdown_files": 74,
+    "book_chapters": 70,
+    "tty": true,
+    "top_level_test_threads": 4,
+    "test_summaries": [
+      "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.29s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.80s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 20.62s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.22s",
+      "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.55s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 10.57s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s",
+      "test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 60.34s",
+      "test result: ok. 16 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 13.39s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.26s",
+      "test result: ok. 2 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 8.21s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.68s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.05s",
+      "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 19.66s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.42s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.11s",
+      "test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+      "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.41s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 20.26s",
+      "test result: ok. 393 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 177.98s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ],
+    "scope": "full portable local gate only; own combined real Linux/Windows native/source acceptance required"
+  },
+  "local_archive": {
+    "path": "evidence/sparse-composition-local-20261019.tar.gz",
+    "sha256": "3db1b72b6c8ad76b1e116ecd43a21377bc38728d170e040b96e77894230ff909",
+    "bytes": 275670,
+    "members": 19,
+    "all_indexed_members_verified": true,
+    "all286_frozen_inputs_unchanged": true,
+    "scope": "portable local composition only; own combined/native gates required"
+  },
+  "accepted_parent": {
+    "source": "d37096cc9c1ba9b55b73fb30d1edfb2fa7ca0955",
+    "main": "6c9f0b5db3705d0bab5aa2d91e0882a977065dfe",
+    "run_id": 39209163191,
+    "all3_raw_own_artifacts": "passed",
+    "runtime_inputs": 284
+  }
+}
