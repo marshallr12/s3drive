@@ -60,3 +60,35 @@ without invalidating the committed result. State all-target Clippy passed17.34s.
 An initial check ran before the test module existed and failed with E0583; the
 module was then supplied. No production assertion was relaxed. Full workspace and
 own hosted/platform acceptance remain outstanding; no remote facade is enabled.
+
+
+Full gate1 is running from frozen340-input source67a75e3047a867e2499ef08ded64fe00b72a4aa9,
+runner1114325/child1114329, started2026-10-19T17:33:34Z. Own
+[CI39295182975](https://github.com/marshallr12/s3drive/actions/runs/39295182975),
+attempt1, has book118205713291/Linux118205712929/Windows118205713142 running.
+GET-only observer1115366 tracks this cohort. Prepared acceptance tools are not
+executed; they require13 new cases,494/489 state counts and exact340 inputs as
+well as inherited native/source/artifact checks. No parent artifact reuse.
+
+
+## Complete local gate (2026-10-19)
+
+Source67a75e3/schema38 passed the complete local gate at17:46:14Z with all340
+frozen inputs unchanged. Publication24/163.16s, state494 (one diagnostic ignored)/
+256.86s, reader23 (one native-only ignored)/45.10s,37core/62S3, formatting,
+workspace all-target Clippy/build and book/link checks passed. The log contains
+90 Markdown-file link validation and86 chapter-test entries. Ordinary four test
+threads; no reduced SDK admission or changed operation deadlines.
+
+The [indexed local archive](evidence/external-clean-local-local-20261019.tar.gz)
+contains355 verified members/6437122bytes: exact340 inputs, full gate/map/runner,
+focused and Clippy logs, archive builder and two independently hash/index-verified
+accepted-parent archives. SHA-256
+`6771882a97cca90e85ca7570d6b05e6fa8ce4bda7e6956628d609cc10bacc582`.
+Full log SHA-256
+`4c9d2c03b1384b851295402053e266554079fc32324b299f0dfeaf11db75f342`.
+[Dated evidence](evidence/external-clean-local-20261019.json) records the scope.
+The one-use local archiver is DONE; never rerun it. Own book/Linux CI succeeded;
+Windows is still running. Full own raw/source/native/artifact checks remain
+required before promotion. The separate remote-observation candidate cannot be
+accepted by this local intent result; it needs its own checks.

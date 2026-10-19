@@ -69,8 +69,11 @@ No authenticated remote facade, mounted chunk write or GC. [Contract](docs/src/e
 Focused12 passed1.23s (five actual kills/SQLITE_FULL/worker race/pins), separate
 publication-history case0.86s; state all-target Clippy17.34s. Initial check before
 test module creation failedE0583; module supplied before the successful focused run.
-Full gate1 runner1114325/startticks143781754, child1114329/startticks143781764
-LIVE at17:33:34Z, exact340 map/source frozen under
+Full gate1 runner1114325/child1114329 CLOSED0 at17:46:14Z, all340 unchanged.
+Publication24/163.16s,state494+1ignored/256.86s,reader23+1nativeignored/45.10s,
+37core/62S3/fmt/workspaceClippy/build/90Markdown/86chapter log entries passed.
+Indexed355-member local archive SHA6771882a97cca90e85ca7570d6b05e6fa8ce4bda7e6956628d609cc10bacc582
+verified; one-use local archiver18521 DONE, never rerun. Exact340 frozen under
 /tmp/s3drive-external-clean-local-candidate1-{frozen.json,source.tar.gz}.
 Logs/status /tmp/s3drive-external-clean-local-gate1-{running,result}.json and .log.
 Own CI39295182975 attempt1: book118205713291/Linux118205712929/Windows118205713142
@@ -78,6 +81,19 @@ running. GET-only observer1115366/startticks143787153, same-prefix hosted-watch
 status. Own acceptance tools prepared/compiled, NOT executed; raw review required
 before marker/checker/comparison/archive. Own expected state494Linux/489Windows,
 24publication/23reader. Parent337 artifacts12204512424/12205563584 forbidden reuse.
+The remote facade is now separately implemented in worktree
+/home/marshall/src/worktrees/s3drive-external-clean-reader, branchcodex/external-clean-reader,
+source9913dd87584caa716a9003ce1d846f3af24cc90a/all342. It adds guarded preflight and
+Reader::observe_clean, with final live payload/root checks and3 SDK/2 state cases.
+[Contract](docs/src/external-clean-reader.md). SDK1 sourcea8cc73e passed2state32.01s
+and3SDK30.05s, but workspace Clippy failed large_enum_variant (344-byte View versus
+8-byte guard). Runner1153483 CLOSED101/all342 unchanged; exact maps/source/logs
+retained. SDK2 boxes the known metadata View; no assertions weakened. Own verifier
+1176459 runs the same2state/3SDK/workspaceClippy legs serially; same-prefix SDK2
+running/result and per-leg logs are in /tmp/s3drive-external-clean-reader-sdk2-*.
+Its exact342 map/source are frozen; do not edit until terminal. No other Cargo.
+Parent340 own Linux/book succeeded; own Windows workspace tests remain live.
+Book/Linux raw logs retained. Own one-use raw review/checker/archiver NOT executed.
 Main remains accepted schema37/all337. Do not edit frozen candidate runtime or
 start another local Cargo while this gate lives. The next remote facade must add
 fresh live-node/root authentication and final observation checks; see proposal.

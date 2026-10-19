@@ -3413,3 +3413,24 @@ Clippy17.34s. Five killed-owner boundaries and real SQLITE_FULL were exercised.
 Full local gate runner1114325/child1114329 began17:33:34Z. Own CI39295182975
 attempt1: book118205713291/Linux118205712929/Windows118205713142 running.
 Main remains accepted schema37; local intent cannot prove fresh remote observation.
+
+
+### Authenticated observation candidate (2026-10-19)
+
+[Separate facade candidate](external-clean-reader.md), checkpointa8cc73e/all342,
+implements same-owner guarded preflight and fresh live root/payload checks with
+three SDK-backed scenarios and two worker cases. It is not yet compiled or accepted.
+Owned verifier1153483 waits for the exact parent340 full gate to exit0 unchanged
+before running its focused cases and workspace Clippy; no second concurrent local
+Cargo is started. Parent340 own Linux/book succeeded; own Windows remains running.
+
+
+### Local intent full gate and first facade checks (2026-10-19)
+
+Local source67a75e3/all340 passed the complete gate at17:46:14Z unchanged:
+494state1ignored/24publication/23reader1nativeignored/37core/62S3, formatting,
+workspace Clippy/build/book. [355-member local archive](external-clean-local.md)
+verified; own Windows and complete hosted raw/source/artifact checks remain.
+Separate facadea8cc73e passed2worker32.01s/3SDK30.05s, then Clippy rejected the
+large preflight enum. Repair9913dd8 boxes known metadata; the same focused cases
+and Clippy are running as SDK2. [Exact scope](external-clean-reader.md). Main37.

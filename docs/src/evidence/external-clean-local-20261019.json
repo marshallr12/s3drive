@@ -1,0 +1,96 @@
+{
+  "date": "2026-10-19",
+  "phase": "local clean-version adoption intent",
+  "status": "full local gate passed; own hosted/platform/source/artifact acceptance required",
+  "schema": 38,
+  "source": "67a75e3047a867e2499ef08ded64fe00b72a4aa9",
+  "runtime_inputs": 340,
+  "local_gate": {
+    "runner_pid": 1114325,
+    "runner_start_ticks": "143781754",
+    "child_pid": 1114329,
+    "child_start_ticks": "143781764",
+    "started": "2026-10-19T17:33:34.114022+00:00",
+    "command": [
+      "bash",
+      "scripts/gate.sh"
+    ],
+    "cwd": "/home/marshall/src/worktrees/s3drive-external-clean-local",
+    "runtime_inputs": 340,
+    "frozen_map": "/tmp/s3drive-external-clean-local-candidate1-frozen.json",
+    "tty": false,
+    "rust_test_threads": 4,
+    "log": "/tmp/s3drive-external-clean-local-gate1.log",
+    "exit_code": 0,
+    "finished": "2026-10-19T17:46:14.939510+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": [],
+    "sha256": "4c9d2c03b1384b851295402053e266554079fc32324b299f0dfeaf11db75f342"
+  },
+  "local_archive": {
+    "scope": "complete local gate only; parent and own hosted/platform/source/native acceptance required",
+    "path": "evidence/external-clean-local-local-20261019.tar.gz",
+    "sha256": "6771882a97cca90e85ca7570d6b05e6fa8ce4bda7e6956628d609cc10bacc582",
+    "bytes": 6437122,
+    "members": 355,
+    "all_indexed_members_verified": true,
+    "runtime_inputs": 340,
+    "source_checkpoint": "67a75e3",
+    "schema": 38,
+    "gate_exit_code": 0,
+    "gate_log_sha256": "4c9d2c03b1384b851295402053e266554079fc32324b299f0dfeaf11db75f342",
+    "rust_test_threads": 4,
+    "reduced_sdk_admission": false,
+    "counts": {
+      "publication": {
+        "passed": 24,
+        "ignored": 0,
+        "seconds": 163.16
+      },
+      "state": {
+        "passed": 494,
+        "ignored": 1,
+        "seconds": 256.86
+      },
+      "reader": {
+        "passed": 23,
+        "ignored": 1,
+        "seconds": 45.1
+      },
+      "core": {
+        "passed": 37,
+        "ignored": 0,
+        "seconds": 0.05
+      },
+      "s3": {
+        "passed": 62,
+        "ignored": 0,
+        "seconds": 20.92
+      }
+    },
+    "parent_archives_independently_verified": 2
+  },
+  "documentation": {
+    "markdown_files": 90,
+    "chapter_test_log_entries": 86
+  },
+  "parent": {
+    "source": "903ade67e21cd71bb7ab02716c098993d9f6e82f",
+    "accepted": true
+  },
+  "own_hosted": {
+    "run_id": 39295182975,
+    "attempt": 1,
+    "jobs": {
+      "book": 118205713291,
+      "linux": 118205712929,
+      "windows": 118205713142
+    },
+    "status": "book/Linux succeeded; Windows workspace tests running",
+    "tools_executed": false,
+    "parent_artifact_reuse_permitted": false
+  },
+  "authenticated_observation": false,
+  "native_chunk_writes": false,
+  "reclamation": false
+}

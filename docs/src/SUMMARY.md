@@ -56,6 +56,7 @@
 - [Bounded local retention plan](mixed-retention-plan.md)
 - [Observing external clean versions: proposal](external-clean-adoption.md)
 - [Local clean adoption intent](external-clean-local.md)
+- [Authenticated clean observation](external-clean-reader.md)
 - [Epoch-scoped source operations](scoped-source-operations.md)
 - [Scoped operations with verified upload batching](scoped-batched-repair.md)
 - [Native manifest reads](native-manifest-reads.md)
