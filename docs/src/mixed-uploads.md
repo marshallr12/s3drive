@@ -82,11 +82,59 @@ Provider and physical reboot/sign-in/SSH/tmux checks remain separate gates.
 
 [Dated implementation evidence](evidence/mixed-uploads-20261019.json).
 
-An implementation review found a remaining restart gap: the current uploader is
-constructed from an authenticated `Preparation`. Reopening that handle after a
-process restart requires original-base authorization. An independent physical
-recoverer is therefore required before W4a acceptance, using only the exact
-private worker, executor binding and saved claimed attempt. It must use an
-observation-only path, refuse missing/prepared attempts and acknowledge only the
-same verified operation. Worker/process restart with denied source metadata,
-expired/narrow policy and no additional PUTs remains an explicit acceptance test.
+`MixedRecovery` now closes the process-restart construction gap. It contains
+only the exact preparation client and executor, with no authority, `Reader` or
+`Preparation` handle. It refuses missing/unclaimed/prepared attempts and uses
+`Executor::reconcile`, which cannot claim or send a PUT. It checks the saved
+operation, generation, target, raw body hash, size and guard before acknowledging
+only that verified operation. Rejected/uncertain outcomes remain errors with
+local bytes retained. A physical parent receipt does not certify its children;
+complete-tree inspection remains separate.
+
+The recovery SDK test passed in73.38seconds. It closed the original SQL worker,
+then ran a separate process with original-source metadata denied and policy both
+narrowed and expired. The process verified only the exact claimed object through
+HEAD/GET; the parent rejected any other path or method. The same operation and
+generation survived, no extra PUT occurred, and later fresh work reopened the
+original plan without replacing its view or a newer dirty head. Missing, hole
+and Prepared recovery were refused before any send.
+
+Additional SDK cases passed: empty manifests,17→7 shrink,17→33 growth, a complete
+zero edit, and a Unicode edit crossing the original partial tail. They verified
+actual provider fixture bytes and core manifest digests, including the lack of
+data objects for holes/empty files. Correct-root offline plans with false data
+or a false hole could not stage or upload either data or a parent. Corruption
+only in the discarded original tail still blocked shrink publication. These two
+tests passed in2.92seconds.
+
+The concurrent test passed in15.77seconds: four committed PUT replies were gated,
+the shared executor refused a fifth before claim, and an independent local edit
+committed while the network waited. One caller was cancelled after claim, then
+recovered by observation with metadata denied and no repeated PUT. The fifth
+resumed its same staged generation after capacity returned. Its newer dirty head
+remained unacknowledged. A racing-creator test passed in1.23seconds: conditional
+PUT412 preserved the rival object, rejected operation and local bytes across
+worker restart; neither a parent nor an unconditional replacement was sent.
+
+These focused results cover the new source, but a new full local gate and own
+Linux/Windows/book/native cohort are still required. The earlier303-input full
+local archive does not cover the added recovery API, controls or fixture gates.
+W4b root CAS, W5 exact-view settlement/retention and W6 native writes remain.
+
+The first final-source gate stopped at workspace Clippy because shared test
+fixture gate fields were unused in the Linux-mount test binary. The fix makes
+PUT gating an explicit opt-in constructor argument; ordinary fixtures retain
+their original constructor and behavior. Workspace/all-target Clippy then passed
+without suppressing warnings. The fresh full gate passed on all304 unchanged
+inputs, including the revised fixture. It passed412state tests (one ignored),
+37core/22reader (one native test ignored)/62S3/18publication cases, formatting,
+Clippy, build,77Markdown link checks and73book chapters.
+The failed source/map/log are retained in dated evidence.
+
+
+The [final local source/evidence archive](evidence/mixed-uploads-final-local-20261019.tar.gz)
+contains324 verified members, including every304 runtime input, current focused
+and full logs, the failed Clippy source/map and preliminary evidence. Its SHA-256
+is `27fd5c537e227ca1e401140a42970755592b23f5474de86ba0a34617b3cfca53`.
+Own Linux/Windows/book/native acceptance remains pending. This is physical upload
+completion and recovery, not an authority root commit or local clean settlement.

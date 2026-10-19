@@ -25,67 +25,72 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
-## Current W4a mixed dependency uploads — draft, focused verification (2026-10-19)
+## Current W4a mixed dependency uploads — focused green, final gates pending (2026-10-19)
 
-Worktree /home/marshall/src/worktrees/s3drive-mixed-uploads, branch
-codex/mixed-uploads fromdd9147f. Full phase contract at implementation-plan tail.
-Wired draft: exact stable physical mappings, same-private-owner check, bounded
-new-transfer walk, parent new-child receipts and a distinct historical mixed-tree
-receipt. Managed controller separates fresh semantic/policy checks from claimed
-observation; no authority root CAS, source settlement or native writes.
-State all-target check77154 CLOSED0/12.18s; managed check92052 CLOSED0/10.85s.
-First state focus43005 CLOSED101 (test-only fixture visibility); second10473
-CLOSED101 (2pass1fail: deliberate receipt removal hit FK). Corrected controlled
-corruption fixture; state27546 CLOSED0:3tests0.50s. New quota/SQL-full case added,
-not run yet. First SDK81003 CLOSED0:1test113.48s, actual SDK/owned S3 7 unique PUTs
-(4 base seed +3 mixed); lost PUT/denied source metadata recovered without resend,
-wrong owner/policy/parent order refused, complete mixed graph verified, newer head
-preserved and authority root unchanged. One unused test import removed afterward.
-Changed walk to new transfers only and added completed historical inspection
-without fresh source. SDK15379 CLOSED0:1test73.02s. Four state42017 CLOSED0:4tests
-1.71s including actual SQLite-full/quota preservation and same-generation resume.
-Then changed receipt validation to one compact checked forest in one read-only
-transaction (no cached proof crosses commands/mutations/awaits), and added bounded
-transfer pagination and fresh denied-source/no-stage controls. Full gate86906 closed143 (SIGTERM origin not established) during state suite,
-without final summary. No gate/Cargo/state child survived the process audit.
-All303 inputs exact; format/Clippy/new13-case SDK suite passed before interruption,
-not a full green result. Retained log/result/map at
-/tmp/s3drive-mixed-uploads-gate1{.log,-interrupted.json,-frozen.json}.
-Owned gate2 runner157304/child157310 CLOSED EXIT0,2026-10-19T09:31:49Z.
-All303 frozen inputs exact,412state1ignored/37core/22reader1nativeignored/62S3,
-13chunk-publication tests, format/Clippy/build/77Markdown/73chapters passed.
-Actual result /tmp/s3drive-mixed-uploads-gate2-result.json; log gate2.log SHA
-dffb3e4dbd83e41d2edb9de367f254376389590f0d7c71591afe49252bf06055.
-One-use local archive executed/verified:327members1040313bytes SHA
-401b33408ec66b7d7e892b443d13039537d0dd5a249f0f3e383ebb6dfc294606,
-contains all303 source inputs, focused/interrupted/successful logs and diagram.
-Do not rerun this one-use archiver. This accepts a local draft, not W4a completion.
-Next apply uncompiled independent recovery draft and SDK test from
-/tmp/s3drive-mixed-recovery-draft.rs and
-/tmp/s3drive-mixed-uploads-recovery-test-draft.rs, wire/export/test them. Gate2 does
-not cover those future changes. Record a new source map and full gate afterward.
+Worktree /home/marshall/src/worktrees/s3drive-mixed-uploads, codex/mixed-uploads.
+Baseline accepted main66ba186/runtimee140508/schema32/all300 exact. Own W3b cohort
+and one-use archive/checkers complete, do not rerun. Local pre-recovery checkpoint
+2a7dc16ca4019c9bcf870bdbd2e4cf132873a026 plus docs-only mergee40a470bd07d340e8697c75547fc88bb1fac5531;
+all303 input hashes preserved through merge. Current recovery/control source is
+uncommitted and not covered by the pre-recovery gate. No W4a own CI yet.
 
-W3b own39225921755 ALL3 accepted. Watch74306 closed143 as observer;86036 closed0;
-checker22853 failed absent review marker after15 interleaved reference lines were
-classified incorrectly; corrected marker+fresh82089 passed before own archive.
-No CI rerun. All300/source/API ZIP SHA/typed21+14/project/all35 raw fields passed.
-Indexed78-member hosted archive306210bytes SHAdc9fe9b4381633f403525a79943a645d8196606b62964c2acc78b2bb2e7364f1.
-Accepted integration8764e3f17ffb01eee2031a1dfec41497637a8341 is pushed; main now
-66ba186f5c1d03e77d04eb0fe16831c6d956af2e after an owned doc-only gate pointer. Clean, runtimee140508,
-schema32/all300 exact; proof /tmp/s3drive-canonical-mixed-plans-publication.json.
-Primary book build passed. Accepted main's docs/evidence are now merged after
-gate2 terminal, with all303 runtime hashes unchanged. Local pre-recovery
-checkpoint2a7dc16ca4019c9bcf870bdbd2e4cf132873a026 preserves the tested source.
-Do not rerun one-use parent acceptance/check/archive tools; already complete.
+Wired: deterministic exact physical mapping on same private owner/generic staging,
+new/inherited/hole tags, bounded new-transfer pagination, dependency ordering and
+distinct historical mixed-tree receipt. Fresh managed source/route/credential/
+write-policy/semantic checks; inherited/zero records never fake upload receipts.
+New MixedRecovery has no authority/Reader/Preparation; same owner/target/intent,
+refuses missing/unclaimed/Prepared, observation-only reconcile and exact Verified
+ack. Existing uploader recovery delegates to it. No root CAS, logical settlement,
+reclamation or native write activation. Schema32 unchanged, no dependency upgrade.
 
-Independent observation-only restart recovery remains a concrete W4a gap:
-MixedUploader construction normally needs authenticated Preparation reopen.
-Add an exact-owner/binding recovery path from saved physical intent, using
-Executor::reconcile plus exact Verified acknowledgment, never a flush/submit path
-that can freshly claim Prepared work. Test actual worker/process restart with
-source metadata denied, expired/narrow policy and zero new PUTs. Also remaining
-SDK empty/partial/cancel/busy/fault controls, then full local/own combined gates.
-See plan tail. Goal ACTIVE/progress. No root CAS/settlement/native chunk writes.
+Pre-recovery full gate1 session86906 ended143 during state suite; no surviving
+processes and all303 exact. Retained log/map/result. Owned runner2 PID157304 finished
+EXIT0 at09:31:49Z, all303 unchanged:412state1ignored/37core/22reader1nativeignored/
+62S3/13publication tests; formatting/Clippy/build/77MD/73chapters passed. Indexed
+327-member local archive1040313bytes SHA401b33408ec66b7d7e892b443d13039537d0dd5a249f0f3e383ebb6dfc294606
+contains all303 sources and failed/interrupted/focused/successful evidence. One-use
+archiver already executed; do not rerun. It does NOT cover new recovery controls.
+
+Current focused: recovery1258 CLOSED0:1/73.38s, actual nested process after worker
+close, source metadata denied, policy narrowed+expired, only saved object HEAD/GET,
+exact original operation/generation and no extra PUT. Missing/hole/Prepared refused.
+Additional15491 CLOSED0:2/2.92s empty/shrink/grow/zero/Unicode, false data/hole plans,
+corrupt unread original tail never stage/send. Concurrency46851 CLOSED0:1/15.77s,
+four gated committed PUTs, fifth Busy before claim, SQL edit progresses, cancelled
+claim observes same operation without resend, fifth resumes same staged generation,
+newer dirty head retained. Conflict14430 CLOSED0:1/1.23s, rival412 preserves rival
+bytes/rejected ID/dirty bytes across restart and no parent/fallback. These use
+owned loopback SDK fixtures and dummy credentials, not Wasabi/native chunk writes.
+The shared test fixture's gates default off; expected cancelled response resets
+are classified only while deliberately gated. Final source has18 publication cases.
+
+Final gate3 runner209353 CLOSED EXIT101 at Clippy, all304 inputs unchanged:
+three new shared fixture fields unused in linux_mount test binary. Old map at
+/tmp/s3drive-mixed-uploads-final-frozen.json, failed source copies at
+/tmp/s3drive-mixed-uploads-failed-gate3-{fixture,parent}.rs, log/result retained.
+Replaced shared fields with opt-in PutGate + start_with_gate; original start uses
+None. No warning suppression. Workspace/all-target Clippy44212 CLOSED0/6.64s.
+Focused SDK results above precede this fixture-only fix; full gate4 must cover it.
+
+Final source frozen304 at /tmp/s3drive-mixed-uploads-final2-frozen.json.
+Owned gate4 runner210431/child210435 CLOSED EXIT0 at10:04:54Z, all304 unchanged:
+412state1ignored/37core/22reader1nativeignored/62S3/18publication tests, format/
+Clippy/build/77MD/73chapters passed. Result/log /tmp/s3drive-mixed-uploads-gate4-*
+(result.json, running.json, runner.py and .log). Source-map sha and log exact in
+JSON result. Indexed324-member final local archive2060824bytes SHA
+27fd5c537e227ca1e401140a42970755592b23f5474de86ba0a34617b3cfca53,
+contains all304 inputs, current full/focused logs, failed-source/map and preliminary
+archive. One-use final archiver executed/verified; do not rerun either archiver.
+
+Ready to publish this exact source for own Linux/Windows/book/native/source/
+artifact acceptance. Main66ba186 remains accepted runtimee140508/schema32 until
+own cohort accepted; do not reuse parent artifacts. Full W4a contract/evidence/
+diagram in mixed-uploads.md and plan end. W4b original-content CAS/root recovery,
+W5 exact-view settlement/clean base/retention, legacy/metadata-empty origins and
+W6 actual native writes/provider/physical sign-in/reboot/SSH/tmux remain. Goal
+ACTIVE/progress. No root publication, local clean acknowledgment or native chunk
+write activation follows from the locally green physical layer.
+
 
 ## Accepted W3b durable mixed-tree preparation (2026-10-19)
 

@@ -66,15 +66,10 @@ impl MixedUploader {
             .as_ref()
             .is_some_and(|i| i.phase != remote::Phase::Prepared)
         {
-            client.require_dependencies(plan, p).await?;
-            let receipt = self
-                .executor
-                .flush(t.generation().ok_or(ReadFailure::Binding)?)
-                .await?;
-            if !t.receipt_matches(&receipt) {
-                return Err(ReadFailure::Integrity.into());
-            }
-            return Ok(Some(receipt));
+            return MixedRecovery::new(client.clone(), self.executor.clone())?
+                .recover_object(plan, p)
+                .await
+                .map(Some);
         }
         self.executor
             .check_create(t.target().object_key(), t.size())?;

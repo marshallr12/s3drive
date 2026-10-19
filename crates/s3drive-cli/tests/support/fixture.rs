@@ -2,7 +2,7 @@ use std::{
     collections::BTreeMap,
     sync::{
         Arc, Mutex,
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicUsize, Ordering},
     },
     time::Duration,
 };
@@ -14,6 +14,22 @@ use tokio::{
 
 type Objects = BTreeMap<String, (Vec<u8>, String)>;
 type Metadata = BTreeMap<String, (String, String)>;
+/// Opt-in control owned only by tests that gate completed PUT replies.
+#[derive(Clone)]
+pub struct PutGate {
+    pub enabled: Arc<AtomicBool>,
+    pub arrived: Arc<AtomicUsize>,
+    pub release: Arc<tokio::sync::Semaphore>,
+}
+impl Default for PutGate {
+    fn default() -> Self {
+        Self {
+            enabled: Arc::new(AtomicBool::new(false)),
+            arrived: Arc::new(AtomicUsize::new(0)),
+            release: Arc::new(tokio::sync::Semaphore::new(0)),
+        }
+    }
+}
 pub struct Fixture {
     pub endpoint: String,
     pub objects: Arc<Mutex<Objects>>,
@@ -37,6 +53,9 @@ impl Drop for Fixture {
 }
 impl Fixture {
     pub async fn start() -> Self {
+        Self::start_with_gate(None).await
+    }
+    pub async fn start_with_gate(put_gate: Option<PutGate>) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let endpoint = format!("http://{}", listener.local_addr().unwrap());
         let objects = Arc::new(Mutex::new(BTreeMap::<String, (Vec<u8>, String)>::new()));
@@ -77,6 +96,7 @@ impl Fixture {
                         let writable=writes.clone();let metadata=metas.clone();
                         let hide_created_listing=hidden_listing.clone();let race_create=competing_create.clone();
                         let lose_put_reply=lost.clone(); let hide_committed=hidden.clone();
+                        let put_gate=put_gate.clone();
                         workers.spawn(async move {
                             tokio::time::timeout(Duration::from_secs(20), async move {
                                 let mut bytes = Vec::new();
@@ -130,7 +150,17 @@ impl Fixture {
                                         }
                                         if lose_put_reply.swap(false,Ordering::SeqCst) {return;}
                                     }
-                                    socket.write_all(&result).await.unwrap();return;
+                                    let was_gated=result.starts_with(b"HTTP/1.1 200") && put_gate.as_ref().is_some_and(|g|g.enabled.load(Ordering::SeqCst));
+                                    if was_gated {
+                                        let gate=put_gate.as_ref().unwrap();
+                                        gate.arrived.fetch_add(1,Ordering::SeqCst);
+                                        let permit=gate.release.acquire().await.unwrap();permit.forget();
+                                    }
+                                    let sent=socket.write_all(&result).await;
+                                    if was_gated {
+                                        if let Err(e)=sent {assert!(matches!(e.kind(),std::io::ErrorKind::BrokenPipe|std::io::ErrorKind::ConnectionReset|std::io::ErrorKind::ConnectionAborted),"unexpected cancelled gated response: {e}");}
+                                    } else {sent.unwrap();}
+                                    return;
                                 }
                                 if offline.load(Ordering::SeqCst) { return; }
                                 if (first.starts_with("HEAD ") && deny_head.load(Ordering::SeqCst)) ||

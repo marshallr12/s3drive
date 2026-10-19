@@ -3025,3 +3025,64 @@ only its exact Verified operation. It must never call a path that can freshly
 claim or PUT, including under narrowed/expired policy. Test actual worker/process
 restart with source metadata denied and unchanged PUT counts. Root CAS and local
 settlement remain W4b/W5; no historical receipt authenticates a fresh root request.
+
+
+W4a restart/control implementation,2026-10-19: added separate `MixedRecovery`,
+which owns no source reader/authority/preparation handle, binds the same private
+SQL owner and exact physical intent, refuses unclaimed/Prepared work, and uses
+observation-only reconcile plus exact Verified acknowledgment. Actual nested
+process recovery succeeded with source metadata denied and expired/narrow policy;
+only the saved object's HEAD/GET were allowed, with unchanged operation/generation
+and PUT counts. SDK empty/partial/growth/Unicode/zero cases, forged data/hole and
+unread-tail refusal, shared four-slot busy/cancel/local SQL progress, and conditional
+racing-creator rejection/restart passed. Historical object receipt, complete-tree
+receipt, authority root commitment and local clean acknowledgment remain distinct.
+This source needs a new full local and own combined cohort; the prior303-input
+local archive covers only the pre-recovery checkpoint, not this changed source.
+
+
+W4a final local verification,2026-10-19: owned gate4 completed exit0 on304 exact
+runtime inputs after the scoped opt-in fixture correction.412state1ignored,
+37core/22reader1nativeignored/62S3/18publication cases, formatting/Clippy/build,
+77Markdown links and73book chapters passed. The indexed324-member final local
+archive2060824bytes SHA27fd5c537e227ca1e401140a42970755592b23f5474de86ba0a34617b3cfca53
+retains all304 sources and failed/focused/full evidence. Own combined/native
+source acceptance remains required before promotion.
+
+### W4b root publication: reviewed constraints and next phase (2026-10-19)
+
+This is a proposal, not implemented mixed-root publication. Current source review
+confirms `ReserveManifest` uses a content guard, and Publish inherits that guard
+from its reservation. The authority accepts an older observed sequence for these
+content-guarded requests; the payload reference must still match. Ordinary rename
+or unrelated namespace changes therefore must not cause the publisher to replace
+its original content CAS. Deletion and changed content remain explicit conflicts.
+See `namespace::publication::{uses_content_guard,base_matches}` and
+`namespace::Journal::apply` in the current state crate. The frozen descriptor's
+`payload_reference` names the actual base; its reservation's own `guard.expected`
+names a predecessor and must never be substituted as the new CAS expectation.
+
+Save exact reserve and publish Apply requests/IDs before RPCs. The reserve ID must
+match the new manifest generation, as enforced by `ManifestRoot::context`. Physical
+root body size/raw SHA belong in the reservation; logical file length and the
+domain-separated page digest belong in the root descriptor. Keep complete-tree
+physical receipt, authorized root commit and exact-view clean settlement as
+separate types; never manufacture the old full-snapshot SourceReceipt.
+
+Before a fresh root publication request, validate the complete mixed plan's
+source semantics as well as physical receipts. A historical TreeReceipt is
+explicitly not source authentication. Replaying an already saved request must
+happen before fresh source/policy/current-head probes and must preserve the
+original guard, IDs and bytes. Two independent machines, lost reserve/root replies,
+rename/delete/content races, quota/full disk, corrupt receipts and killed workers
+need actual SDK/authenticated-authority controls before acceptance.
+
+Resolve the metadata-only restart opener before implementation: normal private
+state opening validates preparation BLOBs. Root recovery after a saved publication
+request must not require S3 credentials or local source-body reads. A narrowly
+typed metadata-only owner/client may be needed; it must retain the private
+kernel lock and role/schema checks, expose no fresh reserve/send/prepare path,
+and never weaken normal data-integrity validation. Record the chosen design and
+its tests. W5 clean-base transition/reclamation and legacy/metadata-empty origin
+admission remain required before W6 activation; this phase must not hide them
+behind one-object fallback or declare mounted chunk writes supported early.

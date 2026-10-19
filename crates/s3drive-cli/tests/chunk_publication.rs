@@ -1073,6 +1073,10 @@ async fn chunk_child() {
         )
         .unwrap();
         match mode.as_str() {
+            "mixed_conflict" => Box::pin(mixed_uploads::conflict(&config, &root, &s)).await,
+            "mixed_concurrency" => Box::pin(mixed_uploads::concurrency(&config, &root, &s)).await,
+            "mixed_controls" => Box::pin(mixed_uploads::controls(&config, &root, &s)).await,
+            "mixed_faults" => Box::pin(mixed_uploads::faults(&config, &root, &s)).await,
             "mixed_uploads" => Box::pin(mixed_uploads::flow(&config, &root, &s)).await,
             "flow" => Box::pin(flow(&config, &root, &s)).await,
             "exact" => Box::pin(exact_names(&config, &root, &s)).await,
@@ -1093,10 +1097,13 @@ async fn chunk_child() {
     s.close().await;
 }
 async fn run(mode: &str) {
-    let f = fixture::Fixture::start().await;
+    let put_gate = fixture::PutGate::default();
+    let f = fixture::Fixture::start_with_gate(Some(put_gate.clone())).await;
     let tmp = tempfile::tempdir().unwrap();
     let setup = writes::setup(&f, tmp.path()).await;
     let mut counts = None;
+    let mut mixed_recovery_window = None;
+    let mut mixed_corrupt_tail = None;
     for stage in match mode {
         "crash" => vec!["crash", "recover"],
         "source_crash" => vec!["source_crash", "source_recover_unknown"],
@@ -1135,6 +1142,90 @@ async fn run(mode: &str) {
                         f.deny_head.store(false, Ordering::SeqCst);
                         f.deny_get.store(false, Ordering::SeqCst);
                         std::fs::write(tmp.path().join("put-restored"), b"ack").unwrap();
+                    }
+                    "MIXED_RIVAL_CREATE" => {
+                        f.race_create.store(true, Ordering::SeqCst);
+                        std::fs::write(tmp.path().join("mixed-rival-create.ack"), b"ack").unwrap();
+                    }
+                    "MIXED_GATE_ARM" => {
+                        assert_eq!(put_gate.arrived.load(Ordering::SeqCst), 0);
+                        put_gate.enabled.store(true, Ordering::SeqCst);
+                        std::fs::write(tmp.path().join("mixed-gate-arm.ack"), b"ack").unwrap();
+                    }
+                    "MIXED_GATE_FOUR" => {
+                        tokio::time::timeout(Duration::from_secs(10), async {
+                            while put_gate.arrived.load(Ordering::SeqCst) < 4 {
+                                tokio::time::sleep(Duration::from_millis(10)).await;
+                            }
+                        })
+                        .await
+                        .unwrap();
+                        assert_eq!(put_gate.arrived.load(Ordering::SeqCst), 4);
+                        std::fs::write(tmp.path().join("mixed-gate-four.ack"), b"ack").unwrap();
+                    }
+                    "MIXED_GATE_RELEASE" => {
+                        put_gate.enabled.store(false, Ordering::SeqCst);
+                        put_gate.release.add_permits(4);
+                        std::fs::write(tmp.path().join("mixed-gate-release.ack"), b"ack").unwrap();
+                    }
+                    "MIXED_CORRUPT_TAIL" => {
+                        let mut objects = f.objects.lock().unwrap();
+                        let keys = objects
+                            .keys()
+                            .filter(|k| k.contains("/writable/.s3drive/") && k.contains("/data/"))
+                            .cloned()
+                            .collect::<Vec<_>>();
+                        assert_eq!(keys.len(), 1);
+                        let object = objects.get_mut(&keys[0]).unwrap();
+                        assert_eq!(object.0.len(), 17);
+                        mixed_corrupt_tail = Some((keys[0].clone(), object.0.clone()));
+                        object.0[16] ^= 1;
+                        drop(objects);
+                        std::fs::write(tmp.path().join("mixed-corrupt-tail.ack"), b"ack").unwrap();
+                    }
+                    "MIXED_RESTORE_TAIL" => {
+                        let (key, bytes) = mixed_corrupt_tail.take().unwrap();
+                        f.objects.lock().unwrap().get_mut(&key).unwrap().0 = bytes;
+                        std::fs::write(tmp.path().join("mixed-restore-tail.ack"), b"ack").unwrap();
+                    }
+                    "MIXED_RECOVERY_BEGIN" => {
+                        mixed_recovery_window = Some(f.requests.lock().unwrap().len());
+                        std::fs::write(tmp.path().join("mixed-recovery-begin.ack"), b"ack")
+                            .unwrap();
+                    }
+                    "MIXED_RECOVERY_END" => {
+                        let begin = mixed_recovery_window.take().unwrap();
+                        let expected =
+                            std::fs::read_to_string(tmp.path().join("mixed-recovery-target.txt"))
+                                .unwrap();
+                        let requests = f.requests.lock().unwrap();
+                        let observed = &requests[begin..];
+                        assert!(
+                            observed.iter().any(|r| r.starts_with("GET ")),
+                            "recovery did not verify the observed new object body"
+                        );
+                        for request in observed {
+                            let mut words = request.split_whitespace();
+                            let method = words.next().unwrap();
+                            assert!(
+                                matches!(method, "HEAD" | "GET"),
+                                "recovery issued a mutation"
+                            );
+                            let url = url::Url::parse(&format!(
+                                "http://fixture{}",
+                                words.next().unwrap()
+                            ))
+                            .unwrap();
+                            let path = percent_encoding::percent_decode_str(url.path())
+                                .decode_utf8()
+                                .unwrap();
+                            assert!(
+                                path.ends_with(&format!("/{expected}")),
+                                "recovery read original or unrelated objects"
+                            );
+                        }
+                        drop(requests);
+                        std::fs::write(tmp.path().join("mixed-recovery-end.ack"), b"ack").unwrap();
                     }
                     "NO_S3_FROM_HERE" => {
                         counts = Some(f.requests.lock().unwrap().len());
@@ -1200,6 +1291,10 @@ async fn run(mode: &str) {
     }
     let expected = match mode {
         "mixed_uploads" => 7,
+        "mixed_conflict" => 3,
+        "mixed_concurrency" => 8,
+        "mixed_controls" => 10,
+        "mixed_faults" => 2,
         "flow" => 6,
         "source_flow" => 5,
         "races" | "crash" | "proof_fault" | "source_crash" => 4,
@@ -1302,4 +1397,30 @@ async fn chunk_sources_expired_narrow_policy_busy_and_concurrent_first_ack() {
 async fn mixed_dependencies_upload_only_new_objects_and_recover_claimed_put_without_source_reauthorization()
  {
     run("mixed_uploads").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn mixed_recovery_child() {
+    mixed_uploads::recovery_child().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn mixed_additional_empty_partial_unicode_growth_and_zero_objects() {
+    run("mixed_controls").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn mixed_additional_forged_data_holes_and_corrupt_unread_base_tail_never_send() {
+    run("mixed_faults").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn mixed_concurrent_uploads_bound_slots_release_sql_and_recover_cancelled_claim_without_resend()
+ {
+    run("mixed_concurrency").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn mixed_racing_creator_retains_rejected_identity_dirty_bytes_and_rival_object_after_restart()
+{
+    run("mixed_conflict").await;
 }

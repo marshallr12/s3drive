@@ -1,7 +1,7 @@
 {
   "date": "2026-10-19",
   "phase": "W4a mixed dependency uploads",
-  "status": "pre-recovery W4a draft full local gate passed; independent recovery/remaining controls/own combined pending",
+  "status": "W4a final local gate passed; own Linux/Windows/book/native/source cohort pending",
   "branch": "codex/mixed-uploads",
   "baseline": "dd9147fc3e0814451dc2656e2bde44d70045852d",
   "schema": 32,
@@ -78,6 +78,48 @@
       "summaries": [
         "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 73.02s"
       ]
+    },
+    "recovery-focused1": {
+      "session": 1258,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-uploads-recovery-focused1.log",
+      "sha256": "32bf65d9a2b67aff7da24ea31214d42ce09625cc7882b2b148dbae80c6c2e763",
+      "summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 13 filtered out; finished in 73.38s"
+      ]
+    },
+    "additional-focused1": {
+      "session": 15491,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-uploads-additional-focused1.log",
+      "sha256": "48c9f185d34011754af84225e133207f4428d7d129b1a7886200f07bdc33cfb8",
+      "summaries": [
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 2.92s"
+      ]
+    },
+    "concurrency-focused1": {
+      "session": 46851,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-uploads-concurrency-focused1.log",
+      "sha256": "dd717a9be26fd329a54d7043d672333a2cebdd7a71441e20060ad2f8f4856f27",
+      "summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 16 filtered out; finished in 15.77s"
+      ]
+    },
+    "conflict-focused1": {
+      "session": 14430,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-uploads-conflict-focused1.log",
+      "sha256": "ba7b06f18b9716b3c2d25f719297d5e3f136b08e2ff03615da51862178c9f3bf",
+      "summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 1.23s"
+      ]
+    },
+    "clippy2": {
+      "session": 44212,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-uploads-clippy2.log",
+      "sha256": "c7c4d821c27a723fa8317d8be705c3d3d49285cda16ff5bbbd6cb5ad6b111701"
     }
   },
   "not_claimed": [
@@ -87,38 +129,13 @@
     "Wasabi acceptance",
     "physical reboot/sign-in/SSH/tmux acceptance"
   ],
-  "full_gate": {
-    "runner_pid": 157304,
-    "runner_start_ticks": "140844461",
-    "child_pid": 157310,
-    "child_start_ticks": "140844470",
-    "started": "2026-10-19T09:24:01.170375+00:00",
-    "command": [
-      "bash",
-      "scripts/gate.sh"
-    ],
-    "cwd": "/home/marshall/src/worktrees/s3drive-mixed-uploads",
-    "runtime_inputs": 303,
-    "frozen_map": "/tmp/s3drive-mixed-uploads-frozen.json",
-    "tty": false,
-    "rust_test_threads": 4,
-    "log": "/tmp/s3drive-mixed-uploads-gate2.log",
-    "exit_code": 0,
-    "finished": "2026-10-19T09:31:49.779321+00:00",
-    "all_inputs_unchanged": true,
-    "changed_inputs": [],
-    "sha256": "dffb3e4dbd83e41d2edb9de367f254376389590f0d7c71591afe49252bf06055"
-  },
   "diagram": {
     "source": "images/mixed-uploads.svg",
     "review_png": "/tmp/s3drive-mixed-uploads-diagram-review.png",
     "status": "final SVG rendered and visually reviewed; labels/arrows clear"
   },
   "remaining_acceptance": [
-    "independent observation-only process/worker restart recovery without authenticated Preparation reopen",
-    "additional empty/partial/cancellation/busy/fault SDK controls",
-    "full local gate terminal success and exact source archive",
-    "own combined Linux/Windows/book/native regression cohort"
+    "own Linux/Windows/book/native exact-source cohort"
   ],
   "parent_cohort": {
     "run_id": 39225921755,
@@ -149,5 +166,95 @@
     "all_indexed_members_verified": true,
     "all303_frozen_inputs_unchanged": true,
     "scope": "locally green W4a draft; remaining controls/own platform gates still required"
+  },
+  "pre_recovery_full_gate": {
+    "runner_pid": 157304,
+    "runner_start_ticks": "140844461",
+    "child_pid": 157310,
+    "child_start_ticks": "140844470",
+    "started": "2026-10-19T09:24:01.170375+00:00",
+    "command": [
+      "bash",
+      "scripts/gate.sh"
+    ],
+    "cwd": "/home/marshall/src/worktrees/s3drive-mixed-uploads",
+    "runtime_inputs": 303,
+    "frozen_map": "/tmp/s3drive-mixed-uploads-frozen.json",
+    "tty": false,
+    "rust_test_threads": 4,
+    "log": "/tmp/s3drive-mixed-uploads-gate2.log",
+    "exit_code": 0,
+    "finished": "2026-10-19T09:31:49.779321+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": [],
+    "sha256": "dffb3e4dbd83e41d2edb9de367f254376389590f0d7c71591afe49252bf06055"
+  },
+  "recovery": {
+    "class": "MixedRecovery",
+    "authority_reader_preparation_handles": false,
+    "new_put_claim_path": false,
+    "prepared_missing_refused": true,
+    "subprocess_with_original_metadata_denied": true,
+    "expired_narrow_policy_recovery": true,
+    "only_exact_object_head_get_allowed": true,
+    "operation_generation_preserved": true
+  },
+  "failed_final_gate": {
+    "runner_pid": 209353,
+    "runner_start_ticks": "141008960",
+    "child_pid": 209355,
+    "child_start_ticks": "141008969",
+    "started": "2026-10-19T09:51:26.159830+00:00",
+    "command": [
+      "bash",
+      "scripts/gate.sh"
+    ],
+    "cwd": "/home/marshall/src/worktrees/s3drive-mixed-uploads",
+    "runtime_inputs": 304,
+    "frozen_map": "/tmp/s3drive-mixed-uploads-final-frozen.json",
+    "tty": false,
+    "rust_test_threads": 4,
+    "log": "/tmp/s3drive-mixed-uploads-gate3.log",
+    "exit_code": 101,
+    "finished": "2026-10-19T09:51:42.020322+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": [],
+    "sha256": "6496bd2fd72f50f067b1dd9a61771d9fad76d3d0cab4d0f76ad4f9e9e3b7cea6",
+    "old_fixture_sources": [
+      "/tmp/s3drive-mixed-uploads-failed-gate3-fixture.rs",
+      "/tmp/s3drive-mixed-uploads-failed-gate3-parent.rs"
+    ],
+    "reason": "gate controls as shared Fixture fields were unused in linux_mount test binary; replaced with opt-in PutGate constructor, no warning suppression"
+  },
+  "final_full_gate": {
+    "runner_pid": 210431,
+    "runner_start_ticks": "141039757",
+    "child_pid": 210435,
+    "child_start_ticks": "141039767",
+    "started": "2026-10-19T09:56:34.146972+00:00",
+    "command": [
+      "bash",
+      "scripts/gate.sh"
+    ],
+    "cwd": "/home/marshall/src/worktrees/s3drive-mixed-uploads",
+    "runtime_inputs": 304,
+    "frozen_map": "/tmp/s3drive-mixed-uploads-final2-frozen.json",
+    "tty": false,
+    "rust_test_threads": 4,
+    "log": "/tmp/s3drive-mixed-uploads-gate4.log",
+    "exit_code": 0,
+    "finished": "2026-10-19T10:04:54.016934+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": [],
+    "sha256": "97a9e3e16902b9029a7168e0d3a0a1092c85aa2c91d597251ca99c8bb833e97a"
+  },
+  "final_local_archive": {
+    "path": "evidence/mixed-uploads-final-local-20261019.tar.gz",
+    "sha256": "27fd5c537e227ca1e401140a42970755592b23f5474de86ba0a34617b3cfca53",
+    "bytes": 2060824,
+    "members": 324,
+    "all_indexed_members_verified": true,
+    "all304_frozen_inputs_unchanged": true,
+    "scope": "final W4a local gate; own Linux/Windows/book/native source/artifact acceptance still required"
   }
 }
