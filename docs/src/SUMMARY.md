@@ -50,6 +50,7 @@
 - [Acknowledgment and clean base epochs](mixed-clean-epochs.md)
 - [Mixed upload authorization batching](mixed-upload-authorization-batch.md)
 - [Transient source read pins](source-read-pins.md)
+- [Clone-sharing source read guards](source-read-guards.md)
 - [Bounded local retention plan](mixed-retention-plan.md)
 - [Epoch-scoped source operations](scoped-source-operations.md)
 - [Native manifest reads](native-manifest-reads.md)

@@ -37,8 +37,8 @@ keys are separate from the paths shown in the mounted drive.
 [root publication](mixed-root-publication.md) and [clean base epochs](mixed-clean-epochs.md)
 have accepted library-level implementations. Mounted writes still use their older
 whole-generation path; the chunk pipeline is not yet enabled in filesystem
-callbacks. Automatic reader retention, bounded cleanup and safe reclamation remain
-required. The [read-pin diagram](source-read-pins.md) shows the current prototype
+callbacks. A [clone-sharing guard and cleanup prototype](source-read-guards.md) has passed
+component checks. Managed-reader integration and safe reclamation remain required. The [read-pin diagram](source-read-pins.md) shows the current prototype
 and the proposed driver integration; its component checks do not establish native
 chunk writes or garbage collection.
 

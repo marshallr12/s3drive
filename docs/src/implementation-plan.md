@@ -3297,3 +3297,13 @@ disk checks, metadata-only recovery, Clippy and workspace compilation. It is bas
 on unaccepted scoped repair1ad9dc6. Parent integration, full workspace/platform
 acceptance and automatic managed-reader guards with bounded cleanup remain
 required. Component evidence does not enable reclamation or native chunk writes.
+
+
+W5b2b2 component2026-10-19: [clone-sharing source reader guards](source-read-guards.md)
+passed480 state cases (one ignored) in266.78s, all336 frozen inputs unchanged.
+Six focused cases and state all-target Clippy also passed. One pin is shared by
+clones; canceled replies drop a complete guard; a bounded same-owner pending map
+retains cleanup across a full worker queue. Failed cleanup preserves retention.
+This isolated schema37 prototype still needs parent acceptance, EditedFile
+integration and its full workspace/platform/source gates. No GC or native chunk
+writes follow from component success.

@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-19",
+  "phase": "W5b2b2 clone-sharing source read guards",
+  "status": "component checks passed; parent integration/full workspace/platform/source acceptance required",
+  "checkpoint": "eef4da2",
+  "schema": 37,
+  "runtime_inputs": 336,
+  "component_archive": {
+    "scope": "component state/lifetime/Clippy evidence only; not full workspace/native/source acceptance",
+    "path": "evidence/source-read-guards-component-20261019.tar.gz",
+    "sha256": "627cf14ad2f0bf8397a783e41a7a7c709aa8e1c01e949745e83c18755be1ba76",
+    "bytes": 927175,
+    "members": 358,
+    "all_indexed_members_verified": true,
+    "runtime_inputs": 336,
+    "checkpoint": "eef4da2",
+    "schema": 37,
+    "state_passed": 480,
+    "state_ignored": 1,
+    "state_seconds": 266.78,
+    "state_log_sha256": "ce942776bea9263d75ea58d04b8da0fcdd1f172febab90d4d59824a1c2ebd2fb"
+  },
+  "state_regression": {
+    "runner_pid": 881065,
+    "runner_start_ticks": "143183070",
+    "child_pid": 881068,
+    "child_start_ticks": "143183078",
+    "started": "2026-10-19T15:53:47.258104+00:00",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "s3drive-state",
+      "--locked"
+    ],
+    "cwd": "/home/marshall/src/worktrees/s3drive-source-read-guards",
+    "runtime_inputs": 336,
+    "frozen_map": "/tmp/s3drive-source-guards-candidate1-frozen.json",
+    "tty": false,
+    "rust_test_threads": 4,
+    "log": "/tmp/s3drive-source-guards-state1.log",
+    "exit_code": 0,
+    "finished": "2026-10-19T15:58:29.704115+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": [],
+    "sha256": "ce942776bea9263d75ea58d04b8da0fcdd1f172febab90d4d59824a1c2ebd2fb"
+  },
+  "focused": {
+    "passed": 6,
+    "seconds": 38.18,
+    "cases": [
+      "cloned exact Unicode reads and idle last-drop release",
+      "full eight-command queue",
+      "canceled queued acquisition and unread committed reply",
+      "trigger-denied cleanup and later retry",
+      "256 active quota and556 lifetime opens",
+      "late release after close/replacement"
+    ]
+  },
+  "clippy": {
+    "state_all_targets": true,
+    "warnings_denied": true,
+    "seconds": 15.35
+  },
+  "unimplemented": [
+    "managed EditedFile integration",
+    "full workspace/platform/source acceptance",
+    "clean-anchor retirement",
+    "garbage collection",
+    "native chunk writes"
+  ],
+  "parent": "unaccepted schema37 manual registry on unaccepted schema36 scoped repair"
+}
