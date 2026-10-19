@@ -2878,3 +2878,53 @@ W3a ancestry update,2026-10-19: merge accepted main057c8ae into preparation bran
 with docs/evidence-only delta from source9544193 and all288 inputs unchanged.
 Its own39215314627 book/Linux passed, Windows is running. Parent acceptance does
 not substitute for this source's own combined checks.
+
+W3a accepted,2026-10-19: runtime9544193 passed own39215314627 all3/full raw/source/
+own API ZIP digests/typed21+14/project/all35 raw field/type checks. Indexed64-member
+hosted archive retained; all288 frozen inputs exact. Linux393state/Windows388state
+1ignored,37core/19reader1nativeignored/62S3; real legacy mounts, manifest FUSE/WinFsp
+remount and paired/no-systemd recovery passed. See [preparation evidence](incremental-data.md).
+Next W3b local draft in /home/marshall/src/worktrees/s3drive-mixed-plans is unwired,
+uncompiled and untested. Existing source remains schema31; no mixed publication,
+settlement or native edited writes are activated by this integration.
+
+### W3b durable mixed-tree preparation — declared phase (2026-10-19)
+
+Implement in isolated `codex/mixed-plans` from `c1f7fbb`; keep parent W3a9544193
+frozen288 inputs for own39215314627. Ownership: state sparse_views/preparation
+modules, additive032 migration, state open/test-schema/native schema assertions,
+private-owner client, managed preparation controller and owned state/CLI tests;
+docs/evidence/diagrams move with the phase. No legacy full-snapshot verifier,
+wire/provider policy or native activation changes.
+
+Freeze one exact immutable view, operation, new object generation and original
+base root context; derive local binding from the stored view. Exact replay after
+new heads/restart must preserve all original input BLOBs and CAS identity.
+Persistent cursor distinguishes input coverage from bounded bottom-up page work.
+New data/pages and inherited chunk/page witnesses have distinct serialized tags;
+never manufacture old upload/source receipts. Validate witness geometry/store/
+file scope and unchanged view coverage. Reuse only complete same-length objects;
+an old root can be a new child only at matching level/span. The output root is
+new, with its own immutable generation/key, even when child references are old.
+
+Use whole unchanged subtrees and structural zero runs, bounded local data and
+shared witness pages;64GiB sparse growth must not enumerate or allocate the
+whole file. New data is at most1MiB per step, pages at most128 children. Persist
+exact dirty bytes/hash and cursor atomically; no SQL across network. Admission
+quotas never prevent recovery/inspection of old work. Validate complete retained
+rows and every post-write effect so ignored/foreign/rewrite triggers, SQLite-full,
+cancellation/unknown replies and killed workers cannot falsely acknowledge work.
+Preserve both local edits and preparation on conflicts/corruption; no repair,
+rebase, cleanup or silent overwrite. Independent worker restart resumes progress.
+
+Local state establishes offline intent/integrity, not remote authorization or
+current data health. The managed producer must use the actual authenticated base
+and private exact-view candidates; restart reopens exact history and compares
+full original binding/root before further preparation. The later W4 controller
+must revalidate the same source/provenance and source-bound write policy before
+new sends. W5 exact-view acknowledgment remains separate. This phase is complete
+only after mixed roots build/reopen with correct bytes and measured unchanged
+reference reuse, partial-final edits,127/128 boundary/height growth, sparse64GiB,
+wrong proofs/bindings/quota/corrupt media/SQL/crash/replay controls, full local gate
+and its own combined platform/native/source acceptance. W4-W6 and legacy/empty
+admission remain required for the full drive goal.

@@ -2,7 +2,7 @@
 
 Implementation date: **2026-10-19**. W3a in `codex/incremental-data` implements
 one bounded data-preparation operation on an authenticated immutable edited file.
-All19 reader tests and the full portable local gate passed. Own combined platform/native acceptance remains required. This is a building block for the durable mixed-tree
+All19 reader tests and the full portable local gate passed. This source's own combined platform/native/source acceptance also passed. This is a building block for the durable mixed-tree
 planner; it enables no uploads, settlement or native writes.
 
 ![Rust prepares one exact-view chunk using private SQLite state, coordinator history and the S3 client. Unchanged chunks yield reachability proofs; changed chunks yield verified bytes or holes. Durable tree preparation and publication remain pending.](images/incremental-data.svg)
@@ -80,10 +80,35 @@ workspace build,75Markdown links and71book chapters. The
 [indexed local archive](evidence/incremental-data-local-20261019.tar.gz) retains16
 verified members: focused/full logs, exact source map/results, changed runtime
 sources and reviewed architecture image. This is portable local evidence; this
-new source still needs its own combined Windows/Linux/native regression checks.
+source also passed its own combined Windows/Linux/native regression checks.
 
 W3a publication,2026-10-19: frozen source `9544193908967ea2852121bef7d91cdce89ed042`
 is pushed with mainabdda37 ancestry and all288 exact inputs from the green gate.
 Its own [run39215314627](https://github.com/marshallr12/s3drive/actions/runs/39215314627)
-is running; all3/raw/own-artifact/source acceptance remains pending. Documentation-
+completed successfully; all3/raw/own-artifact/source acceptance passed. Documentation-
 only follow-ups preserve the frozen source; prior cohorts do not certify it.
+
+Own combined acceptance completed2026-10-19 for `9544193`: all three jobs in
+[run39215314627](https://github.com/marshallr12/s3drive/actions/runs/39215314627)
+succeeded. Complete raw logs, exact288-input working/committed source, both own
+artifact API ZIP digests, independent typed21+14 records, project oracles and
+all35 raw fields/types passed. The
+[indexed hosted archive](evidence/incremental-data-hosted-20261019.tar.gz)
+contains64 verified members,274318bytes, SHA-256
+`ac643ed8c7de9acaae932a308d78cf0d20aa80500b63840524a7f13d463e6c19`.
+
+Linux Ubuntu24.04 image20261012.334.1 passed393state (one ignored),37core,
+19reader (one native ignored),62S3; real legacy FUSE9tests, manifest remount1.66s,
+paired recovery and no-systemd HTTP/TLS24.35s. Windows Server2025 image
+windows-2025-vs2026/20261007.264.1 passed388state (one ignored),37core,19reader
+(one native ignored),62S3; real legacy native7tests, manifest WinFsp remount2.08s
+and paired startup/recovery78.10s. The three new preparation cases and inherited
+read-layer cases passed on both OSes. Times describe this run, not performance.
+
+Retained Windows notes: two unused WinFsp delay-import linker groups (11 test
+executables plus reader rebuild), completed long-running tests, Node notices
+and three locked disposable profiles. Dummy credentials were removed; remaining
+profile deletion was deferred to VM destruction. Linux expected403/rival conflicts
+preserved bytes. This accepts bounded data preparation and regressions, not
+complete durable mixed trees, publication, settlement, native edited writes,
+current Wasabi or physical workstation/reboot/session acceptance.
