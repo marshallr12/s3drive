@@ -25,6 +25,37 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Current W2b1 SQLite base-view admission — preparation (2026-10-19)
+
+Worktree /home/marshall/src/worktrees/s3drive-sparse-edit-views,
+branch codex/sparse-edit-views from core checkpointc759250 (runtimec279e0f).
+Core own CI39198380488 is running in its frozen separate checkout; do not edit
+that checkout's267 runtime inputs. Main remains accepted41188dd. Core full local
+gate33550 EXIT0 is complete; local-only storage may build on its intent codec.
+Read implementation plan before implementation. No storage code changed yet.
+
+Next concrete slice W2b1: private SQLite identity/base-view admission, immutable
+bounded base/zero extent model, exact begin-operation replay, read-only range
+planning, schema/role isolation and migration checks. It must persist and reopen
+a base identity and its initial view without a full-file buffer or authenticated-
+content claim. Add no patch writes, clean acknowledgment, provider access or native
+activation in this slice. W2b2 MUST follow with immutable patch blocks, write/
+truncate/grow transitions, overlapping edits, dirty retention and exact replay;
+W2c must compose verified base/local bytes. This split is implementation order,
+not a reduced final goal. Legacy/metadata-empty bases remain required before W6.
+
+Source footprint findings: new state module/model/tests and next migration;
+state lib migration/open validation, namespace identity/init local-data guards,
+chunk-publication reciprocal isolation, worker client integration, both Windows
+schema assertions. Existing fake-old-schema tests span22 state test files and
+must represent actually old schemas; use a shared test-only table-removal helper
+rather than weakening CREATE/migration collision failures. Inspect exact matches
+before edits. Generic staging remains usable for later mixed uploads: do not put
+role checks into generic journal validation. Preserve all legacy role barriers.
+Run focused storage/replay/isolation/migration controls and the full local gate
+for this slice. Own combined platform acceptance is required before activation.
+PUBLIC remains intentional. No credentials/provider mutation. Goal ACTIVE.
+
 ## Current W2a core identity — local green (2026-10-19)
 
 Worktree /home/marshall/src/worktrees/s3drive-base-identity-core,

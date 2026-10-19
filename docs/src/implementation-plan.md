@@ -2575,3 +2575,29 @@ book checks passed. Indexed12-member local archive verified; see
 acceptance is pending. W2b's local storage-only slices may build on this green
 structural codec in isolation, while their eventual combined source still needs
 its own complete platform gates before activation. Main stays at accepted41188dd.
+
+
+### W2b1 first SQLite slice — declared contract (2026-10-19)
+
+Preparation in codex/sparse-edit-views, based on locally green core runtimec279e0f.
+The core's own hosted source remains frozen in a separate checkout. First persist
+private local target/base intent, an immutable initial extent map and exact begin
+operation/result in SQLite. Expose bounded metadata range planning and reopening;
+no provider call or invented historical Node. A64GiB initial remote-backed view
+must use bounded metadata, not allocate its logical byte length. Decoding a base
+identity still does not establish remote authorization or current availability.
+
+Require same-key/same-arguments replay, changed-key/target/base conflict refusal,
+full-row integrity and bounds, private-owner/worker integration, SQL failure and
+migration rollback, old-schema preservation and reciprocal legacy/authority role
+isolation. Inspect every relevant table list. The existing fake-old-schema tests
+must remove new tables when constructing old fixtures; keep migration collision
+and corruption failures strict. The next migration and two Windows schema
+expectations move together. Generic staging remains available for future mixed
+uploads; its validation must not accidentally become a legacy-only constructor.
+
+W2b2 then adds immutable patch storage and atomic write/truncate/grow transitions,
+read-your-writes plans, older pinned views, newer-head replay, process death,
+SQLite-full rollback and bounded dirty/metadata quotas. W2c supplies verified
+network/local composition. W2b1 alone is not editable storage or native-write
+acceptance. W3-W6 and legacy/metadata-empty recovery remain in scope.
