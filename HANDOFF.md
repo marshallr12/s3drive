@@ -25,6 +25,39 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Current W4b2 root-publication successor — own cohort pending (2026-10-19)
+
+Exact source2d9e21369c587f84cd20b9a11c85e7d822a4a957, codex/mixed-root-journal,
+worktree /home/marshall/src/worktrees/s3drive-mixed-root-journal. Draft schema33
+implements bounded semantic coverage, complete physical root proof, exact saved
+ReserveManifest/Publish, same-owner APIs, strict normal opening and restricted
+existing-only metadata recovery. Actual SDK cases cover rename, lost replies,
+worker kill, disabled credentials/policy and damaged source BLOBs, exact replay,
+known-root no RPC, independent-client conflict, changed/deleted base and Unicode/
+empty/zero/partial roots. No source clean receipt or native chunk-write activation.
+
+Final local gate2 runner399330 CLOSED0, all317 inputs unchanged:429state1ignored,
+37core/22reader1nativeignored/62S3/21publication, format/Clippy/build/78MD/74chapters.
+Indexed675-member local source/evidence archive1845921bytes SHA
+756f32f0ecc4694ff44c2a9282e013c5c4c4674258fc4826e8aec53a0c07a2e9,
+including exact failed gate1 source. Gate1 failed only an old final-schema assertion;
+fixed to SCHEMA_VERSION with data/rollback checks retained. Receipt growth now
+reserves64KiB at admission; exact-bound/narrowed-limit reply regression passed.
+Twelve new state cases include24 process-kill boundaries, SQLite-full, triggers,
+wrong identities, row substitution, strict recovery/no migration and source damage.
+
+Own39249045883 attempt1 in progress: book118048015714/Linux118048016109/
+Windows118048016468. Owned observer455646 (child/start ticks in
+/tmp/s3drive-mixed-roots-hosted-watch-running.json) confirmed live. Four one-use
+own acceptance scripts prepared, NOT executed; never rerun completed local archive.
+First resume: read successor HANDOFF/plan, confirm own API job state, review all
+raw logs then source/API ZIP SHA/typed21+14/project/all35 raw-field/type acceptance
+and one-use archive only after all3 success. No parent artifact reuse; keep317 frozen.
+Main remains accepted W4b1/runtime5112fd2/schema32/all306 inputs. Next W5 clean-base
+transition/retention, explicit legacy/metadata-empty origins and W6 native chunk
+writes remain required; provider/physical session/reboot gates are separate.
+Goal ACTIVE/progress; this pointer does not promote root runtime.
+
 ## Accepted W4b1 exact-data verification (2026-10-19)
 
 Runtime5112fd25452d0a262ed380c688e45b39d28c4370, schema32/all306 frozen inputs.

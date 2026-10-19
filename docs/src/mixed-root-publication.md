@@ -214,3 +214,20 @@ Tooling notices and two unused WinFsp delay-import groups remain in raw evidence
 All long-running tests completed. These checks accept the offline verifier and
 existing native regressions, not mounted chunk writes or physical reboot/session
 acceptance. W4b2 publication/recovery, W5 settlement and W6 native activation remain.
+
+
+## Mixed-root successor locally green
+
+Draft W4b2 source `2d9e21369c587f84cd20b9a11c85e7d822a4a957` is published in
+`codex/mixed-root-journal`. It implements durable semantic coverage and exact
+root requests, content-guarded publication and restricted metadata-only recovery.
+Twelve state cases include24 actual kill boundaries and a future-reply budget
+reservation regression; three SDK/authority scenarios cover normal/scalar roots,
+Unicode, rename, lost replies, process death/source damage and independent clients.
+The full local gate passed on317 unchanged inputs:429state tests (one ignored),
+37core,22reader (one native ignored),62S3 and21publication cases, formatting,
+Clippy, build and docs. The own
+[Linux/Windows/book/native cohort](https://github.com/marshallr12/s3drive/actions/runs/39249045883)
+is running. [Feature implementation/evidence](https://github.com/marshallr12/s3drive/blob/codex/mixed-root-journal/docs/src/mixed-root-publication.md).
+Main remains accepted W4b1; W4b2 promotion requires its own final source/artifact/
+native acceptance. No sparse clean settlement or mounted chunk writes are claimed.

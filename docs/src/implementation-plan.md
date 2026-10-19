@@ -3139,3 +3139,13 @@ SHAd2b9ca34b9520b52359389b32fcabb7181a96173487557b03295ec11c7f1ae04.
 Linux417state/Windows412state and inherited native/session regressions passed;
 see [acceptance evidence](evidence/mixed-semantics-20261019.json). No root commit,
 clean receipt or native chunk write follows. W4b2 remains separately unaccepted.
+
+
+W4b2 successor published,2026-10-19: source2d9e213/schema33 in
+codex/mixed-root-journal passed full local gate2 on317 unchanged inputs
+(429state1ignored/37core/22reader1nativeignored/62S3/21publication, format/Clippy/
+build/docs). Durable root requests, semantic coverage, content guard and restricted
+metadata-only recovery are implemented in validation. The675-member local archive
+retains final and failed sources; see the feature chapter. Own39249045883 platform/
+native/source cohort pending. Main remains accepted W4b1; W5/origins/W6/provider/
+physical session acceptance still remain.
