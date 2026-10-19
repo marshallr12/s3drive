@@ -62,8 +62,12 @@ clients produce one winner and one retained conflict; third refuses changed/
 deleted base. Exact owned fixture counts7/8 PUTs. SDK3 precedes test-only crash
 hooks and final skipped-check validation; final full gate must cover all source.
 
-Freeze current runtime/contract inputs before the full local gate. Run only one
-Cargo owner; no current Cargo work except focused6 if its session is not yet closed.
+Current11 state cases and3 SDK scenarios are focused green. Latest controls1
+session14136 EXIT0/3.78s includes empty/zero/partial Unicode and9 owned PUTs.
+The final source also rechecks create policy after fresh probes, refuses closing
+a shared normal owner through the restricted close API and tests expired policy
+before preparing Publish. Freeze current runtime/contract inputs before full gate.
+Run only one Cargo owner; all prior focused/Clippy sessions are terminal.
 Full local and own hosted/native/source acceptance required before promotion.
 No native chunk writes, local clean receipt, reclaim, Wasabi or physical reboot/
 sign-in/SSH/tmux acceptance. W5 retention/clean-base transition, origins, W6 remain.
@@ -98,7 +102,7 @@ It returns no durable seal, remote permission, root commit or clean receipt.
 Successor W4b2 draft in /home/marshall/src/worktrees/s3drive-mixed-root-journal,
 codex/mixed-root-journal: schema33 root journal/semantic coverage/private metadata
 recovery/publisher implemented;10 focused state tests incl24 kill boundaries and
-2 actual SDK root/recovery/rival cases pass. First Clippy failed2 collapsible-if
+3 actual SDK root/recovery/rival/empty/zero/partial cases pass. First Clippy failed2 collapsible-if
 suggestions, fixed without suppression; second full Clippy passed. Full local and
 own hosted acceptance still required before W4b2 promotion. W5/origins/W6/provider/
 physical session gates remain. Goal ACTIVE/progress.

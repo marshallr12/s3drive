@@ -253,11 +253,11 @@ check/begin/reserve/prepare/publish/rejection row writes, role writes, final
 validation and commit. They cover real SQLite-full rollback/retry, quotas,
 triggers, identity/receipt refusal, additive migration preservation/collision,
 role isolation, source corruption, metadata-only recovery and exclusive ownership.
-Two actual SDK/authority scenarios passed: sparse130MiB+17-byte Unicode edit with
+Three actual SDK/authority scenarios passed: sparse130MiB+17-byte Unicode edit with
 unchanged subtree reuse, rename, lost reserve/publish replies, killed process and
 new credential-free/source-damaged recovery; and independent-client root races
-with retained loser bytes and refusal of changed/deleted bases. Their owned
-fixture PUT counts were7 and8. No Wasabi writes were performed.
+with retained loser bytes and refusal of changed/deleted bases. Empty, all-zero and partial Unicode
+root publications also passed. Their owned fixture PUT counts were7,8 and9. No Wasabi writes were performed.
 
 The failed first compile, orphan-role refusal test, read API/mode-dispatch test
 harness errors and two Clippy style diagnostics are retained in dated evidence.

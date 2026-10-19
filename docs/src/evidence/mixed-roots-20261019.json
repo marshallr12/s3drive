@@ -134,6 +134,16 @@
       "log": "/tmp/s3drive-mixed-roots-clippy2.log",
       "sha256": "7ac87e878449a54920c9ab9c5e727d20630f853cf80e84a44f1fd34157734605",
       "summaries": []
+    },
+    {
+      "name": "controls1",
+      "session": 14136,
+      "exit_code": 0,
+      "log": "/tmp/s3drive-mixed-roots-controls1.log",
+      "sha256": "65f38678bd2c8737fe0caf62976907d1f9f382c09202d9fa7756802724687d89",
+      "summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 20 filtered out; finished in 3.78s"
+      ]
     }
   ],
   "not_claimed": [
@@ -144,5 +154,6 @@
     "native chunk writes",
     "Wasabi acceptance",
     "physical reboot/sign-in/SSH/tmux acceptance"
-  ]
+  ],
+  "focused_scope": "Focused results precede final complete gate; later create-policy recheck/expired-policy control and shared-owner close refusal must be covered by final gate."
 }

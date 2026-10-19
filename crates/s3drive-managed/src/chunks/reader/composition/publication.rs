@@ -126,10 +126,10 @@ impl MixedRootRecovery {
         Self::build(Log::Recovery(c), authority, volume, store)
     }
     pub async fn close(&self) -> Result<()> {
-        if let Log::Recovery(c) = &self.0.log {
-            c.close().await?;
+        match &self.0.log {
+            Log::Recovery(c) => c.close().await,
+            Log::Normal(_) => Err(MixedRootFailure::Binding.into()),
         }
-        Ok(())
     }
     fn scope(&self, r: &roots::Record) -> Result<()> {
         if r.input().reserve().volume != self.0.volume || r.input().store().id != self.0.store {
@@ -387,6 +387,9 @@ impl MixedPublisher {
                 if volume.id != reader.volume || volume.name_policy != reader.policy {
                     return Err(MixedRootFailure::Binding.into());
                 }
+                self.0
+                    .executor
+                    .check_create(target.object_key(), tree.root_receipt().info().size)?;
                 Ok((node, store, volume.sequence))
             }),
         )

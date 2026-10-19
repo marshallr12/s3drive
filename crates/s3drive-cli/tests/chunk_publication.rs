@@ -1075,6 +1075,7 @@ async fn chunk_child() {
         )
         .unwrap();
         match mode.as_str() {
+            "mixed_roots_controls" => Box::pin(mixed_roots::controls(&config, &root, &s)).await,
             "mixed_roots_rivals" => Box::pin(mixed_roots::rivals(&config, &root, &s)).await,
             "mixed_roots_crash" => Box::pin(mixed_roots::crash(&config, &root, &s)).await,
             "mixed_roots_recover" => Box::pin(mixed_roots::recover(&root, &s)).await,
@@ -1325,6 +1326,7 @@ async fn run(mode: &str) {
         }
     }
     let expected = match mode {
+        "mixed_roots_controls" => 9,
         "mixed_roots_rivals" => 8,
         "mixed_roots_crash" | "mixed_uploads" => 7,
         "mixed_conflict" => 3,
@@ -1471,4 +1473,9 @@ async fn mixed_roots_exact_cas_rename_lost_replies_and_killed_metadata_recovery_
 async fn mixed_roots_independent_clients_preserve_rival_conflict_and_refuse_changed_or_deleted_base()
  {
     run("mixed_roots_rivals").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn mixed_roots_publish_empty_zero_partial_unicode_and_preserve_exact_local_view() {
+    run("mixed_roots_controls").await;
 }

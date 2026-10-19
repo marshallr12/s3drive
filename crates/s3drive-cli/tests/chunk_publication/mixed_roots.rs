@@ -95,14 +95,26 @@ pub async fn crash(config: &s3drive_core::Config, root: &Path, s: &Server) {
     assert!(recovered.reservation().is_some());
     assert!(recovered.publication().is_none());
     only_exact_apply(s, reserved_input.input().reserve());
-    let narrow = executor(config, st.clone(), true, false).await;
-    let denied = prep.publisher(narrow, roots::Limits::default()).unwrap();
-    s.proxy.clear();
-    assert!(denied.resume().await.is_err());
-    assert!(
-        s.proxy.applies().is_empty(),
-        "fresh publish bypassed narrowed policy"
-    );
+    for (narrow, expired) in [(true, false), (false, true)] {
+        let denied_executor = executor(config, st.clone(), narrow, expired).await;
+        assert!(
+            denied_executor
+                .check_create(
+                    physical.root_receipt().info().target.object_key(),
+                    physical.root_receipt().info().size
+                )
+                .is_err()
+        );
+        let denied = prep
+            .publisher(denied_executor, roots::Limits::default())
+            .unwrap();
+        s.proxy.clear();
+        assert!(denied.resume().await.is_err());
+        assert!(
+            s.proxy.applies().is_empty(),
+            "fresh publish bypassed narrowed/expired policy"
+        );
+    }
     let newest = local
         .write([4; 32], edited.id(), 1, Arc::from(&b"newer"[..]))
         .await
@@ -312,6 +324,92 @@ pub async fn rivals(config: &s3drive_core::Config, root: &Path, s: &Server) {
         if *plan == machines[2].4 {
             assert!(client.get(*plan).await.is_err());
         }
+        st.close().await.unwrap();
+    }
+    seed.storage().close().await.unwrap();
+}
+
+pub async fn controls(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    let seed = setup(config, root, s).await;
+    let old = publisher(&seed, s).await;
+    let volume = info(&s.direct).await.id;
+    for mode in 0..3u8 {
+        let n = 10 + u64::from(mode);
+        if mode > 0 {
+            create(s, n, &format!("root {mode} café 🦀.bin")).await;
+        }
+        let original = if mode == 0 {
+            Vec::new()
+        } else {
+            (0..17).map(|x| x as u8).collect::<Vec<_>>()
+        };
+        let op = 50 + u64::from(mode) * 10;
+        let (p, _) = plan(&seed, s, n, op, &original, None, 0).await;
+        old.begin(p, id(op + 1)).await.unwrap();
+        old.resume(p).await.unwrap();
+        let st = storage(root, &format!("root-controls-{mode}")).await;
+        let local = st.sparse_views(sparse_views::Options::default()).unwrap();
+        let e = executor(config, st.clone(), false, false).await;
+        let reader = Reader::open(s.wire.clone(), volume.clone(), vec![(id(200), e.reader())])
+            .await
+            .unwrap();
+        let base = reader.open_file(&id(n)).await.unwrap().pinned_base();
+        let initial = local
+            .begin([1; 32], base.sparse_binding().unwrap(), base.size())
+            .await
+            .unwrap();
+        let (view, expected) = match mode {
+            0 => (
+                local.resize([2; 32], initial.id(), 0).await.unwrap(),
+                Vec::new(),
+            ),
+            1 => (
+                local
+                    .write([2; 32], initial.id(), 0, Arc::from(&[0u8; 17][..]))
+                    .await
+                    .unwrap(),
+                vec![0; 17],
+            ),
+            _ => {
+                let v = local.resize([2; 32], initial.id(), 7).await.unwrap();
+                let v = local
+                    .write([3; 32], v.id(), 0, Arc::from("café".as_bytes()))
+                    .await
+                    .unwrap();
+                let mut expected = original[..7].to_vec();
+                expected[..5].copy_from_slice("café".as_bytes());
+                (v, expected)
+            }
+        };
+        let edit = reader
+            .reopen_edited(local.clone(), view.id())
+            .await
+            .unwrap();
+        let prep = edit
+            .begin_preparation([4; 32], [95 + mode; 16], plans::Options::default())
+            .await
+            .unwrap();
+        prep.prepare().await.unwrap();
+        let tree = prep
+            .uploader(e.clone())
+            .unwrap()
+            .upload_tree()
+            .await
+            .unwrap();
+        assert_eq!(tree.new_objects(), if mode == 2 { 2 } else { 1 });
+        let publisher = prep.publisher(e, roots::Limits::default()).unwrap();
+        publisher.check_semantics().await.unwrap();
+        publisher.begin(id(1000 + u64::from(mode))).await.unwrap();
+        let done = publisher.resume().await.unwrap();
+        assert_eq!(done.view_id(), view.id());
+        assert_eq!(done.metadata().node.id, id(n));
+        let current = reader.open_file(&id(n)).await.unwrap();
+        assert_eq!(current.size(), expected.len() as u64);
+        assert_eq!(
+            current.read_range(0, expected.len() + 1).await.unwrap(),
+            expected
+        );
+        assert_eq!(local.head(view.binding().clone()).await.unwrap(), view);
         st.close().await.unwrap();
     }
     seed.storage().close().await.unwrap();
