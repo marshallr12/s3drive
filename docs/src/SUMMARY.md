@@ -37,6 +37,7 @@
 - [Implemented read-only provider contract](provider-contract.md)
 - [Related reads with pinned credentials](pinned-related-reads.md)
 - [Verified manifest range reader](manifest-range-reader.md)
+- [Reopening a pinned manifest base](manifest-base-reopen.md)
 - [Native manifest reads](native-manifest-reads.md)
 - [Implemented Linux read-only mount](linux-mount.md)
 - [Windows read-only drive](windows-mount.md)

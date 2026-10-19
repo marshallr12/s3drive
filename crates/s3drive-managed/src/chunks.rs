@@ -3,8 +3,8 @@
 //! No native activation, detached/removal mode or payload reclamation.
 mod reader;
 pub use reader::{
-    ChunkProof, File, MAX_CHUNK_PROOF_BYTES, MAX_PAGE_PROOF_BYTES, PageProof, ReadFailure,
-    ReadOptions, Reader,
+    BaseDescriptor, BaseFile, ChunkProof, File, MAX_CHUNK_PROOF_BYTES, MAX_PAGE_PROOF_BYTES,
+    PageProof, ReadFailure, ReadOptions, Reader,
 };
 
 use s3drive_authority::{Apply, Error, Reply, Request, Store, WireClient};

@@ -2316,4 +2316,15 @@ No reader activation or own combined hosted acceptance follows from this alone.
 Combined baseline5231113 check9230 and focused reader77295 both EXIT0,
 9passed/1nativeignored10.69s; all264 runtime inputs unchanged. This baseline
 compile/integration result does not replace the future W1c2 full/native gate.
-Reader implementation has not begun; next implement the proposal above.
+This was the pre-implementation baseline; the draft below now implements the
+proposal and requires its own complete acceptance.
+
+W1c2 implementation draft: see [pinned base reopening](manifest-base-reopen.md).
+File metadata and immutable BaseFile versions are separate;88-byte descriptor
+intent is reauthorized through exact history and fresh root/provider checks.
+Initial production all-target check and focused restart process test passed;
+full portable gate95974 now passed with all266 frozen inputs unchanged:368state/
+1ignored,11reader/1nativeignored,11authority namespace,12publication,62S3,
+format/Clippy/build/doclinks/book. Indexed21-member local archive verified.
+Own hosted/native acceptance remains pending. No sparse SQLite schema or native
+chunk-write activation is included.

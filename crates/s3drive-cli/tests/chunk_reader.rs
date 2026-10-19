@@ -9,6 +9,8 @@ mod native;
 mod pages;
 #[path = "chunk_reader/proofs.rs"]
 mod proofs;
+#[path = "chunk_reader/reopen.rs"]
+mod reopen;
 use fixture::*;
 use s3drive_authority::Mutation;
 use s3drive_core::manifest::{
@@ -726,11 +728,12 @@ async fn manifest_reader_child() {
         return;
     };
     let path = PathBuf::from(std::env::var("S3DRIVE_READER_ROOT").unwrap());
-    let f = Fixture::open(&path, mode == "flow").await;
+    let mut f = Fixture::open(&path, mode == "flow").await;
     match mode.as_str() {
         "flow" => Box::pin(flow(&f)).await,
         "proofs" => Box::pin(proofs::flow(&f)).await,
         "pages" => Box::pin(pages::flow(&f)).await,
+        "reopen" => Box::pin(reopen::flow(&mut f, &path)).await,
         "integrity" => Box::pin(integrity(&f)).await,
         "transport" => Box::pin(transport(&f)).await,
         "budgets" => Box::pin(budgets(&f)).await,
@@ -752,7 +755,7 @@ async fn run(mode: &str) {
     )
     .unwrap();
     std::fs::write(&config, "").unwrap();
-    let mut child = tokio::process::Command::new(std::env::current_exe().unwrap())
+    let child = tokio::process::Command::new(std::env::current_exe().unwrap())
         .args(["--exact", "manifest_reader_child", "--nocapture"])
         .env("S3DRIVE_READER_CASE", mode)
         .env("S3DRIVE_READER_ROOT", tmp.path())
@@ -765,6 +768,9 @@ async fn run(mode: &str) {
         .kill_on_drop(true)
         .spawn()
         .unwrap();
+    check_child(child, mode, Duration::from_secs(120)).await;
+}
+async fn check_child(mut child: tokio::process::Child, mode: &str, deadline: Duration) {
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
     let out = tokio::spawn(async move {
@@ -777,7 +783,7 @@ async fn run(mode: &str) {
         stderr.take(65537).read_to_end(&mut bytes).await.unwrap();
         bytes
     });
-    let status = tokio::time::timeout(Duration::from_secs(120), child.wait()).await;
+    let status = tokio::time::timeout(deadline, child.wait()).await;
     if status.is_err() {
         tokio::time::timeout(Duration::from_secs(15), child.kill())
             .await
@@ -828,4 +834,13 @@ async fn manifest_chunk_proofs_bind_snapshot_without_data_reads_and_reject_forge
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn manifest_page_proofs_bind_subtrees_and_reuse_old_root_without_data_reads() {
     run("pages").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn manifest_base_descriptors_reopen_exact_history_with_fresh_auth_and_shared_bounds() {
+    run("reopen").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn manifest_base_reopen_worker() {
+    reopen::worker().await;
 }

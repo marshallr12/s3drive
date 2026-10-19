@@ -56,11 +56,10 @@ impl PageProof {
         out
     }
 }
-impl File {
+impl BaseFile {
     fn root_page_reference(&self) -> Result<Reference> {
         let hint = self
             .0
-            .node
             .payload
             .as_ref()
             .and_then(|p| p.reservation.manifest.as_ref())
@@ -158,7 +157,7 @@ impl File {
         }
         Err(ReadFailure::Integrity.into())
     }
-    /// Pure bounded revalidation against this File's exact base. No new File,
+    /// Pure bounded revalidation against this version's exact base. No new authorized snapshot,
     /// old-root reopening, network authorization or byte-health proof is made.
     pub fn verify_page_proof(&self, encoded: &[u8]) -> Result<PageProof> {
         if encoded.len() < PAGE_HEADER

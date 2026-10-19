@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="670" viewBox="0 0 1080 670" role="img" aria-labelledby="title desc">
 <title id="title">Verified manifest range reader</title>
-<desc id="desc">A Rust reader gets authenticated metadata from the coordinator and pins a manifest root. Related S3 requests reuse its credential generation. Page and whole chunk hashes are verified before a bounded range is returned. Holes alone yield zeros. Native chunk mounts remain future work.</desc>
+<desc id="desc">A Rust reader gets authenticated metadata from the coordinator and pins a manifest root. Related S3 requests reuse its credential generation. Page and whole chunk hashes are verified before a bounded range is returned. Holes alone yield zeros. Read-only native integration is accepted separately; native chunk writes remain future work.</desc>
 <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#415b72"/></marker></defs>
 <rect width="1080" height="670" rx="16" fill="#f3f6fa"/>
 <g font-family="sans-serif" fill="#17324d">
 <text x="32" y="42" font-size="25" font-weight="bold">Read only the requested range, verify every returned byte</text>
-<text x="32" y="70" font-size="15">Implemented Rust library path • Native chunk mounts and write lifecycle remain future work</text>
+<text x="32" y="70" font-size="15">Rust library path • Read-only native mounts accepted separately; chunk writes remain future work</text>
 <rect x="24" y="94" width="624" height="470" rx="12" fill="white" stroke="#adc0d0"/>
 <text x="44" y="124" font-size="19" font-weight="bold">Local workstation: Linux or Windows</text>
 <rect x="48" y="148" width="240" height="96" rx="9" fill="#e5efff" stroke="#6790bd"/>

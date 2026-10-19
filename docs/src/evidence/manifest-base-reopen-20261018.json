@@ -1,0 +1,108 @@
+{
+  "date": "2026-10-18",
+  "status": "W1c2 full portable local gate passed; own hosted/native acceptance pending",
+  "branch": "codex/payload-history-authority",
+  "baseline": "5231113f1ba07ebb3e5a51619f4478805981f85f",
+  "scope": "exact manifest base reopening and shared immutable content handles; no sparse-view schema, native write activation or provider mutation",
+  "runs": {
+    "check": {
+      "exit_code": 0,
+      "log": "/tmp/s3drive-base-reopen-check.log",
+      "sha256": "dd0703378fe522d4ee902fc7aace00e11a9ccc171c6295154f9220ec5130c77a"
+    },
+    "focused1": {
+      "exit_code": 101,
+      "log": "/tmp/s3drive-base-reopen-focused.log",
+      "sha256": "54aa7a3f3a493d53e072a46bd2e7cda657fa004187cae50f0c5576ca621a68aa",
+      "reason": "fixture imported a non-exported capacity constant; changed to documented fixed256-slot contract"
+    },
+    "focused2": {
+      "exit_code": 0,
+      "log": "/tmp/s3drive-base-reopen-focused2.log",
+      "sha256": "9cbf57e35af5eac49bd50e7bdd2e54f05e9576d4d2b602fabd750e95648c2aa3",
+      "passed": 1,
+      "seconds": 5.19
+    },
+    "readers": {
+      "exit_code": 0,
+      "log": "/tmp/s3drive-base-reopen-readers.log",
+      "sha256": "f5d531518f31d577eacd5a61ba7b37693a38201a2d89172f247f2ac64ec6db13",
+      "passed": 11,
+      "ignored": 1,
+      "seconds": 8.58,
+      "native_ignored_requires_separate_gate": true
+    },
+    "gate1": {
+      "exit_code": 101,
+      "session": 50365,
+      "stage": "Clippy before workspace tests",
+      "reason": "fixed-size chunks_exact_to_as_chunks lint; inspected pinned std API and changed iteration",
+      "log": "/tmp/s3drive-base-reopen-gate.log",
+      "sha256": "4089ec96aefeb7be5a1575dcb04de9a7817fff80054f2fcfb85a8cbcdb52ef73",
+      "frozen_inputs": 266,
+      "all_frozen_inputs_unchanged": true
+    },
+    "gate2": {
+      "exit_code": 0,
+      "session": 95974,
+      "log": "/tmp/s3drive-base-reopen-gate2.log",
+      "sha256": "3bb1dea9cb963cd663378be82b7b0123f58304282107de8db673b047f0f7ef60",
+      "frozen_inputs": 266,
+      "all_frozen_inputs_unchanged": true,
+      "state": {
+        "passed": 368,
+        "ignored": 1,
+        "seconds": 324.05
+      },
+      "s3": {
+        "passed": 62,
+        "seconds": 23.96
+      },
+      "reader": {
+        "passed": 11,
+        "ignored": 1,
+        "seconds": 12.8
+      },
+      "authority_namespace": {
+        "passed": 11,
+        "seconds": 1.15
+      },
+      "publication": {
+        "passed": 12,
+        "seconds": 70.24
+      },
+      "schema_format_clippy_workspace_tests_build_doc_links_book_build_and_test": "passed",
+      "acceptance": "portable local only; actual OS mounts require own hosted gate"
+    }
+  },
+  "diagram": {
+    "xml_parse": "passed",
+    "renderer": "system Rsvg+Cairo",
+    "visual_review": "both rendered PNGs viewed; labels/arrows fit",
+    "images": {
+      "manifest-base-reopen": {
+        "svg_sha256": "4df4ef130133c5af446736b55f614067d7c35b92dc83511f40dc5a2526a8a4cf",
+        "png_sha256": "9ec80504970a7df7f992a2c3f23f2f24dfa959f9329ca4bcf06b8650198fba55"
+      },
+      "manifest-range-reader": {
+        "svg_sha256": "fc36825ca30142c2e36ec1cc8fb7890438c7efdeb272ec06797e35a2675634f8",
+        "png_sha256": "1269b2b8aeae5b9eb040a10ce5261f5c3452140ba25363d6bdf20ff59635087d"
+      }
+    }
+  },
+  "not_claimed": [
+    "own native/hosted acceptance",
+    "persistent SQLite sparse views",
+    "legacy/metadata-empty base recovery",
+    "native chunk writes",
+    "live Wasabi or physical reboot acceptance"
+  ],
+  "local_archive": {
+    "path": "evidence/manifest-base-reopen-local-20261018.tar.gz",
+    "sha256": "49c24d72b8b7099db46bd73a7301e1a900c4e1d24cc2590daee5e142c9fff35d",
+    "bytes": 85382,
+    "members": 21,
+    "all_indexed_members_verified": true,
+    "scope": "W1c2 portable local only"
+  }
+}

@@ -34,8 +34,8 @@ with final docs checks; history/reopen code is NOT on main. Proof
 /tmp/s3drive-primary-native-integration-publication.json. This draft branch
 currently diverges only in intended new authority code plus docs from that main;
 include the current main ancestry before eventual promotion, preserve user edits.
-No live CI/Cargo process remains; implement W1c2 next rather than repeat accepted
-cohorts. New reader code still needs its own full/hosted/native acceptance.
+Implement W1c2 in this worktree rather than repeat accepted cohorts. Current
+reader code is now a draft and needs its own full/hosted/native acceptance.
 
 
 Local W1c1 e18d6f5 is now combined with accepted W1b2e7b6ca. Runtime merge is a
@@ -43,10 +43,34 @@ new draft, baseline all-target check9230 CLOSED0 and focused reader77295 CLOSED0
 (9pass/1nativeignored10.69s). All264 inputs unchanged in
 /tmp/s3drive-history-reader-baseline-frozen.json; result
 /tmp/s3drive-history-reader-baseline-result.json. No own combined full/hosted
-acceptance. Reader changes have not begun. Implement the W1c2 proposal in the
+acceptance. Reader implementation is now a draft described below. Follow the W1c2 contract in the
 implementation plan, preserve all existing namespace/native behavior and run a
 fresh full/own hosted gate before W2 or activation. Keep chunk writes unsupported.
 No pending CI remains for the W1b prerequisite; watch7139/checker12398 CLOSED0.
+W1c2 draft: File retains Arc<Node> plus BaseFile(Arc<Version>); reads/proofs share
+that version, no fabricated historical namespace metadata.88-byte S3DBASE1
+descriptor is untrusted intent; reopen binds authenticated historical reply to
+volume/node/reservation/own-payload reference/store before fresh root checks.
+BaseDescriptor.payload_reference() is own CAS, never predecessor guard.
+Initial production all-target check9289 CLOSED0. Focused1 99447 CLOSED101 on
+non-exported MAX_SNAPSHOTS test import; fixed to documented256. Focused2 17788
+CLOSED0: actual authority restart/new reader process/rotated dummy credentials/
+old bytes and proofs/shared bounds passed5.19s. Strengthened missing-page witness
+control and renamed CAS getter; reader suite58518 CLOSED0 (11pass/1nativeignored
+8.58s) -> /tmp/s3drive-base-reopen-readers.log. Full gate1 50365 CLOSED101
+at Clippy chunks_exact_to_as_chunks, before workspace tests; original266 map
+preserved in /tmp/s3drive-base-reopen-gate1-frozen.json. Inspected pinned std
+as_chunks API, changed only fixed-size hex iteration. Fresh full gate2 95974
+CLOSED EXIT0 -> /tmp/s3drive-base-reopen-gate2.log; final266 runtime map
+/tmp/s3drive-base-reopen-frozen.json; all266 unchanged.368state/1ignored,
+11reader/1nativeignored12.80s,11authoritynamespace,12publication,62S3 and
+fmt/Clippy/build/doclinks/book passed. Indexed21-member local archive85382bytes
+SHA49c24d72b8b7099db46bd73a7301e1a900c4e1d24cc2590daee5e142c9fff35d.
+Both diagrams XML/native-rendered/visually reviewed; new chapter documents API.
+Baseline264 map is historical, NOT a freeze
+for this new code. New base.rs and reopen.rs are part of this draft. Dedicated
+book chapter/diagram added; full local gate passed; own cohort required before promotion.
+
 
 ## Local prerequisite W1c1 historical manifest metadata (2026-10-18)
 

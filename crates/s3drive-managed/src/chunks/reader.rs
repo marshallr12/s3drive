@@ -1,6 +1,6 @@
 //! Bounded, authenticated manifest snapshots. No persistent cache, native
-//! activation, arbitrary descriptor constructor or write/settlement effects.
-use s3drive_authority::{Kind, Listing, Node, Reply, Request, Store, WireClient};
+//! activation, arbitrary authorized-snapshot constructor or write/settlement effects.
+use s3drive_authority::{Kind, Listing, Node, Payload, Reply, Request, Store, WireClient};
 use s3drive_core::{
     manifest::{
         self, Entry, VerifiedPage,
@@ -19,6 +19,8 @@ use std::{
     time::Duration,
 };
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
+mod base;
+pub use base::BaseDescriptor;
 mod provenance;
 pub use provenance::{ChunkProof, MAX_CHUNK_PROOF_BYTES, MAX_PAGE_PROOF_BYTES, PageProof};
 
@@ -101,6 +103,7 @@ struct Shared {
     active: Arc<Semaphore>,
     snapshots: Arc<Semaphore>,
     options: ReadOptions,
+    history: bool,
 }
 #[derive(Clone)]
 pub struct Reader(Arc<Shared>);
@@ -186,6 +189,7 @@ impl Reader {
             active: Arc::new(Semaphore::new(MAX_ACTIVE)),
             snapshots: Arc::new(Semaphore::new(MAX_SNAPSHOTS)),
             options,
+            history: features.iter().any(|f| f == "manifest-history-v1"),
         })))
     }
     fn validate(&self, n: &Node) -> Result<()> {
@@ -355,7 +359,18 @@ impl Reader {
         if node.kind == Kind::Directory {
             return Err(ReadFailure::IsDirectory.into());
         }
-        let (size, content) = if let Some(payload) = &node.payload {
+        let base = Box::pin(self.open_version(node.payload.clone(), snapshot)).await?;
+        Ok(File {
+            node: Arc::new(node),
+            base,
+        })
+    }
+    async fn open_version(
+        &self,
+        payload: Option<Payload>,
+        snapshot: OwnedSemaphorePermit,
+    ) -> Result<BaseFile> {
+        let (size, content) = if let Some(payload) = &payload {
             let r = &payload.reservation;
             let descriptor = r
                 .manifest
@@ -409,8 +424,8 @@ impl Reader {
         } else {
             (0, Content::Empty)
         };
-        Ok(File(Arc::new(Snapshot {
-            node,
+        Ok(BaseFile(Arc::new(Version {
+            payload,
             size,
             content,
             reader: self.clone(),
@@ -427,8 +442,8 @@ enum Content {
         store: [u8; 16],
     },
 }
-struct Snapshot {
-    node: Node,
+struct Version {
+    payload: Option<Payload>,
     size: u64,
     content: Content,
     reader: Reader,
@@ -437,7 +452,19 @@ struct Snapshot {
 /// An immutable root and metadata captured at open. Clones share one retained
 /// snapshot permit; new opens authorize again. No bytes or credentials setter.
 #[derive(Clone)]
-pub struct File(Arc<Snapshot>);
+pub struct File {
+    node: Arc<Node>,
+    base: BaseFile,
+}
+/// Authenticated immutable content only; no historical namespace attributes.
+/// Clones share the same retained snapshot permit and operation budget.
+#[derive(Clone)]
+pub struct BaseFile(Arc<Version>);
+impl fmt::Debug for BaseFile {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("ManifestBaseFile([private])")
+    }
+}
 impl fmt::Debug for File {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("ManifestFile([private])")
@@ -445,8 +472,37 @@ impl fmt::Debug for File {
 }
 impl File {
     pub fn metadata(&self) -> &Node {
-        &self.0.node
+        &self.node
     }
+    pub fn size(&self) -> u64 {
+        self.base.size()
+    }
+    pub fn pinned_base(&self) -> BaseFile {
+        self.base.clone()
+    }
+    pub fn base_descriptor(&self) -> Result<BaseDescriptor> {
+        self.base.base_descriptor()
+    }
+    pub async fn read_range(&self, offset: u64, length: usize) -> Result<Vec<u8>> {
+        self.base.read_range(offset, length).await
+    }
+    pub async fn prove_chunk(&self, chunk: u64) -> Result<ChunkProof> {
+        self.base.prove_chunk(chunk).await
+    }
+    pub fn verify_chunk_proof(&self, encoded: &[u8]) -> Result<ChunkProof> {
+        self.base.verify_chunk_proof(encoded)
+    }
+    pub async fn prove_root(&self) -> Result<PageProof> {
+        self.base.prove_root().await
+    }
+    pub async fn prove_page_containing(&self, offset: u64, level: u8) -> Result<PageProof> {
+        self.base.prove_page_containing(offset, level).await
+    }
+    pub fn verify_page_proof(&self, encoded: &[u8]) -> Result<PageProof> {
+        self.base.verify_page_proof(encoded)
+    }
+}
+impl BaseFile {
     pub fn size(&self) -> u64 {
         self.0.size
     }

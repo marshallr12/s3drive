@@ -13,7 +13,7 @@ pub const MAX_CHUNK_PROOF_BYTES: usize =
 /// An authenticated reference or hole for one logical chunk of a pinned base.
 /// A data reference proves reachability, not current availability/authorization
 /// or successful verification of its bytes. The encoded witness must be
-/// revalidated with an authorized File before reuse after restart.
+/// revalidated with an authorized snapshot before reuse after restart.
 #[derive(Clone)]
 pub struct ChunkProof {
     binding: [u8; 32],
@@ -60,10 +60,10 @@ fn encode(binding: [u8; 32], chunk: u64, pages: &[Vec<u8>]) -> Vec<u8> {
     }
     out
 }
-impl File {
+impl BaseFile {
     fn proof_binding(&self) -> Result<[u8; 32]> {
-        let reference = s3drive_authority::payload_reference(&self.0.node.payload)
-            .ok_or(ReadFailure::Binding)?;
+        let reference =
+            s3drive_authority::payload_reference(&self.0.payload).ok_or(ReadFailure::Binding)?;
         let mut hash = Sha256::new();
         hash.update(b"s3drive-authenticated-chunk-reference-v1\0");
         hash.update(reference.as_bytes());

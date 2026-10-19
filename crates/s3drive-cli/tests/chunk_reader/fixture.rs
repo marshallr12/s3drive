@@ -30,7 +30,7 @@ use tokio::{
     task::{JoinHandle, JoinSet},
 };
 pub const C: u64 = manifest::CHUNK_BYTES;
-const TOKEN: &str = "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
+pub const TOKEN: &str = "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
 pub fn id(n: u64) -> String {
     format!("{n:032x}")
 }
@@ -56,6 +56,7 @@ pub struct Event {
     pub range: Option<String>,
     pub matched: Option<String>,
     pub version: Option<String>,
+    pub credential: String,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Fault {
@@ -85,6 +86,7 @@ pub struct S3State {
     notice: Arc<Notify>,
     pub permits: Arc<Semaphore>,
     pub served: Arc<AtomicU64>,
+    pub expected_key: Arc<Mutex<String>>,
 }
 impl S3State {
     pub fn fault(&self, target: Target, fault: Fault) {
@@ -158,8 +160,14 @@ async fn serve(mut socket: TcpStream, s: S3State) {
         matches!(method.as_str(), "HEAD" | "GET"),
         "reader fixture received mutation"
     );
+    let credential = request
+        .split("Credential=")
+        .nth(1)
+        .and_then(|s| s.split('/').next())
+        .unwrap_or("")
+        .to_owned();
     assert!(
-        request.contains("Credential=TESTPROFILE/"),
+        matches!(credential.as_str(), "TESTPROFILE" | "TESTROTATED"),
         "reader used unexpected credential profile"
     );
     let url = url::Url::parse(&format!("http://fixture{}", words.next().unwrap())).unwrap();
@@ -183,8 +191,14 @@ async fn serve(mut socket: TcpStream, s: S3State) {
         range: headers.get("range").cloned(),
         matched: headers.get("if-match").cloned(),
         version: version.clone(),
+        credential: credential.clone(),
     };
     s.events.lock().unwrap().push(event);
+    let permitted = credential == *s.expected_key.lock().unwrap();
+    if !permitted {
+        response(&mut socket, 403, String::new(), b"", 0).await;
+        return;
+    }
     let fault = s.fault.lock().unwrap().clone().and_then(|(t, f)| {
         let matched = match t {
             Target::Exact(p) => p == path,
@@ -293,7 +307,7 @@ async fn serve(mut socket: TcpStream, s: S3State) {
 }
 #[derive(Clone)]
 struct Proxy {
-    upstream: WireClient,
+    upstream: Arc<Mutex<WireClient>>,
     mode: Arc<AtomicU8>,
     requests: Arc<Mutex<Vec<Request>>>,
     next_node: Arc<Mutex<Option<Node>>>,
@@ -308,7 +322,8 @@ async fn proxy(
         format!("Bearer {TOKEN}").as_str()
     );
     p.requests.lock().unwrap().push(request.clone());
-    let mut r = p.upstream.request(&request).await.unwrap();
+    let upstream = p.upstream.lock().unwrap().clone();
+    let mut r = upstream.request(&request).await.unwrap();
     if matches!(request, Request::Node { .. })
         && let Some(node) = p.next_node.lock().unwrap().take()
     {
@@ -316,6 +331,7 @@ async fn proxy(
     }
     match (&request, &mut r, p.mode.load(Ordering::SeqCst)) {
         (Request::Features {}, Reply::Features(f), 1) => f.retain(|f| f != "manifest-root-v1"),
+        (Request::Features {}, Reply::Features(f), 30) => f.retain(|f| f != "manifest-history-v1"),
         (Request::Info {}, Reply::Info(v), 2) => v.id = id(999),
         (Request::Info {}, Reply::Info(v), 3) => v.name_policy = "unsupported".into(),
         (Request::Store { .. }, Reply::Store(s), 4) => s.id = id(999),
@@ -338,7 +354,28 @@ async fn proxy(
         (Request::Node { .. }, Reply::Node(n), 16) => {
             n.payload.as_mut().unwrap().reservation.sha256 = "0".repeat(64)
         }
+        (Request::ManifestPayload { .. }, Reply::ManifestPayload(v), 31) => {
+            v.reservation.node = id(999)
+        }
+        (Request::ManifestPayload { .. }, Reply::ManifestPayload(v), 32) => {
+            v.reservation.store.route = "f".repeat(64)
+        }
+        (Request::ManifestPayload { .. }, Reply::ManifestPayload(v), 33) => {
+            v.etag = "\"other\"".into()
+        }
+        (Request::ManifestPayload { .. }, Reply::ManifestPayload(v), 34) => {
+            v.reservation.id = id(999)
+        }
+        (Request::ManifestPayload { .. }, Reply::ManifestPayload(v), 35) => {
+            v.reservation.volume = id(999)
+        }
         _ => (),
+    }
+    if p.mode.load(Ordering::SeqCst) == 36 && matches!(request, Request::ManifestPayload { .. }) {
+        r = Reply::Features(vec![]);
+    }
+    if p.mode.load(Ordering::SeqCst) == 37 && matches!(request, Request::ManifestPayload { .. }) {
+        r = Reply::Error(s3drive_authority::Error::Unavailable);
     }
     if p.mode.load(Ordering::SeqCst) == 13 && matches!(request, Request::Store { .. }) {
         r = Reply::Features(vec![]);
@@ -365,7 +402,8 @@ async fn proxy(
     axum::Json(r)
 }
 pub struct Fixture {
-    authority: Authority,
+    authority: Option<Authority>,
+    upstream: Arc<Mutex<WireClient>>,
     pub direct: WireClient,
     pub wire: WireClient,
     pub volume: String,
@@ -396,6 +434,7 @@ impl Fixture {
             notice: Arc::new(Notify::new()),
             permits: Arc::new(Semaphore::new(0)),
             served: Arc::new(AtomicU64::new(0)),
+            expected_key: Arc::new(Mutex::new("TESTPROFILE".into())),
         };
         let l = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let endpoint = format!("http://{}", l.local_addr().unwrap());
@@ -448,8 +487,9 @@ impl Fixture {
         let mode = Arc::new(AtomicU8::new(0));
         let requests = Arc::new(Mutex::new(Vec::new()));
         let next_node = Arc::new(Mutex::new(None));
+        let upstream = Arc::new(Mutex::new(direct.clone()));
         let p = Proxy {
-            upstream: direct.clone(),
+            upstream: upstream.clone(),
             mode: mode.clone(),
             requests: requests.clone(),
             next_node: next_node.clone(),
@@ -473,7 +513,8 @@ impl Fixture {
             panic!()
         };
         let f = Self {
-            authority,
+            authority: Some(authority),
+            upstream,
             direct,
             wire,
             volume: v.id,
@@ -507,6 +548,56 @@ impl Fixture {
         .await;
         f.create(10, "café 日本語 🦀.bin", 200, exact).await;
         f
+    }
+    pub fn endpoint(&self) -> &str {
+        &self.authority_endpoint
+    }
+    pub async fn restart_authority(&mut self, path: &Path) {
+        let Reply::Info(before) = self.direct.request(&Request::Info {}).await.unwrap() else {
+            panic!("info")
+        };
+        self.stops.remove(1).send(()).unwrap();
+        tokio::time::timeout(Duration::from_secs(15), self.tasks.remove(1))
+            .await
+            .unwrap()
+            .unwrap();
+        tokio::time::timeout(
+            Duration::from_secs(30),
+            self.authority.take().unwrap().shutdown(),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        let authority =
+            Authority::open_with_policy(path.join("metadata"), before.name_policy.clone())
+                .await
+                .unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/v1/namespace", listener.local_addr().unwrap());
+        let direct = WireClient::loopback(&url, Token::new(TOKEN.into()).unwrap()).unwrap();
+        let (stop, receive) = oneshot::channel();
+        let client = authority.client();
+        let task = tokio::spawn(async move {
+            s3drive_authority::serve_loopback(
+                listener,
+                client,
+                Token::new(TOKEN.into()).unwrap(),
+                async {
+                    let _ = receive.await;
+                },
+            )
+            .await
+            .unwrap();
+        });
+        assert_eq!(
+            direct.request(&Request::Info {}).await.unwrap(),
+            Reply::Info(before)
+        );
+        *self.upstream.lock().unwrap() = direct.clone();
+        self.direct = direct;
+        self.authority = Some(authority);
+        self.stops.insert(1, stop);
+        self.tasks.insert(1, task);
     }
     pub async fn change(&self, op: u64, mutation: Mutation) -> s3drive_authority::Receipt {
         let Reply::Info(v) = self.direct.request(&Request::Info {}).await.unwrap() else {
@@ -812,7 +903,7 @@ impl Fixture {
                 .unwrap()
                 .unwrap();
         }
-        self.authority.shutdown().await.unwrap();
+        self.authority.unwrap().shutdown().await.unwrap();
     }
 }
 fn coalesce(entries: &[Entry]) -> Vec<Entry> {
