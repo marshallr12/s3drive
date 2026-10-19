@@ -80,10 +80,18 @@ their cause. Never equate portable unit tests with an actual mount or flush.
    /home/marshall/src/worktrees/s3drive-scoped-source-operations-repair,
    branch codex/scoped-source-operations-repair, runtime170979e/head1ad9dc6.
    Full repair gate2 exited101:23publication passed/1 upload Timeout; exact case
-   alone passed89.91s. After batch acceptance integrate it and restore normal SDK
-   admission if the full regression permits; require a fresh full gate and own
-   hosted cohort. Never reuse the original prototype's platform artifacts for
-   changed sources. [Contract](docs/src/scoped-source-operations.md).
+   alone passed89.91s. Original and repaired frozen sources/logs remain unchanged.
+   New combined worktree /home/marshall/src/worktrees/s3drive-scoped-source-operations-batched,
+   branch codex/scoped-source-operations-batched, checkpoint6115775/schema36/all329.
+   Accepted batch changes merged cleanly; the unsuccessful two-family SDK limiter
+   was removed. Ordinary four test threads, old30s operations/180s child deadlines.
+   [Combined contract](docs/src/scoped-batched-repair.md). Frozen candidate1 map/source
+   /tmp/s3drive-scoped-batched-candidate1-frozen.json and -source.tar.gz.
+   Full gate runner978816/child978818 is LIVE, startticks143323634/143323642,
+   started16:17:12Z. Inspect /tmp/s3drive-scoped-batched-gate1-{running,result}.json
+   and .log. Source329 is frozen; do not edit it or start another Cargo. Require own complete
+   local and hosted/native/source/artifact gates before promoting schema36.
+   [Original scoped contract](docs/src/scoped-source-operations.md).
 
 3. **Manual pin registry** — worktree
    /home/marshall/src/worktrees/s3drive-source-read-pins, branch codex/source-read-pins,
@@ -114,11 +122,15 @@ their cause. Never equate portable unit tests with an actual mount or flush.
    schema37/all337 frozen. Seven state guard cases passed48.89s; SDK3 lifetime case
    passed30.01s; workspace all-target Clippy passed35.45s. SDK1 fixture compilation
    and SDK2 double-prefixed cancellation-target failures are retained and fixed.
-   Component runner931670 is live; inspect
-   /tmp/s3drive-managed-guards-component1-{running,result}.json before any Cargo.
-   It runs complete state and SDK reader regressions, not a full workspace gate.
-   After batch/scoped parent integration, adapt the new batch private chunk-read
-   path to the guard and require fresh full/platform/source acceptance.
+   Component runner931670 CLOSED0 at16:16:54Z, all337 unchanged:481state/1diagnostic
+   ignored/298.56s and23SDK reader/1native-only ignored/46.92s. See
+   /tmp/s3drive-managed-guards-component1-result.json. One-use component archiver
+   DONE, never rerun. Verified355-member archive SHA
+   4a1324c00285c6d887987e3cf2de0abc9e09ef5ad888b88c7a47564ee86ee8c6.
+   [Managed reader evidence](docs/src/managed-reader-guards.md). This is not its full
+   workspace/platform acceptance. After batch/scoped parent integration, adapt the
+   new batch private chunk-read path to the guard and require fresh full/platform
+   source acceptance. Main remains accepted schema35/all324.
 
 One local Cargo at a time. All worktrees share /home/marshall/src/s3drive/target.
 Inspect actual PID/startticks or terminal result, not only a lock/status file.

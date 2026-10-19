@@ -3316,3 +3316,22 @@ reference/project/all35 raw fields/types checked and104-member archive verified.
 files integrated into main; schema36/37 remain unaccepted. The new managed-reader
 integrationb28ca7b/all337 is isolated: focused state/SDK and Clippy passed, with its
 broader component runner active. No native chunk writes or reclamation enabled.
+
+
+The [combined scoped repair](scoped-batched-repair.md) is checkpoint6115775,
+schema36/all329 frozen. Its clean three-way merge preserves scoped assertions and
+uses accepted upload batching at ordinary four-thread SDK admission. Its own full
+local/hosted acceptance is required. The separate [managed-reader integration](managed-reader-guards.md)
+atb28ca7b/all337 has focused state/SDK and Clippy success; complete state/reader
+component regression remains running. Share the local build target sequentially;
+no source from either frozen candidate is promoted by the other's results.
+
+
+Managed-reader componentb28ca7b completed2026-10-19:481state/1diagnostic ignored/
+298.56s and23SDK reader/1native-only ignored/46.92s, all337 frozen inputs unchanged.
+[Exact component evidence](managed-reader-guards.md); indexed355-member archive
+SHA4a1324c00285c6d887987e3cf2de0abc9e09ef5ad888b88c7a47564ee86ee8c6.
+Its one-use archiver is DONE. Combined scoped source6115775/all329 full gate1 is
+now active (runner978816/child978818), normal four test threads; source frozen.
+No schema36/37 promotion follows from the component regression. Parent integration
+and exact full/platform/source gates remain required before mounted activation.

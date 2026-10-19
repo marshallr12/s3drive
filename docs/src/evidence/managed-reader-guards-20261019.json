@@ -1,0 +1,131 @@
+{
+  "date": "2026-10-19",
+  "phase": "W5b2b3 managed reader retention",
+  "status": "component checks passed; parent/batch integration and full workspace/platform/source acceptance required",
+  "checkpoint": "b28ca7b",
+  "schema": 37,
+  "runtime_inputs": 337,
+  "component_archive": {
+    "scope": "state/SDK reader/Clippy component evidence only; not full workspace/native/source acceptance",
+    "path": "evidence/managed-reader-guards-component-20261019.tar.gz",
+    "sha256": "4a1324c00285c6d887987e3cf2de0abc9e09ef5ad888b88c7a47564ee86ee8c6",
+    "bytes": 898322,
+    "members": 355,
+    "all_indexed_members_verified": true,
+    "runtime_inputs": 337,
+    "checkpoint": "b28ca7b",
+    "schema": 37,
+    "state_passed": 481,
+    "state_ignored": 1,
+    "reader_passed": 23,
+    "reader_native_ignored": 1,
+    "seconds": {
+      "state": 298.56,
+      "reader": 46.92
+    },
+    "log_sha256": {
+      "state": "79c5a7e4663d1fa25748768ea73e69af077fcfc9d2a9efff8d6ff269a0d2a31a",
+      "reader": "911e21fbc3b4848eb59ada32fa7d20f1e7234550072ff5f09da4d12e8587c344"
+    }
+  },
+  "regression": {
+    "scope": "state and SDK reader component regression; not full workspace/native acceptance",
+    "runner_pid": 931670,
+    "runner_start_ticks": "143285314",
+    "started": "2026-10-19T16:10:49.702436+00:00",
+    "cwd": "/home/marshall/src/worktrees/s3drive-managed-reader-guards",
+    "runtime_inputs": 337,
+    "frozen_map": "/tmp/s3drive-managed-guards-candidate1-frozen.json",
+    "rust_test_threads": 4,
+    "tty": false,
+    "legs": [
+      {
+        "name": "state",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "s3drive-state",
+          "--locked"
+        ],
+        "log": "/tmp/s3drive-managed-guards-component1-state.log",
+        "started": "2026-10-19T16:10:49.705798+00:00",
+        "child_pid": 931671,
+        "child_start_ticks": "143285323",
+        "exit_code": 0,
+        "finished": "2026-10-19T16:16:06.857802+00:00",
+        "sha256": "79c5a7e4663d1fa25748768ea73e69af077fcfc9d2a9efff8d6ff269a0d2a31a"
+      },
+      {
+        "name": "reader",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "s3drive-cli",
+          "--test",
+          "chunk_reader",
+          "--locked"
+        ],
+        "log": "/tmp/s3drive-managed-guards-component1-reader.log",
+        "started": "2026-10-19T16:16:06.858649+00:00",
+        "child_pid": 978310,
+        "child_start_ticks": "143317038",
+        "exit_code": 0,
+        "finished": "2026-10-19T16:16:54.099867+00:00",
+        "sha256": "911e21fbc3b4848eb59ada32fa7d20f1e7234550072ff5f09da4d12e8587c344"
+      }
+    ],
+    "current_leg": {
+      "name": "reader",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "s3drive-cli",
+        "--test",
+        "chunk_reader",
+        "--locked"
+      ],
+      "log": "/tmp/s3drive-managed-guards-component1-reader.log",
+      "started": "2026-10-19T16:16:06.858649+00:00",
+      "child_pid": 978310,
+      "child_start_ticks": "143317038",
+      "exit_code": 0,
+      "finished": "2026-10-19T16:16:54.099867+00:00",
+      "sha256": "911e21fbc3b4848eb59ada32fa7d20f1e7234550072ff5f09da4d12e8587c344"
+    },
+    "exit_code": 0,
+    "finished": "2026-10-19T16:16:54.114070+00:00",
+    "all_inputs_unchanged": true,
+    "changed_inputs": []
+  },
+  "focused_state": {
+    "passed": 7,
+    "seconds": 48.89
+  },
+  "focused_sdk": {
+    "passed": 1,
+    "seconds": 30.01
+  },
+  "workspace_clippy_all_targets": {
+    "passed": true,
+    "seconds": 35.45,
+    "warnings_denied": true
+  },
+  "retained_failures": [
+    "SDK1 missing fixture imports/method name",
+    "SDK2 cancellation gate double-prefixed already absolute root path"
+  ],
+  "integration_requirements": [
+    "accepted batching private prepare_chunk must use guard",
+    "scoped schema36 parent own acceptance",
+    "full workspace gate",
+    "own Linux/Windows/native/source/artifact cohort"
+  ],
+  "unimplemented": [
+    "clean-anchor retirement",
+    "garbage collection",
+    "native chunk writes"
+  ]
+}
