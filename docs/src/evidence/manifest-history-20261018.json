@@ -1,0 +1,114 @@
+{
+  "date": "2026-10-18",
+  "status": "W1c1 full independent local gate passed; reader integration and own combined hosted acceptance pending",
+  "branch": "codex/payload-history-authority",
+  "base": "da84d3a05e0562bed00f77f3ea5aece935e52d32",
+  "scope": "additive authenticated history metadata, no schema migration or reader/native activation",
+  "runs": {
+    "check": {
+      "exit_code": 0,
+      "log": "/tmp/s3drive-payload-history-check.log",
+      "sha256": "6295ea03f0eefd02f35758a27ea77e46de387f881352f5e6d0433fac22aa4625"
+    },
+    "state1": {
+      "exit_code": 0,
+      "log": "/tmp/s3drive-payload-history-state-focused.log",
+      "sha256": "6e54491e2584fcb8adcbe236f5b6f36e20d63ac42d42fd2d76ffc80a2448ee37"
+    },
+    "http1": {
+      "exit_code": 101,
+      "log": "/tmp/s3drive-payload-history-http-focused.log",
+      "sha256": "cc436a3f5c3f753869bed07fdddb7edad9e2c831085d7ab1c62fe4de1c896a08",
+      "reason": "integration-test root needs explicit namespace/history.rs module path"
+    },
+    "size_negative": {
+      "exit_code": 101,
+      "log": "/tmp/s3drive-payload-history-size-negative.log",
+      "sha256": "54ee3371796c2fe0df389e8aac19cea6a6bf902b9f6e3b1ef66046af742c9a6f",
+      "reason": "first helper accepted exact valid publication JSON padded beyond16KiB; new SQL CASE bound refuses all five oversized fields"
+    },
+    "state2": {
+      "exit_code": 0,
+      "log": "/tmp/s3drive-payload-history-state-focused2.log",
+      "sha256": "591964face8a1539dbc31a739bc23d00a37b80bbefd701ae1de1e893f5b8bf94",
+      "passed": 3,
+      "seconds": 1.7,
+      "corruption_scenarios": 17
+    },
+    "http2": {
+      "exit_code": 0,
+      "log": "/tmp/s3drive-payload-history-http-focused2.log",
+      "sha256": "b7b964637239cf51ca5cd08d55ac2a8b32f58efdc34e1367125ddbbf039956e2",
+      "passed": 1,
+      "seconds": 0.18
+    }
+  },
+  "not_claimed": [
+    "own hosted cohort",
+    "S3 snapshot reopening",
+    "legacy/metadata-empty recovery",
+    "native chunk writes",
+    "new provider mutations"
+  ],
+  "gate": {
+    "exit_code": 0,
+    "session": 60956,
+    "log": "/tmp/s3drive-payload-history-gate.log",
+    "log_sha256": "1dc90798004126645b5ba755f6cde1d6ada5fa45ebd8ad2c00b7a900498b0e41",
+    "frozen_count": 262,
+    "frozen_map_sha256": "43544f860829dfe851b494031a54acc2e633d4ed79976921aae65bff4b47bcb1",
+    "all_frozen_inputs_unchanged": true,
+    "environment": {
+      "RUST_TEST_THREADS": "2",
+      "tty": true
+    },
+    "test_summaries": [
+      "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.56s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.42s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.49s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.34s",
+      "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.97s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 41.63s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s",
+      "test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 83.76s",
+      "test result: ok. 8 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.56s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.83s",
+      "test result: ok. 2 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 11.22s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.02s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 24.01s",
+      "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 49.33s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.95s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.74s",
+      "test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s",
+      "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.28s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 29.32s",
+      "test result: ok. 368 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 277.33s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ],
+    "scope": "W1c1 independent authority metadata local gate; no reader, own hosted or native activation acceptance"
+  },
+  "local_archive": {
+    "path": "evidence/manifest-history-local-20261018.tar.gz",
+    "sha256": "d7e7aedb493448a7794ddb15f66503d52e188caced3284fe36724ada15942668",
+    "bytes": 71917,
+    "members": 20,
+    "all_indexed_members_verified": true,
+    "scope": "W1c1 portable local only"
+  }
+}

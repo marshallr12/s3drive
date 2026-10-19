@@ -1,6 +1,7 @@
 use super::*;
 use crate::State;
 use s3drive_core::manifest::{Entry, Page, Reference};
+mod history;
 fn id(n: u8) -> String {
     format!("{n:02x}").repeat(16)
 }

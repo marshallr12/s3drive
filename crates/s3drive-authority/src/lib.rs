@@ -32,13 +32,39 @@ const QUEUE: usize = 8;
 pub enum Request {
     Features {},
     Info {},
-    Store { volume: String, store: String },
-    Reservation { volume: String, reservation: String },
-    Node { volume: String, node: String },
-    PendingRemoval { volume: String, node: String },
-    List { volume: String, parent: String },
-    Operation { volume: String, operation: String },
-    Apply { request: Apply },
+    Store {
+        volume: String,
+        store: String,
+    },
+    Reservation {
+        volume: String,
+        reservation: String,
+    },
+    ManifestPayload {
+        volume: String,
+        node: String,
+        reservation: String,
+        reference: String,
+    },
+    Node {
+        volume: String,
+        node: String,
+    },
+    PendingRemoval {
+        volume: String,
+        node: String,
+    },
+    List {
+        volume: String,
+        parent: String,
+    },
+    Operation {
+        volume: String,
+        operation: String,
+    },
+    Apply {
+        request: Apply,
+    },
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
@@ -52,6 +78,7 @@ pub enum Reply {
     Info(Volume),
     Store(Store),
     Reservation(Reservation),
+    ManifestPayload(Payload),
     Node(Node),
     PendingRemoval(Option<PendingRemoval>),
     List(Listing),
@@ -83,6 +110,7 @@ impl Request {
                 "deferred-owner-move-v1".into(),
                 "owned-target-replace-v1".into(),
                 "manifest-root-v1".into(),
+                "manifest-history-v1".into(),
             ])),
             Self::Info {} => state.namespace_volume().map(Reply::Info),
             Self::Store { volume, store } => {
@@ -94,6 +122,14 @@ impl Request {
             } => state
                 .namespace_reservation(&volume, &reservation)
                 .map(Reply::Reservation),
+            Self::ManifestPayload {
+                volume,
+                node,
+                reservation,
+                reference,
+            } => state
+                .namespace_manifest_payload(&volume, &node, &reservation, &reference)
+                .map(Reply::ManifestPayload),
             Self::PendingRemoval { volume, node } => state
                 .namespace_pending_removal(&volume, &node)
                 .map(Reply::PendingRemoval),

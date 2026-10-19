@@ -94,3 +94,43 @@ snapshot atomically while preserving newer dirty heads. Verified manifest
 traversal, authenticated unchanged-chunk reuse, bounded performance and native
 Linux/Windows acceptance follow. No provider calls, user credential changes or
 repository visibility mutations are part of this phase.
+
+## W1c1 historical manifest lookup (2026-10-18)
+
+Draft in `codex/payload-history-authority`, based on accepted `da84d3a`.
+The additive `manifest-history-v1` capability exposes `ManifestPayload`:
+volume, node ID, reservation ID and exact original payload-reference hash.
+The reply contains that published manifest payload, not the latest file version.
+The existing volume bearer authentication protects this read too. Unknown or
+unpublished versions return NotFound, wrong references Conflict, and malformed,
+unsupported legacy or inconsistent retained records an explicit error.
+
+The authority uses the existing `namespace_uploads` publication record and
+reservation operation/receipt in one SQLite read transaction, without a schema
+migration or operation-log scan. Each of the five consulted BLOB fields has a
+16 KiB SQL guard before copying into Rust. A valid JSON record padded beyond
+that bound was accepted by the first draft; the negative control reproduced
+this before the guard was added. Seventeen corruption/binding/size scenarios
+now fail while preserving their records. These are consistency checks against
+trusted authority storage, not cryptographic authentication of an arbitrarily
+rewritten database or an independent proof that S3 contains the bytes.
+
+The three state controls passed, including old versions after replacement,
+rename, deletion and restart. The production WireClient/authenticated HTTP
+control passed: capability discovery, exact old-version recovery, bearer/volume
+enforcement, strict request decoding and unchanged sequence. An attempted
+reservation using the old guard still conflicts after a rival publication;
+looking up history does not rebase it or authorize overwrite. The HTTP test's
+initial module-path compile failure was corrected without changing production.
+
+The full local gate passed with262 frozen inputs unchanged,368 state tests/one
+ignored,11 authority namespace tests,8 reader/format controls/one native ignored,
+12 publication controls,62 S3 tests and formatting/Clippy/build/book checks. The
+[indexed20-member local archive](evidence/manifest-history-local-20261018.tar.gz)
+retains initial failures, complete gate and exact source; every indexed member
+was verified. Later combined hosted acceptance remains required. This endpoint
+does not reopen an S3 snapshot, consume a page witness, activate native writes,
+or restore a drive after reboot. Reader integration must revalidate the route,
+current provider credentials and original root revision/hash before serving
+base bytes. Sparse SQLite views, mixed publication and exact-view settlement
+remain subsequent phases. See [dated draft evidence](evidence/manifest-history-20261018.json).

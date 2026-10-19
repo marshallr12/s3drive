@@ -5,6 +5,8 @@ use std::time::Duration;
 use tokio::{io::AsyncReadExt, sync::oneshot, task::JoinHandle};
 
 const SECRET: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+#[path = "namespace/history.rs"]
+mod history;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn owned_target_replacements_race_and_recover_original_two_node_results_over_http() {

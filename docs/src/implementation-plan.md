@@ -2207,3 +2207,67 @@ artifacts reused. The indexed29-member hosted archive is verified. W1b page
 reachability remains an independent draft with local gate95188 running; combine
 this accepted source and require its own gate before integration. Native chunk
 writes, sparse SQLite views, historical bases and mixed-tree proofs remain later.
+
+### W1c1 authenticated historical manifest metadata (2026-10-18)
+
+Source audit at accepted `da84d3a`: `namespace_uploads` already retains immutable
+reservation descriptors and their committed publication payloads. Add a bounded
+primary-key lookup in one SQLite read transaction, with an additive
+`manifest-history-v1` capability and `ManifestPayload` request/reply. Require
+volume, node, reservation and exact original payload-reference hash. Validate
+the retained reservation operation/receipt, its manifest geometry/store route,
+published payload equality and expected reference. Unpublished/unknown records,
+wrong file/volume/reference and malformed or damaged history fail explicitly.
+No schema migration or full operation-log scan is needed.
+
+The existing volume bearer authentication applies to history too. A deleted or
+renamed current node does not rewrite an already published immutable version;
+history lookup grants no namespace mutation, S3 write policy or settlement.
+Clients must preserve their original CAS guard. Later reader integration must
+reacquire current provider credentials, HEAD/GET/hash the original root and
+revalidate the configured store route; it must not accept a cached arbitrary
+Node as an authorized File or silently substitute the latest payload.
+
+W1c1 scope is authority metadata only, in codex/payload-history-authority from
+accepted da84d3a while separate W1b CI runs. Require old-version lookup after
+replacement/rename/removal/restart, exact bad-binding/record-corruption refusal,
+unpublished and unsupported legacy refusal, bearer/volume enforcement and unchanged
+sequence/records. Run the full local gate. Persisted base-token/reader reopening,
+legacy/metadata-empty recovery, sparse edit views, mixed-tree publication,
+exact-view acknowledgment and native chunk writes remain subsequent work.
+
+### W1c2 pinned base reopening — proposed next slice (2026-10-18)
+
+After W1c1's local gate and W1b's own acceptance, combine their sources before
+implementing the reader. Proposed descriptor: 88 fixed bytes, a distinct 8-byte
+format marker, volume/node/reservation IDs (16 bytes each) and original payload
+reference (32 bytes). Decoding is untrusted intent, not authorization. Persist
+no credentials, caller-supplied S3 key or cached Node as a way to construct File.
+The original edit's CAS expected value is this payload's own reference, **not**
+`payload.reservation.guard.expected`, which identifies its predecessor.
+
+Separate a private immutable content version from named File metadata. A proposed
+BaseFile can expose size, bounded reads and chunk/page proofs, without fabricating
+historical pathname, revision or inode attributes. Existing File APIs delegate
+to the same version; clones retain the same snapshot permit and operation budget.
+This avoids restoring a cached or synthesized Node as trusted namespace metadata.
+Keep the history capability optional for ordinary current-version reads, and
+reject reopening when it is absent. Do not replace the legacy reader or native
+callback API in this slice.
+
+Reopening must bind descriptor volume/file/reservation/reference to the authenticated
+ManifestPayload reply and configured store route, then HEAD/GET/hash/verify the
+original root with current credentials and existing snapshot/deadline bounds.
+It may succeed after rename, newer content or deletion without rebasing the
+original CAS. Missing/revoked/changed roots and routes fail explicitly; a witness
+cannot turn into an upload receipt or network-send permit. Require process/server
+restart, credential rotation/denial, malformed and cross-file descriptors, root
+and child corruption, shared capacity/cancellation and exact old-byte/proof checks.
+Use fresh full local and combined hosted/native gates before W2 uses this API.
+Legacy and metadata-empty restart recovery remain explicit later cases, not
+permission to omit them from eventual native write acceptance.
+
+W1c1 result: full local gate60956 EXIT0, all262 frozen inputs unchanged;
+368state/1ignored,11 authority namespace,8reader/format1nativeignored,12publication,
+62S3,fmt/clippy/build/book passed. The indexed20-member local archive is verified.
+No reader activation or own combined hosted acceptance follows from this alone.

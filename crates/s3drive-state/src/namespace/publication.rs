@@ -1,6 +1,7 @@
 //! Immutable payload reservations and publication CAS. The authenticated client
 //! must verify S3 bytes; the metadata service does not possess S3 credentials.
 use super::*;
+mod history;
 mod manifest;
 pub use manifest::{MAX_MANIFEST_LENGTH, ManifestRoot};
 use sha2::{Digest, Sha256};

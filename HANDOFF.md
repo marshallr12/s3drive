@@ -25,6 +25,38 @@ repeat checker now verifies identity/source/artifacts without requiring private.
 See AGENTS.md and docs/src/decisions.md D040. Future feature integration must
 include main's policy commit; the c7fca789 feature lineage includes that rule.
 
+## Current W1c1 historical manifest metadata (2026-10-18)
+
+Isolated /home/marshall/src/worktrees/s3drive-payload-history-authority,
+codex/payload-history-authority from accepted da84d3a. Page-proof sourcebf2e6ae
+remains frozen in its own checkout/run39187701991/watch7139; it is not accepted
+by this new work. Scope: authenticated, exact-reference historical manifest
+payload lookup from existing namespace_uploads, state/authority controls, book.
+No schema migration, S3 authorization/write, arbitrary File constructor or
+native activation. New additive manifest-history-v1 request/reply/capability.
+Use one read transaction, validate reservation operation and publication against
+requested volume/file/reservation/reference; retain original CAS, never rebase.
+Require focused corruption/restart/auth/old-client controls and full local gate;
+then reader base-token/reopen integration and own combined hosted gate before use.
+Read implementation plan. Full sparse views/mixed publication/settlement/native
+chunk writes remain required. No new provider mutations authorized.
+Initial all-target check44456 CLOSED0; state3 passed0.68s. HTTP1 failed to find
+integration-test module; explicit namespace/history.rs path fixed. Size negative
+77836 CLOSED101 atfault12 proved valid padded JSON bypassed proposed16KiB bound.
+SQL CASE now rejects all five oversized fields before Rust Vec copying; same
+read transaction prechecks records reused by replay validation. Statefocused2
+93999 CLOSED0:3 controls/17 corruption scenarios1.70s. HTTPfocused2 68127 CLOSED0:
+production WireClient/auth HTTP history/restart/no-rebase/auth/bad bindings0.18s.
+Full local gate60956 CLOSED EXIT0, /tmp/s3drive-payload-history-gate.log, frozen262
+/tmp/s3drive-payload-history-frozen.json, all unchanged.368state/1ignored,11authority
+namespace,8reader/format1nativeignored,12publication,62S3,fmt/clippy/build/book passed.
+Indexed20-member local archive71917bytes SHA
+d7e7aedb493448a7794ddb15f66503d52e188caced3284fe36724ada15942668. No own
+hosted endpoint acceptance yet. Logs and book retain both initial failures.
+Next W1c2 proposal in implementation plan: separate metadata-free content version
+from named File, 88-byte untrusted base descriptor, authority-bound old-root
+reopen/current S3 auth, original own-payload CAS (not its predecessor guard).
+
 ## Current combined-source snapshot-format repair (2026-10-18)
 
 Accepted runtime8c3448f478f9ab62fe1a23ce965907546be5d10c: own run39184629344
