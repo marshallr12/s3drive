@@ -3,6 +3,13 @@
 Research date: 2026-10-21. Read-only source review against main8780ce4 and
 SDK candidate8022fae3. Proposal only; no native flag, wire or schema change made.
 
+Status update, 2026-10-21: phase 1 is now accepted as the
+[schema46 event-bound authority](manifest-event-fence.md), with actual45/46
+compatibility and its own exact-source full/native GitHub acceptance. The source
+facts below describe the earlier planning baseline, not a denial of the new
+opt-in authority guard. Phase 2 sparse journal admission is next; phases 2-4 remain
+proposals, and no new sparse SDK or native lifecycle path is enabled.
+
 The chunk choice requires extending the sparse mixed-root path, not substituting
 the old bounded whole-generation writer. Current source facts:
 
