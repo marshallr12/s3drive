@@ -606,7 +606,7 @@ fn removed_role_or_downgraded_marker_never_launders_the_independent_chunk_identi
         assert_eq!(
             db.pragma_query_value(None, "user_version", |r| r.get::<_, i32>(0))
                 .unwrap(),
-            if downgrade { 40 } else { 41 }
+            if downgrade { 40 } else { crate::SCHEMA_VERSION }
         );
     }
 }
@@ -654,7 +654,7 @@ fn schema40_upgrade_preserves_creation_blobs_and_collision_rolls_back_without_ma
             assert_eq!(blobs(&db), before);
         } else {
             let mut s = State::open_managed(&path).unwrap();
-            assert_eq!(s.info().unwrap().schema_version, 41);
+            assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
             assert_eq!(blobs(&s.connection), before);
             let key = admit(&mut s, input()).unwrap();
             assert_eq!(blobs(&s.connection), before);

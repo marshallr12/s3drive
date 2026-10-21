@@ -67,6 +67,14 @@ complete retry-forest retention and reclamation remain unfinished. The current
 writes, physical reboot/sign-in and desktop Windows acceptance remain separate.
 The [read-pin diagram](source-read-pins.md) explains retained source dependencies.
 
+[Atomic deferred canonical creation](atomic-deferred-manifest-create.md) now
+commits the empty canonical payload/history, original removal fence/event and
+exact result in one authority SQLite transaction. The service holds no S3
+credentials and records the caller's upload claim. Client provenance import and
+chunk-backed native lifecycle callbacks remain separate work.
+
+![Atomic authority transaction with original ownership and an explicitly future SDK-to-S3 bridge.](images/atomic-deferred-canonical.svg)
+
 The existing direct-layout implementation below has native read/cache, explicit
 existing-file writes and [guarded file creation](native-creation.md). It remains
 available for existing configurations; its physical keys are not the target

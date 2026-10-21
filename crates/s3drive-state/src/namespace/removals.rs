@@ -129,6 +129,17 @@ fn origin(db: &Connection, id: &str, fence: &RemovalFence) -> Result<(Receipt, R
     let input: Apply = serde_json::from_slice(&input).map_err(|_| Error::Internal)?;
     let outcome: Result<Receipt> = serde_json::from_slice(&outcome).map_err(|_| Error::Internal)?;
     let receipt = outcome.map_err(|_| Error::Internal)?;
+    if let Mutation::CreateDeferredEmptyManifest { owner, .. } = &input.mutation {
+        if input.volume != volume(db)?.id
+            || input.operation != fence.intent
+            || input.operation != id
+            || owner != &fence.owner
+        {
+            return Err(Error::Internal);
+        }
+        publication::deferred::replay(db, &input, &receipt)?;
+        return Ok((receipt, RemovalMode::Deferred));
+    }
     if let Mutation::CreateDeferredEntry { store, owner, .. } = &input.mutation {
         let placement = store
             .as_ref()
@@ -294,7 +305,9 @@ fn revision(db: &Connection, n: &Node, sequence: i64, deleted: bool) -> Result<(
     Ok(())
 }
 pub(super) fn created(db: &Connection, r: &Apply, sequence: i64) -> Result<()> {
-    let Mutation::CreateDeferredEntry { owner, .. } = &r.mutation else {
+    let (Mutation::CreateDeferredEntry { owner, .. }
+    | Mutation::CreateDeferredEmptyManifest { owner, .. }) = &r.mutation
+    else {
         return Err(Error::Internal);
     };
     let fence = RemovalFence {
@@ -315,6 +328,7 @@ pub(super) fn created(db: &Connection, r: &Apply, sequence: i64) -> Result<()> {
     {
         return Err(Error::Internal);
     }
+    publication::empty::checkpoint(r, "RemovalStored")?;
     events::insert(db, r, &r.operation, &fence, "deferred", sequence as u64)
 }
 pub(super) fn mutate(db: &Connection, r: &Apply, sequence: i64) -> Result<(String, RemovalFence)> {

@@ -1,8 +1,10 @@
 # Deferred canonical manifest integration
 
-Source review dated2026-10-19. Proposal only, not implemented or a resolved
-wire/API contract. Reviewed against
-66d78db. Keep native delete-on-close/save-replace flags unsupported until proven.
+Original source review dated2026-10-19 against66d78db. The
+[atomic deferred canonical authority/state contract](atomic-deferred-manifest-create.md)
+is now implemented and independently accepted at3e670915/schema42. The SDK
+provenance import, owned-unlinked publisher and native lifecycle integration
+below remain future work. Keep delete-on-close/save-replace flags unsupported.
 
 Observed boundaries:
 
@@ -55,3 +57,12 @@ The [current bridge plan](native-chunk-integration.md) and its architecture imag
 show the broader native integration. This proposal does not activate callbacks
 or grant S3 permissions. Keep both coordinator hosting options open; it does not
 provision a service or select a Turso backend.
+
+
+Authority prerequisite candidate2026-10-21: the
+[atomic deferred canonical creation contract](atomic-deferred-manifest-create.md)
+now defines a new mutation, combined publication/fence artifact and schema42
+compatibility marker. Focused state/HTTP checks pass; full acceptance is pending.
+This resolves the initial authority transaction design for evaluation, not the
+creation SDK/open-journal provenance bridge, sparse owned-unlinked publication,
+retention or native lifecycle integration. Keep callbacks unsupported.

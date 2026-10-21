@@ -3,7 +3,10 @@
 use super::*;
 use s3drive_core::manifest::objects::RootDescriptor;
 fn is_empty(request: &Apply) -> bool {
-    matches!(request.mutation, Mutation::CreateEmptyManifest { .. })
+    matches!(
+        request.mutation,
+        Mutation::CreateEmptyManifest { .. } | Mutation::CreateDeferredEmptyManifest { .. }
+    )
 }
 pub(in crate::namespace) fn valid_proof(
     operation: &str,
@@ -148,6 +151,7 @@ pub(super) fn mutate(
     if changed != 1 {
         return Err(Error::Internal);
     }
+    checkpoint(request, "PayloadStored")?;
     if sql(db.execute(
         "INSERT INTO namespace_uploads VALUES(?1,?2,?3)",
         params![p.reservation.id, encode(&p.reservation)?, encode(&p)?],

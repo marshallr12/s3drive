@@ -84,6 +84,23 @@ pub(super) fn proof(db: &Connection, event: &Event) -> Result<Receipt> {
         moves::proof(db, event, &request, &receipt)?;
         return Ok(receipt);
     }
+    if matches!(
+        request.mutation,
+        Mutation::CreateDeferredEmptyManifest { .. }
+    ) {
+        let (original, mode) = origin(db, &event.node, &event.fence)?;
+        if mode != RemovalMode::Deferred
+            || original != receipt
+            || event.operation != request.operation
+            || event.node != request.operation
+            || event.fence.intent != request.operation
+            || event.mode != "deferred"
+            || event.sequence != receipt.sequence
+        {
+            return Err(Error::Internal);
+        }
+        return Ok(receipt);
+    }
     let (id, parent, fence, mode, guard) = match &request.mutation {
         Mutation::CreateDeferredEntry { parent, owner, .. } => {
             origin(db, &event.node, &event.fence)?;

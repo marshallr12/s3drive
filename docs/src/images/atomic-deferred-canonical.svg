@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600">
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="none" stroke="#355671" stroke-width="1.5"/></marker></defs>
+<rect width="1200" height="600" fill="#f7f9fc"/>
+<g font-family="DejaVu Sans, sans-serif" fill="#243a4c">
+<text x="30" y="38" font-size="25" font-weight="bold">Canonical file creation and its original ownership commit together</text>
+<text x="30" y="69" font-size="16" fill="#805311">Authority/state support; client journal/import and native lifecycle callbacks remain future work</text>
+<rect x="30" y="125" width="280" height="170" rx="12" fill="white" stroke="#356c91" stroke-width="2"/>
+<text x="46" y="156" font-size="16" font-weight="bold">Caller / future creation SDK</text>
+<text x="46" y="187" font-size="14">Original operation ID and owner</text>
+<text x="46" y="213" font-size="14">Parent/name/store + root identity</text>
+<text x="46" y="239" font-size="14">Upload operation, ETag, version</text>
+<text x="46" y="271" font-size="13" fill="#805311">Physical upload proof remains a claim</text>
+<rect x="350" y="125" width="455" height="330" rx="12" fill="white" stroke="#655b99" stroke-width="2"/>
+<text x="368" y="157" font-size="19" font-weight="bold" fill="#655b99">Rust authority + metadata SQLite</text>
+<text x="368" y="188" font-size="15" font-weight="bold">One immediate SQL transaction</text>
+<text x="368" y="227" font-size="15">Validate canonical root + parent/store guards</text>
+<text x="368" y="261" font-size="15">File node + canonical empty payload</text>
+<text x="368" y="295" font-size="15">Immutable upload history</text>
+<text x="368" y="329" font-size="15">Original removal fence + initial deferred event</text>
+<text x="368" y="363" font-size="15">Volume sequence + exact operation result</text>
+<text x="368" y="411" font-size="14" fill="#536577">No new tables; no S3 credentials in this service</text>
+<rect x="860" y="155" width="310" height="185" rx="12" fill="white" stroke="#2d7b6d" stroke-width="2"/>
+<text x="876" y="188" font-size="18" font-weight="bold" fill="#2d7b6d">Immutable creation receipt</text>
+<text x="876" y="222" font-size="14">Payload + original removal fence</text>
+<text x="876" y="251" font-size="14">Exact operation ID and owner</text>
+<text x="876" y="280" font-size="14">Retained history and initial event</text>
+<text x="876" y="315" font-size="13" fill="#536577">Replay never adopts a newer owner</text>
+<rect x="30" y="355" width="280" height="100" rx="12" fill="white" stroke="#486c50" stroke-width="2"/>
+<text x="46" y="385" font-size="18" font-weight="bold" fill="#486c50">S3-compatible bucket</text>
+<text x="46" y="414" font-size="14">Immutable 64-byte empty root</text>
+<text x="46" y="440" font-size="13" fill="#805311">Future SDK verifies the object here</text>
+<path d="M310 220 H345" fill="none" stroke="#355671" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="315" y="204" font-size="12">Apply</text>
+<path d="M805 235 H855" fill="none" stroke="#355671" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="811" y="219" font-size="12">Receipt</text>
+<path d="M170 350 V300" fill="none" stroke="#355671" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+<text x="181" y="330" font-size="12" fill="#805311">Future SDK bridge</text>
+<rect x="30" y="505" width="1140" height="65" rx="10" fill="white" stroke="#b88538" stroke-width="1.5"/>
+<text x="48" y="533" font-size="16">Only the complete transaction or the prior state becomes visible.</text>
+<text x="48" y="556" font-size="14" fill="#805311">Missing or changed retained history/event → integrity error; no repair, new operation ID or ownership substitution.</text>
+</g></svg>

@@ -55,6 +55,7 @@
 - [Mounted chunk-write integration](native-chunk-integration.md)
 - [Native chunk writer implementation](native-chunk-writes.md)
 - [Chunk-backed directory creation](native-chunk-directories.md)
+- [Atomic deferred canonical creation](atomic-deferred-manifest-create.md)
 - [Deferred canonical manifest integration](deferred-manifest-integration.md)
 - [Bounded local retention plan](mixed-retention-plan.md)
 - [Observing external clean versions: proposal](external-clean-adoption.md)

@@ -42,6 +42,11 @@ at `7c980745`, with its own full local gate and
 Nested Unicode folder creation, listing and remount passed on both OSes;
 directory-only operations make zero S3 uploads and preserve unrelated dirty data.
 
+The [atomic deferred canonical creation prerequisite](docs/src/atomic-deferred-manifest-create.md)
+is accepted at3e670915/schema42 with its own full local and Linux/Windows/book
+gates. It commits canonical metadata and original removal ownership together;
+its client journal/open import and native lifecycle integration remain pending.
+
 This remains an experimental profile. Rename/delete, deferred/open-unlinked
 publication and complete retention/GC remain unfinished.
 Its64-file/512-view/64MiB dirty defaults are prototypes. Existing profiles keep

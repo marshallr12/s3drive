@@ -94,6 +94,16 @@ impl NodeGuard {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
 pub enum Mutation {
+    CreateDeferredEmptyManifest {
+        parent: String,
+        parent_revision: u64,
+        name: String,
+        store: String,
+        upload_operation: String,
+        etag: String,
+        version: Option<String>,
+        owner: String,
+    },
     CreateEmptyManifest {
         parent: String,
         parent_revision: u64,
@@ -314,6 +324,12 @@ impl Apply {
             return Err(Error::Invalid);
         }
         let valid = match &self.mutation {
+            Mutation::CreateDeferredEmptyManifest { parent, parent_revision, name, store, upload_operation, etag, version, owner } => {
+                valid_id(parent) && *parent_revision <= self.expected_sequence
+                    && names::collision_key(name).is_some() && valid_id(store) && store != ROOT
+                    && valid_id(owner) && owner != ROOT
+                    && publication::empty::valid_proof(upload_operation, etag, version.as_deref())
+            }
             Mutation::CreateEmptyManifest { parent, parent_revision, name, store, upload_operation, etag, version } => {
                 valid_id(parent) && *parent_revision <= self.expected_sequence
                     && names::collision_key(name).is_some() && valid_id(store) && store != ROOT
@@ -848,6 +864,7 @@ impl State {
             .transaction_with_behavior(TransactionBehavior::Immediate))?;
         let v = check_volume(&tx, &request.volume)?;
         publication::empty::preflight(&tx, request)?;
+        publication::deferred::preflight(&tx, request)?;
         if let Some((original, outcome)) = stored(&tx, &request.operation)? {
             if original != encoded {
                 return Err(Error::OperationMismatch);
@@ -883,6 +900,7 @@ impl State {
                 request.mutation,
                 Mutation::CreateEntry { .. }
                     | Mutation::CreateEmptyManifest { .. }
+                    | Mutation::CreateDeferredEmptyManifest { .. }
                     | Mutation::CreateDeferredEntry { .. }
                     | Mutation::MoveEntry { .. }
                     | Mutation::MoveDeferredEntry { .. }
@@ -941,6 +959,7 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
     if matches!(
         &request.mutation,
         Mutation::CreateEmptyManifest { .. }
+            | Mutation::CreateDeferredEmptyManifest { .. }
             | Mutation::RegisterStore { .. }
             | Mutation::ReserveManifest { .. }
             | Mutation::Reserve { .. }
@@ -990,6 +1009,7 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
     }
     let changed = match &request.mutation {
         Mutation::CreateEmptyManifest { .. }
+        | Mutation::CreateDeferredEmptyManifest { .. }
         | Mutation::RegisterStore { .. }
         | Mutation::ReserveManifest { .. }
         | Mutation::Reserve { .. }

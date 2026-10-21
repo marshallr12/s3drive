@@ -103,7 +103,9 @@ impl State {
         original.validate().map_err(|_| Error::Internal)?;
         if !matches!(
             original.mutation,
-            Mutation::ReserveManifest { .. } | Mutation::CreateEmptyManifest { .. }
+            Mutation::ReserveManifest { .. }
+                | Mutation::CreateEmptyManifest { .. }
+                | Mutation::CreateDeferredEmptyManifest { .. }
         ) || original.volume != volume_id
             || original.operation != reservation_id
         {
@@ -121,6 +123,13 @@ impl State {
                 Some(Artifact::Published(p)) => {
                     p.reservation == r
                         && matches!(original.mutation, Mutation::CreateEmptyManifest { .. })
+                }
+                Some(Artifact::PublishedRemoval { payload, .. }) => {
+                    payload.reservation == r
+                        && matches!(
+                            original.mutation,
+                            Mutation::CreateDeferredEmptyManifest { .. }
+                        )
                 }
                 _ => false,
             }

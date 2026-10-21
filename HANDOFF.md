@@ -20,52 +20,52 @@ capability is available. Read this and docs/src/implementation-plan.md first.
 
 ## Accepted runtime and publication
 
-Accepted runtime `7c980745c6d2a2bd55805a3536b15d874d6b6b22`, schema41/all368, exactly7 runtime paths from main
-6417ee7. [Directory contract/evidence](docs/src/native-chunk-directories.md).
-Own full local gate3 CLOSED0/712.93s/all701 unchanged, logSHA
-14d5fa41bf5ea5fc6ea2ee4fc35622a164bbf59dceaf40c014b7f438662d58b6.
-Own CI39568987445 attempt1 Linux/Windows/book all success. Exact source ZIP/all701,
-API ZIP digest/strict21+14/project/all35 raw field/type/full raw-log review passed.
-Canonical promotion proof will be /tmp/s3drive-canonical-chunk-directories-publication.json;
-verify current HEAD/remote/runtime368 rather than treating pre-promotion6417 as current.
+Runtime `3e670915cdfe3dbafee9cd40c33d1a70cf979234`, schema42/all372,16 runtime deltas from main19ac76f.
+[Authority/state contract and evidence](docs/src/atomic-deferred-manifest-create.md).
+Full local gate3 CLOSED0/664.97s/all709 unchanged, logSHA
+48a3dfd3767e37747ab70d9bbabbba70ed34f78055b382d07fcc34dd9ba04174.
+Own CI39579144740 attempt1 Linux/Windows/book all success. Exact source/API ZIP,
+strict21+14/project/all35 raw fields/types and full raw-log review passed.
+Canonical publication proof will be /tmp/s3drive-canonical-deferred-canonical-publication.json;
+verify current HEAD/remote and runtime372 rather than copying historical19ac.
 
-Version8 canonical file create/read/write/resize/exact-view flush plus ordinary
-folder create/list works through FUSE/WinFsp. Folder intent precedes RPC; exact
-saved outcomes replay under narrowed/expired fresh admission. Directory-only
-operations make zero S3 PUTs, do not flush unrelated files or resolve their
-unknown roots, and preserve newer dirty edits. Fresh parent revision, portable
-names, feature/default-store policy required. Four permits before owned Tokio
-spawn,120s directory deadline, abort-on-drop; thin chunk/legacy future selection,
-no stack increase.128KiB callback control passed. No schema/dependency upgrade.
+CreateDeferredEmptyManifest commits canonical node/payload/upload history plus
+original removal fence and initial event in one transaction. PublishedRemoval
+contains payload and exact fence; replay checks immutable initial evidence,
+keeps older receipts after content/mode/name/epoch changes, never adopts a newer
+owner. Schema42 marker only;64-table snapshot bound, old BLOB/hash bytes retained.
+The authority records upload claims, has no S3 credentials. No SDK creation/import,
+sparse owned-unlinked or OS lifecycle callback is enabled by this phase.
 
-Native fixture creates/lists nested Unicode directories, verifies metadata,
-creates11MiB sparse/2MiB binary file, flushes/resizes/remounts; six unique immutable
-PUTs. Both real native fixtures and existing startup/regressions pass. Hosted
-Ubuntu24.04/WindowsServer2025 are owned loopback fixtures, not live Wasabi or
-physical MX/Windows10/11 startup evidence. Old profiles3–7 retain behavior and
-old writable8MiB limits. Legacy whole-object/metadata-empty origins remain read
-only in v8; never silently promote. Source/store/credential changes conflict.
+Version8 canonical file create/read/write/resize/exact-view flush and nested
+Unicode directory create/list/remount remain natively verified. Four bounded
+owned Tokio tasks, abort-on-drop and128KiB callback control unchanged. Old
+profiles3–7 retain behavior and older writable8MiB bounds. Dirty/newer edits and
+unknown identities remain preserved. Hosted Ubuntu and WindowsServer2025 use
+owned loopback fixtures; not physical MX/Windows10/11 or live managed Wasabi.
 
 ## Evidence and superseded runs
 
-Indexed local/hosted archives in docs/src/evidence; every member verified.
-Local archive401/1126835B SHAd24d53df92f9d415ad9c9d18081513d76a16aef83addb13ed5cc981ec1c92303.
-Hosted archive counts/hash and complete warning review in the directory record.
-/tmp/s3drive-chunk-directories-checkpoint.json and candidate3-frozen.json retain
-continuation pointers. One-use archive writers DONE, never rerun.
-SDK1 private-field compile mistake; SDK3 invalid sibling-revision race; SDK4
-fixture mode not reset. SDK5 corrected controls passed3. Candidate3004479 full
-gate1 failed Clippy38.76s unchanged; hosted1 both platforms lint rejected.
-Candidate6471af9 gate2 deliberately stopped229.29s/exit-15 unchanged to add actual
-native Unicode enumeration; its CI cannot replace final7c980745 acceptance.
-Earlier file-writer stack/ready-marker rejections and accepted d95a634 remain
-fully preserved in docs/src/native-chunk-writes.md and its four indexed archives.
-No test timeout, stack threshold or unsupported lifecycle path was weakened.
+Indexed local/hosted deferred-canonical archives in docs/src/evidence; every member
+verified. Exact hashes/counts, job/raw review and all inherited directory/file-I/O
+archives are linked from the contract. /tmp/s3drive-deferred-canonical-checkpoint.json
+and candidate2-frozen.json hold continuation pointers. Archive writers DONE,
+never rerun. Real schema41 Linux binaryfea3b379 refused42 unchanged; Cargo restored
+new binary. No user database or startup installation touched.
+
+Development check1 visibility/tests2 signed-SQL conversion errors retained;
+tests3 red missing-history NotFound normalized to integrity error. Focused2
+13state/1HTTP/Clippy passed. Candidatefeead770 gate1 failed stale41 expectation
+773.99s unchanged; both hosted Rust jobs failed the same fixture. Source3e670915
+gate2 lost its supervisor after tests, child was waited to reaping without
+inferring its exit. Only fresh isolated-supervisor gate3 counts as full acceptance.
+Earlier native directory/file stack rejections remain in their own indexed
+archives. No timeout, stack threshold or dirty-preservation barrier was weakened.
 
 ## Next work and boundaries
 
-1. Declare rename/delete/save-replace, deferred canonical creation and owned-
-   unlinked publication phases. Use exact creator provenance, same-owner journals,
+1. Implement the durable deferred creation SDK and exact verified creator-to-open
+   journal import, then sparse owned-unlinked and native lifecycle phases. Use exact creator provenance, same-owner journals,
    original removal owner/fence/event; never derive admission from a path. Read
    docs/src/deferred-manifest-integration.md. Keep unsupported flags until own
    state/SDK/native FUSE+WinFsp recovery gates pass.
@@ -80,12 +80,17 @@ No test timeout, stack threshold or unsupported lifecycle path was weakened.
    us-east-2/profilewasabi-s3drive. No user mount/writable policy installed.
 5. Packaging/licensing, policy renewal and complete application workflows remain.
 
-First continuation: inspect canonical clean status/publication proof, runtime368
+First continuation: inspect canonical clean status/publication proof, runtime372
 map and latest CI, then declare one independently testable phase in docs/src.
 One local Cargo at a time, shared /home/marshall/src/s3drive/target, threads4.
 No subagents were authorized/spawned for this phase. Preserve unrelated edits.
 
-Before refresh handoff archived verbatim in
-[archive](docs/archive/HANDOFF-before-chunk-directory-refresh-20261021.md).
-Pruned126→91 lines; archived SHA256
-bb030bdd0dbf16f4a965ef48cee0d81cfa57f0648ad7758d9762318697edb5ab.
+
+Shared target caveat: switching compatibility worktrees reused an old state
+library despite a successful CLI rebuild. Invalidate affected local package
+artifacts or use an isolated target, and verify actual binary schema. Keep one
+local Cargo process; do not use Cargo freshness as runtime evidence.
+
+Before refresh handoff archived verbatim in docs/archive/HANDOFF-before-deferred-canonical-refresh-20261021.md.
+
+Handoff refresh105→96 lines; archived source SHA25614a1ef9456abba997d90221e46e2ef98b53f24179b0d96c38b27f42a42580b54.

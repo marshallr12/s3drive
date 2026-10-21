@@ -552,3 +552,21 @@ initialization was rejected by a remaining schema23 string. Isolated negative
 controls restoring either stale expectation fail; the corrected expectations
 pass. This is a source-contract check, not execution of Windows startup, ACLs,
 snapshots or mounts. Those native acceptance gates remain mandatory.
+
+
+## Verify binaries when sharing a target across worktrees
+
+Observed2026-10-21 during the [schema42 compatibility control](atomic-deferred-manifest-create.md):
+a shared CARGO_TARGET_DIR reused the schema41 state library when Cargo rebuilt a
+CLI from the schema42 worktree. The build succeeded; an actual disposable-state
+probe exposed the wrong schema. This is a local observation for the pinned
+workspace/toolchain, not an assertion that every shared-target build is affected.
+
+Keep one local Cargo process at a time. When switching compatibility versions,
+use an isolated target or invalidate the affected local package artifacts before
+building. The accepted control used `cargo clean -p s3drive-state` followed by
+`cargo build -p s3drive-cli --locked` at each switch, retaining source/input hashes,
+command logs and actual binary hashes. It verified fresh42, fresh41, old-binary
+refusal of42 with unchanged database bytes, then restored42 through Cargo. Use
+owned disposable state for these checks; a Cargo exit code or version string for
+the package alone does not prove the schema compiled into its dependencies.

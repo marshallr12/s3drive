@@ -3645,3 +3645,30 @@ This supersedes earlier directory-unsupported status, not the broader lifecycle
 limits. Rename/delete, deferred/unlinked, retention/GC, cold metadata recovery,
 v8 startup/physical workstation, independent-host restore/deployment and freshly
 authorized live provider acceptance remain required.
+
+
+### Atomic deferred canonical creation candidate —2026-10-21
+
+[Declared authority/state prerequisite](atomic-deferred-manifest-create.md) adds
+canonical initial payload/history plus the original deferred fence/event in one
+transaction, with an explicit new wire variant/feature and schema42 marker. No
+new tables or old record rewrites. Focused13 state/1 authenticated HTTP and
+workspace Clippy passed. Full own local and hosted Linux/Windows/book/native
+regression acceptance remain pending. SDK provenance import, owned-unlinked
+publication, native lifecycle callbacks and retention remain subsequent work.
+
+
+### Atomic deferred canonical authority/state accepted —2026-10-21
+
+[Contract and indexed evidence](atomic-deferred-manifest-create.md),3e670915,
+schema42/all372,16 runtime deltas from19ac76f. Full local gate3
+664.97s/all709 unchanged and own CI39579144740 all3 passed.
+Raw/source/API ZIP/strict21+14/project/all35 field/type and full warning/slow/
+interleaved review passed.13 state +1 HTTP, eight crash points, actual SQLITE_FULL,
+exact initial ownership/history, successor-owner separation, later owned roots,
+byte-preserving migration, snapshot inspection and a real old-Linux-binary42
+refusal control passed. Existing FUSE/WinFsp and startup regressions passed.
+The initial authority transaction is implemented; SDK intent/provenance import,
+sparse owned-unlinked publication and native lifecycle flags remain subsequent
+phases. Retention/GC, cold recovery, physical startup and real-provider/remote
+service acceptance remain required. No provider or visibility mutation authorized.

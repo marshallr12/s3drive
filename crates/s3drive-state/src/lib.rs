@@ -27,7 +27,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 41;
+pub const SCHEMA_VERSION: i32 = 42;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
@@ -346,6 +346,10 @@ impl State {
             namespace::check_schema(&tx)?;
             if version < 39 {
                 namespace::publication::empty::require_pre39(&tx)?;
+            }
+            // Schema42 changes wire records only. Never relabel new records as old.
+            if version < 42 {
+                namespace::publication::deferred::require_pre42(&tx)?;
             }
             namespace_client::check_schema(&tx)?;
             manifest_creation::check_schema(&tx)?;

@@ -1,6 +1,7 @@
 //! Immutable payload reservations and publication CAS. The authenticated client
 //! must verify S3 bytes; the metadata service does not possess S3 credentials.
 use super::*;
+pub(crate) mod deferred;
 pub(crate) mod empty;
 mod history;
 mod manifest;
@@ -80,6 +81,10 @@ pub enum Artifact {
     Store(Store),
     Reservation(Reservation),
     Published(Payload),
+    PublishedRemoval {
+        payload: Payload,
+        fence: RemovalFence,
+    },
 }
 pub fn digest(value: &str) -> bool {
     value.len() == 64
@@ -327,6 +332,7 @@ pub(super) fn mutate(
 ) -> Result<(String, Artifact)> {
     match &request.mutation {
         Mutation::CreateEmptyManifest { .. } => empty::mutate(db, request, sequence),
+        Mutation::CreateDeferredEmptyManifest { .. } => deferred::mutate(db, request, sequence),
         Mutation::RegisterStore { route, root } => {
             let count: i64 =
                 sql(db.query_row("SELECT count(*) FROM namespace_stores", [], |r| r.get(0)))?;
@@ -507,7 +513,9 @@ pub(super) fn verify_manifest_effect(
 ) -> Result<()> {
     let (r, published) = match &receipt.artifact {
         Some(Artifact::Reservation(r)) if r.manifest.is_some() => (r, None),
-        Some(Artifact::Published(p)) if p.reservation.manifest.is_some() => {
+        Some(Artifact::Published(p) | Artifact::PublishedRemoval { payload: p, .. })
+            if p.reservation.manifest.is_some() =>
+        {
             (&p.reservation, Some(p))
         }
         _ => return Ok(()),
@@ -550,6 +558,14 @@ pub(super) fn validate_manifest_receipt(receipt: &Receipt, volume_id: &str) -> R
     {
         return Err(Error::Internal);
     }
+    if let Some(Artifact::PublishedRemoval { payload, fence }) = &receipt.artifact {
+        if !fence.valid() || fence.intent != n.id || payload.reservation.manifest.is_none() {
+            return Err(Error::Internal);
+        }
+        let mut ordinary = receipt.clone();
+        ordinary.artifact = Some(Artifact::Published(payload.clone()));
+        validate_manifest_receipt(&ordinary, volume_id)?;
+    }
     match &receipt.artifact {
         Some(Artifact::Reservation(r)) if r.manifest.is_some() => {
             if !r.valid()
@@ -584,6 +600,21 @@ pub(super) fn validate_manifest_replay(
     receipt: &Receipt,
 ) -> Result<()> {
     validate_manifest_receipt(receipt, &request.volume)?;
+    if matches!(receipt.artifact, Some(Artifact::PublishedRemoval { .. }))
+        && !matches!(
+            request.mutation,
+            Mutation::CreateDeferredEmptyManifest { .. }
+        )
+    {
+        return Err(Error::Internal);
+    }
+
+    if matches!(
+        request.mutation,
+        Mutation::CreateDeferredEmptyManifest { .. }
+    ) {
+        return deferred::replay(db, request, receipt);
+    }
     if matches!(request.mutation, Mutation::CreateEmptyManifest { .. }) {
         return empty::replay(db, request, receipt);
     }
