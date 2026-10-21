@@ -81,6 +81,7 @@ pub async fn run(config: &s3drive_core::Config, root: &Path, wire: &WireClient, 
             sha256: sha(&body),
             manifest: Box::new(s3drive_authority::ManifestRoot::new(root).unwrap()),
             guard: s3drive_authority::ContentGuard {
+                removal_claim: None,
                 expected: None,
                 detached: false,
                 removal: None,

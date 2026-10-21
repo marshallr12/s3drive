@@ -3,7 +3,10 @@
 pub(crate) mod creation;
 mod entries;
 mod removals;
-pub use removals::{PendingRemoval, RemovalClaim, RemovalFence, RemovalMode};
+pub use removals::{
+    PendingRemoval, RemovalClaim, RemovalEpoch, RemovalFence, RemovalMode, RemovalPublicationClaim,
+    RemovalPublicationMode,
+};
 pub(crate) fn migrate_removals(db: &Connection) -> crate::Result<()> {
     removals::migrate(db).map_err(|_| "reserved namespace migration refused".into())
 }
@@ -865,6 +868,7 @@ impl State {
         let v = check_volume(&tx, &request.volume)?;
         publication::empty::preflight(&tx, request)?;
         publication::deferred::preflight(&tx, request)?;
+        publication::event::preflight(&tx, request)?;
         if let Some((original, outcome)) = stored(&tx, &request.operation)? {
             if original != encoded {
                 return Err(Error::OperationMismatch);
@@ -942,6 +946,7 @@ impl State {
             return Err(Error::Internal);
         }
         publication::empty::checkpoint(request, "OutcomeStored")?;
+        publication::event::checkpoint(request, "OutcomeStored")?;
         if let Ok(receipt) = &outcome {
             publication::verify_manifest_effect(&tx, request, receipt)?;
             removals::check_effect(&tx, &receipt.node.id)?;
@@ -951,6 +956,7 @@ impl State {
         }
         sql(tx.commit())?;
         publication::empty::checkpoint(request, "Committed")?;
+        publication::event::checkpoint(request, "Committed")?;
         outcome
     }
 }
@@ -971,6 +977,7 @@ fn mutate(db: &Connection, request: &Apply, sequence: u64) -> Result<Receipt> {
         let (changed, artifact) = publication::mutate(db, request, sequence)?;
         let receipt = finish(db, request, sequence, &changed, Some(artifact))?;
         publication::empty::checkpoint(request, "SequenceUpdated")?;
+        publication::event::checkpoint(request, "SequenceUpdated")?;
         return Ok(receipt);
     }
     if matches!(&request.mutation, Mutation::MoveDeferredEntry { .. }) {

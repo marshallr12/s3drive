@@ -396,7 +396,7 @@ fn prospective_valid44_upgrade_preserves_legacy_rows_and_failure_rolls_back_mark
             assert_eq!(catalog_db(&raw), before);
         } else {
             let s = result.unwrap();
-            assert_eq!(s.info().unwrap().schema_version, 45);
+            assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
             assert_eq!(catalog(&s), before);
         }
     }

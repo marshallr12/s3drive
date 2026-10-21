@@ -499,6 +499,7 @@ fn schema_twelve_migration_preserves_old_serialized_nodes_and_guards() {
     );
     assert_eq!(
         serde_json::to_string(&ContentGuard {
+            removal_claim: None,
             expected: None,
             detached: false,
             removal: None
@@ -509,6 +510,7 @@ fn schema_twelve_migration_preserves_old_serialized_nodes_and_guards() {
     let old: ContentGuard = serde_json::from_str("{\"expected\":null,\"detached\":true}").unwrap();
     assert!(old.detached && old.removal.is_none());
     let invalid = ContentGuard {
+        removal_claim: None,
         expected: None,
         detached: true,
         removal: Some(RemovalFence {

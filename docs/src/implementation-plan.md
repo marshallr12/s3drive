@@ -3748,3 +3748,23 @@ provider or user startup configuration is enabled. Next is sparse owned-unlinked
 publication with original fence/current-event and unresolved-effect barriers,
 then retention/retry-forest/native integration. Physical startup and remote
 provider/deployment acceptance remain separate.
+
+### Event-bound authority accepted — 2026-10-21
+
+The [event-bound manifest authority](manifest-event-fence.md), runtime 0a236de
+from schema45 main378c569, is accepted at schema46. Own exact-source
+Linux/Windows/book CI 39650193633 passes: all 751 source files match; workspace
+Linux 921/Windows 917 tests pass; all 15 new state tests and the HTTP race/restart
+case pass on both. Native gates and strict 21+14 raw artifact review pass. Actual
+separate45/46 CLIs pass eight compatibility invocations with unchanged refusal
+bytes and genuine legacy upgrade. The local overlayfs/tmpfs full gate failed
+and remains recorded; the user-authorized equivalent full gate passed on
+standard GitHub hosts without relaxing safeguards.
+
+Integrate the hosted test branch into `codex/manifest-event-fence` first, then
+that branch into main after review/fresh comparison, and verify main's CI before
+redundant-branch/worktree cleanup. Keep the local archive unpublished and the
+unmerged experiment intact. Next is sparse journal typed admission, retained
+original/current provenance, source settlement and node-wide unresolved-effect
+barriers, then SDK/native integration. No native lifecycle flag, real provider
+mutation or physical-workstation/deployment acceptance is enabled by this phase.

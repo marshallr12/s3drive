@@ -170,6 +170,7 @@ impl<'a> Journal<'a> {
                     sha256: hex(&physical.sha256),
                     manifest: Box::new(ns::ManifestRoot::new(root).map_err(|_| Failure::Invalid)?),
                     guard: ns::ContentGuard {
+                        removal_claim: None,
                         expected: ns::payload_reference(&base.payload),
                         detached: false,
                         removal: None,

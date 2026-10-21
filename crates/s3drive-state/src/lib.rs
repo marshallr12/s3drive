@@ -27,7 +27,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 45;
+pub const SCHEMA_VERSION: i32 = 46;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
@@ -320,6 +320,9 @@ impl State {
             // marker. Existing43/44 roles keep every byte; a transaction-local
             // current marker enables their strict role validators. Any failure
             // rolls back this marker together with the rest of initialization.
+            if version < 46 {
+                namespace::publication::event::require_pre46(&tx)?;
+            }
             if version < 45 {
                 manifest_creation::admission::require_pre45(&tx)?;
             }

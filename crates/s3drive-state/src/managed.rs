@@ -64,6 +64,7 @@ impl Input {
                 size,
                 sha256,
                 Some(crate::namespace::ContentGuard {
+                    removal_claim: None,
                     expected: expected_payload.clone(),
                     removal: None,
                     detached: matches!(
@@ -87,6 +88,7 @@ impl Input {
                 size,
                 sha256,
                 Some(crate::namespace::ContentGuard {
+                    removal_claim: None,
                     expected: expected_payload.clone(),
                     detached: false,
                     removal: Some(fence.clone()),

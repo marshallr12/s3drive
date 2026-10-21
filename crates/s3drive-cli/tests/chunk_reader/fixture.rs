@@ -797,6 +797,7 @@ impl Fixture {
                 sha256: hash(&bytes),
                 manifest: Box::new(manifest),
                 guard: ContentGuard {
+                    removal_claim: None,
                     expected: s3drive_authority::payload_reference(&n.payload),
                     detached: false,
                     removal: None,

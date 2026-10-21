@@ -3,6 +3,7 @@
 use super::*;
 pub(crate) mod deferred;
 pub(crate) mod empty;
+pub(crate) mod event;
 mod history;
 mod manifest;
 pub use manifest::{MAX_MANIFEST_LENGTH, ManifestRoot};
@@ -22,6 +23,25 @@ pub struct ContentGuard {
     pub detached: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub removal: Option<RemovalFence>,
+    /// Opt-in exact current event and mode. None preserves legacy wire bytes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub removal_claim: Option<Box<RemovalPublicationClaim>>,
+}
+impl ContentGuard {
+    fn valid(&self) -> bool {
+        self.expected.as_ref().is_none_or(|s| digest(s))
+            && self.removal.as_ref().is_none_or(|f| f.valid())
+            && match &self.removal_claim {
+                Some(c) => {
+                    self.removal.as_ref() == Some(&c.fence)
+                        && c.fence.valid()
+                        && valid_id(&c.previous)
+                        && c.previous != ROOT
+                        && self.detached == c.mode.detached()
+                }
+                None => self.removal.is_none() || !self.detached,
+            }
+    }
 }
 fn is_false(value: &bool) -> bool {
     !*value
@@ -120,10 +140,10 @@ impl Reservation {
             && self.expected_revision < i64::MAX as u64
             && self.size <= 8 * 1024 * 1024
             && digest(&self.sha256)
-            && self.guard.as_ref().is_none_or(|g| {
-                g.expected.as_ref().is_none_or(|s| digest(s))
-                    && g.removal.as_ref().is_none_or(|f| !g.detached && f.valid())
-            })
+            && self
+                .guard
+                .as_ref()
+                .is_none_or(|g| g.valid() && (g.removal_claim.is_none() || self.manifest.is_some()))
             && match &self.manifest {
                 None => {
                     self.key
@@ -168,7 +188,10 @@ fn base_matches(n: &Node, revision: u64, guard: Option<&ContentGuard>) -> bool {
     n.kind != Kind::Directory
         && n.deleted == guard.is_some_and(|g| g.detached)
         && match guard {
-            Some(g) => payload_reference(&n.payload) == g.expected,
+            Some(g) => {
+                payload_reference(&n.payload) == g.expected
+                    && (g.removal_claim.is_none() || n.revision == revision)
+            }
             None => n.revision == revision,
         }
 }
@@ -249,11 +272,7 @@ pub(super) fn valid(m: &Mutation) -> bool {
                 && (64..=s3drive_core::manifest::MAX_PAGE_BYTES as u64).contains(size)
                 && digest(sha256)
                 && manifest.root().is_ok()
-                && guard.expected.as_ref().is_none_or(|s| digest(s))
-                && guard
-                    .removal
-                    .as_ref()
-                    .is_none_or(|f| !guard.detached && f.valid())
+                && guard.valid()
         }
         Mutation::Publish {
             reservation,
@@ -400,6 +419,7 @@ pub(super) fn mutate(
                 | Mutation::ReservePendingContent {
                     expected_payload, ..
                 } => Some(ContentGuard {
+                    removal_claim: None,
                     expected: expected_payload.clone(),
                     detached: matches!(request.mutation, Mutation::ReserveDetachedContent { .. }),
                     removal: match &request.mutation {
@@ -454,6 +474,7 @@ pub(super) fn mutate(
                 "INSERT INTO namespace_uploads VALUES(?1,?2,NULL)",
                 params![reservation.id, encode(&reservation)?],
             ))?;
+            event::checkpoint(request, "EffectStored")?;
             Ok((id.clone(), Artifact::Reservation(reservation)))
         }
         Mutation::Publish {
@@ -494,6 +515,7 @@ pub(super) fn mutate(
             if changed != 1 {
                 return Err(Error::Conflict);
             }
+            event::checkpoint(request, "EffectStored")?;
             Ok((p.reservation.node.clone(), Artifact::Published(p)))
         }
         _ => Err(Error::Invalid),
@@ -645,6 +667,7 @@ pub(super) fn validate_manifest_replay(
             return Err(Error::Internal);
         }
     }
+    event::validate_replay(db, request)?;
     if let Mutation::Publish {
         reservation: id,
         upload_operation,

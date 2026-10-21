@@ -666,6 +666,7 @@ fn deferred_canonical_initial_receipt_survives_later_owned_manifest_publication_
                 .collect(),
             manifest: Box::new(ManifestRoot::new(root).unwrap()),
             guard: ContentGuard {
+                removal_claim: None,
                 expected: payload_reference(&initial.node.payload),
                 detached: false,
                 removal: Some(fence.clone()),

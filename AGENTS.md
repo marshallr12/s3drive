@@ -30,3 +30,23 @@ Never store credentials in the repository or dump configuration source on error.
 Preserve dirty data and return conflicts explicitly; no silent unconditional
 overwrite fallback. Keep the scaffold's explicit unsupported paths until their
 phase acceptance criteria pass.
+
+## Development and testing environments
+
+The user requested this workflow on 2026-10-21: run development and tests on
+the assistant's own cloud workstation where it is suitable, and use this
+repository's standard GitHub Actions runners when a more suitable environment
+is needed. Use standard runners for this public repository, not paid larger
+runners. Keep filesystem and durability safeguards intact; unsupported local
+storage is not a reason to relax them. Record blocked local checks honestly and
+review the corresponding exact-source hosted logs and artifacts before acceptance.
+
+For the schema46 authority validation, the user requested this integration
+order: the test branch into `codex/manifest-event-fence` first, then that branch
+into `main` only after acceptance and review. Check fresh remote heads before
+each merge and verify main's CI afterward. Once the merged result is verified,
+remove only redundant clean worktrees and merged local/remote branches. Preserve
+dirty work, unmerged experiments and unique evidence. These instructions do not
+authorize access to the user's other computers, provider writes, credentials,
+user startup installation or repository visibility changes. The local validation
+evidence archive was excluded from publication and must remain unpublished.

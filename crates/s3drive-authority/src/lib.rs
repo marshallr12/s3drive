@@ -21,8 +21,8 @@ pub use wire::{ExchangeObservation, WireClient, WireError, WirePhase, WireReques
 
 pub use namespace::{
     Apply, Artifact, ContentGuard, Error, Kind, Listing, ManifestRoot, Mutation, Node, NodeGuard,
-    Payload, PendingRemoval, ROOT, Receipt, RemovalClaim, RemovalFence, RemovalMode, Reservation,
-    Store, Volume, payload_reference,
+    Payload, PendingRemoval, ROOT, Receipt, RemovalClaim, RemovalEpoch, RemovalFence, RemovalMode,
+    RemovalPublicationClaim, RemovalPublicationMode, Reservation, Store, Volume, payload_reference,
 };
 const BODY_LIMIT: usize = 4096;
 const QUEUE: usize = 8;
@@ -47,6 +47,10 @@ pub enum Request {
         reference: String,
     },
     Node {
+        volume: String,
+        node: String,
+    },
+    RemovalEpoch {
         volume: String,
         node: String,
     },
@@ -80,6 +84,7 @@ pub enum Reply {
     Reservation(Reservation),
     ManifestPayload(Payload),
     Node(Node),
+    RemovalEpoch(Option<RemovalEpoch>),
     PendingRemoval(Option<PendingRemoval>),
     List(Listing),
     Operation(Option<std::result::Result<Receipt, Error>>),
@@ -113,6 +118,7 @@ impl Request {
                 "atomic-empty-manifest-v1".into(),
                 "atomic-deferred-empty-manifest-v1".into(),
                 "manifest-history-v1".into(),
+                "event-fenced-manifest-v1".into(),
             ])),
             Self::Info {} => state.namespace_volume().map(Reply::Info),
             Self::Store { volume, store } => {
@@ -132,6 +138,9 @@ impl Request {
             } => state
                 .namespace_manifest_payload(&volume, &node, &reservation, &reference)
                 .map(Reply::ManifestPayload),
+            Self::RemovalEpoch { volume, node } => state
+                .namespace_removal_epoch(&volume, &node)
+                .map(Reply::RemovalEpoch),
             Self::PendingRemoval { volume, node } => state
                 .namespace_pending_removal(&volume, &node)
                 .map(Reply::PendingRemoval),
