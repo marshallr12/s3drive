@@ -422,3 +422,5 @@ fn chunk_namespace_barrier_retains_unknown_and_remotely_committed_roots_until_lo
     crate::namespace_client::Journal::for_chunks(&mut s, crate::journal::Options::default(), &key)
         .unwrap();
 }
+
+mod barriers;

@@ -132,7 +132,14 @@ pub(crate) fn require_pre46(db: &Connection) -> crate::Result<()> {
     Ok(())
 }
 
-/// Owned subprocess fault boundary; inert unless all fixture selectors match.
+/// No environment-driven fault injection in non-test builds.
+#[cfg(not(test))]
+pub(in crate::namespace) fn checkpoint(_request: &Apply, _stage: &str) -> Result<()> {
+    Ok(())
+}
+
+/// Owned unit-test subprocess fault boundary; all selectors must match.
+#[cfg(test)]
 pub(in crate::namespace) fn checkpoint(request: &Apply, stage: &str) -> Result<()> {
     if std::env::var("S3DRIVE_EVENT_MANIFEST_CRASH_POINT")
         .ok()
@@ -148,8 +155,23 @@ pub(in crate::namespace) fn checkpoint(request: &Apply, stage: &str) -> Result<(
     let Some(path) = std::env::var_os("S3DRIVE_EVENT_MANIFEST_CRASH_READY") else {
         return Ok(());
     };
-    std::fs::write(path, b"ready").map_err(|_| Error::Internal)?;
+    publish_ready(std::path::Path::new(&path), |_| {})?;
     use std::io::Read;
     let _ = std::io::stdin().read(&mut [0u8]);
+    Ok(())
+}
+
+/// The hook observes only the complete temporary marker, never partial readiness.
+#[cfg(test)]
+pub(in crate::namespace) fn publish_ready(
+    path: &std::path::Path,
+    before_publish: impl FnOnce(&std::path::Path),
+) -> Result<()> {
+    // The parent polls existence; writing its path directly exposes an empty
+    // file between creation and write. Rename publishes the complete marker.
+    let temporary = path.with_extension("tmp");
+    std::fs::write(&temporary, b"ready").map_err(|_| Error::Internal)?;
+    before_publish(&temporary);
+    std::fs::rename(temporary, path).map_err(|_| Error::Internal)?;
     Ok(())
 }

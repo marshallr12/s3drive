@@ -50,6 +50,8 @@ fn actual_sqlite_full_rolls_back_epoch_admission_without_losing_published_or_dir
     assert!(crate::sparse_views::ledger::inspect(&s.connection).unwrap() == source);
     assert!(ledger::inspect(&s.connection).unwrap() == meta);
     assert!(j(&mut s).get(p).unwrap().receipt().is_some());
+    let base = f.binding.base().unwrap();
+    assert!(namespace_pending(&s.connection, base.volume(), base.node()).is_err());
     s.connection
         .pragma_update(None, "max_page_count", pages + 64)
         .unwrap();
@@ -61,6 +63,7 @@ fn actual_sqlite_full_rolls_back_epoch_admission_without_losing_published_or_dir
             .clean_view()
             .is_some()
     );
+    assert!(namespace_pending(&s.connection, base.volume(), base.node()).is_ok());
 }
 #[test]
 fn schema_thirty_five_preserves_old_records_and_rejects_new_ack_formats_under_old_markers_without_repair()

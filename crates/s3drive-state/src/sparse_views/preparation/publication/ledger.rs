@@ -228,18 +228,25 @@ pub(super) fn validate_checks(meta: &Meta, s: &super::super::ledger::Snapshot) -
 }
 pub(super) fn validate_source(db: &Connection, meta: &Meta) -> Result<()> {
     let s = super::super::ledger::inspect(db)?;
-    validate_checks(meta, &s)?;
+    validate_source_snapshot(db, meta, &s)
+}
+pub(super) fn validate_source_snapshot(
+    db: &Connection,
+    meta: &Meta,
+    s: &super::super::ledger::Snapshot,
+) -> Result<()> {
+    validate_checks(meta, s)?;
     for (plan, r) in &meta.records {
         if !r.input.matches(&s.info(*plan)?)? {
             return Err(Failure::Corrupt.into());
         }
         if let Some(p) = r.input.predecessor {
             let prior = meta.records.get(&p).ok_or(Failure::Corrupt)?;
-            if !lineage::ancestor(&s, prior.input.view, r.input.view)? {
+            if !lineage::ancestor(s, prior.input.view, r.input.view)? {
                 return Err(Failure::Corrupt.into());
             }
         }
-        coverage(meta, &s, *plan)?;
+        coverage(meta, s, *plan)?;
         let tree = super::super::transfers::inspect_tree(db, *plan)?;
         if Physical::from_tree(&tree)? != r.physical {
             return Err(Failure::Corrupt.into());

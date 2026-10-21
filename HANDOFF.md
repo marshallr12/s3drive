@@ -4,7 +4,35 @@ Updated 2026-10-21. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
-## Current checkpoint: accepted event-bound manifest authority
+## Current checkpoint: accepted sparse node-wide effect barriers
+
+The narrow barrier prerequisite is accepted at runtime/test source
+`2b08169f5e85d92bb7cc3a5834913ae490c0f11b`, based on main
+`022c832aed4174203dfe29451979dc9d5391ac00`. Its own
+[run39673658957](https://github.com/marshallr12/s3drive/actions/runs/39673658957)
+has all three jobs terminal green. Full logs: Linux933/Windows929 passed,
+37 cohorts each; all eleven new barriers, marker regression and process-kill/
+SQLite-full checks pass. Separate native gates and all 35 exact typed artifact
+records pass. All 753 source ZIP files match. Read
+`docs/src/sparse-node-barriers.md` for evidence, scope and limitations.
+
+The first candidate's Linux run39670781416 caught an existing readiness-file
+creation/write race; its Windows job passed. The corrected hook publishes via
+atomic rename and is now genuinely test-only, with a deterministic negative
+control and regression. Keep both cohorts; do not treat a retry alone as proof.
+
+Local fmt/Clippy/build/docs passed, but durable suites cannot run on this cloud
+workstation's overlayfs/tmpfs. Use standard GitHub runners without relaxing
+guards. Keep the local validation archive unpublished. Before integration check
+fresh main/branch heads; verify main CI afterward. Preserve the local-only
+`dot/schema46-validation` evidence branch and unmerged pending-scan experiment.
+
+Next: typed sparse owned-unlinked admission and persisted original-open/current-
+event provenance, predecessor/successor/source settlement and explicit rejected/
+no-effect handling. SDK and native lifecycle acceptance remain subsequent phases.
+This barrier slice changes no schema/wire format/native flag or provider behavior.
+
+## Earlier checkpoint: accepted event-bound manifest authority
 
 Runtime implementation `0a236de`, transfer source `a6e91434`, was validated
 without changing any runtime input. Its own
