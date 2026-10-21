@@ -39,6 +39,7 @@ fn fixture() -> Fixture {
         sha256: hex(&digest(&b.page.encode())),
         manifest: Some(ns::ManifestRoot::new(b.root.clone()).unwrap()),
         guard: Some(ns::ContentGuard {
+            removal_claim: None,
             expected: None,
             detached: false,
             removal: None,
@@ -211,6 +212,7 @@ fn exact_semantic_coverage_physical_proof_requests_and_newer_heads_survive_resta
             sha256: hex(&r.physical.sha256),
             manifest: Box::new(ns::ManifestRoot::new(info.root().unwrap().unwrap()).unwrap()),
             guard: ns::ContentGuard {
+                removal_claim: None,
                 expected: ns::payload_reference(&f.node.payload),
                 detached: false,
                 removal: None

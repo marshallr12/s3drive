@@ -1,6 +1,7 @@
 use super::*;
 use crate::State;
 use s3drive_core::manifest::{Entry, Page, Reference};
+mod event_fence;
 mod history;
 fn id(n: u8) -> String {
     format!("{n:02x}").repeat(16)
@@ -78,6 +79,7 @@ fn request(s: &State, n: &Node, op: u8, guard: ContentGuard) -> Apply {
 }
 fn normal(n: &Node) -> ContentGuard {
     ContentGuard {
+        removal_claim: None,
         expected: payload_reference(&n.payload),
         detached: false,
         removal: None,

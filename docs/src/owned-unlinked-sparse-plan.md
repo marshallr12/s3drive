@@ -30,8 +30,8 @@ Proposed independently green phases:
    exact current mode/event and expected payload/revision. Preserve historical
    idempotent replies; reject cancelled, transitioned, replaced and successor
    ownership for fresh effects. Decide explicit new variant versus versioned
-   optional guard only after checking old-reader and serde bytes. Test event
-   transition with unchanged node revision, two clients and lost replies before
+   optional guard only after checking old-reader and serde bytes. Test stale events paired with
+   current node revisions, two clients and lost replies before
    exposing a local API. No native flag.
 2. Sparse journal typed admission with capability and retained original open.
    Atomic persisted original/current provenance; format/schema guards before old

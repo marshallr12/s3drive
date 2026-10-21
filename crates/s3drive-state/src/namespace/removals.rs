@@ -61,6 +61,53 @@ pub struct RemovalClaim {
     pub previous: String,
     pub mode: RemovalMode,
 }
+/// Publication can retain a committed old identity after unlink/replacement.
+/// Cancellation is deliberately not a publication mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum RemovalPublicationMode {
+    Deferred,
+    Pending,
+    Committed,
+}
+impl RemovalPublicationMode {
+    pub fn detached(self) -> bool {
+        self == Self::Committed
+    }
+    fn text(self) -> &'static str {
+        match self {
+            Self::Deferred => "deferred",
+            Self::Pending => "pending",
+            Self::Committed => "committed",
+        }
+    }
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RemovalPublicationClaim {
+    pub fence: RemovalFence,
+    pub previous: String,
+    pub mode: RemovalPublicationMode,
+}
+impl From<RemovalClaim> for RemovalPublicationClaim {
+    fn from(value: RemovalClaim) -> Self {
+        Self {
+            fence: value.fence,
+            previous: value.previous,
+            mode: match value.mode {
+                RemovalMode::Deferred => RemovalPublicationMode::Deferred,
+                RemovalMode::Pending => RemovalPublicationMode::Pending,
+            },
+        }
+    }
+}
+/// A coherent metadata observation, not a live filesystem handle.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RemovalEpoch {
+    pub node: Node,
+    pub claim: RemovalPublicationClaim,
+}
 impl Mutation {
     pub fn owned_destination(&self) -> Option<(&NodeGuard, &RemovalClaim)> {
         match self {
@@ -243,9 +290,34 @@ pub(super) fn publication_gate(
     id: &str,
     guard: Option<&ContentGuard>,
 ) -> Result<()> {
+    if let Some(claim) = guard.and_then(|g| g.removal_claim.as_ref())
+        && claim.mode == RemovalPublicationMode::Committed
+    {
+        let active = pending(db, id)?;
+        let e = events::latest(db, id)?.ok_or(Error::Conflict)?;
+        if active.is_some()
+            || !node(db, id)?.deleted
+            || e.operation != claim.previous
+            || e.fence != claim.fence
+            || e.mode != "committed"
+        {
+            return Err(Error::Conflict);
+        }
+        events::proof(db, &e)?;
+        return Ok(());
+    }
     match (pending(db, id)?, guard.and_then(|g| g.removal.as_ref())) {
         (None, None) => Ok(()),
-        (Some(actual), Some(expected)) if actual.fence == *expected => Ok(()),
+        (Some(actual), Some(expected)) if actual.fence == *expected => {
+            if let Some(claim) = guard.and_then(|g| g.removal_claim.as_ref())
+                && (claim.fence != actual.fence
+                    || claim.previous != actual.event
+                    || claim.mode.text() != actual.mode.text())
+            {
+                return Err(Error::Conflict);
+            }
+            Ok(())
+        }
         (Some(_), None) => Err(Error::DeletePending),
         (Some(_), Some(_)) => Err(Error::Conflict),
         (None, Some(_)) => Err(Error::Conflict),
@@ -254,6 +326,44 @@ pub(super) fn publication_gate(
 impl State {
     /// Explicit inspection for the disposition owner/recovery. Normal Node
     /// lookup refuses pending names; this API does not create a read handle.
+    /// Read the node and independently checked current ownership event in one
+    /// read transaction. This is observational metadata, not native activation.
+    pub fn namespace_removal_epoch(
+        &mut self,
+        volume_id: &str,
+        id: &str,
+    ) -> Result<Option<RemovalEpoch>> {
+        let tx = sql(self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred))?;
+        let version: i32 = sql(tx.pragma_query_value(None, "user_version", |r| r.get(0)))?;
+        if version < 46 {
+            return Err(Error::Internal);
+        }
+        check_volume(&tx, volume_id)?;
+        let n = node(&tx, id)?;
+        let claim = match pending(&tx, id)? {
+            Some(t) => Some(RemovalPublicationClaim::from(RemovalClaim {
+                fence: t.fence,
+                previous: t.event,
+                mode: t.mode,
+            })),
+            None => match events::latest(&tx, id)? {
+                Some(e) if e.mode == "committed" && n.deleted => {
+                    events::proof(&tx, &e)?;
+                    Some(RemovalPublicationClaim {
+                        fence: e.fence,
+                        previous: e.operation,
+                        mode: RemovalPublicationMode::Committed,
+                    })
+                }
+                _ => None,
+            },
+        };
+        let result = claim.map(|claim| RemovalEpoch { node: n, claim });
+        sql(tx.commit())?;
+        Ok(result)
+    }
     pub fn namespace_pending_removal(
         &self,
         volume: &str,
@@ -469,3 +579,17 @@ fn release(db: &Connection, id: &str, fence: &RemovalFence) -> Result<()> {
 
 #[cfg(test)]
 mod tests;
+
+pub(in crate::namespace) fn publication_claim_history(
+    db: &Connection,
+    id: &str,
+    claim: &RemovalPublicationClaim,
+    before: u64,
+) -> Result<()> {
+    let e = events::get(db, id, &claim.previous)?.ok_or(Error::Internal)?;
+    if e.fence != claim.fence || e.mode != claim.mode.text() || e.sequence > before {
+        return Err(Error::Internal);
+    }
+    events::proof(db, &e)?;
+    Ok(())
+}

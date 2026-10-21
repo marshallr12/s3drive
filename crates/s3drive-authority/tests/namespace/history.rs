@@ -9,7 +9,7 @@ fn id(n: u64) -> String {
 fn binary(s: &str) -> [u8; 16] {
     std::array::from_fn(|i| u8::from_str_radix(&s[2 * i..2 * i + 2], 16).unwrap())
 }
-fn reservation(v: &Volume, n: &Node, op: u64) -> Request {
+pub(super) fn reservation(v: &Volume, n: &Node, op: u64) -> Request {
     let page = Page::new(
         binary(&v.id),
         binary(&n.id),
@@ -38,6 +38,7 @@ fn reservation(v: &Volume, n: &Node, op: u64) -> Request {
             sha256: page.digest().iter().map(|b| format!("{b:02x}")).collect(),
             manifest: Box::new(ManifestRoot::new(root).unwrap()),
             guard: ContentGuard {
+                removal_claim: None,
                 expected: payload_reference(&n.payload),
                 detached: false,
                 removal: None,

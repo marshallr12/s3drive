@@ -207,6 +207,7 @@ impl Input {
                 size: body.len() as u64,
                 sha256: hex(&Sha256::digest(&body)),
                 guard: Some(ContentGuard {
+                    removal_claim: None,
                     expected: None,
                     detached: false,
                     removal: None,

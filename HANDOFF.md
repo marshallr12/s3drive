@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated 2026-10-21. Goal ACTIVE/incomplete. Assistant Mira. No voice-context
+Updated 2026-10-21. Goal paused/incomplete for transfer to another workstation. Assistant Mira. No voice-context
 handoff capability available. Read this and docs/src/implementation-plan.md first.
 
 ## Decisions and permissions
@@ -26,7 +26,7 @@ in docs/src/creator-open-state.md. Native lifecycle flags remain unsupported.
 Publication proof: /tmp/s3drive-canonical-creator-open-sdk-publication.json;
 frozen map /tmp/s3drive-creator-open-sdk-candidate1-frozen.json; candidate
 /home/marshall/src/worktrees/s3drive-creator-open-sdk, branchcodex/creator-open-sdk.
-Verify current main/remote instead of guessing canonical squash ID.
+Accepted main is 378c569b0b23b518db6f4e0404572261905dd702. Historical local paths above are not required for resumption; the committed evidence archives are portable.
 
 Creator::create_for_open derives original owner from same-worker/volume chunk
 capability. Read-only require_store is inside original shared semaphore/deadline.
@@ -95,3 +95,76 @@ Preserve unrelated/dirty work and every uncertain/failed cohort. No subagents.
 Previous156-line handoff archived verbatim in
 docs/archive/HANDOFF-before-creator-open-sdk-refresh-20261021.md,
 SHA68c6c636ef662b5efcb33d85efb9803672ad14454ef1c1bc93a4708f4a4b1944. Older state evidence remains unchanged.
+
+## Resume checkpoint: event-bound manifest authority
+
+Continue on `codex/manifest-event-fence`, based on accepted main `378c569`.
+The checkpoint is an unaccepted schema46 candidate. Main stays at schema45.
+Read [the candidate contract](docs/src/manifest-event-fence.md) and
+[the implementation plan](docs/src/implementation-plan.md) before edits.
+
+On another workstation:
+
+```sh
+git clone https://github.com/marshallr12/s3drive.git
+cd s3drive
+git switch --track origin/codex/manifest-event-fence
+```
+
+If already cloned, fetch origin and switch to that branch. Local credentials,
+Wasabi configuration, build outputs and /tmp artifacts are intentionally absent.
+Use a separate local state directory; never open a user's schema45 database with
+this candidate as an acceptance experiment. Repository visibility remains public.
+
+Implemented: optional event-bound manifest guard, atomic RemovalEpoch read,
+active/committed publication modes, immutable historical replay checks, bounded
+raw pre46 metadata guard and schema46 marker. No sparse SDK publication call
+site, native lifecycle flag or provider writes enabled.
+
+Checkpoint verification: 15 focused state tests pass, including eight killed
+workers and actual SQLiteFull; authenticated loopback HTTP race/lost-reply/restart
+case passes; workspace/all-targets Clippy with warnings denied passes. These are
+focused checks, not a full acceptance gate. Portable development evidence,
+including failed earlier compilation/test assumptions and subsequent corrections,
+is indexed in `docs/src/evidence/manifest-event-checkpoint-20261021.tar.gz`.
+
+Next steps, before accepting or merging:
+1. Run `bash scripts/gate.sh` with one Cargo process and four test threads.
+2. Build actual schema45 CLI from main378c569 in a separate target directory;
+   verify it initializes45. Build candidate46, prove old45 refuses46 with database
+   bytes unchanged, and prove new46 can reopen. A retained Linux old45 executable
+   existed only locally (SHA7c67ee45bde346306fd192ce600e508831304045078b286820f18550a162ad7b).
+   Its metadata proof is archived; its binary is not transferred. Do not infer
+   executable identity from Cargo freshness or assume /tmp exists elsewhere.
+3. Obtain/review this candidate's own exact-source Linux/Windows/book CI and
+   native regression evidence. Hosted Windows is not physical workstation proof.
+4. Continue sparse local preparation, source settlement and node-wide unknown
+   effect barriers only after this authority phase passes acceptance.
+
+Main follow-up CI39641137658 was still in progress at transfer preparation;
+inspect that same run rather than restarting it. Accepted SDK evidence uses its
+own completed CI39633251767. Historical branches/worktrees are being cleaned
+under the user's explicit request; do not rely on their local paths. Resume
+from this branch and committed documentation. No background feature work should
+continue on this workstation after the transfer checkpoint is pushed.
+
+## Worktree cleanup at transfer
+
+User explicitly requested retirement of obsolete worktrees and local/remote
+branches. Removed44 clean obsolete worktrees,110 local and106 remote branches.
+Main and active event-fence worktree remain. A dirty detached experiment remains
+at `/tmp/s3drive-staged-range-study-20261018-tjtdatmk/source`; its related local
+`codex/pending-scan-proofs` and remote branches of that name plus
+`codex/pending-scan-repeat-64aa073` are preserved. These are historical experiment
+references, not the active development branch. Do not delete dirty experiment
+bytes or interpret its portable tests as acceptance of this phase.
+
+Before deletion, all Git refs/history were preserved in verified local recovery
+bundle `/home/marshall/src/s3drive-retired-20261021.bundle` (76286231 bytes;
+SHA2563834eb741cbd17342d2a6b201eb27550532dd30721426d7cea27043c02c30e4c).
+The bundle is outside the repository and is not automatically transferred to
+another workstation. Accepted runtime and evidence remain in main history;
+the active checkpoint is pushed separately. The committed cleanup archive
+`docs/src/evidence/workstation-cleanup-20261021.tar.gz` records exact retired
+heads, accepted ancestor/runtime matches, superseded backups and guarded results.
+No repository visibility setting was changed.

@@ -3748,3 +3748,12 @@ provider or user startup configuration is enabled. Next is sparse owned-unlinked
 publication with original fence/current-event and unresolved-effect barriers,
 then retention/retry-forest/native integration. Physical startup and remote
 provider/deployment acceptance remain separate.
+
+### Event-bound authority transfer checkpoint — 2026-10-21
+
+Development continues on `codex/manifest-event-fence` from accepted main378c569.
+The [event-bound manifest candidate](manifest-event-fence.md) proposes schema46;
+its focused state/HTTP checks and workspace Clippy pass. Full local gate, actual
+old45/new46 executable compatibility and its own hosted/native acceptance remain
+pending. This checkpoint is not merged or native-enabled. Read the root HANDOFF.md
+for portable resumption instructions and archived development evidence.

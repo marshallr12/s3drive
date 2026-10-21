@@ -565,6 +565,7 @@ impl<'a> Journal<'a> {
                     sha256: hex(t.payload_sha256()),
                     manifest: Box::new(ManifestRoot::new(root).map_err(|_| Failure::Invalid)?),
                     guard: ContentGuard {
+                        removal_claim: None,
                         expected: p.input().expected_content.as_ref().map(|h| hex(h)),
                         detached: false,
                         removal: None,

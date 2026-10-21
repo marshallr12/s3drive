@@ -252,6 +252,7 @@ fn replacement_observes_both_files_together_and_refuses_dirty_source() {
 fn detached_content_guard_is_additive_and_never_resurrects_a_name() {
     assert_eq!(
         serde_json::to_string(&namespace::ContentGuard {
+            removal_claim: None,
             expected: None,
             detached: false,
             removal: None

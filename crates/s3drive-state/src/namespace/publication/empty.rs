@@ -83,6 +83,7 @@ fn canonical(request: &Apply, store: Store, sequence: u64) -> Result<Payload> {
             .map(|b| format!("{b:02x}"))
             .collect(),
         guard: Some(ContentGuard {
+            removal_claim: None,
             expected: None,
             detached: false,
             removal: None,

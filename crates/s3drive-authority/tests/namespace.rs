@@ -9,6 +9,8 @@ const SECRET: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789
 mod deferred;
 #[path = "namespace/empty.rs"]
 mod empty;
+#[path = "namespace/event.rs"]
+mod event;
 #[path = "namespace/history.rs"]
 mod history;
 
