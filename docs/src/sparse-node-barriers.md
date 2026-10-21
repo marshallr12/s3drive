@@ -44,15 +44,40 @@ namespace effect or acknowledged removal ownership. Future typed owned-unlinked
 admission must supply retained original-open/current-event provenance rather
 than bypassing this check.
 
-## Verification status
+## Accepted verification — 2026-10-21
 
-Implementation candidate; acceptance pending its own exact-source hosted run.
+Runtime/test source `2b08169f5e85d92bb7cc3a5834913ae490c0f11b` passed its own
+[Linux/Windows/book run 39673658957](https://github.com/marshallr12/s3drive/actions/runs/39673658957).
+All three jobs are terminal success. The source ZIP matches all 753 tracked files
+byte for byte (ZIP SHA256
+`efad6deddb4b0b99149640416aa307936639c00dc8a8a504d0ef0a841f0843d4`).
+The full logs and both downloaded artifacts were reviewed, not just job status.
+
+- Workspace suites: Linux 933 passed/0 failed/15 ignored; Windows 929
+  passed/0 failed/31 ignored, each across 37 cohorts. All eleven new barrier
+  tests and the readiness regression passed on both platforms.
+- The original eight authority kill boundaries, fourteen preparation boundaries,
+  eleven settlement boundaries and actual SQLite-full rollback cases passed.
+- Separate FUSE/WinFsp, Unicode/chunk writes, manifest ranges/remount,
+  replacement/disposition and startup/recovery gates passed unchanged.
+- All 21 replacement plus 14 disposition artifact records match the reference
+  fields, types and values, their log records and the exact candidate SHA.
+  Downloaded ZIP digests were verified. JSON SHA256 values are
+  `042ed122db7f98cbba55ed1e8eb7fb93189e1f75eb7100128a0431223cfe7ac7`
+  and `5186a0a3a0fa2b000979229671489547ec02cafeb9b6a894e3b686c50b86018f`.
+- All 19 slow-test notices resolve to passes. Existing WinFsp no-import linker
+  warnings, toolchain selection notices and Actions Node20 deprecation warnings
+  remain; no failed test or native step is waived.
+
+Local fmt, all-target Clippy with warnings denied, workspace build, schema-fixture
+checks, documentation links and mdBook build/test passed. The marker regression
+also ran locally; the built production CLI contains none of its fault selectors.
 The cloud workstation uses unsupported overlayfs/tmpfs for durable staging.
 Local durable-state tests are recorded as blocked/failing for that reason, not
 accepted, and the storage guard remains intact. Suitable standard GitHub runners
 are authorized for the full Linux/Windows and separate native regression gates.
 
-The first hosted candidate49d1c6c, run39670781416, passed all eleven new
+The first hosted candidate `49d1c6c`, [run39670781416](https://github.com/marshallr12/s3drive/actions/runs/39670781416), passed all eleven new
 Linux barrier cases but failed an existing authority crash-fixture readiness
 assertion: the parent observed the marker between file creation and its write.
 The checkpoint now writes a temporary file and atomically renames it, as the
@@ -63,8 +88,10 @@ creation window fails that exact assertion; the restored implementation passes.
 The eight original kill boundaries and strong byte assertions remain.
 Source review also found the fixture hook was not compile-time test-only; it is
 now guarded by cfg(test), with an inert non-test stub. No ordinary authority
-mutation semantics change. The failed run is retained; only the corrected
-candidate's full gates can accept this slice.
+mutation semantics change. The first Windows job passed its full/native gates,
+but that run remains failed diagnostic evidence. Acceptance uses only the
+corrected candidate's own complete run. The local evidence archive stays
+unpublished; integrate only after a fresh head comparison and verify main CI.
 
 Eleven new durable-journal cases cover preparation-only clean heads, claimed
 physical uploads and complete trees without root records, multiple same-node
@@ -77,8 +104,9 @@ The existing preparation process-kill suite additionally checks that the barrier
 appears only at committed admission. Existing source-settlement process-kill and
 actual SQLite-full suites additionally check that it releases only at committed
 acknowledgment, including historical acknowledgments preserving newer dirty data.
-The complete standard CI remains required, including unchanged FUSE/WinFsp,
-Unicode/chunk I/O, remount and startup/recovery regressions.
+The complete standard CI above includes unchanged FUSE/WinFsp, Unicode/chunk
+I/O, remount and startup/recovery regressions. This accepts only the barrier
+prerequisite, not the subsequent typed owned-unlinked contract.
 
 ## Next boundary
 

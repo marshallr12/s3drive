@@ -10,8 +10,8 @@ facts below describe the earlier planning baseline, not a denial of the new
 opt-in authority guard. Phase 2 sparse journal admission is next; phases 2-4 remain
 proposals, and no new sparse SDK or native lifecycle path is enabled.
 
-The [node-wide barrier prerequisite](sparse-node-barriers.md) is being implemented
-as a separate narrow phase-2 slice. It includes preparations before root records,
+The [node-wide barrier prerequisite](sparse-node-barriers.md) is now accepted
+as a separate narrow phase-2 slice at `2b08169`, full/native run39673658957. It includes preparations before root records,
 reciprocal namespace admission, and abandonment/retirement checks. Typed owned
 admission and explicit rejected/no-effect settlement are still subsequent work.
 

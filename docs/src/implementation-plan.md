@@ -64,11 +64,12 @@ lifecycle flags remain unchanged.
 
 ## Current sparse lifecycle prerequisite
 
-The [node-wide sparse effect barrier](sparse-node-barriers.md) is the next narrow
-implementation candidate after accepted schema46 authority. Its own full/native
-acceptance is pending. It does not complete phase-2 typed owned admission or
-enable SDK/native owned-unlinked publication. See the contract for conservative
-rejection handling, historical replay, and the remaining persisted ownership work.
+The [node-wide sparse effect barrier](sparse-node-barriers.md) is accepted at
+`2b08169`, with its own full/native Linux/Windows/book run39673658957 and exact
+source/log/35-record artifact review. Schema46 is unchanged. It does not complete
+phase-2 typed owned admission or enable SDK/native owned-unlinked publication.
+See the contract for conservative rejection handling, historical replay, the
+corrected test-only readiness hook, and remaining persisted ownership work.
 
 ## P1 concrete tasks
 
