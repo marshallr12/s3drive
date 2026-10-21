@@ -4,6 +4,8 @@
 mod composition;
 #[path = "chunk_publication/creator_import.rs"]
 mod creator_import;
+#[path = "chunk_publication/creator_open.rs"]
+mod creator_open;
 #[path = "chunk_publication/deferred_creation.rs"]
 mod deferred_creation;
 #[path = "chunk_publication/empty_creation.rs"]
@@ -1203,8 +1205,11 @@ async fn chunk_child() {
             | "empty_recover"
             | "deferred_client_recover"
             | "creator_import_recover"
+            | "creator_open_recover"
     ) {
-        if mode == "creator_import_recover" {
+        if mode == "creator_open_recover" {
+            Box::pin(creator_open::recover(&root, &s)).await;
+        } else if mode == "creator_import_recover" {
             Box::pin(creator_import::recover(&root, &s)).await;
         } else if mode == "deferred_client_recover" {
             Box::pin(deferred_creation::killed_recovery(&root, &s)).await;
@@ -1251,6 +1256,16 @@ fn dispatch<'a>(
         "native_policy" => Box::pin(native_writer::policy(config, root, s)),
         "native_concurrency" => Box::pin(native_writer::concurrency(config, root, s)),
         "composition" => Box::pin(composition::flow(config, root, s)),
+        "creator_open_flow" => Box::pin(creator_open::flow(config, root, s)),
+        "creator_open_controls" => Box::pin(creator_open::controls(config, root, s)),
+        "creator_open_quotas" => Box::pin(creator_open::quotas(config, root, s)),
+        "creator_open_recovery" => Box::pin(creator_open::recovery(config, root, s)),
+        "creator_open_physical" => Box::pin(creator_open::physical(config, root, s)),
+        "creator_open_unclaimed" => Box::pin(creator_open::unclaimed(config, root, s)),
+        "creator_open_deadline" => Box::pin(creator_open::deadline(config, root, s)),
+        "creator_open_crash" => Box::pin(creator_open::crash(config, root, s)),
+        "creator_open_stores" => Box::pin(creator_open::stores(config, root, s)),
+        "creator_open_rejected" => Box::pin(creator_open::rejected(config, root, s)),
         "creator_import_flow" => Box::pin(creator_import::flow(config, root, s)),
         "creator_import_controls" => Box::pin(creator_import::controls(config, root, s)),
         "creator_import_crash" => Box::pin(creator_import::crash(config, root, s)),
@@ -1301,11 +1316,13 @@ async fn run(mode: &str) {
     let mut mixed_recovery_window = None;
     let mut mixed_corrupt_tail = None;
     let mut mixed_batch_window = None;
+    let mut creator_open_objects = None;
     for stage in match mode {
         "mixed_roots_crash" => vec!["mixed_roots_crash", "mixed_roots_recover"],
         "crash" => vec!["crash", "recover"],
         "empty_crash" => vec!["empty_crash", "empty_recover"],
         "creator_import_crash" => vec!["creator_import_crash", "creator_import_recover"],
+        "creator_open_crash" => vec!["creator_open_crash", "creator_open_recover"],
         "deferred_client_crash" => vec!["deferred_client_crash", "deferred_client_recover"],
         "source_crash" => vec!["source_crash", "source_recover_unknown"],
         "source_ack_crash" => vec!["source_ack_crash", "source_recover_known"],
@@ -1347,6 +1364,31 @@ async fn run(mode: &str) {
                     "MIXED_RIVAL_CREATE" => {
                         f.race_create.store(true, Ordering::SeqCst);
                         std::fs::write(tmp.path().join("mixed-rival-create.ack"), b"ack").unwrap();
+                    }
+                    "CREATOR_OPEN_GATE_ARM" => {
+                        assert_eq!(put_gate.arrived.load(Ordering::SeqCst),0);
+                        creator_open_objects=Some(f.objects.lock().unwrap().len());
+                        put_gate.before_commit.store(true,Ordering::SeqCst);
+                        put_gate.enabled.store(true,Ordering::SeqCst);
+                        std::fs::write(tmp.path().join("creator-open-gate-armed"),b"ack").unwrap();
+                    }
+                    "CREATOR_OPEN_GATE_INSPECT" => {
+                        tokio::time::timeout(Duration::from_secs(10),async {
+                            while put_gate.arrived.load(Ordering::SeqCst)!=1 {tokio::time::sleep(Duration::from_millis(10)).await;}
+                        }).await.unwrap();
+                        assert_eq!(f.objects.lock().unwrap().len(),creator_open_objects.unwrap());
+                        let db=raw(tmp.path());
+                        let bytes:Vec<u8>=db.query_row("SELECT record FROM manifest_creations WHERE operation=?",[id(40)],|r|r.get(0)).unwrap();
+                        let creator:serde_json::Value=serde_json::from_slice(&bytes).unwrap();
+                        assert_eq!(creator["format"],3);assert_eq!(creator["input"]["open"]["id"],id(71));
+                        let (owner,bytes,count):(String,Vec<u8>,i64)=db.query_row("SELECT owner_id,input,event_count FROM windows_open_journal WHERE open_id=?",[id(71)],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?))).unwrap();
+                        let open:serde_json::Value=serde_json::from_slice(&bytes).unwrap();
+                        assert_eq!(creator["input"]["owner"],owner);assert_eq!(open["creation"],id(40));
+                        assert_eq!(open["session"],id(80));assert_eq!(open["controlled"],true);assert_eq!(open["session_bound"],true);assert_eq!(count,0);
+                        assert_eq!(db.query_row("SELECT count(*) FROM retained_windows_opens",[],|r|r.get::<_,i64>(0)).unwrap(),1);
+                        assert_eq!(db.query_row("SELECT count(*) FROM namespace_intents",[],|r|r.get::<_,i64>(0)).unwrap(),0);
+                        drop(db);put_gate.enabled.store(false,Ordering::SeqCst);put_gate.release.add_permits(1);
+                        std::fs::write(tmp.path().join("creator-open-gate-checked"),b"ack").unwrap();
                     }
                     "MIXED_GATE_ARM" => {
                         assert_eq!(put_gate.arrived.load(Ordering::SeqCst), 0);
@@ -1496,6 +1538,7 @@ async fn run(mode: &str) {
                         | "empty_crash"
                         | "deferred_client_crash"
                         | "creator_import_crash"
+                        | "creator_open_crash"
                 ) {
                     killed && !status.success()
                 } else {
@@ -1505,7 +1548,7 @@ async fn run(mode: &str) {
         );
         if matches!(
             stage,
-            "empty_crash" | "deferred_client_crash" | "creator_import_crash"
+            "empty_crash" | "deferred_client_crash" | "creator_import_crash" | "creator_open_crash"
         ) {
             assert_eq!(puts(&f), 1);
             let db = raw(tmp.path());
@@ -1578,6 +1621,9 @@ async fn run(mode: &str) {
                 | "creator_import_recover"
                 | "creator_import_flow"
                 | "creator_import_controls"
+                | "creator_open_flow"
+                | "creator_open_recovery"
+                | "creator_open_recover"
         ) {
             assert_eq!(
                 f.requests.lock().unwrap().len(),
@@ -1587,6 +1633,14 @@ async fn run(mode: &str) {
         }
     }
     let expected = match mode {
+        "creator_open_flow"
+        | "creator_open_recovery"
+        | "creator_open_physical"
+        | "creator_open_deadline"
+        | "creator_open_crash" => 1,
+        "creator_open_stores" => 4,
+        "creator_open_rejected" => 2,
+        "creator_open_controls" | "creator_open_quotas" | "creator_open_unclaimed" => 0,
         "creator_import_flow" | "creator_import_crash" => 1,
         "creator_import_controls" => 2,
         "deferred_client_flow"
@@ -1896,4 +1950,54 @@ async fn creator_import_controls() {
 #[tokio::test]
 async fn creator_import_crash() {
     run("creator_import_crash").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn creator_open_flow() {
+    run("creator_open_flow").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn creator_open_controls() {
+    run("creator_open_controls").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn creator_open_quotas() {
+    run("creator_open_quotas").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn creator_open_recovery() {
+    run("creator_open_recovery").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn creator_open_physical() {
+    run("creator_open_physical").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn creator_open_unclaimed() {
+    run("creator_open_unclaimed").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn creator_open_deadline() {
+    run("creator_open_deadline").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn creator_open_crash() {
+    run("creator_open_crash").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn creator_open_stores() {
+    run("creator_open_stores").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn creator_open_rejected() {
+    run("creator_open_rejected").await;
 }

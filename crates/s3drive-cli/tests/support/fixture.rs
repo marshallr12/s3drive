@@ -18,6 +18,7 @@ type Metadata = BTreeMap<String, (String, String)>;
 #[derive(Clone)]
 pub struct PutGate {
     pub enabled: Arc<AtomicBool>,
+    pub before_commit: Arc<AtomicBool>,
     pub arrived: Arc<AtomicUsize>,
     pub release: Arc<tokio::sync::Semaphore>,
 }
@@ -25,6 +26,7 @@ impl Default for PutGate {
     fn default() -> Self {
         Self {
             enabled: Arc::new(AtomicBool::new(false)),
+            before_commit: Arc::new(AtomicBool::new(false)),
             arrived: Arc::new(AtomicUsize::new(0)),
             release: Arc::new(tokio::sync::Semaphore::new(0)),
         }
@@ -123,6 +125,10 @@ impl Fixture {
                                         objects.lock().unwrap().remove(&key);metadata.lock().unwrap().remove(&key);
                                         socket.write_all(&response("204 No Content","",b"",0)).await.unwrap();return;
                                     }
+                                    if let Some(gate)=put_gate.as_ref().filter(|g|g.enabled.load(Ordering::SeqCst)&&g.before_commit.load(Ordering::SeqCst)) {
+                                        gate.arrived.fetch_add(1,Ordering::SeqCst);
+                                        let permit=gate.release.acquire().await.unwrap();permit.forget();
+                                    }
                                     let length=headers["content-length"].parse::<usize>().unwrap();assert!(length<=8*1024*1024);assert!(!headers.contains_key("transfer-encoding"));
                                     if headers.get("expect").is_some_and(|h|h.eq_ignore_ascii_case("100-continue")){socket.write_all(b"HTTP/1.1 100 Continue\r\n\r\n").await.unwrap();}
                                     let mut body=vec![0;length];socket.read_exact(&mut body).await.unwrap();
@@ -150,7 +156,7 @@ impl Fixture {
                                         }
                                         if lose_put_reply.swap(false,Ordering::SeqCst) {return;}
                                     }
-                                    let was_gated=result.starts_with(b"HTTP/1.1 200") && put_gate.as_ref().is_some_and(|g|g.enabled.load(Ordering::SeqCst));
+                                    let was_gated=result.starts_with(b"HTTP/1.1 200") && put_gate.as_ref().is_some_and(|g|g.enabled.load(Ordering::SeqCst)&&!g.before_commit.load(Ordering::SeqCst));
                                     if was_gated {
                                         let gate=put_gate.as_ref().unwrap();
                                         gate.arrived.fetch_add(1,Ordering::SeqCst);

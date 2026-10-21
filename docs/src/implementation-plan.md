@@ -21,7 +21,13 @@ It reserves namespace closing capacity and an inactive open in one local
 transaction before remote mutation. Its state, SDK and hosted acceptance steps
 remain separated. The [accepted state layer](creator-open-state.md) implements
 step A with schema 45, a full local gate and exact-source hosted/native regression
-acceptance. SDK wiring is next; native lifecycle support is unchanged.
+acceptance. The [SDK layer](creator-open-sdk.md),8022fae3, now passes its own full and hosted
+regression gates; native lifecycle support is unchanged.
+
+SDK step B now has an [accepted implementation and verification contract](creator-open-sdk.md).
+It adds typed creation, restart observation without a second PUT and chunk-bound
+metadata-only recovery; full/hosted acceptance passed. Schema45 and native
+lifecycle flags remain unchanged.
 
 | Phase | Deliverable | Completion evidence |
 | --- | --- | --- |
@@ -3729,3 +3735,16 @@ are retained. No new native flag, provider mutation or SDK flow is enabled.
 Next: typed SDK admission and metadata-only mixed-role recovery, then sparse
 owned-unlinked publication, retry-forest/retention and native lifecycle. Physical
 startup, live provider and remote deployment acceptance remain separate.
+
+
+### Prospective creation SDK accepted —2026-10-21
+
+[SDK contract](creator-open-sdk.md), source8022fae3, now passes its own full
+local gate (988.85s/all739 unchanged) and exact-source
+Linux/Windows/book CI39633251767. All10 new SDK cases and prior state/native
+regressions passed; strict21+14/project/raw/source/log review is retained.
+Schema45 and creatorformat3 remain unchanged. No native lifecycle flag, real
+provider or user startup configuration is enabled. Next is sparse owned-unlinked
+publication with original fence/current-event and unresolved-effect barriers,
+then retention/retry-forest/native integration. Physical startup and remote
+provider/deployment acceptance remain separate.

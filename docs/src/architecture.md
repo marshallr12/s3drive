@@ -78,11 +78,11 @@ physical/authority proof into the same-owner namespace/open journal.
 
 [Prospective state admission](creator-open-state.md),20420d7/schema45, reserves
 an inactive open and namespace closing capacity in the same local transaction
-before future remote creation. Full local and own hosted Linux/Windows/native
-regressions passed. The diagram below is the intended integrated sequence:
-SDK wiring and chunk-backed native lifecycle callbacks remain separate work.
+before remote creation. The [typed SDK integration](creator-open-sdk.md),8022fae3,
+also passed full local and own hosted Linux/Windows/native regressions. The
+diagram shows this sequence; native lifecycle callbacks remain separate work.
 
-![State admission commits creator, inactive open and cleanup reservations locally before the planned SDK flow uploads to S3 and submits metadata to the Rust coordinator.](images/creator-open-admission.svg)
+![State admission commits creator, inactive open and cleanup reservations locally before the SDK flow uploads to S3 and submits metadata to the Rust coordinator.](images/creator-open-admission.svg)
 
 The existing direct-layout implementation below has native read/cache, explicit
 existing-file writes and [guarded file creation](native-creation.md). It remains

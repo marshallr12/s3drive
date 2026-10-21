@@ -4,7 +4,7 @@ use s3drive_managed::creation::{Creator, Draft};
 use s3drive_state::{
     chunk_mount, manifest_creation::Limits, namespace_client as names, namespace_client::opens,
 };
-async fn setup_owner(
+pub(super) async fn setup_owner(
     config: &s3drive_core::Config,
     root: &Path,
     s: &Server,

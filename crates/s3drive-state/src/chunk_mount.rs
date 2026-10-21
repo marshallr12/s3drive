@@ -431,6 +431,20 @@ impl Client {
     pub fn key(&self) -> &Key {
         &self.key
     }
+    /// Retained local store control only; grants no provider permission or
+    /// current remote ownership. Safe for metadata-only recovery construction.
+    pub async fn require_store(&self, store: ns::Store) -> Result<()> {
+        let key = self.key.clone();
+        self.owner
+            .call(move |worker| {
+                let binding = require(&worker.state.connection, &key)?;
+                if !binding.controls.iter().any(|c| c.store == store) {
+                    return Err("store is outside the retained chunk capability".into());
+                }
+                Ok(())
+            })
+            .await
+    }
     pub fn namespace(&self) -> crate::worker::Namespace {
         crate::worker::Namespace::chunk(self.owner.clone(), self.options, self.key.clone())
     }

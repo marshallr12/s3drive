@@ -32,8 +32,9 @@ Chunk directory creation subsequently passed its own native acceptance; see
 [its contract](native-chunk-directories.md). The latest state prerequisite is
 [prospective creation/open admission](creator-open-state.md),20420d7/schema45,
 with full local and own Linux/Windows/book/native regression acceptance. It
-reserves creator/open/cleanup capacity before the planned SDK creation flow;
-that SDK wiring remains next. No chunk-native lifecycle flag is enabled.
+reserves creator/open/cleanup capacity before remote creation. The
+[typed SDK integration](creator-open-sdk.md),8022fae3, now passes its own full
+local and hosted/native regressions. No chunk-native lifecycle flag is enabled.
 
 This profile remains experimental: rename/delete, deferred
 and owned-unlinked publication, full retry-forest retention/GC and larger

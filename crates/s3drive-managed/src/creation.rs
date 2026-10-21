@@ -2,6 +2,7 @@
 //! Receipts describe historical creation, never native flush or current liveness.
 use s3drive_authority::{Error, Kind, NodeGuard, Receipt, Reply, Request, Store, WireClient};
 use s3drive_s3::uploads::Executor;
+pub use s3drive_state::manifest_creation::CreationOpen;
 use s3drive_state::{
     Result, journal,
     manifest_creation::{self as local, Input, Record},
@@ -125,6 +126,8 @@ struct RecoveryShared {
     store: Store,
     slots: Semaphore,
     deadline: Duration,
+    store_scoped: bool,
+    chunk_owner: Option<String>,
 }
 /// Only saved metadata requests. No S3 client, credentials, staging or rebasing.
 #[derive(Clone)]
@@ -151,7 +154,38 @@ impl Recovery {
             store,
             slots: Semaphore::new(1),
             deadline,
+            store_scoped: false,
+            chunk_owner: None,
         })))
+    }
+    /// Saved metadata only on a retained chunk worker, scoped to this store and
+    /// its original client owner (ordinary unowned legacy records are allowed).
+    /// No S3 client, policy, fresh feature probe or kernel handle. Close through
+    /// the owning Storage.
+    pub async fn for_chunks(
+        chunks: &s3drive_state::chunk_mount::Client,
+        authority: WireClient,
+        store: Store,
+        limits: local::Limits,
+        deadline: Duration,
+    ) -> Result<Self> {
+        let mut recovery = Self::bind(
+            Log::Normal(chunks.creations(limits)?),
+            authority,
+            chunks.key().volume().into(),
+            store,
+            deadline,
+        )?;
+        tokio::time::timeout(
+            recovery.0.deadline,
+            chunks.require_store(recovery.0.store.clone()),
+        )
+        .await
+        .map_err(|_| Failure::Deadline)??;
+        let shared = Arc::get_mut(&mut recovery.0).ok_or(Failure::Binding)?;
+        shared.store_scoped = true;
+        shared.chunk_owner = Some(chunks.key().owner().into());
+        Ok(recovery)
     }
     pub async fn open_existing(
         directory: &Path,
@@ -171,14 +205,29 @@ impl Recovery {
         let log = Log::Restricted(local::RecoveryClient::open(directory).await?);
         Self::bind(log, authority, volume, store, deadline)
     }
+    fn matches_scope(&self, r: &Record) -> bool {
+        r.input().volume == self.0.volume
+            && r.input().store == self.0.store
+            && self.0.chunk_owner.as_ref().is_none_or(|expected| {
+                r.input()
+                    .owner
+                    .as_ref()
+                    .is_none_or(|owner| owner == expected)
+            })
+    }
     fn scope(&self, r: &Record) -> Result<()> {
-        if r.input().volume != self.0.volume || r.input().store != self.0.store {
+        if !self.matches_scope(r) {
             return Err(Failure::Binding.into());
         }
         Ok(())
     }
     pub async fn records(&self) -> Result<Vec<Record>> {
         let rows = self.0.log.records().await?;
+        if self.0.store_scoped {
+            // The journal validates the complete role before enumeration; a
+            // legitimate other store is not adopted and corruption is not hidden.
+            return Ok(rows.into_iter().filter(|r| self.matches_scope(r)).collect());
+        }
         for r in &rows {
             self.scope(r)?;
         }
@@ -234,6 +283,7 @@ struct Shared {
     executor: Executor,
     journal: local::Client,
     recovery: Recovery,
+    limits: local::Limits,
 }
 #[derive(Clone)]
 pub struct Creator(Arc<Shared>);
@@ -262,12 +312,13 @@ impl Creator {
             executor,
             journal,
             recovery,
+            limits,
         })))
     }
     pub fn recovery(&self) -> Recovery {
         self.0.recovery.clone()
     }
-    fn input(&self, d: Draft, owner: Option<String>) -> Result<Input> {
+    fn input(&self, d: Draft, owner: Option<String>, open: Option<CreationOpen>) -> Result<Input> {
         let mut i = Input {
             volume: self.0.recovery.0.volume.clone(),
             operation: d.operation,
@@ -278,7 +329,7 @@ impl Creator {
             source: [0; 32],
             fingerprint: "0".repeat(64),
             owner,
-            open: None,
+            open,
         };
         let target = self.0.executor.recovery_target(&i.object_key()?)?;
         i.source = *target.source();
@@ -349,16 +400,37 @@ impl Creator {
     /// Retry the identical draft after any unknown result. Never substitute a
     /// new operation, parent revision, filename or credential generation.
     pub async fn create(&self, draft: Draft) -> Result<HistoricalCreation> {
-        self.create_mode(draft, None).await
+        self.create_mode(draft, None, None).await
     }
     /// Original deferred ownership is durable; this is not an active native handle.
     pub async fn create_deferred(&self, draft: Draft, owner: String) -> Result<HistoricalCreation> {
-        self.create_mode(draft, Some(owner)).await
+        self.create_mode(draft, Some(owner), None).await
+    }
+    /// Reserve the original inactive open and cleanup capacity before any PUT
+    /// or metadata mutation. The result is historical, never a live handle.
+    pub async fn create_for_open(
+        &self,
+        draft: Draft,
+        chunks: &s3drive_state::chunk_mount::Client,
+        open: CreationOpen,
+    ) -> Result<HistoricalCreation> {
+        if !chunks.same_storage(&self.0.executor.storage())
+            || chunks.key().volume() != self.0.recovery.0.volume
+        {
+            return Err(Failure::Binding.into());
+        }
+        self.create_mode(
+            draft,
+            Some(chunks.key().owner().into()),
+            Some((chunks.clone(), open)),
+        )
+        .await
     }
     fn create_mode<'a>(
         &'a self,
         draft: Draft,
         owner: Option<String>,
+        prospective: Option<(s3drive_state::chunk_mount::Client, CreationOpen)>,
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<HistoricalCreation>> + Send + 'a>>
     {
         Box::pin(async move {
@@ -369,20 +441,35 @@ impl Creator {
                 .slots
                 .try_acquire()
                 .map_err(|_| Failure::Busy)?;
-            tokio::time::timeout(self.0.recovery.0.deadline, self.create_inner(draft, owner))
-                .await
-                .map_err(|_| Failure::Deadline)?
+            tokio::time::timeout(
+                self.0.recovery.0.deadline,
+                self.create_inner(draft, owner, prospective),
+            )
+            .await
+            .map_err(|_| Failure::Deadline)?
         })
     }
     async fn create_inner(
         &self,
         draft: Draft,
         owner: Option<String>,
+        prospective: Option<(s3drive_state::chunk_mount::Client, CreationOpen)>,
     ) -> Result<HistoricalCreation> {
-        let input = self.input(draft, owner)?;
-        let old = self
-            .0
-            .journal
+        if let Some((chunks, _)) = &prospective {
+            chunks
+                .require_store(self.0.recovery.0.store.clone())
+                .await?;
+        }
+        let input = self.input(
+            draft,
+            owner,
+            prospective.as_ref().map(|(_, open)| open.clone()),
+        )?;
+        let journal = match &prospective {
+            Some((chunks, _)) => chunks.creations(self.0.limits)?,
+            None => self.0.journal.clone(),
+        };
+        let old = journal
             .records()
             .await?
             .into_iter()
@@ -415,7 +502,14 @@ impl Creator {
                 .executor
                 .check_create(&input.object_key()?, input.body()?.len() as u64)?;
         }
-        let r = self.0.journal.begin(input.clone()).await?;
+        let r = if claimed && prospective.is_some() {
+            // Existing claim permission was consumed before this runtime. Its
+            // validated original open remains reserved. Do not request fresh
+            // session admission merely to observe that exact physical outcome.
+            old.ok_or(Failure::NotPrepared)?
+        } else {
+            journal.begin(input.clone()).await?
+        };
         let g = if let Some(g) = r.generation() {
             g
         } else {
@@ -434,7 +528,7 @@ impl Creator {
                 staging.append_at(g, 0, Arc::from(body)).await?;
             }
             staging.seal(g).await?;
-            self.0.journal.link(input.operation.clone(), g).await?;
+            journal.link(input.operation.clone(), g).await?;
             g
         };
         self.0.executor.flush(g).await?;
@@ -443,7 +537,7 @@ impl Creator {
         if claimed {
             self.fresh(&input).await?;
         }
-        let r = self.0.journal.prepare_request(input.operation).await?;
+        let r = journal.prepare_request(input.operation).await?;
         self.0.recovery.resume_inner(r).await
     }
 }

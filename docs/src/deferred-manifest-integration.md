@@ -2,15 +2,16 @@
 
 Updated2026-10-21. The initial authority transaction, creation client and same-owner open-journal
 provenance bridge and prospective state closing budget are independently accepted.
-SDK wiring of that budget, sparse owned-unlinked publication and native lifecycle integration remain future
-work. Keep delete-on-close/save-replace flags unsupported in the chunk profile.
+[SDK wiring of that budget](creator-open-sdk.md) is also accepted. Sparse
+owned-unlinked publication and native lifecycle integration remain future work. Keep delete-on-close/save-replace flags unsupported in the chunk profile.
 
 | Boundary | Current evidence |
 | --- | --- |
 | Canonical node, initial payload/history and original fence/event | [Authority/state contract](atomic-deferred-manifest-create.md),3e670915/schema42, full local and own Linux/Windows/book/native regression acceptance |
 | Original client owner, physical root proof, exact request/outcome and restricted recovery | [Creation client](deferred-creation-client.md),9381456/schema43, full local and own Linux/Windows/book/native regression acceptance |
 | Verified creator to same-owner namespace/open journal | [Verified import](creator-provenance-import.md),3c38ad1/schema44, full local and own Linux/Windows/book/native regression acceptance |
-| State closing capacity for prospective creation | [Accepted state layer](creator-open-state.md),20420d7/schema45/format3; full local and own Linux/Windows/book/native regression acceptance; SDK wiring pending |
+| State closing capacity for prospective creation | [Accepted state layer](creator-open-state.md),20420d7/schema45/format3; full local and own Linux/Windows/book/native regression acceptance; SDK wiring accepted separately |
+| SDK typed admission and metadata-only chunk recovery | [Accepted SDK](creator-open-sdk.md),8022fae3; own full local and Linux/Windows/book/native regressions, exact-source/strict artifact/raw review passed; no native flag enabled |
 | Sparse publication after unlink or owner-bound replacement | Planned; exact fence/current event and unresolved-effect barriers required |
 | Native v8 deferred/open-unlinked/delete/save-replace callbacks | Unsupported until their library and FUSE/WinFsp recovery gates pass |
 

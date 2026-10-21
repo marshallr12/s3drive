@@ -1,0 +1,26 @@
+{
+  "source_svg": "docs/src/images/creator-open-admission.svg",
+  "svg_sha256": "1c346f61407498c698c3412cf8be10ca65757a81eff3e6704a320e7046fa5c15",
+  "failed_attempts": [
+    {
+      "renderer": "ImageMagick convert",
+      "exit_code": 1,
+      "reason": "rsvg-convert delegate executable absent; no image produced"
+    },
+    {
+      "renderer": "system librsvg GI adapter, first attempt",
+      "exit_code": 1,
+      "reason": "dimension result tuple has out_width/out_height fields, not width/height; corrected by unpacking documented result; SVG unchanged"
+    }
+  ],
+  "successful_renderer": "system Python3 gi Rsvg2.0 render_document plus Cairo",
+  "dimensions": [
+    1200,
+    760
+  ],
+  "rendered_png_sha256": "94126b5c7df0faea6f6fb99861a1baf5546974548ac03c49859b51ac8fecdf24",
+  "visually_reviewed": true,
+  "text_and_arrows_legible": true,
+  "clipping_or_overlap_observed": false,
+  "scope": "Diagram status and architecture rendering only; no runtime or test change"
+}

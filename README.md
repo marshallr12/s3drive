@@ -46,8 +46,9 @@ The [deferred creation components](docs/src/deferred-manifest-integration.md)
 include the atomic authority transaction, verified creator/open import and
 [prospective state admission](docs/src/creator-open-state.md). State source
 20420d7/schema45 passed its full local and own Linux/Windows/book/native regression
-gates. It reserves an inactive open and cleanup capacity atomically. SDK wiring
-and chunk-backed native lifecycle integration remain pending.
+gates. It reserves an inactive open and cleanup capacity atomically. The [typed creation SDK](docs/src/creator-open-sdk.md), source8022fae3, now passes
+its own full local and hosted Linux/Windows/book/native regressions. Chunk-backed
+native lifecycle integration remains pending.
 
 This remains an experimental profile. Rename/delete, deferred/open-unlinked
 publication and complete retention/GC remain unfinished.

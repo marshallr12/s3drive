@@ -2,7 +2,7 @@
 
 Design reviewed against source on 2026-10-21 at `daf5806`. The
 [accepted state layer](creator-open-state.md) now implements step A with
-schema 45. SDK/native integration remains proposed; no user installation was
+schema 45. [SDK integration](creator-open-sdk.md) is accepted; native integration remains proposed; no user installation was
 performed. The selected storage layout is
 immutable chunks plus manifests, with ordinary names in the mounted drive.
 This phase prepares local recovery capacity for deferred canonical creation;
@@ -190,8 +190,8 @@ saturated historical-import recovery/compensation path remains separate work.
 | Step | Required behavior and evidence |
 | --- | --- |
 | A — state admission and validation | [Accepted state layer](creator-open-state.md),20420d7/schema45, full local and own Linux/Windows/book/native regression acceptance. No SDK or native call site enabled. |
-| B — SDK entry point | Same-worker capability and shared concurrency/deadline; no PUT/authority mutation on quota/session/binding refusal; exact replay/observation after uncertain remote outcomes through the real SDK and loopback authority. |
-| C — hosted acceptance | State source20420d7 passed these gates. SDK step B needs fresh full local/exact-source Linux and Windows/native regression/strict artifact/source/raw-log gates after its own changes; physical/provider gates remain separate. |
+| B — SDK entry point | [Accepted SDK](creator-open-sdk.md),8022fae3. Same-worker capability and shared concurrency/deadline; no PUT/authority mutation on quota/session/binding refusal; exact replay/observation after uncertain remote outcomes through the real SDK and loopback authority. |
+| C — hosted acceptance | State source20420d7 passed these gates. SDK step B source8022fae3 also passed its fresh full local/exact-source Linux and Windows/native regression/strict artifact/source/raw-log gates; physical/provider gates remain separate. |
 | D — later native lifecycle | Sparse owned-unlinked publication with original fence/current event, unresolved-effect barriers and FUSE/WinFsp deletion/replacement tests. No lifecycle flag enabled by A–C. |
 
 State acceptance must cover exact/changed retries, operation collisions,
@@ -215,7 +215,8 @@ An actual schema-44 binary must refuse a disposable schema-45 database without
 changing it; restore and verify the new binary afterward. Portable unit tests
 do not establish WinFsp/FUSE, Wasabi, physical sign-in/reboot or multi-host
 fencing behavior. The [state layer](creator-open-state.md) has full local and
-hosted acceptance; **SDK and integrated native lifecycle acceptance remain pending**.
+hosted acceptance; the [SDK step](creator-open-sdk.md) also passed its own full and hosted gates.
+**Integrated native lifecycle acceptance remains pending**.
 
 ## Original design publication evidence
 
