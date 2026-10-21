@@ -1,7 +1,42 @@
 # S3Drive handoff
 
-Updated 2026-10-21. Goal ACTIVE/incomplete. Assistant Mira. No voice-context
-handoff capability available. Read this and docs/src/implementation-plan.md first.
+Updated 2026-10-21. Work paused for transfer; overall goal incomplete. Assistant
+Mira. No voice-context handoff capability available.
+
+## Start here: switch to the active development branch
+
+**Resume implementation on `codex/manifest-event-fence`, not on `main`.**
+The pushed transfer checkpoint is `a6e91434b465347818a9da3c4b6373fddda45dba`.
+Main retains the accepted schema45 baseline; the development branch contains the
+unaccepted schema46 event-bound manifest authority candidate, portable evidence,
+and the current detailed handoff. Do not infer that this candidate is accepted
+or merge it merely to resume work.
+
+From a clean checkout on another workstation:
+
+```sh
+git fetch origin
+git switch codex/manifest-event-fence
+git pull --ff-only
+```
+
+If Git reports that the branch is already checked out in another local worktree,
+continue in that worktree instead of forcing a checkout. On the original
+workstation it is `/home/marshall/src/worktrees/s3drive-manifest-event-fence`.
+Preserve unrelated or dirty work before switching; do not reset or discard it.
+
+After switching, read that branch's `AGENTS.md`, `HANDOFF.md`,
+`docs/src/implementation-plan.md` and `docs/src/manifest-event-fence.md` before
+implementation. Its focused tests, Clippy and documentation checks passed;
+the full local gate, actual old45/new46 executable compatibility and the
+candidate's own hosted/native acceptance remain pending. No provider mutation,
+startup installation or native lifecycle enablement is authorized by this
+handoff. Repository visibility remains public.
+
+The sections below describe the accepted baseline and historical evidence.
+They do not supersede the active branch's handoff. Historical worktree and /tmp
+paths may no longer exist after cleanup; use the committed evidence and resume
+instructions on the development branch.
 
 ## Decisions and permissions
 
