@@ -647,3 +647,16 @@ fn event_manifest_live_old_marker_cannot_admit_the_new_guard_or_epoch_read() {
         .unwrap();
     assert!(s.namespace_apply(&q).is_ok());
 }
+
+#[test]
+fn event_manifest_ready_marker_is_invisible_until_its_complete_atomic_publication() {
+    let temp = tempfile::tempdir().unwrap();
+    let ready = temp.path().join("ready");
+    super::super::super::event::publish_ready(&ready, |temporary| {
+        assert!(!ready.exists(), "parent must not observe partial readiness");
+        assert_eq!(std::fs::read(temporary).unwrap(), b"ready");
+    })
+    .unwrap();
+    assert_eq!(std::fs::read(&ready).unwrap(), b"ready");
+    assert!(!ready.with_extension("tmp").exists());
+}

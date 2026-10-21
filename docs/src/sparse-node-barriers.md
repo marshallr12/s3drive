@@ -52,6 +52,20 @@ Local durable-state tests are recorded as blocked/failing for that reason, not
 accepted, and the storage guard remains intact. Suitable standard GitHub runners
 are authorized for the full Linux/Windows and separate native regression gates.
 
+The first hosted candidate49d1c6c, run39670781416, passed all eleven new
+Linux barrier cases but failed an existing authority crash-fixture readiness
+assertion: the parent observed the marker between file creation and its write.
+The checkpoint now writes a temporary file and atomically renames it, as the
+other crash fixtures do. A deterministic regression pauses before rename to
+assert that the complete temporary bytes exist while parent-visible readiness
+is absent. A deterministic negative control that exposes the old direct-write
+creation window fails that exact assertion; the restored implementation passes.
+The eight original kill boundaries and strong byte assertions remain.
+Source review also found the fixture hook was not compile-time test-only; it is
+now guarded by cfg(test), with an inert non-test stub. No ordinary authority
+mutation semantics change. The failed run is retained; only the corrected
+candidate's full gates can accept this slice.
+
 Eleven new durable-journal cases cover preparation-only clean heads, claimed
 physical uploads and complete trees without root records, multiple same-node
 plans, rejection, cross-node filtering plus corrupt excluded records, reciprocal

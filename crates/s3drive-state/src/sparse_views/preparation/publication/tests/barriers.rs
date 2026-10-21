@@ -241,11 +241,20 @@ fn sparse_barrier_filters_nodes_only_after_validating_the_complete_source_graph(
     let t = tempfile::tempdir().unwrap();
     let mut s = State::open_managed(&t.path().join("s")).unwrap();
     let f = fixture();
+    let key = chunk(&mut s, &f);
     let v = clean(&mut s, &f);
     pj(&mut s).begin(request(&f, &v, 9)).unwrap();
     let volume = f.binding.base().unwrap().volume().to_owned();
     namespace_pending(&s.connection, &volume, &hex(&[99; 16])).unwrap();
     namespace_pending(&s.connection, &hex(&[99; 16]), &f.node.id).unwrap();
+    let mut unrelated = f.node.clone();
+    unrelated.id = hex(&[99; 16]);
+    unrelated.kind = ns::Kind::EmptyFile;
+    unrelated.payload = None;
+    // A real public namespace admission for another node remains available.
+    names(&mut s, &key)
+        .begin(removal(&f, &unrelated, 80))
+        .unwrap();
     s.connection
         .execute("UPDATE sparse_preparations SET state_hash=zeroblob(32)", [])
         .unwrap();
