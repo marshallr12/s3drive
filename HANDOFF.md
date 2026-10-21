@@ -151,11 +151,10 @@ continue on this workstation after the transfer checkpoint is pushed.
 ## Worktree cleanup at transfer
 
 User explicitly requested retirement of obsolete worktrees and local/remote
-branches. Removed44 clean obsolete worktrees,110 local and106 remote branches.
+branches. Removed44 clean obsolete worktrees,110 local and107 remote branches.
 Main and active event-fence worktree remain. A dirty detached experiment remains
 at `/tmp/s3drive-staged-range-study-20261018-tjtdatmk/source`; its related local
-`codex/pending-scan-proofs` and remote branches of that name plus
-`codex/pending-scan-repeat-64aa073` are preserved. These are historical experiment
+`codex/pending-scan-proofs` and its remote branch are preserved. These are historical experiment
 references, not the active development branch. Do not delete dirty experiment
 bytes or interpret its portable tests as acceptance of this phase.
 
@@ -168,3 +167,11 @@ the active checkpoint is pushed separately. The committed cleanup archive
 `docs/src/evidence/workstation-cleanup-20261021.tar.gz` records exact retired
 heads, accepted ancestor/runtime matches, superseded backups and guarded results.
 No repository visibility setting was changed.
+
+Cleanup addendum: the remote-only duplicate `codex/pending-scan-repeat-64aa073`
+was also removed with its exact expected64aa073 lease. Its identical head remains
+under `codex/pending-scan-proofs` and in the recovery bundle. Final remote branch
+count is three: main, manifest-event-fence and pending-scan-proofs. The original
+cleanup archive records the preceding106 deletions; this addendum accounts for
+the107th. Checkpoint implementation commit is0a236de; this documentation update
+records the final cleanup state without changing runtime inputs.
