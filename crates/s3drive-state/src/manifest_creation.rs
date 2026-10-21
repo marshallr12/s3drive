@@ -225,7 +225,39 @@ fn projection(rows: &BTreeMap<String, Record>) -> Result<[u8; 32]> {
         .collect::<Result<_>>()?;
     hash(b"s3drive-empty-creation-membership-v1\0", &entries)
 }
+/// Original acknowledged deferred creation, independently checked against its
+/// retained staging/upload metadata. Payload body bytes are not read or repaired.
+pub(crate) fn verified_creation(db: &Connection, operation: &str) -> Result<Record> {
+    let r = inspect_with_witnesses(db, false)?
+        .remove(operation)
+        .ok_or(Failure::Missing)?;
+    if r.format != 2 || r.receipt.is_none() || r.input.owner.is_none() {
+        return Err(Failure::Incomplete.into());
+    }
+    check_witness(db, &r)?;
+    Ok(r)
+}
+fn check_witness(db: &Connection, record: &Record) -> Result<()> {
+    if let Some(generation) = record.generation {
+        if let Some(proof) = &record.physical {
+            if journal_impl::verified_physical(db, &record.input, generation)? != *proof {
+                return Err(Failure::Corrupt.into());
+            }
+        } else {
+            journal_impl::check_staged(db, &record.input, generation, false)?;
+        }
+    }
+    Ok(())
+}
 fn inspect(db: &Connection) -> Result<BTreeMap<String, Record>> {
+    inspect_with_witnesses(db, true)
+}
+// Keep the complete role membership/hash/format projection for a targeted
+// provenance read, then validate that exact creator's physical witness once.
+fn inspect_with_witnesses(
+    db: &Connection,
+    all_witnesses: bool,
+) -> Result<BTreeMap<String, Record>> {
     let mut rows = BTreeMap::new();
     let schema: i32 = db.pragma_query_value(None, "user_version", |row| row.get(0))?;
     let mut q=db.prepare("SELECT CASE WHEN length(CAST(operation AS BLOB))=32 THEN operation END,CASE WHEN length(record) BETWEEN 1 AND 65536 THEN record END,CASE WHEN length(state_hash)=32 THEN state_hash END FROM manifest_creations ORDER BY operation LIMIT 129")?;
@@ -245,13 +277,8 @@ fn inspect(db: &Connection) -> Result<BTreeMap<String, Record>> {
         if record.format == 2 && schema < 43 {
             return Err(Failure::Corrupt.into());
         }
-        if let Some(generation) = record.generation {
-            journal_impl::check_staged(db, &record.input, generation, false)?;
-            if let Some(proof) = &record.physical
-                && journal_impl::verified_physical(db, &record.input, generation)? != *proof
-            {
-                return Err(Failure::Corrupt.into());
-            }
+        if all_witnesses {
+            check_witness(db, &record)?;
         }
         if record.input.operation != id
             || digest != record_hash(&record)?

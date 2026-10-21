@@ -187,7 +187,9 @@ fn control(open: &OpenInput, input: &Input) -> bool {
 }
 fn target(input: &Input) -> Option<&str> {
     match &input.request.mutation {
-        Mutation::CreateDeferredEntry { .. } => Some(&input.request.operation),
+        Mutation::CreateDeferredEntry { .. } | Mutation::CreateDeferredEmptyManifest { .. } => {
+            Some(&input.request.operation)
+        }
         Mutation::PrepareRemoval { node, .. }
         | Mutation::ArmRemoval { node, .. }
         | Mutation::TransitionRemoval { node, .. }
@@ -214,7 +216,7 @@ fn valid_input(input: &OpenInput, owner: &str) -> Result<()> {
         if !input.delete_on_close
             || !control(input, admission)
             || target(admission) != Some(&input.node)
-            || !matches!(&admission.request.mutation,Mutation::PrepareRemoval{owner:who,..}|Mutation::CreateDeferredEntry{owner:who,..} if who==owner)
+            || !matches!(&admission.request.mutation,Mutation::PrepareRemoval{owner:who,..}|Mutation::CreateDeferredEntry{owner:who,..}|Mutation::CreateDeferredEmptyManifest{owner:who,..} if who==owner)
         {
             return Err("per-open admission changed frozen identity or owner".into());
         }
@@ -244,13 +246,17 @@ fn reduce(db: &Connection, record: &mut OpenRecord, event: &Event) -> Result<()>
     if !id(&event.id) || record.events.iter().any(|e| e.id == event.id) {
         return Err("duplicate or invalid per-open event".into());
     }
+    if let Action::Link { input, .. } = &event.action {
+        super::creator_import::check_link(db, input)?;
+    }
     match &event.action {
         Action::Activate { proof } if record.events.is_empty() => {
             if let Some(proof) = proof {
                 let saved = super::load(db, &proof.input.request.operation)?
                     .ok_or("activation namespace proof missing")?;
                 let (node, deferred) = match &proof.input.request.mutation {
-                    Mutation::CreateDeferredEntry { .. } => {
+                    Mutation::CreateDeferredEntry { .. }
+                    | Mutation::CreateDeferredEmptyManifest { .. } => {
                         (proof.input.request.operation.as_str(), true)
                     }
                     Mutation::PrepareRemoval { node, .. }
@@ -339,6 +345,7 @@ fn reduce(db: &Connection, record: &mut OpenRecord, event: &Event) -> Result<()>
                     Mutation::ArmRemoval { .. } => Some(RemovalMode::Pending),
                     Mutation::PrepareRemoval { .. }
                     | Mutation::CreateDeferredEntry { .. }
+                    | Mutation::CreateDeferredEmptyManifest { .. }
                     | Mutation::MoveDeferredEntry { .. } => Some(RemovalMode::Deferred),
                     Mutation::TransitionRemoval { mode, .. } => Some(*mode),
                     _ => None,
@@ -456,6 +463,7 @@ fn load(db: &Connection, key: &str) -> Result<Option<(Row, OpenRecord)>> {
     };
     let input: OpenInput = serde_json::from_slice(&bytes)?;
     valid_input(&input, &owner)?;
+    super::creator_import::check_admission(db, &input)?;
     if input.session_bound {
         session::binding(db, &input.session, &input.volume)?;
     }
@@ -608,6 +616,7 @@ impl<'a> Journal<'a> {
         self.chunk_check()?;
         let owner = identity::ensure(self.state)?;
         valid_input(&input, &owner)?;
+        super::creator_import::check_admission(&self.state.connection, &input)?;
         if let Some(key) = &self.chunk {
             crate::chunk_mount::verify_key(&self.state.connection, key)?.open(&input)?;
         }
@@ -689,7 +698,18 @@ impl<'a> Journal<'a> {
         if a != 1 || b != 1 || load(&tx, &row.input.id)?.as_ref().map(|(_, r)| r) != Some(&record) {
             return Err("per-open preparation was not durably recorded".into());
         }
+        let imported = record
+            .input
+            .admission
+            .as_ref()
+            .is_some_and(|a| super::creator_import::canonical(&a.request.mutation));
+        if imported {
+            super::creator_import::checkpoint("CreatorOpenStored")?;
+        }
         tx.commit()?;
+        if imported {
+            super::creator_import::checkpoint("CreatorOpenCommitted")?;
+        }
         Ok(record)
     }
     pub fn get(&self, key: &str) -> Result<OpenRecord> {
@@ -965,7 +985,19 @@ impl<'a> Journal<'a> {
         if a != 1 || b != 1 || load(&tx, key)?.as_ref().map(|(_, r)| r) != Some(&record) {
             return Err("per-open event was not durably committed".into());
         }
+        let imported = matches!(event.action, Action::Activate { .. })
+            && record
+                .input
+                .admission
+                .as_ref()
+                .is_some_and(|a| super::creator_import::canonical(&a.request.mutation));
+        if imported {
+            super::creator_import::checkpoint("CreatorActivationStored")?;
+        }
         tx.commit()?;
+        if imported {
+            super::creator_import::checkpoint("CreatorActivationCommitted")?;
+        }
         Ok(record)
     }
 }

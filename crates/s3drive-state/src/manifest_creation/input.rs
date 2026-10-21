@@ -197,7 +197,7 @@ impl Input {
         }
         Ok(p)
     }
-    pub(super) fn check_receipt(&self, request: &ns::Apply, r: &ns::Receipt) -> Result<()> {
+    pub(crate) fn check_receipt(&self, request: &ns::Apply, r: &ns::Receipt) -> Result<()> {
         let payload = self.payload(request, r.sequence)?;
         let expected = ns::Node {
             id: self.operation.clone(),

@@ -16,7 +16,8 @@ pub(super) fn fence(input: &Input) -> Option<RemovalFence> {
     match &input.request.mutation {
         Mutation::ArmRemoval { owner, .. }
         | Mutation::PrepareRemoval { owner, .. }
-        | Mutation::CreateDeferredEntry { owner, .. } => Some(RemovalFence {
+        | Mutation::CreateDeferredEntry { owner, .. }
+        | Mutation::CreateDeferredEmptyManifest { owner, .. } => Some(RemovalFence {
             intent: input.request.operation.clone(),
             owner: owner.clone(),
         }),
@@ -88,6 +89,7 @@ fn history(records: &[Record]) -> Result<History<'_>> {
                 Mutation::ArmRemoval { .. }
                     | Mutation::PrepareRemoval { .. }
                     | Mutation::CreateDeferredEntry { .. }
+                    | Mutation::CreateDeferredEmptyManifest { .. }
             ) {
                 if active
                     .insert(
@@ -101,6 +103,7 @@ fn history(records: &[Record]) -> Result<History<'_>> {
                                 r.input.request.mutation,
                                 Mutation::PrepareRemoval { .. }
                                     | Mutation::CreateDeferredEntry { .. }
+                                    | Mutation::CreateDeferredEmptyManifest { .. }
                             ) {
                                 RemovalMode::Deferred
                             } else {
@@ -262,7 +265,9 @@ fn required_slots(records: &[Record]) -> Result<usize> {
         .filter(|r| r.outcome.is_none())
         .map(|r| match r.input.request.mutation {
             Mutation::ArmRemoval { .. } => 1,
-            Mutation::PrepareRemoval { .. } | Mutation::CreateDeferredEntry { .. } => 2,
+            Mutation::PrepareRemoval { .. }
+            | Mutation::CreateDeferredEntry { .. }
+            | Mutation::CreateDeferredEmptyManifest { .. } => 2,
             _ => 0,
         })
         .sum::<usize>();
@@ -285,7 +290,10 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
     let h = history(&records)?;
     let owned = &h.active;
     if fence(input).is_some() {
-        let created = matches!(input.request.mutation, Mutation::CreateDeferredEntry { .. });
+        let created = matches!(
+            input.request.mutation,
+            Mutation::CreateDeferredEntry { .. } | Mutation::CreateDeferredEmptyManifest { .. }
+        );
         let id = if created {
             &input.request.operation
         } else {
@@ -296,6 +304,7 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
             Mutation::ArmRemoval { .. }
             | Mutation::PrepareRemoval { .. }
             | Mutation::CreateDeferredEntry { .. }
+            | Mutation::CreateDeferredEmptyManifest { .. }
                 if old.is_none() => {}
             Mutation::CancelRemoval { .. }
             | Mutation::CommitRemoval { .. }
@@ -394,7 +403,10 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
 }
 fn protected(input: &Input) -> Vec<&str> {
     let mut ids: Vec<_> = input.entries.iter().map(|e| e.id.as_str()).collect();
-    if matches!(input.request.mutation, Mutation::CreateDeferredEntry { .. }) {
+    if matches!(
+        input.request.mutation,
+        Mutation::CreateDeferredEntry { .. } | Mutation::CreateDeferredEmptyManifest { .. }
+    ) {
         ids.push(&input.request.operation);
     }
     ids
@@ -402,9 +414,9 @@ fn protected(input: &Input) -> Vec<&str> {
 fn touched(input: &Input) -> Vec<&str> {
     let mut ids = protected(input);
     match &input.request.mutation {
-        Mutation::CreateEntry { parent, .. } | Mutation::CreateDeferredEntry { parent, .. } => {
-            ids.push(parent)
-        }
+        Mutation::CreateEntry { parent, .. }
+        | Mutation::CreateDeferredEntry { parent, .. }
+        | Mutation::CreateDeferredEmptyManifest { parent, .. } => ids.push(parent),
         Mutation::RemoveEntry { parent, .. }
         | Mutation::ArmRemoval { parent, .. }
         | Mutation::PrepareRemoval { parent, .. }

@@ -57,7 +57,7 @@
 - [Chunk-backed directory creation](native-chunk-directories.md)
 - [Atomic deferred canonical creation](atomic-deferred-manifest-create.md)
 - [Deferred canonical creation client](deferred-creation-client.md)
-- [Creator provenance import proposal](creator-provenance-import.md)
+- [Verified creator provenance import](creator-provenance-import.md)
 - [Deferred canonical manifest integration](deferred-manifest-integration.md)
 - [Bounded local retention plan](mixed-retention-plan.md)
 - [Observing external clean versions: proposal](external-clean-adoption.md)

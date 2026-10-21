@@ -27,7 +27,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 43;
+pub const SCHEMA_VERSION: i32 = 44;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
@@ -315,6 +315,16 @@ impl State {
             }
             if version < 41 {
                 tx.execute_batch(include_str!("../migrations/041.sql"))?;
+            }
+            // Imported creation records cannot be laundered through an old
+            // marker. Existing43 roles keep every byte; a transaction-local44
+            // marker enables their strict role validators. Any later failure
+            // rolls back this marker together with the rest of initialization.
+            if version < 44 {
+                namespace_client::creator_import::require_pre44(&tx)?;
+            }
+            if version == 43 {
+                tx.pragma_update(None, "user_version", SCHEMA_VERSION)?;
             }
             chunk_mount::check_schema(&tx)?;
             chunk_mount::validate_all(&tx)?;

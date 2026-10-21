@@ -2,6 +2,8 @@
 //! fixtures/dummy profiles only. No provider or mounted chunk-format acceptance.
 #[path = "chunk_publication/composition.rs"]
 mod composition;
+#[path = "chunk_publication/creator_import.rs"]
+mod creator_import;
 #[path = "chunk_publication/deferred_creation.rs"]
 mod deferred_creation;
 #[path = "chunk_publication/empty_creation.rs"]
@@ -1200,8 +1202,11 @@ async fn chunk_child() {
             | "source_recover_known"
             | "empty_recover"
             | "deferred_client_recover"
+            | "creator_import_recover"
     ) {
-        if mode == "deferred_client_recover" {
+        if mode == "creator_import_recover" {
+            Box::pin(creator_import::recover(&root, &s)).await;
+        } else if mode == "deferred_client_recover" {
             Box::pin(deferred_creation::killed_recovery(&root, &s)).await;
         } else if mode == "empty_recover" {
             Box::pin(empty_creation::killed_recovery(&root, &s)).await;
@@ -1246,6 +1251,9 @@ fn dispatch<'a>(
         "native_policy" => Box::pin(native_writer::policy(config, root, s)),
         "native_concurrency" => Box::pin(native_writer::concurrency(config, root, s)),
         "composition" => Box::pin(composition::flow(config, root, s)),
+        "creator_import_flow" => Box::pin(creator_import::flow(config, root, s)),
+        "creator_import_controls" => Box::pin(creator_import::controls(config, root, s)),
+        "creator_import_crash" => Box::pin(creator_import::crash(config, root, s)),
         "deferred_client_flow" => Box::pin(deferred_creation::flow(config, root, s)),
         "deferred_client_controls" => Box::pin(deferred_creation::controls(config, root, s)),
         "deferred_client_recovery" => Box::pin(deferred_creation::recovery(config, root, s)),
@@ -1297,6 +1305,7 @@ async fn run(mode: &str) {
         "mixed_roots_crash" => vec!["mixed_roots_crash", "mixed_roots_recover"],
         "crash" => vec!["crash", "recover"],
         "empty_crash" => vec!["empty_crash", "empty_recover"],
+        "creator_import_crash" => vec!["creator_import_crash", "creator_import_recover"],
         "deferred_client_crash" => vec!["deferred_client_crash", "deferred_client_recover"],
         "source_crash" => vec!["source_crash", "source_recover_unknown"],
         "source_ack_crash" => vec!["source_ack_crash", "source_recover_known"],
@@ -1486,6 +1495,7 @@ async fn run(mode: &str) {
                         | "mixed_roots_crash"
                         | "empty_crash"
                         | "deferred_client_crash"
+                        | "creator_import_crash"
                 ) {
                     killed && !status.success()
                 } else {
@@ -1493,7 +1503,10 @@ async fn run(mode: &str) {
                 },
             "case {stage}: {status}: {err}"
         );
-        if matches!(stage, "empty_crash" | "deferred_client_crash") {
+        if matches!(
+            stage,
+            "empty_crash" | "deferred_client_crash" | "creator_import_crash"
+        ) {
             assert_eq!(puts(&f), 1);
             let db = raw(tmp.path());
             db.execute("UPDATE staged_chunks SET data=zeroblob(length(data))", [])
@@ -1562,6 +1575,9 @@ async fn run(mode: &str) {
                 | "deferred_client_recovery"
                 | "empty_recover"
                 | "deferred_client_recover"
+                | "creator_import_recover"
+                | "creator_import_flow"
+                | "creator_import_controls"
         ) {
             assert_eq!(
                 f.requests.lock().unwrap().len(),
@@ -1571,6 +1587,8 @@ async fn run(mode: &str) {
         }
     }
     let expected = match mode {
+        "creator_import_flow" | "creator_import_crash" => 1,
+        "creator_import_controls" => 2,
         "deferred_client_flow"
         | "deferred_client_recovery"
         | "deferred_client_crash"
@@ -1863,4 +1881,19 @@ async fn deferred_client_crash() {
 #[tokio::test]
 async fn deferred_client_deadline() {
     run("deferred_client_deadline").await;
+}
+
+#[tokio::test]
+async fn creator_import_flow() {
+    run("creator_import_flow").await;
+}
+
+#[tokio::test]
+async fn creator_import_controls() {
+    run("creator_import_controls").await;
+}
+
+#[tokio::test]
+async fn creator_import_crash() {
+    run("creator_import_crash").await;
 }

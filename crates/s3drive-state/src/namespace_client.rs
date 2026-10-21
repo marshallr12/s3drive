@@ -1,5 +1,6 @@
 //! Client-local metadata intents. Persist exact admission and request before RPC.
 mod changes;
+pub(crate) mod creator_import;
 pub(crate) mod identity;
 pub mod opens;
 mod removals;
@@ -53,6 +54,7 @@ impl Input {
             self.request.mutation,
             Mutation::CreateEntry { .. }
                 | Mutation::CreateDeferredEntry { .. }
+                | Mutation::CreateDeferredEmptyManifest { .. }
                 | Mutation::MoveEntry { .. }
                 | Mutation::MoveDeferredEntry { .. }
                 | Mutation::RemoveEntry { .. }
@@ -113,6 +115,9 @@ fn checked_outcome(input: &Input, outcome: &namespace::Result<Receipt>) -> Resul
         Err(_) => return Ok(()),
         Ok(r) => r,
     };
+    if creator_import::canonical(&input.request.mutation) {
+        return creator_import::check_receipt(input, receipt);
+    }
     if !matches!(
         input.request.mutation,
         Mutation::CreateEntry { .. } | Mutation::CreateDeferredEntry { .. }
@@ -166,6 +171,7 @@ fn load(db: &Connection, id: &str) -> Result<Option<Record>> {
     if r.input.request.operation != id || hash(&r)? != checksum {
         return Err("namespace intent integrity failure".into());
     }
+    creator_import::check_record(db, &r)?;
     if let Some(o) = &r.outcome {
         checked_outcome(&r.input, o)?;
     }
@@ -262,6 +268,9 @@ impl<'a> Journal<'a> {
         removals::transition_cancellation(&self.state.connection, operation)
     }
     pub fn begin(&mut self, input: Input) -> Result<Record> {
+        if creator_import::canonical(&input.request.mutation) {
+            return Err("canonical creation requires the verified same-owner importer".into());
+        }
         input.validate()?;
         if let Some(b) = self.chunk_check()? {
             b.namespace(&input)?;

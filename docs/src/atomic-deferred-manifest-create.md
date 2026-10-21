@@ -156,8 +156,9 @@ repeat with a session-isolated supervisor and retain the authoritative status.
 ![Rust client verifies the S3 object and retains its local journal; the authority atomically records canonical file metadata, original fence/event and exact result.](images/atomic-deferred-canonical.svg)
 
 The physical root is still a caller claim at the metadata service. The [creation client](deferred-creation-client.md) now persists the original
-creator/physical proof. The next phase must import its exact receipt into the
-same-owner open journal. Sparse owned-unlinked publication must
+creator/physical proof. The [same-owner import](creator-provenance-import.md) now retains that exact
+receipt in namespace/open journals. Prospective closing admission remains before
+native create wiring. Sparse owned-unlinked publication must
 bind the original fence and current removal event. Native delete-on-close,
 save-replace/rename/delete, retention/GC and cold recovery remain unsupported in
 the chunk profile. Real managed Wasabi, physical MX/Windows10/11 reboot/session,

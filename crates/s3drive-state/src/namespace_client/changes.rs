@@ -81,7 +81,9 @@ pub(super) fn validate(input: &Input) -> Result<()> {
         entry.validate()?;
     }
     match &input.request.mutation {
-        Mutation::CreateEntry { .. } | Mutation::CreateDeferredEntry { .. }
+        Mutation::CreateEntry { .. }
+        | Mutation::CreateDeferredEntry { .. }
+        | Mutation::CreateDeferredEmptyManifest { .. }
             if input.entries.is_empty() =>
         {
             Ok(())

@@ -757,6 +757,14 @@ impl Namespace {
             })
             .await
     }
+    /// Import an already verified creator from this capability's SQLite owner.
+    /// No caller-supplied receipt or network permission is accepted.
+    pub async fn import_creation(
+        &self,
+        operation: String,
+    ) -> Result<crate::namespace_client::Record> {
+        self.call(move |j| j.import_creation(&operation)).await
+    }
     pub async fn begin(
         &self,
         input: crate::namespace_client::Input,

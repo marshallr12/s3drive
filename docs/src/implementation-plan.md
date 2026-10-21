@@ -3688,3 +3688,18 @@ cases and unchanged128KiB/native FUSE+WinFsp/startup regressions passed.
 publication and native lifecycle activation remain next. Retention/GC, cold
 recovery, physical workstation and freshly approved provider/service acceptance
 remain required; the full goal is incomplete.
+
+
+### Verified creator provenance import accepted — 2026-10-21
+
+[Import contract, architecture and indexed evidence](creator-provenance-import.md),
+3c38ad1/schema44/all377,15 runtime deltas from25fc926. Full local gate874.84s/all723
+unchanged and own CI39599329985 Linux/Windows/book all passed. Exact source/API ZIP,
+strict21+14/project/all35 field+type and complete raw-log review passed.14 state/
+3 SDK cases include seven killed-worker boundaries, actualSQL_FULL at import/
+open/activation, unchanged43→44 rows, old43-binary44 refusal, independent provenance,
+unknown local receipt, metadata-only no-credential recovery and successor epochs.
+Existing FUSE/WinFsp v8 I/O/directories/remount and128KiB/startup controls passed.
+Prospective closing headroom before native remote create, sparse owned-unlinked
+publication and native lifecycle remain next. Retention/GC, cold recovery, physical
+startup and provider/remote deployment acceptance remain incomplete.

@@ -51,7 +51,7 @@ function Parsed($Result) {
         $value.manifest.volume.id -cne $pin.volume -or
         $value.manifest.volume.name_policy -cne 'portable-collision-v1' -or
         $value.manifest.format -cne 's3drive-authority-snapshot' -or
-        $value.manifest.schema_version -ne 43) { throw 'Snapshot identity/validation contract changed' }
+        $value.manifest.schema_version -ne 44) { throw 'Snapshot identity/validation contract changed' }
     return $value
 }
 if ($Phase -eq 'Cancel') {

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="730" viewBox="0 0 1200 730">
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="none" stroke="#355671" stroke-width="1.5"/></marker></defs>
+<rect width="1200" height="730" fill="#f7f9fc"/>
+<g font-family="DejaVu Sans, sans-serif" fill="#243a4c">
+<text x="30" y="38" font-size="25" font-weight="bold">Verified creation evidence reaches the same-owner open journal</text>
+<text x="30" y="70" font-size="16" fill="#805311">Library metadata bridge; native lifecycle activation and owned-unlinked publication remain future work</text>
+<rect x="30" y="105" width="560" height="490" rx="14" fill="#edf3fa" stroke="#356c91" stroke-width="2"/>
+<text x="55" y="135" font-size="18" font-weight="bold" fill="#356c91">Rust client + one private local SQLite worker</text>
+<rect x="55" y="155" width="510" height="130" rx="10" fill="white" stroke="#356c91" stroke-width="1.5"/>
+<text x="75" y="183" font-size="18" font-weight="bold">Creation SDK and durable creation journal</text>
+<text x="75" y="215" font-size="15">Original operation / owner / source controls</text>
+<text x="75" y="242" font-size="15">Verified staging/upload witness + exact request</text>
+<text x="75" y="269" font-size="15">Saved combined payload / original-fence receipt</text>
+<rect x="55" y="385" width="510" height="160" rx="10" fill="white" stroke="#2d7b6d" stroke-width="1.5"/>
+<text x="75" y="415" font-size="18" font-weight="bold" fill="#2d7b6d">Namespace and open journals</text>
+<text x="75" y="447" font-size="15">Complete imported record; proof checked on load</text>
+<text x="75" y="474" font-size="15">Original owner / fence + current local deferred event</text>
+<text x="75" y="501" font-size="15">Session-bound admission and local activation facts</text>
+<text x="75" y="528" font-size="13" fill="#805311">Local records do not prove current remote ownership</text>
+<path d="M310 290 V378" fill="none" stroke="#355671" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="325" y="325" font-size="15" font-weight="bold">Verified same-owner import</text>
+<text x="325" y="350" font-size="12" fill="#536577">No caller receipt or path inference</text>
+<text x="325" y="372" font-size="12" fill="#536577">Original owner stays bound</text>
+<text x="55" y="576" font-size="14" fill="#536577">Local state stays outside the mounted tree</text>
+<rect x="700" y="130" width="455" height="170" rx="12" fill="white" stroke="#486c50" stroke-width="2"/>
+<text x="720" y="163" font-size="19" font-weight="bold" fill="#486c50">S3-compatible bucket</text>
+<text x="720" y="200" font-size="16">Immutable canonical 64-byte empty root</text>
+<text x="720" y="230" font-size="15">Create-only send and exact-byte observation</text>
+<text x="720" y="273" font-size="13" fill="#536577">No new S3 request is needed for historical import</text>
+<path d="M565 185 H695" fill="none" stroke="#355671" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="612" y="169" font-size="13">PUT</text>
+<path d="M700 232 H570" fill="none" stroke="#355671" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="607" y="253" font-size="13">observe</text>
+<rect x="700" y="385" width="455" height="210" rx="12" fill="white" stroke="#655b99" stroke-width="2"/>
+<text x="720" y="418" font-size="19" font-weight="bold" fill="#655b99">Rust coordinator + metadata SQLite</text>
+<text x="720" y="454" font-size="15">Atomic canonical node / payload / upload history</text>
+<text x="720" y="483" font-size="15">Original removal fence and initial event</text>
+<text x="720" y="512" font-size="15">Exact immutable creation result</text>
+<text x="720" y="554" font-size="13" fill="#536577">The coordinator records a caller upload claim</text>
+<text x="720" y="576" font-size="13" fill="#536577">It holds no S3 credentials</text>
+<path d="M565 210 H660 V440 H695" fill="none" stroke="#355671" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="600" y="204" font-size="12">Apply</text>
+<path d="M700 530 H620 V275 H570" fill="none" stroke="#355671" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="630" y="552" font-size="12">receipt</text>
+<rect x="30" y="635" width="1125" height="65" rx="10" fill="white" stroke="#b88538" stroke-width="1.5"/>
+<text x="48" y="662" font-size="16">Import and activation are separate durable operations; old runtime sessions remain obsolete.</text>
+<text x="48" y="687" font-size="13" fill="#805311">Closing capacity before new creates, native lifecycle and provider/startup acceptance remain separate.</text>
+</g></svg>

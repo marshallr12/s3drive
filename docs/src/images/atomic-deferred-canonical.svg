@@ -3,7 +3,7 @@
 <rect width="1200" height="600" fill="#f7f9fc"/>
 <g font-family="DejaVu Sans, sans-serif" fill="#243a4c">
 <text x="30" y="38" font-size="25" font-weight="bold">Canonical file creation and its original ownership commit together</text>
-<text x="30" y="69" font-size="16" fill="#805311">SDK/root verification implemented; open-journal import and native lifecycle remain future work</text>
+<text x="30" y="69" font-size="16" fill="#805311">SDK verification and journal import implemented; native lifecycle and owned-unlinked publication remain future work</text>
 <text x="30" y="100" font-size="13" fill="#536577">The client journal stays outside the mount. S3 stores immutable objects; authority metadata defines filenames.</text>
 <rect x="30" y="125" width="280" height="170" rx="12" fill="white" stroke="#356c91" stroke-width="2"/>
 <text x="46" y="156" font-size="16" font-weight="bold">Rust SDK + local SQLite</text>

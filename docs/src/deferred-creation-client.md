@@ -49,9 +49,9 @@ Done criteria:
 Expected footprint: manifest creation input/format/validation, Creator API and
 feature selection, focused state/SDK fixtures, schema marker/native assertions,
 book/handoff. No new dependency, native callback, provenance import, sparse
-owned-unlinked publisher, GC or service provisioning. The next phase must import
-this exact verified creator provenance into the same-owner open journal and bind
-publication to the original fence/current event. Real provider and physical
+owned-unlinked publisher, GC or service provisioning. The [verified provenance import](creator-provenance-import.md) now retains this
+exact creator in the same-owner namespace/open journal. Subsequent publication
+must bind the original fence and current event. Real provider and physical
 startup acceptance remain separate. Keep both hosting choices/Turso open and
 repository visibility public; only read-only visibility checks are authorized.
 
@@ -105,10 +105,10 @@ regression footprint; no new native lifecycle operation is enabled.
 
 ![Client SQLite retains the original creator and verified S3 root; the Rust authority stores canonical metadata and the initial fence atomically.](images/atomic-deferred-canonical.svg)
 
-The next [provenance import proposal](creator-provenance-import.md) describes the
-same-owner SQLite bridge. A historical receipt alone cannot activate an open or
-change the owner. Sparse owned-unlinked publication and native lifecycle gates
-remain subsequent work.
+The [verified provenance import](creator-provenance-import.md) now implements the
+same-owner SQLite bridge. A historical receipt alone cannot grant a kernel
+handle or change the owner. Prospective closing admission, sparse owned-unlinked
+publication and native lifecycle gates remain subsequent work.
 
 Development compiler checks1/2 failed with E0275 while proving Send through the
 expanded SDK future. Check3 passed after the boxed creation/join boundary; the
