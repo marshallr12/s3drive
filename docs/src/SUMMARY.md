@@ -58,6 +58,7 @@
 - [Atomic deferred canonical creation](atomic-deferred-manifest-create.md)
 - [Deferred canonical creation client](deferred-creation-client.md)
 - [Verified creator provenance import](creator-provenance-import.md)
+- [Prospective creation/open admission: proposal](creator-open-admission.md)
 - [Deferred canonical manifest integration](deferred-manifest-integration.md)
 - [Bounded local retention plan](mixed-retention-plan.md)
 - [Observing external clean versions: proposal](external-clean-adoption.md)

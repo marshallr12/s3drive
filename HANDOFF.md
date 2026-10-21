@@ -71,6 +71,19 @@ were authorized/spawned. No user database, provider or startup installation touc
 
 ## Next work
 
+Source-reviewed proposal: docs/src/creator-open-admission.md and its SVG, dated
+2026-10-21 against daf5806. No runtime changes: format3/schema45 are PROPOSED.
+First implement its step A: same-transaction creator/open admission, shared
+namespace capacity and unknown-creator abandonment/retirement barriers. Preserve
+old format1/2 staging identities; saturated historical imports stay explicit
+recovery work. Then SDK step B, hosted acceptance C and later native lifecycle D.
+Plan-only full gate CLOSED0/917.02s/all729 draft inputs unchanged,37 passing
+cohorts, all slow notices resolved. LogSHA
+e9f6656fe042bba2cfd873a04efd10f2cc995875ce275093e6aa7ffbf7c62bcb.
+All377 runtime inputs unchanged; final documentation gate and SVG review passed.
+Additional main CI39605585564 at daf5806 reports all3 jobs success (status only).
+Plan publication proof: /tmp/s3drive-creator-open-plan-publication.json.
+
 1. Reserve local namespace/open closing headroom BEFORE native S3/authority file
    creation. Historical import can currently refuse capacity after remote create;
    preserve its creator and support recovery of such existing records. Then bind

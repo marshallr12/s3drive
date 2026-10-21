@@ -10,6 +10,7 @@ work. Keep delete-on-close/save-replace flags unsupported in the chunk profile.
 | Canonical node, initial payload/history and original fence/event | [Authority/state contract](atomic-deferred-manifest-create.md),3e670915/schema42, full local and own Linux/Windows/book/native regression acceptance |
 | Original client owner, physical root proof, exact request/outcome and restricted recovery | [Creation client](deferred-creation-client.md),9381456/schema43, full local and own Linux/Windows/book/native regression acceptance |
 | Verified creator to same-owner namespace/open journal | [Verified import](creator-provenance-import.md),3c38ad1/schema44, full local and own Linux/Windows/book/native regression acceptance |
+| Closing capacity before remote creation | [Prospective admission design](creator-open-admission.md); source-reviewed proposal only, no runtime change or acceptance yet |
 | Sparse publication after unlink or owner-bound replacement | Planned; exact fence/current event and unresolved-effect barriers required |
 | Native v8 deferred/open-unlinked/delete/save-replace callbacks | Unsupported until their library and FUSE/WinFsp recovery gates pass |
 

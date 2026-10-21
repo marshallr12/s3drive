@@ -15,6 +15,12 @@ owner. P5a2b implements local file-edit plans and pinned-base hydration; remote 
 and opt-in writable OS callbacks have subsequently passed native acceptance.
 The user selected managed layout on 2026-10-16; P6m phases now define the target.
 
+The next deferred-creation step is the [prospective creation/open admission
+proposal](creator-open-admission.md), reviewed against `daf5806` on 2026-10-21.
+It reserves namespace closing capacity and an inactive open in one local
+transaction before remote mutation. Its state, SDK and hosted acceptance steps
+are unimplemented; schema 44 and native lifecycle support remain unchanged.
+
 | Phase | Deliverable | Completion evidence |
 | --- | --- | --- |
 | P0 — research and scaffold | This book, workspace, local CLI, SQLite bootstrap, GitHub repository (intentionally public under D040) | Local gate passes; pushed source matches local commit; current public visibility verified read-only |

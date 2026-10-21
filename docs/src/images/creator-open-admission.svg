@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">Prospective creation admission: proposed local and remote sequence</title>
+  <desc id="desc">A Rust engine commits an original creator, inactive open, independent anchors and cleanup reservations in private local SQLite before its S3 client uploads an immutable initial manifest. It then creates the namespace entry through the Rust coordinator. Exact receipts return to local SQLite before import and activation. Unknown outcomes retain reservations. This design is not implemented.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#334155"/></marker>
+    <style>
+      text { font-family: sans-serif; fill: #172b4d; }
+      .title { font-size: 28px; font-weight: 700; }
+      .heading { font-size: 21px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .small { font-size: 16px; }
+      .arrow { fill: none; stroke: #334155; stroke-width: 2.5; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1200" height="760" fill="#f8fafc"/>
+  <text x="32" y="43" class="title">Reserve recovery capacity before remote creation</text>
+  <text x="32" y="77" class="body">PROPOSED · source review 2026-10-21 · runtime remains schema 44</text>
+
+  <rect x="32" y="110" width="690" height="484" rx="16" fill="#eff6ff" stroke="#93c5fd" stroke-width="2"/>
+  <text x="55" y="145" class="heading">Local workstation · Linux or Windows</text>
+  <rect x="58" y="167" width="636" height="90" rx="10" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+  <text x="80" y="199" class="heading">Rust engine and S3 client</text>
+  <text x="80" y="231" class="body">Typed mount capability + original runtime session</text>
+  <path d="M376 258 V321" class="arrow"/>
+  <text x="395" y="294" class="body">1. Commit one local transaction</text>
+
+  <rect x="58" y="331" width="636" height="233" rx="10" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+  <text x="80" y="365" class="heading">Private local SQLite · outside the mount</text>
+  <text x="80" y="401" class="body">Original creator + inactive session-bound open</text>
+  <text x="80" y="434" class="body">Independent anchors + exact source / owner / store</text>
+  <text x="80" y="467" class="body">Reserve namespace import + two closing slots</text>
+  <text x="80" y="500" class="body">Consume open row; reserve callback event slots</text>
+  <text x="80" y="540" class="small">Validate the complete graph before commit; no partial admission.</text>
+
+  <path d="M695 193 H761 V241 H804" class="arrow"/>
+  <text x="815" y="144" class="heading">2. Upload after local commit</text>
+  <rect x="815" y="176" width="352" height="139" rx="12" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/>
+  <text x="837" y="211" class="heading">S3-compatible service</text>
+  <text x="837" y="244" class="body">Immutable initial manifest</text>
+  <text x="837" y="277" class="body">Verified physical receipt</text>
+
+  <path d="M695 225 H744 V485 H804" class="arrow"/>
+  <text x="815" y="371" class="heading">3. Create namespace entry</text>
+  <text x="815" y="400" class="small">After the original upload is verified</text>
+  <rect x="815" y="420" width="352" height="144" rx="12" fill="#faf5ff" stroke="#9333ea" stroke-width="2"/>
+  <text x="837" y="456" class="heading">Rust coordinator</text>
+  <text x="837" y="489" class="body">Shared namespace + fencing</text>
+  <text x="837" y="522" class="body">Metadata SQLite</text>
+  <text x="837" y="548" class="small">Optional Turso backend remains open</text>
+
+  <rect x="32" y="623" width="1135" height="108" rx="12" fill="#fff7ed" stroke="#ea580c" stroke-width="2"/>
+  <text x="55" y="656" class="heading">4. Retain exact outcomes locally, then import and activate</text>
+  <text x="55" y="687" class="body">Unknown upload / metadata outcome: keep reservations and recover the original identity.</text>
+  <text x="55" y="714" class="small">Local admission or activation does not grant a kernel handle or prove current remote ownership.</text>
+</svg>
