@@ -14,6 +14,7 @@ pub(super) fn is_retired(db: &Connection, key: &str) -> Result<bool> {
     )?)
 }
 fn terminal(db: &Connection, row: &Row, record: &OpenRecord) -> Result<bool> {
+    creation::recoverable(db, &record.input)?;
     Ok((record.input.controlled
         && record.active()
         && record.cleanup().is_some_and(|e| record.completed(&e.id))

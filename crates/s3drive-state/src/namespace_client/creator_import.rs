@@ -32,6 +32,7 @@ pub(super) fn check_receipt(input: &Input, receipt: &Receipt) -> Result<()> {
         source: input.source,
         fingerprint: input.fingerprint.clone(),
         owner: Some(owner.clone()),
+        open: None,
     };
     original.check_receipt(&input.request, receipt)
 }
@@ -146,9 +147,10 @@ impl Journal<'_> {
         }
         // Import is an acknowledged historical fact, not a fresh mutation
         // admission. Project complete history/closing capacity before inserting.
-        let mut projected = removals::records(&tx)?;
+        let before = removals::records(&tx)?;
+        let mut projected = before.clone();
         projected.push(original.clone());
-        removals::check_capacity(&projected)?;
+        removals::check_import_capacity(&tx, &before, &projected, operation)?;
         checkpoint("ImportBeforeStored")?;
         let written = tx.execute(
             "INSERT INTO namespace_intents VALUES(?1,?2,?3,?4)",
@@ -171,7 +173,7 @@ impl Journal<'_> {
         {
             return Err("creator import was not durably retained".into());
         }
-        removals::check_capacity(&removals::records(&tx)?)?;
+        removals::check_import_capacity(&tx, &before, &removals::records(&tx)?, operation)?;
         checkpoint("ImportStored")?;
         tx.commit()?;
         checkpoint("ImportCommitted")?;

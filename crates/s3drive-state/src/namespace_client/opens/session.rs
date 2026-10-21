@@ -31,7 +31,7 @@ pub struct RecoveryRecord {
     pub input: RecoveryInput,
     pub finished: bool,
 }
-fn runtime(state: &State) -> Result<String> {
+pub(super) fn runtime(state: &State) -> Result<String> {
     state.verify_staging_storage()?;
     state
         .incarnation
@@ -66,7 +66,7 @@ pub(super) fn binding(db: &Connection, session: &str, volume: &str) -> Result<St
     }
     Ok(r)
 }
-fn current(db: &Connection, runtime: &str, session: &str, volume: &str) -> Result<()> {
+pub(super) fn current(db: &Connection, runtime: &str, session: &str, volume: &str) -> Result<()> {
     if binding(db, session, volume)? != runtime {
         return Err("mount session belongs to a different runtime owner".into());
     }
@@ -116,6 +116,7 @@ fn recovery(db: &Connection, key: &str) -> Result<(RecoveryInput, Option<Proof>)
     }
     let mut seen = std::collections::HashSet::new();
     for open in &input.opens {
+        creation::check_recovery_open(db, &open.id)?;
         if !id(&open.id)
             || open.hash.len() != 32
             || members.get(&open.id) != Some(&open.hash)
@@ -318,6 +319,7 @@ impl Journal<'_> {
             return Err("recover exact namespace outcomes before session abandonment".into());
         }
         for (row, r) in &records {
+            creation::recoverable(&tx, &r.input)?;
             if !r.input.session_bound
                 || !r.input.controlled
                 || binding(&tx, &r.input.session, volume)? == runtime

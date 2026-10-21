@@ -16,7 +16,7 @@ immutable S3 objects hold file generations. Each computer has a separate private
 SQLite cache/journal. Existing direct-key mounts remain available without an
 automatic conversion.
 
-**Latest large-file checkpoint:** the explicit
+**Native large-file checkpoint:** the explicit
 [version 8 native chunk writer](native-chunk-writes.md) integrates canonical file
 creation, private SQLite sparse edits, immutable S3 uploads, exact root CAS and
 local acknowledgment with the shared filesystem callbacks.
@@ -28,7 +28,14 @@ loopback S3/authority services. The 128 KiB callback control passed on both OSes
 Windows testing used a hosted Windows Server 2025 VM; these are not live Wasabi
 or physical MX/Windows10/11 reboot results.
 
-This profile remains experimental: directory creation, rename/delete, deferred
+Chunk directory creation subsequently passed its own native acceptance; see
+[its contract](native-chunk-directories.md). The latest state prerequisite is
+[prospective creation/open admission](creator-open-state.md),20420d7/schema45,
+with full local and own Linux/Windows/book/native regression acceptance. It
+reserves creator/open/cleanup capacity before the planned SDK creation flow;
+that SDK wiring remains next. No chunk-native lifecycle flag is enabled.
+
+This profile remains experimental: rename/delete, deferred
 and owned-unlinked publication, full retry-forest retention/GC and larger
 long-running workloads remain unfinished. Current64-file/512-view/64MiB dirty
 limits are prototypes. The earlier version4–7 whole-generation profiles retain
@@ -176,7 +183,7 @@ application limits are recorded in the [filesystem contract](filesystem-contract
 | Rust workspace and CLI | Implemented |
 | TOML parsing and source/namespace validation | Implemented; no network checks |
 | Alias + prefix + file-path resolution | Implemented as a planning utility |
-| Local SQLite state | Main schema23; offline multipart candidate schema24; separate authoritative namespace and client databases, immutable staged bytes, exact operation/receipt recovery, private ownership, publication/disposition/open-session journals and cache |
+| Local SQLite state | Schema45; separate authoritative namespace and client databases, immutable staged bytes, exact operation/receipt recovery, private ownership, publication/disposition/open-session journals, prospective creator/open admission and cache |
 | mdBook research, design and acceptance plan | Implemented |
 | S3 transport and credentials | Implemented; [Wasabi read acceptance](wasabi.md) passed; broader conformance pending |
 | Linux filesystem mount | FUSE reads and explicit policy-bound writes/creation/managed mutation; [initial mount contract](linux-mount.md) and later managed acceptance |

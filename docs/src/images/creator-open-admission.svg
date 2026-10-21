@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
   <title id="title">Prospective creation admission: proposed local and remote sequence</title>
-  <desc id="desc">A Rust engine commits an original creator, inactive open, independent anchors and cleanup reservations in private local SQLite before its S3 client uploads an immutable initial manifest. It then creates the namespace entry through the Rust coordinator. Exact receipts return to local SQLite before import and activation. Unknown outcomes retain reservations. This design is not implemented.</desc>
+  <desc id="desc">A Rust engine commits an original creator, inactive open, independent anchors and cleanup reservations in private local SQLite before its S3 client uploads an immutable initial manifest. It then creates the namespace entry through the Rust coordinator. Exact receipts return to local SQLite before import and activation. Unknown outcomes retain reservations. State admission is accepted; SDK and native integration remain pending.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#334155"/></marker>
     <style>
@@ -14,7 +14,7 @@
   </defs>
   <rect width="1200" height="760" fill="#f8fafc"/>
   <text x="32" y="43" class="title">Reserve recovery capacity before remote creation</text>
-  <text x="32" y="77" class="body">PROPOSED · source review 2026-10-21 · runtime remains schema 44</text>
+  <text x="32" y="77" class="body">FLOW DESIGN · state layer accepted: schema 45 · SDK and native integration pending</text>
 
   <rect x="32" y="110" width="690" height="484" rx="16" fill="#eff6ff" stroke="#93c5fd" stroke-width="2"/>
   <text x="55" y="145" class="heading">Local workstation · Linux or Windows</text>

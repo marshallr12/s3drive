@@ -3,6 +3,7 @@ use super::*;
 pub struct Journal<'a> {
     state: &'a mut State,
     limits: Limits,
+    chunk: Option<crate::chunk_mount::Key>,
 }
 impl<'a> Journal<'a> {
     pub fn new(state: &'a mut State, limits: Limits) -> Result<Self> {
@@ -11,7 +12,21 @@ impl<'a> Journal<'a> {
         isolation(&state.connection)?;
         preflight(&state.connection)?;
         inspect(&state.connection)?;
-        Ok(Self { state, limits })
+        Ok(Self {
+            state,
+            limits,
+            chunk: None,
+        })
+    }
+    pub fn for_chunks(
+        state: &'a mut State,
+        limits: Limits,
+        key: &crate::chunk_mount::Key,
+    ) -> Result<Self> {
+        crate::chunk_mount::verify_key(&state.connection, key)?;
+        let mut journal = Self::new(state, limits)?;
+        journal.chunk = Some(key.clone());
+        Ok(journal)
     }
     pub fn get(&mut self, id: &str) -> Result<Record> {
         let tx = self
@@ -34,12 +49,37 @@ impl<'a> Journal<'a> {
         mut hook: impl FnMut(&str) -> Result<()>,
     ) -> Result<Record> {
         input.validate()?;
+        let runtime = if input.open.is_some() {
+            if self.chunk.is_none() {
+                return Err(Failure::Isolated.into());
+            }
+            Some(crate::namespace_client::opens::creation::runtime(
+                self.state,
+            )?)
+        } else {
+            None
+        };
         let tx = self
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         preflight(&tx)?;
         isolation(&tx)?;
+        if let Some(key) = &self.chunk {
+            let binding = crate::chunk_mount::verify_key(&tx, key)?;
+            binding.volume(&input.volume)?;
+            if input.owner.as_deref() != Some(key.owner()) {
+                return Err(Failure::Conflict.into());
+            }
+        }
+        if let Some(claim) = &input.open {
+            crate::namespace_client::opens::creation::check_session(
+                &tx,
+                runtime.as_deref().ok_or(Failure::Invalid)?,
+                &claim.session,
+                &input.volume,
+            )?;
+        }
         if let Some(b) = crate::chunk_mount::load(&tx)? {
             b.volume(&input.volume)?;
             b.control(&crate::namespace_client::Control {
@@ -80,7 +120,25 @@ impl<'a> Journal<'a> {
             receipt: None,
             rejection: None,
         };
-        save(&tx, &mut rows, r.clone(), true)?;
+        if let Some(runtime) = &runtime {
+            if tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM namespace_intents WHERE operation_id=?)",
+                [&r.input.operation],
+                |row| row.get::<_, bool>(0),
+            )? {
+                return Err(Failure::Conflict.into());
+            }
+            write(&tx, &mut rows, r.clone(), true)?;
+            hook("AdmissionCreatorStored")?;
+            admission::begin_open(&tx, &r.input, runtime)?;
+            hook("AdmissionOpenStored")?;
+            crate::namespace_client::check_creation_capacity(&tx)?;
+            if inspect(&tx)? != rows {
+                return Err(Failure::Corrupt.into());
+            }
+        } else {
+            save(&tx, &mut rows, r.clone(), true)?;
+        }
         hook("AdmissionStored")?;
         tx.commit()?;
         hook("AdmissionCommitted")?;
@@ -240,13 +298,24 @@ pub(super) fn check_staged(
 pub struct Client {
     owner: crate::worker::Owner,
     limits: Limits,
+    chunk: Option<crate::chunk_mount::Key>,
 }
 impl Client {
     pub(crate) fn new(owner: crate::worker::Owner, limits: Limits) -> Result<Self> {
         Ok(Self {
             owner,
             limits: limits.validate()?,
+            chunk: None,
         })
+    }
+    pub(crate) fn chunk(
+        owner: crate::worker::Owner,
+        limits: Limits,
+        key: crate::chunk_mount::Key,
+    ) -> Result<Self> {
+        let mut client = Self::new(owner, limits)?;
+        client.chunk = Some(key);
+        Ok(client)
     }
     pub fn same_storage(&self, storage: &crate::worker::Storage) -> bool {
         storage.same_owner(&self.owner)
@@ -256,8 +325,16 @@ impl Client {
         work: impl FnOnce(&mut Journal<'_>) -> Result<T> + Send + 'static,
     ) -> Result<T> {
         let limits = self.limits;
+        let chunk = self.chunk.clone();
         self.owner
-            .call(move |store| work(&mut Journal::new(&mut store.state, limits)?))
+            .call(move |store| {
+                let mut journal = if let Some(key) = chunk {
+                    Journal::for_chunks(&mut store.state, limits, &key)?
+                } else {
+                    Journal::new(&mut store.state, limits)?
+                };
+                work(&mut journal)
+            })
             .await
     }
     pub async fn records(&self) -> Result<Vec<Record>> {

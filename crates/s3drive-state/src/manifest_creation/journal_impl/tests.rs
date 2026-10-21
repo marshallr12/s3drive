@@ -25,6 +25,7 @@ fn input(n: u8) -> Input {
         source: [9; 32],
         fingerprint: "a".repeat(64),
         owner: None,
+        open: None,
     }
 }
 fn j(s: &mut State) -> Journal<'_> {

@@ -278,6 +278,7 @@ impl Creator {
             source: [0; 32],
             fingerprint: "0".repeat(64),
             owner,
+            open: None,
         };
         let target = self.0.executor.recovery_target(&i.object_key()?)?;
         i.source = *target.source();

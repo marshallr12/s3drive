@@ -1,109 +1,116 @@
 # S3Drive handoff
 
-Updated 2026-10-21. Goal ACTIVE/incomplete. Assistant Mira. No voice-context handoff
-capability is available. Read this and docs/src/implementation-plan.md first.
+Updated 2026-10-21. Goal ACTIVE/incomplete. Assistant Mira. No voice-context
+handoff capability available. Read this and docs/src/implementation-plan.md first.
 
 ## Decisions and permissions
 
-- marshallr12/s3drive is intentionally PUBLIC. Never mutate visibility without a
-  new direct request. Checks GET-only; original private goal is superseded.
-- Managed immutable chunks/manifests, ordinary mounted filenames, Rust authority,
-  private local SQLite outside the mount. Optional Turso and both hosting choices
-  remain open; none provisioned.
-- MX Linux without systemd and Windows; sign-in plus same-account SSH/tmux
-  continuity required. Physical workstation reboot/logon remains unverified.
-- No new provider writes, credentials, root/startup installation, hosting or Turso
+- marshallr12/s3drive is intentionally PUBLIC. No visibility mutation without a
+  new direct request; GET-only checks. Original private goal is superseded.
+- Managed immutable chunks/manifests and normal mounted names; Rust authority,
+  private local SQLite outside mount. Optional Turso/both hosting choices open;
+  no remote service provisioned.
+- MX without systemd and Windows; sign-in plus same-account SSH/tmux continuity
+  required. Physical MX/Windows10/11 reboot/sign-in is not verified.
+- No new provider writes, credentials, root/startup install, hosting or Turso
   changes authorized. Old Wasabi3-object and6-key/14-PUT scopes exhausted/cleaned
-  on2026-10-16 at23:36:18Z. Never replay them. Keep config/keys out of Git/chat.
-- Run bash scripts/gate.sh; native/provider/recovery gates are separate. Preserve
-  dirty bytes and exact unknown identities; no unconditional overwrite fallback.
+  2026-10-16T23:36:18Z. Never replay them; never print config/keys.
+- Run bash scripts/gate.sh. Native/provider/recovery gates are separate. Preserve
+  dirty bytes and exact uncertain identities; no unconditional overwrite fallback.
 
-## Accepted runtime and evidence
+## Accepted state layer
 
-Runtime3c38ad1bdf3aad9f41a202af1e6120ed2e6cfd57, schema44/all377;15 runtime deltas
-from accepted main25fc926. [Contract](docs/src/creator-provenance-import.md).
-Own full local gate1 CLOSED0/874.84s/all723 unchanged, logSHA
-541307c3c948433d62f7222799b5bc58fceb2dbb4ae59a899871417ea0f258d7.
-Own CI39599329985 attempt1 Linux/Windows/book all success. Exact source/API ZIP,
-strict21+14/project/all35 raw field/type and full raw-log review passed.
-Publication proof: /tmp/s3drive-canonical-creator-import-publication.json;
-verify actual HEAD/remote and runtime377 instead of copying an older main.
+Runtime20420d73bf07ccb0929c3b188e32c6d23a37dfec, schema45/all380,25 runtime
+changes from main02133e0. docs/src/creator-open-state.md is the contract/evidence.
+No SDK or native lifecycle call site enabled. Verify actual main/remote instead
+of guessing the canonical squash ID. Publication proof:
+/tmp/s3drive-canonical-creator-open-state-publication.json.
+Candidate worktree /home/marshall/src/worktrees/s3drive-creator-open-admission;
+runtime frozen map /tmp/s3drive-creator-open-state-candidate1-frozen.json.
 
-Namespace::import_creation accepts only the original operation ID on a retained
-chunk capability. It reads a verified acknowledged format2 creator in that same
-SQLite worker, checks owner/source/store/proof, atomically writes the exact
-complete namespace row and checks it again on load. Generic begin refuses this
-kind; no path/caller receipt/metadata-empty surrogate. Targeted reads keep the
-complete creator-role metadata projection plus the exact selected physical
-witness; full-role APIs still validate all physical witnesses. Historical body
-bytes/credentials are unnecessary; damaged provenance fails without repair.
+ChunkClient::creations(limits)/Journal::for_chunks admits owner+CreationOpen
+format3. One immediate transaction stores original creator/source, inactive
+controlled session-bound open, retained anchor and shared namespace closing
+budget before commit. Generic creator/open admission cannot manufacture it.
+Original current runtime session/capability/source/store/owner must match.
 
-Imported creation supports local open admission/activation facts with exact
-original owner/fence/current acknowledged local event. Known cancellations and
-successor epochs cannot be rewound. Obsolete sessions cannot admit fresh handles.
-Local activation does not prove current remote ownership or grant a kernel
-handle; native live authority checks remain required. No new OS flag is enabled.
+Unimported/nonrejected creators hold3 namespace slots. Exact successful import
+converts3 to row1+deferred2 once; terminal authority rejection frees prospective
+namespace budget but not open history. Other effects cannot steal the op ID.
+A proven zero-growth conversion can proceed while unrelated admitted closing
+credit is pending; no fresh capacity or physical row limit is increased.
 
-Schema44 has no new table/DDL. Valid43 roles upgrade atomically with unchanged
-rows/hashes; imported shapes under old markers fail before relabeling. Failures
-roll back the marker. Keep original-version guards before transaction-local
-marker changes in future upgrades. Actual43 Linux binary refused44 unchanged;
-Cargo restored actual44 with identical binary hash. Shared-target switches need
-state-artifact invalidation plus actual schema checks, not Cargo freshness alone.
+Raw open-anchor validation avoids recursive creator/open/namespace loaders.
+Full metadata projections and selected physical/anchor witnesses remain checked;
+full-role APIs still check all witnesses. Fresh activation requires original
+session and locally deferred original fence. Unknown creators block abandonment,
+recovery-proof loading and retirement, including before any namespace row exists.
+Known rejection can close an obsolete session without synthetic activation.
+Local facts do not prove live remote ownership or grant a kernel handle.
 
-All14 state/3 SDK cases passed in both hosted jobs: seven worker kill points,
-realSQL_FULL at import/open/activation, quota closing slots, source/owner/receipt
-corruption, unknown local receipts after authority commit, no-credential damaged-
-body recovery and migration. Existing v8 Unicode folders and chunk file I/O/
-flush/resize/remount,128KiB callback and old native/startup regressions passed.
-Linux: Ubuntu24.04/20261018.339.1; WindowsServer2025/windows-2025-vs2026/20261007.264.1.
-Owned loopback fixtures do not certify physical MX/Windows10/11 or live Wasabi.
-Old profiles3–7 and whole-generation8MiB bounds remain unchanged.
+Schema45 adds no DDL/table. Raw pre45 and original-version pre44 guards precede
+transaction-local marker changes. Valid43/44 roles retain every byte/hash; bad
+upgrades roll back. Earlier unsupported roles stay refusals. Legacy format1/2
+stage keys are unchanged; saturated historical imports remain separate recovery
+work, never relabeled or discarded.
 
-Indexed local/hosted archives in docs/src/evidence, every member verified. Local
-412members/SHAe1aa32aa57c40f392edaeb2f0f955a64baf4a29bc28ceedc11a4d6adfdd39655;
-hosted37members/SHA3f4591648357e92070349af60667cba15e94520aadcb4c13190a0467609d13eb.
-Archive writers DONE; never rerun. /tmp/s3drive-creator-import-checkpoint.json,
-candidate1-frozen.json and hosted1-* hold continuation pointers. Development
-fixture lifetime/parent-directory/session/pending-read/Debug-format failures are
-retained; corrected tests preserve session and owned-node guards. No subagents
-were authorized/spawned. No user database, provider or startup installation touched.
+## Verification and artifacts
+
+Full local gate CLOSED0/983.01s/all733 unchanged,37 cohorts/all17 new cases
+passed; all slow notices resolved. LogSHA
+ba753a63a14675cace65c3ca1fcdea8aa75d35ea95c57af40caa4f3b06c1e1cc.
+Own CI39616964879 attempt1 Linux/Windows/book all success. Source ZIP/all733,
+strict21+14/project/all35 raw field/type and complete log review passed. Both
+hosted Rust jobs pass17 prospective,14 prior import and3 prior SDK completions
+(worker entries included). Four actual killed-worker boundaries, SQL_FULL,
+independent open/event/namespace quota, duplicate/concurrent IDs, corruption,
+no-effect forgery, successor fence and migration covered. Physical receipts and
+bulk quota history modeled; old SDK fixtures use actual loopback HTTP/AWS SDK.
+
+Existing real FUSE/WinFsp v8 Unicode I/O/directories/flush/resize/remount,128KiB
+callback and startup regressions passed. Ubuntu24.04/20261012.334.1 and
+WindowsServer2025/windows-2025-vs2026/20261018.275.1. No live Wasabi or physical
+MX/Windows10/11 acceptance.17 slow notices and15 bounded interleaved completions
+reviewed. Three disposable-profile warnings: dummy credentials removed; locked
+profile deletion deferred to VM destruction only under checked cleanup guards.
+Tool/node and unused delay-import warnings retained; no test faults.
+
+Actual old44 Linux CLI refused45 without changing database bytes; new45 reopened.
+OldSHA4fce77cea8b52753c59bf55a5cde7f24374b7ef70ef58e1be4e3bdf289e6a6bc.
+Final45 SHAd08bd8bcdf785aa6c697ddcbccd42bd4a61d06c7fce6a7334502b14cbbd9ccc0.
+Failed equal-digest assumption between test-stage and final-build executables is
+retained, with independent final-binary checks. No source/guard changed for it.
+Use actual schema checks; never infer runtime identity from Cargo freshness.
+
+Indexed archives in docs/src/evidence: local405 members SHA123b8b7e2d343726290004e77bbcaf5a5cc31d811e749cdc916ede44ec1a056a;
+supplement5 SHA7dbf2771616a26d332c5f174dc6d48a4420fd66761cfdf71456d640aac0ab617;
+hosted37 SHA0af4ed455c7a66da01c34c773d10e641687c9d2c5b0ea70debeafd521c4a6f2a.
+Every member checked; archive writers DONE, NEVER rerun. Initial missing legacy
+fixture field was corrected; failed/successful development logs retained. No
+subagents spawned. No user database, config, bucket or startup install touched.
 
 ## Next work
 
-Source-reviewed proposal: docs/src/creator-open-admission.md and its SVG, dated
-2026-10-21 against daf5806. No runtime changes: format3/schema45 are PROPOSED.
-First implement its step A: same-transaction creator/open admission, shared
-namespace capacity and unknown-creator abandonment/retirement barriers. Preserve
-old format1/2 staging identities; saturated historical imports stay explicit
-recovery work. Then SDK step B, hosted acceptance C and later native lifecycle D.
-Plan-only full gate CLOSED0/917.02s/all729 draft inputs unchanged,37 passing
-cohorts, all slow notices resolved. LogSHA
-e9f6656fe042bba2cfd873a04efd10f2cc995875ce275093e6aa7ffbf7c62bcb.
-All377 runtime inputs unchanged; final documentation gate and SVG review passed.
-Additional main CI39605585564 at daf5806 reports all3 jobs success (status only).
-Plan publication proof: /tmp/s3drive-creator-open-plan-publication.json.
-
-1. Reserve local namespace/open closing headroom BEFORE native S3/authority file
-   creation. Historical import can currently refuse capacity after remote create;
-   preserve its creator and support recovery of such existing records. Then bind
-   sparse owned-unlinked reservations/publication to original fence/current event,
-   preserve dirty/newer views and unresolved-effect barriers before final removal.
-   Enable native delete-on-close/save-replace/rename/delete only after exact
-   state/SDK/FUSE+WinFsp gates. See docs/src/deferred-manifest-integration.md.
-2. Cold metadata-only namespace/open recovery, retry-forest closure and retention/
-   GC remain missing.64-file/512-view/64MiB dirty and history quotas are prototypes;
-   no reclamation enabled. Snapshot create/inspect exists; restore not implemented.
-3. v8 startup supervisors, physical MX/Windows10/11 reboot/sign-in/SSH/tmux,
-   independent-host partitions/fencing/deployment/restore, packaging/licensing,
-   policy renewal and application workflows remain.
-4. Prepare a fresh bounded managed Wasabi plan before requesting live mutations.
-   Local ignored s3drive.local.toml: bucket s3drivetest, us-east-2/profilewasabi-s3drive.
-   No user mount or writable policy is installed.
+1. SDK step B: typed same-worker creation admission, original shared semaphore/
+   deadline/boxed future, exact retained-request recovery and claimed-upload
+   observation without resend. Fresh unclaimed admission cannot revive obsolete
+   sessions. Add metadata-only mixed-role chunk recovery with no S3 client for
+   saved requests/receipts. Source findings and test gates are in the contract;
+   /tmp/s3drive-creator-open-sdk-readiness.md is supplementary, recheck lines.
+2. Sparse owned-unlinked root publication must bind original fence/current event,
+   preserve dirty/newer views and block final removal across unresolved effects.
+   Enable native delete/save-replace/rename only after state/SDK/FUSE+WinFsp gates.
+3. Cold namespace/open recovery, full retry-forest closure, retention/GC and
+   snapshot restore remain.64-file/512-view/64MiB dirty/history quotas prototype;
+   no reclamation enabled. Old profiles3-7 retain8MiB whole-generation bound.
+4. v8 supervisors, physical MX/Windows10/11 reboot/sign-in/SSH/tmux, independent
+   host partitions/fencing/deployment/restore, policy renewal, packaging/licensing
+   and application workflows remain. Prepare a fresh bounded Wasabi plan before
+   asking for new live mutations. Ignored local config: s3drivetest/us-east-2,
+   profilewasabi-s3drive. No real writable policy or user mount installed.
 
 One local Cargo at a time; shared /home/marshall/src/s3drive/target, threads4.
-Preserve unrelated/dirty work and every failed or uncertain verification result.
-Prior handoff archived verbatim in
-`docs/archive/HANDOFF-before-creator-import-refresh-20261021.md`.
-
-Archived source SHA25612adb445ad37144b8c63bb231066541ec73b3f8204871f9c6dcacb9738aa0870.
+Preserve dirty/unrelated work and every failed/uncertain verification cohort.
+Previous134-line handoff archived verbatim at
+ docs/archive/HANDOFF-before-creator-open-state-refresh-20261021.md,
+SHA0d88dc391f9255f7bdcb6a6713506c71198ecf6eff393e7ba6aa9c0ba95064bb.

@@ -14,6 +14,9 @@ use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 const LIMIT: i64 = 4096;
+pub(crate) fn check_creation_capacity(db: &Connection) -> Result<()> {
+    removals::check_capacity(db, &removals::records(db)?)
+}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Control {
@@ -408,7 +411,7 @@ impl<'a> Journal<'a> {
         for update in updates {
             update.apply(&tx)?;
         }
-        removals::check_capacity(&removals::records(&tx)?)?;
+        removals::check_capacity(&tx, &removals::records(&tx)?)?;
         if load(&tx, id)?.as_ref().and_then(|r| r.outcome.as_ref()) != r.outcome.as_ref() {
             return Err("namespace acknowledgment readback mismatch".into());
         }

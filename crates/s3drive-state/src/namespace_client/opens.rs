@@ -1,6 +1,7 @@
 //! Durable per-file-object facts, not a substitute for kernel deletion policy.
 //! Namespace effects keep their exact existing journal and proof boundary.
 use super::*;
+pub(crate) mod creation;
 mod retirement;
 pub mod session;
 use namespace::{ROOT, RemovalMode};
@@ -24,6 +25,8 @@ pub struct OpenInput {
     #[serde(default, skip_serializing_if = "is_false")]
     pub posix: bool,
     pub admission: Option<Box<Input>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub creation: Option<String>,
 }
 fn is_false(value: &bool) -> bool {
     !*value
@@ -208,6 +211,8 @@ fn valid_input(input: &OpenInput, owner: &str) -> Result<()> {
         || (input.posix && !input.session_bound)
         || !input.store.valid()
         || !namespace::publication::digest(&input.fingerprint)
+        || (input.creation.is_some()
+            && (!input.session_bound || !input.controlled || input.admission.is_some()))
     {
         return Err("invalid per-open binding".into());
     }
@@ -273,11 +278,14 @@ fn reduce(db: &Connection, record: &mut OpenRecord, event: &Event) -> Result<()>
                         != Some(&record.owner)
                     || saved.input != *proof.input
                     || !matches!(saved.outcome, Some(Ok(_)))
+                    || record.input.creation.as_ref().is_some_and(|origin| {
+                        removals::fence(&proof.input).as_ref().map(|f| &f.intent) != Some(origin)
+                    })
                     || super::hash(&saved)? != proof.outcome_hash
                 {
                     return Err("activation namespace proof changed".into());
                 }
-            } else if record.input.delete_on_close {
+            } else if record.input.delete_on_close || record.input.creation.is_some() {
                 return Err("delete-on-close activation lacks a retained proof".into());
             }
         }
@@ -464,6 +472,7 @@ fn load(db: &Connection, key: &str) -> Result<Option<(Row, OpenRecord)>> {
     let input: OpenInput = serde_json::from_slice(&bytes)?;
     valid_input(&input, &owner)?;
     super::creator_import::check_admission(db, &input)?;
+    creation::check_input(db, &input, &owner)?;
     if input.session_bound {
         session::binding(db, &input.session, &input.volume)?;
     }
@@ -587,6 +596,32 @@ fn controlled_slots(r: &OpenRecord) -> usize {
     slots
 }
 
+fn insert_row(db: &Connection, row: &Row, record: &OpenRecord) -> Result<()> {
+    let mut records = all(db)?;
+    if records.len() >= OPEN_LIMIT {
+        return Err("per-open limit reached; history retained".into());
+    }
+    records.push((row.clone(), record.clone()));
+    capacity(&records)?;
+    let a = db.execute(
+        "INSERT INTO windows_open_journal VALUES(?1,?2,?3,0,NULL,?4)",
+        params![
+            row.input.id,
+            row.owner,
+            serde_json::to_vec(&row.input)?,
+            checksum(row)?
+        ],
+    )?;
+    let b = db.execute(
+        "INSERT INTO retained_windows_opens VALUES(?1,?2)",
+        params![row.input.id, anchor(row)?],
+    )?;
+    if a != 1 || b != 1 || load(db, &row.input.id)?.as_ref().map(|(_, r)| r) != Some(record) {
+        return Err("per-open preparation was not durably recorded".into());
+    }
+    Ok(())
+}
+
 pub struct Journal<'a> {
     state: &'a mut State,
     chunk: Option<crate::chunk_mount::Key>,
@@ -642,6 +677,9 @@ impl<'a> Journal<'a> {
             }
             return Ok(old);
         }
+        if input.creation.is_some() {
+            return Err("prospective open requires atomic creator admission".into());
+        }
         if input.admission.is_none() {
             if removals::blocks_for_node(&self.state.connection, &input.volume, &input.node, None)?
             {
@@ -676,28 +714,7 @@ impl<'a> Journal<'a> {
         if let Some(key) = &self.chunk {
             crate::chunk_mount::verify_key(&tx, key)?;
         }
-        let mut records = all(&tx)?;
-        if records.len() >= OPEN_LIMIT {
-            return Err("per-open limit reached; history retained".into());
-        }
-        records.push((row.clone(), record.clone()));
-        capacity(&records)?;
-        let a = tx.execute(
-            "INSERT INTO windows_open_journal VALUES(?1,?2,?3,0,NULL,?4)",
-            params![
-                row.input.id,
-                row.owner,
-                serde_json::to_vec(&row.input)?,
-                checksum(&row)?
-            ],
-        )?;
-        let b = tx.execute(
-            "INSERT INTO retained_windows_opens VALUES(?1,?2)",
-            params![row.input.id, anchor(&row)?],
-        )?;
-        if a != 1 || b != 1 || load(&tx, &row.input.id)?.as_ref().map(|(_, r)| r) != Some(&record) {
-            return Err("per-open preparation was not durably recorded".into());
-        }
+        insert_row(&tx, &row, &record)?;
         let imported = record
             .input
             .admission
@@ -756,6 +773,10 @@ impl<'a> Journal<'a> {
                     action: record.events[0].action.clone(),
                 },
             );
+        }
+        if record.input.creation.is_some() {
+            self.current_session(&record.input.session, &record.input.volume)?;
+            creation::activation(&self.state.connection, &record.input)?;
         }
         let proof = {
             if let Some(admission) = &record.input.admission {

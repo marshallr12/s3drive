@@ -19,7 +19,9 @@ The next deferred-creation step is the [prospective creation/open admission
 proposal](creator-open-admission.md), reviewed against `daf5806` on 2026-10-21.
 It reserves namespace closing capacity and an inactive open in one local
 transaction before remote mutation. Its state, SDK and hosted acceptance steps
-are unimplemented; schema 44 and native lifecycle support remain unchanged.
+remain separated. The [accepted state layer](creator-open-state.md) implements
+step A with schema 45, a full local gate and exact-source hosted/native regression
+acceptance. SDK wiring is next; native lifecycle support is unchanged.
 
 | Phase | Deliverable | Completion evidence |
 | --- | --- | --- |
@@ -3709,3 +3711,21 @@ Existing FUSE/WinFsp v8 I/O/directories/remount and128KiB/startup controls passe
 Prospective closing headroom before native remote create, sparse owned-unlinked
 publication and native lifecycle remain next. Retention/GC, cold recovery, physical
 startup and provider/remote deployment acceptance remain incomplete.
+
+### Prospective creation/open state admission accepted — 2026-10-21
+
+[State contract, architecture and indexed evidence](creator-open-state.md),
+20420d7/schema45/all380,25 runtime deltas from main02133e0. Full local gate
+983.01s/all733 unchanged and own CI39616964879 Linux/Windows/book all passed.
+Exact source/API ZIP/strict21+14/project/all35 field/type and full raw-log review
+passed. All17 prospective cases (worker entry included) plus old14 import/3 SDK
+completions passed in both Rust jobs. Four actual killed-worker boundaries,
+actualSQL_FULL, independent row/event quotas, shared namespace reservations and
+zero-growth conversion beside unknown closing credit, original-fence activation,
+unknown-creator abandonment/retirement barriers and byte-preserving43/44 migration
+are covered. Actual old44 Linux binary refused45 unchanged. A failed equal-
+executable-digest assumption and independently successful final-binary checks
+are retained. No new native flag, provider mutation or SDK flow is enabled.
+Next: typed SDK admission and metadata-only mixed-role recovery, then sparse
+owned-unlinked publication, retry-forest/retention and native lifecycle. Physical
+startup, live provider and remote deployment acceptance remain separate.

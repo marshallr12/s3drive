@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{collections::BTreeMap, fmt};
 mod input;
-pub use input::Input;
+pub use input::{CreationOpen, Input};
+pub(crate) mod admission;
 mod journal_impl;
 mod recovery;
 pub use journal_impl::{Client, Journal};
@@ -231,13 +232,16 @@ pub(crate) fn verified_creation(db: &Connection, operation: &str) -> Result<Reco
     let r = inspect_with_witnesses(db, false)?
         .remove(operation)
         .ok_or(Failure::Missing)?;
-    if r.format != 2 || r.receipt.is_none() || r.input.owner.is_none() {
+    if !(2..=3).contains(&r.format) || r.receipt.is_none() || r.input.owner.is_none() {
         return Err(Failure::Incomplete.into());
     }
     check_witness(db, &r)?;
     Ok(r)
 }
 fn check_witness(db: &Connection, record: &Record) -> Result<()> {
+    if record.input.open.is_some() {
+        crate::namespace_client::opens::creation::check_anchor(db, &record.input)?;
+    }
     if let Some(generation) = record.generation {
         if let Some(proof) = &record.physical {
             if journal_impl::verified_physical(db, &record.input, generation)? != *proof {
@@ -275,6 +279,9 @@ fn inspect_with_witnesses(
         let record: Record = serde_json::from_slice(&raw).map_err(|_| Failure::Corrupt)?;
         record.validate()?;
         if record.format == 2 && schema < 43 {
+            return Err(Failure::Corrupt.into());
+        }
+        if record.format == 3 && schema < 45 {
             return Err(Failure::Corrupt.into());
         }
         if all_witnesses {
@@ -322,6 +329,18 @@ fn save(
     r: Record,
     fresh: bool,
 ) -> Result<()> {
+    write(db, rows, r, fresh)?;
+    if inspect(db)? != *rows {
+        return Err(Failure::Corrupt.into());
+    }
+    Ok(())
+}
+fn write(
+    db: &Connection,
+    rows: &mut BTreeMap<String, Record>,
+    r: Record,
+    fresh: bool,
+) -> Result<()> {
     r.validate()?;
     let raw = serde_json::to_vec(&r)?;
     if raw.len() > RECORD_BYTES {
@@ -343,9 +362,6 @@ fn save(
     }
     rows.insert(r.input.operation.clone(), r);
     if db.execute("INSERT INTO manifest_creation_role(singleton,records,state_hash) VALUES(1,?1,?2) ON CONFLICT(singleton) DO UPDATE SET records=excluded.records,state_hash=excluded.state_hash",params![rows.len() as i64,projection(rows)?.as_slice()])?!=1 {return Err(Failure::Corrupt.into())}
-    if inspect(db)? != *rows {
-        return Err(Failure::Corrupt.into());
-    }
     Ok(())
 }
 

@@ -259,7 +259,7 @@ pub(super) fn blocks_for_node(
     Ok(false)
 }
 // Deferred ownership reserves promotion plus final closure; pending reserves closure.
-fn required_slots(records: &[Record]) -> Result<usize> {
+fn required_slots(db: &Connection, records: &[Record]) -> Result<usize> {
     let unknown = records
         .iter()
         .filter(|r| r.outcome.is_none())
@@ -276,13 +276,42 @@ fn required_slots(records: &[Record]) -> Result<usize> {
         .values()
         .map(|o| o.mode.closing_slots())
         .sum::<usize>();
-    Ok(records.len() + reserved + unknown)
+    (records.len() + reserved + unknown)
+        .checked_add(crate::manifest_creation::admission::reserved(db, records)?)
+        .ok_or_else(|| "namespace creation quota overflow".into())
 }
-pub(super) fn check_capacity(records: &[Record]) -> Result<()> {
-    if required_slots(records)? > LIMIT as usize {
+pub(super) fn check_capacity(db: &Connection, records: &[Record]) -> Result<()> {
+    if required_slots(db, records)? > LIMIT as usize {
         return Err("namespace intent limit preserves removal closing headroom".into());
     }
     Ok(())
+}
+/// An exact creator import converts already held capacity. Other admitted
+/// closing attempts may temporarily occupy their own reserved credit; their
+/// unknown outcomes cannot turn a zero-growth conversion into fresh admission.
+pub(super) fn check_import_capacity(
+    db: &Connection,
+    before: &[Record],
+    after: &[Record],
+    operation: &str,
+) -> Result<()> {
+    let next = required_slots(db, after)?;
+    if next <= LIMIT as usize {
+        return Ok(());
+    }
+    let creator = crate::manifest_creation::admission::original(db, operation)?;
+    if creator.input().open.is_some()
+        && creator.receipt().is_some()
+        && before
+            .iter()
+            .all(|r| r.input.request.operation != operation)
+        && after.len() == before.len() + 1
+        && after.len() <= LIMIT as usize
+        && next == required_slots(db, before)?
+    {
+        return Ok(());
+    }
+    Err("namespace import requires reserved closing capacity".into())
 }
 pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
     check_identity(db, input)?;
@@ -396,7 +425,7 @@ pub(super) fn check_begin(db: &Connection, input: &Input) -> Result<()> {
         input: input.clone(),
         outcome: None,
     });
-    if required_slots(&projected)? as isize - credit > LIMIT as isize {
+    if required_slots(db, &projected)? as isize - credit > LIMIT as isize {
         return Err("namespace removal closing quota".into());
     }
     Ok(())

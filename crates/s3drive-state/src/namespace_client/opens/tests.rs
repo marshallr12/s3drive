@@ -109,6 +109,7 @@ impl Fixture {
             controlled: false,
             session_bound: false,
             admission: admission.map(Box::new),
+            creation: None,
         }
     }
     fn apply(&mut self, i: &Input) -> namespace::Receipt {

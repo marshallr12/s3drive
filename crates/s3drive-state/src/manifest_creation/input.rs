@@ -18,6 +18,16 @@ pub struct Input {
     pub fingerprint: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub open: Option<CreationOpen>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CreationOpen {
+    pub id: String,
+    pub session: String,
+    pub delete_on_close: bool,
+    pub posix: bool,
 }
 impl fmt::Debug for Input {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -40,10 +50,23 @@ fn id(s: &str) -> Result<[u8; 16]> {
 }
 impl Input {
     pub(super) fn format(&self) -> u8 {
-        if self.owner.is_some() { 2 } else { 1 }
+        if self.open.is_some() {
+            3
+        } else if self.owner.is_some() {
+            2
+        } else {
+            1
+        }
     }
     pub(super) fn validate(&self) -> Result<()> {
         id(&self.parent.id)?;
+        if let Some(open) = &self.open {
+            id(&open.id)?;
+            id(&open.session)?;
+            if self.owner.is_none() || open.id == ns::ROOT || open.session == ns::ROOT {
+                return Err(Failure::Invalid.into());
+            }
+        }
         if let Some(owner) = &self.owner {
             id(owner)?;
             if owner == ns::ROOT {
@@ -98,7 +121,9 @@ impl Input {
     }
     pub fn stage_key(&self) -> Result<[u8; 32]> {
         self.validate()?;
-        if self.owner.is_some() {
+        if self.open.is_some() {
+            hash(b"s3drive-open-creation-stage-v3\0", self)
+        } else if self.owner.is_some() {
             hash(b"s3drive-deferred-creation-stage-v2\0", self)
         } else {
             hash(b"s3drive-empty-creation-stage-v1\0", self)

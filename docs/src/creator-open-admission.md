@@ -1,7 +1,9 @@
 # Prospective creation and open admission
 
-Design reviewed against source on 2026-10-21 at `daf5806`. **Proposed, not
-implemented.** Runtime remains schema 44. The user-selected storage layout is
+Design reviewed against source on 2026-10-21 at `daf5806`. The
+[accepted state layer](creator-open-state.md) now implements step A with
+schema 45. SDK/native integration remains proposed; no user installation was
+performed. The selected storage layout is
 immutable chunks plus manifests, with ordinary names in the mounted drive.
 This phase prepares local recovery capacity for deferred canonical creation;
 it does not enable native deletion, replacement or open-unlinked callbacks.
@@ -187,9 +189,9 @@ saturated historical-import recovery/compensation path remains separate work.
 
 | Step | Required behavior and evidence |
 | --- | --- |
-| A — state admission and validation | Format-3/optional origin, marker guard/migration, same-transaction creator/open write, shared accounting and recovery barriers. Public worker tests must prove atomicity and unchanged legacy bytes. No SDK or native call site enabled. |
+| A — state admission and validation | [Accepted state layer](creator-open-state.md),20420d7/schema45, full local and own Linux/Windows/book/native regression acceptance. No SDK or native call site enabled. |
 | B — SDK entry point | Same-worker capability and shared concurrency/deadline; no PUT/authority mutation on quota/session/binding refusal; exact replay/observation after uncertain remote outcomes through the real SDK and loopback authority. |
-| C — hosted acceptance | Full local gate, exact-source Linux and Windows jobs, native v8 regressions, strict artifact/source checks and reviewed raw logs; separate physical/provider gates remain. |
+| C — hosted acceptance | State source20420d7 passed these gates. SDK step B needs fresh full local/exact-source Linux and Windows/native regression/strict artifact/source/raw-log gates after its own changes; physical/provider gates remain separate. |
 | D — later native lifecycle | Sparse owned-unlinked publication with original fence/current event, unresolved-effect barriers and FUSE/WinFsp deletion/replacement tests. No lifecycle flag enabled by A–C. |
 
 State acceptance must cover exact/changed retries, operation collisions,
@@ -212,12 +214,13 @@ readiness barrier rather than reusing a parent's obsolete runtime session.
 An actual schema-44 binary must refuse a disposable schema-45 database without
 changing it; restore and verify the new binary afterward. Portable unit tests
 do not establish WinFsp/FUSE, Wasabi, physical sign-in/reboot or multi-host
-fencing behavior. This document records design/source review only; **none of
-these proposed acceptance gates has passed yet**.
+fencing behavior. The [state layer](creator-open-state.md) has full local and
+hosted acceptance; **SDK and integrated native lifecycle acceptance remain pending**.
 
-## Verification of this documentation change
+## Original design publication evidence
 
-The full `bash scripts/gate.sh` passed on 2026-10-21 in 917.02 seconds, exit 0,
+For the original documentation-only publication, `bash scripts/gate.sh` passed
+on 2026-10-21 in 917.02 seconds, exit 0,
 with all 729 draft inputs unchanged during the run. All 37 test cohorts passed;
 every slow-test notice resolved to a pass. Gate-log SHA256:
 `e9f6656fe042bba2cfd873a04efd10f2cc995875ce275093e6aa7ffbf7c62bcb`.

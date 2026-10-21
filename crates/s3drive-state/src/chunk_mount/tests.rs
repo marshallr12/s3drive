@@ -55,6 +55,7 @@ fn creation(input: &Input, op: u8) -> crate::manifest_creation::Input {
         source: c.source,
         fingerprint: c.fingerprint.clone(),
         owner: None,
+        open: None,
     }
 }
 fn directory(input: &Input, op: u8) -> names::Input {
@@ -248,6 +249,7 @@ fn shared_namespace_receipts_and_open_sessions_survive_restart_without_old_write
         session_bound: true,
         posix: false,
         admission: None,
+        creation: None,
     };
     let mut journal = opens::Journal::for_chunks(&mut state, &key).unwrap();
     journal.start_session(&id(41), &input.volume).unwrap();
@@ -800,6 +802,7 @@ fn open_input(declared: &Input, n: u8) -> opens::OpenInput {
         session_bound: true,
         posix: false,
         admission: None,
+        creation: None,
     }
 }
 #[test]

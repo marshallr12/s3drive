@@ -437,6 +437,12 @@ impl Client {
     pub fn opens(&self) -> crate::worker::Opens {
         crate::worker::Opens::chunk(self.owner.clone(), self.key.clone())
     }
+    pub fn creations(
+        &self,
+        limits: crate::manifest_creation::Limits,
+    ) -> Result<crate::manifest_creation::Client> {
+        crate::manifest_creation::Client::chunk(self.owner.clone(), limits, self.key.clone())
+    }
     pub fn same_storage(&self, storage: &Storage) -> bool {
         storage.same_owner(&self.owner)
     }

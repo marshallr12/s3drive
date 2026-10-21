@@ -3,6 +3,7 @@
 use super::*;
 use crate::{chunk_mount, namespace_client as names, namespace_client::opens};
 use std::{collections::BTreeMap, path::Path};
+mod prospective;
 fn setup(root: &Path) -> (State, State, chunk_mount::Key, Input) {
     std::fs::create_dir_all(root).unwrap();
     let mut a = State::open_managed(&root.join("authority")).unwrap();
@@ -73,6 +74,7 @@ fn open(r: &names::Record) -> opens::OpenInput {
         session_bound: true,
         posix: false,
         admission: Some(Box::new(r.input.clone())),
+        creation: None,
     }
 }
 fn catalog(s: &State) -> BTreeMap<String, Vec<String>> {
@@ -482,6 +484,7 @@ fn creator_import_old43_role_upgrades_without_rewriting_rows_and_cannot_launder_
         .unwrap();
     let plain = opens::OpenInput {
         admission: None,
+        creation: None,
         delete_on_close: false,
         ..open(&names::Record {
             input: ns_input(&i, j(&mut s).get(&i.operation).unwrap().request().unwrap()),
@@ -499,7 +502,7 @@ fn creator_import_old43_role_upgrades_without_rewriting_rows_and_cannot_launder_
     drop(s);
     let mut s = State::open_managed(&t.path().join("client")).unwrap();
     assert_eq!(catalog(&s), before);
-    assert_eq!(s.info().unwrap().schema_version, 44);
+    assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
     import(&mut s, &key, &i.operation).unwrap();
     s.connection
         .pragma_update(None, "user_version", 43)
