@@ -76,6 +76,16 @@ impl Journal<'_> {
         if is_retired(&tx, key)? {
             return Ok(());
         }
+        // Retirement is a new local capacity release, unlike replaying an
+        // already sealed historical retirement. Retain every open while any
+        // preparation for its node has an unresolved effect/source settlement.
+        if self.chunk.is_some() {
+            crate::sparse_views::preparation::publication::namespace_pending(
+                &tx,
+                &record.input.volume,
+                &record.input.node,
+            )?;
+        }
         all(&tx)?;
         if tx.execute(
             "INSERT INTO retired_windows_opens VALUES(?1,?2)",

@@ -183,16 +183,25 @@ pub(super) fn adoption_fence(
     Ok(AdoptionFence(meta))
 }
 
-pub(in crate::sparse_views) fn namespace_pending(
-    db: &Connection,
-    volume: &str,
-    node: &str,
-) -> Result<()> {
+pub(crate) fn namespace_pending(db: &Connection, volume: &str, node: &str) -> Result<()> {
+    // An admitted preparation may already have staged or claimed physical
+    // effects before a root publication record exists. Inspect the complete
+    // plan/source graph, not just roots or the current (possibly clean) head.
+    let source = super::ledger::inspect(db)?;
     let meta = ledger::inspect(db)?;
-    for r in meta.records.values() {
-        let base = r.input().binding().base()?;
-        if base.volume() == volume && base.node() == node && r.acknowledgment().is_none() {
-            return Err("recover pending sparse publication before namespace mutation".into());
+    ledger::validate_source_snapshot(db, &meta, &source)?;
+    for (plan, saved) in &source.plans {
+        let binding = &source.views.record(saved.input.view)?.request.binding;
+        let base = binding.base()?;
+        if base.volume() == volume
+            && base.node() == node
+            && meta
+                .records
+                .get(plan)
+                .and_then(|r| r.acknowledgment())
+                .is_none()
+        {
+            return Err("settle every sparse preparation before closing this node".into());
         }
     }
     Ok(())

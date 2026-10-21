@@ -4,6 +4,22 @@ Updated 2026-10-21. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
+## Active continuation: sparse node-wide effect barriers
+
+Branch `codex/sparse-node-effect-barriers` starts from freshly fetched main
+`022c832aed4174203dfe29451979dc9d5391ac00`. Main's previous schema46 merge and
+run39656415734 were verified before this continuation. Read
+`docs/src/sparse-node-barriers.md` for the new narrow contract. Candidate changes
+cover preparations before root records, reciprocal namespace admission, and
+session abandonment/open retirement. Schema46 and native feature flags remain
+unchanged. Typed owned-unlinked admission is not claimed complete.
+
+This candidate's full/native hosted acceptance remains pending. Local durable
+state tests cannot run on the cloud workstation's overlayfs/tmpfs; retain failed
+local logs and use authorized standard GitHub runners without relaxing guards.
+Do not merge this candidate until its exact-source full/native results are
+reviewed; check fresh main/branch heads and verify main CI after any merge.
+
 ## Current checkpoint: accepted event-bound manifest authority
 
 Runtime implementation `0a236de`, transfer source `a6e91434`, was validated

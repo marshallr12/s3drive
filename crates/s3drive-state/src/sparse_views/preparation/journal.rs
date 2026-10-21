@@ -66,6 +66,8 @@ impl<'a> Journal<'a> {
             return old.info(&before.views);
         }
         let view = View(before.views.record(input.view)?.clone());
+        let base = view.binding().base()?;
+        crate::namespace_client::authorize_sparse_preparation(&tx, base.volume(), base.node())?;
         for old in before.plans.values() {
             if old.input.generation == input.generation
                 && before

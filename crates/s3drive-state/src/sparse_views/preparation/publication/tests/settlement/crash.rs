@@ -82,6 +82,12 @@ fn killed_epoch_owners_keep_exact_old_state_or_complete_ack_and_replay_same_resu
                 .unwrap();
             let r = j(&mut s).get(p).unwrap();
             assert_eq!(r.acknowledgment().is_some(), point == "Committed");
+            let base = f.binding.base().unwrap();
+            assert_eq!(
+                namespace_pending(&s.connection, base.volume(), base.node()).is_ok(),
+                point == "Committed",
+                "only committed source settlement releases the node barrier"
+            );
             let head = vj(&mut s).current_head(&f.binding).unwrap();
             if history {
                 assert_eq!(head.0.operation, [41; 32]);

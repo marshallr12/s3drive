@@ -203,6 +203,19 @@ pub(crate) fn authorize_publication(db: &Connection, input: &crate::managed::Inp
         _ => Err("publication requires this client's exact acknowledged removal fence".into()),
     }
 }
+/// The existing sparse preparation path has no retained removal/open claim.
+/// Freeze no fresh work behind a namespace effect or acknowledged ownership;
+/// typed owned-unlinked admission must supply its own contract in a later phase.
+pub(crate) fn authorize_sparse_preparation(
+    db: &Connection,
+    volume: &str,
+    node: &str,
+) -> Result<()> {
+    if pending_for_node(db, volume, node)? || removals::owned(db, volume, node)?.is_some() {
+        return Err("recover namespace ownership before fresh sparse preparation".into());
+    }
+    Ok(())
+}
 pub(crate) fn pending_for_node(db: &Connection, volume: &str, node: &str) -> Result<bool> {
     removals::blocks_for_node(db, volume, node, None)
 }

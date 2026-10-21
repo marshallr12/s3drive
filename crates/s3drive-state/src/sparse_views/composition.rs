@@ -54,6 +54,7 @@ pub(crate) fn chunk_scope(db: &Connection, b: &crate::chunk_mount::Binding) -> R
     Ok(())
 }
 pub(crate) fn namespace_guard(db: &Connection, volume: &str, entry: &Entry) -> Result<()> {
+    preparation::publication::namespace_pending(db, volume, &entry.id)?;
     let found = headers(db)?.into_iter().find(|(_, b, _)| {
         b.base()
             .is_ok_and(|base| base.volume() == volume && base.node() == entry.id)
@@ -81,6 +82,5 @@ pub(crate) fn namespace_guard(db: &Connection, volume: &str, entry: &Entry) -> R
     if file.head != head || !record.clean() {
         return Err("settle dirty sparse data before namespace mutation".into());
     }
-    preparation::publication::namespace_pending(db, volume, &entry.id)?;
     Ok(())
 }

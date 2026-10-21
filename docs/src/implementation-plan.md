@@ -62,6 +62,14 @@ lifecycle flags remain unchanged.
 | P5c — desktop mutations | Safe delete, documented rename behavior, open-handle semantics, real application workflows | Delete races, save/replace, concurrent open, unmount failures and data-loss tests on both OSes |
 | P6 — user application | Diagnostics, startup integration in installers, signed packaging/update process, optional tray UI | Clean-machine install/uninstall, missing-driver handling, upgrade/recovery, user-visible status |
 
+## Current sparse lifecycle prerequisite
+
+The [node-wide sparse effect barrier](sparse-node-barriers.md) is the next narrow
+implementation candidate after accepted schema46 authority. Its own full/native
+acceptance is pending. It does not complete phase-2 typed owned admission or
+enable SDK/native owned-unlinked publication. See the contract for conservative
+rejection handling, historical replay, and the remaining persisted ownership work.
+
 ## P1 concrete tasks
 
 1. Wasabi is the selected first provider; a dedicated test bucket/prefix is configured. Add AWS SDK client

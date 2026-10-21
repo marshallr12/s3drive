@@ -313,6 +313,9 @@ impl Journal<'_> {
         if records.is_empty() {
             return Err("no old open records to recover".into());
         }
+        if self.chunk.is_some() {
+            crate::sparse_views::preparation::publication::namespace_pending(&tx, volume, node)?;
+        }
         let mut opens = Vec::new();
         let first = &records[0].1.input;
         if removals::blocks_for_node(&tx, volume, node, None)? {
@@ -424,6 +427,13 @@ impl Journal<'_> {
                 input,
                 finished: true,
             });
+        }
+        if self.chunk.is_some() {
+            crate::sparse_views::preparation::publication::namespace_pending(
+                &tx,
+                &input.volume,
+                &input.node,
+            )?;
         }
         if removals::owned(&tx, &input.volume, &input.node)?.is_some()
             || removals::blocks_for_node(&tx, &input.volume, &input.node, None)?

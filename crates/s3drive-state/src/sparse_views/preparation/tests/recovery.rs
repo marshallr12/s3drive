@@ -135,6 +135,18 @@ fn killed_preparation_owners_roll_back_every_uncommitted_boundary_and_replay_com
                         && snapshot.blobs.is_empty()
                 );
             }
+            let base_binding = binding(C);
+            let descriptor = base_binding.base().unwrap();
+            assert_eq!(
+                publication::namespace_pending(
+                    &s.connection,
+                    descriptor.volume(),
+                    descriptor.node()
+                )
+                .is_err(),
+                kind != "begin" || *point == "Committed",
+                "namespace barrier must follow durable preparation admission"
+            );
             let b = base(C, BTreeMap::from([(0, pattern(0, C))]));
             let v = old_view(&mut s, &b);
             let info = Journal::new(&mut s, Options::default())
