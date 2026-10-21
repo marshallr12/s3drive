@@ -153,11 +153,11 @@ repeat with a session-isolated supervisor and retain the authoritative status.
 - [Local indexed archive](evidence/deferred-canonical-local-20261021.tar.gz): 432 members, 1169783 bytes; SHA256 `621f693651c74986023ed71be8dc9f60c4330ec573244fb404eb2fcc3dd4e70f`. Every member verified.
 - [Hosted indexed archive](evidence/deferred-canonical-hosted-20261021.tar.gz): 40 members, 224449 bytes; SHA256 `2bb73e5483c5bed7feb44e142afc058a82ade562394ba6fc1cbf7ef5543f156a`. Every member verified.
 
-![Rust authority atomically stores canonical file metadata, original fence/event and exact result; the future SDK verifies the S3 object.](images/atomic-deferred-canonical.svg)
+![Rust client verifies the S3 object and retains its local journal; the authority atomically records canonical file metadata, original fence/event and exact result.](images/atomic-deferred-canonical.svg)
 
-The physical root is still a caller claim at the metadata service. The next
-phase must persist the original creator/physical proof and import its exact
-receipt into the same-owner open journal. Sparse owned-unlinked publication must
+The physical root is still a caller claim at the metadata service. The [creation client](deferred-creation-client.md) now persists the original
+creator/physical proof. The next phase must import its exact receipt into the
+same-owner open journal. Sparse owned-unlinked publication must
 bind the original fence and current removal event. Native delete-on-close,
 save-replace/rename/delete, retention/GC and cold recovery remain unsupported in
 the chunk profile. Real managed Wasabi, physical MX/Windows10/11 reboot/session,

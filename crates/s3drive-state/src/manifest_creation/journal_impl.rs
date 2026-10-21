@@ -72,7 +72,7 @@ impl<'a> Journal<'a> {
             return Err(Failure::Conflict.into());
         }
         let r = Record {
-            format: 1,
+            format: input.format(),
             input,
             generation: None,
             physical: None,

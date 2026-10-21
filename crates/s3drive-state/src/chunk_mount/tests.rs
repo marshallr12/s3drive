@@ -54,6 +54,7 @@ fn creation(input: &Input, op: u8) -> crate::manifest_creation::Input {
         store: c.store.clone(),
         source: c.source,
         fingerprint: c.fingerprint.clone(),
+        owner: None,
     }
 }
 fn directory(input: &Input, op: u8) -> names::Input {

@@ -24,6 +24,7 @@ fn input(n: u8) -> Input {
         },
         source: [9; 32],
         fingerprint: "a".repeat(64),
+        owner: None,
     }
 }
 fn j(s: &mut State) -> Journal<'_> {
@@ -78,7 +79,17 @@ fn receipt(i: &Input, r: &Apply) -> ns::Receipt {
             payload: Some(p.clone()),
             placement: Some(i.store.clone()),
         },
-        artifact: Some(ns::Artifact::Published(p)),
+        artifact: Some(if let Some(owner) = &i.owner {
+            ns::Artifact::PublishedRemoval {
+                payload: p,
+                fence: ns::RemovalFence {
+                    intent: i.operation.clone(),
+                    owner: owner.clone(),
+                },
+            }
+        } else {
+            ns::Artifact::Published(p)
+        }),
     }
 }
 fn rows(s: &State) -> Vec<Vec<String>> {
@@ -427,7 +438,10 @@ fn creation_crash_worker() {
     };
     let action = std::env::var("S3DRIVE_EMPTY_CREATION_ACTION").unwrap();
     let mut s = State::open_managed(std::path::Path::new(&path)).unwrap();
-    let i = input(4);
+    let mut i = input(4);
+    if std::env::var("S3DRIVE_CREATION_DEFERRED").as_deref() == Ok("1") {
+        i.owner = Some(id(9));
+    }
     match action.as_str() {
         "admit" => {
             j(&mut s).begin(i).unwrap();
@@ -457,6 +471,9 @@ fn creation_crash_worker() {
 }
 #[test]
 fn killed_real_owners_preserve_old_or_exact_committed_admission_link_request_and_receipt() {
+    killed_creation_cases(false);
+}
+fn killed_creation_cases(deferred: bool) {
     use std::{
         io::{BufRead, BufReader},
         process::{Command, Stdio},
@@ -474,7 +491,10 @@ fn killed_real_owners_preserve_old_or_exact_committed_admission_link_request_and
             let t = tempfile::tempdir().unwrap();
             let path = t.path().join("s");
             let mut s = State::open_managed(&path).unwrap();
-            let i = input(4);
+            let mut i = input(4);
+            if deferred {
+                i.owner = Some(id(9));
+            }
             let mut g = None;
             if action != "admit" {
                 j(&mut s).begin(i.clone()).unwrap();
@@ -503,6 +523,10 @@ fn killed_real_owners_preserve_old_or_exact_committed_admission_link_request_and
                     .arg("--nocapture")
                     .env("S3DRIVE_EMPTY_CREATION_PATH", &path)
                     .env("S3DRIVE_EMPTY_CREATION_ACTION", action)
+                    .env(
+                        "S3DRIVE_CREATION_DEFERRED",
+                        if deferred { "1" } else { "0" },
+                    )
                     .env("S3DRIVE_EMPTY_CREATION_STOP", boundary)
                     .env(
                         "S3DRIVE_EMPTY_CREATION_GENERATION",
@@ -962,3 +986,5 @@ fn rewritten_request_and_physical_snapshot_cannot_replace_the_independent_verifi
         assert!(State::open_managed(&path).is_err());
     }
 }
+
+mod deferred;

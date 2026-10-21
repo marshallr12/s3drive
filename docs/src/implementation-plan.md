@@ -3672,3 +3672,19 @@ The initial authority transaction is implemented; SDK intent/provenance import,
 sparse owned-unlinked publication and native lifecycle flags remain subsequent
 phases. Retention/GC, cold recovery, physical startup and real-provider/remote
 service acceptance remain required. No provider or visibility mutation authorized.
+
+
+### Deferred canonical creation client accepted —2026-10-21
+
+[Client contract and indexed evidence](deferred-creation-client.md),9381456,
+schema43/all374,15 runtime deltas from8601973. Full local gate841.84s/all716
+unchanged and own CI39587227416 Linux/Windows/book all passed. Exact remote
+source/API ZIP/strict21+14/project/all35 field/type and full raw-log review passed.
+Seven state/six SDK cases cover original owner, physical uncertainty, restricted
+no-credential recovery, Unicode collisions, eight crash points, actualSQL_FULL,
+old-format bytes and real schema42-binary43 refusal. Both dispatcher cancellation
+cases and unchanged128KiB/native FUSE+WinFsp/startup regressions passed.
+[Same-owner provenance import](creator-provenance-import.md), sparse owned-unlinked
+publication and native lifecycle activation remain next. Retention/GC, cold
+recovery, physical workstation and freshly approved provider/service acceptance
+remain required; the full goal is incomplete.

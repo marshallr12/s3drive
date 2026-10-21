@@ -16,6 +16,8 @@ pub struct Input {
     pub store: Store,
     pub source: [u8; 32],
     pub fingerprint: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner: Option<String>,
 }
 impl fmt::Debug for Input {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -37,8 +39,18 @@ fn id(s: &str) -> Result<[u8; 16]> {
     Ok(out)
 }
 impl Input {
+    pub(super) fn format(&self) -> u8 {
+        if self.owner.is_some() { 2 } else { 1 }
+    }
     pub(super) fn validate(&self) -> Result<()> {
         id(&self.parent.id)?;
+        if let Some(owner) = &self.owner {
+            id(owner)?;
+            if owner == ns::ROOT {
+                return Err(Failure::Invalid.into());
+            }
+        }
+
         if self.operation == ns::ROOT
             || self.volume == ns::ROOT
             || self.parent.id == self.operation
@@ -86,7 +98,11 @@ impl Input {
     }
     pub fn stage_key(&self) -> Result<[u8; 32]> {
         self.validate()?;
-        hash(b"s3drive-empty-creation-stage-v1\0", self)
+        if self.owner.is_some() {
+            hash(b"s3drive-deferred-creation-stage-v2\0", self)
+        } else {
+            hash(b"s3drive-empty-creation-stage-v1\0", self)
+        }
     }
     pub(super) fn request(
         &self,
@@ -94,7 +110,7 @@ impl Input {
         etag: String,
         version: Option<String>,
     ) -> Result<ns::Apply> {
-        let r = ns::Apply {
+        let mut r = ns::Apply {
             volume: self.volume.clone(),
             operation: self.operation.clone(),
             expected_sequence: self.expected_sequence,
@@ -108,16 +124,46 @@ impl Input {
                 version,
             },
         };
+        if let Some(owner) = &self.owner {
+            let ns::Mutation::CreateEmptyManifest {
+                parent,
+                parent_revision,
+                name,
+                store,
+                upload_operation,
+                etag,
+                version,
+            } = r.mutation
+            else {
+                return Err(Failure::Invalid.into());
+            };
+            r.mutation = ns::Mutation::CreateDeferredEmptyManifest {
+                parent,
+                parent_revision,
+                name,
+                store,
+                upload_operation,
+                etag,
+                version,
+                owner: owner.clone(),
+            };
+        }
         r.validate().map_err(|_| Failure::Invalid)?;
         Ok(r)
     }
     pub(super) fn payload(&self, request: &ns::Apply, sequence: u64) -> Result<Payload> {
-        let ns::Mutation::CreateEmptyManifest {
+        let (ns::Mutation::CreateEmptyManifest {
             upload_operation,
             etag,
             version,
             ..
-        } = &request.mutation
+        }
+        | ns::Mutation::CreateDeferredEmptyManifest {
+            upload_operation,
+            etag,
+            version,
+            ..
+        }) = &request.mutation
         else {
             return Err(Failure::Corrupt.into());
         };
@@ -163,9 +209,20 @@ impl Input {
             payload: Some(payload.clone()),
             placement: Some(self.store.clone()),
         };
+        let artifact = if let Some(owner) = &self.owner {
+            ns::Artifact::PublishedRemoval {
+                payload,
+                fence: ns::RemovalFence {
+                    intent: self.operation.clone(),
+                    owner: owner.clone(),
+                },
+            }
+        } else {
+            ns::Artifact::Published(payload)
+        };
         if r.sequence <= self.expected_sequence
             || r.node != expected
-            || r.artifact != Some(ns::Artifact::Published(payload))
+            || r.artifact != Some(artifact)
         {
             return Err(Failure::Corrupt.into());
         }

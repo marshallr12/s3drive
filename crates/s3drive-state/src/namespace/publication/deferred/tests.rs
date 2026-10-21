@@ -268,7 +268,7 @@ fn deferred_canonical_migration_preserves_old_bytes_and_rejects_downgraded_new_r
         .unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
-    assert_eq!(s.info().unwrap().schema_version, 42);
+    assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
     assert_eq!(rows(&s.connection), before);
     let after_tables: i64 = s
         .connection

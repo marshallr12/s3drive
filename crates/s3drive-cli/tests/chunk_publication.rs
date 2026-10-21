@@ -2,6 +2,8 @@
 //! fixtures/dummy profiles only. No provider or mounted chunk-format acceptance.
 #[path = "chunk_publication/composition.rs"]
 mod composition;
+#[path = "chunk_publication/deferred_creation.rs"]
+mod deferred_creation;
 #[path = "chunk_publication/empty_creation.rs"]
 mod empty_creation;
 #[path = "support/fixture.rs"]
@@ -212,7 +214,8 @@ async fn proxy(
             &request,
             Request::Apply {
                 request: Apply {
-                    mutation: Mutation::CreateEmptyManifest { .. },
+                    mutation: Mutation::CreateEmptyManifest { .. }
+                        | Mutation::CreateDeferredEmptyManifest { .. },
                     ..
                 }
             }
@@ -263,6 +266,13 @@ async fn proxy(
         Request::Apply {
             request:
                 Apply {
+                    mutation: Mutation::CreateDeferredEmptyManifest { .. },
+                    ..
+                },
+        } => 20,
+        Request::Apply {
+            request:
+                Apply {
                     mutation:
                         Mutation::CreateEntry {
                             node_kind: Kind::Directory,
@@ -296,6 +306,12 @@ async fn proxy(
         (Request::Features {}, Reply::Features(fs), 6) => fs.retain(|f| f != "manifest-root-v1"),
         (Request::Features {}, Reply::Features(fs), 17) => {
             fs.retain(|f| f != "namespace-create-v1")
+        }
+        (Request::Features {}, Reply::Features(fs), 19) => {
+            fs.retain(|f| f != "atomic-deferred-empty-manifest-v1")
+        }
+        (Request::Features {}, Reply::Features(fs), 21) => {
+            fs.retain(|f| f != "manifest-history-v1")
         }
         (Request::Info {}, Reply::Info(v), 7) => {
             v.name_policy = "unsupported-fixture-policy".into()
@@ -1179,9 +1195,15 @@ async fn chunk_child() {
     let s = Server::open(&root, policy).await;
     if matches!(
         mode.as_str(),
-        "recover" | "source_recover_unknown" | "source_recover_known" | "empty_recover"
+        "recover"
+            | "source_recover_unknown"
+            | "source_recover_known"
+            | "empty_recover"
+            | "deferred_client_recover"
     ) {
-        if mode == "empty_recover" {
+        if mode == "deferred_client_recover" {
+            Box::pin(deferred_creation::killed_recovery(&root, &s)).await;
+        } else if mode == "empty_recover" {
             Box::pin(empty_creation::killed_recovery(&root, &s)).await;
         } else if mode == "recover" {
             Box::pin(recover(&root, &s)).await;
@@ -1224,6 +1246,12 @@ fn dispatch<'a>(
         "native_policy" => Box::pin(native_writer::policy(config, root, s)),
         "native_concurrency" => Box::pin(native_writer::concurrency(config, root, s)),
         "composition" => Box::pin(composition::flow(config, root, s)),
+        "deferred_client_flow" => Box::pin(deferred_creation::flow(config, root, s)),
+        "deferred_client_controls" => Box::pin(deferred_creation::controls(config, root, s)),
+        "deferred_client_recovery" => Box::pin(deferred_creation::recovery(config, root, s)),
+        "deferred_client_physical" => Box::pin(deferred_creation::physical(config, root, s)),
+        "deferred_client_crash" => Box::pin(deferred_creation::crash(config, root, s)),
+        "deferred_client_deadline" => Box::pin(deferred_creation::deadline(config, root, s)),
         "empty_deadline" => Box::pin(empty_creation::deadline(config, root, s)),
         "empty_physical" => Box::pin(empty_creation::physical(config, root, s)),
         "empty_crash" => Box::pin(empty_creation::crash(config, root, s)),
@@ -1269,6 +1297,7 @@ async fn run(mode: &str) {
         "mixed_roots_crash" => vec!["mixed_roots_crash", "mixed_roots_recover"],
         "crash" => vec!["crash", "recover"],
         "empty_crash" => vec!["empty_crash", "empty_recover"],
+        "deferred_client_crash" => vec!["deferred_client_crash", "deferred_client_recover"],
         "source_crash" => vec!["source_crash", "source_recover_unknown"],
         "source_ack_crash" => vec!["source_ack_crash", "source_recover_known"],
         _ => vec![mode],
@@ -1456,6 +1485,7 @@ async fn run(mode: &str) {
                         | "source_ack_crash"
                         | "mixed_roots_crash"
                         | "empty_crash"
+                        | "deferred_client_crash"
                 ) {
                     killed && !status.success()
                 } else {
@@ -1463,7 +1493,7 @@ async fn run(mode: &str) {
                 },
             "case {stage}: {status}: {err}"
         );
-        if stage == "empty_crash" {
+        if matches!(stage, "empty_crash" | "deferred_client_crash") {
             assert_eq!(puts(&f), 1);
             let db = raw(tmp.path());
             db.execute("UPDATE staged_chunks SET data=zeroblob(length(data))", [])
@@ -1529,7 +1559,9 @@ async fn run(mode: &str) {
                 | "source_policy"
                 | "source_flow"
                 | "empty_recovery"
+                | "deferred_client_recovery"
                 | "empty_recover"
+                | "deferred_client_recover"
         ) {
             assert_eq!(
                 f.requests.lock().unwrap().len(),
@@ -1539,6 +1571,12 @@ async fn run(mode: &str) {
         }
     }
     let expected = match mode {
+        "deferred_client_flow"
+        | "deferred_client_recovery"
+        | "deferred_client_crash"
+        | "deferred_client_physical"
+        | "deferred_client_deadline" => 1,
+        "deferred_client_controls" => 2,
         "empty_flow" | "empty_recovery" | "empty_crash" | "empty_physical" | "empty_deadline" => 1,
         "native_writer_mount" => 6,
         "native_writer" => 5,
@@ -1795,4 +1833,34 @@ async fn native_chunk_directory_during_unknown_root_keeps_newer_local_edits() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn native_chunk_directory_only_performs_zero_s3_puts() {
     run("native_directories_only").await;
+}
+
+#[tokio::test]
+async fn deferred_client_flow() {
+    run("deferred_client_flow").await;
+}
+
+#[tokio::test]
+async fn deferred_client_controls() {
+    run("deferred_client_controls").await;
+}
+
+#[tokio::test]
+async fn deferred_client_recovery() {
+    run("deferred_client_recovery").await;
+}
+
+#[tokio::test]
+async fn deferred_client_physical() {
+    run("deferred_client_physical").await;
+}
+
+#[tokio::test]
+async fn deferred_client_crash() {
+    run("deferred_client_crash").await;
+}
+
+#[tokio::test]
+async fn deferred_client_deadline() {
+    run("deferred_client_deadline").await;
 }

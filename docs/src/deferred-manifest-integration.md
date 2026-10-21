@@ -1,68 +1,45 @@
 # Deferred canonical manifest integration
 
-Original source review dated2026-10-19 against66d78db. The
-[atomic deferred canonical authority/state contract](atomic-deferred-manifest-create.md)
-is now implemented and independently accepted at3e670915/schema42. The SDK
-provenance import, owned-unlinked publisher and native lifecycle integration
-below remain future work. Keep delete-on-close/save-replace flags unsupported.
+Updated2026-10-21. The initial authority transaction and its creation client are
+implemented and independently accepted. The open-journal provenance bridge,
+sparse owned-unlinked publisher and native lifecycle integration remain future
+work. Keep delete-on-close/save-replace flags unsupported in the chunk profile.
 
-Observed boundaries:
+| Boundary | Current evidence |
+| --- | --- |
+| Canonical node, initial payload/history and original fence/event | [Authority/state contract](atomic-deferred-manifest-create.md),3e670915/schema42, full local and own Linux/Windows/book/native regression acceptance |
+| Original client owner, physical root proof, exact request/outcome and restricted recovery | [Creation client](deferred-creation-client.md),9381456/schema43, full local and own Linux/Windows/book/native regression acceptance |
+| Verified creator to same-owner namespace/open journal | [Proposed typed import](creator-provenance-import.md); unimplemented |
+| Sparse publication after unlink or owner-bound replacement | Planned; exact fence/current event and unresolved-effect barriers required |
+| Native v8 deferred/open-unlinked/delete/save-replace callbacks | Unsupported until their library and FUSE/WinFsp recovery gates pass |
 
-- `namespace/publication/empty.rs` creates node, canonical payload and upload history
-  atomically, but has no removal owner. Its artifact is `Published(payload)`.
-- `namespace/removals.rs` recognizes `CreateDeferredEntry` as the initial owner/fence
-  operation and its artifact is `Removal(fence)`. That operation creates a
-  metadata-empty node and cannot be silently used as a sparse manifest origin.
-- `namespace/creation.rs` only defines metadata-empty creation receipt shapes.
-- Native lifecycle calls `CreateDeferredEntry` in `s3drive-fs/src/managed/writes/lifecycle.rs`.
-- Mixed root reservations still use `detached:false, removal:None` in
-  `sparse_views/preparation/publication/journal.rs`; owned-unlinked writes require
-  an exact validated removal fence, not merely a boolean switch.
+The creation client and namespace/open journal use distinct durable records.
+An ordinary namespace Input or historical receipt cannot stand in for the
+creation journal's independently checked staging/upload witness. Import must
+read the exact successful owner-bearing creation from the same SQLite worker,
+retain its original request/receipt and preserve source/store/owner controls.
+Generic namespace submission must not bypass that importer. Activation must
+still prove current deferred ownership; historical replay cannot resurrect a
+cancelled owner or adopt a successor epoch.
 
-Design choices still to resolve:
+Owned-unlinked publication must save the original owner, fence and current
+removal event in the exact reservation request. Final removal must stay blocked
+while root/physical outcomes or local source acknowledgment remain unresolved.
+Preserve existing handles, exact old reads and newer dirty heads through retry
+and recovery. Increasing the old8MiB whole-generation bound cannot substitute
+for the sparse chunk engine. Retention and complete retry-forest closure remain
+separate prerequisites for safe GC and a usable long-running drive.
 
-1. Prefer evaluating an explicit new deferred canonical-manifest mutation rather
-   than treating an unchecked create followed by prepare-removal as atomic. It
-   needs exact parent/name/store/owner guards, stable operation identity, canonical
-   64-byte physical root proof, and a receipt representing both publication and
-   the original removal fence. Reuse the same authority SQL transaction; schema41
-   retains the 64-table snapshot bound, so do not add a table casually.
-2. Preserve old operation and intent JSON/BLOB bytes. New optional fields or
-   record formats require explicit old-schema downgrade refusal and feature
-   negotiation, plus tests proving historical exact-request recovery before fresh
-   feature/policy admission. No decided API or schema42 claim is made here.
-3. The creation SDK uses its own durable journal, while `OpenInput.admission`
-   expects a namespace journal input/outcome. A typed same-owner import of an
-   exact verified creation receipt may be needed. It must validate original local
-   physical metadata and original authority request; never fabricate an outcome
-   from a path or a newer node. Shared receipt-shape checks should avoid divergent
-   definitions of canonical nodes/payloads/fences.
-4. Owned-unlinked publication must bind the exact owner, fence and current removal
-   event in the original saved reservation request. Final removal must remain
-   blocked while root/physical outcomes or local source acknowledgment are
-   unresolved. Preserve old handles and newer dirty heads through recovery.
-5. Do not increase the old 8MiB whole-generation constant as a substitute for a
-   native sparse engine. Native integration needs canonical manifest opening,
-   sparse read/write/resize, exact flush/local acknowledgment and the owner-bound
-   namespace/open capability. Source retention and complete retry-forest closure
-   remain separate requirements before a usable long-running drive/GC.
+Required subsequent evidence includes import/admission crash and SQLITE_FULL
+boundaries, source/owner corruption and downgrade refusal, exact historical
+versus current ownership, lost PUT/metadata replies without resend, and native
+FUSE/WinFsp delete-on-close/save-replace with large sparse Unicode files. Keep
+real-provider conformance, physical MX/Windows10/11 sign-in/reboot/SSH/tmux,
+independent-host partitions/restore, packaging and deployment gates separate.
 
-Required future evidence: atomic node/payload/history/fence killed-owner points,
-SQLITE_FULL rollback, same-name/cross-store races, lost PUT/metadata replies without
-resend, exact old-session replay, native FUSE/WinFsp delete-on-close and save/replace,
-and separately approved real-provider and physical startup tests. Existing
-library or whole-generation native success cannot stand in for those gates.
-
-The [current bridge plan](native-chunk-integration.md) and its architecture image
-show the broader native integration. This proposal does not activate callbacks
-or grant S3 permissions. Keep both coordinator hosting options open; it does not
-provision a service or select a Turso backend.
-
-
-Authority prerequisite candidate2026-10-21: the
-[atomic deferred canonical creation contract](atomic-deferred-manifest-create.md)
-now defines a new mutation, combined publication/fence artifact and schema42
-compatibility marker. Focused state/HTTP checks pass; full acceptance is pending.
-This resolves the initial authority transaction design for evaluation, not the
-creation SDK/open-journal provenance bridge, sparse owned-unlinked publication,
-retention or native lifecycle integration. Keep callbacks unsupported.
+The [native bridge architecture](native-chunk-integration.md) shows the wider
+system; the current [creation diagram](images/atomic-deferred-canonical.svg)
+separates the client's local SQLite/S3 verification from the credential-free
+Rust authority's metadata SQLite transaction. Optional Turso and both hosting
+choices remain open. This plan provisions no service and grants no provider
+mutation or startup-installation permission.

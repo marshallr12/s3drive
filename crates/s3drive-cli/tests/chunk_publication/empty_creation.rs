@@ -2,7 +2,7 @@
 use super::*;
 use s3drive_managed::creation::{Creator, Draft, Recovery as CreationRecovery};
 use s3drive_state::manifest_creation::Limits;
-async fn store(s: &Server) -> s3drive_authority::Store {
+pub(super) async fn store(s: &Server) -> s3drive_authority::Store {
     let Reply::Store(st) = ask(
         &s.direct,
         Request::Store {
@@ -16,7 +16,7 @@ async fn store(s: &Server) -> s3drive_authority::Store {
     };
     st
 }
-async fn draft(s: &Server, op: u64) -> Draft {
+pub(super) async fn draft(s: &Server, op: u64) -> Draft {
     let v = info(&s.direct).await;
     let p = node(&s.direct, &v.id, s3drive_authority::ROOT).await;
     Draft {
@@ -29,7 +29,7 @@ async fn draft(s: &Server, op: u64) -> Draft {
         name: "empty café 日本語 🦀 %2F.bin".into(),
     }
 }
-async fn creator(e: Executor, s: &Server) -> Creator {
+pub(super) async fn creator(e: Executor, s: &Server) -> Creator {
     Creator::bind(
         e,
         s.wire.clone(),

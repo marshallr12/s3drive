@@ -47,6 +47,13 @@ impl HistoricalCreation {
     pub fn metadata(&self) -> &Receipt {
         self.record.receipt().expect("validated creation receipt")
     }
+    /// Historical original fence only, never a fresh open/removal admission.
+    pub fn original_removal(&self) -> Option<&s3drive_authority::RemovalFence> {
+        match &self.metadata().artifact {
+            Some(s3drive_authority::Artifact::PublishedRemoval { fence, .. }) => Some(fence),
+            _ => None,
+        }
+    }
 }
 impl fmt::Debug for HistoricalCreation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -260,7 +267,7 @@ impl Creator {
     pub fn recovery(&self) -> Recovery {
         self.0.recovery.clone()
     }
-    fn input(&self, d: Draft) -> Result<Input> {
+    fn input(&self, d: Draft, owner: Option<String>) -> Result<Input> {
         let mut i = Input {
             volume: self.0.recovery.0.volume.clone(),
             operation: d.operation,
@@ -270,6 +277,7 @@ impl Creator {
             store: self.0.recovery.0.store.clone(),
             source: [0; 32],
             fingerprint: "0".repeat(64),
+            owner,
         };
         let target = self.0.executor.recovery_target(&i.object_key()?)?;
         i.source = *target.source();
@@ -283,13 +291,14 @@ impl Creator {
         else {
             return Err(Failure::Protocol.into());
         };
-        if ![
-            "atomic-empty-manifest-v1",
-            "manifest-root-v1",
-            "manifest-history-v1",
-        ]
-        .iter()
-        .all(|f| features.iter().any(|v| v == f))
+        let creation_feature = if i.owner.is_some() {
+            "atomic-deferred-empty-manifest-v1"
+        } else {
+            "atomic-empty-manifest-v1"
+        };
+        if ![creation_feature, "manifest-root-v1", "manifest-history-v1"]
+            .iter()
+            .all(|f| features.iter().any(|v| v == f))
         {
             return Err(Failure::UnsupportedFeature.into());
         }
@@ -339,19 +348,37 @@ impl Creator {
     /// Retry the identical draft after any unknown result. Never substitute a
     /// new operation, parent revision, filename or credential generation.
     pub async fn create(&self, draft: Draft) -> Result<HistoricalCreation> {
-        let _slot = self
-            .0
-            .recovery
-            .0
-            .slots
-            .try_acquire()
-            .map_err(|_| Failure::Busy)?;
-        tokio::time::timeout(self.0.recovery.0.deadline, self.create_inner(draft))
-            .await
-            .map_err(|_| Failure::Deadline)?
+        self.create_mode(draft, None).await
     }
-    async fn create_inner(&self, draft: Draft) -> Result<HistoricalCreation> {
-        let input = self.input(draft)?;
+    /// Original deferred ownership is durable; this is not an active native handle.
+    pub async fn create_deferred(&self, draft: Draft, owner: String) -> Result<HistoricalCreation> {
+        self.create_mode(draft, Some(owner)).await
+    }
+    fn create_mode<'a>(
+        &'a self,
+        draft: Draft,
+        owner: Option<String>,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<HistoricalCreation>> + Send + 'a>>
+    {
+        Box::pin(async move {
+            let _slot = self
+                .0
+                .recovery
+                .0
+                .slots
+                .try_acquire()
+                .map_err(|_| Failure::Busy)?;
+            tokio::time::timeout(self.0.recovery.0.deadline, self.create_inner(draft, owner))
+                .await
+                .map_err(|_| Failure::Deadline)?
+        })
+    }
+    async fn create_inner(
+        &self,
+        draft: Draft,
+        owner: Option<String>,
+    ) -> Result<HistoricalCreation> {
+        let input = self.input(draft, owner)?;
         let old = self
             .0
             .journal

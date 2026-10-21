@@ -9,11 +9,13 @@ impl<T> Drop for Task<T> {
         self.0.abort();
     }
 }
-async fn run<T: Send + 'static>(
+fn run<T: Send + 'static>(
     future: impl Future<Output = Result<T>> + Send + 'static,
-) -> Result<T> {
+) -> impl Future<Output = Result<T>> + Send {
+    // Construct the owned job before the join future. Callers must prove Send
+    // only for its result/handle, not traverse an inactive SDK future's type.
     let mut task = Task(tokio::spawn(future));
-    (&mut task.0).await.map_err(|_| Error::Internal)?
+    async move { (&mut task.0).await.map_err(|_| Error::Internal)? }
 }
 impl Writes {
     pub async fn create(self: &Arc<Self>, parent: &str, name: &str) -> Result<RemoteNode> {
@@ -162,6 +164,20 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
+        let _permit = tokio::time::timeout(Duration::from_secs(5), slots.acquire_owned())
+            .await
+            .unwrap()
+            .unwrap();
+    }
+    #[tokio::test]
+    async fn unpolled_join_drop_cancels_owned_job_and_releases_admission() {
+        let slots = Arc::new(Semaphore::new(1));
+        let permit = slots.clone().acquire_owned().await.unwrap();
+        let join = run(async move {
+            let _permit = permit;
+            std::future::pending::<Result<()>>().await
+        });
+        drop(join);
         let _permit = tokio::time::timeout(Duration::from_secs(5), slots.acquire_owned())
             .await
             .unwrap()

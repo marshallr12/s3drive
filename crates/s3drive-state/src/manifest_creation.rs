@@ -99,7 +99,7 @@ impl Record {
     }
     fn validate(&self) -> Result<()> {
         self.input.validate()?;
-        if self.format != 1
+        if self.format != self.input.format()
             || (self.request.is_some() && self.generation.is_none())
             || self.physical.is_some() != self.request.is_some()
             || (self.receipt.is_some() && self.rejection.is_some())
@@ -227,6 +227,7 @@ fn projection(rows: &BTreeMap<String, Record>) -> Result<[u8; 32]> {
 }
 fn inspect(db: &Connection) -> Result<BTreeMap<String, Record>> {
     let mut rows = BTreeMap::new();
+    let schema: i32 = db.pragma_query_value(None, "user_version", |row| row.get(0))?;
     let mut q=db.prepare("SELECT CASE WHEN length(CAST(operation AS BLOB))=32 THEN operation END,CASE WHEN length(record) BETWEEN 1 AND 65536 THEN record END,CASE WHEN length(state_hash)=32 THEN state_hash END FROM manifest_creations ORDER BY operation LIMIT 129")?;
     for result in q.query_map([], |r| {
         Ok((
@@ -241,6 +242,9 @@ fn inspect(db: &Connection) -> Result<BTreeMap<String, Record>> {
         let digest = digest.ok_or(Failure::Corrupt)?;
         let record: Record = serde_json::from_slice(&raw).map_err(|_| Failure::Corrupt)?;
         record.validate()?;
+        if record.format == 2 && schema < 43 {
+            return Err(Failure::Corrupt.into());
+        }
         if let Some(generation) = record.generation {
             journal_impl::check_staged(db, &record.input, generation, false)?;
             if let Some(proof) = &record.physical

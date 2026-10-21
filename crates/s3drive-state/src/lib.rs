@@ -27,7 +27,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 42;
+pub const SCHEMA_VERSION: i32 = 43;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
@@ -353,6 +353,8 @@ impl State {
             }
             namespace_client::check_schema(&tx)?;
             manifest_creation::check_schema(&tx)?;
+            // Schema43 adds owner-bearing creation record format2, with no DDL.
+            // Validation rejects new records under older markers before relabeling.
             manifest_creation::validate_all(&tx)?;
             // Catch a damaged/current-version database before returning success.
             tx.prepare("SELECT source_alias, object_key, etag, version_id, size_bytes FROM legacy_cached_objects_v1 LIMIT 0")?;

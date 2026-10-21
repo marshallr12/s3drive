@@ -3,13 +3,14 @@
 <rect width="1200" height="600" fill="#f7f9fc"/>
 <g font-family="DejaVu Sans, sans-serif" fill="#243a4c">
 <text x="30" y="38" font-size="25" font-weight="bold">Canonical file creation and its original ownership commit together</text>
-<text x="30" y="69" font-size="16" fill="#805311">Authority/state support; client journal/import and native lifecycle callbacks remain future work</text>
+<text x="30" y="69" font-size="16" fill="#805311">SDK/root verification implemented; open-journal import and native lifecycle remain future work</text>
+<text x="30" y="100" font-size="13" fill="#536577">The client journal stays outside the mount. S3 stores immutable objects; authority metadata defines filenames.</text>
 <rect x="30" y="125" width="280" height="170" rx="12" fill="white" stroke="#356c91" stroke-width="2"/>
-<text x="46" y="156" font-size="16" font-weight="bold">Caller / future creation SDK</text>
-<text x="46" y="187" font-size="14">Original operation ID and owner</text>
-<text x="46" y="213" font-size="14">Parent/name/store + root identity</text>
-<text x="46" y="239" font-size="14">Upload operation, ETag, version</text>
-<text x="46" y="271" font-size="13" fill="#805311">Physical upload proof remains a claim</text>
+<text x="46" y="156" font-size="16" font-weight="bold">Rust SDK + local SQLite</text>
+<text x="46" y="187" font-size="14">Durable original operation + owner</text>
+<text x="46" y="213" font-size="14">Exact intent + verified root proof</text>
+<text x="46" y="239" font-size="14">Saved request + historical receipt</text>
+<text x="46" y="271" font-size="13" fill="#805311">Authority receives a caller claim</text>
 <rect x="350" y="125" width="455" height="330" rx="12" fill="white" stroke="#655b99" stroke-width="2"/>
 <text x="368" y="157" font-size="19" font-weight="bold" fill="#655b99">Rust authority + metadata SQLite</text>
 <text x="368" y="188" font-size="15" font-weight="bold">One immediate SQL transaction</text>
@@ -28,14 +29,14 @@
 <rect x="30" y="355" width="280" height="100" rx="12" fill="white" stroke="#486c50" stroke-width="2"/>
 <text x="46" y="385" font-size="18" font-weight="bold" fill="#486c50">S3-compatible bucket</text>
 <text x="46" y="414" font-size="14">Immutable 64-byte empty root</text>
-<text x="46" y="440" font-size="13" fill="#805311">Future SDK verifies the object here</text>
+<text x="46" y="440" font-size="13" fill="#805311">SDK verifies the exact object bytes</text>
 <path d="M310 220 H345" fill="none" stroke="#355671" stroke-width="2" marker-end="url(#arrow)"/>
 <text x="315" y="204" font-size="12">Apply</text>
 <path d="M805 235 H855" fill="none" stroke="#355671" stroke-width="2" marker-end="url(#arrow)"/>
 <text x="811" y="219" font-size="12">Receipt</text>
-<path d="M170 350 V300" fill="none" stroke="#355671" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
-<text x="181" y="330" font-size="12" fill="#805311">Future SDK bridge</text>
+<path d="M170 350 V300" fill="none" stroke="#355671" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="181" y="330" font-size="12" fill="#805311">Verified upload</text>
 <rect x="30" y="505" width="1140" height="65" rx="10" fill="white" stroke="#b88538" stroke-width="1.5"/>
-<text x="48" y="533" font-size="16">Only the complete transaction or the prior state becomes visible.</text>
+<text x="48" y="533" font-size="16">The authority exposes only the complete transaction or the prior state.</text>
 <text x="48" y="556" font-size="14" fill="#805311">Missing or changed retained history/event → integrity error; no repair, new operation ID or ownership substitution.</text>
 </g></svg>
