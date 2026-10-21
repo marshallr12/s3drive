@@ -9,14 +9,14 @@ client keeps its own private SQLite cache/journal and transfers immutable file
 generations directly to S3. The [publication library](docs/src/managed-publication.md)
 verifies blobs before metadata CAS and local acknowledgment.
 
-Managed native reads, policy-bound writes, directory/file creation and
+Managed whole-generation profiles support native reads, policy-bound writes, directory/file creation and
 [version6 rename/replacement and Linux removal](docs/src/managed-native-mutations.md)
 have accepted Linux/Windows checkpoints. Windows deletion uses the explicit
 [version7/POSIX lifecycle profile](docs/src/native-windows-lifecycle.md), with
 measured WinFsp limitations. [HTTPS](docs/src/remote-authority.md) and
 [store/configuration bootstrap](docs/src/managed-bootstrap.md) are accepted
 through main `f8c4f58`. Existing direct mounts remain available without
-implicit migration. Multipart/large files, reclamation, full application
+implicit migration. Multipart network execution, reclamation, full application
 compatibility and real remote deployment remain work.
 
 **Earlier hosted checkpoint:** [coordinator supervision and TLS diagnostics](docs/src/authority-startup.md)
@@ -25,15 +25,22 @@ at `f8c4f58`, [CI39097275707](https://github.com/marshallr12/s3drive/actions/run
 Exact uncertain identities, dirty conflicts, Unicode/binary/empty reads and
 same-supervisor child replacement passed. Earlier timeout causes remain open.
 
-**Current work:** the user selected immutable chunks and manifests for large
-managed files. The [offline planner](docs/src/chunk-plans.md) passed its own
-Linux/Windows hosted cohort. The [chunk object upload bridge](docs/src/chunk-object-uploads.md)
-connects prepared trees to exact create-only operations and verified child
-receipts. The [manifest authority contract](docs/src/manifest-root-authority.md)
-adds versioned root metadata and content CAS; client publication/settlement and
-mounted large-file activation remain unfinished. A
-[complete-tree receipt check](docs/src/chunk-tree-receipts.md) supplies the next
-prerequisite by checking every object, including grandchildren. No real user startup, remote hosting or Turso backend is installed.
+**Large managed files:** the explicit
+[version 8 chunk writer](docs/src/native-chunk-writes.md) connects canonical file
+creation, immutable chunks/manifests and the shared filesystem callbacks.
+Source `d95a634` passed its full local gate and
+[own Linux/Windows/book CI39351215634](https://github.com/marshallr12/s3drive/actions/runs/39351215634).
+Real FUSE and WinFsp fixtures verified Unicode canonical creation, an 11 MiB sparse
+file with 2 MiB binary data, exact flush, shrink/regrow and remount using owned
+loopback S3/authority services. The 128 KiB callback control passed on both OSes.
+Windows testing used a hosted Windows Server 2025 VM; these are not live Wasabi
+or physical MX/Windows10/11 reboot results.
+
+This is an experimental file-I/O profile. Directory creation, rename/delete,
+deferred/open-unlinked publication and complete retention/GC remain unfinished.
+Its64-file/512-view/64MiB dirty defaults are prototypes. Existing profiles keep
+their own behavior; no bucket migration or real writable user configuration is
+installed. No real user startup, remote hosting or Turso backend is provisioned.
 
 The shared engine preserves uncertain/conflicting bytes and exact operation
 identities. Direct and managed writes require explicit source/prefix policy and

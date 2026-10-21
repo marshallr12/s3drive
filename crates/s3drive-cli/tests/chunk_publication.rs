@@ -12,6 +12,11 @@ mod mixed_epochs;
 mod mixed_roots;
 #[path = "chunk_publication/mixed_uploads.rs"]
 mod mixed_uploads;
+#[cfg(any(target_os = "linux", windows))]
+#[path = "chunk_publication/native_mount.rs"]
+mod native_mount;
+#[path = "chunk_publication/native_writer.rs"]
+mod native_writer;
 #[path = "chunk_publication/source_settlement.rs"]
 mod source_settlement;
 #[path = "support/writes.rs"]
@@ -175,6 +180,23 @@ async fn proxy(
         p.publish_gate.wait().await;
         p.publish_gate.wait().await;
     }
+    if p.mode.load(Ordering::SeqCst) == 14 {
+        let clear = |n: &mut Node| {
+            if n.kind == Kind::File {
+                n.kind = Kind::EmptyFile;
+                n.payload = None;
+            }
+        };
+        match &mut reply {
+            Reply::Node(n) => clear(n),
+            Reply::List(l) => {
+                for n in &mut l.children {
+                    clear(n)
+                }
+            }
+            _ => {}
+        }
+    }
     let loss = match &request {
         Request::Apply {
             request:
@@ -206,6 +228,10 @@ async fn proxy(
     {
         return axum::http::StatusCode::SERVICE_UNAVAILABLE.into_response();
     }
+    if loss == 2 && p.mode.load(Ordering::SeqCst) == 15 {
+        p.publish_gate.wait().await;
+        p.publish_gate.wait().await;
+    }
     if loss == 2 && p.mode.load(Ordering::SeqCst) == 10 {
         // Force both independent recoveries to read Prepared before either can
         // persist its identical receipt. No sleeping/concurrency assumption.
@@ -225,6 +251,7 @@ async fn proxy(
     axum::Json(reply).into_response()
 }
 struct Server {
+    url: String,
     authority: Authority,
     wire: WireClient,
     direct: WireClient,
@@ -276,6 +303,7 @@ impl Server {
                 .unwrap();
         });
         Self {
+            url,
             authority,
             wire,
             direct,
@@ -1129,6 +1157,12 @@ fn dispatch<'a>(
     s: &'a Server,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + 'a>> {
     match mode {
+        #[cfg(any(target_os = "linux", windows))]
+        "native_writer_mount" => Box::pin(native_writer::mount(config, root, s)),
+        "native_writer" => Box::pin(native_writer::flow(config, root, s)),
+        "native_small_stack" => Box::pin(native_writer::small_stack(config, root, s)),
+        "native_policy" => Box::pin(native_writer::policy(config, root, s)),
+        "native_concurrency" => Box::pin(native_writer::concurrency(config, root, s)),
         "composition" => Box::pin(composition::flow(config, root, s)),
         "empty_deadline" => Box::pin(empty_creation::deadline(config, root, s)),
         "empty_physical" => Box::pin(empty_creation::physical(config, root, s)),
@@ -1446,6 +1480,11 @@ async fn run(mode: &str) {
     }
     let expected = match mode {
         "empty_flow" | "empty_recovery" | "empty_crash" | "empty_physical" | "empty_deadline" => 1,
+        "native_writer_mount" => 6,
+        "native_writer" => 5,
+        "native_small_stack" => 3,
+        "native_policy" => 3,
+        "native_concurrency" => 5,
         "composition" => 1,
         "empty_controls" => 2,
         "mixed_epochs" | "mixed_scoped" => 13,
@@ -1653,4 +1692,30 @@ async fn empty_manifest_creation_deadline_retains_committed_request_and_releases
 #[tokio::test]
 async fn chunk_client_composes_canonical_creation_sparse_large_edits_and_namespace_receipts() {
     run("composition").await;
+}
+
+#[tokio::test]
+async fn native_chunk_shared_engine_large_unicode_edits_exact_flush_and_restart() {
+    run("native_writer").await;
+}
+
+#[cfg(any(target_os = "linux", windows))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "native chunk-write acceptance: requires real FUSE/WinFsp runtime"]
+async fn actual_native_chunk_writes_unicode_sparse_flush_resize_and_remount() {
+    run("native_writer_mount").await;
+}
+
+#[tokio::test]
+async fn native_chunk_policy_narrowing_preserves_dirty_reads_and_rejects_changed_format() {
+    run("native_policy").await;
+}
+#[tokio::test]
+async fn native_chunk_flush_captures_exact_view_and_preserves_newer_edits() {
+    run("native_concurrency").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_chunk_callbacks_use_owned_runtime_tasks_on_a_small_driver_stack() {
+    run("native_small_stack").await;
 }

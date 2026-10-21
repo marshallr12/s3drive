@@ -410,6 +410,22 @@ impl<'a> Journal<'a> {
     }
     /// Scope-bound metadata lookup across locally acknowledged base epochs.
     /// This grants no permission to read the returned immutable source.
+    /// All retained current heads, bounded by the existing file quota. No network authority.
+    pub fn heads(&mut self) -> Result<Vec<View>> {
+        let tx = self
+            .state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred)?;
+        isolation(&tx)?;
+        let data = inspect(&tx)?;
+        let heads = data
+            .files
+            .values()
+            .map(|f| data.record(f.head).cloned().map(View))
+            .collect::<Result<Vec<_>>>()?;
+        tx.commit()?;
+        Ok(heads)
+    }
     pub fn current_head(&mut self, binding: &Binding) -> Result<View> {
         binding.validate()?;
         let tx = self
@@ -615,6 +631,12 @@ impl Client {
         let options = self.options;
         self.owner
             .call(move |s| Journal::new(&mut s.state, options)?.resize_scoped(token, parent, size))
+            .await
+    }
+    pub async fn heads(&self) -> Result<Vec<View>> {
+        let options = self.options;
+        self.owner
+            .call(move |s| Journal::new(&mut s.state, options)?.heads())
             .await
     }
     pub async fn current_head(&self, binding: Binding) -> Result<View> {

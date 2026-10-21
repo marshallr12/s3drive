@@ -16,6 +16,38 @@ immutable S3 objects hold file generations. Each computer has a separate private
 SQLite cache/journal. Existing direct-key mounts remain available without an
 automatic conversion.
 
+**Latest large-file checkpoint:** the explicit
+[version 8 native chunk writer](native-chunk-writes.md) integrates canonical file
+creation, private SQLite sparse edits, immutable S3 uploads, exact root CAS and
+local acknowledgment with the shared filesystem callbacks.
+Source `d95a634` passed its full local gate and
+[own Linux/Windows/book CI39351215634](https://github.com/marshallr12/s3drive/actions/runs/39351215634).
+Real FUSE and WinFsp fixtures verified Unicode canonical creation, an 11 MiB sparse
+file with 2 MiB binary data, exact flush, shrink/regrow and remount using owned
+loopback S3/authority services. The 128 KiB callback control passed on both OSes.
+Windows testing used a hosted Windows Server 2025 VM; these are not live Wasabi
+or physical MX/Windows10/11 reboot results.
+
+This profile remains experimental: directory creation, rename/delete, deferred
+and owned-unlinked publication, full retry-forest retention/GC and larger
+long-running workloads remain unfinished. Current64-file/512-view/64MiB dirty
+limits are prototypes. The earlier version4–7 whole-generation profiles retain
+their existing features and8MiB limit. No automatic conversion or real writable
+Wasabi policy is installed. [Architecture and component diagrams](architecture.md)
+show the client, private database, S3 service and shared Rust authority.
+
+Remaining acceptance includes approved live managed Wasabi writes, actual MX
+and Windows10/11 sign-in/reboot/SSH sessions, independent-host failure/recovery,
+writable restore/failover and distribution. Existing startup supervision works
+without systemd; it does not certify physical reboot behavior for version 8.
+Turso and both coordinator-hosting options remain open and unprovisioned.
+
+## Earlier checkpoints and investigations
+
+The following dated records describe earlier implementations and acceptance
+scopes. Their old pending/ahead-of-main statements are historical; the latest
+writer's exact scope and remaining work are recorded above and in its chapter.
+
 Managed native reads, existing-file writes, directory/file creation and
 rename/save replacement have accepted Linux/Windows checkpoints. Linux removal
 and retained handles are implemented; Windows deletion uses the explicit
@@ -25,7 +57,7 @@ WinFsp limitations. [HTTPS transport](remote-authority.md) and
 `bf9509e`. This is still a research/development filesystem with incomplete
 application, platform and provider acceptance.
 
-**Current main checkpoint:** coordinator startup, private offline
+**Earlier main checkpoint:** coordinator startup, private offline
 [snapshot creation/inspection](authority-backup-recovery.md), and bounded TLS
 socket diagnostics passed at `bf9509e`,
 [primary CI39113628548](https://github.com/marshallr12/s3drive/actions/runs/39113628548)
@@ -55,7 +87,7 @@ large/sparse-file reads and pinned old handles. This feature branch is ahead of
 runtime main. Incremental chunk writes and provider/reboot acceptance remain
 separate work; the W1a reference-proof foundation is still in development.
 
-**Current large-file work:** the [representation study](large-managed-files.md) audits
+**Earlier large-file work:** the [representation study](large-managed-files.md) audits
 the remaining whole-file boundaries and compares one-object generations with
 immutable chunks and authenticated manifests. The recommendation and diagram
 explain the chunked format selected by the user on2026-10-18. An offline bounded

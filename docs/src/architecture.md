@@ -34,19 +34,31 @@ unchanged chunks can be reused by a later file generation. These internal object
 keys are separate from the paths shown in the mounted drive.
 
 [Mixed upload plans](mixed-plans.md), [dependency uploads](mixed-uploads.md),
-[root publication](mixed-root-publication.md) and [clean base epochs](mixed-clean-epochs.md)
-have accepted library-level implementations. Mounted writes still use their older
-whole-generation path; the chunk pipeline is not yet enabled in filesystem
-callbacks. The [guarded managed-reader integration](managed-reader-guards.md) and
-[canonical empty-manifest creation SDK](empty-manifest-publisher.md) have accepted
-library implementations. [Explicit same-owner client-state composition](native-chunk-integration.md)
-now binds sparse views/creation, namespace and open/session journals in one private
-SQLite owner through a typed capability; its schema41 local and own Linux/Windows
-CI gates passed. The [read-pin diagram](source-read-pins.md) explains the retention
-mechanism. Native callback integration and safe reclamation remain required.
-[Deferred canonical creation and owned-unlinked publication](deferred-manifest-integration.md)
-remain proposals. These library results do not establish native chunk writes or
-physical reboot acceptance.
+[root publication](mixed-root-publication.md), [clean base epochs](mixed-clean-epochs.md),
+the [guarded managed reader](managed-reader-guards.md) and
+[canonical creation SDK](empty-manifest-publisher.md) form the sparse pipeline.
+[Explicit same-owner state composition](native-chunk-integration.md) binds its
+creation/views, namespace and open/session journals in one private SQLite owner.
+
+Source `d95a634` passed its full local gate and
+[own Linux/Windows/book CI39351215634](https://github.com/marshallr12/s3drive/actions/runs/39351215634).
+Real FUSE and WinFsp fixtures verified Unicode canonical creation, an 11 MiB sparse
+file with 2 MiB binary data, exact flush, shrink/regrow and remount using owned
+loopback S3/authority services. The 128 KiB callback control passed on both OSes.
+Windows testing used a hosted Windows Server 2025 VM; these are not live Wasabi
+or physical MX/Windows10/11 reboot results.
+
+![Version8 filesystem callbacks, private SQLite journal, Rust S3 client, metadata authority and immutable bucket objects.](images/native-chunk-writer.svg)
+
+Versions4–7 retain the older whole-generation writer; version3 retains read-only
+chunk snapshots. Version8 is an explicit experimental selection with its own
+private journal and policy-bound stores. Metadata-empty and old whole-object
+files remain readable but do not silently become writable manifest origins.
+Rename/delete, [deferred canonical creation and owned-unlinked publication](deferred-manifest-integration.md),
+complete retry-forest retention and reclamation remain unfinished. The current
+64-file/512-view/64MiB dirty defaults are prototype limits. Live managed Wasabi
+writes, physical reboot/sign-in and desktop Windows acceptance remain separate.
+The [read-pin diagram](source-read-pins.md) explains retained source dependencies.
 
 The existing direct-layout implementation below has native read/cache, explicit
 existing-file writes and [guarded file creation](native-creation.md). It remains
@@ -56,11 +68,10 @@ Linux without systemd and account-owned Windows mounts.
 
 ![Existing direct-layout components: Rust adapters, S3 client, local SQLite and startup supervisors.](images/architecture.png)
 
-The [mounted chunk-write source review](native-chunk-integration.md) maps the
-remaining callback, SQLite-role, origin and retained-handle boundaries. Its diagram
-shows the proposed bridge beside the existing8MiB whole-generation writer. The
-current mounted backend deliberately does not enable chunk readers in a writable
-configuration; library publication tests do not remove that integration boundary.
+The [earlier mounted source review](native-chunk-integration.md) records the
+boundaries resolved by explicit version 8 and the remaining namespace/open-handle
+protocol work. The [native writer record](native-chunk-writes.md) separates actual
+shared-engine and OS-fixture evidence from remaining provider/physical acceptance.
 
 ## Crate ownership and process model
 

@@ -536,7 +536,12 @@ fn crash_child() {
     let g = stage(&mut s, None, b"abcdefg");
     let hook = |p: Point| -> Result<()> {
         if format!("{p:?}") == stop {
-            fs::write(&ready, g.value().to_string()).unwrap();
+            // Existence is the parent's ready barrier. Publish only after the
+            // complete generation ID is written; create/truncate is observable
+            // before fs::write has filled the file on a busy runner.
+            let pending = std::path::Path::new(&ready).with_extension("pending");
+            fs::write(&pending, g.value().to_string()).unwrap();
+            fs::rename(&pending, &ready).unwrap();
             let mut byte = [0];
             std::io::stdin().read_exact(&mut byte).unwrap();
             panic!("child unexpectedly resumed");

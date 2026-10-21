@@ -146,6 +146,16 @@ impl MixedRootRecovery {
             slots: Semaphore::new(1),
         })))
     }
+    /// Recover saved metadata on an already open SQL owner before fresh S3 access.
+    /// No source credential, upload permit or new Publish preparation is granted.
+    pub fn on_owner(
+        client: roots::Client,
+        authority: WireClient,
+        volume: String,
+        store: String,
+    ) -> Result<Self> {
+        Self::build(Log::Normal(client), authority, volume, store)
+    }
     pub async fn open_existing(
         directory: &Path,
         authority: WireClient,

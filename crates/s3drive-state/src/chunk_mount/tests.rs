@@ -884,3 +884,51 @@ fn late_triggers_and_oversized_role_metadata_are_refused_without_mutation() {
     drop((db, s));
     assert!(State::open_managed(&path).is_err());
 }
+
+#[test]
+fn bounded_head_enumeration_retains_only_current_views_and_clean_hints_survive_restart() {
+    let t = tempfile::tempdir().unwrap();
+    let path = t.path().join("state");
+    let mut s = State::open_managed(&path).unwrap();
+    let declared = input();
+    admit(&mut s, declared.clone()).unwrap();
+    let mut j = sparse_views::Journal::new(&mut s, sparse_views::Options::default()).unwrap();
+    j.enable_scoped().unwrap();
+    let a = sparse(&declared, 10);
+    let b = sparse(&declared, 11);
+    let initial = j
+        .begin_scoped(
+            sparse_views::ScopedOperation::new(&a, [1; 32]).unwrap(),
+            a,
+            4,
+        )
+        .unwrap();
+    let other = j
+        .begin_scoped(
+            sparse_views::ScopedOperation::new(&b, [2; 32]).unwrap(),
+            b,
+            4,
+        )
+        .unwrap();
+    assert!(initial.is_clean() && other.is_clean());
+    let dirty = j
+        .write_scoped(
+            sparse_views::ScopedOperation::new(initial.binding(), [3; 32]).unwrap(),
+            initial.id(),
+            1,
+            b"\0\xff",
+        )
+        .unwrap();
+    assert!(!dirty.is_clean());
+    let heads = j.heads().unwrap();
+    assert_eq!(heads.len(), 2);
+    assert!(heads.contains(&dirty) && heads.contains(&other) && !heads.contains(&initial));
+    drop(s);
+    let mut s = State::open_managed(&path).unwrap();
+    let mut j = sparse_views::Journal::new(&mut s, sparse_views::Options::default()).unwrap();
+    assert_eq!(j.heads().unwrap(), heads);
+    s.connection
+        .execute_batch("UPDATE sparse_view_blocks SET data=zeroblob(length(data))")
+        .unwrap();
+    assert!(sparse_views::Journal::new(&mut s, sparse_views::Options::default()).is_err());
+}

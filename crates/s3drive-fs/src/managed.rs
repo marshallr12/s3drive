@@ -1,10 +1,12 @@
 use super::*;
+pub(super) mod chunk_writes;
 pub(super) mod writes;
 use s3drive_authority::{Token, WireClient};
 pub(super) struct Backend {
     pub reader: s3drive_managed::Reader,
     pub chunks: Option<s3drive_managed::chunks::Reader>,
     pub writes: Option<Arc<writes::Writes>>,
+    pub chunk_writes: Option<Arc<chunk_writes::Writes>>,
 }
 impl Backend {
     pub async fn node(&self, id: &str) -> Result<s3drive_authority::Node> {
@@ -33,19 +35,26 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
             return Err(Error::Configuration);
         };
         let mut required = vec!["content-cas-v1"];
-        if config.version >= 5 {
+        if (5..=7).contains(&config.version) {
             required.push("namespace-create-v1");
         }
-        if config.version >= 6 {
+        if (6..=7).contains(&config.version) {
             required.extend(["namespace-entry-cas-v1", "detached-content-cas-v1"]);
         }
-        if config.version >= 7 {
+        if config.version == 7 {
             required.extend([
                 "pending-removal-v1",
                 "deferred-removal-v1",
                 "deferred-create-v1",
                 "deferred-owner-move-v1",
                 "owned-target-replace-v1",
+            ]);
+        }
+        if config.version == 8 {
+            required.extend([
+                "manifest-root-v1",
+                "manifest-history-v1",
+                "atomic-empty-manifest-v1",
             ]);
         }
         if required
@@ -70,6 +79,7 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
     };
     let mut bindings = Vec::new();
     let mut publishers = HashMap::new();
+    let mut chunk_executors = HashMap::new();
     for mapping in &settings.stores {
         let source = config
             .sources
@@ -109,22 +119,26 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
             .await
             .map_err(error)?;
             reader = executor.reader();
-            let publisher = s3drive_managed::Publisher::open(
-                executor,
-                authority.clone(),
-                settings.volume.clone(),
-                mapping.id.clone(),
-            )
-            .await
-            .map_err(error)?;
-            publishers.insert(mapping.id.clone(), publisher);
+            if config.version == 8 {
+                chunk_executors.insert(mapping.id.clone(), executor);
+            } else {
+                let publisher = s3drive_managed::Publisher::open(
+                    executor,
+                    authority.clone(),
+                    settings.volume.clone(),
+                    mapping.id.clone(),
+                )
+                .await
+                .map_err(error)?;
+                publishers.insert(mapping.id.clone(), publisher);
+            }
         }
         bindings.push((mapping.id.clone(), reader));
     }
     // Chunk snapshots are read-only until their separate mutation/recovery
     // lifecycle is accepted. Valid capability absence retains legacy behavior;
     // transport/protocol failures never silently disable validation.
-    let chunks = if config.writes.is_none() {
+    let chunks = if config.writes.is_none() || config.version == 8 {
         let s3drive_authority::Reply::Features(features) = authority
             .request(&s3drive_authority::Request::Features {})
             .await
@@ -157,7 +171,24 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
     {
         return Err(Error::Configuration);
     }
-    let writes = storage.map(|s| {
+    let chunk_writes = if config.version == 8 {
+        Some(Arc::new(
+            // Keep the sparse constructor's recovery state out of the outer
+            // filesystem future, including legacy/read-only startup paths.
+            Box::pin(chunk_writes::Writes::new(
+                storage.clone().ok_or(Error::Configuration)?,
+                authority.clone(),
+                settings.volume.clone(),
+                chunks.clone().ok_or(Error::Configuration)?,
+                chunk_executors,
+                settings.default_store.clone().ok_or(Error::Configuration)?,
+            ))
+            .await?,
+        ))
+    } else {
+        None
+    };
+    let writes = storage.filter(|_| config.version != 8).map(|s| {
         Arc::new(writes::Writes::new(
             s,
             settings.volume.clone(),
@@ -199,6 +230,7 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
             reader,
             chunks,
             writes,
+            chunk_writes,
         })),
     })
 }
@@ -304,6 +336,44 @@ pub(super) fn logical_metadata(node: &s3drive_authority::Node) -> Result<ObjectM
 }
 pub(super) fn error<E: Into<Box<dyn std::error::Error + Send + Sync>>>(e: E) -> Error {
     let e = e.into();
+    if let Some(f) = e.downcast_ref::<s3drive_s3::uploads::Failure>() {
+        use s3drive_s3::uploads::Failure as F;
+        return match f {
+            F::Busy => Error::Busy,
+            F::PolicyExpired | F::PolicyScope | F::PolicyOperation => Error::ReadOnly,
+            F::PolicySize => Error::TooLarge,
+            _ => Error::Managed(e),
+        };
+    }
+    if let Some(f) = e.downcast_ref::<s3drive_managed::chunks::MixedRootFailure>() {
+        use s3drive_managed::chunks::MixedRootFailure as F;
+        return match f {
+            F::Busy => Error::Busy,
+            F::BaseChanged | F::RetainedConflict => Error::Conflict,
+            _ => Error::Managed(e),
+        };
+    }
+    if let Some(f) = e.downcast_ref::<s3drive_managed::creation::Failure>() {
+        return match f {
+            s3drive_managed::creation::Failure::Authority(a) => {
+                error(s3drive_managed::Failure::Authority(*a))
+            }
+            s3drive_managed::creation::Failure::Busy => Error::Busy,
+            s3drive_managed::creation::Failure::Deadline => Error::Timeout,
+            s3drive_managed::creation::Failure::RetainedConflict => Error::Conflict,
+            _ => Error::Managed(e),
+        };
+    }
+    if let Some(f) = e.downcast_ref::<s3drive_state::sparse_views::Failure>() {
+        use s3drive_state::sparse_views::Failure as F;
+        return match f {
+            F::Quota => Error::NoSpace,
+            F::Bounds => Error::TooLarge,
+            F::NotFound => Error::NotFound,
+            F::Conflict | F::EpochClosed => Error::Conflict,
+            _ => Error::Managed(e),
+        };
+    }
     if let Some(f) = e.downcast_ref::<s3drive_managed::chunks::ReadFailure>() {
         use s3drive_managed::chunks::ReadFailure;
         return match f {

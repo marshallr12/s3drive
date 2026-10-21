@@ -3601,3 +3601,22 @@ atomic role/identity/control admission and sparse namespace barriers are library
 features. Cold metadata-only namespace/open recovery, native chunk callbacks,
 [deferred manifest protocol](deferred-manifest-integration.md), owned-unlinked
 publication, retention, real-provider and physical startup acceptance remain.
+
+
+### Native chunk file I/O accepted — review2026-10-21
+
+[Version8 integration](native-chunk-writes.md), sourced95a634/schema41/all366,
+passed its complete local gate707.85s/all693 unchanged and own CI39351215634
+Linux/Windows/book all success. Exact source/API ZIP, strict typed21+14, project
+oracles and all35 raw-record fields/types were checked. Real FUSE/WinFsp creation,
+11MiB sparse Unicode/binary data, flush, resize and remount passed, along with
+the unchanged128KiB callback control and existing native/startup regressions.
+Earlier stack/ready-marker cohorts remain rejected and archived.
+
+This completes the ordinary chunk file-I/O bridge, not P6m3b's complete namespace
+lifecycle or the full goal. Keep directory creation, rename/delete, deferred and
+owned-unlinked paths unsupported until their exact journal/fence/native gates
+pass. Close all retry forests before retention/GC; current quotas are prototypes.
+Version8 startup supervision, physical MX/Windows10/11 reboot/SSH, independently
+hosted coordination/restore and a newly approved live Wasabi scope remain required.
+No deployment, provider authorization or Turso provisioning is implied.

@@ -471,6 +471,11 @@ pub enum Range {
     Patch { block: Id, offset: u64, length: u64 },
 }
 impl View {
+    /// Validated local clean-head hint only; no remote freshness or read authority.
+    pub fn is_clean(&self) -> bool {
+        self.0.clean()
+    }
+
     /// One remaining structural span, without reading bytes or authorizing
     /// anything. Unlike range(), this metadata hint is not an 8-MiB byte read.
     /// Consumers must revalidate the immutable view on the private owner.

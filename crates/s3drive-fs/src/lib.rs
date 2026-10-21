@@ -121,6 +121,10 @@ pub struct OpenFile {
     managed: Option<s3drive_managed::FileSnapshot>,
     managed_chunks: Option<s3drive_managed::chunks::File>,
     managed_write: Option<(Arc<managed::writes::Writes>, Arc<managed::writes::File>)>,
+    chunk_write: Option<(
+        Arc<managed::chunk_writes::Writes>,
+        Arc<managed::chunk_writes::File>,
+    )>,
     cache: Option<(Arc<CacheBackend>, Key)>,
     snapshot: OnceCell<Pinned>,
     bypass: AtomicBool,
@@ -135,6 +139,9 @@ impl OpenFile {
         }
     }
     pub fn current_metadata(&self) -> Result<ObjectMetadata> {
+        if let Some((_, f)) = &self.chunk_write {
+            return f.metadata();
+        }
         if let Some((_, file)) = &self.managed_write {
             return file.metadata();
         }
@@ -153,6 +160,9 @@ impl OpenFile {
         if !self.writable_open {
             return Err(Error::ReadOnly);
         }
+        if let Some((writer, file)) = &self.chunk_write {
+            return Box::pin(writer.write(file, offset, bytes, append, constrained)).await;
+        }
         if let Some((writer, file)) = &self.managed_write {
             return Box::pin(writer.write(file, offset, bytes, append, constrained)).await;
         }
@@ -163,6 +173,9 @@ impl OpenFile {
         if !self.writable_open {
             return Err(Error::ReadOnly);
         }
+        if let Some((writer, file)) = &self.chunk_write {
+            return Box::pin(writer.truncate(file, size)).await;
+        }
         if let Some((writer, file)) = &self.managed_write {
             return Box::pin(writer.truncate(file, size)).await;
         }
@@ -170,6 +183,9 @@ impl OpenFile {
         Box::pin(writer.truncate(file, size)).await
     }
     pub async fn flush(&self) -> Result<()> {
+        if let Some((writer, file)) = &self.chunk_write {
+            Box::pin(writer.flush(file)).await?;
+        }
         if let Some((writer, file)) = &self.managed_write {
             Box::pin(writer.flush(file)).await?;
         }
@@ -179,7 +195,7 @@ impl OpenFile {
         Ok(())
     }
     pub async fn flush_on_close(&self) -> Result<()> {
-        if self.managed_write.is_some() && !self.writable_open {
+        if (self.managed_write.is_some() || self.chunk_write.is_some()) && !self.writable_open {
             return Ok(());
         }
         self.flush().await
@@ -188,6 +204,9 @@ impl OpenFile {
         &self.initial_metadata
     }
     pub async fn read(&self, offset: u64, length: usize) -> Result<Vec<u8>> {
+        if let Some((writer, file)) = &self.chunk_write {
+            return Box::pin(writer.read(file, offset, length)).await;
+        }
         if let Some((_, file)) = &self.managed_write {
             return file.read(offset, length).await;
         }
@@ -431,7 +450,11 @@ impl ReadOnlyFs {
         &self,
     ) -> impl std::future::Future<Output = Result<()>> + Send + 'static {
         let writes = self.managed.as_ref().and_then(|m| m.writes.clone());
+        let chunks = self.managed.as_ref().and_then(|m| m.chunk_writes.clone());
         async move {
+            if let Some(w) = chunks {
+                Box::pin(w.stop()).await?;
+            }
             if let Some(w) = writes {
                 w.stop().await?;
             }
@@ -440,6 +463,9 @@ impl ReadOnlyFs {
     }
     /// Adapters close this worker only after callbacks stop and writes drain.
     pub fn cache_control(&self) -> Option<Cache> {
+        if let Some(w) = self.managed.as_ref().and_then(|m| m.chunk_writes.as_ref()) {
+            return Some(w.storage.cache());
+        }
         self.cache
             .as_ref()
             .map(|cache| cache.worker.clone())
@@ -452,7 +478,11 @@ impl ReadOnlyFs {
             })
     }
     pub fn is_read_only(&self) -> bool {
-        self.writes.is_none() && self.managed.as_ref().is_none_or(|m| m.writes.is_none())
+        self.writes.is_none()
+            && self
+                .managed
+                .as_ref()
+                .is_none_or(|m| m.writes.is_none() && m.chunk_writes.is_none())
     }
     pub async fn capacity(&self) -> Result<Option<s3drive_state::journal::Capacity>> {
         if let Some(w) = self.managed.as_ref().and_then(|m| m.writes.as_ref()) {
@@ -468,6 +498,9 @@ impl ReadOnlyFs {
         }
     }
     pub fn writable(&self, node: &Node) -> bool {
+        if let Some(w) = self.managed.as_ref().and_then(|m| m.chunk_writes.as_ref()) {
+            return node.kind == Kind::File && w.permits(&node.key);
+        }
         if let Some(w) = self.managed.as_ref().and_then(|m| m.writes.as_ref()) {
             return node.kind == Kind::File && w.permits(&node.key);
         }
@@ -564,12 +597,22 @@ impl ReadOnlyFs {
             .insert_managed(&changed, parent.id)
     }
     pub fn namespace_creation(&self) -> bool {
+        if self
+            .managed
+            .as_ref()
+            .is_some_and(|m| m.chunk_writes.is_some())
+        {
+            return true;
+        }
         self.managed
             .as_ref()
             .and_then(|m| m.writes.as_ref())
             .is_some_and(|w| w.namespace_enabled())
     }
     pub fn writable_directory(&self, node: &Node) -> bool {
+        if let Some(w) = self.managed.as_ref().and_then(|m| m.chunk_writes.as_ref()) {
+            return node.kind == Kind::Directory && w.permits_directory();
+        }
         if let Some(w) = self.managed.as_ref().and_then(|m| m.writes.as_ref()) {
             return node.kind == Kind::Directory && w.permits_directory();
         }
@@ -581,7 +624,84 @@ impl ReadOnlyFs {
             })
     }
     /// The adapter supplies its native comparison, under the shared create lock.
-    pub async fn create_file(
+    pub fn create_file<'a>(
+        &'a self,
+        parent: u64,
+        name: &'a str,
+        same_name: fn(&str, &str) -> bool,
+        writing: bool,
+    ) -> impl std::future::Future<Output = Result<OpenFile>> + Send + 'a {
+        // Select before constructing the async state: native callbacks must not
+        // reserve the legacy SDK/namespace future for a sparse creation.
+        let future: std::pin::Pin<
+            Box<dyn std::future::Future<Output = Result<OpenFile>> + Send + 'a>,
+        > = if self
+            .managed
+            .as_ref()
+            .is_some_and(|m| m.chunk_writes.is_some())
+        {
+            Box::pin(self.create_chunk_file(parent, name, writing))
+        } else {
+            Box::pin(self.create_file_legacy(parent, name, same_name, writing))
+        };
+        future
+    }
+    async fn create_chunk_file(&self, parent: u64, name: &str, writing: bool) -> Result<OpenFile> {
+        validate_name(name)?;
+        let parent = self.node(parent)?;
+        if parent.kind != Kind::Directory {
+            return Err(Error::NotDirectory);
+        }
+        if !self.writable_directory(&parent) {
+            return Err(Error::ReadOnly);
+        }
+        let backend = self.managed.as_ref().ok_or(Error::Internal)?;
+        let w = backend.chunk_writes.as_ref().ok_or(Error::Internal)?;
+        let created = Box::pin(w.create(&parent.key, name)).await?;
+        let node = self
+            .nodes
+            .lock()
+            .map_err(|_| Error::Internal)?
+            .insert_managed(&created, parent.id)?;
+        if node.kind != Kind::File {
+            return Err(Error::IsDirectory);
+        }
+        let selected = Box::pin(w.open(&node.key, writing, backend.reader.clone())).await?;
+        Self::chunk_open_file(node, w, writing, selected)
+    }
+    fn chunk_open_file(
+        node: Arc<Node>,
+        writer: &Arc<managed::chunk_writes::Writes>,
+        writing: bool,
+        selected: managed::chunk_writes::Opened,
+    ) -> Result<OpenFile> {
+        use managed::chunk_writes::Opened;
+        let (initial_metadata, managed, managed_chunks, chunk_write) = match selected {
+            Opened::Sparse(file) => (file.metadata()?, None, None, Some((writer.clone(), file))),
+            Opened::Chunks(file) => (
+                managed::logical_metadata(file.metadata())?,
+                None,
+                Some(*file),
+                None,
+            ),
+            Opened::Legacy(file) => (managed::metadata(file.metadata()), Some(*file), None, None),
+        };
+        Ok(OpenFile {
+            node,
+            handle: None,
+            initial_metadata,
+            managed,
+            managed_chunks,
+            managed_write: None,
+            chunk_write,
+            cache: None,
+            snapshot: OnceCell::new(),
+            bypass: AtomicBool::new(false),
+            writes: None,
+            writable_open: writing,
+        })
+    }
+    async fn create_file_legacy(
         &self,
         parent: u64,
         name: &str,
@@ -597,9 +717,9 @@ impl ReadOnlyFs {
             return Err(Error::ReadOnly);
         }
         if let Some(w) = self.managed.as_ref().and_then(|m| m.writes.as_ref()) {
-            let created = w
-                .create_node(&parent.key, name, s3drive_authority::Kind::EmptyFile)
-                .await?;
+            let created =
+                Box::pin(w.create_node(&parent.key, name, s3drive_authority::Kind::EmptyFile))
+                    .await?;
             let node = self
                 .nodes
                 .lock()
@@ -620,7 +740,7 @@ impl ReadOnlyFs {
             return Err(Error::ResourceLimit);
         }
         let key = format!("{}{name}", parent.key);
-        match self.readers[source].head(&key).await {
+        match Box::pin(self.readers[source].head(&key)).await {
             Ok(_) => return Err(Error::AlreadyExists),
             Err(error) if error.kind == s3drive_s3::ErrorKind::NotFound => {}
             Err(error) => return Err(error.into()),
@@ -732,6 +852,9 @@ impl ReadOnlyFs {
             .await
     }
     pub async fn sync_namespace(&self) -> Result<()> {
+        if let Some(w) = self.managed.as_ref().and_then(|m| m.chunk_writes.as_ref()) {
+            return Box::pin(w.sync_namespace()).await;
+        }
         if !self.namespace_mutation() {
             return Err(Error::ReadOnly);
         }
@@ -743,6 +866,9 @@ impl ReadOnlyFs {
             .await
     }
     pub async fn flush_all(&self) -> Result<()> {
+        if let Some(w) = self.managed.as_ref().and_then(|m| m.chunk_writes.as_ref()) {
+            return Box::pin(w.flush_all()).await;
+        }
         if let Some(w) = self.managed.as_ref().and_then(|m| m.writes.as_ref()) {
             w.flush_all().await?;
         }
@@ -779,7 +905,10 @@ impl ReadOnlyFs {
                     if let Some(w) = &backend.writes {
                         w.remember(&n)?;
                     }
-                    if backend.chunks.is_some() {
+                    if let Some(w) = &backend.chunk_writes {
+                        w.remember(&n)?;
+                    }
+                    if backend.chunks.is_some() && backend.chunk_writes.is_none() {
                         nodes.insert_managed_snapshot(&n, parent.id)
                     } else {
                         nodes.insert_managed(&n, parent.id)
@@ -870,6 +999,11 @@ impl ReadOnlyFs {
                             return Ok(Some(metadata));
                         }
                     }
+                    if let Some(w) = &backend.chunk_writes
+                        && let Some(m) = w.metadata(&live).await?
+                    {
+                        return Ok(Some(m));
+                    }
                     Some(managed::logical_metadata(&live)?)
                 }
             });
@@ -899,12 +1033,18 @@ impl ReadOnlyFs {
             return Err(Error::IsDirectory);
         }
         if let Some(backend) = &self.managed {
-            if writing && backend.writes.is_none() {
+            if writing && backend.writes.is_none() && backend.chunk_writes.is_none() {
                 return Err(Error::ReadOnly);
             }
+            if let Some(w) = &backend.chunk_writes {
+                let selected = Box::pin(w.open(&node.key, writing, backend.reader.clone())).await?;
+                return Self::chunk_open_file(node, w, writing, selected);
+            }
             if let Some(reader) = &backend.chunks {
-                let live = backend.node(&node.key).await?;
-                managed::check_snapshot(&node, &live)?;
+                let live = Box::pin(backend.node(&node.key)).await?;
+                if backend.chunk_writes.is_none() {
+                    managed::check_snapshot(&node, &live)?;
+                }
                 if live
                     .payload
                     .as_ref()
@@ -913,7 +1053,9 @@ impl ReadOnlyFs {
                     let file = Box::pin(reader.open_file(&node.key))
                         .await
                         .map_err(managed::error)?;
-                    managed::check_snapshot(&node, file.metadata())?;
+                    if backend.chunk_writes.is_none() {
+                        managed::check_snapshot(&node, file.metadata())?;
+                    }
                     let initial_metadata = managed::logical_metadata(file.metadata())?;
                     return Ok(OpenFile {
                         initial_metadata,
@@ -922,6 +1064,7 @@ impl ReadOnlyFs {
                         managed: None,
                         managed_chunks: Some(file),
                         managed_write: None,
+                        chunk_write: None,
                         cache: None,
                         snapshot: OnceCell::new(),
                         bypass: AtomicBool::new(false),
@@ -941,7 +1084,7 @@ impl ReadOnlyFs {
                     None,
                 )
             };
-            if backend.chunks.is_some() {
+            if backend.chunks.is_some() && backend.chunk_writes.is_none() {
                 managed::check_snapshot(&node, snapshot.metadata())?;
             }
             let initial_metadata = managed::metadata(snapshot.metadata());
@@ -955,6 +1098,7 @@ impl ReadOnlyFs {
                     None
                 },
                 managed_write,
+                chunk_write: None,
                 managed_chunks: None,
                 cache: None,
                 snapshot: OnceCell::new(),
@@ -964,7 +1108,7 @@ impl ReadOnlyFs {
             });
         }
         let reader = &self.readers[node.source.ok_or(Error::Internal)?];
-        let mut handle = reader.open(&node.key).await?;
+        let mut handle = Box::pin(reader.open(&node.key)).await?;
         let writes = if let Some(writes) = &self.writes {
             let (fresh, file) =
                 Box::pin(writes.open(node.source.ok_or(Error::Internal)?, &handle, writing))
@@ -1003,6 +1147,7 @@ impl ReadOnlyFs {
             handle: Some(handle),
             managed: None,
             managed_write: None,
+            chunk_write: None,
             cache,
             snapshot: OnceCell::new(),
             bypass: AtomicBool::new(false),
