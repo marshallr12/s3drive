@@ -291,3 +291,10 @@ open recovery, full retry-forest retention/GC, version 8 supervision acceptance,
 approved live managed Wasabi work, independent-host deployment/restore and actual
 MX/Windows10/11 sign-in/reboot/SSH. Hosting and optional Turso remain undecided.
 No user startup or provider policy was installed by this phase.
+
+
+Directory extension accepted2026-10-21: [native chunk directories](native-chunk-directories.md)
+adds exact journaled folder creation and Unicode listing/remount at7c980745, with
+its own complete gates. The original file-writer boundary recorded above remains
+historical; current unsupported operations begin with rename/delete and
+deferred/open-unlinked publication.

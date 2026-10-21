@@ -50,6 +50,13 @@ or physical MX/Windows10/11 reboot results.
 
 ![Version8 filesystem callbacks, private SQLite journal, Rust S3 client, metadata authority and immutable bucket objects.](images/native-chunk-writer.svg)
 
+[Native directory creation](native-chunk-directories.md) uses the private SQLite
+namespace intent and Rust metadata client. Its exact saved request precedes RPC;
+folder creation changes authority metadata and makes no S3 PUTs. It preserves
+unrelated dirty file views and unknown root publications. Real FUSE/WinFsp
+fixtures verified nested Unicode creation, listing and remount. Rename/delete
+and deferred/open-unlinked publication remain separate requirements.
+
 Versions4–7 retain the older whole-generation writer; version3 retains read-only
 chunk snapshots. Version8 is an explicit experimental selection with its own
 private journal and policy-bound stores. Metadata-empty and old whole-object

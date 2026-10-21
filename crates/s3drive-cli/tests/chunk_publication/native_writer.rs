@@ -1,13 +1,13 @@
 //! Actual shared filesystem dispatch + SDK fixtures. OS drivers have their own gate.
 use super::*;
 use s3drive_fs::{ROOT, ReadOnlyFs};
-async fn stop(fs: ReadOnlyFs) {
+pub(super) async fn stop(fs: ReadOnlyFs) {
     let cache = fs.cache_control().unwrap();
     fs.shutdown_writes().await.unwrap();
     drop(fs);
     cache.close().await.unwrap();
 }
-async fn configuration(
+pub(super) async fn configuration(
     config: &s3drive_core::Config,
     root: &Path,
     s: &Server,
@@ -265,13 +265,34 @@ pub async fn mount(config: &s3drive_core::Config, root: &Path, s: &Server) {
     let text = toml::to_string(&cfg).unwrap();
     s3drive_core::Config::parse(&text).unwrap();
     std::fs::write(root.join("native-drive.toml"), text).unwrap();
+    fn enumerate(path: &Path) {
+        let nested = path.parent().unwrap();
+        let top = nested.parent().unwrap();
+        let mount = top.parent().unwrap();
+        assert!(std::fs::metadata(nested).unwrap().is_dir());
+        assert!(std::fs::metadata(top).unwrap().is_dir());
+        for (parent, child) in [(mount, top), (top, nested), (nested, path)] {
+            let names = std::fs::read_dir(parent)
+                .unwrap()
+                .map(|entry| entry.unwrap().file_name())
+                .collect::<Vec<_>>();
+            assert!(
+                names.iter().any(|name| name == child.file_name().unwrap()),
+                "missing Unicode entry in {parent:?}"
+            );
+            if parent != mount {
+                assert_eq!(names.len(), 1);
+            }
+        }
+    }
     let name = "native OS 日本語 café 🦀.bin";
     let at = 9 * 1024 * 1024u64;
     let bytes: Vec<u8> = (0..2 * 1024 * 1024).map(|n| (n % 251) as u8).collect();
     let mut m = Mount::start(root).await;
-    let path = m.path.join(name);
+    let path = m.path.join("folders 日本語").join("nested 🦀").join(name);
     let expected = bytes.clone();
     blocking(&mut m, move || {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         let mut file = std::fs::OpenOptions::new()
             .read(true)
             .write(true)
@@ -281,6 +302,7 @@ pub async fn mount(config: &s3drive_core::Config, root: &Path, s: &Server) {
         file.seek(SeekFrom::Start(at)).unwrap();
         file.write_all(&expected).unwrap();
         file.sync_all().unwrap();
+        enumerate(&path);
         assert_eq!(file.metadata().unwrap().len(), at + expected.len() as u64);
         file.seek(SeekFrom::Start(0)).unwrap();
         let mut hole = [1; 97];
@@ -296,9 +318,10 @@ pub async fn mount(config: &s3drive_core::Config, root: &Path, s: &Server) {
     m.stop().await;
     drop(m);
     let mut m = Mount::start(root).await;
-    let path = m.path.join(name);
+    let path = m.path.join("folders 日本語").join("nested 🦀").join(name);
     let expected = bytes;
     blocking(&mut m, move || {
+        enumerate(&path);
         let mut file = std::fs::OpenOptions::new()
             .read(true)
             .write(true)
@@ -340,9 +363,14 @@ pub async fn small_stack(config: &s3drive_core::Config, root: &Path, s: &Server)
             .spawn(move || {
                 eprintln!("SMALL_STACK_STAGE entered");
                 eprintln!("SMALL_STACK_STAGE create");
+                let directory = runtime
+                    .block_on(Box::pin(
+                        worker.create_directory(ROOT, "callback folders 日本語"),
+                    ))
+                    .unwrap();
                 let file = runtime
                     .block_on(Box::pin(worker.create_file(
-                        ROOT,
+                        directory.id,
                         "callback 日本語 🦀.bin",
                         |a, b| a == b,
                         true,

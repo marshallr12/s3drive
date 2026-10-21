@@ -36,8 +36,14 @@ loopback S3/authority services. The 128 KiB callback control passed on both OSes
 Windows testing used a hosted Windows Server 2025 VM; these are not live Wasabi
 or physical MX/Windows10/11 reboot results.
 
-This is an experimental file-I/O profile. Directory creation, rename/delete,
-deferred/open-unlinked publication and complete retention/GC remain unfinished.
+[Chunk directory creation](docs/src/native-chunk-directories.md) is also accepted
+at `7c980745`, with its own full local gate and
+[Linux/Windows/book CI39568987445](https://github.com/marshallr12/s3drive/actions/runs/39568987445).
+Nested Unicode folder creation, listing and remount passed on both OSes;
+directory-only operations make zero S3 uploads and preserve unrelated dirty data.
+
+This remains an experimental profile. Rename/delete, deferred/open-unlinked
+publication and complete retention/GC remain unfinished.
 Its64-file/512-view/64MiB dirty defaults are prototypes. Existing profiles keep
 their own behavior; no bucket migration or real writable user configuration is
 installed. No real user startup, remote hosting or Turso backend is provisioned.

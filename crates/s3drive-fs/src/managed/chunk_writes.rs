@@ -17,6 +17,7 @@ use s3drive_state::{
 };
 use sha2::{Digest, Sha256};
 use std::sync::Weak;
+mod directories;
 mod dispatch;
 const DEADLINE: Duration = Duration::from_secs(120);
 fn derived(domain: &[u8], id: &[u8; 32]) -> [u8; 32] {
@@ -256,6 +257,7 @@ impl Writes {
     }
     async fn recover(&self) -> Result<()> {
         let _serial = self.recovery_serial.lock().await;
+        self.recover_directories().await?;
         if let Some((_, _, creator)) = self.stores.values().next() {
             for record in creator.recovery().records().await.map_err(error)? {
                 if record.receipt().is_some() || record.rejection().is_some() {

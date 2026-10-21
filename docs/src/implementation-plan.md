@@ -3620,3 +3620,28 @@ pass. Close all retry forests before retention/GC; current quotas are prototypes
 Version8 startup supervision, physical MX/Windows10/11 reboot/SSH, independently
 hosted coordination/restore and a newly approved live Wasabi scope remain required.
 No deployment, provider authorization or Turso provisioning is implied.
+
+
+### Native chunk directory candidate —2026-10-21
+
+[Declared directory phase](native-chunk-directories.md) integrates same-owner
+namespace intents with explicit version8, bounded owned dispatch and exact saved
+replay. Three focused SDK cases pass; full unchanged-source gate and own native
+Linux/Windows acceptance remain pending. Directory-only work must not flush
+unrelated dirty files or upload S3 objects. Rename/delete, deferred/unlinked
+lifecycle, retention and the broader deployment/provider/startup gates remain.
+
+
+### Native chunk directories accepted —2026-10-21
+
+[Directory contract and indexed evidence](native-chunk-directories.md):7c980745,
+schema41/all368, exactly7 runtime deltas from6417ee7. Own complete local gate3
+712.93s/all701 unchanged and own CI39568987445 Linux/Windows/book all succeeded.
+Exact source/API ZIP/strict21+14/project/all35 raw field/type and complete raw-log
+review passed. Native nested Unicode folders/listing, canonical file I/O and
+remount, zero-PUT SDK folders, exact narrowed/expired replay, parent-move conflict
+and unknown-root/newer-edit concurrency passed;128KiB control unchanged.
+This supersedes earlier directory-unsupported status, not the broader lifecycle
+limits. Rename/delete, deferred/unlinked, retention/GC, cold metadata recovery,
+v8 startup/physical workstation, independent-host restore/deployment and freshly
+authorized live provider acceptance remain required.

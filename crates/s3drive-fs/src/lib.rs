@@ -755,7 +755,42 @@ impl ReadOnlyFs {
         )?;
         Box::pin(self.open_mode(node.id, writing)).await
     }
-    pub async fn create_directory(&self, parent: u64, name: &str) -> Result<Arc<Node>> {
+    pub fn create_directory<'a>(
+        &'a self,
+        parent: u64,
+        name: &'a str,
+    ) -> impl std::future::Future<Output = Result<Arc<Node>>> + Send + 'a {
+        let future: std::pin::Pin<
+            Box<dyn std::future::Future<Output = Result<Arc<Node>>> + Send + 'a>,
+        > = if self
+            .managed
+            .as_ref()
+            .is_some_and(|m| m.chunk_writes.is_some())
+        {
+            Box::pin(self.create_chunk_directory(parent, name))
+        } else {
+            Box::pin(self.create_directory_legacy(parent, name))
+        };
+        future
+    }
+    async fn create_chunk_directory(&self, parent: u64, name: &str) -> Result<Arc<Node>> {
+        validate_name(name)?;
+        let parent = self.node(parent)?;
+        if parent.kind != Kind::Directory {
+            return Err(Error::NotDirectory);
+        }
+        let w = self
+            .managed
+            .as_ref()
+            .and_then(|m| m.chunk_writes.as_ref())
+            .ok_or(Error::ReadOnly)?;
+        let created = Box::pin(w.create_directory(&parent.key, name)).await?;
+        self.nodes
+            .lock()
+            .map_err(|_| Error::Internal)?
+            .insert_managed(&created, parent.id)
+    }
+    async fn create_directory_legacy(&self, parent: u64, name: &str) -> Result<Arc<Node>> {
         validate_name(name)?;
         let parent = self.node(parent)?;
         if parent.kind != Kind::Directory {
@@ -766,9 +801,8 @@ impl ReadOnlyFs {
             .as_ref()
             .and_then(|m| m.writes.as_ref())
             .ok_or(Error::ReadOnly)?;
-        let created = w
-            .create_node(&parent.key, name, s3drive_authority::Kind::Directory)
-            .await?;
+        let created =
+            Box::pin(w.create_node(&parent.key, name, s3drive_authority::Kind::Directory)).await?;
         self.nodes
             .lock()
             .map_err(|_| Error::Internal)?

@@ -5,12 +5,12 @@
 <text x="35" y="70" font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="normal" fill="#805311">Experimental version 8 · native fixtures verified · provider and physical startup acceptance pending</text>
 <rect x="35" y="115" width="265" height="145" rx="12" fill="white" stroke="#356c91" stroke-width="2"/>
 <text x="53" y="147" font-family="DejaVu Sans, sans-serif" font-size="19" font-weight="bold" fill="#356c91">FUSE + WinFsp</text>
-<text x="53" y="179" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal" fill="#243a4c">Linux and Windows file I/O</text>
+<text x="53" y="179" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal" fill="#243a4c">Linux/Windows files + folders</text>
 <text x="53" y="205" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal" fill="#243a4c">Sparse writes beyond 8 MiB</text>
 <text x="53" y="231" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal" fill="#243a4c">One exact view per flush</text>
 <rect x="355" y="115" width="395" height="145" rx="12" fill="white" stroke="#356c91" stroke-width="2"/>
 <text x="373" y="147" font-family="DejaVu Sans, sans-serif" font-size="19" font-weight="bold" fill="#356c91">Local Rust chunk writer</text>
-<text x="373" y="179" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal" fill="#243a4c">Canonical create + guarded reader</text>
+<text x="373" y="179" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal" fill="#243a4c">File/folder create + guarded reader</text>
 <text x="373" y="205" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal" fill="#243a4c">4 owned Tokio tasks + stable retry IDs</text>
 <text x="373" y="231" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal" fill="#243a4c">Policy-bound S3 + metadata clients</text>
 <rect x="850" y="115" width="315" height="175" rx="12" fill="white" stroke="#655b99" stroke-width="2"/>
@@ -26,7 +26,7 @@
 <text x="868" y="496" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal" fill="#243a4c">Direct transfers from Rust client</text>
 <rect x="355" y="335" width="395" height="170" rx="12" fill="white" stroke="#486c50" stroke-width="2"/>
 <text x="373" y="367" font-family="DejaVu Sans, sans-serif" font-size="19" font-weight="bold" fill="#486c50">Private local SQLite</text>
-<text x="373" y="399" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal" fill="#243a4c">Sparse views, staged objects, retry state</text>
+<text x="373" y="399" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal" fill="#243a4c">Sparse views, namespace intents, retries</text>
 <text x="373" y="425" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal" fill="#243a4c">Permanent volume/source/owner binding</text>
 <text x="373" y="451" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal" fill="#243a4c">Separate remote commit and local ACK</text>
 <text x="373" y="477" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal" fill="#243a4c">Outside the mounted tree; no GC yet</text>
@@ -45,6 +45,6 @@
 <path d="M300 400 H325 V220 H350" fill="none" stroke="#355671" stroke-width="2" marker-end="url(#arrow)"/>
 <text x="35" y="575" font-family="DejaVu Sans, sans-serif" font-size="18" font-weight="bold" fill="#243a4c">Flush order</text>
 <text x="35" y="605" font-family="DejaVu Sans, sans-serif" font-size="18" font-weight="normal" fill="#243a4c">Capture view  →  persist plan  →  create-only S3 PUTs  →  metadata CAS  →  exact local acknowledgment</text>
-<text x="35" y="642" font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="normal" fill="#805311">Remaining work: directory creation, rename/delete and deferred/open-unlinked publication.</text>
+<text x="35" y="642" font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="normal" fill="#805311">Remaining work: rename/delete and deferred/open-unlinked publication.</text>
 <text x="35" y="671" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="normal" fill="#536577">Existing-only creation recovery and normal-owner root recovery do not imply cold namespace/open recovery.</text>
 </svg>

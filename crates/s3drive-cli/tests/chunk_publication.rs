@@ -12,6 +12,8 @@ mod mixed_epochs;
 mod mixed_roots;
 #[path = "chunk_publication/mixed_uploads.rs"]
 mod mixed_uploads;
+#[path = "chunk_publication/native_directories.rs"]
+mod native_directories;
 #[cfg(any(target_os = "linux", windows))]
 #[path = "chunk_publication/native_mount.rs"]
 mod native_mount;
@@ -165,6 +167,45 @@ async fn proxy(
     if p.mode.load(Ordering::SeqCst) == 8 {
         return axum::http::StatusCode::SERVICE_UNAVAILABLE.into_response();
     }
+    if let Request::Apply { request: apply } = &request
+        && let Mutation::CreateEntry {
+            parent,
+            parent_revision,
+            node_kind: Kind::Directory,
+            ..
+        } = &apply.mutation
+        && p.mode
+            .compare_exchange(18, 0, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+    {
+        let root = node(&p.upstream, &apply.volume, &id(0)).await;
+        let mut rival = apply.clone();
+        rival.operation = id(8888);
+        rival.mutation = Mutation::MoveEntry {
+            node: s3drive_authority::NodeGuard {
+                id: parent.clone(),
+                revision: *parent_revision,
+            },
+            source_parent: s3drive_authority::NodeGuard {
+                id: root.id.clone(),
+                revision: root.revision,
+            },
+            parent: s3drive_authority::NodeGuard {
+                id: root.id,
+                revision: root.revision,
+            },
+            name: "rival directory".into(),
+            destination: None,
+            destination_removal: None,
+        };
+        assert!(matches!(
+            p.upstream
+                .request(&Request::Apply { request: rival })
+                .await
+                .unwrap(),
+            Reply::Applied(_)
+        ));
+    }
     let mut reply = p.upstream.request(&request).await.unwrap();
     if p.mode.load(Ordering::SeqCst) == 13
         && matches!(
@@ -219,6 +260,17 @@ async fn proxy(
                     ..
                 },
         } => 12,
+        Request::Apply {
+            request:
+                Apply {
+                    mutation:
+                        Mutation::CreateEntry {
+                            node_kind: Kind::Directory,
+                            ..
+                        },
+                    ..
+                },
+        } => 16,
         _ => 0,
     };
     if loss != 0
@@ -242,6 +294,9 @@ async fn proxy(
         (Request::Store { .. }, Reply::Store(s), 4) => s.route = "f".repeat(64),
         (Request::Node { .. }, Reply::Node(n), 5) => n.id = id(999),
         (Request::Features {}, Reply::Features(fs), 6) => fs.retain(|f| f != "manifest-root-v1"),
+        (Request::Features {}, Reply::Features(fs), 17) => {
+            fs.retain(|f| f != "namespace-create-v1")
+        }
         (Request::Info {}, Reply::Info(v), 7) => {
             v.name_policy = "unsupported-fixture-policy".into()
         }
@@ -1160,6 +1215,11 @@ fn dispatch<'a>(
         #[cfg(any(target_os = "linux", windows))]
         "native_writer_mount" => Box::pin(native_writer::mount(config, root, s)),
         "native_writer" => Box::pin(native_writer::flow(config, root, s)),
+        "native_directories" => Box::pin(native_directories::flow(config, root, s)),
+        "native_directories_only" => Box::pin(native_directories::only(config, root, s)),
+        "native_directory_concurrency" => {
+            Box::pin(native_directories::concurrency(config, root, s))
+        }
         "native_small_stack" => Box::pin(native_writer::small_stack(config, root, s)),
         "native_policy" => Box::pin(native_writer::policy(config, root, s)),
         "native_concurrency" => Box::pin(native_writer::concurrency(config, root, s)),
@@ -1482,6 +1542,9 @@ async fn run(mode: &str) {
         "empty_flow" | "empty_recovery" | "empty_crash" | "empty_physical" | "empty_deadline" => 1,
         "native_writer_mount" => 6,
         "native_writer" => 5,
+        "native_directories" => 3,
+        "native_directories_only" => 0,
+        "native_directory_concurrency" => 5,
         "native_small_stack" => 3,
         "native_policy" => 3,
         "native_concurrency" => 5,
@@ -1718,4 +1781,18 @@ async fn native_chunk_flush_captures_exact_view_and_preserves_newer_edits() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn native_chunk_callbacks_use_owned_runtime_tasks_on_a_small_driver_stack() {
     run("native_small_stack").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_chunk_directory_recovery_preserves_dirty_files_and_original_request() {
+    run("native_directories").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_chunk_directory_during_unknown_root_keeps_newer_local_edits() {
+    run("native_directory_concurrency").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_chunk_directory_only_performs_zero_s3_puts() {
+    run("native_directories_only").await;
 }

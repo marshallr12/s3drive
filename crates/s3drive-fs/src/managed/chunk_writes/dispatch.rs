@@ -26,6 +26,25 @@ impl Writes {
         })
         .await
     }
+    pub async fn create_directory(
+        self: &Arc<Self>,
+        parent: &str,
+        name: &str,
+    ) -> Result<RemoteNode> {
+        let permit = self.admit()?;
+        let writer = self.clone();
+        let (parent, name) = (parent.to_owned(), name.to_owned());
+        run(async move {
+            let _permit = permit;
+            tokio::time::timeout(
+                DEADLINE,
+                Box::pin(writer.create_directory_inner(&parent, &name)),
+            )
+            .await
+            .map_err(|_| Error::Timeout)?
+        })
+        .await
+    }
     pub async fn open(
         self: &Arc<Self>,
         node: &str,
