@@ -119,6 +119,14 @@ impl<'a> Journal<'a> {
             }
             return Err(Failure::Conflict.into());
         }
+        if info.native_ownership().is_some() {
+            super::super::owned::fresh(
+                &tx,
+                self.state.incarnation.as_deref(),
+                &self.state.native_sparse,
+                &info,
+            )?;
+        }
         let mut after = before.clone();
         after.checks.insert((plan, slot), row);
         after.admit(self.limits)?;
@@ -188,7 +196,12 @@ impl<'a> Journal<'a> {
             }
             return Err(Failure::Conflict.into());
         }
-        super::super::owned::fresh(&tx, self.state.incarnation.as_deref(), &info)?;
+        super::super::owned::fresh(
+            &tx,
+            self.state.incarnation.as_deref(),
+            &self.state.native_sparse,
+            &info,
+        )?;
         let r = Record {
             format: if input.owned.is_some() {
                 4
@@ -251,11 +264,12 @@ impl<'a> Journal<'a> {
     }
     pub fn prepare_publish(&mut self, plan: Id, sequence: u64) -> Result<Record> {
         let record = self.get(plan)?;
-        if record.input.owned.is_some() && record.publication.is_none() {
+        if record.publication.is_none() {
             let source = super::super::ledger::inspect(&self.state.connection)?;
             super::super::owned::fresh(
                 &self.state.connection,
                 self.state.incarnation.as_deref(),
+                &self.state.native_sparse,
                 &source.info(plan)?,
             )?;
         }

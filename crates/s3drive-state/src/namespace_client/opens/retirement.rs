@@ -17,7 +17,12 @@ fn terminal(db: &Connection, row: &Row, record: &OpenRecord) -> Result<bool> {
     creation::recoverable(db, &record.input)?;
     Ok((record.input.controlled
         && record.active()
-        && record.cleanup().is_some_and(|e| record.completed(&e.id))
+        && (record.cleanup().is_some_and(|e| record.completed(&e.id))
+            || (record.cleanup().is_none()
+                && record
+                    .events
+                    .iter()
+                    .any(|e| matches!(e.action, Action::BindSparse))))
         && record.close().is_some_and(|e| record.completed(&e.id))
         && record.pending().is_empty()
         && record

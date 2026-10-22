@@ -90,3 +90,5 @@ pub(super) fn check_adoption_fence(
 }
 
 pub mod owned;
+
+pub mod native;

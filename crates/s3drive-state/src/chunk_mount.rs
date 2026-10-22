@@ -313,6 +313,7 @@ fn scopes(db: &Connection, b: &Binding) -> Result<()> {
 pub(crate) fn validate_all(db: &Connection) -> Result<()> {
     if let Some(b) = load(db)? {
         scopes(db, &b)?;
+        crate::sparse_views::preparation::native::validate_metadata(db)?;
     }
     Ok(())
 }
@@ -337,6 +338,7 @@ pub(crate) fn require(db: &Connection, key: &Key) -> Result<Binding> {
         return Err("chunk mount capability belongs to another owner".into());
     }
     scopes(db, &b)?;
+    crate::sparse_views::preparation::native::validate_metadata(db)?;
     Ok(b)
 }
 pub(crate) fn require_legacy(db: &Connection) -> Result<()> {
@@ -436,6 +438,19 @@ impl Client {
     }
     pub fn key(&self) -> &Key {
         &self.key
+    }
+    /// Original-open-bound native source operations; no adapter activation.
+    pub fn native_sparse(
+        &self,
+        views: crate::sparse_views::Options,
+        plans: crate::sparse_views::preparation::Options,
+    ) -> Result<crate::sparse_views::preparation::native::Client> {
+        crate::sparse_views::preparation::native::Client::new(
+            self.owner.clone(),
+            self.key.clone(),
+            views,
+            plans,
+        )
     }
     /// Retained local store control only; grants no provider permission or
     /// current remote ownership. Safe for metadata-only recovery construction.

@@ -779,6 +779,7 @@ fn downgraded_or_future_schema_markers_never_adopt_or_repair_new_creation_record
             _directory: None,
             incarnation: None,
             source_pin_witness: None,
+            native_sparse: Default::default(),
         };
         assert_eq!(rows(&state), before);
     }

@@ -4,6 +4,18 @@ Updated 2026-10-22. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
+## In-progress candidate: native sparse state ordering, not native enablement
+
+Read `docs/src/native-sparse-close-ordering.md`. The schema48 candidate adds
+original epoch ownership, synchronous Close observation, atomic final admission
+and frozen plans, exact native completion witnesses and cold clean-session fences.
+Its16 dedicated state tests and16 killed boundaries still require hosted acceptance.
+Actual46/47 compatibility remains; a separate actual47/48 gate is added.
+SDK/controller/adapter integration and dedicated new lifecycle OS gates are still
+outstanding. All new native capability flags remain disabled. The accepted
+cold-recovery checkpoint below remains distinct; do not call this candidate accepted
+or promote main without the pending promotion approval and exact-source review.
+
 ## Current checkpoint: accepted cold-recovery prerequisite, native work ongoing
 
 The bounded restricted namespace/open recovery prerequisite is accepted at

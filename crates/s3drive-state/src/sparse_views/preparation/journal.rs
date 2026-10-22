@@ -66,86 +66,22 @@ impl<'a> Journal<'a> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let before = ledger::inspect(&tx)?;
-        let owned = ownership
-            .as_ref()
-            .map(|(key, open, claim)| owned::capture(&tx, key, open, claim))
-            .transpose()?;
-        let input = Input {
-            operation: request.operation,
-            view: request.view,
-            generation: request.generation,
-            base_root: request.base_root,
-            base_page: digest(&request.base_page),
-            owned,
-        };
-        if let Some(old) = before
-            .plans
-            .values()
-            .find(|p| p.input.operation == input.operation)
-        {
-            if old.input != input || before.blobs.get(&input.base_page) != Some(&request.base_page)
-            {
-                return Err(Failure::Conflict.into());
-            }
-            return old.info(&before.views);
-        }
-        let view = View(before.views.record(input.view)?.clone());
-        let base = view.binding().base()?;
-        match (&ownership, &input.owned) {
-            (Some((key, _, _)), Some(provenance)) => owned::admit(
-                &tx,
-                self.state.incarnation.as_deref().ok_or(Failure::Conflict)?,
-                key,
-                provenance,
-                view.binding(),
-            )?,
-            (None, None) => crate::namespace_client::authorize_sparse_preparation(
-                &tx,
-                base.volume(),
-                base.node(),
-            )?,
-            _ => return Err(Failure::Corrupt.into()),
-        }
-        for old in before.plans.values() {
-            if old.input.generation == input.generation
-                && before
-                    .views
-                    .record(old.input.view)?
-                    .request
-                    .binding
-                    .target()?
-                    == view.binding().target()?
-            {
-                return Err(Failure::Conflict.into());
-            }
-        }
-        let plan = input.id()?;
-        let mut after = before.clone();
-        after.put_blob(request.base_page)?;
-        let progress = Progress {
-            cursor: Cursor {
-                offset: 0,
-                level: if view.size() == 0 { 0 } else { -1 },
-                slot: 0,
+        let (info, changed) = begin_in_transaction(
+            &tx,
+            self.options,
+            self.state.incarnation.as_deref(),
+            &self.state.native_sparse,
+            request,
+            Admission {
+                ownership,
+                ..Admission::default()
             },
-            root: None,
-            settlement: None,
-        };
-        if after
-            .plans
-            .insert(plan, Saved::new(input, progress)?)
-            .is_some()
-        {
-            return Err(Failure::Conflict.into());
+        )?;
+        if changed {
+            tx.commit()?;
+            checkpoint("begin", "Committed");
         }
-        after.validate()?;
-        after.admit(self.options)?;
-        write_delta(&tx, &before, &after, "begin")?;
-        let result = after.info(plan)?;
-        tx.commit()?;
-        checkpoint("begin", "Committed");
-        Ok(result)
+        Ok(info)
     }
     /// Exact candidate retry after progress/newer heads returns actual progress.
     /// A stale cursor with different content is a conflict, never an acknowledgment.
@@ -176,6 +112,14 @@ impl<'a> Journal<'a> {
         }
         if info.progress.root.is_some() {
             return Err(Failure::Conflict.into());
+        }
+        if info.native_ownership().is_some() {
+            owned::fresh(
+                &tx,
+                self.state.incarnation.as_deref(),
+                &self.state.native_sparse,
+                &info,
+            )?;
         }
         let end = object.end();
         if after
@@ -215,6 +159,14 @@ impl<'a> Journal<'a> {
         }
         if expected.level < 0 {
             return Err(Failure::Invalid.into());
+        }
+        if info.native_ownership().is_some() {
+            owned::fresh(
+                &tx,
+                self.state.incarnation.as_deref(),
+                &self.state.native_sparse,
+                &info,
+            )?;
         }
         let mut after = before.clone();
         let mut progress = info.progress.clone();
@@ -585,4 +537,117 @@ pub(super) fn checkpoint(kind: &str, point: &str) {
     std::fs::rename(temporary, path).unwrap();
     use std::io::Read;
     let _ = std::io::stdin().read(&mut [0u8]);
+}
+
+#[derive(Default)]
+pub(super) struct Admission {
+    pub ownership: Option<(
+        crate::chunk_mount::Key,
+        String,
+        crate::namespace::RemovalPublicationClaim,
+    )>,
+    pub native: Option<native::Provenance>,
+    pub finalizing: bool,
+}
+/// The caller must commit all source/open records with this preparation atomically.
+pub(super) fn begin_in_transaction(
+    tx: &rusqlite::Transaction<'_>,
+    options: Options,
+    incarnation: Option<&str>,
+    native_runtime: &native::Runtime,
+    request: Request,
+    admission: Admission,
+) -> Result<(Info, bool)> {
+    let before = ledger::inspect(tx)?;
+    let owned = admission
+        .ownership
+        .as_ref()
+        .map(|(key, open, claim)| owned::capture(tx, key, open, claim))
+        .transpose()?;
+    let input = Input {
+        operation: request.operation,
+        view: request.view,
+        generation: request.generation,
+        base_root: request.base_root,
+        base_page: digest(&request.base_page),
+        owned,
+        native: admission.native,
+    };
+    if let Some(old) = before
+        .plans
+        .values()
+        .find(|p| p.input.operation == input.operation)
+    {
+        if old.input != input || before.blobs.get(&input.base_page) != Some(&request.base_page) {
+            return Err(Failure::Conflict.into());
+        }
+        return Ok((old.info(&before.views)?, false));
+    }
+    let view = View(before.views.record(input.view)?.clone());
+    let base = view.binding().base()?;
+    native::admit(
+        tx,
+        incarnation,
+        native_runtime,
+        &view,
+        input.native.as_ref(),
+        admission.finalizing,
+    )?;
+    match (&admission.ownership, &input.owned) {
+        (Some((key, _, _)), Some(provenance)) => owned::admit(
+            tx,
+            incarnation.ok_or(Failure::Conflict)?,
+            key,
+            provenance,
+            view.binding(),
+        )?,
+        (None, None) => {
+            crate::namespace_client::authorize_sparse_preparation(tx, base.volume(), base.node())?
+        }
+        _ => return Err(Failure::Corrupt.into()),
+    }
+    for old in before.plans.values() {
+        if old.input.generation == input.generation
+            && before
+                .views
+                .record(old.input.view)?
+                .request
+                .binding
+                .target()?
+                == view.binding().target()?
+        {
+            return Err(Failure::Conflict.into());
+        }
+    }
+    let plan = input.id()?;
+    let mut after = before.clone();
+    after.put_blob(request.base_page)?;
+    let progress = Progress {
+        cursor: Cursor {
+            offset: 0,
+            level: if view.size() == 0 { 0 } else { -1 },
+            slot: 0,
+        },
+        root: None,
+        settlement: None,
+    };
+    if after
+        .plans
+        .insert(plan, Saved::new(input, progress)?)
+        .is_some()
+    {
+        return Err(Failure::Conflict.into());
+    }
+    after.validate()?;
+    after.admit(options)?;
+    write_delta(tx, &before, &after, "begin")?;
+    if after
+        .plans
+        .get(&plan)
+        .is_some_and(|p| p.input.native.is_some())
+    {
+        crate::namespace_client::opens::sparse_capacity(tx)?;
+    }
+    let result = after.info(plan)?;
+    Ok((result, true))
 }

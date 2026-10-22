@@ -357,6 +357,7 @@ impl Journal<'_> {
         owned::fresh(
             &self.state.connection,
             self.state.incarnation.as_deref(),
+            &self.state.native_sparse,
             &info,
         )?;
         self.require_dependencies(plan, p)?;

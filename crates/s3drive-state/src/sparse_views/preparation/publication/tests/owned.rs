@@ -609,36 +609,40 @@ fn owned_sparse_no_effect_of_one_plan_never_settles_another_plan() {
     );
 }
 #[test]
-fn owned_sparse_legacy_preparation_bytes_and_hashes_survive_schema46_upgrade() {
-    let t = tempfile::tempdir().unwrap();
-    let path = t.path().join("s");
-    let mut s = State::open_managed(&path).unwrap();
-    let f = fixture();
-    let info = prepare(&mut s, &f, false);
-    let raw: Vec<u8> = s
-        .connection
-        .query_row("SELECT input FROM sparse_preparations", [], |r| r.get(0))
-        .unwrap();
-    assert!(!String::from_utf8(raw.clone()).unwrap().contains("owned"));
-    let before = crate::sparse_views::preparation::ledger::inspect(&s.connection).unwrap();
-    s.connection
-        .pragma_update(None, "user_version", 46)
-        .unwrap();
-    drop(s);
-    let mut s = State::open_managed(&path).unwrap();
-    assert_eq!(s.info().unwrap().schema_version, 47);
-    assert!(crate::sparse_views::preparation::ledger::inspect(&s.connection).unwrap() == before);
-    assert_eq!(
-        pj(&mut s).info(info.id().unwrap()).unwrap().ownership(),
-        None
-    );
-    assert_eq!(
+fn owned_sparse_legacy_preparation_bytes_and_hashes_survive_schema46_and47_upgrade() {
+    for version in [46, 47] {
+        let t = tempfile::tempdir().unwrap();
+        let path = t.path().join("s");
+        let mut s = State::open_managed(&path).unwrap();
+        let f = fixture();
+        let info = prepare(&mut s, &f, false);
+        let raw: Vec<u8> = s
+            .connection
+            .query_row("SELECT input FROM sparse_preparations", [], |r| r.get(0))
+            .unwrap();
+        assert!(!String::from_utf8(raw.clone()).unwrap().contains("owned"));
+        let before = crate::sparse_views::preparation::ledger::inspect(&s.connection).unwrap();
         s.connection
-            .query_row("SELECT input FROM sparse_preparations", [], |r| r
-                .get::<_, Vec<u8>>(0))
-            .unwrap(),
-        raw
-    );
+            .pragma_update(None, "user_version", version)
+            .unwrap();
+        drop(s);
+        let mut s = State::open_managed(&path).unwrap();
+        assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
+        assert!(
+            crate::sparse_views::preparation::ledger::inspect(&s.connection).unwrap() == before
+        );
+        assert_eq!(
+            pj(&mut s).info(info.id().unwrap()).unwrap().ownership(),
+            None
+        );
+        assert_eq!(
+            s.connection
+                .query_row("SELECT input FROM sparse_preparations", [], |r| r
+                    .get::<_, Vec<u8>>(0))
+                .unwrap(),
+            raw
+        );
+    }
 }
 #[test]
 fn owned_sparse_corrupt_independent_open_blocks_whole_graph_and_metadata_recovery() {

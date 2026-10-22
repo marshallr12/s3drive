@@ -371,15 +371,23 @@ impl Journal<'_> {
     }
 }
 
-pub(super) fn fresh(db: &Connection, runtime: Option<&str>, info: &Info) -> Result<()> {
+pub(super) fn fresh(
+    db: &Connection,
+    runtime: Option<&str>,
+    native_runtime: &native::Runtime,
+    info: &Info,
+) -> Result<()> {
+    native::fresh(db, runtime, native_runtime, info)?;
     require_unsettled(info)?;
     if let Some(p) = info.ownership() {
         p.historical(db, info.view().binding())?;
-        names::opens::sparse_current(
-            db,
-            runtime.ok_or(Failure::Conflict)?,
-            &names::opens::sparse_open(db, &p.open.id)?,
-        )?;
+        if info.native_ownership().is_none() {
+            names::opens::sparse_current(
+                db,
+                runtime.ok_or(Failure::Conflict)?,
+                &names::opens::sparse_open(db, &p.open.id)?,
+            )?;
+        }
         if names::pending_for_node(db, &p.open.volume, &p.open.node)?
             || names::removals::sparse_claim(db, &p.open.volume, &p.open.node)?.as_ref()
                 != Some(&p.claim)
