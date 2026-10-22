@@ -67,3 +67,13 @@ sequence older than its own node guard (invalid admission rather than an
 authority rejection). The fix recognizes exactly those killed modes and uses a
 valid future sequence for a real retained authority Conflict. Neither change
 relaxes implementation checks. No acceptance is claimed from this failed run.
+
+Second candidate b344890f4867e0dfffc19d6c083cb2566108cc4c,
+[run39848748461](https://github.com/marshallr12/s3drive/actions/runs/39848748461),
+passed six of seven state cases including all four killed transaction boundaries.
+The real SQLiteFull case reached disk-full and verified rollback, then its retry
+correctly rejected the fixture's duplicate authority sequence across independent
+modeled receipts. Each modeled receipt now has a distinct sequence and matching
+node revision; implementation validation remains unchanged. The suite additionally
+checks missing stores/roles, foreign roles, non-WAL opening and corrupt unselected
+namespace records. Failed candidate runs remain non-acceptance evidence.

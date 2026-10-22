@@ -245,6 +245,8 @@ fn namespace_cold_refuses_missing_changed_unknown_and_unlinked_effects() {
 fn namespace_cold_checks_whole_role_and_late_triggers_without_migration() {
     for sql in [
         "PRAGMA user_version=46",
+        "INSERT INTO chunk_client_role VALUES(1,1,zeroblob(32))",
+        "DELETE FROM chunk_mount_role",
         "PRAGMA application_id=1",
         "UPDATE windows_open_journal SET state_hash=zeroblob(32)",
         "UPDATE source_bindings SET config_fingerprint=replace(config_fingerprint,'b','c')",
@@ -284,6 +286,8 @@ fn namespace_cold_real_sqlite_full_preserves_original_outcome_and_retry() {
             .unwrap();
         let mut out = receipt.clone();
         out.node.id = id(n);
+        out.sequence = u64::from(n);
+        out.node.revision = out.sequence;
         out.artifact = Some(namespace::Artifact::Removal(namespace::RemovalFence {
             intent: id(n),
             owner: key.owner().into(),
@@ -418,4 +422,54 @@ fn namespace_cold_killed_owners_preserve_atomic_outcome_and_link() {
         assert!(open.cleanup().is_none());
         assert!(open.close().is_none());
     }
+}
+
+#[test]
+fn namespace_cold_requires_existing_wal_role_and_checks_unselected_records() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("never-created");
+    assert!(RecoveryStore::open(&path, &id(1)).is_err());
+    assert!(!path.exists());
+    let state = State::open_managed(&path).unwrap();
+    drop(state);
+    assert!(RecoveryStore::open(&path, &id(1)).is_err());
+    let path = temp.path().join("state");
+    let (mut input, _, _) = fixture(&path, true);
+    let key = RecoveryStore::open(&path, &id(1)).unwrap().key.clone();
+    let mut state = State::open_managed(&path).unwrap();
+    input.request.operation = id(100);
+    input.entries[0].id = id(100);
+    let Mutation::ArmRemoval { node, .. } = &mut input.request.mutation else {
+        panic!()
+    };
+    node.id = id(100);
+    Journal::for_chunks(&mut state, crate::journal::Options::default(), &key)
+        .unwrap()
+        .begin(input)
+        .unwrap();
+    drop(state);
+    let mut r = RecoveryStore::open(&path, &id(1)).unwrap();
+    assert_eq!(
+        r.connection
+            .execute(
+                "UPDATE namespace_intents SET state_hash=zeroblob(32) WHERE operation_id=?",
+                [id(100)]
+            )
+            .unwrap(),
+        1
+    );
+    assert!(r.get(&id(6)).is_err());
+    assert!(r.open_record(&id(8)).is_err());
+    drop(r);
+    assert!(RecoveryStore::open(&path, &id(1)).is_err());
+    let path = temp.path().join("not-wal");
+    fixture(&path, true);
+    let r = RecoveryStore::open(&path, &id(1)).unwrap();
+    let mode: String = r
+        .connection
+        .query_row("PRAGMA journal_mode=DELETE", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(mode.to_lowercase(), "delete");
+    drop(r);
+    assert!(RecoveryStore::open(&path, &id(1)).is_err());
 }
