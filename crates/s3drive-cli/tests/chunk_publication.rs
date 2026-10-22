@@ -18,6 +18,8 @@ mod mixed_epochs;
 mod mixed_roots;
 #[path = "chunk_publication/mixed_uploads.rs"]
 mod mixed_uploads;
+#[path = "chunk_publication/namespace_recovery.rs"]
+mod namespace_recovery;
 #[path = "chunk_publication/native_directories.rs"]
 mod native_directories;
 #[cfg(any(target_os = "linux", windows))]
@@ -1218,7 +1220,8 @@ async fn chunk_child() {
     let s = Server::open(&root, policy).await;
     if matches!(
         mode.as_str(),
-        "owned_sparse_recover"
+        "cold_namespace_recover"
+            | "owned_sparse_recover"
             | "recover"
             | "source_recover_unknown"
             | "source_recover_known"
@@ -1227,7 +1230,9 @@ async fn chunk_child() {
             | "creator_import_recover"
             | "creator_open_recover"
     ) {
-        if mode == "owned_sparse_recover" {
+        if mode == "cold_namespace_recover" {
+            Box::pin(namespace_recovery::recover(&root, &s)).await;
+        } else if mode == "owned_sparse_recover" {
             Box::pin(owned_sparse::recover(&root, &s)).await;
         } else if mode == "creator_open_recover" {
             Box::pin(creator_open::recover(&root, &s)).await;
@@ -1266,6 +1271,24 @@ fn dispatch<'a>(
     s: &'a Server,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + 'a>> {
     match mode {
+        "cold_namespace_crash" => Box::pin(namespace_recovery::seed(
+            config,
+            root,
+            s,
+            "cold_namespace_crash",
+        )),
+        "cold_namespace_known" => Box::pin(namespace_recovery::seed(
+            config,
+            root,
+            s,
+            "cold_namespace_known",
+        )),
+        "cold_namespace_rejected" => Box::pin(namespace_recovery::seed(
+            config,
+            root,
+            s,
+            "cold_namespace_rejected",
+        )),
         "owned_sparse_pending" => Box::pin(owned_sparse::flow(config, root, s, false)),
         "owned_sparse_committed" => Box::pin(owned_sparse::flow(config, root, s, true)),
         "owned_sparse_physical" => Box::pin(owned_sparse::physical(config, root, s)),
@@ -1346,6 +1369,9 @@ async fn run(mode: &str) {
     let mut mixed_batch_window = None;
     let mut creator_open_objects = None;
     for stage in match mode {
+        "cold_namespace_crash" | "cold_namespace_known" | "cold_namespace_rejected" => {
+            vec![mode, "cold_namespace_recover"]
+        }
         "owned_sparse_crash" => vec!["owned_sparse_crash", "owned_sparse_recover"],
         "mixed_roots_crash" => vec!["mixed_roots_crash", "mixed_roots_recover"],
         "crash" => vec!["crash", "recover"],
@@ -1593,8 +1619,14 @@ async fn run(mode: &str) {
             .unwrap();
             counts = Some(f.requests.lock().unwrap().len());
         }
-        if stage == "owned_sparse_crash" {
-            assert_eq!(puts(&f), 3);
+        if matches!(
+            stage,
+            "owned_sparse_crash"
+                | "cold_namespace_crash"
+                | "cold_namespace_known"
+                | "cold_namespace_rejected"
+        ) {
+            assert_eq!(puts(&f), if stage == "owned_sparse_crash" { 3 } else { 1 });
             let db = raw(tmp.path());
             db.execute(
                 "UPDATE sparse_view_blocks SET data=zeroblob(length(data))",
@@ -1612,7 +1644,7 @@ async fn run(mode: &str) {
             .unwrap();
             counts = Some(f.requests.lock().unwrap().len());
         }
-        if stage == "owned_sparse_recover" {
+        if matches!(stage, "owned_sparse_recover" | "cold_namespace_recover") {
             assert_eq!(
                 f.requests.lock().unwrap().len(),
                 counts.unwrap(),
@@ -1689,6 +1721,7 @@ async fn run(mode: &str) {
         }
     }
     let expected = match mode {
+        "cold_namespace_crash" | "cold_namespace_known" | "cold_namespace_rejected" => 1,
         "owned_sparse_pending" | "owned_sparse_committed" => 6,
         "owned_sparse_controls" => 1,
         "owned_sparse_physical" => 2,
@@ -2090,4 +2123,19 @@ async fn owned_sparse_crash() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn owned_sparse_physical() {
     run("owned_sparse_physical").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn cold_namespace_crash() {
+    run("cold_namespace_crash").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn cold_namespace_known() {
+    run("cold_namespace_known").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn cold_namespace_rejected() {
+    run("cold_namespace_rejected").await;
 }

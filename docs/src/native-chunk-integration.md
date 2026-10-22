@@ -267,7 +267,8 @@ Recovery boundary: namespace/open clients still use normal `Storage`/`State`
 opening, which validates retained source bodies. The saved-outcome path can avoid
 reading those bodies on an already open owner; its compatibility constructor is
 not a cold metadata-only namespace/open recovery API. That separate capability
-and native restart integration remain required. The creation SDK's existing-only
+is now a [separate candidate](chunk-namespace-cold-recovery.md); native restart
+integration remains required. The creation SDK's existing-only
 recovery store is a distinct implemented API. Do not conflate these scopes.
 
 

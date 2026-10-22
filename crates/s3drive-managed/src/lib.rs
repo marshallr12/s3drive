@@ -4,6 +4,7 @@
 pub mod chunks;
 pub mod creation;
 pub mod disposition;
+pub mod namespace_recovery;
 mod reader;
 pub use reader::Reader;
 use s3drive_authority::{Apply, Artifact, Kind, Node, Receipt, Reply, Request, Store, WireClient};

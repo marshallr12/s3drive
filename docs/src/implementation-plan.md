@@ -3795,3 +3795,14 @@ durable gate remain recorded; no safeguard was relaxed. Schema47 and native flag
 stay unchanged. Next is actual new owned sparse native lifecycle/cold recovery
 and separate FUSE/WinFsp gates before enablement, not inferred from SDK tests.
 Verify main's full CI after the approved merge; keep validation archives private.
+
+
+### Restricted namespace cold-recovery prerequisite — 2026-10-22
+
+The [bounded cold-recovery candidate](chunk-namespace-cold-recovery.md) supplies
+existing-only namespace outcomes and already-linked open acknowledgments without
+source-body startup dependence. It is not yet accepted. No callback/session
+observations, fresh work or native enablement are added. Dedicated state fault
+and authenticated SDK recovery gates must pass on both OSes in addition to all
+existing regression gates. The chunk-compatible live lifecycle controller and
+actual new FUSE/WinFsp lifecycle/remount acceptance remain subsequent work.

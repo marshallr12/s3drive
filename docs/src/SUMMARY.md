@@ -64,6 +64,7 @@
 - [Sparse owned-unlinked publication proposal](owned-unlinked-sparse-plan.md)
 - [Typed owned sparse state](owned-unlinked-sparse-state.md)
 - [Owned sparse SDK](owned-unlinked-sparse-sdk.md)
+- [Restricted namespace cold recovery](chunk-namespace-cold-recovery.md)
   - [Sparse node-wide effect barriers](sparse-node-barriers.md)
 - [Event-bound manifest authority candidate](manifest-event-fence.md)
 - [Deferred canonical manifest integration](deferred-manifest-integration.md)

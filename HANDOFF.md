@@ -4,6 +4,17 @@ Updated 2026-10-22. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
+## In progress: native prerequisite, not activation
+
+The new owned sparse native integration review found missing restricted cold
+namespace/open recovery and no chunk-compatible lifecycle controller.
+`docs/src/chunk-namespace-cold-recovery.md` defines the bounded prerequisite.
+The current candidate adds exact saved-request/outcome and existing-link recovery
+only. It is not accepted until its dedicated Linux/Windows fault gates and full
+CI pass. No native flags are enabled. Live lifecycle integration, startup ordering,
+dirty existing-handle reads, replacement and last-close settlement still require
+separate native implementation and FUSE/WinFsp acceptance.
+
 ## Current checkpoint: accepted owned sparse SDK
 
 Typed SDK admission, coherent current-event publication, exact historical replay
