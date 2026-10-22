@@ -182,6 +182,7 @@ pub(super) fn inspect(db: &Connection) -> Result<Snapshot> {
         }
     }
     s.validate()?;
+    owned::validate_snapshot(db, &s)?;
     Ok(s)
 }
 impl Snapshot {
@@ -201,7 +202,13 @@ impl Snapshot {
                 .objects
                 .values()
                 .map(|o| o.raw.len() as u64)
-                .sum::<u64>();
+                .sum::<u64>()
+            + self
+                .plans
+                .values()
+                .filter(|p| p.progress.settlement.is_none())
+                .count() as u64
+                * 256;
         let bytes = self.blobs.values().map(|b| b.len() as u64).sum::<u64>();
         if self.plans.len() > options.plans
             || self.objects.len() > options.objects

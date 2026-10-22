@@ -1,8 +1,14 @@
 # S3Drive handoff
 
-Updated 2026-10-21. Event-bound manifest authority is accepted at schema46;
+Updated 2026-10-22. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
+
+## In-progress candidate: typed owned sparse state
+
+Schema47 state work is described in `docs/src/owned-unlinked-sparse-state.md`.
+It remains unaccepted pending full exact-source hosted/native and actual46/47
+compatibility verification. No SDK/native lifecycle feature is enabled.
 
 ## Current checkpoint: accepted sparse node-wide effect barriers
 

@@ -27,7 +27,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 46;
+pub const SCHEMA_VERSION: i32 = 47;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
@@ -320,6 +320,9 @@ impl State {
             // marker. Existing43/44 roles keep every byte; a transaction-local
             // current marker enables their strict role validators. Any failure
             // rolls back this marker together with the rest of initialization.
+            if version < 47 {
+                sparse_views::preparation::owned::require_pre47(&tx)?;
+            }
             if version < 46 {
                 namespace::publication::event::require_pre46(&tx)?;
             }
@@ -329,7 +332,7 @@ impl State {
             if version < 44 {
                 namespace_client::creator_import::require_pre44(&tx)?;
             }
-            if version == 43 || version == 44 {
+            if (43..=46).contains(&version) {
                 tx.pragma_update(None, "user_version", SCHEMA_VERSION)?;
             }
             chunk_mount::check_schema(&tx)?;

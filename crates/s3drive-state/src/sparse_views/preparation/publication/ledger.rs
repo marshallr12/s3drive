@@ -1,8 +1,8 @@
 use super::*;
 #[derive(Clone, Default, PartialEq, Eq)]
-pub(super) struct Meta {
+pub(in crate::sparse_views::preparation) struct Meta {
     pub records: BTreeMap<Id, Record>,
-    pub checks: BTreeMap<(Id, u64), Check>,
+    pub(super) checks: BTreeMap<(Id, u64), Check>,
 }
 impl Meta {
     pub fn empty(&self) -> bool {
@@ -103,7 +103,7 @@ fn count(db: &Connection, sql: &str) -> Result<u64> {
     let n: i64 = db.query_row(sql, [], |r| r.get(0))?;
     u64::try_from(n).map_err(|_| Failure::Corrupt.into())
 }
-pub(super) fn inspect(db: &Connection) -> Result<Meta> {
+pub(in crate::sparse_views::preparation) fn inspect(db: &Connection) -> Result<Meta> {
     let records = count(db, "SELECT count(*) FROM sparse_publications")?;
     let checks = count(db, "SELECT count(*) FROM sparse_publication_checks")?;
     let roles = count(db, "SELECT count(*) FROM sparse_publication_role")?;
@@ -179,6 +179,27 @@ pub(super) fn inspect(db: &Connection) -> Result<Meta> {
         }
     }
     meta.validate()?;
+    let version: i32 = db.pragma_query_value(None, "user_version", |r| r.get(0))?;
+    for r in meta.records.values() {
+        if let Some(p) = &r.input.owned {
+            if version < 47 {
+                return Err(Failure::Corrupt.into());
+            }
+            p.historical(db, &r.input.binding)?;
+            let raw: Vec<u8> = db.query_row("SELECT CASE WHEN typeof(input)='blob' AND length(input) BETWEEN 1 AND 65536 THEN input END FROM sparse_preparations WHERE plan_id=?1", [r.input.plan.as_slice()], |row|row.get(0))?;
+            let source: super::super::model::Input = serde_json::from_slice(&raw)?;
+            if serde_json::to_vec(&source)? != raw
+                || source.id()? != r.input.plan
+                || source.owned.as_ref() != Some(p)
+                || source.operation != r.input.operation
+                || source.view != r.input.view
+                || source.generation != r.input.generation
+                || source.base_root != r.input.original_root
+            {
+                return Err(Failure::Corrupt.into());
+            }
+        }
+    }
     let (singleton, admitted, checked, sha): (i64, i64, i64, Vec<u8>) = db.query_row(
         "SELECT singleton,admitted,checked,state_hash FROM sparse_publication_role",
         [],

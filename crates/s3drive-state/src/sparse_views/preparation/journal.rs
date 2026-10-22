@@ -41,18 +41,43 @@ impl<'a> Journal<'a> {
         Ok(result)
     }
     pub fn begin(&mut self, request: Request) -> Result<Info> {
+        self.begin_inner(request, None)
+    }
+    pub fn begin_owned(
+        &mut self,
+        request: Request,
+        key: &crate::chunk_mount::Key,
+        open: &str,
+        claim: crate::namespace::RemovalPublicationClaim,
+    ) -> Result<Info> {
+        self.begin_inner(request, Some((key.clone(), open.into(), claim)))
+    }
+    fn begin_inner(
+        &mut self,
+        request: Request,
+        ownership: Option<(
+            crate::chunk_mount::Key,
+            String,
+            crate::namespace::RemovalPublicationClaim,
+        )>,
+    ) -> Result<Info> {
         request_bounds(&request)?;
         let tx = self
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let before = ledger::inspect(&tx)?;
+        let owned = ownership
+            .as_ref()
+            .map(|(key, open, claim)| owned::capture(&tx, key, open, claim))
+            .transpose()?;
         let input = Input {
             operation: request.operation,
             view: request.view,
             generation: request.generation,
             base_root: request.base_root,
             base_page: digest(&request.base_page),
+            owned,
         };
         if let Some(old) = before
             .plans
@@ -67,7 +92,21 @@ impl<'a> Journal<'a> {
         }
         let view = View(before.views.record(input.view)?.clone());
         let base = view.binding().base()?;
-        crate::namespace_client::authorize_sparse_preparation(&tx, base.volume(), base.node())?;
+        match (&ownership, &input.owned) {
+            (Some((key, _, _)), Some(provenance)) => owned::admit(
+                &tx,
+                self.state.incarnation.as_deref().ok_or(Failure::Conflict)?,
+                key,
+                provenance,
+                view.binding(),
+            )?,
+            (None, None) => crate::namespace_client::authorize_sparse_preparation(
+                &tx,
+                base.volume(),
+                base.node(),
+            )?,
+            _ => return Err(Failure::Corrupt.into()),
+        }
         for old in before.plans.values() {
             if old.input.generation == input.generation
                 && before
@@ -91,6 +130,7 @@ impl<'a> Journal<'a> {
                 slot: 0,
             },
             root: None,
+            settlement: None,
         };
         if after
             .plans
@@ -117,6 +157,7 @@ impl<'a> Journal<'a> {
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let before = ledger::inspect(&tx)?;
         let info = before.info(plan)?;
+        owned::require_unsettled(&info)?;
         if expected.level != -1
             || expected.slot != 0
             || expected.offset >= info.view.size()
@@ -168,6 +209,7 @@ impl<'a> Journal<'a> {
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let before = ledger::inspect(&tx)?;
         let info = before.info(plan)?;
+        owned::require_unsettled(&info)?;
         if info.cursor() != expected || info.progress.root.is_some() {
             return Ok(info);
         }
@@ -363,7 +405,12 @@ fn inherited_object(
         kind: Kind::Inherited(witness),
     })
 }
-fn write_delta(db: &Connection, before: &Snapshot, after: &Snapshot, kind: &str) -> Result<()> {
+pub(super) fn write_delta(
+    db: &Connection,
+    before: &Snapshot,
+    after: &Snapshot,
+    kind: &str,
+) -> Result<()> {
     ledger::no_triggers(db)?;
     for (id, bytes) in &after.blobs {
         if let Some(old) = before.blobs.get(id) {
@@ -450,12 +497,38 @@ fn write_delta(db: &Connection, before: &Snapshot, after: &Snapshot, kind: &str)
 pub struct Client {
     pub(super) owner: Owner,
     options: Options,
+    chunk: Option<crate::chunk_mount::Key>,
 }
 impl Client {
+    pub(crate) fn for_chunks(
+        owner: Owner,
+        options: Options,
+        key: crate::chunk_mount::Key,
+    ) -> Result<Self> {
+        Ok(Self {
+            owner,
+            options: options.validate()?,
+            chunk: Some(key),
+        })
+    }
+    pub async fn begin_owned(
+        &self,
+        request: Request,
+        open: String,
+        claim: crate::namespace::RemovalPublicationClaim,
+    ) -> Result<Info> {
+        let key = self.chunk.clone().ok_or(Failure::Conflict)?;
+        self.call(move |j| j.begin_owned(request, &key, &open, claim))
+            .await
+    }
+    pub async fn settle(&self, plan: Id, settlement: owned::Settlement) -> Result<Info> {
+        self.call(move |j| j.settle(plan, settlement)).await
+    }
     pub(crate) fn new(owner: Owner, options: Options) -> Result<Self> {
         Ok(Self {
             owner,
             options: options.validate()?,
+            chunk: None,
         })
     }
     pub(super) async fn call<T: Send + 'static>(
@@ -491,9 +564,9 @@ impl Client {
 }
 
 #[cfg(not(test))]
-fn checkpoint(_kind: &str, _point: &str) {}
+pub(super) fn checkpoint(_kind: &str, _point: &str) {}
 #[cfg(test)]
-fn checkpoint(kind: &str, point: &str) {
+pub(super) fn checkpoint(kind: &str, point: &str) {
     if std::env::var("S3DRIVE_MIXED_CRASH_KIND").as_deref() != Ok(kind)
         || std::env::var("S3DRIVE_MIXED_CRASH_POINT").as_deref() != Ok(point)
     {

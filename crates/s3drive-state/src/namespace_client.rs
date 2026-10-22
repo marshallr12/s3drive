@@ -3,7 +3,7 @@ mod changes;
 pub(crate) mod creator_import;
 pub(crate) mod identity;
 pub mod opens;
-mod removals;
+pub(crate) mod removals;
 use crate::{
     Result, State,
     namespace::{self, Apply, Mutation, Receipt, Store},
@@ -153,7 +153,7 @@ pub(crate) fn check_schema(db: &Connection) -> Result<()> {
     db.prepare("SELECT singleton,state_hash FROM retained_client_identity LIMIT 0")?;
     Ok(())
 }
-fn load(db: &Connection, id: &str) -> Result<Option<Record>> {
+pub(crate) fn load(db: &Connection, id: &str) -> Result<Option<Record>> {
     let shape:Option<bool>=db.query_row("SELECT length(input)<=8192 AND coalesce(length(outcome),0)<=65536 AND length(state_hash)=32 FROM namespace_intents WHERE operation_id=?",[id],|r|r.get(0)).optional()?;
     let Some(shape) = shape else { return Ok(None) };
     if !shape {
@@ -205,13 +205,13 @@ pub(crate) fn authorize_publication(db: &Connection, input: &crate::managed::Inp
 }
 /// The existing sparse preparation path has no retained removal/open claim.
 /// Freeze no fresh work behind a namespace effect or acknowledged ownership;
-/// typed owned-unlinked admission must supply its own contract in a later phase.
+/// typed owned-unlinked admission supplies its separately retained contract.
 pub(crate) fn authorize_sparse_preparation(
     db: &Connection,
     volume: &str,
     node: &str,
 ) -> Result<()> {
-    if pending_for_node(db, volume, node)? || removals::owned(db, volume, node)?.is_some() {
+    if pending_for_node(db, volume, node)? || removals::sparse_claim(db, volume, node)?.is_some() {
         return Err("recover namespace ownership before fresh sparse preparation".into());
     }
     Ok(())

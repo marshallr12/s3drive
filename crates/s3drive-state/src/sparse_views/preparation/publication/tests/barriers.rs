@@ -459,3 +459,6 @@ fn sparse_barrier_session_finish_rechecks_later_work_and_replays_only_a_committe
     );
     assert!(opens(&mut s, &key).retire(&input.id).is_err());
 }
+
+#[path = "owned.rs"]
+mod owned;

@@ -62,6 +62,9 @@ lifecycle flags remain unchanged.
 | P5c — desktop mutations | Safe delete, documented rename behavior, open-handle semantics, real application workflows | Delete races, save/replace, concurrent open, unmount failures and data-loss tests on both OSes |
 | P6 — user application | Diagnostics, startup integration in installers, signed packaging/update process, optional tray UI | Clean-machine install/uninstall, missing-driver handling, upgrade/recovery, user-visible status |
 
+See the [typed owned sparse state candidate](owned-unlinked-sparse-state.md) for
+the in-progress schema47 layer. It is not yet accepted.
+
 ## Current sparse lifecycle prerequisite
 
 The [node-wide sparse effect barrier](sparse-node-barriers.md) is accepted at

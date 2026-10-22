@@ -62,6 +62,7 @@
 - [Prospective admission state layer](creator-open-state.md)
 - [Accepted prospective creation SDK](creator-open-sdk.md)
 - [Sparse owned-unlinked publication proposal](owned-unlinked-sparse-plan.md)
+- [Typed owned sparse state](owned-unlinked-sparse-state.md)
   - [Sparse node-wide effect barriers](sparse-node-barriers.md)
 - [Event-bound manifest authority candidate](manifest-event-fence.md)
 - [Deferred canonical manifest integration](deferred-manifest-integration.md)
