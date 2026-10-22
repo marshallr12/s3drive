@@ -289,7 +289,7 @@ pub(super) fn acknowledge(
     let mut after = before.clone();
     let r = after.records.get_mut(&plan).ok_or(Failure::Missing)?;
     r.acknowledgment = Some(a);
-    r.format = 3;
+    r.format = if r.input.owned.is_some() { 4 } else { 3 };
     r.validate()?;
     let result = SourceReceipt::from_record(r.clone())?;
     ledger::save(&tx, &before, &after, true)?;

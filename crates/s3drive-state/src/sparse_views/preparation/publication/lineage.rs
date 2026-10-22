@@ -20,7 +20,10 @@ pub(super) fn select(meta: &Meta, s: &Snapshot, plan: Id, node: &ns::Node) -> Re
     let info = s.info(plan)?;
     let binding = info.view().binding();
     let base = binding.base()?;
-    if node.id != base.node() || node.deleted || node.kind != ns::Kind::File {
+    if node.id != base.node()
+        || node.deleted != info.ownership().is_some_and(|p| p.claim().mode.detached())
+        || node.kind != ns::Kind::File
+    {
         return Err(Failure::Conflict.into());
     }
     if ns::payload_reference(&node.payload).as_deref() == Some(base.payload_reference()) {
@@ -30,6 +33,13 @@ pub(super) fn select(meta: &Meta, s: &Snapshot, plan: Id, node: &ns::Node) -> Re
     for (p, r) in &meta.records {
         let Some(receipt) = r.receipt() else { continue };
         if receipt.node.payload == node.payload
+            && match (r.input.owned.as_ref(), info.ownership()) {
+                (None, None) => true,
+                (Some(old), Some(new)) => {
+                    old.same_epoch(new) && old.event_sequence() <= new.event_sequence()
+                }
+                _ => false,
+            }
             && r.input.binding == *binding
             && r.input.original_root == info.original_root()?.encode()
             && receipt.sequence <= node.revision
@@ -49,7 +59,13 @@ pub(super) fn validate(meta: &Meta, r: &Record) -> Result<()> {
     };
     let prior = meta.records.get(&p).ok_or(Failure::Corrupt)?;
     let receipt = prior.receipt().ok_or(Failure::Corrupt)?;
-    if prior.input.binding != r.input.binding
+    if !match (&prior.input.owned, &r.input.owned) {
+        (None, None) => true,
+        (Some(old), Some(new)) => {
+            old.same_epoch(new) && old.event_sequence() <= new.event_sequence()
+        }
+        _ => false,
+    } || prior.input.binding != r.input.binding
         || prior.input.store != r.input.store
         || prior.input.original_root != r.input.original_root
         || prior.input.view == r.input.view

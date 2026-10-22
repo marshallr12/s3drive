@@ -131,7 +131,7 @@ fn ready(s: &ledger::Snapshot, plan: Id) -> Result<Info> {
     i.root()?.ok_or(Failure::Invalid)?;
     Ok(i)
 }
-fn transfer(
+pub(super) fn transfer(
     db: &Connection,
     s: &ledger::Snapshot,
     i: &Info,
@@ -353,6 +353,12 @@ impl Journal<'_> {
         p: Position,
         options: staging::Options,
     ) -> Result<Option<Transfer>> {
+        let info = self.info(plan)?;
+        owned::fresh(
+            &self.state.connection,
+            self.state.incarnation.as_deref(),
+            &info,
+        )?;
         self.require_dependencies(plan, p)?;
         let s = inspect(&self.state.connection)?;
         let i = ready(&s, plan)?;

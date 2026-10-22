@@ -13,7 +13,7 @@ mod model;
 use model::Check;
 pub use model::{Input, Physical, Record, Rejection};
 mod journal;
-mod ledger;
+pub(super) mod ledger;
 mod lineage;
 pub use journal::{Client, DataNeed, Journal};
 pub(in crate::sparse_views) mod settlement;
@@ -171,6 +171,7 @@ pub(super) fn adoption_fence(
     for (plan, saved) in &source.plans {
         let view = source.views.record(saved.input.view)?;
         if view.request.binding.target()? == target
+            && saved.progress.settlement.is_none()
             && meta
                 .records
                 .get(plan)
@@ -193,7 +194,8 @@ pub(crate) fn namespace_pending(db: &Connection, volume: &str, node: &str) -> Re
     for (plan, saved) in &source.plans {
         let binding = &source.views.record(saved.input.view)?.request.binding;
         let base = binding.base()?;
-        if base.volume() == volume
+        if saved.progress.settlement.is_none()
+            && base.volume() == volume
             && base.node() == node
             && meta
                 .records

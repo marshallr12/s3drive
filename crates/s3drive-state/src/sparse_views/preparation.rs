@@ -88,3 +88,5 @@ pub(super) fn check_adoption_fence(
     }
     Ok(())
 }
+
+pub mod owned;

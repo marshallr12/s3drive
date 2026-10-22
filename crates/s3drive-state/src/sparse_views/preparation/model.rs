@@ -52,6 +52,8 @@ pub(super) struct Input {
     pub generation: [u8; 16],
     pub base_root: Vec<u8>,
     pub base_page: Id,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owned: Option<owned::Provenance>,
 }
 impl Input {
     pub fn id(&self) -> Result<Id> {
@@ -91,6 +93,8 @@ pub struct Cursor {
 pub(super) struct Progress {
     pub cursor: Cursor,
     pub root: Option<Vec<u8>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub settlement: Option<owned::Settlement>,
 }
 #[derive(Clone)]
 pub struct Info {
@@ -104,6 +108,12 @@ impl fmt::Debug for Info {
     }
 }
 impl Info {
+    pub fn ownership(&self) -> Option<&owned::Provenance> {
+        self.input.owned.as_ref()
+    }
+    pub fn settlement(&self) -> Option<&owned::Settlement> {
+        self.progress.settlement.as_ref()
+    }
     pub fn id(&self) -> Result<Id> {
         self.input.id()
     }

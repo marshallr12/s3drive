@@ -170,15 +170,16 @@ impl<'a> Journal<'a> {
                     sha256: hex(&physical.sha256),
                     manifest: Box::new(ns::ManifestRoot::new(root).map_err(|_| Failure::Invalid)?),
                     guard: ns::ContentGuard {
-                        removal_claim: None,
+                        removal_claim: info.ownership().map(|p| Box::new(p.claim().clone())),
                         expected: ns::payload_reference(&base.payload),
-                        detached: false,
-                        removal: None,
+                        detached: info.ownership().is_some_and(|p| p.claim().mode.detached()),
+                        removal: info.ownership().map(|p| p.claim().fence.clone()),
                     },
                 },
             },
             publish_operation,
             predecessor,
+            owned: info.ownership().cloned(),
         };
         input.reservation()?;
         if let Some(old) = before.records.get(&plan) {
@@ -187,8 +188,15 @@ impl<'a> Journal<'a> {
             }
             return Err(Failure::Conflict.into());
         }
+        super::super::owned::fresh(&tx, self.state.incarnation.as_deref(), &info)?;
         let r = Record {
-            format: if predecessor.is_some() { 2 } else { 1 },
+            format: if input.owned.is_some() {
+                4
+            } else if predecessor.is_some() {
+                2
+            } else {
+                1
+            },
             input,
             physical,
             semantics: before.semantic_hash(plan)?,
@@ -242,6 +250,15 @@ impl<'a> Journal<'a> {
         })
     }
     pub fn prepare_publish(&mut self, plan: Id, sequence: u64) -> Result<Record> {
+        let record = self.get(plan)?;
+        if record.input.owned.is_some() && record.publication.is_none() {
+            let source = super::super::ledger::inspect(&self.state.connection)?;
+            super::super::owned::fresh(
+                &self.state.connection,
+                self.state.incarnation.as_deref(),
+                &source.info(plan)?,
+            )?;
+        }
         update(&mut self.state.connection, plan, true, |r| {
             r.prepare(sequence)
         })

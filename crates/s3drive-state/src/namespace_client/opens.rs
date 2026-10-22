@@ -1060,3 +1060,21 @@ pub(super) fn chunk_scope(db: &Connection, b: &crate::chunk_mount::Binding) -> R
 
 #[cfg(test)]
 mod tests;
+
+/// Independent retained-open witness used by sparse admission and recovery.
+pub(crate) fn sparse_open(db: &Connection, key: &str) -> Result<OpenRecord> {
+    load(db, key)?
+        .map(|(_, record)| record)
+        .ok_or_else(|| "unknown original sparse open".into())
+}
+pub(crate) fn sparse_current(db: &Connection, runtime: &str, open: &OpenRecord) -> Result<()> {
+    if !open.input.session_bound
+        || !open.active()
+        || open.close().is_some()
+        || !open.pending().is_empty()
+        || session::frozen(db, &open.input.id)?
+    {
+        return Err("sparse admission requires a live original session-bound open".into());
+    }
+    session::current(db, runtime, &open.input.session, &open.input.volume)
+}

@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+env:
+  RUST_TEST_THREADS: "4"
+
 permissions:
   contents: read
 
@@ -34,6 +37,8 @@ jobs:
         run: ./scripts/install-winfsp.ps1
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Verify typed owned sparse state and crash recovery
+        run: cargo test -p s3drive-state owned_sparse --locked -- --test-threads=4
       - name: Verify Windows callback stack bound
         if: runner.os == 'Windows'
         timeout-minutes: 3
@@ -83,6 +88,24 @@ jobs:
         run: cargo test -p s3drive-cli --test windows_mount actual_managed_windows_disposition_lifecycle --locked -- --ignored --nocapture --test-threads=1
       - run: cargo test --workspace --locked
       - run: cargo build --workspace --locked
+      - name: Verify actual schema46/schema47 compatibility
+        if: runner.os == 'Linux'
+        run: |
+          cp target/debug/s3drive "$RUNNER_TEMP/s3drive-schema47"
+          git fetch origin 5343eb41b6132ba3a8a5cfc2f74b4d6ff01d0b28
+          git worktree add --detach "$RUNNER_TEMP/s3drive-schema46-source" 5343eb41b6132ba3a8a5cfc2f74b4d6ff01d0b28
+          CARGO_TARGET_DIR="$RUNNER_TEMP/s3drive-schema46-target" cargo build --manifest-path "$RUNNER_TEMP/s3drive-schema46-source/Cargo.toml" -p s3drive-cli --locked
+          cp "$RUNNER_TEMP/s3drive-schema46-target/debug/s3drive" "$RUNNER_TEMP/s3drive-schema46"
+          python3 scripts/test-owned-sparse-compatibility.py "$RUNNER_TEMP/s3drive-schema46" "$RUNNER_TEMP/s3drive-schema47" "$RUNNER_TEMP/owned-sparse-compatibility"
+          cmp target/debug/s3drive "$RUNNER_TEMP/s3drive-schema47"
+      - name: Retain schema compatibility observations
+        if: runner.os == 'Linux' && always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: owned-sparse-schema-compatibility-${{ github.sha }}
+          path: ${{ runner.temp }}/owned-sparse-compatibility/report.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Verify Windows supervisor retry policy
         if: runner.os == 'Windows'
         timeout-minutes: 2

@@ -457,6 +457,16 @@ impl Client {
     ) -> Result<crate::manifest_creation::Client> {
         crate::manifest_creation::Client::chunk(self.owner.clone(), limits, self.key.clone())
     }
+    pub fn preparations(
+        &self,
+        options: crate::sparse_views::preparation::Options,
+    ) -> Result<crate::sparse_views::preparation::Client> {
+        crate::sparse_views::preparation::Client::for_chunks(
+            self.owner.clone(),
+            options,
+            self.key.clone(),
+        )
+    }
     pub fn same_storage(&self, storage: &Storage) -> bool {
         storage.same_owner(&self.owner)
     }

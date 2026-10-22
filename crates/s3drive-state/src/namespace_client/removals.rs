@@ -506,3 +506,69 @@ fn check_entry(
     }
     Ok(())
 }
+
+/// Current local acknowledged epoch, including an identity retained after unlink.
+/// This is historical client evidence, never current authority authorization.
+pub(crate) fn sparse_claim(
+    db: &Connection,
+    volume: &str,
+    node: &str,
+) -> Result<Option<namespace::RemovalPublicationClaim>> {
+    let records = records(db)?;
+    let h = history(&records)?;
+    if let Some(active) = h.active.get(&(volume.into(), node.into())) {
+        return Ok(Some(namespace::RemovalPublicationClaim {
+            fence: active.fence.clone(),
+            previous: active.event.clone(),
+            mode: match active.mode {
+                RemovalMode::Deferred => namespace::RemovalPublicationMode::Deferred,
+                RemovalMode::Pending => namespace::RemovalPublicationMode::Pending,
+            },
+        }));
+    }
+    let Some(latest) = records
+        .iter()
+        .filter_map(|r| {
+            let Some(Ok(receipt)) = &r.outcome else {
+                return None;
+            };
+            if r.input.request.volume != volume {
+                return None;
+            }
+            let affected = receipt.node.id == node
+                || r.input
+                    .request
+                    .mutation
+                    .owned_destination()
+                    .is_some_and(|(n, _)| n.id == node);
+            affected.then_some((receipt.sequence, r))
+        })
+        .max_by_key(|(sequence, _)| *sequence)
+        .map(|(_, r)| r)
+    else {
+        return Ok(None);
+    };
+    let claim = match &latest.input.request.mutation {
+        Mutation::CommitRemoval { node: n, fence, .. } if n.id == node => {
+            namespace::RemovalPublicationClaim {
+                fence: fence.clone(),
+                previous: latest.input.request.operation.clone(),
+                mode: namespace::RemovalPublicationMode::Committed,
+            }
+        }
+        m => {
+            let Some((target, claim)) = m.owned_destination() else {
+                return Ok(None);
+            };
+            if target.id != node {
+                return Ok(None);
+            }
+            namespace::RemovalPublicationClaim {
+                fence: claim.fence.clone(),
+                previous: latest.input.request.operation.clone(),
+                mode: namespace::RemovalPublicationMode::Committed,
+            }
+        }
+    };
+    Ok(Some(claim))
+}

@@ -15,6 +15,8 @@ pub struct Input {
     pub(super) publish_operation: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) predecessor: Option<Id>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) owned: Option<super::super::owned::Provenance>,
 }
 impl fmt::Debug for Input {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -90,6 +92,20 @@ impl Input {
             manifest: Some((**manifest).clone()),
             guard: Some(guard.clone()),
         };
+        if let Some(p) = &self.owned {
+            p.validate(&self.binding)?;
+            if self.base.revision < p.event_sequence() {
+                return Err(Failure::Corrupt.into());
+            }
+            if guard.removal.as_ref() != Some(&p.claim().fence)
+                || guard.removal_claim.as_deref() != Some(p.claim())
+                || guard.detached != p.claim().mode.detached()
+            {
+                return Err(Failure::Corrupt.into());
+            }
+        } else if guard.detached || guard.removal.is_some() || guard.removal_claim.is_some() {
+            return Err(Failure::Corrupt.into());
+        }
         let old = self.base.payload.as_ref().ok_or(Failure::Corrupt)?;
         if self.plan == [0; 32]
             || self.operation == [0; 32]
@@ -114,12 +130,10 @@ impl Input {
             || manifest.root().map_err(|_| Failure::Corrupt)? != root
             || *expected_revision != self.base.revision
             || self.base.revision > self.reserve.expected_sequence
-            || guard.detached
-            || guard.removal.is_some()
             || guard.expected != ns::payload_reference(&self.base.payload)
             || self.base.id != base.node()
             || self.base.kind != ns::Kind::File
-            || self.base.deleted
+            || self.base.deleted != guard.detached
             || self.base.parent.as_deref().is_none_or(|p| !id(p))
             || !name(&self.base.name)
             || self
@@ -156,7 +170,8 @@ impl Input {
         Ok(expected)
     }
     pub(super) fn matches(&self, info: &Info) -> Result<bool> {
-        Ok(self.plan == info.id()?
+        Ok(self.owned.as_ref() == info.ownership()
+            && self.plan == info.id()?
             && self.operation == info.operation()
             && self.view == info.view().id()
             && self.binding == *info.view().binding()
@@ -279,7 +294,9 @@ impl Record {
     pub(super) fn validate(&self) -> Result<()> {
         let expected = self.input.reservation()?;
         if self.format
-            != if self.acknowledgment.is_some() {
+            != if self.input.owned.is_some() {
+                4
+            } else if self.acknowledgment.is_some() {
                 3
             } else if self.input.predecessor.is_some() {
                 2
@@ -351,7 +368,7 @@ impl Record {
 }
 fn receipt_node(n: &ns::Node, r: &ns::Reservation, seq: u64) -> bool {
     n.id == r.node
-        && !n.deleted
+        && n.deleted == r.guard.as_ref().is_some_and(|g| g.detached)
         && n.kind != ns::Kind::Directory
         && n.revision <= seq
         && seq < i64::MAX as u64

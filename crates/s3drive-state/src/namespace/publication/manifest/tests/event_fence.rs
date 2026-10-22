@@ -512,7 +512,7 @@ fn event_manifest_genuine_legacy45_upgrade_preserves_every_original_request_and_
     s.connection.execute_batch("CREATE TABLE user_bytes(data BLOB);INSERT INTO user_bytes VALUES(CAST('{\"removal_claim\":null}' AS BLOB));PRAGMA user_version=45").unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
-    assert_eq!(s.info().unwrap().schema_version, 46);
+    assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
     assert_eq!(outputs(&s), before);
     assert_eq!(s.namespace_apply(&p).unwrap(), done);
 }
