@@ -663,7 +663,7 @@ fn owned_sparse_corrupt_independent_open_blocks_whole_graph_and_metadata_recover
 }
 
 #[test]
-fn owned_sparse_successor_binds_advanced_event_without_replacing_original_open() {
+fn owned_sparse_rebased_publication_binds_advanced_event_without_replacing_original_open() {
     let t = tempfile::tempdir().unwrap();
     let mut s = State::open_managed(&t.path().join("s")).unwrap();
     let (f, key, open, v, claim, node) = setup(&mut s, false);
@@ -671,11 +671,11 @@ fn owned_sparse_successor_binds_advanced_event_without_replacing_original_open()
     let a = finish(&mut s, &f, a);
     let ar = root(&mut s, &f, &a, &node);
     let ar = commit(&mut s, ar);
-    let newer = views::Journal::new(&mut s, views::Options::default())
+    let clean = ack(&mut s, &ar).acknowledgment().clean_view().unwrap();
+    let page = crate::sparse_views::preparation::ledger::inspect(&s.connection)
         .unwrap()
-        .write([20; 32], v.id(), 6, &[20])
+        .page(&a, 0, 0)
         .unwrap();
-    ack(&mut s, &ar);
     let base = ar.receipt().unwrap().node.clone();
     let mut input = removal(&f, &base, 83);
     let ns::Mutation::RemoveEntry { node, parent } = input.request.mutation.clone() else {
@@ -704,6 +704,25 @@ fn owned_sparse_successor_binds_advanced_event_without_replacing_original_open()
         fence: claim.fence.clone(),
         previous: input.request.operation,
         mode: ns::RemovalPublicationMode::Committed,
+    };
+    // Event advancement requires a clean head. A later write starts from the
+    // exact published root rather than inventing a cross-binding predecessor.
+    let newer = views::Journal::new(&mut s, views::Options::default())
+        .unwrap()
+        .write([20; 32], clean, 6, &[20])
+        .unwrap();
+    let mut previous_bytes = f.bytes.clone();
+    previous_bytes[5] = 255;
+    let f = Fixture {
+        base: Base {
+            root: a.root().unwrap().unwrap(),
+            page: page.clone(),
+            pages: BTreeMap::from([((0, 0), page)]),
+        },
+        node: base.clone(),
+        store: f.store.clone(),
+        binding: newer.binding().clone(),
+        bytes: previous_bytes,
     };
     assert!(
         pj(&mut s)
@@ -736,7 +755,7 @@ fn owned_sparse_successor_binds_advanced_event_without_replacing_original_open()
             hex(&[22; 16]),
         )
         .unwrap();
-    assert_eq!(br.input.predecessor, Some(ar.input.plan));
+    assert_eq!(br.input.predecessor, None);
     let br = commit(&mut s, br);
     j(&mut s)
         .acknowledge([41; 32], br.input.plan, views::Options::default())
