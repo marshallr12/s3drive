@@ -56,3 +56,14 @@ unconditional retry or synthesized successful close is permitted. Actual >8MiB
 Unicode unlink/save-replace/dirty read/last close/crash/remount cases on both OSes
 are required before enabling flags. GC, providers, physical startup and deployment
 remain outside this slice.
+
+## Candidate history
+
+First candidate ea974014fce882d1a21337484fd369e3e1eac8e9,
+[run39848217524](https://github.com/marshallr12/s3drive/actions/runs/39848217524),
+failed its new SDK fixture gate: the generic child harness did not yet recognize
+the three new intentional-kill modes, and the rejected-outcome fixture chose a
+sequence older than its own node guard (invalid admission rather than an
+authority rejection). The fix recognizes exactly those killed modes and uses a
+valid future sequence for a real retained authority Conflict. Neither change
+relaxes implementation checks. No acceptance is claimed from this failed run.

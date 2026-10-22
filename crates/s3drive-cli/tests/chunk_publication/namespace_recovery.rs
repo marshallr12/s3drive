@@ -104,7 +104,7 @@ pub async fn seed(config: &s3drive_core::Config, root: &Path, s: &Server, kind: 
         destination_control: None,
     };
     if kind == "cold_namespace_rejected" {
-        input.request.expected_sequence -= 1;
+        input.request.expected_sequence += 1;
     }
     o.callback(id(71), id(73), opens::Callback::SetDelete { delete: true })
         .await

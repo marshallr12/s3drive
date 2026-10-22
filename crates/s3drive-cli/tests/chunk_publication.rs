@@ -1587,6 +1587,9 @@ async fn run(mode: &str) {
                 && if matches!(
                     stage,
                     "crash"
+                        | "cold_namespace_crash"
+                        | "cold_namespace_known"
+                        | "cold_namespace_rejected"
                         | "source_crash"
                         | "source_ack_crash"
                         | "owned_sparse_crash"
