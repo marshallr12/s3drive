@@ -23,7 +23,7 @@ async fn setup(path: &std::path::Path, plans: usize) -> Native {
             let s = &mut store.state;
             let f = fixture();
             let key = chunk(s, &f);
-            let input = open(s, &f, &key);
+            let input = open_with_posix(s, &f, &key, true);
             views::scoped::enable(s)?;
             let view = views::Journal::new(s, views::Options::default())?.begin_scoped(
                 views::ScopedOperation::new(&f.binding, [1; 32])?,
@@ -416,6 +416,64 @@ async fn native_sparse_close_completion_requires_exact_source_receipt_not_staged
             .await
             .is_err()
     );
+    let key = n.key.clone();
+    let open = n.token.input().id.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            opens(&mut store.state, &key).retire(&open)?;
+            crate::chunk_mount::require(&store.state.connection, &key)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        n.client
+            .plans(n.token.input().node.clone())
+            .await
+            .unwrap()
+            .len(),
+        1
+    );
+    n.storage.close().await.unwrap();
+    // Retiring live capacity must not erase the publisher's historical proof.
+    drop(State::open_managed(&temp.path().join("source receipt")).unwrap());
+}
+
+#[tokio::test]
+async fn native_sparse_epoch_context_cannot_change_plain_or_domain_separated_page_identity() {
+    let temp = tempfile::tempdir().unwrap();
+    let n = setup(&temp.path().join("context identities"), 16).await;
+    let view = dirty(&n, &n.view, 2, 5).await;
+    let foreign = base(17, BTreeMap::from([(0, vec![4; 17])]));
+    let context =
+        Context::new(&view, foreign.root.encode().to_vec(), foreign.page.encode()).unwrap();
+    assert!(
+        n.client
+            .prepare(n.token.clone(), context.clone())
+            .await
+            .is_err()
+    );
+    assert!(
+        n.client
+            .write(n.token.clone(), context, [3; 32], 6, vec![254])
+            .await
+            .is_err()
+    );
+    assert!(
+        n.client
+            .plans(n.token.input().node.clone())
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    let closed = close_native(&n, &n.token, 71).await.unwrap();
+    assert_eq!(closed.plans.len(), 1);
+    assert_eq!(closed.plans[0].view().id(), view.id());
+    let input = &closed.plans[0].input;
+    assert_eq!(input.base_page, digest(&fixture().base.page.encode()));
+    assert_ne!(input.base_page, *fixture().base.root.page().sha256());
     n.storage.close().await.unwrap();
 }
 
@@ -652,6 +710,9 @@ async fn reopen_native(path: &std::path::Path, old: &Native, recover: bool) -> N
                             .finish_recovery(&input.session, &proof.input.id)?
                             .finished
                     );
+                    for old in &proof.input.opens {
+                        journal.retire(&old.id)?;
+                    }
                 }
                 if !recover {
                     // No current open exists yet: the old unprepared dirty
@@ -662,8 +723,12 @@ async fn reopen_native(path: &std::path::Path, old: &Native, recover: bool) -> N
                             .is_err()
                     );
                 }
-                journal.prepare(input.clone())?;
-                journal.activate(&input.id, &hex(&[77; 16]))?;
+                if recover {
+                    journal.prepare(input.clone())?;
+                    journal.activate(&input.id, &hex(&[77; 16]))?;
+                } else {
+                    assert!(journal.prepare(input.clone()).is_err());
+                }
                 let view = views::Journal::new(s, views::Options::default())?
                     .current_head(&fixture().binding)?;
                 Ok((input, view))
@@ -678,7 +743,12 @@ async fn reopen_native(path: &std::path::Path, old: &Native, recover: bool) -> N
         Options::default(),
     )
     .unwrap();
-    let token = client.bind(input.id).await.unwrap();
+    let token = if recover {
+        client.bind(input.id).await.unwrap()
+    } else {
+        assert!(client.bind(old.token.input().id.clone()).await.is_err());
+        old.token.clone() // Deliberately stale capability for refusal assertions only.
+    };
     Native {
         storage,
         client,
@@ -811,24 +881,28 @@ async fn native_sparse_cold_unprepared_dirty_epoch_cannot_be_abandoned_or_adopte
 async fn native_sparse_actual_sqlite_full_rolls_back_epoch_and_close_without_losing_callback_identity()
  {
     let temp = tempfile::tempdir().unwrap();
-    let n = setup(temp.path(), 16).await;
+    let n = setup(&temp.path().join("state"), 16).await;
     async fn pressure(n: &Native, enable: bool) {
-        n.storage.cache().owner.call(move |store| {
-            let db = &store.state.connection;
-            let pages: i64 = db.pragma_query_value(None, "page_count", |r| r.get(0))?;
-            if enable {
-                db.execute_batch("CREATE TABLE IF NOT EXISTS native_full(data BLOB)")?;
+        n.storage
+            .cache()
+            .owner
+            .call(move |store| {
+                let db = &store.state.connection;
                 let pages: i64 = db.pragma_query_value(None, "page_count", |r| r.get(0))?;
-                db.pragma_update(None, "max_page_count", pages)?;
-                // Real SQLite allocation failure at the event boundary, not
-                // a synthetic returned error or a relaxed durability guard.
-                db.execute_batch("CREATE TRIGGER native_full_fail BEFORE INSERT ON windows_open_events BEGIN INSERT INTO native_full VALUES(zeroblob(1048576)); END")?;
-            } else {
-                db.pragma_update(None, "max_page_count", pages + 1024)?;
-                db.execute_batch("DROP TRIGGER native_full_fail")?;
-            }
-            Ok(())
-        }).await.unwrap();
+                if enable {
+                    db.execute_batch("CREATE TABLE native_sparse_full_probe(data BLOB)")?;
+                    let pages: i64 = db.pragma_query_value(None, "page_count", |r| r.get(0))?;
+                    db.pragma_update(None, "max_page_count", pages)?;
+                    // The test-only event-boundary probe requests actual pages
+                    // inside the transaction. Trigger rejection remains intact.
+                } else {
+                    db.pragma_update(None, "max_page_count", pages + 1024)?;
+                    db.execute_batch("DROP TABLE native_sparse_full_probe")?;
+                }
+                Ok(())
+            })
+            .await
+            .unwrap();
     }
     fn full(error: Box<dyn std::error::Error + Send + Sync>) {
         assert!(
@@ -934,7 +1008,7 @@ async fn native_sparse_schema47_marker_cannot_launder_native_event_or_plan() {
 #[tokio::test]
 async fn native_sparse_generic_mutation_and_preparation_cannot_bypass_original_open() {
     let temp = tempfile::tempdir().unwrap();
-    let n = setup(temp.path(), 16).await;
+    let n = setup(&temp.path().join("state"), 16).await;
     let view = dirty(&n, &n.view, 2, 5).await;
     let v = view.clone();
     n.storage
@@ -979,7 +1053,7 @@ async fn native_sparse_generic_mutation_and_preparation_cannot_bypass_original_o
 #[tokio::test]
 async fn native_sparse_sealed_posix_retirement_releases_token_not_historical_evidence() {
     let temp = tempfile::tempdir().unwrap();
-    let n = setup(temp.path(), 16).await;
+    let n = setup(&temp.path().join("state"), 16).await;
     let other = second(&n).await;
     close_native(&n, &n.token, 71).await.unwrap();
     n.client
@@ -1019,7 +1093,7 @@ async fn native_sparse_sealed_posix_retirement_releases_token_not_historical_evi
 async fn native_sparse_frozen_owned_plans_keep_original_open_and_exact_removal_claim() {
     for committed in [false, true] {
         let temp = tempfile::tempdir().unwrap();
-        let n = setup(temp.path(), 16).await;
+        let n = setup(&temp.path().join("state"), 16).await;
         let key = n.key.clone();
         let claim = n
             .storage

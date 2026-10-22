@@ -102,6 +102,10 @@ fn prepare(
 ) -> Result<(Info, bool)> {
     let (native, original) = epoch_owner(tx, &context.binding)?.ok_or(Failure::Conflict)?;
     crate::chunk_mount::verify_key(tx, key)?.open(&original.input)?;
+    if epoch_context(&original, &context.binding)? != (context.root.clone(), digest(&context.page))
+    {
+        return Err(Failure::Conflict.into());
+    }
     let operation = hash(b"s3drive-native-sparse-plan-v1\0", &(&native, context.view))?;
     let saved = ledger::inspect(tx)?;
     if let Some(plan) = saved

@@ -88,6 +88,8 @@ pub enum Action {
     OwnSparseEpoch {
         binding: Box<crate::sparse_views::Binding>,
         operation: crate::sparse_views::Id,
+        base_root: Vec<u8>,
+        base_page: crate::sparse_views::Id,
     },
     /// Exact plans admitted before this Close in the same state transaction.
     FreezeSparse {
@@ -285,12 +287,19 @@ fn reduce(db: &Connection, record: &mut OpenRecord, event: &Event) -> Result<()>
                 || record.events.iter().any(|e| matches!(&e.action, Action::CompleteSparse { callback: old, .. } if old == callback))
             { return Err("invalid native sparse completion witness".into()); }
         }
-        Action::OwnSparseEpoch { binding, operation }
+        Action::OwnSparseEpoch { binding, operation, base_root, base_page }
             if record.active() && record.input.controlled && record.input.session_bound =>
         {
             let base = binding.base()?;
             let epoch = binding.epoch()?;
-            if record.close().is_some()
+            let root = s3drive_core::manifest::objects::RootDescriptor::decode(base_root)?;
+            let hex = |bytes: &[u8]| bytes.iter().map(|b| format!("{b:02x}")).collect::<String>();
+            if *base_page == [0; 32]
+                || root.length() != binding.base_size()
+                || root.page().store() != binding.store()
+                || hex(root.volume()) != base.volume()
+                || hex(root.node()) != base.node()
+                || record.close().is_some()
                 || !record.events.iter().any(|e| matches!(e.action, Action::BindSparse))
                 || *operation == [0; 32]
                 || base.volume() != record.input.volume
@@ -1202,6 +1211,8 @@ pub(crate) fn append_in_transaction(
     if action.len() > 16384 {
         return Err("per-open event too large".into());
     }
+    #[cfg(test)]
+    crate::sparse_views::preparation::native::full_probe(tx)?;
     let a = tx.execute(
         "INSERT INTO windows_open_events VALUES(?1,?2,?3,?4,?5,?6)",
         params![event.id, key, row.count as i64, action, previous, hash],

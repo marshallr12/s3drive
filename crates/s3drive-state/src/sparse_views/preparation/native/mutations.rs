@@ -92,6 +92,14 @@ pub(in crate::sparse_views) fn before_mutation(
         return Err(Failure::Conflict.into());
     }
     let event = if let Some((original, record)) = publisher {
+        if epoch_context(&record, binding)?
+            != (
+                mutation.context.root.clone(),
+                digest(&mutation.context.page),
+            )
+        {
+            return Err(Failure::Conflict.into());
+        }
         opens::sparse_current(db, incarnation, &record)?;
         if runtime.closing(&original.open)? {
             return Err(Failure::Conflict.into());
@@ -126,6 +134,8 @@ pub(in crate::sparse_views) fn before_mutation(
                 action: Action::OwnSparseEpoch {
                     binding: Box::new(binding.clone()),
                     operation,
+                    base_root: mutation.context.root.clone(),
+                    base_page: digest(&mutation.context.page),
                 },
             },
         ))

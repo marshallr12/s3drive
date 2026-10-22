@@ -55,7 +55,7 @@ impl Provenance {
             || hash(b"s3drive-native-sparse-open-v1\0", &record.input)? != self.input_hash
             || self.epoch != binding.epoch()? || self.operation == [0; 32]
             || !record.events.iter().any(|e| matches!(&e.action,
-                Action::OwnSparseEpoch { binding: b, operation } if b.as_ref() == binding && *operation == self.operation))
+                Action::OwnSparseEpoch { binding: b, operation, .. } if b.as_ref() == binding && *operation == self.operation))
         { return Err(Failure::Corrupt.into()); }
         Ok(record)
     }
@@ -262,6 +262,7 @@ fn epoch_owner(db: &Connection, binding: &Binding) -> Result<Option<(Provenance,
             if let Action::OwnSparseEpoch {
                 binding: b,
                 operation,
+                ..
             } = &event.action
                 && b.epoch()? == epoch
             {
@@ -276,6 +277,37 @@ fn epoch_owner(db: &Connection, binding: &Binding) -> Result<Option<(Provenance,
         }
     }
     Ok(result)
+}
+
+fn epoch_context(record: &OpenRecord, binding: &Binding) -> Result<(Vec<u8>, Id)> {
+    record
+        .events
+        .iter()
+        .find_map(|e| match &e.action {
+            Action::OwnSparseEpoch {
+                binding: b,
+                base_root,
+                base_page,
+                ..
+            } if b.as_ref() == binding => Some((base_root.clone(), *base_page)),
+            _ => None,
+        })
+        .ok_or_else(|| Failure::Corrupt.into())
+}
+// Actual SQLite allocation failure at a transaction boundary. Test-only and
+// connection-local: no triggers, global environment changes, or guard bypass.
+#[cfg(test)]
+pub(crate) fn full_probe(db: &Connection) -> Result<()> {
+    let enabled: bool = db.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='table' AND name='native_sparse_full_probe')", [], |r| r.get(0))?;
+    if enabled {
+        let pages: i64 = db.pragma_query_value(None, "page_count", |r| r.get(0))?;
+        let size: i64 = db.pragma_query_value(None, "page_size", |r| r.get(0))?;
+        db.execute(
+            "INSERT INTO native_sparse_full_probe VALUES(zeroblob(?))",
+            [(pages + 1) * size],
+        )?;
+    }
+    Ok(())
 }
 
 pub(super) fn admit(

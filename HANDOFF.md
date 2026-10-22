@@ -9,12 +9,15 @@ docs/src/implementation-plan.md before continuing.
 Read `docs/src/native-sparse-close-ordering.md`. The schema48 candidate adds
 original epoch ownership, synchronous Close observation, atomic final admission
 and frozen plans, exact native completion witnesses and cold clean-session fences.
-Its16 dedicated state tests and16 killed boundaries still require hosted acceptance.
+Its17 dedicated state tests and16 killed boundaries still require hosted acceptance.
 Actual46/47 compatibility remains; a separate actual47/48 gate is added.
 SDK/controller/adapter integration and dedicated new lifecycle OS gates are still
 outstanding. All new native capability flags remain disabled. The accepted
 cold-recovery checkpoint below remains distinct; do not call this candidate accepted
-or promote main without the pending promotion approval and exact-source review.
+or promote the candidate without exact-source acceptance and review.
+The accepted cold-recovery prerequisite was merged at8777d30; its full main CI
+39867508230 is still under verification. Candidate run39867493619 failed; see
+the correction record in the state ordering document.
 
 ## Current checkpoint: accepted cold-recovery prerequisite, native work ongoing
 

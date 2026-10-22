@@ -100,7 +100,7 @@ recovery handle.
 
 ## Candidate checks and required acceptance
 
-Sixteen dedicated state tests have been added, including16 killed transaction
+Seventeen dedicated state tests have been added, including16 killed transaction
 boundaries, real SQLiteFull at epoch/Close event writes, exact callback retry,
 POSIX and Windows-cleanup models, source receipt gating, cold metadata/body
 separation, clean session retirement, unprepared dirty refusal, pre48 marker
@@ -133,3 +133,23 @@ This protocol alone does not enable native flags. A chunk-aware disposition
 controller and adapter routing still require implementation and their dedicated
 native OS gates. Preserve the existing profile's unsupported operations until
 those gates pass; do not use old native regression success as new acceptance.
+
+## First hosted candidate correction (not acceptance)
+
+Run [39867493619](https://github.com/marshallr12/s3drive/actions/runs/39867493619)
+failed the new dedicated state gate on both platforms. The original candidate
+incorrectly equated a plain SHA-256 preparation BLOB key with the manifest's
+domain-separated page digest. The corrected epoch event retains the exact original
+root descriptor and plain page key atomically with the first edit; later mutation,
+plan admission and metadata recovery must match those identities. Metadata recovery
+still never reads private page/dirty bodies or pretends to authenticate them.
+Retired publisher records referenced by bounded retained plans are checked without
+scanning unbounded retired history. No original runtime capability is restored.
+
+Fixtures now create fresh private state subdirectories, explicitly retire only
+finished clean-session recovery proofs, and require dirty recovery to refuse new
+open admission. The disk-full fixture uses a connection-local, test-only SQLite
+allocation probe at the event transaction boundary. It causes real SQLITE_FULL
+and rollback, without installing a trigger or relaxing the trigger/schema guard.
+The extra root-context refusal test and historical retirement check require a new
+exact-source full hosted run. The failed run is retained; no capability is enabled.

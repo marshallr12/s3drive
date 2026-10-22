@@ -3,8 +3,21 @@ use super::*;
 use crate::sparse_views::{Change, ledger as views};
 
 pub(crate) fn validate(db: &Connection) -> Result<()> {
-    let records = opens::sparse_records(db)?;
+    let mut records = opens::sparse_records(db)?;
+    let live = records
+        .iter()
+        .map(|r| r.input.id.clone())
+        .collect::<BTreeSet<_>>();
     let plans = headers(db)?;
+    // Retired publisher evidence remains authoritative for retained plans.
+    // Load only the bounded plan references, not an unbounded retired-open scan.
+    for plan in plans.values() {
+        if let Some(proof) = &plan.input.native
+            && !records.iter().any(|r| r.input.id == proof.open)
+        {
+            records.push(opens::sparse_open(db, &proof.open)?);
+        }
+    }
     if !records.iter().any(is_bound) && !plans.values().any(|p| p.input.native.is_some()) {
         return Ok(());
     }
@@ -17,7 +30,13 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
     let mut epochs = BTreeMap::new();
     for record in &records {
         for event in &record.events {
-            if let Action::OwnSparseEpoch { binding, operation } = &event.action {
+            if let Action::OwnSparseEpoch {
+                binding,
+                operation,
+                base_root,
+                base_page,
+            } = &event.action
+            {
                 let proof = Provenance::capture(record, binding, *operation)?;
                 proof.historical(db, binding)?;
                 let first = source
@@ -35,7 +54,9 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
                         first.record.request.edit,
                         Some(Change::Write { .. } | Change::Resize { .. })
                     )
-                    || epochs.insert(binding.epoch()?, proof).is_some()
+                    || epochs
+                        .insert(binding.epoch()?, (proof, base_root.clone(), *base_page))
+                        .is_some()
                 {
                     return Err(Failure::Corrupt.into());
                 }
@@ -53,7 +74,15 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
             .record;
         let binding = &view.request.binding;
         proof.historical(db, binding)?;
-        if epochs.get(&binding.epoch()?) != Some(proof)
+        // The plain BLOB key and domain-separated manifest page digest are
+        // intentionally different. Bind both exact original intent identities
+        // through the source-epoch event; do not fetch private page bodies.
+        if epochs.get(&binding.epoch()?)
+            != Some(&(
+                proof.clone(),
+                plan.input.base_root.clone(),
+                plan.input.base_page,
+            ))
             || plan.input.id()? != *id
             || plan.input.operation != hash(b"s3drive-native-sparse-plan-v1\0", &(proof, view.id))?
         {
@@ -73,7 +102,7 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
             || descriptor.page().store() != binding.store()
             || hex(descriptor.volume()) != base.volume()
             || hex(descriptor.node()) != base.node()
-            || &plan.input.base_page != descriptor.page().sha256()
+            || plan.input.base_page == [0; 32]
         {
             return Err(Failure::Corrupt.into());
         }
@@ -94,7 +123,10 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
         let base = file.binding.base()?;
         if !head.clean()
             && records.iter().any(|r| {
-                is_bound(r) && r.input.volume == base.volume() && r.input.node == base.node()
+                live.contains(&r.input.id)
+                    && is_bound(r)
+                    && r.input.volume == base.volume()
+                    && r.input.node == base.node()
             })
             && !epochs.contains_key(&head.request.binding.epoch()?)
         {
