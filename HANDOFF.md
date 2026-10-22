@@ -4,16 +4,27 @@ Updated 2026-10-22. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
-## In progress: native prerequisite, not activation
+## Current checkpoint: accepted cold-recovery prerequisite, native work ongoing
 
-The new owned sparse native integration review found missing restricted cold
-namespace/open recovery and no chunk-compatible lifecycle controller.
-`docs/src/chunk-namespace-cold-recovery.md` defines the bounded prerequisite.
-The current candidate adds exact saved-request/outcome and existing-link recovery
-only. It is not accepted until its dedicated Linux/Windows fault gates and full
-CI pass. No native flags are enabled. Live lifecycle integration, startup ordering,
-dirty existing-handle reads, replacement and last-close settlement still require
-separate native implementation and FUSE/WinFsp acceptance.
+The bounded restricted namespace/open recovery prerequisite is accepted at
+cb568aa0417cf84d829a58236f9ac45c707b4ef8 in
+[run39849211849](https://github.com/marshallr12/s3drive/actions/runs/39849211849).
+Read `docs/src/chunk-namespace-cold-recovery.md`. Linux966/Windows962 workspace
+tests passed in37 cohorts each, including8 new state/3 new SDK cases, prior16
+state/6 SDK cases, actual46/47 compatibility and35 exact typed native records.
+All764 source files matched. Complete logs/artifact digests were reviewed.
+This capability replays only saved namespace requests/outcomes and already-linked
+open acknowledgments without source-body startup dependence. It does not create
+sessions/callback observations, admit fresh work or complete/retire opens.
+
+Schema47 and native flags are unchanged. Actual new native integration remains
+open: atomic original-publisher/source-epoch/Close ordering, chunk-compatible live
+controller, startup sequencing, dirty existing-handle reads, replacement and
+last-close settlement, followed by dedicated FUSE/WinFsp lifecycle/remount gates.
+Observe Close before filesystem/network waits; settle all barriers before close
+completion or releasing ownership. Do not relax closed/dead-session safeguards,
+adopt another original open's lineage, or treat existing native regressions as
+new lifecycle acceptance. Verify merged main's own full CI and retain branches.
 
 ## Current checkpoint: accepted owned sparse SDK
 

@@ -3799,10 +3799,14 @@ Verify main's full CI after the approved merge; keep validation archives private
 
 ### Restricted namespace cold-recovery prerequisite — 2026-10-22
 
-The [bounded cold-recovery candidate](chunk-namespace-cold-recovery.md) supplies
-existing-only namespace outcomes and already-linked open acknowledgments without
-source-body startup dependence. It is not yet accepted. No callback/session
-observations, fresh work or native enablement are added. Dedicated state fault
-and authenticated SDK recovery gates must pass on both OSes in addition to all
-existing regression gates. The chunk-compatible live lifecycle controller and
-actual new FUSE/WinFsp lifecycle/remount acceptance remain subsequent work.
+The [bounded cold-recovery prerequisite](chunk-namespace-cold-recovery.md) is
+accepted at cb568aa0417cf84d829a58236f9ac45c707b4ef8 in CI39849211849:
+Linux966/Windows962 tests,37 cohorts each,8 state/3 SDK cases plus prior16/6,
+all764 exact source files, full logs,35 typed native records and actual46/47
+compatibility. It supplies only existing namespace outcomes and already-linked
+open acknowledgments without source-body startup dependence. Schema47 and native
+flags remain unchanged. No callback/session observations or fresh work are added.
+Atomic source-epoch/original-publisher/Close ordering, the chunk-compatible live
+lifecycle controller and actual new FUSE/WinFsp lifecycle/remount acceptance remain
+subsequent work. Existing native gates do not accept those new semantics.
+Verify merged main's own full CI. Keep validation archives private.
