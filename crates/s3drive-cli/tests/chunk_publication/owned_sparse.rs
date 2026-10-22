@@ -42,7 +42,7 @@ async fn setup_case(
             store: store.clone(),
             source: *target.source(),
             fingerprint: target.fingerprint().into(),
-            delete_on_close: true,
+            delete_on_close: false,
             controlled: true,
             session_bound: true,
             posix: false,
@@ -246,6 +246,28 @@ pub async fn flow(config: &s3drive_core::Config, root: &Path, s: &Server, commit
     let saved = p.recovery().recover(prep.id()).await.unwrap();
     assert_eq!(saved.input(), r.input());
     assert!(saved.receipt().is_some());
+    let payload = saved.receipt().unwrap().node.payload.as_ref().unwrap();
+    let descriptor = s3drive_core::manifest::base::Descriptor::from_hex(
+        &payload.reservation.volume,
+        &payload.reservation.node,
+        &payload.reservation.id,
+        &s3drive_authority::payload_reference(&Some(payload.clone())).unwrap(),
+    )
+    .unwrap();
+    let base = c
+        .reader
+        .reopen_base(
+            &s3drive_managed::chunks::BaseDescriptor::decode(&descriptor.encode()).unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(base.size(), c.view.size());
+    assert_eq!(
+        base.read_range(11 * 1024 * 1024 + 3, 32).await.unwrap(),
+        "日本語 🦀\0".as_bytes()
+    );
+    assert_eq!(base.read_range(1, 6).await.unwrap(), vec![0; 6]);
+    drop(base);
     let ack = p
         .acknowledge([5; 32], sparse_views::Options::default())
         .await
@@ -311,6 +333,49 @@ pub async fn controls(config: &s3drive_core::Config, root: &Path, s: &Server) {
         .await
         .is_err()
     );
+    let mut wrong_open = c.ownership.clone();
+    wrong_open.open = id(99);
+    assert!(
+        edit.begin_owned_preparation(
+            [3; 32],
+            [3; 16],
+            plans::Options::default(),
+            &c.chunks,
+            wrong_open
+        )
+        .await
+        .is_err()
+    );
+    let other = storage(root, "foreign").await;
+    let other_e = executor(config, other.clone(), false, false).await;
+    let target = other_e
+        .recovery_target("writable/.s3drive/binding")
+        .unwrap();
+    let foreign = other
+        .chunk_mount(chunk_mount::Input {
+            volume: c.chunks.key().volume().into(),
+            controls: vec![names::Control {
+                store: empty_creation::store(s).await,
+                source: *target.source(),
+                fingerprint: target.fingerprint().into(),
+            }],
+        })
+        .await
+        .unwrap();
+    s.proxy.clear();
+    assert!(
+        edit.begin_owned_preparation(
+            [3; 32],
+            [3; 16],
+            plans::Options::default(),
+            &foreign,
+            c.ownership.clone()
+        )
+        .await
+        .is_err()
+    );
+    assert!(s.proxy.requests().is_empty());
+    other.close().await.unwrap();
     let prep = c.prep(3, &c.view).await;
     s.proxy.mode.store(8, Ordering::SeqCst);
     s.proxy.clear();
@@ -531,4 +596,67 @@ pub async fn recover(root: &Path, s: &Server) {
     recovery.recover(saved.input().plan()).await.unwrap();
     assert!(s.proxy.requests().is_empty());
     recovery.close().await.unwrap();
+}
+
+pub async fn physical(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    let c = setup_case(config, root, s, true).await;
+    let prep = c.prep(3, &c.view).await;
+    prep.prepare().await.unwrap();
+    let client = c.chunks.preparations(plans::Options::default()).unwrap();
+    let position = client
+        .transfers(prep.id(), None, 1)
+        .await
+        .unwrap()
+        .remove(0)
+        .position();
+    checkpoint("LOSE_PUT");
+    wait(root, "put-enabled").await;
+    assert!(
+        prep.uploader(c.e.clone())
+            .unwrap()
+            .upload_object(position)
+            .await
+            .is_err()
+    );
+    let transfer = client.transfer(prep.id(), position).await.unwrap().unwrap();
+    let original =
+        c.e.storage()
+            .uploads()
+            .for_generation(transfer.generation().unwrap())
+            .await
+            .unwrap()
+            .unwrap();
+    assert_eq!(original.phase, s3drive_state::remote::Phase::Uncertain);
+    assert!(
+        prep.settle(Settlement::NoEffect { operation: [4; 32] })
+            .await
+            .is_err()
+    );
+    assert!(
+        prep.settle(Settlement::Rejected { operation: [4; 32] })
+            .await
+            .is_err()
+    );
+    checkpoint("RESTORE_PUT");
+    wait(root, "put-restored").await;
+    c.e.storage().close().await.unwrap();
+    let st = storage(root, "client").await;
+    let e = executor(config, st.clone(), true, true).await;
+    assert!(
+        e.check_create(transfer.target().object_key(), transfer.size())
+            .is_err()
+    );
+    let client = st
+        .sparse_views(sparse_views::Options::default())
+        .unwrap()
+        .preparations(plans::Options::default())
+        .unwrap();
+    s.proxy.clear();
+    s.proxy.mode.store(8, Ordering::SeqCst);
+    let recovery = s3drive_managed::chunks::MixedRecovery::new(client, e).unwrap();
+    let receipt = recovery.recover_object(prep.id(), position).await.unwrap();
+    assert_eq!(receipt.info().operation, original.operation);
+    assert_eq!(receipt.info().generation, original.generation);
+    assert!(s.proxy.requests().is_empty());
+    st.close().await.unwrap();
 }

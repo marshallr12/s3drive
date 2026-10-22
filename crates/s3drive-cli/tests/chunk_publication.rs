@@ -1268,6 +1268,7 @@ fn dispatch<'a>(
     match mode {
         "owned_sparse_pending" => Box::pin(owned_sparse::flow(config, root, s, false)),
         "owned_sparse_committed" => Box::pin(owned_sparse::flow(config, root, s, true)),
+        "owned_sparse_physical" => Box::pin(owned_sparse::physical(config, root, s)),
         "owned_sparse_controls" => Box::pin(owned_sparse::controls(config, root, s)),
         "owned_sparse_rejected" => Box::pin(owned_sparse::rejected(config, root, s)),
         "owned_sparse_crash" => Box::pin(owned_sparse::crash(config, root, s)),
@@ -1690,6 +1691,7 @@ async fn run(mode: &str) {
     let expected = match mode {
         "owned_sparse_pending" | "owned_sparse_committed" => 6,
         "owned_sparse_controls" => 1,
+        "owned_sparse_physical" => 2,
         "owned_sparse_rejected" | "owned_sparse_crash" => 3,
         "creator_open_flow"
         | "creator_open_recovery"
@@ -2083,4 +2085,9 @@ async fn owned_sparse_rejected() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn owned_sparse_crash() {
     run("owned_sparse_crash").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn owned_sparse_physical() {
+    run("owned_sparse_physical").await;
 }
