@@ -17,10 +17,6 @@ fn setup(
     let key = chunk(s, &f);
     let open = open(s, &f, &key);
     let v = clean(s, &f);
-    let v = views::Journal::new(s, views::Options::default())
-        .unwrap()
-        .write([2; 32], v.id(), 5, &[255])
-        .unwrap();
     let mut input = removal(&f, &f.node, 80);
     let ns::Mutation::RemoveEntry { node, parent } = input.request.mutation.clone() else {
         panic!()
@@ -82,6 +78,11 @@ fn setup(
         claim.previous = input.request.operation;
         claim.mode = ns::RemovalPublicationMode::Committed;
     }
+    // Namespace admission requires clean data; model writes after ownership.
+    let v = views::Journal::new(s, views::Options::default())
+        .unwrap()
+        .write([2; 32], v.id(), 5, &[255])
+        .unwrap();
     (f, key, open, v, claim, node)
 }
 fn owned_begin(
