@@ -25,6 +25,8 @@ mod native_directories;
 mod native_mount;
 #[path = "chunk_publication/native_writer.rs"]
 mod native_writer;
+#[path = "chunk_publication/owned_sparse.rs"]
+mod owned_sparse;
 #[path = "chunk_publication/source_settlement.rs"]
 mod source_settlement;
 #[path = "support/writes.rs"]
@@ -212,6 +214,20 @@ async fn proxy(
             Reply::Applied(_)
         ));
     }
+    if p.mode.load(Ordering::SeqCst) == 23
+        && matches!(
+            &request,
+            Request::Apply {
+                request: Apply {
+                    mutation: Mutation::Publish { .. },
+                    ..
+                }
+            }
+        )
+    {
+        p.publish_gate.wait().await;
+        p.publish_gate.wait().await;
+    }
     let mut reply = p.upstream.request(&request).await.unwrap();
     if p.mode.load(Ordering::SeqCst) == 13
         && matches!(
@@ -316,6 +332,9 @@ async fn proxy(
         }
         (Request::Features {}, Reply::Features(fs), 21) => {
             fs.retain(|f| f != "manifest-history-v1")
+        }
+        (Request::Features {}, Reply::Features(fs), 24) => {
+            fs.retain(|f| f != "event-fenced-manifest-v1")
         }
         (Request::Info {}, Reply::Info(v), 7) => {
             v.name_policy = "unsupported-fixture-policy".into()
@@ -1199,7 +1218,8 @@ async fn chunk_child() {
     let s = Server::open(&root, policy).await;
     if matches!(
         mode.as_str(),
-        "recover"
+        "owned_sparse_recover"
+            | "recover"
             | "source_recover_unknown"
             | "source_recover_known"
             | "empty_recover"
@@ -1207,7 +1227,9 @@ async fn chunk_child() {
             | "creator_import_recover"
             | "creator_open_recover"
     ) {
-        if mode == "creator_open_recover" {
+        if mode == "owned_sparse_recover" {
+            Box::pin(owned_sparse::recover(&root, &s)).await;
+        } else if mode == "creator_open_recover" {
             Box::pin(creator_open::recover(&root, &s)).await;
         } else if mode == "creator_import_recover" {
             Box::pin(creator_import::recover(&root, &s)).await;
@@ -1244,6 +1266,12 @@ fn dispatch<'a>(
     s: &'a Server,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + 'a>> {
     match mode {
+        "owned_sparse_pending" => Box::pin(owned_sparse::flow(config, root, s, false)),
+        "owned_sparse_committed" => Box::pin(owned_sparse::flow(config, root, s, true)),
+        "owned_sparse_physical" => Box::pin(owned_sparse::physical(config, root, s)),
+        "owned_sparse_controls" => Box::pin(owned_sparse::controls(config, root, s)),
+        "owned_sparse_rejected" => Box::pin(owned_sparse::rejected(config, root, s)),
+        "owned_sparse_crash" => Box::pin(owned_sparse::crash(config, root, s)),
         #[cfg(any(target_os = "linux", windows))]
         "native_writer_mount" => Box::pin(native_writer::mount(config, root, s)),
         "native_writer" => Box::pin(native_writer::flow(config, root, s)),
@@ -1318,6 +1346,7 @@ async fn run(mode: &str) {
     let mut mixed_batch_window = None;
     let mut creator_open_objects = None;
     for stage in match mode {
+        "owned_sparse_crash" => vec!["owned_sparse_crash", "owned_sparse_recover"],
         "mixed_roots_crash" => vec!["mixed_roots_crash", "mixed_roots_recover"],
         "crash" => vec!["crash", "recover"],
         "empty_crash" => vec!["empty_crash", "empty_recover"],
@@ -1534,6 +1563,7 @@ async fn run(mode: &str) {
                     "crash"
                         | "source_crash"
                         | "source_ack_crash"
+                        | "owned_sparse_crash"
                         | "mixed_roots_crash"
                         | "empty_crash"
                         | "deferred_client_crash"
@@ -1562,6 +1592,32 @@ async fn run(mode: &str) {
             )
             .unwrap();
             counts = Some(f.requests.lock().unwrap().len());
+        }
+        if stage == "owned_sparse_crash" {
+            assert_eq!(puts(&f), 3);
+            let db = raw(tmp.path());
+            db.execute(
+                "UPDATE sparse_view_blocks SET data=zeroblob(length(data))",
+                [],
+            )
+            .unwrap();
+            db.execute("UPDATE staged_chunks SET data=zeroblob(length(data))", [])
+                .unwrap();
+            drop(db);
+            std::fs::rename(&setup.credentials, tmp.path().join("credentials.disabled")).unwrap();
+            std::fs::rename(
+                tmp.path().join("policy.toml"),
+                tmp.path().join("policy.disabled"),
+            )
+            .unwrap();
+            counts = Some(f.requests.lock().unwrap().len());
+        }
+        if stage == "owned_sparse_recover" {
+            assert_eq!(
+                f.requests.lock().unwrap().len(),
+                counts.unwrap(),
+                "owned metadata recovery accessed S3"
+            );
         }
         if stage == "mixed_roots_crash" {
             assert_eq!(puts(&f), 7);
@@ -1633,6 +1689,10 @@ async fn run(mode: &str) {
         }
     }
     let expected = match mode {
+        "owned_sparse_pending" | "owned_sparse_committed" => 6,
+        "owned_sparse_controls" => 1,
+        "owned_sparse_physical" => 2,
+        "owned_sparse_rejected" | "owned_sparse_crash" => 3,
         "creator_open_flow"
         | "creator_open_recovery"
         | "creator_open_physical"
@@ -2000,4 +2060,34 @@ async fn creator_open_stores() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn creator_open_rejected() {
     run("creator_open_rejected").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn owned_sparse_pending() {
+    run("owned_sparse_pending").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn owned_sparse_committed() {
+    run("owned_sparse_committed").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn owned_sparse_controls() {
+    run("owned_sparse_controls").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn owned_sparse_rejected() {
+    run("owned_sparse_rejected").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn owned_sparse_crash() {
+    run("owned_sparse_crash").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn owned_sparse_physical() {
+    run("owned_sparse_physical").await;
 }

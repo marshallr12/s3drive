@@ -6,8 +6,8 @@ pub use reader::{
     BaseDescriptor, BaseFile, ChunkContent, ChunkProof, CleanObservation, EditedFile, File,
     MAX_CHUNK_PROOF_BYTES, MAX_PAGE_PROOF_BYTES, MixedPublisher, MixedRecovery,
     MixedRecoveryFailure, MixedRootCommit, MixedRootFailure, MixedRootRecovery, MixedSourceReceipt,
-    MixedUploader, ObservationKind, PageProof, Preparation, PreparedChunk, PreparedDependency,
-    ReadFailure, ReadOptions, Reader,
+    MixedUploader, ObservationKind, OwnedPreparation, PageProof, Preparation, PreparedChunk,
+    PreparedDependency, ReadFailure, ReadOptions, Reader,
 };
 
 use s3drive_authority::{Apply, Error, Reply, Request, Store, WireClient};

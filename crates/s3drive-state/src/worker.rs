@@ -290,6 +290,9 @@ pub(crate) struct Owner {
     read_pins: Arc<read_pins::Pending>,
 }
 impl Owner {
+    pub(crate) fn same_owner(&self, other: &Self) -> bool {
+        self.sender.same_channel(&other.sender)
+    }
     pub(crate) async fn call<T: Send + 'static>(
         &self,
         work: impl FnOnce(&mut cache::Store) -> Result<T> + Send + 'static,
