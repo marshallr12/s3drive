@@ -1,8 +1,9 @@
 # Typed owned sparse preparation state
 
-Implementation candidate, 2026-10-22. Not accepted until its exact-source full
-Linux/Windows suites, native regression artifacts and actual46/47 binary
-compatibility checks have been reviewed. SDK integration and native lifecycle
+Accepted state layer, 2026-10-22, at source
+`499aa6378360f2bdc76bf020b58e73cb20c4437d`. Exact-source full Linux/Windows
+suites, native regression artifacts and actual46/47 binary compatibility
+checks have been reviewed. SDK integration and native lifecycle
 activation remain deliberately excluded.
 
 ## Durable contract
@@ -87,4 +88,40 @@ or sidecar bytes. This is semantic verification, not crash/durability acceptance
 Old and new builds must use separate Cargo target directories; sharing outputs
 can leave the wrong executable at the public binary path even after a build.
 The hosted compatibility step uses isolated outputs and records both binary
-hashes. Publication and full hosted acceptance remain pending.
+hashes. Full hosted state acceptance is recorded below.
+
+
+## Hosted acceptance
+
+[Run39796709806](https://github.com/marshallr12/s3drive/actions/runs/39796709806)
+is terminal green in all three jobs at the exact source above. Complete logs
+show Linux949 passed/0 failed/15 ignored and Windows945 passed/0 failed/31 ignored,
+37 workspace cohorts each. All16 new state tests pass on both, including actual
+SQLite-full rollback and killed-worker recovery. Separate native FUSE/WinFsp,
+Unicode chunk I/O/remount, disposition/replacement and startup/recovery gates pass.
+The ignored workspace cases are exercised by their separate supported gates;
+these regressions do not enable the new owned-unlinked native lifecycle.
+
+Both Windows artifact JSON documents match all35 reference records (21 replacement,
+14 disposition), including every field type/value and the corresponding raw log
+records. Source commit, OS/runtime and archive SHA256 were verified. The source
+ZIP matches all757 tracked files byte-for-byte (SHA256
+`cf2c85e4e35adee0e37f175b583f4bc6aca4fd7d358ba8d009f1e6a6da899ebc`).
+
+The actual46 CLI built from accepted main5343eb41 and separately built47 CLI pass
+all7 compatibility invocations. The complete75-statement legacy schema/data dump
+is unchanged through migration; both old-reader refusal cases preserve database
+and sidecar bytes, and47 reopens fresh/upgraded databases. Binary hashes differ
+and the candidate executable is checked unchanged after the isolated old build.
+Artifact archive SHA256 values:
+
+- replacement12434282601: `cbe2f289d948a0ee43b07b9d643cfc766af3719b02dcb311e150681f10b66d32`
+- disposition12436391719: `84b4764e3600348d974c6c8bafaf3026bfeec0c9ac59d95bf93c176d6ec707c1`
+- compatibility12435410634: `9e0d7011c47dd6047f19fc8d739e7722097a2eb90818d812cb6dfa8d4e6e9a79`
+
+Earlier runs39794331799 and39795452958 caught test-fixture ordering mistakes:
+writes must follow removal admission, and event advancement requires exact clean
+source acknowledgment before subsequent writes. The fixes correct the fixtures;
+no runtime safeguard was relaxed. Failed evidence is retained privately.
+Integration must check fresh main/branch heads and verify main's full CI after
+merging. Local validation archives remain unpublished.

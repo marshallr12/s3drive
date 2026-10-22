@@ -15,10 +15,10 @@ as a separate narrow phase-2 slice at `2b08169`, full/native run39673658957. It 
 reciprocal namespace admission, and abandonment/retirement checks. Typed owned
 admission and explicit rejected/no-effect settlement are still subsequent work.
 
-Status update, 2026-10-22: the [typed state candidate](owned-unlinked-sparse-state.md)
-implements the phase-2 provenance, source lineage and explicit settlement layer.
-It is not accepted until full exact-source hosted/native and actual46/47
-compatibility verification passes. Phases 3-4 remain excluded.
+Status update, 2026-10-22: the [typed state layer](owned-unlinked-sparse-state.md)
+is accepted at source499aa637 in full/native run39796709806, including actual46/47
+compatibility. Phase-2 provenance, source lineage and explicit settlement are
+complete. Phases 3-4 remain excluded.
 
 The chunk choice requires extending the sparse mixed-root path, not substituting
 the old bounded whole-generation writer. Current source facts:

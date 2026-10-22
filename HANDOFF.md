@@ -4,11 +4,17 @@ Updated 2026-10-22. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
-## In-progress candidate: typed owned sparse state
+## Current checkpoint: accepted typed owned sparse state
 
 Schema47 state work is described in `docs/src/owned-unlinked-sparse-state.md`.
-It remains unaccepted pending full exact-source hosted/native and actual46/47
-compatibility verification. No SDK/native lifecycle feature is enabled.
+Source499aa6378360f2bdc76bf020b58e73cb20c4437d is accepted in
+[run39796709806](https://github.com/marshallr12/s3drive/actions/runs/39796709806):
+Linux949/Windows945 passed,37 workspace cohorts each, all16 new state tests,
+separate native gates,35 exact typed artifact records and actual46/47 compatibility.
+All757 source ZIP files match. Original-open/current-event provenance, source
+lineage and explicit rejected/no-effect settlement are complete at the state layer.
+No SDK/native lifecycle feature is enabled. Next is SDK integration, followed by
+separate native lifecycle acceptance. Verify main's full CI after integration.
 
 ## Current checkpoint: accepted sparse node-wide effect barriers
 
