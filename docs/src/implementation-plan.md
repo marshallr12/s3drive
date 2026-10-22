@@ -3782,10 +3782,16 @@ original/current provenance, source settlement and node-wide unresolved-effect
 barriers, then SDK/native integration. No native lifecycle flag, real provider
 mutation or physical-workstation/deployment acceptance is enabled by this phase.
 
-### Owned sparse SDK candidate — 2026-10-22
+### Owned sparse SDK accepted — 2026-10-22
 
-[SDK integration](owned-unlinked-sparse-sdk.md) now connects typed original-open/
-current-event admission, coherent remote epoch checks, exact historical replay
-and explicit terminal settlement. Schema47 and native flags stay unchanged.
-The candidate requires its own full/native hosted gates; actual new owned sparse
-native lifecycle and cold recovery are subsequent work, not inferred from SDK tests.
+[SDK integration](owned-unlinked-sparse-sdk.md), source1645861186421c3c5c10a9b4c3d3244389665e7f,
+passes exact-source Linux/Windows/book CI39822691603:955/951 workspace tests,
+37 cohorts each, all6 SDK recovery/rejection cases,16 state cases, separate native
+regression gates,35 typed artifact records and actual46/47 compatibility. All759
+source files match. Original-open/current-event admission, coherent remote epoch
+checks, exact historical replay, lineage/source acknowledgment and explicit
+terminal settlement are connected. The failed first fixture and blocked local
+durable gate remain recorded; no safeguard was relaxed. Schema47 and native flags
+stay unchanged. Next is actual new owned sparse native lifecycle/cold recovery
+and separate FUSE/WinFsp gates before enablement, not inferred from SDK tests.
+Verify main's full CI after the approved merge; keep validation archives private.

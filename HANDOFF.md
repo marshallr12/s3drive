@@ -4,14 +4,25 @@ Updated 2026-10-22. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
-## Active candidate: owned sparse SDK
+## Current checkpoint: accepted owned sparse SDK
 
-The fresh `codex/owned-sparse-sdk` branch starts from accepted main de0e4894.
-Read `docs/src/owned-unlinked-sparse-sdk.md` for the candidate contract. Typed SDK
-admission, event-aware publication and explicit terminal settlement are under
-verification. Schema47 and native lifecycle flags are unchanged. Full own-source
-Linux/Windows and native regression acceptance remain required before merge.
-The new owned-unlinked native lifecycle and cold recovery remain subsequent work.
+Typed SDK admission, coherent current-event publication, exact historical replay
+and explicit rejected/no-effect settlement are accepted at runtime/test/CI source
+1645861186421c3c5c10a9b4c3d3244389665e7f, based on main de0e4894.
+Read `docs/src/owned-unlinked-sparse-sdk.md` for the contract and evidence.
+[Run39822691603](https://github.com/marshallr12/s3drive/actions/runs/39822691603)
+passes Linux955/Windows951 tests in37 cohorts each, all6 SDK and16 state cases,
+separate native regression gates, all35 typed artifact records and actual46/47
+compatibility. All759 source files match. Schema47 and native flags are unchanged.
+The first fixture failure is recorded, not discarded. Local overlayfs/tmpfs full
+tests remain unsupported; never relax durability guards. Keep archives private.
+
+Next: actual owned-unlinked sparse native unlink-while-open, save/replace,
+dirty-handle reads, final-close settlement and cold/remount recovery, with separate
+Linux FUSE and Windows WinFsp acceptance before enablement. Existing native
+regressions are not proof of these new lifecycle flows. Physical workstation,
+real providers, retention/GC and remote deployment remain separate. Verify main's
+own full CI after the approved integration. Do not delete user-owned branches.
 
 ## Current checkpoint: accepted typed owned sparse state
 
@@ -22,8 +33,7 @@ Linux949/Windows945 passed,37 workspace cohorts each, all16 new state tests,
 separate native gates,35 exact typed artifact records and actual46/47 compatibility.
 All757 source ZIP files match. Original-open/current-event provenance, source
 lineage and explicit rejected/no-effect settlement are complete at the state layer.
-No SDK/native lifecycle feature is enabled. Next is SDK integration, followed by
-separate native lifecycle acceptance. Verify main's full CI after integration.
+The SDK slice is now accepted above; native lifecycle enablement remains pending.
 
 ## Current checkpoint: accepted sparse node-wide effect barriers
 
