@@ -500,6 +500,10 @@ pub struct Client {
     chunk: Option<crate::chunk_mount::Key>,
 }
 impl Client {
+    /// Identity of the live private worker, not matching paths or stored IDs.
+    pub fn same_views(&self, views: &super::super::Client) -> bool {
+        self.owner.same_owner(&views.owner)
+    }
     pub(crate) fn for_chunks(
         owner: Owner,
         options: Options,

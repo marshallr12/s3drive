@@ -37,6 +37,8 @@ jobs:
         run: ./scripts/install-winfsp.ps1
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Verify owned sparse SDK and killed recovery
+        run: cargo test -p s3drive-cli --test chunk_publication owned_sparse --locked -- --nocapture --test-threads=4
       - name: Verify typed owned sparse state and crash recovery
         run: cargo test -p s3drive-state owned_sparse --locked -- --test-threads=4
       - name: Verify Windows callback stack bound

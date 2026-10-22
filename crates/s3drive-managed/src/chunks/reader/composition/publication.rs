@@ -423,6 +423,8 @@ impl MixedPublisher {
                 };
                 if !features.iter().any(|x| x == "manifest-root-v1")
                     || !features.iter().any(|x| x == "content-cas-v1")
+                    || (info.ownership().is_some()
+                        && !features.iter().any(|x| x == "event-fenced-manifest-v1"))
                 {
                     return Err(MixedRootFailure::UnsupportedFeature.into());
                 }
@@ -446,16 +448,35 @@ impl MixedPublisher {
                 {
                     return Err(MixedRootFailure::Binding.into());
                 }
-                let Reply::Node(node) = reply(
-                    authority
-                        .request(&Request::Node {
-                            volume: descriptor.volume().into(),
-                            node: descriptor.node().into(),
-                        })
-                        .await?,
-                )?
-                else {
-                    return Err(MixedRootFailure::Protocol.into());
+                let node = if let Some(owned) = info.ownership() {
+                    let Reply::RemovalEpoch(Some(epoch)) = reply(
+                        authority
+                            .request(&Request::RemovalEpoch {
+                                volume: descriptor.volume().into(),
+                                node: descriptor.node().into(),
+                            })
+                            .await?,
+                    )?
+                    else {
+                        return Err(MixedRootFailure::BaseChanged.into());
+                    };
+                    if &epoch.claim != owned.claim() {
+                        return Err(MixedRootFailure::BaseChanged.into());
+                    }
+                    epoch.node
+                } else {
+                    let Reply::Node(node) = reply(
+                        authority
+                            .request(&Request::Node {
+                                volume: descriptor.volume().into(),
+                                node: descriptor.node().into(),
+                            })
+                            .await?,
+                    )?
+                    else {
+                        return Err(MixedRootFailure::Protocol.into());
+                    };
+                    node
                 };
                 if node.id != descriptor.node() {
                     return Err(MixedRootFailure::Binding.into());

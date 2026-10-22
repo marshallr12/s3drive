@@ -3,6 +3,13 @@
 use super::*;
 use s3drive_core::manifest::objects::RootDescriptor;
 use s3drive_state::sparse_views::preparation as plans;
+/// Exact caller intent. The state capability independently validates and freezes
+/// the acknowledged event and original session-bound open before any staging.
+#[derive(Clone, Debug)]
+pub struct OwnedPreparation {
+    pub open: String,
+    pub claim: s3drive_authority::RemovalPublicationClaim,
+}
 #[derive(Clone)]
 pub struct Preparation {
     pub(super) edited: EditedFile,
@@ -15,6 +22,61 @@ impl fmt::Debug for Preparation {
     }
 }
 impl EditedFile {
+    /// Owned pending/deferred/unlinked admission on the same private worker.
+    /// Exact retries return historical identity before fresh source probes.
+    pub async fn begin_owned_preparation(
+        &self,
+        operation: Id,
+        generation: [u8; 16],
+        options: plans::Options,
+        chunks: &s3drive_state::chunk_mount::Client,
+        ownership: OwnedPreparation,
+    ) -> Result<Preparation> {
+        let client = chunks.preparations(options)?;
+        if !client.same_views(&self.local) {
+            return Err(ReadFailure::Binding.into());
+        }
+        let _active = self
+            .base
+            .0
+            .reader
+            .0
+            .active
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| ReadFailure::Busy)?;
+        bounded(
+            self.base.0.reader.0.options,
+            Box::pin(async {
+                let (root, page) = self.original_context()?;
+                let request = plans::Request {
+                    operation,
+                    view: self.view.id(),
+                    generation,
+                    base_root: root.encode().to_vec(),
+                    base_page: page,
+                };
+                if client.operation(operation).await?.is_none() {
+                    let view = self.local.view(self.view.id()).await?;
+                    if view != *self.view {
+                        return Err(ReadFailure::Binding.into());
+                    }
+                    Box::pin(self.base.authorize_sparse()).await?;
+                }
+                let info = client
+                    .begin_owned(request, ownership.open, ownership.claim)
+                    .await?;
+                let result = Preparation {
+                    edited: self.clone(),
+                    client,
+                    id: info.id()?,
+                };
+                result.scope(&info)?;
+                Ok(result)
+            }),
+        )
+        .await
+    }
     fn original_context(&self) -> Result<(RootDescriptor, Vec<u8>)> {
         let Content::Manifest { root, .. } = &self.base.0.content else {
             return Err(ReadFailure::UnsupportedContent.into());
@@ -108,6 +170,15 @@ impl PreparedDependency {
     }
 }
 impl Preparation {
+    /// Explicit terminal resolution, not success or a clean-source receipt.
+    /// NoEffect requires no staged object/root; Rejected requires the exact saved
+    /// terminal authority Conflict. Unknown outcomes always remain unresolved.
+    /// This local operation performs no credential, source or policy probe.
+    pub async fn settle(&self, settlement: plans::owned::Settlement) -> Result<plans::Info> {
+        let info = self.client.settle(self.id, settlement).await?;
+        self.scope(&info)?;
+        Ok(info)
+    }
     pub fn id(&self) -> Id {
         self.id
     }

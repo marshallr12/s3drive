@@ -4,6 +4,15 @@ Updated 2026-10-22. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
+## Active candidate: owned sparse SDK
+
+The fresh `codex/owned-sparse-sdk` branch starts from accepted main de0e4894.
+Read `docs/src/owned-unlinked-sparse-sdk.md` for the candidate contract. Typed SDK
+admission, event-aware publication and explicit terminal settlement are under
+verification. Schema47 and native lifecycle flags are unchanged. Full own-source
+Linux/Windows and native regression acceptance remain required before merge.
+The new owned-unlinked native lifecycle and cold recovery remain subsequent work.
+
 ## Current checkpoint: accepted typed owned sparse state
 
 Schema47 state work is described in `docs/src/owned-unlinked-sparse-state.md`.

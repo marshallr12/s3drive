@@ -3781,3 +3781,11 @@ unmerged experiment intact. Next is sparse journal typed admission, retained
 original/current provenance, source settlement and node-wide unresolved-effect
 barriers, then SDK/native integration. No native lifecycle flag, real provider
 mutation or physical-workstation/deployment acceptance is enabled by this phase.
+
+### Owned sparse SDK candidate — 2026-10-22
+
+[SDK integration](owned-unlinked-sparse-sdk.md) now connects typed original-open/
+current-event admission, coherent remote epoch checks, exact historical replay
+and explicit terminal settlement. Schema47 and native flags stay unchanged.
+The candidate requires its own full/native hosted gates; actual new owned sparse
+native lifecycle and cold recovery are subsequent work, not inferred from SDK tests.

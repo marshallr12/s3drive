@@ -14,7 +14,7 @@ pub use recovery::{MixedRecovery, MixedRecoveryFailure};
 mod uploading;
 pub use uploading::MixedUploader;
 mod planning;
-pub use planning::{Preparation, PreparedDependency};
+pub use planning::{OwnedPreparation, Preparation, PreparedDependency};
 mod preparation;
 pub use preparation::{ChunkContent, PreparedChunk};
 
