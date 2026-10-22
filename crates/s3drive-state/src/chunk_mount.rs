@@ -98,6 +98,12 @@ fn sorted(mut controls: Vec<Control>) -> Result<Vec<Control>> {
     Ok(controls)
 }
 impl Binding {
+    pub(crate) fn key(&self) -> Key {
+        Key {
+            volume: self.volume.clone(),
+            owner: self.owner.clone(),
+        }
+    }
     fn validate(&self) -> Result<()> {
         if self.format != 1
             || !id(&self.volume)

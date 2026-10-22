@@ -959,67 +959,13 @@ impl<'a> Journal<'a> {
         )
     }
     fn append(&mut self, key: &str, event: Event) -> Result<OpenRecord> {
-        let tx = self
-            .state
-            .connection
-            .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        if let Some(key) = &self.chunk {
-            crate::chunk_mount::verify_key(&tx, key)?;
-        }
-        let (mut row, mut record) = load(&tx, key)?.ok_or("per-open record not found")?;
-        if let Some(old) = record.events.iter().find(|e| e.id == event.id) {
-            if *old != event {
-                return Err("per-open event identity changed".into());
-            }
-            return Ok(record);
-        }
-        if retirement::is_retired(&tx, key)? {
-            return Err("retired open history is immutable".into());
-        }
-        if session::frozen(&tx, key)? {
-            return Err("session recovery froze this exact callback history".into());
-        }
-        let old_hash = checksum(&row)?;
-        let previous = row.head.clone();
-        let hash = event_hash(key, row.count + 1, &event, &previous)?;
-        reduce(&tx, &mut record, &event)?;
-        if let Some(key) = &self.chunk {
-            scope_record(&crate::chunk_mount::verify_key(&tx, key)?, &record)?;
-        }
-        row.count += 1;
-        row.head = Some(hash.clone());
-        let mut records = all(&tx)?;
-        *records
-            .iter_mut()
-            .find(|(r, _)| r.input.id == key)
-            .ok_or("per-open row missing")? = (row.clone(), record.clone());
-        capacity(&records)?;
-        let action = serde_json::to_vec(&event.action)?;
-        if action.len() > 16384 {
-            return Err("per-open event too large".into());
-        }
-        let a = tx.execute(
-            "INSERT INTO windows_open_events VALUES(?1,?2,?3,?4,?5,?6)",
-            params![event.id, key, row.count as i64, action, previous, hash],
-        )?;
-        let b=tx.execute("UPDATE windows_open_journal SET event_count=?1,head_hash=?2,state_hash=?3 WHERE open_id=?4 AND state_hash=?5",params![row.count as i64,row.head,checksum(&row)?,key,old_hash])?;
-        if a != 1 || b != 1 || load(&tx, key)?.as_ref().map(|(_, r)| r) != Some(&record) {
-            return Err("per-open event was not durably committed".into());
-        }
-        let imported = matches!(event.action, Action::Activate { .. })
-            && record
-                .input
-                .admission
-                .as_ref()
-                .is_some_and(|a| super::creator_import::canonical(&a.request.mutation));
-        if imported {
-            super::creator_import::checkpoint("CreatorActivationStored")?;
-        }
-        tx.commit()?;
-        if imported {
-            super::creator_import::checkpoint("CreatorActivationCommitted")?;
-        }
-        Ok(record)
+        append_existing(
+            &mut self.state.connection,
+            self.chunk.as_ref(),
+            key,
+            event,
+            false,
+        )
     }
 }
 
@@ -1077,4 +1023,87 @@ pub(crate) fn sparse_current(db: &Connection, runtime: &str, open: &OpenRecord) 
         return Err("sparse admission requires a live original session-bound open".into());
     }
     session::current(db, runtime, &open.input.session, &open.input.volume)
+}
+
+// Shared transaction implementation; restricted recovery permits only acknowledgments.
+pub(super) fn append_existing(
+    connection: &mut Connection,
+    chunk: Option<&crate::chunk_mount::Key>,
+    key: &str,
+    event: Event,
+    restricted: bool,
+) -> Result<OpenRecord> {
+    let tx = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    if let Some(key) = &chunk {
+        crate::chunk_mount::verify_key(&tx, key)?;
+        if restricted {
+            super::recovery::metadata(&tx, key)?;
+        }
+    }
+    let (mut row, mut record) = load(&tx, key)?.ok_or("per-open record not found")?;
+    if let Some(old) = record.events.iter().find(|e| e.id == event.id) {
+        if *old != event {
+            return Err("per-open event identity changed".into());
+        }
+        return Ok(record);
+    }
+    if retirement::is_retired(&tx, key)? {
+        return Err("retired open history is immutable".into());
+    }
+    if session::frozen(&tx, key)? {
+        return Err("session recovery froze this exact callback history".into());
+    }
+    let old_hash = checksum(&row)?;
+    let previous = row.head.clone();
+    let hash = event_hash(key, row.count + 1, &event, &previous)?;
+    reduce(&tx, &mut record, &event)?;
+    if let Some(key) = &chunk {
+        scope_record(&crate::chunk_mount::verify_key(&tx, key)?, &record)?;
+    }
+    row.count += 1;
+    row.head = Some(hash.clone());
+    let mut records = all(&tx)?;
+    *records
+        .iter_mut()
+        .find(|(r, _)| r.input.id == key)
+        .ok_or("per-open row missing")? = (row.clone(), record.clone());
+    capacity(&records)?;
+    let action = serde_json::to_vec(&event.action)?;
+    if action.len() > 16384 {
+        return Err("per-open event too large".into());
+    }
+    let a = tx.execute(
+        "INSERT INTO windows_open_events VALUES(?1,?2,?3,?4,?5,?6)",
+        params![event.id, key, row.count as i64, action, previous, hash],
+    )?;
+    let b=tx.execute("UPDATE windows_open_journal SET event_count=?1,head_hash=?2,state_hash=?3 WHERE open_id=?4 AND state_hash=?5",params![row.count as i64,row.head,checksum(&row)?,key,old_hash])?;
+    if a != 1 || b != 1 || load(&tx, key)?.as_ref().map(|(_, r)| r) != Some(&record) {
+        return Err("per-open event was not durably committed".into());
+    }
+    let imported = matches!(event.action, Action::Activate { .. })
+        && record
+            .input
+            .admission
+            .as_ref()
+            .is_some_and(|a| super::creator_import::canonical(&a.request.mutation));
+    if imported {
+        super::creator_import::checkpoint("CreatorActivationStored")?;
+    }
+    if restricted {
+        super::recovery::metadata(
+            &tx,
+            chunk.ok_or("restricted acknowledgment requires chunk role")?,
+        )?;
+    }
+    if matches!(event.action, Action::Acknowledge { .. }) {
+        super::recovery::checkpoint("OpenStored");
+    }
+    tx.commit()?;
+    if matches!(event.action, Action::Acknowledge { .. }) {
+        super::recovery::checkpoint("OpenCommitted");
+    }
+    if imported {
+        super::creator_import::checkpoint("CreatorActivationCommitted")?;
+    }
+    Ok(record)
 }

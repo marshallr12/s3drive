@@ -3,6 +3,7 @@ mod changes;
 pub(crate) mod creator_import;
 pub(crate) mod identity;
 pub mod opens;
+pub mod recovery;
 pub(crate) mod removals;
 use crate::{
     Result, State,
