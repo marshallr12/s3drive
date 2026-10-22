@@ -25,6 +25,8 @@ mod native_directories;
 #[cfg(any(target_os = "linux", windows))]
 #[path = "chunk_publication/native_mount.rs"]
 mod native_mount;
+#[path = "chunk_publication/native_sparse_sdk.rs"]
+mod native_sparse_sdk;
 #[path = "chunk_publication/native_writer.rs"]
 mod native_writer;
 #[path = "chunk_publication/owned_sparse.rs"]
@@ -1289,6 +1291,15 @@ fn dispatch<'a>(
             s,
             "cold_namespace_rejected",
         )),
+        "native_sparse_sdk_controller_linked" => {
+            Box::pin(native_sparse_sdk::flow(config, root, s, 3))
+        }
+        "native_sparse_sdk_controller_unlinked" => {
+            Box::pin(native_sparse_sdk::flow(config, root, s, 5))
+        }
+        "native_sparse_sdk_linked" => Box::pin(native_sparse_sdk::flow(config, root, s, 0)),
+        "native_sparse_sdk_pending" => Box::pin(native_sparse_sdk::flow(config, root, s, 1)),
+        "native_sparse_sdk_committed" => Box::pin(native_sparse_sdk::flow(config, root, s, 2)),
         "owned_sparse_pending" => Box::pin(owned_sparse::flow(config, root, s, false)),
         "owned_sparse_committed" => Box::pin(owned_sparse::flow(config, root, s, true)),
         "owned_sparse_physical" => Box::pin(owned_sparse::physical(config, root, s)),
@@ -1725,6 +1736,11 @@ async fn run(mode: &str) {
     }
     let expected = match mode {
         "cold_namespace_crash" | "cold_namespace_known" | "cold_namespace_rejected" => 1,
+        "native_sparse_sdk_controller_linked"
+        | "native_sparse_sdk_controller_unlinked"
+        | "native_sparse_sdk_linked"
+        | "native_sparse_sdk_pending"
+        | "native_sparse_sdk_committed" => 5,
         "owned_sparse_pending" | "owned_sparse_committed" => 6,
         "owned_sparse_controls" => 1,
         "owned_sparse_physical" => 2,
@@ -2141,4 +2157,26 @@ async fn cold_namespace_known() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn cold_namespace_rejected() {
     run("cold_namespace_rejected").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_sparse_sdk_linked() {
+    run("native_sparse_sdk_linked").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_sparse_sdk_pending() {
+    run("native_sparse_sdk_pending").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_sparse_sdk_committed() {
+    run("native_sparse_sdk_committed").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_sparse_sdk_controller_linked() {
+    run("native_sparse_sdk_controller_linked").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_sparse_sdk_controller_unlinked() {
+    run("native_sparse_sdk_controller_unlinked").await;
 }

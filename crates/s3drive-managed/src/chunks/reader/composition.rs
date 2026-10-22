@@ -13,6 +13,8 @@ mod recovery;
 pub use recovery::{MixedRecovery, MixedRecoveryFailure};
 mod uploading;
 pub use uploading::MixedUploader;
+mod native;
+pub use native::NativeSparseFile;
 mod planning;
 pub use planning::{OwnedPreparation, Preparation, PreparedDependency};
 mod preparation;

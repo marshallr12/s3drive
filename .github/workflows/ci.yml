@@ -46,6 +46,8 @@ jobs:
         run: cargo test -p s3drive-cli --test chunk_publication owned_sparse --locked -- --nocapture --test-threads=4
       - name: Verify native sparse atomic admission Close and cold fences
         run: cargo test -p s3drive-state native_sparse --locked -- --nocapture --test-threads=4
+      - name: Verify original-open sparse SDK and chunk disposition controller
+        run: cargo test -p s3drive-cli --test chunk_publication native_sparse_sdk --locked -- --nocapture --test-threads=4
       - name: Verify typed owned sparse state and crash recovery
         run: cargo test -p s3drive-state owned_sparse --locked -- --test-threads=4
       - name: Verify Windows callback stack bound

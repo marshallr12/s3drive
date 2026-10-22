@@ -162,3 +162,43 @@ the fixture now asserts that identity and still rejects fresh/stale admission.
 Preparation additionally rejects a caller token for another node/source/control,
 including before returning a known plan. A new assertion exercises that boundary.
 These changes still require full hosted acceptance.
+
+## SDK/controller bridge candidate (not native acceptance)
+
+The SDK now has a nonserializable original-open bridge. Its Close constructor
+marks the synchronous fence before the returned future can be polled or dropped.
+Edits use authenticated pinned root/page context and exact worker, node, source,
+store and fingerprint binding. Known preparations are replayed without changing
+their original publisher; fresh preparation remains state-guarded. Frozen work
+still independently passes existing reader, immutable upload, root publication
+and exact source-acknowledgment gates.
+
+The shared disposition controller can use the chunk owner's namespace/Open
+capability instead of constructing a whole-file publisher for a chunk store.
+Its content hook must flush every Close, including non-last Close, and complete
+through the native source witness. Namespace transitions share the adapter's
+serialization gate and flush retained native content first. Actual Cleanup remains
+separate; obsolete-session Close is not fabricated or marked complete during cold
+recovery. Existing whole-file behavior retains its original backend and barriers.
+
+Five dedicated local-HTTP SDK/controller fixtures compile: linked, pending and
+committed removal source publication; linked controller Close; committed-removal
+controller Close/release. They exercise dropped-unpolled Close futures, multi-plan
+lineage, refusal before exact source acknowledgments, dirty read through pinned
+handles, and source completion without inventing POSIX Cleanup. Hosted execution,
+full legacy regressions and the new Linux/Windows adapter lifecycle gates remain
+outstanding. This bridge does not activate native filesystem capability flags.
+
+Recovery prerequisite main8777d3078cdf87360893899fe448b0dc53c7b742 was independently
+verified in [39867508230](https://github.com/marshallr12/s3drive/actions/runs/39867508230):
+Linux966/Windows962 tests across37 cohorts; eight cold state and three cold SDK
+cases, prior owned sparse gates, actual46/47 compatibility, and35 strictly compared
+native reference artifact records. All764 source files and full logs/artifact
+hashes were reviewed. Those existing native references are not acceptance of this
+new SDK/controller or adapter behavior.
+
+Local bridge verification: workspace Clippy with warnings denied, formatting,
+schema fixture expectations and109 Markdown link checks pass. All five SDK cases
+compile, but execution stops during durable authority startup on this cloud
+workstation (overlayfs/tmpfs). This is not a test pass; the guard stays intact and
+standard hosted Linux/Windows runners must execute the dedicated cases.
