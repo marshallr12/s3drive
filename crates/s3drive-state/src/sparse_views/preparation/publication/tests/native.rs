@@ -125,7 +125,21 @@ async fn native_sparse_atomic_close_captures_latest_multi_handle_head_without_li
     );
     assert!(closed.plans[0].ownership().is_none());
     assert!(closed.open.close().is_some());
-    assert!(n.client.prepare(other, context(&last)).await.is_err());
+    // A known exact answer is not adoption or fresh admission. Its original
+    // publisher and frozen plan identity remain unchanged for every handle.
+    let replay = n
+        .client
+        .prepare(other.clone(), context(&last))
+        .await
+        .unwrap();
+    assert_eq!(replay.id().unwrap(), closed.plans[0].id().unwrap());
+    assert_eq!(replay.view(), closed.plans[0].view());
+    assert_eq!(replay.cursor(), closed.plans[0].cursor());
+    assert_eq!(
+        replay.native_ownership().unwrap().open(),
+        n.token.input().id
+    );
+    assert!(n.client.prepare(other, context(&first)).await.is_err());
     assert!(
         n.client
             .complete(n.token.clone(), hex(&[71; 16]), hex(&[72; 16]))
@@ -446,6 +460,24 @@ async fn native_sparse_epoch_context_cannot_change_plain_or_domain_separated_pag
     let temp = tempfile::tempdir().unwrap();
     let n = setup(&temp.path().join("context identities"), 16).await;
     let view = dirty(&n, &n.view, 2, 5).await;
+    let mut input = n.token.input().clone();
+    input.id = hex(&[67; 16]);
+    input.node = hex(&[68; 16]);
+    let key = n.key.clone();
+    let open = n
+        .storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let mut journal = opens(&mut store.state, &key);
+            journal.prepare(input.clone())?;
+            journal.activate(&input.id, &hex(&[69; 16]))?;
+            Ok(input.id)
+        })
+        .await
+        .unwrap();
+    let other_node = n.client.bind(open).await.unwrap();
+    assert!(n.client.prepare(other_node, context(&view)).await.is_err());
     let foreign = base(17, BTreeMap::from([(0, vec![4; 17])]));
     let context =
         Context::new(&view, foreign.root.encode().to_vec(), foreign.page.encode()).unwrap();

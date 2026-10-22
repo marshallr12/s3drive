@@ -153,3 +153,12 @@ allocation probe at the event transaction boundary. It causes real SQLITE_FULL
 and rollback, without installing a trigger or relaxing the trigger/schema guard.
 The extra root-context refusal test and historical retirement check require a new
 exact-source full hosted run. The failed run is retained; no capability is enabled.
+
+The corrected run [39869226128](https://github.com/marshallr12/s3drive/actions/runs/39869226128)
+passed16 of17 dedicated tests on each OS. Its remaining assertion incorrectly
+expected an error for exact known-plan replay by another live handle on the same
+node. Replay must preserve the original publisher and frozen plan, not adopt them;
+the fixture now asserts that identity and still rejects fresh/stale admission.
+Preparation additionally rejects a caller token for another node/source/control,
+including before returning a known plan. A new assertion exercises that boundary.
+These changes still require full hosted acceptance.

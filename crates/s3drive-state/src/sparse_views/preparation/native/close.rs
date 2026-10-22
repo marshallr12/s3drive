@@ -20,6 +20,17 @@ impl Client {
                     .connection
                     .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
                 let caller = token.validate(&tx, &state.native_sparse)?;
+                let base = context.binding.base()?;
+                if caller.input.volume != base.volume()
+                    || caller.input.node != base.node()
+                    || caller.input.source != *context.binding.source()
+                    || caller.input.fingerprint != context.binding.fingerprint()
+                    || caller.input.store.id != hex(context.binding.store())
+                    || caller.input.store.root != context.binding.root()
+                {
+                    return Err(Failure::Conflict.into());
+                }
+
                 opens::sparse_current(
                     &tx,
                     state.incarnation.as_deref().ok_or(Failure::Conflict)?,
