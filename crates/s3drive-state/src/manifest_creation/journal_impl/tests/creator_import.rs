@@ -1003,21 +1003,39 @@ fn creator_import_targeted_provenance_still_checks_the_complete_role_metadata_pr
     }
 }
 
-// Schema49 adds exactly one empty table; retain exact comparisons for every old
-// schema definition and row, rather than weakening the migration oracle.
+// Schemas49/50 add exactly three empty tables. Verify their complete DDL and
+// emptiness, then compare every original definition and row without exclusions.
 fn assert_legacy_catalog(
     mut after: BTreeMap<String, Vec<String>>,
     before: BTreeMap<String, Vec<String>>,
 ) {
-    let ddl = include_str!("../../../../migrations/049.sql")
-        .split_once("CREATE TABLE")
-        .unwrap()
-        .1
-        .trim()
-        .trim_end_matches(';');
-    let expected = vec![hex(&Sha256::digest(
-        format!("CREATE TABLE {ddl}").as_bytes(),
-    ))];
-    assert_eq!(after.remove("sparse_retry_mode"), Some(expected));
+    let migrations = [
+        include_str!("../../../../migrations/049.sql"),
+        include_str!("../../../../migrations/050.sql"),
+    ];
+    let mut added = Vec::new();
+    for sql in migrations {
+        for ddl in sql.split("CREATE TABLE").skip(1) {
+            let ddl = ddl.trim().trim_end_matches(';');
+            let table = ddl.split_whitespace().next().unwrap();
+            let expected = vec![hex(&Sha256::digest(
+                format!("CREATE TABLE {ddl}").as_bytes(),
+            ))];
+            assert_eq!(
+                after.remove(table),
+                Some(expected),
+                "new table must have exact DDL and no rows: {table}"
+            );
+            added.push(table);
+        }
+    }
+    assert_eq!(
+        added,
+        [
+            "sparse_retry_mode",
+            "sparse_retention_role",
+            "sparse_retention_anchors"
+        ]
+    );
     assert_eq!(after, before);
 }

@@ -40,6 +40,8 @@ jobs:
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Verify retry fencing checkpoints rollback and killed owners
         run: cargo test -p s3drive-state retry_safety --locked -- --nocapture --test-threads=4
+      - name: Verify historical upgrade row and schema preservation
+        run: cargo test -p s3drive-state upgrade --locked -- --nocapture --test-threads=4
       - name: Verify transactional local retirement bounds corruption rollback and killed owners
         run: cargo test -p s3drive-state retention_ --locked -- --nocapture --test-threads=4
       - name: Verify scoped SDK populated migration and local retention

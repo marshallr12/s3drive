@@ -109,3 +109,11 @@ fixture whose literal50 became the current schema. The fixture now derives
 SCHEMA_VERSION+1 and still requires refusal. This failed run is historical partial
 evidence only, not candidate acceptance; Windows and corrected full gates remain
 required.
+
+SDK candidate42eb926 passed its dedicated Linux state/SDK/native gates but full
+workspace acceptance found two historical43/44 upgrade-oracle failures. Log
+comparison showed no changed legacy definitions or rows: only the two exactly
+empty schema50 tables were additional. The corrected oracle verifies their exact
+DDL and emptiness alongside schema49's existing addition, then retains the full
+original catalog comparison. It does not ignore arbitrary tables or data. Full
+reruns remain required;42eb926 is not accepted.
