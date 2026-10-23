@@ -284,9 +284,7 @@ fn additive_schema39_migration_preserves_old_blobs_and_rejects_collisions_withou
         let mut s = State::open_managed(&path).unwrap();
         s.register_source(&[7; 32], &"c".repeat(64)).unwrap();
         crate::test_schema::without_creation(&s.connection);
-        s.connection
-            .pragma_update(None, "user_version", 39)
-            .unwrap();
+        crate::test_schema::demote(&s.connection, 39).unwrap();
         if collision {
             s.connection
                 .execute_batch("CREATE TABLE manifest_creations(wrong BLOB)")
@@ -761,9 +759,7 @@ fn downgraded_or_future_schema_markers_never_adopt_or_repair_new_creation_record
         let mut s = State::open_managed(&path).unwrap();
         j(&mut s).begin(input(4)).unwrap();
         let before = rows(&s);
-        s.connection
-            .pragma_update(None, "user_version", version)
-            .unwrap();
+        crate::test_schema::demote(&s.connection, version).unwrap();
         assert!(Journal::new(&mut s, Limits::default()).is_err());
         assert_eq!(rows(&s), before);
         drop(s);
@@ -881,7 +877,7 @@ fn restricted_creation_recovery_never_creates_migrates_or_prepares_and_refuses_l
     drop(recovery);
     assert!(RecoveryStore::open(&path).is_err());
     db.execute_batch("DROP TRIGGER no_recovery").unwrap();
-    db.pragma_update(None, "user_version", 39).unwrap();
+    crate::test_schema::demote(&db, 39).unwrap();
     drop(db);
     assert!(RecoveryStore::open(&path).is_err());
     let db = Connection::open(path.join("metadata.sqlite3")).unwrap();

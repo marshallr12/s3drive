@@ -70,6 +70,7 @@
 - [Event-bound manifest authority candidate](manifest-event-fence.md)
 - [Deferred canonical manifest integration](deferred-manifest-integration.md)
 - [Bounded local retention plan](mixed-retention-plan.md)
+  - [Retry/checkpoint state prerequisite](retry-checkpoint-safety.md)
 - [Observing external clean versions: proposal](external-clean-adoption.md)
 - [Local clean adoption intent](external-clean-local.md)
 - [Authenticated clean observation](external-clean-reader.md)

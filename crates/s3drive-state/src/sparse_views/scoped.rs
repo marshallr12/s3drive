@@ -32,7 +32,7 @@ impl Operation {
         )
     }
 }
-fn mode_hash() -> Result<Id> {
+pub(in crate::sparse_views) fn mode_hash() -> Result<Id> {
     hash(b"s3drive-source-scoped-mode-v1\0", &1u8)
 }
 pub(crate) fn check_schema(db: &Connection) -> Result<()> {

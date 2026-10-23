@@ -91,7 +91,7 @@ fn existing_authority_wrong_identity_does_not_migrate_or_change_operation_bytes(
         let db = Connection::open(path.join("metadata.sqlite3")).unwrap();
         db.execute_batch(&crate::test_schema::legacy_sql("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans"))
             .unwrap();
-        db.pragma_update(None, "user_version", 22).unwrap();
+        crate::test_schema::demote(&db, 22).unwrap();
     }
     let before = rows(&path);
     for (id, policy) in [
@@ -159,7 +159,7 @@ fn existing_authority_rechecks_identity_inside_migration_transaction() {
     assert_ne!(other.id, v.id);
     let db = Connection::open(replacement.join("metadata.sqlite3")).unwrap();
     db.execute_batch(&crate::test_schema::legacy_sql("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans")).unwrap();
-    db.pragma_update(None, "user_version", 22).unwrap();
+    crate::test_schema::demote(&db, 22).unwrap();
     drop(db);
     // Simulate a noncooperating external replacement AFTER the read-only
     // inspection, while our legitimate advisory owner still holds its lock.
@@ -199,7 +199,7 @@ fn existing_authority_real_schema_eight_migrates_without_rewriting_old_receipt()
     }
     db.pragma_update(None, "application_id", APPLICATION_ID)
         .unwrap();
-    db.pragma_update(None, "user_version", 8).unwrap();
+    crate::test_schema::demote(&db, 8).unwrap();
     let volume = "4".repeat(32);
     let request = Apply {
         volume: volume.clone(),

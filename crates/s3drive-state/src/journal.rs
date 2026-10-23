@@ -322,6 +322,14 @@ impl<'a> Journal<'a> {
         if size > i64::MAX as u64 {
             return Err("staged size exceeds supported offset range".into());
         }
+        crate::sparse_views::preparation::retry::preflight_staging(
+            &self.state.connection,
+            operation.copied(),
+            target,
+            &base,
+            expected_parent,
+            size,
+        )?;
         self.state
             .register_source(&target.source, &target.fingerprint)?;
         let tx = self
@@ -350,6 +358,14 @@ impl<'a> Journal<'a> {
                 return Ok(existing.id);
             }
         }
+        crate::sparse_views::preparation::retry::admit_staging(
+            &tx,
+            operation.copied(),
+            target,
+            &base,
+            expected_parent,
+            size,
+        )?;
         if current_head(&tx, target)? != expected_parent {
             return Err(Failure::LocalConflict.into());
         }

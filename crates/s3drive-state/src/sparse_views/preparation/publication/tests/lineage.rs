@@ -231,11 +231,9 @@ fn schema_thirty_four_keeps_literal_old_publication_blobs_hashes_and_requests() 
             .contains("predecessor")
     );
     s.connection
-        .execute_batch("DROP TABLE chunk_mount_role; DROP TABLE manifest_creations; DROP TABLE manifest_creation_role; DROP TABLE source_read_pins; DROP TABLE source_read_pin_session; DROP TABLE sparse_scoped_mode")
+        .execute_batch("DROP TABLE sparse_retry_mode; DROP TABLE chunk_mount_role; DROP TABLE manifest_creations; DROP TABLE manifest_creation_role; DROP TABLE source_read_pins; DROP TABLE source_read_pin_session; DROP TABLE sparse_scoped_mode")
         .unwrap();
-    s.connection
-        .pragma_update(None, "user_version", 33)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 33).unwrap();
     drop(s);
     // Recover old exact metadata without migrating or opening source BLOBs.
     let mut recovery = RecoveryStore::open(&path).unwrap();
@@ -338,11 +336,9 @@ fn schema_thirty_three_pending_publish_recovers_without_source_or_migration() {
         )
         .unwrap();
     s.connection
-        .execute_batch("DROP TABLE chunk_mount_role; DROP TABLE manifest_creations; DROP TABLE manifest_creation_role; DROP TABLE source_read_pins; DROP TABLE source_read_pin_session; DROP TABLE sparse_scoped_mode")
+        .execute_batch("DROP TABLE sparse_retry_mode; DROP TABLE chunk_mount_role; DROP TABLE manifest_creations; DROP TABLE manifest_creation_role; DROP TABLE source_read_pins; DROP TABLE source_read_pin_session; DROP TABLE sparse_scoped_mode")
         .unwrap();
-    s.connection
-        .pragma_update(None, "user_version", 33)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 33).unwrap();
     drop(s);
     assert!(State::open_managed(&path).is_err());
     let mut recovery = RecoveryStore::open(&path).unwrap();

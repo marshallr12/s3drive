@@ -27,7 +27,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 48;
+pub const SCHEMA_VERSION: i32 = 49;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
@@ -317,6 +317,9 @@ impl State {
             if version < 41 {
                 tx.execute_batch(include_str!("../migrations/041.sql"))?;
             }
+            if version < 49 {
+                tx.execute_batch(include_str!("../migrations/049.sql"))?;
+            }
             // Imported creation records cannot be laundered through an old
             // marker. Existing43/44 roles keep every byte; a transaction-local
             // current marker enables their strict role validators. Any failure
@@ -336,7 +339,7 @@ impl State {
             if version < 44 {
                 namespace_client::creator_import::require_pre44(&tx)?;
             }
-            if (43..=47).contains(&version) {
+            if (43..=48).contains(&version) {
                 tx.pragma_update(None, "user_version", SCHEMA_VERSION)?;
             }
             chunk_mount::check_schema(&tx)?;
@@ -478,7 +481,7 @@ mod tests {
             .unwrap();
         db.pragma_update(None, "application_id", APPLICATION_ID)
             .unwrap();
-        db.pragma_update(None, "user_version", 1).unwrap();
+        crate::test_schema::demote(&db, 1).unwrap();
         db.execute(
             "INSERT INTO cached_objects VALUES ('docs', 'café.txt', 'opaque', NULL, 42)",
             [],

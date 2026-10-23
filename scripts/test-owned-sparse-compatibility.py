@@ -13,9 +13,9 @@ old, new, root = (Path(p).resolve() for p in sys.argv[1:])
 root.mkdir(parents=True, exist_ok=False)
 old_schema = int(os.environ.get("S3DRIVE_COMPAT_OLD_SCHEMA", "46"))
 new_schema = int(os.environ.get("S3DRIVE_COMPAT_NEW_SCHEMA", "47"))
-assert (old_schema, new_schema) in [(46, 47), (47, 48)]
+assert (old_schema, new_schema) in [(46, 47), (47, 48), (48, 49)]
 report = {"format": 1,
-          "kind": "owned-sparse-schema-compatibility" if old_schema == 46 else "native-sparse-close-schema-compatibility",
+          "kind": {46: "owned-sparse-schema-compatibility", 47: "native-sparse-close-schema-compatibility", 48: "retry-checkpoint-schema-compatibility"}[old_schema],
           "refusal_cases": [], "old_schema": old_schema, "new_schema": new_schema,
           "invocations": [], "success": False,
           "old_source_commit": os.environ.get("S3DRIVE_COMPAT_OLD_SHA", "5343eb41b6132ba3a8a5cfc2f74b4d6ff01d0b28"),
@@ -61,10 +61,21 @@ try:
     before = contents(legacy)
     invoke(new, legacy, new_schema)
     after = contents(legacy)
-    assert after == before, "legacy schema or rows were rewritten"
+    if old_schema == 48:
+        additions = [row for row in after if row.startswith("CREATE TABLE sparse_retry_mode (")]
+        assert len(additions) == 1, "expected exactly one new retry-mode table"
+        expected_ddl = (Path(__file__).resolve().parent.parent / "crates/s3drive-state/migrations/049.sql").read_text().split("CREATE TABLE", 1)[1].strip()
+        assert additions[0] == "CREATE TABLE " + expected_ddl, "retry-mode DDL differs"
+        assert [row for row in after if row not in additions] == before, "legacy schema or rows were rewritten"
+        with closing(sqlite3.connect(legacy / "metadata.sqlite3")) as db:
+            assert db.execute("SELECT count(*) FROM sparse_retry_mode").fetchone() == (0,)
+        report["new_empty_retry_table_verified"] = True
+        report["legacy_existing_dump_unchanged"] = True
+    else:
+        assert after == before, "legacy schema or rows were rewritten"
     report["legacy_dump_statements"] = len(before)
     report["legacy_dump_sha256"] = hashlib.sha256(json.dumps(before, ensure_ascii=False).encode()).hexdigest()
-    report["legacy_complete_dump_unchanged"] = True
+    report["legacy_complete_dump_unchanged"] = old_schema != 48
     for directory in [legacy, fresh]:
         if directory == fresh:
             invoke(new, directory, new_schema)

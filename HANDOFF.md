@@ -4,38 +4,44 @@ Updated 2026-10-23. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
-## Native opt-in accepted on main; retained-history performance work underway
+## Accepted performance baseline; retry-checkpoint prerequisite under development
 
-Main `7a312b7c2fcc788348dcbdec1261c7182ae754f4` passed full exact-source review
-of [run39938915190](https://github.com/marshallr12/s3drive/actions/runs/39938915190):
-Linux1010/Windows1006 workspace tests in37 cohorts,22 native state cases, nine
-shared lifecycle cases and three actual native cases per OS in both debug and
-release, actual46/47 and47/48 compatibility, four artifact ZIPs,35 typed Windows
-native reference records and779 source files. The complete debug lifecycle took
-64.89 seconds on Linux and110.70 seconds on Windows under the unchanged120-second
-bound; release took9.84/20.10 seconds. These are hosted measurements, not an
-interactive-performance or retained-history capacity guarantee.
+Main `86d1e0ea7e27889e418863e3ab1b58e6e629f56c` is accepted after complete
+[run39977846665](https://github.com/marshallr12/s3drive/actions/runs/39977846665)
+review: Linux1014/Windows1010 workspace tests in37 cohorts,26 native state cases,
+nine shared lifecycle cases and three actual native cases per OS in debug and
+release, actual46/47 and47/48 compatibility, four artifact ZIPs,35 typed native
+reference records and780 exact source files. Whole native debug/release timing
+was61.15/9.58 seconds on Linux and100.96/18.82 on Windows, with the original
+120-second sequence bound unchanged. This accepts the bounded repeated-open
+replay/source-index improvement, not retained-history capacity or disk boundedness.
 
 Historical failure remains relevant: normal-build source1ae0d16 passed
 CI39898701182 and was merged unchanged ataffbf519461557209ba9be8c874be8d4636a2558,
 but main run39931022610 failed the Windows complete debug sequence. Rename took
 43.79 seconds and detached sync reached120.004 seconds before final Close/reopen.
-The subsequent accepted correction shares one lazy isolation check inside a single
-immutable source inspection. It does not cache across mutations, commands,
-transaction boundaries or awaits. Late unselected-open corruption and trigger
-checks remain mandatory; the failed run is not relabeled as a pass.
+Accepted corrections remain transaction-local; no cross-command proof caching,
+relaxed deadlines or suppressed native workload failures are permitted.
 
-The next bounded phase profiles retained epochs/plans/opens, corrects measured
-repeated work and adds deterministic history-size regressions. Its new candidate
-requires separate full Linux/Windows hosted acceptance before merge; main's
-accepted baseline does not validate subsequent edits. Keep all original timeouts,
-whole-sequence native checks, proof/corruption/recovery gates and default behavior.
+The new [retry/checkpoint prerequisite](docs/src/retry-checkpoint-safety.md) is
+an unaccepted schema49 candidate. Its permanent explicit state-library opt-in
+closes preparation/root/physical admission over a source epoch and derives a
+revalidated observational clean-checkpoint/terminal-evidence capability. It must
+refuse activation on populated downstream/native owners without changing them.
+It does NOT upgrade those owners, enable native/SDK callers, permit missing
+ancestors, reclaim rows/bytes, or complete the full retry/retention protocol.
+Unknown outcomes, dirty heads and reader pins remain protective. A released
+reader token is never evidence of history reclamation.
 
-Activation still requires managed version8 sparse-lifecycle=owned-unlinked-v1.
-Omission preserves the default. Unknown dirty epochs remain conflicts with data
-retained. Retention/GC, sparse delete-on-close/deferred creation, real-provider
-writes/deployment and beta installation are not part of this performance phase.
-Read `docs/src/native-sparse-close-ordering.md`. Keep validation archives private.
+Candidate acceptance requires its own complete Linux/Windows standard Actions,
+new48/49 actual executable compatibility alongside46/47 and47/48, exact source,
+full logs and all native artifact checks. Failed local/cohort evidence stays
+private and retained. Do not merge before that review; verify main afterward.
+
+Native activation still requires managed version8 sparse-lifecycle=owned-unlinked-v1.
+Omission preserves the default. Retention/GC, sparse delete-on-close/deferred
+creation, real-provider writes/deployment and beta installation are not in scope.
+No provider or user data is deleted; no credentials/default settings change.
 
 ## Accepted native sparse state baseline (historical)
 

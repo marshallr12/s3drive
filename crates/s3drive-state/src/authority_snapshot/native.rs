@@ -133,7 +133,7 @@ fn identity(
         return Err(Error::Limit);
     }
     let tables = {
-        let mut stmt = db.prepare("SELECT name,type FROM sqlite_schema WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' LIMIT 65").map_err(|_| Error::Validation)?;
+        let mut stmt = db.prepare("SELECT name,type FROM sqlite_schema WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' LIMIT 66").map_err(|_| Error::Validation)?;
         stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))
             .map_err(|_| Error::Validation)?
             .collect::<rusqlite::Result<Vec<_>>>()
@@ -153,6 +153,7 @@ fn identity(
         "manifest_creation_role",
         "manifest_creations",
         "sparse_scoped_mode",
+        "sparse_retry_mode",
         "source_read_pin_session",
         "source_read_pins",
         "sparse_publication_role",
@@ -205,7 +206,7 @@ fn identity(
         "chunk_source_role",
         "chunk_source_settlements",
     ];
-    if tables.len() > 64 {
+    if tables.len() > 65 {
         return Err(Error::Validation);
     }
     for (name, kind) in &tables {
@@ -827,7 +828,7 @@ mod tests {
         }
         db.pragma_update(None, "application_id", APPLICATION_ID)
             .unwrap();
-        db.pragma_update(None, "user_version", 8).unwrap();
+        crate::test_schema::demote(&db, 8).unwrap();
         let volume = "4".repeat(32);
         let request = Apply {
             volume: volume.clone(),

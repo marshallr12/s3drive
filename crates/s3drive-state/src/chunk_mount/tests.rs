@@ -143,7 +143,7 @@ fn role_admission_is_stable_append_only_and_reciprocally_excludes_old_roles() {
             |r| r.get(0),
         )
         .unwrap();
-    assert!(tables <= 64, "actual table count {tables}");
+    assert!(tables <= 65, "actual table count {tables}");
     drop(state);
     let mut state = State::open_managed(&path).unwrap();
     assert_eq!(admit(&mut state, declared).unwrap(), key);
@@ -582,7 +582,7 @@ fn removed_role_or_downgraded_marker_never_launders_the_independent_chunk_identi
         if downgrade {
             state
                 .connection
-                .execute_batch("DROP TABLE chunk_mount_role; PRAGMA user_version=40")
+                .execute_batch("DROP TABLE sparse_retry_mode; DROP TABLE chunk_mount_role; PRAGMA user_version=40")
                 .unwrap();
         } else {
             state
@@ -637,9 +637,7 @@ fn schema40_upgrade_preserves_creation_blobs_and_collision_rolls_back_without_ma
         };
         let before = blobs(&s.connection);
         crate::test_schema::without_chunk_mount(&s.connection);
-        s.connection
-            .pragma_update(None, "user_version", 40)
-            .unwrap();
+        crate::test_schema::demote(&s.connection, 40).unwrap();
         if collision {
             s.connection
                 .execute_batch("CREATE TABLE chunk_mount_role(wrong BLOB)")
@@ -935,4 +933,26 @@ fn bounded_head_enumeration_retains_only_current_views_and_clean_hints_survive_r
         .execute_batch("UPDATE sparse_view_blocks SET data=zeroblob(length(data))")
         .unwrap();
     assert!(sparse_views::Journal::new(&mut s, sparse_views::Options::default()).is_err());
+}
+
+#[test]
+fn retry_safety_refuses_native_owner_activation_without_changing_default_composition() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut s = State::open_managed(&tmp.path().join("state")).unwrap();
+    let declared = input();
+    let key = admit(&mut s, declared.clone()).unwrap();
+    let before = rows(&s);
+    assert!(
+        crate::sparse_views::preparation::Journal::new(
+            &mut s,
+            crate::sparse_views::preparation::Options::default()
+        )
+        .unwrap()
+        .enable_retry_safety()
+        .is_err()
+    );
+    assert!(!crate::sparse_views::preparation::retry::enabled(&s.connection).unwrap());
+    assert!(!crate::sparse_views::scoped::enabled(&s.connection).unwrap());
+    assert_eq!(rows(&s), before);
+    assert_eq!(admit(&mut s, declared).unwrap(), key);
 }

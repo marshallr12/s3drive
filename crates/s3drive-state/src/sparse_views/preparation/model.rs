@@ -56,6 +56,8 @@ pub(super) struct Input {
     pub owned: Option<owned::Provenance>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub native: Option<native::Provenance>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retry: Option<retry::Operation>,
 }
 impl Input {
     pub fn id(&self) -> Result<Id> {
@@ -64,6 +66,9 @@ impl Input {
     pub fn validate(&self, view: &View, blobs: &BTreeMap<Id, Vec<u8>>) -> Result<VerifiedPage> {
         if self.operation == [0; 32] || self.generation == [0; 16] || self.view != view.id() {
             return Err(Failure::Corrupt.into());
+        }
+        if let Some(token) = self.retry {
+            token.matches(self, view.binding())?;
         }
         let base = view.binding().base()?;
         let root = RootDescriptor::decode(&self.base_root)?;
@@ -110,6 +115,9 @@ impl fmt::Debug for Info {
     }
 }
 impl Info {
+    pub fn retry_operation(&self) -> Option<retry::Operation> {
+        self.input.retry
+    }
     pub fn native_ownership(&self) -> Option<&native::Provenance> {
         self.input.native.as_ref()
     }

@@ -349,10 +349,7 @@ fn prospective_missing_or_rewritten_anchor_and_old_marker_never_launder_new_orig
                     )
                     .unwrap();
             }
-            _ => s
-                .connection
-                .pragma_update(None, "user_version", 44)
-                .unwrap(),
+            _ => crate::test_schema::demote(&s.connection, 44).unwrap(),
         }
         let before = catalog(&s);
         assert!(Journal::new(&mut s, Limits::default()).is_err());
@@ -371,9 +368,7 @@ fn prospective_valid44_upgrade_preserves_legacy_rows_and_failure_rolls_back_mark
         let (mut s, mut a, key, i) = setup(t.path());
         ack(&mut s, &mut a, &i);
         import(&mut s, &key, &i.operation).unwrap();
-        s.connection
-            .pragma_update(None, "user_version", 44)
-            .unwrap();
+        crate::test_schema::demote(&s.connection, 44).unwrap();
         if damaged {
             s.connection
                 .execute(
@@ -397,7 +392,7 @@ fn prospective_valid44_upgrade_preserves_legacy_rows_and_failure_rolls_back_mark
         } else {
             let s = result.unwrap();
             assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
-            assert_eq!(catalog(&s), before);
+            assert_legacy_catalog(catalog(&s), before);
         }
     }
 }

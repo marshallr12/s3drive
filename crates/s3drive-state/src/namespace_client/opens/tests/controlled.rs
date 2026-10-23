@@ -447,10 +447,7 @@ fn schema_seventeen_evidence_hashes_are_preserved_without_opting_into_controller
         .connection
         .execute_batch(&crate::test_schema::legacy_sql("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans; DROP TABLE recovered_windows_opens; DROP TABLE windows_session_recoveries; DROP TABLE windows_mount_sessions; DROP TABLE retired_windows_opens"))
         .unwrap();
-    f.client
-        .connection
-        .pragma_update(None, "user_version", 17)
-        .unwrap();
+    crate::test_schema::demote(&f.client.connection, 17).unwrap();
     f.reopen();
     assert_eq!(
         f.client.info().unwrap().schema_version,

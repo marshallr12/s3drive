@@ -120,9 +120,7 @@ fn original_twenty_nine(path: &std::path::Path) -> (State, Vec<View>) {
     s.connection
         .execute_batch(include_str!("../../../migrations/031.sql"))
         .unwrap();
-    s.connection
-        .pragma_update(None, "user_version", 29)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 29).unwrap();
     let mut j = Journal::new(&mut s, Options::default()).unwrap();
     let a = j.begin([7; 32], binding(2, 17), MAX_FILE_BYTES).unwrap();
     let b = j.begin([8; 32], binding(3, 0), 0).unwrap();

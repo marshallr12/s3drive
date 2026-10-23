@@ -321,10 +321,7 @@ fn owned_replacement_schema21_upgrade_keeps_legacy_request_bytes_and_hashes() {
         .connection
         .execute_batch(&crate::test_schema::legacy_sql("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans"))
         .unwrap();
-    f.client
-        .connection
-        .pragma_update(None, "user_version", 21)
-        .unwrap();
+    crate::test_schema::demote(&f.client.connection, 21).unwrap();
     f.reopen_client();
     assert_eq!(
         f.client.info().unwrap().schema_version,

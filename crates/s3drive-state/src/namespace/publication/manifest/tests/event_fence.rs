@@ -482,9 +482,7 @@ fn event_manifest_raw_null_presence_is_rejected_before_any_old_marker_jump() {
                 params![bytes, q.operation],
             )
             .unwrap();
-        s.connection
-            .pragma_update(None, "user_version", version)
-            .unwrap();
+        crate::test_schema::demote(&s.connection, version).unwrap();
         drop(s);
         let before = std::fs::read(path.join("metadata.sqlite3")).unwrap();
         let err = State::open_managed(&path)
@@ -509,7 +507,7 @@ fn event_manifest_genuine_legacy45_upgrade_preserves_every_original_request_and_
     let p = publish(&mut s, &r, 5);
     let done = s.namespace_apply(&p).unwrap();
     let before = outputs(&s);
-    s.connection.execute_batch("CREATE TABLE user_bytes(data BLOB);INSERT INTO user_bytes VALUES(CAST('{\"removal_claim\":null}' AS BLOB));PRAGMA user_version=45").unwrap();
+    s.connection.execute_batch("CREATE TABLE user_bytes(data BLOB);INSERT INTO user_bytes VALUES(CAST('{\"removal_claim\":null}' AS BLOB));DROP TABLE sparse_retry_mode;PRAGMA user_version=45").unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
     assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
@@ -610,9 +608,7 @@ fn event_manifest_real_new_records_cannot_be_relabelled_as43_44_or45() {
         let e = owned(&mut s, RemovalMode::Deferred);
         let q = request(&s, &e.node, 5, guard(&e));
         s.namespace_apply(&q).unwrap();
-        s.connection
-            .pragma_update(None, "user_version", version)
-            .unwrap();
+        crate::test_schema::demote(&s.connection, version).unwrap();
         drop(s);
         let before = std::fs::read(path.join("metadata.sqlite3")).unwrap();
         let err = State::open_managed(&path)
@@ -633,18 +629,14 @@ fn event_manifest_live_old_marker_cannot_admit_the_new_guard_or_epoch_read() {
     let e = owned(&mut s, RemovalMode::Deferred);
     let q = request(&s, &e.node, 5, guard(&e));
     let before = outputs(&s);
-    s.connection
-        .pragma_update(None, "user_version", 45)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 45).unwrap();
     assert_eq!(s.namespace_apply(&q), Err(Error::Internal));
     assert_eq!(
         s.namespace_removal_epoch(&q.volume, &e.node.id),
         Err(Error::Internal)
     );
     assert_eq!(outputs(&s), before);
-    s.connection
-        .pragma_update(None, "user_version", 46)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 46).unwrap();
     assert!(s.namespace_apply(&q).is_ok());
 }
 

@@ -286,6 +286,7 @@ impl<'a> Journal<'a> {
         mut hook: impl FnMut(PreparePoint) -> Result<()>,
     ) -> Result<Info> {
         self.state.verify_staging_storage()?;
+        crate::sparse_views::preparation::retry::enabled(&self.state.connection)?;
         if let Some(info) = self.for_generation(generation)? {
             return Ok(info);
         }
@@ -296,6 +297,7 @@ impl<'a> Journal<'a> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        crate::sparse_views::preparation::retry::admit_remote(&tx, generation)?;
         let history = preparation_history(&tx, &generation_data)?;
         if history.count >= self.options.max_records {
             return Err(Failure::QuotaExceeded.into());

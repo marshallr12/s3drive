@@ -500,10 +500,7 @@ fn namespace_cold_startup_classifies_without_migration_or_source_reads() {
     let mut store = RecoveryStore::open(&path, &id(1)).unwrap();
     assert_eq!(store.open_records().unwrap(), vec![open]);
     assert_eq!(source(&store.connection), before);
-    store
-        .connection
-        .pragma_update(None, "user_version", 47)
-        .unwrap();
+    crate::test_schema::demote(&store.connection, 47).unwrap();
     drop(store);
     assert!(!RecoveryStore::needs_startup_replay(&path).unwrap());
     let db = Connection::open(path.join("metadata.sqlite3")).unwrap();
@@ -519,7 +516,7 @@ fn namespace_cold_startup_never_falls_back_from_current_role_corruption() {
     for sql in [
         "DELETE FROM chunk_mount_role",
         "PRAGMA application_id=1",
-        "PRAGMA user_version=49",
+        "PRAGMA user_version=50",
         "UPDATE windows_open_journal SET state_hash=zeroblob(32)",
     ] {
         let temp = tempfile::tempdir().unwrap();

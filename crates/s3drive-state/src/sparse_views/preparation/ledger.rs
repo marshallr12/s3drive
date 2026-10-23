@@ -192,6 +192,7 @@ pub(super) fn inspect(db: &Connection) -> Result<Snapshot> {
     s.validate()?;
     owned::validate_snapshot(db, &s)?;
     native::validate_snapshot(db, &s)?;
+    retry::validate_snapshot(db, &s)?;
     Ok(s)
 }
 impl Snapshot {

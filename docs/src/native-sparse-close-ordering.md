@@ -2,14 +2,14 @@
 
 ## Current opt-in contract (2026-10-23)
 
-Main `7a312b7c2fcc788348dcbdec1261c7182ae754f4` is accepted after complete
-[run39938915190](https://github.com/marshallr12/s3drive/actions/runs/39938915190)
-log and artifact review: Linux1010/Windows1006 tests in37 cohorts,22 native state
+Main `86d1e0ea7e27889e418863e3ab1b58e6e629f56c` is accepted after complete
+[run39977846665](https://github.com/marshallr12/s3drive/actions/runs/39977846665)
+log and artifact review: Linux1014/Windows1010 tests in37 cohorts,26 native state
 cases, nine shared lifecycle cases, three actual native cases per OS in debug and
 release, actual46/47 and47/48 compatibility, four artifacts/35 typed native
-reference records and779 exact source files. The complete debug lifecycle took
-64.89/110.70 seconds (Linux/Windows) within the original120-second bound; release
-9.84/20.10 seconds. Main verification is no longer pending.
+reference records and780 exact source files. The complete debug lifecycle took
+61.15/100.96 seconds (Linux/Windows) within the original120-second bound; release
+9.58/18.82 seconds. Main verification and the bounded performance phase are accepted.
 
 Historical failure: normal-build candidate1ae0d16 passed CI39898701182
 (Linux1007/Windows1003,19 native state cases) and was merged unchanged ataffbf519.
@@ -26,12 +26,12 @@ Mode/trigger checks, all pin checks and full graph/body validation remain intact
 Three additional state cases assert one scan with a live pin, rejection of late
 unselected-open corruption and rejection of a late trigger without repair.
 
-Retained-history profiling and bounded performance improvements are now a separate
-candidate phase, not yet accepted. No retention/GC, provider deployment or default
+Retained-history profiling and bounded performance improvements described below
+are accepted at86d1e0e. No retention/GC, provider deployment or default
 activation is implied. Existing native whole-sequence deadlines and all independent
 acceptance gates remain unchanged.
 
-### Bounded retained-history performance candidate
+### Accepted bounded retained-history performance
 
 The profiling baseline is `b2eb0eabf8bbc3e92639a87cb3ac0655257e0fb4`, based on
 accepted main7a312b7 with test-only counters and the handover correction. Its
@@ -41,7 +41,7 @@ durable journals at1/4/8 retained epochs, preparations and original opens, with
 2/8/16 source views. It reports replay/lookup work separately from elapsed time;
 single hosted timings are diagnostics, not a capacity or latency guarantee.
 
-The bounded candidate makes two read-only changes:
+The accepted bounded correction makes two read-only changes:
 
 - Chunk scope inspection reuses each already-replayed non-retired record from
   its own `all()` result. It still validates the live quota, session/retirement
@@ -68,8 +68,9 @@ changes; debug and release still run the whole native sequence independently.
 This does not eliminate whole-history validation, bound retained disk growth or
 establish large-history capacity. Retired records, source graphs and bodies still
 have validation costs. Retention/GC and real-provider or workstation deployment
-remain separate work. The new candidate requires full exact-source hosted review;
-local tmpfs/overlayfs cannot substitute for durable acceptance.
+remain separate work. Exact-source hosted acceptance is recorded above; local
+tmpfs/overlayfs cannot substitute for durable acceptance. The next retry/checkpoint
+state prerequisite is separately unaccepted; see [its scope](retry-checkpoint-safety.md).
 
 ### Earlier candidate evidence
 

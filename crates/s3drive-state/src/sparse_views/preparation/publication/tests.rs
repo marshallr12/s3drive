@@ -426,3 +426,5 @@ fn chunk_namespace_barrier_retains_unknown_and_remotely_committed_roots_until_lo
 mod barriers;
 
 mod batched_validation;
+
+mod retry_safety;

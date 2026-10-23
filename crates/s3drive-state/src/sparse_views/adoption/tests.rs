@@ -378,9 +378,7 @@ fn schema37_migration_preserves_literal_rows_but_cannot_launder_new_observation_
     let v = initial(&mut s);
     let before = rows(&s);
     crate::test_schema::without_creation(&s.connection);
-    s.connection
-        .pragma_update(None, "user_version", 37)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 37).unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
     assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
@@ -392,9 +390,7 @@ fn schema37_migration_preserves_literal_rows_but_cannot_launder_new_observation_
     );
     assert_eq!(next.0.format, 4);
     crate::test_schema::without_creation(&s.connection);
-    s.connection
-        .pragma_update(None, "user_version", 37)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 37).unwrap();
     drop(s);
     assert!(State::open_managed(&path).is_err());
     let db = Connection::open(path.join("metadata.sqlite3")).unwrap();

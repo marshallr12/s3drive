@@ -1012,7 +1012,7 @@ async fn native_sparse_schema47_marker_cannot_launder_native_event_or_plan() {
         }
         n.storage.close().await.unwrap();
         let db = rusqlite::Connection::open(path.join("metadata.sqlite3")).unwrap();
-        db.pragma_update(None, "user_version", 47).unwrap();
+        crate::test_schema::demote(&db, 47).unwrap();
         drop(db);
         let bytes = || -> BTreeMap<_, _> {
             std::fs::read_dir(&path)

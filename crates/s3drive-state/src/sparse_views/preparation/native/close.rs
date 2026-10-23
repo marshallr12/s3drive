@@ -170,6 +170,7 @@ fn prepare(
             ownership,
             native: Some(native),
             finalizing,
+            retry: None,
         },
     )
 }

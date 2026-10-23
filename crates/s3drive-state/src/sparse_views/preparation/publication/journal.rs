@@ -196,6 +196,7 @@ impl<'a> Journal<'a> {
             }
             return Err(Failure::Conflict.into());
         }
+        super::super::retry::admit_root(&tx, &s, &info, &input.publish_operation)?;
         super::super::owned::fresh(
             &tx,
             self.state.incarnation.as_deref(),

@@ -19,11 +19,16 @@ The new version8 native owned/unlinked sparse lifecycle has passed candidate
 acceptance on Linux FUSE and Windows WinFsp. The normal build exposes it only via
 an explicit runtime opt-in, preserving the previous default profile. See the
 [current contract and acceptance evidence](native-sparse-close-ordering.md).
-Main7a312b7 passed full exact-source verification in run39938915190. New
-performance candidates still require their own gates and post-merge verification.
-This does not enable deferred creation, sparse delete-on-close or real-provider
-deployment. The current bounded next step is retained-history profiling and
-correctness-preserving performance work, not retention/GC or beta deployment.
+Main86d1e0e passed full exact-source verification in
+[run39977846665](https://github.com/marshallr12/s3drive/actions/runs/39977846665):
+Linux1014/Windows1010 tests,37 cohorts,26 native state cases and780 source files.
+The retained-history performance phase is accepted, with unchanged120-second
+whole native sequence limits. It does not bound retained bytes or enable GC.
+The current bounded next step is the [retry/checkpoint state prerequisite](retry-checkpoint-safety.md).
+Its schema49 candidate still requires independent acceptance. Populated native
+owner upgrades, history severance and actual reclamation remain blocked and are
+not claimed by this library-only contract. Defaults and provider behavior remain
+unchanged.
 
 The next deferred-creation step is the [prospective creation/open admission
 proposal](creator-open-admission.md), reviewed against `daf5806` on 2026-10-21.

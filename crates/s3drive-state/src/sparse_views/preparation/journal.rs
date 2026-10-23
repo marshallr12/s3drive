@@ -4,7 +4,7 @@ use ledger::{Saved, SavedObject, Snapshot};
 use model::{Progress, count, geometry, ordinal, root_level, span};
 pub struct Journal<'a> {
     pub(super) state: &'a mut State,
-    options: Options,
+    pub(super) options: Options,
 }
 impl<'a> Journal<'a> {
     pub fn new(state: &'a mut State, options: Options) -> Result<Self> {
@@ -282,7 +282,7 @@ impl fmt::Debug for Dependency {
         f.write_str("MixedDependency([offline private intent])")
     }
 }
-fn request_bounds(r: &Request) -> Result<()> {
+pub(super) fn request_bounds(r: &Request) -> Result<()> {
     if r.operation == [0; 32]
         || r.generation == [0; 16]
         || r.base_root.len() != s3drive_core::manifest::objects::ROOT_BYTES
@@ -548,6 +548,7 @@ pub(super) struct Admission {
     )>,
     pub native: Option<native::Provenance>,
     pub finalizing: bool,
+    pub retry: Option<retry::Operation>,
 }
 /// The caller must commit all source/open records with this preparation atomically.
 pub(super) fn begin_in_transaction(
@@ -572,6 +573,7 @@ pub(super) fn begin_in_transaction(
         base_page: digest(&request.base_page),
         owned,
         native: admission.native,
+        retry: admission.retry,
     };
     if let Some(old) = before
         .plans
@@ -584,6 +586,7 @@ pub(super) fn begin_in_transaction(
         return Ok((old.info(&before.views)?, false));
     }
     let view = View(before.views.record(input.view)?.clone());
+    retry::admit(tx, &before, &input, &view)?;
     let base = view.binding().base()?;
     native::admit(
         tx,

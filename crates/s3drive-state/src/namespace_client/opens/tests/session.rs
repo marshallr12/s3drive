@@ -62,10 +62,7 @@ fn native_posix_profile_is_session_bound_and_cannot_mix_with_legacy_file_objects
         .connection
         .execute_batch(&crate::test_schema::legacy_sql("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans"))
         .unwrap();
-    f.client
-        .connection
-        .pragma_update(None, "user_version", 22)
-        .unwrap();
+    crate::test_schema::demote(&f.client.connection, 22).unwrap();
     f.reopen();
     let after = load(&f.client.connection, &old.id).unwrap().unwrap();
     assert!(before == after);
@@ -272,10 +269,7 @@ fn observed_close_without_cleanup_can_be_abandoned_without_fabricating_either_co
         .connection
         .execute_batch(&crate::test_schema::legacy_sql("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role; DROP TABLE chunk_objects; DROP TABLE chunk_plans; DROP TABLE multipart_parts; DROP TABLE multipart_plans"))
         .unwrap();
-    f.client
-        .connection
-        .pragma_update(None, "user_version", 20)
-        .unwrap();
+    crate::test_schema::demote(&f.client.connection, 20).unwrap();
     f.reopen();
     assert_eq!(
         f.client.info().unwrap().schema_version,

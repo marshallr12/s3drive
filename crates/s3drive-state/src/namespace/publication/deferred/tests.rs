@@ -262,10 +262,9 @@ fn deferred_canonical_migration_preserves_old_bytes_and_rejects_downgraded_new_r
             |r| r.get(0),
         )
         .unwrap();
-    assert!(tables <= 64);
-    s.connection
-        .pragma_update(None, "user_version", 41)
-        .unwrap();
+    assert!(tables <= 65);
+    crate::test_schema::without_retry(&s.connection);
+    crate::test_schema::demote(&s.connection, 41).unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
     assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
@@ -282,9 +281,7 @@ fn deferred_canonical_migration_preserves_old_bytes_and_rejects_downgraded_new_r
     let q = request(&s, 5);
     s.namespace_apply(&q).unwrap();
     let before = rows(&s.connection);
-    s.connection
-        .pragma_update(None, "user_version", 41)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 41).unwrap();
     assert_eq!(s.namespace_apply(&q), Err(Error::Internal));
     drop(s);
     assert!(State::open_managed(&path).is_err());
@@ -531,9 +528,7 @@ fn deferred_canonical_combined_artifact_cannot_be_attached_to_old_operations_or_
         Err(Error::Internal)
     );
     let before = rows(&s.connection);
-    s.connection
-        .pragma_update(None, "user_version", 41)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 41).unwrap();
     drop(s);
     assert!(State::open_managed(&path).is_err());
     let db = Connection::open(path.join("metadata.sqlite3")).unwrap();

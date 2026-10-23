@@ -532,9 +532,7 @@ fn schema_twenty_five_marker_upgrade_preserves_exact_legacy_request_and_payload_
     s.connection
         .execute_batch(&crate::test_schema::legacy_sql("DROP TABLE chunk_source_settlements; DROP TABLE chunk_source_role; DROP TABLE chunk_publications; DROP TABLE chunk_client_role"))
         .unwrap();
-    s.connection
-        .pragma_update(None, "user_version", 25)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 25).unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
     assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);

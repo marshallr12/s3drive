@@ -217,9 +217,7 @@ fn deferred_client_state_format1_bytes_and_stage_identity_survive42_to43_without
         i.stage_key().unwrap()
     );
     let before = rows(&s);
-    s.connection
-        .pragma_update(None, "user_version", 42)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 42).unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
     assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
@@ -232,20 +230,14 @@ fn deferred_client_state_old_marker_refuses_new_intent_and_format2_recovery_with
     let path = t.path().join("client");
     let mut s = State::open_managed(&path).unwrap();
     j(&mut s).begin(input(4)).unwrap();
-    s.connection
-        .pragma_update(None, "user_version", 42)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 42).unwrap();
     let before = rows(&s);
     assert!(j(&mut s).begin(owned(5)).is_err());
     assert_eq!(rows(&s), before);
-    s.connection
-        .pragma_update(None, "user_version", 43)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 43).unwrap();
     prepared(&mut s, &owned(5));
     let before = rows(&s);
-    s.connection
-        .pragma_update(None, "user_version", 42)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 42).unwrap();
     drop(s);
     assert!(RecoveryStore::open(&path).is_err());
     assert!(State::open_managed(&path).is_err());

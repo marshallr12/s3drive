@@ -170,6 +170,11 @@ impl Input {
         Ok(expected)
     }
     pub(super) fn matches(&self, info: &Info) -> Result<bool> {
+        if let Some(token) = info.retry_operation()
+            && self.publish_operation != token.publish_operation()?
+        {
+            return Err(Failure::Corrupt.into());
+        }
         Ok(self.owned.as_ref() == info.ownership()
             && self.plan == info.id()?
             && self.operation == info.operation()

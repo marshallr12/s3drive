@@ -204,9 +204,7 @@ fn atomic_empty_pre39_marker_preserves_literal_rows_and_refuses_new_record_laund
     let s = setup(&path);
     let before = rows(&s);
     crate::test_schema::without_creation(&s.connection);
-    s.connection
-        .pragma_update(None, "user_version", 38)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 38).unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
     assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
@@ -215,9 +213,7 @@ fn atomic_empty_pre39_marker_preserves_literal_rows_and_refuses_new_record_laund
     s.namespace_apply(&q).unwrap();
     let before = rows(&s);
     crate::test_schema::without_creation(&s.connection);
-    s.connection
-        .pragma_update(None, "user_version", 38)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 38).unwrap();
     drop(s);
     assert!(State::open_managed(&path).is_err());
     let db = Connection::open(path.join("metadata.sqlite3")).unwrap();

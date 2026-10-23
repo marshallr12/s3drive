@@ -251,7 +251,7 @@ pub(super) fn validate_source(db: &Connection, meta: &Meta) -> Result<()> {
     let s = super::super::ledger::inspect(db)?;
     validate_source_snapshot(db, meta, &s)
 }
-pub(super) fn validate_source_snapshot(
+pub(in crate::sparse_views::preparation) fn validate_source_snapshot(
     db: &Connection,
     meta: &Meta,
     s: &super::super::ledger::Snapshot,

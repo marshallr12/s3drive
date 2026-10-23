@@ -355,9 +355,7 @@ fn owned_sparse_old_marker_refusal_preserves_new_format_bytes() {
     let mut s = State::open_managed(&path).unwrap();
     let (f, key, open, v, claim, _) = setup(&mut s, false);
     owned_begin(&mut s, &f, &key, &open, &v, &claim, 9);
-    s.connection
-        .pragma_update(None, "user_version", 46)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 46).unwrap();
     drop(s);
     let bytes = std::fs::read(path.join("metadata.sqlite3")).unwrap();
     assert!(State::open_managed(&path).is_err());
@@ -622,9 +620,8 @@ fn owned_sparse_legacy_preparation_bytes_and_hashes_survive_schema46_and47_upgra
             .unwrap();
         assert!(!String::from_utf8(raw.clone()).unwrap().contains("owned"));
         let before = crate::sparse_views::preparation::ledger::inspect(&s.connection).unwrap();
-        s.connection
-            .pragma_update(None, "user_version", version)
-            .unwrap();
+        crate::test_schema::without_retry(&s.connection);
+        crate::test_schema::demote(&s.connection, version).unwrap();
         drop(s);
         let mut s = State::open_managed(&path).unwrap();
         assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);

@@ -7,6 +7,15 @@ This follows [clean epochs](mixed-clean-epochs.md) and
 continuous mounted chunk writes can exceed the current retained-history quotas.
 A successful publication alone does not make its local dependencies disposable.
 
+## Retry/checkpoint prerequisite (2026-10-23, candidate)
+
+The [bounded state contract](retry-checkpoint-safety.md) adds explicit downstream
+retry fencing and revalidated observational checkpoint evidence, without deletion.
+It deliberately refuses populated/native-owner activation and still requires all
+ancestor rows. Full history severance, native-owner upgrade and bounded local
+storage remain open. The accepted retained-history performance improvement at
+main86d1e0e does not satisfy these retention gates.
+
 ## What the current code requires
 
 Inspection of `sparse_views/ledger.rs`, `preparation/transfers.rs`,

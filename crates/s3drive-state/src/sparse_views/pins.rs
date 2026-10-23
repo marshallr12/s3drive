@@ -70,7 +70,7 @@ impl Role {
 #[derive(Clone, Default, PartialEq, Eq)]
 pub(super) struct Ledger {
     role: Option<Role>,
-    pins: BTreeMap<Id, Pin>,
+    pub(super) pins: BTreeMap<Id, Pin>,
 }
 fn owner_valid(s: &str) -> bool {
     s.len() == 32

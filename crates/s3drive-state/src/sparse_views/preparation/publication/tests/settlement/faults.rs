@@ -94,9 +94,7 @@ fn schema_thirty_five_preserves_old_records_and_rejects_new_ack_formats_under_ol
         .execute_batch("DROP TABLE source_read_pins; DROP TABLE source_read_pin_session; DROP TABLE sparse_scoped_mode")
         .unwrap();
     crate::test_schema::without_creation(&s.connection);
-    s.connection
-        .pragma_update(None, "user_version", 34)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 34).unwrap();
     drop(s);
     let mut recovery = RecoveryStore::open(&path).unwrap();
     assert_eq!(recovery.acknowledged(p).unwrap(), None);
@@ -118,9 +116,7 @@ fn schema_thirty_five_preserves_old_records_and_rejects_new_ack_formats_under_ol
         .acknowledge([40; 32], p, crate::sparse_views::Options::default())
         .unwrap();
     crate::test_schema::without_creation(&s.connection);
-    s.connection
-        .pragma_update(None, "user_version", 34)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 34).unwrap();
     drop(s);
     assert!(RecoveryStore::open(&path).is_err());
     assert!(State::open_managed(&path).is_err());

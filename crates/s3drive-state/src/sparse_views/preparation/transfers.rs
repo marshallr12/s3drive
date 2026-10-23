@@ -30,7 +30,7 @@ pub struct Transfer {
     reference: Reference,
     size: u64,
     payload_sha256: Id,
-    operation: Id,
+    pub(super) operation: Id,
     generation: Option<GenerationId>,
 }
 impl fmt::Debug for Transfer {

@@ -495,18 +495,14 @@ fn creator_import_old43_role_upgrades_without_rewriting_rows_and_cannot_launder_
         .unwrap()
         .prepare(plain)
         .unwrap();
-    s.connection
-        .pragma_update(None, "user_version", 43)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 43).unwrap();
     let before = catalog(&s);
     drop(s);
     let mut s = State::open_managed(&t.path().join("client")).unwrap();
-    assert_eq!(catalog(&s), before);
+    assert_legacy_catalog(catalog(&s), before);
     assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);
     import(&mut s, &key, &i.operation).unwrap();
-    s.connection
-        .pragma_update(None, "user_version", 43)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 43).unwrap();
     let before = catalog(&s);
     drop(s);
     assert!(RecoveryStore::open(&t.path().join("client")).is_err());
@@ -530,9 +526,7 @@ fn creator_import_failed43_upgrade_rolls_back_the_marker_without_repairing_damag
             ["b".repeat(64)],
         )
         .unwrap();
-    s.connection
-        .pragma_update(None, "user_version", 43)
-        .unwrap();
+    crate::test_schema::demote(&s.connection, 43).unwrap();
     let before = catalog(&s);
     drop(s);
     assert!(State::open_managed(&t.path().join("client")).is_err());
@@ -1007,4 +1001,23 @@ fn creator_import_targeted_provenance_still_checks_the_complete_role_metadata_pr
         assert!(import(&mut s, &key, &i.operation).is_err());
         assert_eq!(catalog(&s), before);
     }
+}
+
+// Schema49 adds exactly one empty table; retain exact comparisons for every old
+// schema definition and row, rather than weakening the migration oracle.
+fn assert_legacy_catalog(
+    mut after: BTreeMap<String, Vec<String>>,
+    before: BTreeMap<String, Vec<String>>,
+) {
+    let ddl = include_str!("../../../../migrations/049.sql")
+        .split_once("CREATE TABLE")
+        .unwrap()
+        .1
+        .trim()
+        .trim_end_matches(';');
+    let expected = vec![hex(&Sha256::digest(
+        format!("CREATE TABLE {ddl}").as_bytes(),
+    ))];
+    assert_eq!(after.remove("sparse_retry_mode"), Some(expected));
+    assert_eq!(after, before);
 }

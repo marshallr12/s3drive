@@ -4,6 +4,7 @@ use super::*;
 use s3drive_core::manifest::{self, Entry, Page, Reference, VerifiedPage, objects::RootDescriptor};
 use std::collections::{BTreeMap, BTreeSet};
 mod model;
+pub mod retry;
 pub use model::{Candidate, Cursor, Info, Options, Request};
 use model::{Input, Kind, Object};
 mod journal;

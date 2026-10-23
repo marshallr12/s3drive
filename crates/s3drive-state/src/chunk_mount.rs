@@ -351,6 +351,9 @@ pub(crate) fn require_legacy(db: &Connection) -> Result<()> {
 /// Durable admission; no migration, network, file-body reads or namespace effects.
 pub fn admit(state: &mut State, input: Input) -> Result<Key> {
     state.verify_staging_storage()?;
+    if crate::sparse_views::preparation::retry::enabled(&state.connection)? {
+        return Err("retry-safety owner cannot activate native composition".into());
+    }
     preflight(&state.connection)?;
     if !id(&input.volume) {
         return Err("invalid chunk mount volume".into());
