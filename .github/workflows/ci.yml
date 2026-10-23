@@ -54,6 +54,19 @@ jobs:
         run: cargo test -p s3drive-cli --test chunk_publication --features native-sparse-candidate native_lifecycle_shared --locked -- --nocapture --test-threads=4
       - name: Verify legacy version8 unchanged with candidate compiled
         run: cargo test -p s3drive-cli --test chunk_publication --features native-sparse-candidate native_chunk_ --locked -- --nocapture --test-threads=4
+      - name: Prepare Linux FUSE acceptance
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fuse3 tmux libglib2.0-bin
+          sudo modprobe fuse
+          test -c /dev/fuse
+      - name: Verify NEW real native sparse unlink replacement dirty handles and remount
+        timeout-minutes: 10
+        run: cargo test -p s3drive-cli --test chunk_publication --features native-sparse-candidate native_lifecycle_actual_ --locked -- --ignored --nocapture --test-threads=1
+      - name: Verify legacy native mounts with candidate compiled but not opted in
+        timeout-minutes: 8
+        run: cargo test -p s3drive-cli --test chunk_publication --features native-sparse-candidate actual_native_chunk_writes_unicode_sparse_flush_resize_and_remount --locked -- --ignored --nocapture --exact --test-threads=1
       - name: Verify typed owned sparse state and crash recovery
         run: cargo test -p s3drive-state owned_sparse --locked -- --test-threads=4
       - name: Verify Windows callback stack bound
@@ -145,13 +158,6 @@ jobs:
         env:
           S3DRIVE_DISPOSABLE_WINDOWS_VM: '1'
         run: cargo test -p s3drive-cli --test authority_restart supervised_windows_managed_drive_and_coordinator_recovery --locked -- --ignored --nocapture --exact
-      - name: Prepare Linux FUSE acceptance
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y fuse3 tmux libglib2.0-bin
-          sudo modprobe fuse
-          test -c /dev/fuse
       # Native cases share process-wide descriptors and driver/Shell state.
       # A fork in another case can close a live FUSE descriptor and flush it.
       - name: Verify Windows reference fixture rejection checks
@@ -169,12 +175,6 @@ jobs:
           path: ${{ runner.temp }}/windows-disposition-reference.json
           if-no-files-found: error
           retention-days: 30
-      - name: Verify NEW real native sparse unlink replacement dirty handles and remount
-        timeout-minutes: 10
-        run: cargo test -p s3drive-cli --test chunk_publication --features native-sparse-candidate native_lifecycle_actual_ --locked -- --ignored --nocapture --test-threads=1
-      - name: Verify legacy native mounts with candidate compiled but not opted in
-        timeout-minutes: 8
-        run: cargo test -p s3drive-cli --test chunk_publication --features native-sparse-candidate actual_native_chunk_writes_unicode_sparse_flush_resize_and_remount --locked -- --ignored --nocapture --exact --test-threads=1
       - name: Verify real Linux mount and teardown
         if: runner.os == 'Linux'
         timeout-minutes: 10

@@ -139,6 +139,14 @@ pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
     let mut mount = Mount::start(root).await;
     let base = mount.path.clone();
     blocking(&mut mount, move || {
+        let started = std::time::Instant::now();
+        let stage = |name| {
+            eprintln!(
+                "NATIVE_LIFECYCLE_STAGE {name} elapsed={:?}",
+                started.elapsed()
+            )
+        };
+        stage("unlink-start");
         let path = base.join("unlink 日本語 🦀.bin");
         let mut file = std::fs::OpenOptions::new()
             .read(true)
@@ -164,6 +172,7 @@ pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
         other.read_exact(&mut bytes).unwrap();
         assert_eq!(bytes, [0, b'z', 0]);
         drop(other);
+        stage("unlink-finished");
         let saved = base.join("saved 日本語.bin");
         let temporary = base.join("temporary.bin");
         let mut old = std::fs::OpenOptions::new()
@@ -180,7 +189,9 @@ pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
             .open(&temporary)
             .unwrap();
         temp.write_all(b"new body").unwrap();
+        stage("replacement-before-rename");
         std::fs::rename(&temporary, &saved).unwrap();
+        stage("replacement-after-rename");
         assert!(!temporary.exists());
         old.seek(SeekFrom::Start(0)).unwrap();
         let mut bytes = [0; 8];
@@ -190,9 +201,13 @@ pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
         old.seek(SeekFrom::Start(0)).unwrap();
         old.write_all(b"OLD").unwrap();
         old.sync_all().unwrap();
+        stage("replacement-before-close");
         drop(old);
+        stage("replacement-old-closed");
         drop(temp);
+        stage("replacement-temp-closed-before-reopen");
         assert_eq!(std::fs::read(&saved).unwrap(), b"new body");
+        stage("replacement-finished");
     })
     .await;
     mount.stop().await;

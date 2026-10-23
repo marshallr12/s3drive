@@ -258,8 +258,16 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
         None
     };
     #[cfg(feature = "native-sparse-candidate")]
-    if native_lifecycle && let Some(w) = &chunk_writes {
-        w.start_native().await?;
+    if native_lifecycle
+        && let Some(w) = &chunk_writes
+        && let Err(failure) = w.start_native().await
+    {
+        // Mount admission has not exposed callbacks. Release the one storage
+        // owner before reporting refusal so an immediate original-profile
+        // retry cannot race a dropped worker's directory lock. This only closes
+        // SQLite ownership; it never fabricates a file-object Close or ACK.
+        w.storage.close().await.map_err(error)?;
+        return Err(failure);
     }
     let writes = storage.filter(|_| config.version != 8).map(|s| {
         Arc::new(writes::Writes::new(

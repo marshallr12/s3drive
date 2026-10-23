@@ -312,3 +312,10 @@ profile transitions and ordered writes/Close; six shared plus three actual OS
 fixtures now apply. Unchanged legacy version8 shared and real mount gates also run
 with candidate code compiled, not only with the feature absent. Full final-source
 and main verification remain required before production availability.
+
+Opt-in run39883093594 rejected two immediate profile retry checks: startup
+correctly refused dirty epoch adoption, but returned before its ordinary storage
+worker released the exclusive directory lock. Failed native startup now explicitly
+awaits storage-owner closure before returning its original refusal. No filesystem
+callback exists yet; this is not native Close/completion or source acknowledgment.
+The transition checks retain their exact error/byte expectations.
