@@ -1233,7 +1233,7 @@ async fn native_sparse_frozen_owned_plans_keep_original_open_and_exact_removal_c
 }
 
 #[tokio::test]
-async fn native_sparse_metadata_batch_replays_each_original_once() {
+async fn native_sparse_metadata_batch_does_not_repeat_epoch_or_plan_loads() {
     let temp = tempfile::tempdir().unwrap();
     let n = setup(&temp.path().join("batch"), 16).await;
     let view = dirty(&n, &n.view, 2, 5).await;
@@ -1246,12 +1246,19 @@ async fn native_sparse_metadata_batch_replays_each_original_once() {
         .owner
         .call(|store| {
             let db = &store.state.connection;
+            // Source-isolation checks independently inspect the namespace
+            // role, including original opens. They remain mandatory and are
+            // not elided by the provenance replay optimization.
+            let start = opens::load_count();
+            crate::sparse_views::ledger::inspect_metadata(db)?;
+            let source_checks = opens::load_count() - start;
+            assert!(source_checks > 0);
             let before = opens::load_count();
             crate::sparse_views::preparation::native::validate_metadata(db)?;
             assert_eq!(
                 opens::load_count() - before,
-                1,
-                "same command replayed the original event chain per epoch/plan"
+                source_checks + 1,
+                "provenance checks replayed the same original per epoch/plan"
             );
             Ok(())
         })

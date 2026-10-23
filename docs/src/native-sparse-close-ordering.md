@@ -475,6 +475,14 @@ each epoch and each plan in a single immutable command. The correction reuses th
 already checked original record only within that command and performs every
 provenance comparison unchanged. Fresh SDK admission and later commands still
 reload/recheck state; no proof crosses a mutation, commit or await. Two new state
-cases require one replay per original and rejection of later corruption in an
+cases require one direct provenance replay above mandatory source-isolation
+checks, and rejection of later corruption in an
 unselected open without repair. Their correctness and latency benefit require new
 hosted acceptance; the actual bounds and all default/opt-in gates remain intact.
+
+The first replay-count fixture in39898041537 assumed the entire command performed
+only one open load. Both OSes observed five: four mandatory source-isolation/role
+checks plus one direct original-provenance load. The corruption test and other18
+state cases pass. The corrected assertion measures the independent source-check
+baseline and requires exactly one additional provenance load, preserving those
+checks rather than weakening them. This test correction is not runtime acceptance.
