@@ -721,3 +721,224 @@ async fn retention_physical_clone_blocks_old_anchor_replacement_and_releases_wit
     .await
     .expect("physical reader retirement test timed out");
 }
+
+#[test]
+fn retention_other_target_inherited_witness_pages_and_pending_work_remain_intact() {
+    use s3drive_core::manifest::{Entry, Page, Reference, objects::RootDescriptor};
+    let tmp = tempfile::tempdir().unwrap();
+    let mut s = State::open_managed(&tmp.path().join("state")).unwrap();
+    let mut f = setup(&mut s);
+    let (_, _, cp, _) = cycle(&mut s, &mut f, vec![255; 17]);
+    let c = s3drive_core::manifest::CHUNK_BYTES;
+    let leaf = Page::new(
+        [1; 16],
+        [22; 16],
+        0,
+        0,
+        vec![Entry::Hole { length: 128 * c }],
+    )
+    .unwrap();
+    let tail = Page::new(
+        [1; 16],
+        [22; 16],
+        128 * c,
+        0,
+        vec![Entry::Hole { length: c }],
+    )
+    .unwrap();
+    let reference = |slot, p: &Page| {
+        Reference::new(
+            [5; 16],
+            [7; 16],
+            super::super::super::model::ordinal(0, slot),
+            p.digest(),
+        )
+        .unwrap()
+    };
+    let page = Page::new(
+        [1; 16],
+        [22; 16],
+        0,
+        1,
+        vec![
+            Entry::Child {
+                length: 128 * c,
+                object: reference(0, &leaf),
+            },
+            Entry::Child {
+                length: c,
+                object: reference(1, &tail),
+            },
+        ],
+    )
+    .unwrap();
+    let root = RootDescriptor::new(
+        [1; 16],
+        [22; 16],
+        129 * c,
+        Reference::new(
+            [5; 16],
+            [7; 16],
+            super::super::super::model::ordinal(1, 0),
+            page.digest(),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    let b = Base {
+        root,
+        page: page.clone(),
+        pages: BTreeMap::from([((0, 0), leaf), ((0, 1), tail), ((1, 0), page)]),
+    };
+    let binding = Binding::new(
+        Descriptor::from_hex(
+            &"01".repeat(16),
+            &"16".repeat(16),
+            &"03".repeat(16),
+            &"4".repeat(64),
+        )
+        .unwrap(),
+        [5; 16],
+        [6; 32],
+        "a".repeat(64),
+        "managed/".into(),
+        129 * c,
+    )
+    .unwrap();
+    let v = vj(&mut s)
+        .begin_scoped(
+            views::ScopedOperation::new(&binding, [71; 32]).unwrap(),
+            binding,
+            129 * c,
+        )
+        .unwrap();
+    let token = retry::Operation::new(v.binding(), [72; 32]).unwrap();
+    let i = pj(&mut s)
+        .begin_scoped(
+            token,
+            Request {
+                operation: token.id().unwrap(),
+                generation: token.generation().unwrap(),
+                view: v.id(),
+                base_root: b.root.encode().to_vec(),
+                base_page: b.page.encode(),
+            },
+        )
+        .unwrap();
+    let i = pj(&mut s)
+        .append(
+            i.id().unwrap(),
+            i.cursor(),
+            Candidate::InheritedChunk(super::super::super::tests::fixture::proof(&b, 0, None)),
+        )
+        .unwrap();
+    let before = super::super::super::ledger::inspect(&s.connection).unwrap();
+    let proof_blobs = before
+        .objects
+        .values()
+        .filter(|o| o.object.inherited())
+        .flat_map(|o| o.object.blobs())
+        .collect::<Vec<_>>();
+    assert!(!proof_blobs.is_empty());
+    let cp = pj(&mut s).checkpoint(cp.plan()).unwrap();
+    j(&mut s)
+        .retire_checkpoint(&cp, views::Options::default())
+        .unwrap();
+    let after = super::super::super::ledger::inspect(&s.connection).unwrap();
+    assert_eq!(after.info(i.id().unwrap()).unwrap().cursor(), i.cursor());
+    for id in proof_blobs {
+        assert_eq!(after.blobs.get(&id), before.blobs.get(&id));
+    }
+    assert_eq!(after.plans.len(), 1);
+    assert_eq!(after.objects.len(), 1);
+    assert_eq!(vj(&mut s).view(v.id()).unwrap(), v);
+}
+
+#[test]
+fn retention_self_consistent_forged_plan_cannot_relabel_original_physical_receipt() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut s = State::open_managed(&tmp.path().join("state")).unwrap();
+    let mut f = setup(&mut s);
+    let (_, _, cp, _) = cycle(&mut s, &mut f, vec![255; 17]);
+    j(&mut s)
+        .retire_checkpoint(&cp, views::Options::default())
+        .unwrap();
+    let raw: Vec<u8> = s
+        .connection
+        .query_row("SELECT record FROM sparse_retention_anchors", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    let mut a: serde_json::Value = serde_json::from_slice(&raw).unwrap();
+    let mut input: super::super::super::model::Input =
+        serde_json::from_value(a["input"].clone()).unwrap();
+    input.retry = None;
+    input.operation = [217; 32];
+    let mut publication: Record = serde_json::from_value(a["publication"].clone()).unwrap();
+    publication.input.operation = input.operation;
+    publication.input.plan = input.id().unwrap();
+    let mut parent = a["published"].clone();
+    parent["spans"] = serde_json::json!([]);
+    let parent: views::model::Record = serde_json::from_value(parent).unwrap();
+    let view = views::model::Record::child(
+        publication.acknowledgment().unwrap().operation(),
+        super::super::settlement::request(&publication).unwrap(),
+        &parent,
+    )
+    .unwrap();
+    let mut ack = serde_json::to_value(publication.acknowledgment().unwrap()).unwrap();
+    ack["clean_view"] = serde_json::to_value(view.id).unwrap();
+    publication.acknowledgment = Some(serde_json::from_value(ack).unwrap());
+    publication.validate().unwrap(); // internally coherent copied publication
+    a["input"] = serde_json::to_value(input).unwrap();
+    a["publication"] = serde_json::to_value(publication).unwrap();
+    a["view"] = serde_json::to_value(&view).unwrap();
+    s.connection
+        .execute_batch("BEGIN IMMEDIATE; PRAGMA defer_foreign_keys=ON")
+        .unwrap();
+    s.connection
+        .execute(
+            "UPDATE sparse_views SET view_id=?1,record=?2,state_hash=?3",
+            params![
+                view.id.as_slice(),
+                serde_json::to_vec(&view).unwrap(),
+                views::hash(b"s3drive-sparse-view-v1\0", &view)
+                    .unwrap()
+                    .as_slice()
+            ],
+        )
+        .unwrap();
+    s.connection
+        .execute(
+            "UPDATE sparse_view_operations SET view_id=?1,request=?2,state_hash=?3",
+            params![
+                view.id.as_slice(),
+                serde_json::to_vec(&view.request).unwrap(),
+                views::hash(
+                    b"s3drive-sparse-request-v1\0",
+                    &(view.operation, &view.request)
+                )
+                .unwrap()
+                .as_slice()
+            ],
+        )
+        .unwrap();
+    s.connection
+        .execute("UPDATE sparse_view_files SET head=?1", [view.id.as_slice()])
+        .unwrap();
+    s.connection
+        .execute(
+            "UPDATE sparse_retention_anchors SET view_id=?1",
+            [view.id.as_slice()],
+        )
+        .unwrap();
+    rewrite_anchor(&mut s, a);
+    s.connection.execute_batch("COMMIT").unwrap();
+    let before = super::retry_safety::migration_rows(&s);
+    assert!(
+        views::Journal::new(&mut s, views::Options::default())
+            .and_then(|mut j| j.heads())
+            .is_err()
+    );
+    assert_eq!(super::retry_safety::migration_rows(&s), before);
+}

@@ -1,5 +1,5 @@
 use super::*;
-use crate::sparse_views::preparation::{self as prep, Kind};
+use crate::sparse_views::preparation as prep;
 
 impl Journal<'_> {
     /// Explicit local retirement, not a remote deletion or a fresh clean receipt.
@@ -134,9 +134,7 @@ impl Journal<'_> {
         let mut used_blobs: BTreeSet<_> =
             expected.plans.values().map(|p| p.input.base_page).collect();
         for o in expected.objects.values() {
-            if let Kind::Data { blob } | Kind::Page { blob } = o.object.kind {
-                used_blobs.insert(blob);
-            }
+            used_blobs.extend(o.object.blobs());
         }
         expected.blobs.retain(|id, _| used_blobs.contains(id));
         expected.views.admit(options)?;

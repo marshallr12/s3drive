@@ -22,7 +22,8 @@ physical root per target. Its compact witness binds the original source identity
 preparation input, original root page, terminal publication, acknowledgment and
 owner identity. Loading it rederives the exact clean rebase, verifies canonical
 identities and quota bounds, then verifies the retained physical receipt and root
-bytes independently. A hash alone is not a severance proof. Missing, changed,
+bytes and the original deterministic staged-operation-to-plan mapping independently.
+A hash alone is not a severance proof. Missing, changed,
 foreign-owner or inconsistent evidence fails closed. Ordinary source edges still
 require every ancestor; only this exact validated anchor can terminate a chain.
 
@@ -69,3 +70,15 @@ Workspace Clippy/build and schema checks pass locally. Durable runtime acceptanc
 requires standard Linux/Windows runners because the workstation's overlayfs/tmpfs
 fails the unchanged storage guard. Full logs, exact sources and artifacts must be
 reviewed before merge. Private failed-run evidence stays unpublished.
+
+## Pre-acceptance review corrections
+
+The first schema50 candidate339b535 had two review findings: unrelated inherited
+witness page blobs were omitted from the collector's dependency union (the final
+validator rolled the attempted cleanup back), and the compact anchor did not
+independently bind its copied plan to the original physical staging operation.
+The correction uses the complete validated object-blob dependency enumeration
+and rederives that exact operation from the retained root and plan. New tests
+cover a pending unrelated target with nested inherited witness pages and a fully
+rehashed forged plan/source/anchor with unchanged physical evidence. These fixes
+require their own hosted and independent review; the earlier tree is not accepted.

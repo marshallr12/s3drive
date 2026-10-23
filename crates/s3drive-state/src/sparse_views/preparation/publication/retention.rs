@@ -8,6 +8,7 @@ use crate::sparse_views::{
     self as views,
     model::{Change, Record as Source, Request as SourceRequest},
 };
+use rusqlite::OptionalExtension;
 mod collect;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -150,8 +151,27 @@ impl Anchor {
             usize::try_from(remote.size)?,
             false,
         )?;
-        self.publication.input.root()?.verify_page(&page)?;
-        if digest(&page) != remote.payload_sha256 {
+        let checked_page = self.publication.input.root()?.verify_page(&page)?;
+        // Independently bind the compact plan to its original physical operation.
+        // Rehashing a rewritten anchor must not substitute a different plan while
+        // keeping a genuine receipt for this same root payload.
+        let object = super::super::model::Object {
+            level: checked_page.page().level() as i8,
+            slot: 0,
+            length: self.publication.input.root()?.length(),
+            kind: super::super::model::Kind::Page {
+                blob: digest(&page),
+            },
+        };
+        let operation = super::super::transfers::object_operation(&info, &object, digest(&page))?;
+        let mapped: Option<i64> = db
+            .query_row(
+                "SELECT generation_id FROM staged_operations WHERE operation_key=?1",
+                [operation.as_slice()],
+                |r| r.get(0),
+            )
+            .optional()?;
+        if mapped != Some(self.generation().value()) || digest(&page) != remote.payload_sha256 {
             return Err(Failure::Corrupt.into());
         }
         Ok(())

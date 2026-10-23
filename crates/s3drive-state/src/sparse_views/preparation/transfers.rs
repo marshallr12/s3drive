@@ -131,6 +131,19 @@ fn ready(s: &ledger::Snapshot, plan: Id) -> Result<Info> {
     i.root()?.ok_or(Failure::Invalid)?;
     Ok(i)
 }
+pub(super) fn object_operation(i: &Info, o: &model::Object, blob: Id) -> Result<Id> {
+    hash(
+        b"s3drive-mixed-object-staging-v1\0",
+        &(
+            i.id()?,
+            i.root()?.ok_or(Failure::Invalid)?.encode().to_vec(),
+            o.level,
+            o.slot,
+            o,
+            blob,
+        ),
+    )
+}
 pub(super) fn transfer(
     db: &Connection,
     s: &ledger::Snapshot,
@@ -157,17 +170,7 @@ pub(super) fn transfer(
     let role = if p.level < 0 { Role::Data } else { Role::Page };
     let key = ns.key(role, &reference)?;
     let bytes = s.blobs.get(&blob).ok_or(Failure::Corrupt)?;
-    let operation = hash(
-        b"s3drive-mixed-object-staging-v1\0",
-        &(
-            i.id()?,
-            i.root()?.ok_or(Failure::Invalid)?.encode().to_vec(),
-            p.level,
-            p.slot,
-            o,
-            blob,
-        ),
-    )?;
+    let operation = object_operation(i, o, blob)?;
     let mapped: Option<i64> = db
         .query_row(
             "SELECT generation_id FROM staged_operations WHERE operation_key=?1",
