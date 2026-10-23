@@ -345,6 +345,23 @@ fn cache_error(error: Box<dyn std::error::Error + Send + Sync>) -> Error {
 
 impl ReadOnlyFs {
     pub async fn new(config: &Config) -> Result<Self> {
+        #[cfg(feature = "native-sparse-candidate")]
+        if config.version == 8 && config.managed.is_some() {
+            // Native startup recovery may replay a deep saved SDK operation.
+            // Poll it on the runtime worker, not Windows main or a driver stack.
+            // Cancellation aborts the owner task; journal recovery remains exact.
+            struct Startup(tokio::task::JoinHandle<Result<ReadOnlyFs>>);
+            impl Drop for Startup {
+                fn drop(&mut self) {
+                    self.0.abort();
+                }
+            }
+            let config = config.clone();
+            let mut task = Startup(tokio::spawn(async move {
+                Box::pin(Self::new_inner(&config)).await
+            }));
+            return (&mut task.0).await.map_err(|_| Error::Internal)?;
+        }
         Box::pin(Self::new_inner(config)).await
     }
     async fn new_inner(config: &Config) -> Result<Self> {

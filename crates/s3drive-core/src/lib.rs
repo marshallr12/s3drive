@@ -11,14 +11,14 @@ use std::{
 use url::Url;
 
 /// Phase 0 deliberately accepts only the first planned mount mode.
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum Mode {
     ReadOnly,
     ReadWrite,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     pub version: u32,
@@ -29,7 +29,7 @@ pub struct Config {
     pub managed: Option<ManagedConfig>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ManagedConfig {
     /// Optional owner-private PEM roots for HTTPS; replaces platform trust.
@@ -45,17 +45,17 @@ pub struct ManagedConfig {
     pub token_file: PathBuf,
     pub stores: Vec<ManagedStore>,
 }
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum WindowsDisposition {
     PosixV1,
 }
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum SparseLifecycle {
     OwnedUnlinkedV1,
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ManagedStore {
     pub id: String,
@@ -106,13 +106,13 @@ impl ManagedConfig {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct WritesConfig {
     pub directory: PathBuf,
     pub sources: Vec<WriteSource>,
 }
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct WriteSource {
     pub alias: String,
@@ -126,7 +126,7 @@ fn absolute_local(path: &std::path::Path) -> bool {
         && !path.as_os_str().as_encoded_bytes().contains(&0)
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CacheConfig {
     /// Explicit private local directory outside the mounted tree.

@@ -332,3 +332,12 @@ Cold startup recovery awaits are boxed, and the known-root shared remount now ru
 on a 128-KiB thread. A seventh shared case isolates Windows-style transient
 SetDelete/Cleanup/Close while other handles survive. It does not substitute for
 actual WinFsp callbacks. Native operation and fixture deadlines remain unchanged.
+
+Run39885763631 passes six of seven shared cases on both OSes, including the
+transient disposition-owner Close sequence. The unchanged 128-KiB cold-start case
+still overflows; boxing nested awaits alone did not bound the caller stack.
+Candidate version8 managed construction now owns a cloned configuration and polls
+startup on a Tokio worker. The small caller stack only awaits its join handle;
+dropping the startup await aborts that owned task instead of detaching a mount.
+Recovery requests, ownership fences and fixture stack/deadline bounds are unchanged.
+Actual OS acceptance remains pending; this correction is not a passing result.
