@@ -280,3 +280,14 @@ native reference records were reviewed. All774 source files matched. Source ZIP
 SHA-256: `87db4eeabb5bb0aa7af08f5b1fad3de9ac10395aeff719077f5f1147f5197481`.
 The bridge remains on the feature branch, not main. No adapter acceptance or
 native capability enablement follows merely from this bridge checkpoint.
+
+## First adapter gate correction (2026-10-23)
+
+Candidate8d224b5/run39880794317 is not accepted. Linux shared-engine tests passed
+held unlink and both cold-known/cold-unknown recovery cases, but held-target
+replacement failed because the adapter supplied a duplicate same-control
+`destination_control`. The state validator correctly rejects that redundant
+control. The adapter now supplies a second control only when the destination's
+complete store/source/fingerprint control differs from the source; distinct
+controls remain required and validated. The existing replacement fixture is
+unchanged. Actual OS tests were not reached in that failed Linux run.

@@ -389,7 +389,11 @@ impl Writes {
                     None
                 };
                 let destination_control = if target_owned.is_some() {
-                    Some(w.native_control(target.as_ref().ok_or(Error::Internal)?)?)
+                    let destination = w.native_control(target.as_ref().ok_or(Error::Internal)?)?;
+                    // The primary control already authenticates a same-control
+                    // displacement. Only a distinct destination gets a second
+                    // control; never discard a different store/source identity.
+                    (destination != w.native_control(&source)?).then_some(destination)
                 } else {
                     None
                 };
