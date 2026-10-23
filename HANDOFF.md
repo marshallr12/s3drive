@@ -15,6 +15,10 @@ actual OS fixtures cover unlink, save/replace, dirty handles, Close, remount and
 killed known/unknown owners. Two state startup tests cover restricted metadata
 classification and enumeration. They compile locally but are not accepted until
 hosted execution/full review passes on both OSes. Keep failed/partial evidence.
+A transaction-local publication-validation batching candidate adds three strict
+state gates; it must not cache proofs across mutation/commit/await or skip any
+unselected row/receipt validation. Its latency benefit and full acceptance remain
+unverified alongside the native gates.
 Sparse delete-on-close/deferred creation, provider writes and deployment are not
 implicitly enabled by this candidate. Never substitute old native gates for these.
 

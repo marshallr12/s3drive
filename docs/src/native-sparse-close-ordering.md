@@ -367,3 +367,19 @@ measurement, with individual open/read/close timings and candidate internal
 publication/Open/Close/rename phase timings. The180-second whole-child,
 120-second blocking-phase and existing operation deadlines remain unchanged.
 Splitting a fixture alone does not resolve or accept these excessive costs.
+
+
+### Transaction-local validation batching candidate
+
+Publication validation previously rebuilt the complete preparation/source graph
+and whole physical-receipt proof once per root, in addition to its initial source
+snapshot. The candidate reuses one fully checked source snapshot and one compact
+physical proof only inside the same immutable read transaction/owner command.
+Every root, admitted object, source relationship and exact receipt is still checked;
+no proof is cached across writes, commits, commands or awaits. Global trigger and
+unselected-row corruption checks remain in force. No schema or admission rule changes.
+Three dedicated `publication_batch` cases assert one source inspection for two
+roots, rejection of physical corruption in an unselected root without repair, and
+fresh rejection after a late trigger between commands. Local feature Clippy passes;
+local execution is blocked by the unchanged persistent-storage guard on tmpfs.
+Hosted correctness and measured latency improvement are still unverified.

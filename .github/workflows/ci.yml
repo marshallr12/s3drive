@@ -44,6 +44,8 @@ jobs:
         run: cargo test -p s3drive-cli --test chunk_publication cold_namespace --locked -- --nocapture --test-threads=4
       - name: Verify owned sparse SDK and killed recovery
         run: cargo test -p s3drive-cli --test chunk_publication owned_sparse --locked -- --nocapture --test-threads=4
+      - name: Verify transaction-local publication proof batching
+        run: cargo test -p s3drive-state publication_batch --locked -- --nocapture
       - name: Verify native sparse atomic admission Close and cold fences
         run: cargo test -p s3drive-state native_sparse --locked -- --nocapture --test-threads=4
       - name: Verify original-open sparse SDK and chunk disposition controller
