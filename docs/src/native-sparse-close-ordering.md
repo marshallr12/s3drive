@@ -357,3 +357,13 @@ retained failure, or permits the closed handle to write. Failed/cancelled jobs
 remain conflicts. Three portable signal tests and an eighth shared fixture cover
 completion/failure and a surviving write issued before the Close future is joined.
 These corrections still require exact-source actual OS and full regression gates.
+
+Run39887940131 passes all eight shared cases, three Close-join tests and both
+actual crash/recovery cases on each OS. Actual Windows post-unlink writes now
+succeed. Replacement still exceeds the cumulative fixture phase budget: measured
+rename is about40 seconds on Linux and56 seconds on Windows for tiny files.
+This is an unresolved latency issue, not acceptance. Final reopen is isolated for
+measurement, with individual open/read/close timings and candidate internal
+publication/Open/Close/rename phase timings. The180-second whole-child,
+120-second blocking-phase and existing operation deadlines remain unchanged.
+Splitting a fixture alone does not resolve or accept these excessive costs.

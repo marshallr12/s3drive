@@ -324,8 +324,14 @@ impl Writes {
         tokio::spawn(async move {
             let _permit = permit;
             tokio::time::timeout(DEADLINE, async {
+                let started = std::time::Instant::now();
                 let _serial = w.native_serial.lock().await;
+                eprintln!("NATIVE_TIMING rename-lock {:?}", started.elapsed());
                 w.flush_native_node(&node).await?;
+                eprintln!(
+                    "NATIVE_TIMING rename-source-flushed {:?}",
+                    started.elapsed()
+                );
                 let source = w.native_observed(&node).await?;
                 if source.deleted {
                     return Err(Error::NotFound);
@@ -352,6 +358,10 @@ impl Writes {
                         return Err(Error::AlreadyExists);
                     }
                     w.flush_native_node(&t.id).await?;
+                    eprintln!(
+                        "NATIVE_TIMING rename-target-flushed {:?}",
+                        started.elapsed()
+                    );
                     let current = w.native_observed(&t.id).await?;
                     if current.parent != t.parent || current.name != t.name || current.deleted {
                         return Err(Error::Conflict);
@@ -370,6 +380,7 @@ impl Writes {
                         },
                     );
                 }
+                eprintln!("NATIVE_TIMING rename-target-armed {:?}", started.elapsed());
                 // Target arming changes parent revisions, so refresh both guards.
                 let source_parent = w.reader.node(&source_parent.id).await.map_err(error)?;
                 let parent = w.reader.node(&parent.id).await.map_err(error)?;
@@ -431,6 +442,7 @@ impl Writes {
                 {
                     before.push(t);
                 }
+                eprintln!("NATIVE_TIMING rename-before-effect {:?}", started.elapsed());
                 w.native_change(mutation, before, destination_control)
                     .await
                     .map(|r| r.node)

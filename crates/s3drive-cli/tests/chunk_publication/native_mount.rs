@@ -103,6 +103,9 @@ impl Mount {
             .await
             .unwrap()
             .unwrap();
+        if log.contains("NATIVE_TIMING") {
+            eprintln!("{log}");
+        }
         assert!(
             status.success()
                 && log.len() <= 65536

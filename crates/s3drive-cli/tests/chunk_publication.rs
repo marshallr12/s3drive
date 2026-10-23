@@ -1630,6 +1630,9 @@ async fn run(mode: &str) {
             .unwrap()
             .unwrap();
         let err = errors.await.unwrap();
+        if stage.starts_with("native_lifecycle_mounted") {
+            eprintln!("{err}");
+        }
         assert!(
             result.is_ok()
                 && if matches!(

@@ -224,8 +224,28 @@ pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
         stage("replacement-old-closed");
         drop(temp);
         stage("replacement-temp-closed-before-reopen");
-        assert_eq!(std::fs::read(&saved).unwrap(), b"new body");
-        stage("replacement-finished");
+    })
+    .await;
+    let saved = mount.path.join("saved 日本語.bin");
+    blocking(&mut mount, move || {
+        let started = std::time::Instant::now();
+        let mut file = std::fs::File::open(saved).unwrap();
+        eprintln!(
+            "NATIVE_LIFECYCLE_STAGE final-reopen-opened elapsed={:?}",
+            started.elapsed()
+        );
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes).unwrap();
+        eprintln!(
+            "NATIVE_LIFECYCLE_STAGE final-reopen-read elapsed={:?}",
+            started.elapsed()
+        );
+        assert_eq!(bytes, b"new body");
+        drop(file);
+        eprintln!(
+            "NATIVE_LIFECYCLE_STAGE final-reopen-closed elapsed={:?}",
+            started.elapsed()
+        );
     })
     .await;
     mount.stop().await;
