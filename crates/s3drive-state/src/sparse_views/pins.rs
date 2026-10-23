@@ -90,6 +90,10 @@ pub(crate) fn check_schema(db: &Connection) -> Result<()> {
     Ok(())
 }
 pub(super) fn load(db: &Connection) -> Result<Ledger> {
+    load_in(&mut IsolationCheck::new(db))
+}
+pub(super) fn load_in(scope: &mut IsolationCheck<'_>) -> Result<Ledger> {
+    let db = scope.db;
     if check_schema(db).is_err() {
         let n:i64=db.query_row("SELECT count(*) FROM sqlite_schema WHERE type='table' AND name IN ('source_read_pin_session','source_read_pins')",[],|r|r.get(0))?;
         let version: i32 = db.pragma_query_value(None, "user_version", |r| r.get(0))?;
@@ -141,7 +145,7 @@ pub(super) fn load(db: &Connection) -> Result<Ledger> {
         if sha != role.sha()? {
             return Err(Failure::Corrupt.into());
         }
-        isolation(db)?;
+        scope.require()?;
         out.role = Some(role);
     }
     let mut sequences = BTreeSet::new();

@@ -109,12 +109,13 @@ fn load(db: &Connection, patches: bool, bodies: bool) -> Result<Ledger> {
     for (i, table) in tables.iter().enumerate() {
         counts[i] = count(db, &format!("SELECT count(*) FROM {table}"))?;
     }
+    let mut scope = IsolationCheck::new(db);
     if patches {
-        scoped::enabled(db)?;
+        scoped::enabled_in(&mut scope)?;
     }
     let mut out = Ledger::default();
     if patches {
-        out.read_pins = pins::load(db)?;
+        out.read_pins = pins::load_in(&mut scope)?;
     }
     if counts == [0; 5] {
         return Ok(out);
@@ -130,7 +131,7 @@ fn load(db: &Connection, patches: bool, bodies: bool) -> Result<Ledger> {
     {
         return Err(Failure::Corrupt.into());
     }
-    isolation(db)?;
+    scope.require()?;
     for sql in [
         "SELECT EXISTS(SELECT 1 FROM sparse_view_role WHERE typeof(singleton)!='integer' OR singleton!=1 OR typeof(format)!='integer' OR format!=1 OR typeof(state_hash)!='blob' OR length(state_hash)!=32)",
         "SELECT EXISTS(SELECT 1 FROM sparse_view_files WHERE typeof(target)!='blob' OR length(target)!=32 OR typeof(binding)!='blob' OR length(binding) NOT BETWEEN 1 AND 4096 OR typeof(head)!='blob' OR length(head)!=32 OR typeof(state_hash)!='blob' OR length(state_hash)!=32)",

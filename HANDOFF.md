@@ -4,32 +4,33 @@ Updated 2026-10-23. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
-## Native lifecycle accepted; final runtime opt-in verification
+## Native opt-in merged; main verification performance correction pending
 
-Read the current contract in `docs/src/native-sparse-close-ordering.md`.
-Candidate a3db497 passed full exact-source review of39892868332: Linux993/
-Windows989 workspace tests,37 cohorts each, nine shared and three actual lifecycle
-cases per OS, three Close-join and three proof-batching tests, real47/48 and46/47
-compatibility, four artifacts/35 typed native records, and779 source files.
-The original single120-second live native sequence passed both OSes. Debug
-rename/reopen costs remain substantial; do not claim interactive-scale performance.
+Exact normal-build source1ae0d16 passed full review of CI39898701182:
+Linux1007/Windows1003 tests,37 cohorts,19 native state cases, nine shared cases,
+three actual native cases per OS in both debug and release, four artifacts with35
+native reference records, actual46/47 and47/48 compatibility, and779 source files.
+It was merged unchanged at affbf519461557209ba9be8c874be8d4636a2558.
 
-The temporary compile-only feature is removed. The normal build makes the new
-contract available only through managed version8 sparse-lifecycle=owned-unlinked-v1.
-Omission preserves the existing default profile, including its distinct recovery
-behavior. Unknown dirty epochs and incompatible profile transitions remain explicit
-conflicts with original data retained. Sparse delete-on-close/deferred creation,
-real-provider writes and deployment are not enabled.
+Main run39931022610 then failed the Windows combined debug live sequence's
+original120-second bound (known/unknown killed-recovery cases passed). Rename
+consumed43.79 seconds; detached sync reached120.004 seconds before final Close and
+reopen. Main is not fully verified. Do not substitute candidate acceptance or
+rerun-to-green for this failure. Linux debug/release native gates passed; the full
+Linux suite was still running when this correction was prepared.
 
-This availability change must pass its own full exact-source CI before merge,
-including both runtime profiles and debug/release actual native gates; verify main
-again after conditional merge. Keep prior failed evidence and original bounds.
-Final-source run39896504446 failed its Windows debug sequence bound despite
-passing Linux debug/release actual gates. Do not merge that source or substitute
-its release result for the failed debug gate. A further command-local original-
-record validation correction and two additional state fault tests require their
-own exact-source acceptance. Main remains at the accepted prerequisite checkpoint.
-No private validation archive belongs in the public repository.
+The correction shares one lazy isolation check across mode, read-pin and graph
+validation inside a single immutable source inspection. All existing checks run;
+no result survives mutation, another command, transaction boundary or await. Three
+state fixtures require one isolation scan with a live pin and fresh rejection of
+late unselected-open corruption and SQL triggers. Original debug and release native
+bounds, both runtime profiles and full hosted gates remain mandatory.
+
+Activation still requires managed version8 sparse-lifecycle=owned-unlinked-v1.
+Omission preserves the default. Unknown dirty epochs remain conflicts with data
+retained. Sparse delete-on-close/deferred creation and real-provider deployment
+are not enabled. Performance and retained-history capacity remain limited.
+Read `docs/src/native-sparse-close-ordering.md`. Keep validation archives private.
 
 ## Accepted native sparse state baseline (historical)
 
