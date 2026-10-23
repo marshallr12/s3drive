@@ -951,6 +951,15 @@ fn retry_safety_refuses_native_owner_activation_without_changing_default_composi
         .enable_retry_safety()
         .is_err()
     );
+    assert!(
+        crate::sparse_views::preparation::Journal::new(
+            &mut s,
+            crate::sparse_views::preparation::Options::default()
+        )
+        .unwrap()
+        .migrate_retry_safety()
+        .is_err()
+    );
     assert!(!crate::sparse_views::preparation::retry::enabled(&s.connection).unwrap());
     assert!(!crate::sparse_views::scoped::enabled(&s.connection).unwrap());
     assert_eq!(rows(&s), before);

@@ -4,6 +4,16 @@ Updated 2026-10-23. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
+## Populated migration candidate (2026-10-23)
+
+The [explicit ordinary-store migration](docs/src/populated-retry-migration.md)
+is a candidate, not accepted. It preserves all legacy identities and bytes while
+atomically enabling fresh scoped admission only after full terminal evidence.
+Native/owned owners, dirty or uncertain work and unrelated staging remain refused.
+No history cleanup, bounded-storage claim or default activation is included.
+The following accepted baseline remains authoritative until the candidate's own
+full Linux/Windows/source/artifact gates pass.
+
 ## Accepted retry/checkpoint state prerequisite; no history reclamation
 
 Main `870284330d3ce61983fe0080bc1acbe877ec9259` is accepted for the bounded

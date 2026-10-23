@@ -476,3 +476,335 @@ async fn retry_safety_concurrent_cloned_readers_keep_history_protected() {
     .await
     .expect("bounded concurrent reader checkpoint test timed out");
 }
+
+fn legacy_complete(s: &mut State, f: &Fixture) -> Info {
+    let i = prepare(s, f, false);
+    let p = i.id().unwrap();
+    physical(s, p);
+    j(s).check(p, 0, Some(&proof(f))).unwrap();
+    let r = j(s)
+        .begin(p, f.node.clone(), f.store.clone(), 5, hex(&[10; 16]))
+        .unwrap();
+    lineage::commit(s, r);
+    j(s).acknowledge([40; 32], p, views::Options::default())
+        .unwrap();
+    i
+}
+fn legacy_request(f: &Fixture, i: &Info) -> Request {
+    Request {
+        operation: i.operation(),
+        view: i.view().id(),
+        generation: *i.generation(),
+        base_root: f.base.root.encode().to_vec(),
+        base_page: f.base.page.encode(),
+    }
+}
+// Compare every original SQL value, not just selected ledger counts. Mode rows
+// are the only allowed delta. Schema and sqlite_sequence are included.
+fn migration_rows(s: &State) -> Vec<String> {
+    let mut out = s
+        .connection
+        .prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY type,name")
+        .unwrap()
+        .query_map([], |r| {
+            Ok(format!(
+                "schema: {:?}",
+                (
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, String>(2)?,
+                    r.get::<_, Option<String>>(3)?
+                )
+            ))
+        })
+        .unwrap()
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .unwrap();
+    let mut names = s.connection.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT IN ('sparse_scoped_mode','sparse_retry_mode') ORDER BY name").unwrap();
+    let names = names
+        .query_map([], |r| r.get::<_, String>(0))
+        .unwrap()
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .unwrap();
+    for name in names {
+        let mut q = s
+            .connection
+            .prepare(&format!("SELECT * FROM \"{}\"", name.replace('"', "\"\"")))
+            .unwrap();
+        let n = q.column_count();
+        let mut values = q
+            .query_map([], |r| {
+                (0..n)
+                    .map(|i| r.get::<_, rusqlite::types::Value>(i))
+                    .collect::<rusqlite::Result<Vec<_>>>()
+            })
+            .unwrap()
+            .map(|r| format!("{name}: {:?}", r.unwrap()))
+            .collect::<Vec<_>>();
+        values.sort();
+        out.extend(values);
+    }
+    out
+}
+#[test]
+fn retry_safety_populated_migration_preserves_all_rows_and_exact_legacy_retries() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("migration café 🦀");
+    let mut s = State::open_managed(&path).unwrap();
+    let f = fixture();
+    let i = legacy_complete(&mut s, &f);
+    let p = i.id().unwrap();
+    let pin = vj(&mut s).pin(i.view().id()).unwrap();
+    let before = migration_rows(&s);
+    pj(&mut s).migrate_retry_safety().unwrap();
+    assert!(retry::enabled(&s.connection).unwrap());
+    assert_eq!(migration_rows(&s), before);
+    assert_eq!(
+        pj(&mut s)
+            .begin(legacy_request(&f, &i))
+            .unwrap()
+            .id()
+            .unwrap(),
+        p
+    );
+    assert!(
+        j(&mut s)
+            .begin(p, f.node.clone(), f.store.clone(), 5, hex(&[10; 16]))
+            .unwrap()
+            .receipt()
+            .is_some()
+    );
+    let mut changed = legacy_request(&f, &i);
+    changed.generation = [31; 16];
+    assert!(pj(&mut s).begin(changed).is_err());
+    let mut unknown = legacy_request(&f, &i);
+    unknown.operation = [33; 32];
+    assert!(pj(&mut s).begin(unknown).is_err());
+    assert_eq!(vj(&mut s).view(i.view().id()).unwrap(), *i.view());
+    assert_eq!(migration_rows(&s), before);
+    // A retained legacy operation is never relabeled as a scoped operation.
+    assert!(pj(&mut s).checkpoint(p).is_err());
+    assert!(vj(&mut s).release_pin(&pin).unwrap());
+    drop(s);
+    let mut s = State::open_managed(&path).unwrap();
+    assert!(retry::enabled(&s.connection).unwrap());
+    pj(&mut s).migrate_retry_safety().unwrap();
+    assert_eq!(
+        pj(&mut s)
+            .begin(legacy_request(&f, &i))
+            .unwrap()
+            .id()
+            .unwrap(),
+        p
+    );
+    let clean = vj(&mut s).current_head(&f.binding).unwrap();
+    let token = views::ScopedOperation::new(clean.binding(), [71; 32]).unwrap();
+    assert!(vj(&mut s).write([72; 32], clean.id(), 0, &[5]).is_err());
+    let dirty = vj(&mut s).write_scoped(token, clean.id(), 0, &[5]).unwrap();
+    assert_ne!(dirty.id(), clean.id());
+    let stale = retry::Operation::new(i.view().binding(), [81; 32]).unwrap();
+    let mut stale_request = legacy_request(&f, &i);
+    stale_request.operation = stale.id().unwrap();
+    stale_request.generation = stale.generation().unwrap();
+    assert!(pj(&mut s).begin_scoped(stale, stale_request).is_err());
+    let snapshot = views::preparation::ledger::inspect(&s.connection).unwrap();
+    let root = i.root().unwrap().unwrap();
+    let views::preparation::model::Kind::Page { blob } = snapshot.object(p, 0, 0).unwrap().kind
+    else {
+        panic!("expected leaf root");
+    };
+    let token = retry::Operation::new(dirty.binding(), [82; 32]).unwrap();
+    let next = pj(&mut s)
+        .begin_scoped(
+            token,
+            Request {
+                operation: token.id().unwrap(),
+                view: dirty.id(),
+                generation: token.generation().unwrap(),
+                base_root: root.encode().to_vec(),
+                base_page: snapshot.blobs[&blob].clone(),
+            },
+        )
+        .unwrap();
+    assert_eq!(next.view(), &dirty);
+}
+#[test]
+fn retry_safety_populated_migration_refuses_dirty_incomplete_and_unrelated_physical_history() {
+    for case in 0..4 {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut s = State::open_managed(&tmp.path().join("state")).unwrap();
+        let f = fixture();
+        if case == 0 || case == 3 {
+            let i = prepare(&mut s, &f, false);
+            if case == 3 {
+                let p = i.id().unwrap();
+                let t = pj(&mut s).transfers(p, None, 1).unwrap().remove(0);
+                let t = pj(&mut s)
+                    .materialize(p, t.position(), crate::journal::Options::default())
+                    .unwrap()
+                    .unwrap();
+                let mut remote =
+                    crate::remote::Journal::new(&mut s, crate::remote::Options::default()).unwrap();
+                let intent = remote.prepare(t.generation().unwrap()).unwrap();
+                let _permit = remote.claim(intent.operation, &intent.target).unwrap();
+            }
+        } else {
+            legacy_complete(&mut s, &f);
+            if case == 1 {
+                let clean = vj(&mut s).current_head(&f.binding).unwrap();
+                vj(&mut s).write([72; 32], clean.id(), 0, &[5]).unwrap();
+            } else {
+                let target =
+                    crate::journal::Target::new([6; 32], &"a".repeat(64), "unrelated").unwrap();
+                crate::journal::Journal::new(&mut s, crate::journal::Options::default())
+                    .unwrap()
+                    .begin_operation(&[73; 32], &target, crate::journal::Base::Missing, None, 1)
+                    .unwrap();
+            }
+        }
+        let before = migration_rows(&s);
+        assert!(pj(&mut s).migrate_retry_safety().is_err());
+        assert!(!retry::enabled(&s.connection).unwrap());
+        assert!(!views::scoped::enabled(&s.connection).unwrap());
+        assert_eq!(migration_rows(&s), before);
+    }
+}
+#[test]
+fn retry_safety_populated_migration_rejects_corrupt_or_missing_terminal_proof() {
+    for damage in 0..3 {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut s = State::open_managed(&tmp.path().join("state")).unwrap();
+        let f = fixture();
+        legacy_complete(&mut s, &f);
+        match damage {
+            0 => {
+                s.connection
+                    .execute("UPDATE remote_flushes SET receipt_hash=zeroblob(32)", [])
+                    .unwrap();
+            }
+            1 => {
+                s.connection
+                    .execute("UPDATE sparse_publications SET state_hash=zeroblob(32)", [])
+                    .unwrap();
+            }
+            _ => {
+                s.connection.execute_batch("PRAGMA foreign_keys=OFF; DELETE FROM remote_flushes; PRAGMA foreign_keys=ON;").unwrap();
+            }
+        }
+        let before = migration_rows(&s);
+        assert!(pj(&mut s).migrate_retry_safety().is_err());
+        assert!(!retry::enabled(&s.connection).unwrap());
+        assert!(!views::scoped::enabled(&s.connection).unwrap());
+        assert_eq!(migration_rows(&s), before);
+    }
+}
+#[test]
+fn retry_safety_migration_crash_child() {
+    let Some(path) = std::env::var_os("S3DRIVE_MIGRATION_CRASH_DIR") else {
+        return;
+    };
+    let mut s = State::open_managed(std::path::Path::new(&path)).unwrap();
+    pj(&mut s).migrate_retry_safety().unwrap();
+    panic!("did not stop at migration checkpoint");
+}
+#[test]
+fn retry_safety_populated_migration_killed_owners_preserve_atomic_modes_and_all_history() {
+    use std::process::{Command, Stdio};
+    use std::time::{Duration, Instant};
+    for point in [
+        "Eligible",
+        "SourceStored",
+        "Stored",
+        "Validated",
+        "Committed",
+    ] {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("migration crash café");
+        let ready = tmp.path().join("ready");
+        let mut s = State::open_managed(&path).unwrap();
+        let f = fixture();
+        let i = legacy_complete(&mut s, &f);
+        let before = migration_rows(&s);
+        drop(s);
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "sparse_views::preparation::publication::tests::retry_safety::retry_safety_migration_crash_child", "--nocapture"])
+            .env("S3DRIVE_MIGRATION_CRASH_DIR", &path).env("S3DRIVE_MIXED_CRASH_KIND", "retry_migrate").env("S3DRIVE_MIXED_CRASH_POINT", point).env("S3DRIVE_MIXED_CRASH_READY", &ready)
+            .stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::piped()).spawn().unwrap();
+        let start = Instant::now();
+        while !ready.exists() {
+            if let Some(status) = child.try_wait().unwrap() {
+                use std::io::Read;
+                let mut err = String::new();
+                child
+                    .stderr
+                    .take()
+                    .unwrap()
+                    .read_to_string(&mut err)
+                    .unwrap();
+                panic!("{point}: {status}: {err}");
+            }
+            if start.elapsed() > Duration::from_secs(30) {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("checkpoint timed out {point}");
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert!(State::open_managed(&path).is_err());
+        child.kill().unwrap();
+        assert!(!child.wait().unwrap().success());
+        let mut s = State::open_managed(&path).unwrap();
+        assert_eq!(retry::enabled(&s.connection).unwrap(), point == "Committed");
+        assert_eq!(
+            views::scoped::enabled(&s.connection).unwrap(),
+            point == "Committed"
+        );
+        assert_eq!(migration_rows(&s), before);
+        pj(&mut s).migrate_retry_safety().unwrap();
+        assert_eq!(
+            pj(&mut s)
+                .begin(legacy_request(&f, &i))
+                .unwrap()
+                .id()
+                .unwrap(),
+            i.id().unwrap()
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn retry_safety_populated_migration_preserves_concurrent_cloned_readers() {
+    tokio::time::timeout(std::time::Duration::from_secs(30), async {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("migration reader café 🦀");
+        let mut s = State::open_managed(&path).unwrap();
+        let f = fixture();
+        let i = legacy_complete(&mut s, &f);
+        drop(s);
+        let storage = crate::worker::Storage::open(
+            &path,
+            crate::cache::Options::default(),
+            crate::journal::Options::default(),
+        )
+        .await
+        .unwrap();
+        let client = storage.sparse_views(views::Options::default()).unwrap();
+        let plans = client.preparations(Options::default()).unwrap();
+        let guard = client.guard(i.view().id()).await.unwrap();
+        let clone = guard.clone();
+        let (read, migrated) = tokio::join!(clone.read(5, 1), plans.migrate_retry_safety());
+        assert_eq!(read.unwrap(), vec![views::Piece::Local(vec![255])]);
+        migrated.unwrap();
+        drop(guard);
+        assert_eq!(
+            clone.read(5, 1).await.unwrap(),
+            vec![views::Piece::Local(vec![255])]
+        );
+        drop(clone);
+        storage.close().await.unwrap();
+        let mut s = State::open_managed(&path).unwrap();
+        assert_eq!(vj(&mut s).view(i.view().id()).unwrap(), *i.view());
+    })
+    .await
+    .expect("bounded migration reader test timed out");
+}

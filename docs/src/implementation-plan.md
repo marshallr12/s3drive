@@ -32,6 +32,12 @@ owner upgrades, history severance and actual reclamation remain blocked and are
 not claimed by this library-only contract. Defaults and provider behavior remain
 unchanged.
 
+The next cleanup/migration work starts with the separate
+[populated ordinary-store retry migration candidate](populated-retry-migration.md).
+It must retain legacy operation identities and preserve dirty/uncertain/native
+refusals. Full terminal retirement and bounded local reclamation are subsequent
+required slices, not inferred from migration acceptance.
+
 The next deferred-creation step is the [prospective creation/open admission
 proposal](creator-open-admission.md), reviewed against `daf5806` on 2026-10-21.
 It reserves namespace closing capacity and an inactive open in one local

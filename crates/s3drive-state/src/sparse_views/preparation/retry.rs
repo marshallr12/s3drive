@@ -1,5 +1,6 @@
 //! Opt-in retry closure and revalidated retirement evidence. Never deletes data.
 use super::*;
+mod migration;
 use crate::journal::{Base, GenerationId, Target};
 
 /// Persist the complete token before an uncertain begin. A new epoch/nonce is a
