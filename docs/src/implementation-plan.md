@@ -66,6 +66,14 @@ The [typed owned sparse state layer](owned-unlinked-sparse-state.md) is accepted
 at schema47/source499aa637, full/native run39796709806. SDK integration and
 separate owned-unlinked native lifecycle acceptance remain subsequent work.
 
+## Native sparse ordering candidate, not accepted
+
+The [native epoch/Close state contract](native-sparse-close-ordering.md) now has a
+schema48 implementation candidate and16 dedicated state cases, including16 killed
+transaction boundaries. Durable full Linux/Windows acceptance and actual47/48
+compatibility remain required. It does not enable lifecycle flags or complete
+SDK/controller/adapter integration. Preserve actual46/47 compatibility separately.
+
 ## Current sparse lifecycle prerequisite
 
 The [node-wide sparse effect barrier](sparse-node-barriers.md) is accepted at

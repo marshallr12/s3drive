@@ -76,6 +76,26 @@ pub enum Action {
     Completed {
         callback: String,
     },
+    /// Durable opt-in by the original current native file object.
+    BindSparse,
+    /// Historical clean-head witness recorded atomically with Close completion.
+    CompleteSparse {
+        callback: String,
+        view: Option<crate::sparse_views::Id>,
+        frozen: crate::sparse_views::Id,
+    },
+    /// Local native publisher identity, minted only with a bound source edit.
+    OwnSparseEpoch {
+        binding: Box<crate::sparse_views::Binding>,
+        operation: crate::sparse_views::Id,
+        base_root: Vec<u8>,
+        base_page: crate::sparse_views::Id,
+    },
+    /// Exact plans admitted before this Close in the same state transaction.
+    FreezeSparse {
+        callback: String,
+        plan: crate::sparse_views::Id,
+    },
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -255,6 +275,61 @@ fn reduce(db: &Connection, record: &mut OpenRecord, event: &Event) -> Result<()>
         super::creator_import::check_link(db, input)?;
     }
     match &event.action {
+        Action::BindSparse if record.active() && record.input.controlled && record.input.session_bound => {
+            if record.close().is_some() || record.events.iter().any(|e| matches!(e.action, Action::BindSparse)) {
+                return Err("duplicate or closed native sparse binding".into());
+            }
+        }
+        Action::CompleteSparse { callback, view, frozen } if record.active() => {
+            if !record.events.iter().any(|e| matches!(e.action, Action::BindSparse))
+                || record.close().map(|e| &e.id) != Some(callback) || record.completed(callback)
+                || *view == Some([0; 32]) || *frozen == [0; 32]
+                || record.events.iter().any(|e| matches!(&e.action, Action::CompleteSparse { callback: old, .. } if old == callback))
+            { return Err("invalid native sparse completion witness".into()); }
+        }
+        Action::OwnSparseEpoch { binding, operation, base_root, base_page }
+            if record.active() && record.input.controlled && record.input.session_bound =>
+        {
+            let base = binding.base()?;
+            let epoch = binding.epoch()?;
+            let root = s3drive_core::manifest::objects::RootDescriptor::decode(base_root)?;
+            let hex = |bytes: &[u8]| bytes.iter().map(|b| format!("{b:02x}")).collect::<String>();
+            if *base_page == [0; 32]
+                || root.length() != binding.base_size()
+                || root.page().store() != binding.store()
+                || hex(root.volume()) != base.volume()
+                || hex(root.node()) != base.node()
+                || record.close().is_some()
+                || !record.events.iter().any(|e| matches!(e.action, Action::BindSparse))
+                || *operation == [0; 32]
+                || base.volume() != record.input.volume
+                || base.node() != record.input.node
+                || record.events.iter().any(|e| {
+                    matches!(&e.action,
+                    Action::OwnSparseEpoch { binding: b, .. } if b.epoch().ok() == Some(epoch))
+                })
+            {
+                return Err("invalid original native source epoch".into());
+            }
+        }
+        Action::FreezeSparse { callback, plan } if record.active() => {
+            let adjacent = record.events.last().is_some_and(|e| match &e.action {
+                Action::Callback(Callback::Close) => &e.id == callback,
+                Action::FreezeSparse { callback: c, .. } => c == callback,
+                _ => false,
+            });
+            if !adjacent
+                || !record.events.iter().any(|e| matches!(e.action, Action::BindSparse))
+                || *plan == [0; 32]
+                || record.close().map(|e| &e.id) != Some(callback)
+                || record.events.iter().any(|e| {
+                    matches!(&e.action,
+                    Action::FreezeSparse { plan: p, .. } if p == plan)
+                })
+            {
+                return Err("invalid native Close frozen-plan sequence".into());
+            }
+        }
         Action::Activate { proof } if record.events.is_empty() => {
             if let Some(proof) = proof {
                 let saved = super::load(db, &proof.input.request.operation)?
@@ -403,6 +478,11 @@ fn reduce(db: &Connection, record: &mut OpenRecord, event: &Event) -> Result<()>
                     _ => None,
                 })
                 .ok_or("completion lacks callback")?;
+            if matches!(kind, Callback::Close)
+                && record.events.iter().any(|e| matches!(e.action, Action::BindSparse))
+                && !record.events.last().is_some_and(|e| matches!(&e.action,
+                    Action::CompleteSparse { callback: c, .. } if c == callback))
+            { return Err("native Close completion lacks atomic clean-head witness".into()); }
             if record.completed(callback)
                 || record
                     .links(callback)
@@ -440,7 +520,8 @@ fn reduce(db: &Connection, record: &mut OpenRecord, event: &Event) -> Result<()>
                     }
                 }
             }
-            if matches!(kind, Callback::Close) && record.cleanup().is_none() {
+            if matches!(kind, Callback::Close) && record.cleanup().is_none()
+                && !record.events.iter().any(|e| matches!(e.action, Action::BindSparse)) {
                 return Err("close has no cleanup evidence".into());
             }
         }
@@ -543,7 +624,7 @@ fn all(db: &Connection) -> Result<Vec<(Row, OpenRecord)>> {
     }
     Ok(records)
 }
-fn capacity(records: &[(Row, OpenRecord)]) -> Result<()> {
+fn capacity(db: &Connection, records: &[(Row, OpenRecord)]) -> Result<()> {
     // Facts remain recordable even when ordinary callback/effect history fills.
     // Namespace closing capacity is independently reserved by its own journal.
     let slots = records
@@ -559,7 +640,11 @@ fn capacity(records: &[(Row, OpenRecord)]) -> Result<()> {
                 + r.pending().len()
         })
         .sum::<usize>();
-    if slots > EVENT_LIMIT {
+    let native = crate::sparse_views::preparation::native::reserved_events(
+        db,
+        records.iter().map(|(_, r)| r),
+    )?;
+    if slots.checked_add(native).is_none_or(|n| n > EVENT_LIMIT) {
         return Err(
             "per-open journal preserves activation, cleanup, close and acknowledgment slots".into(),
         );
@@ -602,7 +687,7 @@ fn insert_row(db: &Connection, row: &Row, record: &OpenRecord) -> Result<()> {
         return Err("per-open limit reached; history retained".into());
     }
     records.push((row.clone(), record.clone()));
-    capacity(&records)?;
+    capacity(db, &records)?;
     let a = db.execute(
         "INSERT INTO windows_open_journal VALUES(?1,?2,?3,0,NULL,?4)",
         params![
@@ -1014,15 +1099,28 @@ pub(crate) fn sparse_open(db: &Connection, key: &str) -> Result<OpenRecord> {
         .ok_or_else(|| "unknown original sparse open".into())
 }
 pub(crate) fn sparse_current(db: &Connection, runtime: &str, open: &OpenRecord) -> Result<()> {
+    if open.close().is_some() {
+        return Err("sparse admission requires a live original session-bound open".into());
+    }
+    sparse_original_session(db, runtime, open)
+}
+/// Original session validity only. This is not fresh-work permission for a closed open.
+pub(crate) fn sparse_original_session(
+    db: &Connection,
+    runtime: &str,
+    open: &OpenRecord,
+) -> Result<()> {
     if !open.input.session_bound
         || !open.active()
-        || open.close().is_some()
         || !open.pending().is_empty()
         || session::frozen(db, &open.input.id)?
     {
-        return Err("sparse admission requires a live original session-bound open".into());
+        return Err("sparse admission requires the original unfrozen session-bound open".into());
     }
     session::current(db, runtime, &open.input.session, &open.input.volume)
+}
+pub(crate) fn sparse_records(db: &Connection) -> Result<Vec<OpenRecord>> {
+    all(db).map(|rows| rows.into_iter().map(|(_, record)| record).collect())
 }
 
 // Shared transaction implementation; restricted recovery permits only acknowledgments.
@@ -1033,51 +1131,94 @@ pub(super) fn append_existing(
     event: Event,
     restricted: bool,
 ) -> Result<OpenRecord> {
+    if matches!(
+        event.action,
+        Action::BindSparse
+            | Action::CompleteSparse { .. }
+            | Action::OwnSparseEpoch { .. }
+            | Action::FreezeSparse { .. }
+    ) {
+        return Err("native sparse events require atomic typed admission".into());
+    }
     let tx = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
-    if let Some(key) = &chunk {
-        crate::chunk_mount::verify_key(&tx, key)?;
-        if restricted {
-            super::recovery::metadata(&tx, key)?;
+    let acknowledgment = matches!(event.action, Action::Acknowledge { .. });
+    let appended = append_in_transaction(&tx, chunk, key, event, restricted)?;
+    if appended.changed {
+        tx.commit()?;
+        if acknowledgment {
+            super::recovery::checkpoint("OpenCommitted");
+        }
+        if appended.imported {
+            super::creator_import::checkpoint("CreatorActivationCommitted")?;
         }
     }
-    let (mut row, mut record) = load(&tx, key)?.ok_or("per-open record not found")?;
+    Ok(appended.record)
+}
+
+/// Private composition primitive. The caller owns the immediate transaction and
+/// must commit the complete higher-level transition, never a partial event set.
+pub(crate) struct Appended {
+    pub(crate) record: OpenRecord,
+    pub(crate) changed: bool,
+    imported: bool,
+}
+pub(crate) fn append_in_transaction(
+    tx: &rusqlite::Transaction<'_>,
+    chunk: Option<&crate::chunk_mount::Key>,
+    key: &str,
+    event: Event,
+    restricted: bool,
+) -> Result<Appended> {
+    if let Some(key) = &chunk {
+        crate::chunk_mount::verify_key(tx, key)?;
+        if restricted {
+            super::recovery::metadata(tx, key)?;
+        }
+    }
+    let (mut row, mut record) = load(tx, key)?.ok_or("per-open record not found")?;
     if let Some(old) = record.events.iter().find(|e| e.id == event.id) {
         if *old != event {
             return Err("per-open event identity changed".into());
         }
-        return Ok(record);
+        return Ok(Appended {
+            record,
+            changed: false,
+            imported: false,
+        });
     }
-    if retirement::is_retired(&tx, key)? {
+    if retirement::is_retired(tx, key)? {
         return Err("retired open history is immutable".into());
     }
-    if session::frozen(&tx, key)? {
+    if session::frozen(tx, key)? {
         return Err("session recovery froze this exact callback history".into());
     }
     let old_hash = checksum(&row)?;
     let previous = row.head.clone();
     let hash = event_hash(key, row.count + 1, &event, &previous)?;
-    reduce(&tx, &mut record, &event)?;
+    reduce(tx, &mut record, &event)?;
     if let Some(key) = &chunk {
-        scope_record(&crate::chunk_mount::verify_key(&tx, key)?, &record)?;
+        scope_record(&crate::chunk_mount::verify_key(tx, key)?, &record)?;
     }
     row.count += 1;
     row.head = Some(hash.clone());
-    let mut records = all(&tx)?;
+    let mut records = all(tx)?;
     *records
         .iter_mut()
         .find(|(r, _)| r.input.id == key)
         .ok_or("per-open row missing")? = (row.clone(), record.clone());
-    capacity(&records)?;
+    capacity(tx, &records)?;
     let action = serde_json::to_vec(&event.action)?;
     if action.len() > 16384 {
         return Err("per-open event too large".into());
     }
+    #[cfg(test)]
+    crate::sparse_views::preparation::native::full_probe(tx)?;
     let a = tx.execute(
         "INSERT INTO windows_open_events VALUES(?1,?2,?3,?4,?5,?6)",
         params![event.id, key, row.count as i64, action, previous, hash],
     )?;
     let b=tx.execute("UPDATE windows_open_journal SET event_count=?1,head_hash=?2,state_hash=?3 WHERE open_id=?4 AND state_hash=?5",params![row.count as i64,row.head,checksum(&row)?,key,old_hash])?;
-    if a != 1 || b != 1 || load(&tx, key)?.as_ref().map(|(_, r)| r) != Some(&record) {
+    if a != 1 || b != 1 || load(tx, key)?.as_ref().map(|(_, r)| r) != Some(&record) {
         return Err("per-open event was not durably committed".into());
     }
     let imported = matches!(event.action, Action::Activate { .. })
@@ -1091,19 +1232,33 @@ pub(super) fn append_existing(
     }
     if restricted {
         super::recovery::metadata(
-            &tx,
+            tx,
             chunk.ok_or("restricted acknowledgment requires chunk role")?,
         )?;
     }
     if matches!(event.action, Action::Acknowledge { .. }) {
         super::recovery::checkpoint("OpenStored");
     }
-    tx.commit()?;
-    if matches!(event.action, Action::Acknowledge { .. }) {
-        super::recovery::checkpoint("OpenCommitted");
-    }
-    if imported {
-        super::creator_import::checkpoint("CreatorActivationCommitted")?;
-    }
-    Ok(record)
+    Ok(Appended {
+        record,
+        changed: true,
+        imported,
+    })
+}
+
+pub(crate) fn sparse_capacity(db: &Connection) -> Result<()> {
+    capacity(db, &all(db)?)
+}
+
+/// Exact durable abandonment proof; never fresh original-open authority.
+pub(crate) fn sparse_recovered(db: &Connection, id: &str) -> Result<bool> {
+    let (row, record) = load(db, id)?.ok_or("original open missing")?;
+    session::closed(db, &row, &record)
+}
+
+/// Exact sealed retirement, used only to release an obsolete runtime token.
+pub(crate) fn sparse_retired(db: &Connection, id: &str) -> Result<bool> {
+    let (row, record) = load(db, id)?.ok_or("original open missing")?;
+    retirement::check(db, &row, &record)?;
+    retirement::is_retired(db, id)
 }

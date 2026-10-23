@@ -379,7 +379,7 @@ fn controlled_quota_keeps_response_compensation_cleanup_and_final_release_capaci
         )
         .unwrap();
     fill_completed_noops(&mut f, &i.id, 1359);
-    capacity(&all(&f.client.connection).unwrap()).unwrap();
+    capacity(&f.client.connection, &all(&f.client.connection).unwrap()).unwrap();
     assert!(
         Journal::new(&mut f.client)
             .unwrap()
@@ -422,7 +422,7 @@ fn controlled_quota_keeps_response_compensation_cleanup_and_final_release_capaci
         .complete(&i.id, &key(3703), &key(3700))
         .unwrap();
     assert!(r.pending().is_empty());
-    capacity(&all(&f.client.connection).unwrap()).unwrap();
+    capacity(&f.client.connection, &all(&f.client.connection).unwrap()).unwrap();
 }
 #[test]
 fn schema_seventeen_evidence_hashes_are_preserved_without_opting_into_controller_policy() {

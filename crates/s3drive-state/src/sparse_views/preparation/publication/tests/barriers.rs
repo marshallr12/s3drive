@@ -68,6 +68,14 @@ fn opens<'a>(s: &'a mut State, key: &crate::chunk_mount::Key) -> opens::Journal<
     opens::Journal::for_chunks(s, key).unwrap()
 }
 fn open(s: &mut State, f: &Fixture, key: &crate::chunk_mount::Key) -> opens::OpenInput {
+    open_with_posix(s, f, key, false)
+}
+fn open_with_posix(
+    s: &mut State,
+    f: &Fixture,
+    key: &crate::chunk_mount::Key,
+    posix: bool,
+) -> opens::OpenInput {
     let input = opens::OpenInput {
         id: hex(&[60; 16]),
         session: hex(&[61; 16]),
@@ -79,7 +87,7 @@ fn open(s: &mut State, f: &Fixture, key: &crate::chunk_mount::Key) -> opens::Ope
         delete_on_close: false,
         controlled: true,
         session_bound: true,
-        posix: false,
+        posix,
         admission: None,
         creation: None,
     };
@@ -462,3 +470,6 @@ fn sparse_barrier_session_finish_rechecks_later_work_and_replays_only_a_committe
 
 #[path = "owned.rs"]
 mod owned;
+
+#[path = "native.rs"]
+mod native;

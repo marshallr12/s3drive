@@ -78,17 +78,33 @@ fn id(raw: Vec<u8>) -> Result<Id> {
     raw.try_into().map_err(|_| Failure::Corrupt.into())
 }
 pub(super) fn inspect_initial(db: &Connection) -> Result<Ledger> {
-    load(db, false)
+    load(db, false, false)
 }
 pub(super) fn inspect(db: &Connection) -> Result<Ledger> {
-    load(db, true)
+    load(db, true, true)
 }
 fn count(db: &Connection, sql: &str) -> Result<u64> {
     let n: i64 = db.query_row(sql, [], |r| r.get(0))?;
     n.try_into().map_err(|_| Failure::Corrupt.into())
 }
-fn load(db: &Connection, patches: bool) -> Result<Ledger> {
-    let tables = if patches { &TABLES[..] } else { &TABLES[..4] };
+/// Structural history only. This distinct type cannot supply source bytes.
+pub(in crate::sparse_views) struct Metadata {
+    pub files: BTreeMap<Id, File>,
+    pub records: BTreeMap<Id, Saved>,
+}
+pub(in crate::sparse_views) fn inspect_metadata(db: &Connection) -> Result<Metadata> {
+    let data = load(db, true, false)?;
+    Ok(Metadata {
+        files: data.files,
+        records: data.records,
+    })
+}
+fn load(db: &Connection, patches: bool, bodies: bool) -> Result<Ledger> {
+    let tables = if patches && bodies {
+        &TABLES[..]
+    } else {
+        &TABLES[..4]
+    };
     let mut counts = [0u64; 5];
     for (i, table) in tables.iter().enumerate() {
         counts[i] = count(db, &format!("SELECT count(*) FROM {table}"))?;
@@ -132,7 +148,7 @@ fn load(db: &Connection, patches: bool) -> Result<Ledger> {
     if metadata > HARD_METADATA {
         return Err(Failure::Corrupt.into());
     }
-    if patches {
+    if bodies {
         let bad:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM sparse_view_blocks WHERE typeof(block)!='blob' OR length(block)!=32 OR typeof(data)!='blob' OR length(data) NOT BETWEEN 1 AND 1048576)",[],|r|r.get(0))?;
         let bytes = count(
             db,
@@ -259,10 +275,11 @@ fn load(db: &Connection, patches: bool) -> Result<Ledger> {
             }
             if let Change::Write { blocks, .. } = change {
                 for b in blocks {
-                    if out
-                        .blocks
-                        .get(&b.block)
-                        .is_none_or(|data| data.len() as u64 != b.length)
+                    if bodies
+                        && out
+                            .blocks
+                            .get(&b.block)
+                            .is_none_or(|data| data.len() as u64 != b.length)
                     {
                         return Err(Failure::Corrupt.into());
                     }
@@ -286,7 +303,7 @@ fn load(db: &Connection, patches: bool) -> Result<Ledger> {
             return Err(Failure::Corrupt.into());
         }
     }
-    if !operations.is_empty() || used.len() != out.blocks.len() {
+    if !operations.is_empty() || (bodies && used.len() != out.blocks.len()) {
         return Err(Failure::Corrupt.into());
     }
     let mut visited = BTreeSet::new();

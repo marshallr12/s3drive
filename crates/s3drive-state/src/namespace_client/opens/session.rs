@@ -322,6 +322,7 @@ impl Journal<'_> {
             return Err("recover exact namespace outcomes before session abandonment".into());
         }
         for (row, r) in &records {
+            let native = crate::sparse_views::preparation::native::recovery_ready(&tx, r)?;
             creation::recoverable(&tx, &r.input)?;
             if !r.input.session_bound
                 || !r.input.controlled
@@ -335,7 +336,7 @@ impl Journal<'_> {
                     matches!(e.action, Action::Callback(_))
                         && !r.completed(&e.id)
                         && !(matches!(e.action, Action::Callback(Callback::Close))
-                            && r.cleanup().is_none())
+                            && (r.cleanup().is_none() || native))
                 })
             {
                 return Err("recover original obsolete session work before abandonment".into());
@@ -442,6 +443,7 @@ impl Journal<'_> {
         }
         for open in &input.opens {
             let (_, r) = load(&tx, &open.id)?.ok_or("recovery open missing")?;
+            crate::sparse_views::preparation::native::recovery_ready(&tx, &r)?;
             if binding(&tx, &r.input.session, &input.volume)? == runtime {
                 return Err("cannot abandon a current runtime file object".into());
             }

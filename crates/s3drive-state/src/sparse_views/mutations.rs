@@ -248,65 +248,58 @@ impl<'a> Journal<'a> {
         bytes: &[u8],
         hook: impl FnMut(Boundary) -> Result<()>,
     ) -> Result<View> {
-        write_bounds(offset, bytes)?;
-        let mut data = BTreeMap::new();
-        let mut blocks = Vec::new();
-        for chunk in bytes.chunks(PATCH_BYTES) {
-            let block = digest(chunk);
-            blocks.push(BlockRef {
-                block,
-                length: chunk.len() as u64,
-            });
-            if let Some(old) = data.insert(block, chunk.to_vec())
-                && old != chunk
-            {
-                return Err(Failure::Corrupt.into());
-            }
-        }
-        self.change(
-            operation,
-            scope,
-            Change::Write {
-                parent,
-                offset,
-                blocks,
-            },
-            None,
-            data,
-            hook,
-        )
+        let edit = write_edit(operation, scope, parent, offset, bytes)?;
+        self.change(edit, None, hook)
     }
     pub fn resize(&mut self, operation: Id, parent: Id, size: u64) -> Result<View> {
         resize_bounds(size)?;
         self.change(
-            operation,
+            resize_edit(operation, None, parent, size)?,
             None,
-            Change::Resize { parent },
-            Some(size),
-            BTreeMap::new(),
             |_| Ok(()),
         )
     }
     pub fn resize_scoped(&mut self, token: ScopedOperation, parent: Id, size: u64) -> Result<View> {
         resize_bounds(size)?;
         self.change(
-            token.id()?,
-            Some(token),
-            Change::Resize { parent },
-            Some(size),
-            BTreeMap::new(),
+            resize_edit(token.id()?, Some(token), parent, size)?,
+            None,
             |_| Ok(()),
         )
     }
+    pub(in crate::sparse_views) fn change_native(
+        &mut self,
+        edit: Edit,
+        native: &preparation::native::Mutation<'_>,
+    ) -> Result<View> {
+        self.change(edit, Some(native), |point| {
+            preparation::native::checkpoint(
+                "native-edit",
+                match point {
+                    Boundary::BlockStored => "BlockStored",
+                    Boundary::ViewStored => "ViewStored",
+                    Boundary::OperationStored => "OperationStored",
+                    Boundary::HeadUpdated => "HeadUpdated",
+                    Boundary::Validated => "Validated",
+                    Boundary::Committed => "Committed",
+                },
+            );
+            Ok(())
+        })
+    }
     fn change(
         &mut self,
-        operation: Id,
-        scope: Option<ScopedOperation>,
-        change: Change,
-        size: Option<u64>,
-        data: BTreeMap<Id, Vec<u8>>,
+        edit: Edit,
+        native: Option<&preparation::native::Mutation<'_>>,
         mut hook: impl FnMut(Boundary) -> Result<()>,
     ) -> Result<View> {
+        let Edit {
+            operation,
+            scope,
+            change,
+            size,
+            data,
+        } = edit;
         if operation == [0; 32] {
             return Err(Failure::Invalid.into());
         }
@@ -338,6 +331,14 @@ impl<'a> Journal<'a> {
         if before.files.get(&target).ok_or(Failure::Corrupt)?.head != parent.id {
             return Err(Failure::Conflict.into());
         }
+        let epoch_event = preparation::native::before_mutation(
+            &tx,
+            self.state.incarnation.as_deref(),
+            &mut self.state.native_sparse,
+            native,
+            parent,
+            operation,
+        )?;
         let size = match &change {
             Change::Rebase { .. } | Change::Observe { .. } => return Err(Failure::Invalid.into()),
             Change::Resize { .. } => size.ok_or(Failure::Invalid)?,
@@ -400,6 +401,19 @@ impl<'a> Journal<'a> {
             return Err(Failure::Corrupt.into());
         }
         hook(Boundary::HeadUpdated)?;
+        if let Some((key, open, event)) = epoch_event {
+            crate::namespace_client::opens::append_in_transaction(
+                &tx,
+                Some(&key),
+                &open,
+                event,
+                false,
+            )?;
+            preparation::native::checkpoint("native-edit", "EpochStored");
+        }
+        if native.is_some() {
+            preparation::native::validate_metadata(&tx)?;
+        }
         if inspect(&tx)? != expected {
             return Err(Failure::Corrupt.into());
         }
@@ -677,4 +691,62 @@ impl Client {
             .call(move |s| Journal::new(&mut s.state, options)?.read(id, offset, length))
             .await
     }
+}
+
+/// Internal bounded edit, shared by ordinary and explicitly native-bound entry points.
+pub(in crate::sparse_views) struct Edit {
+    operation: Id,
+    scope: Option<ScopedOperation>,
+    change: Change,
+    size: Option<u64>,
+    data: BTreeMap<Id, Vec<u8>>,
+}
+pub(in crate::sparse_views) fn write_edit(
+    operation: Id,
+    scope: Option<ScopedOperation>,
+    parent: Id,
+    offset: u64,
+    bytes: &[u8],
+) -> Result<Edit> {
+    write_bounds(offset, bytes)?;
+    let mut data = BTreeMap::new();
+    let mut blocks = Vec::new();
+    for chunk in bytes.chunks(PATCH_BYTES) {
+        let block = digest(chunk);
+        blocks.push(BlockRef {
+            block,
+            length: chunk.len() as u64,
+        });
+        if let Some(old) = data.insert(block, chunk.to_vec())
+            && old != chunk
+        {
+            return Err(Failure::Corrupt.into());
+        }
+    }
+    Ok(Edit {
+        operation,
+        scope,
+        change: Change::Write {
+            parent,
+            offset,
+            blocks,
+        },
+        size: None,
+        data,
+    })
+}
+pub(in crate::sparse_views) fn resize_edit(
+    operation: Id,
+    scope: Option<ScopedOperation>,
+    parent: Id,
+    size: u64,
+) -> Result<Edit> {
+    resize_bounds(size)?;
+    Ok(Edit {
+        operation,
+        scope,
+        change: Change::Resize { parent },
+        size: Some(size),
+        data: BTreeMap::new(),
+    })
 }

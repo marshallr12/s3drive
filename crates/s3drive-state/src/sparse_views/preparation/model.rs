@@ -54,6 +54,8 @@ pub(super) struct Input {
     pub base_page: Id,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owned: Option<owned::Provenance>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub native: Option<native::Provenance>,
 }
 impl Input {
     pub fn id(&self) -> Result<Id> {
@@ -108,6 +110,9 @@ impl fmt::Debug for Info {
     }
 }
 impl Info {
+    pub fn native_ownership(&self) -> Option<&native::Provenance> {
+        self.input.native.as_ref()
+    }
     pub fn ownership(&self) -> Option<&owned::Provenance> {
         self.input.owned.as_ref()
     }

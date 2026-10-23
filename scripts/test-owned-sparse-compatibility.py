@@ -11,9 +11,15 @@ import sys
 
 old, new, root = (Path(p).resolve() for p in sys.argv[1:])
 root.mkdir(parents=True, exist_ok=False)
-report = {"format": 1, "kind": "owned-sparse-schema-compatibility", "refusal_cases": [], "old_schema": 46, "new_schema": 47, "invocations": [], "success": False,
-          "old_source_commit": "5343eb41b6132ba3a8a5cfc2f74b4d6ff01d0b28",
-          "new_source_commit": os.environ.get("GITHUB_SHA", "local-uncommitted")}
+old_schema = int(os.environ.get("S3DRIVE_COMPAT_OLD_SCHEMA", "46"))
+new_schema = int(os.environ.get("S3DRIVE_COMPAT_NEW_SCHEMA", "47"))
+assert (old_schema, new_schema) in [(46, 47), (47, 48)]
+report = {"format": 1,
+          "kind": "owned-sparse-schema-compatibility" if old_schema == 46 else "native-sparse-close-schema-compatibility",
+          "refusal_cases": [], "old_schema": old_schema, "new_schema": new_schema,
+          "invocations": [], "success": False,
+          "old_source_commit": os.environ.get("S3DRIVE_COMPAT_OLD_SHA", "5343eb41b6132ba3a8a5cfc2f74b4d6ff01d0b28"),
+          "new_source_commit": os.environ.get("S3DRIVE_COMPAT_NEW_SHA", os.environ.get("GITHUB_SHA", "local-uncommitted"))}
 report_path = root / "report.json"
 
 
@@ -48,12 +54,12 @@ try:
     assert report["old_binary_sha256"] != report["new_binary_sha256"]
     legacy = root / "legacy café 🦀"
     fresh = root / "fresh 日本語"
-    invoke(old, legacy, 46)
+    invoke(old, legacy, old_schema)
     with sqlite3.connect(legacy / "metadata.sqlite3") as db:
         db.execute("INSERT INTO legacy_cached_objects_v1 VALUES(?,?,?,?,?)", ("café", "日本語 🦀", '"legacy"', None, 17))
     db.close()
     before = contents(legacy)
-    invoke(new, legacy, 47)
+    invoke(new, legacy, new_schema)
     after = contents(legacy)
     assert after == before, "legacy schema or rows were rewritten"
     report["legacy_dump_statements"] = len(before)
@@ -61,13 +67,13 @@ try:
     report["legacy_complete_dump_unchanged"] = True
     for directory in [legacy, fresh]:
         if directory == fresh:
-            invoke(new, directory, 47)
+            invoke(new, directory, new_schema)
         before_bytes = bytes_on_disk(directory)
         invoke(old, directory)
         after_bytes = bytes_on_disk(directory)
         report["refusal_cases"].append({"directory": directory.name, "before": before_bytes, "after": after_bytes})
         assert after_bytes == before_bytes, "old reader mutated current database/sidecars"
-        invoke(new, directory, 47)
+        invoke(new, directory, new_schema)
     report["refusal_bytes_unchanged"] = True
     report["success"] = True
 finally:

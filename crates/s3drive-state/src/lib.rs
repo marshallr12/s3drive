@@ -27,7 +27,7 @@ use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 47;
+pub const SCHEMA_VERSION: i32 = 48;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
@@ -40,6 +40,7 @@ pub struct State {
     _directory: Option<directory::OwnedDirectory>,
     incarnation: Option<String>,
     source_pin_witness: Option<[u8; 32]>,
+    native_sparse: sparse_views::preparation::native::Runtime,
 }
 
 #[derive(Debug)]
@@ -320,6 +321,9 @@ impl State {
             // marker. Existing43/44 roles keep every byte; a transaction-local
             // current marker enables their strict role validators. Any failure
             // rolls back this marker together with the rest of initialization.
+            if version < 48 {
+                sparse_views::preparation::native::require_pre48(&tx)?;
+            }
             if version < 47 {
                 sparse_views::preparation::owned::require_pre47(&tx)?;
             }
@@ -332,7 +336,7 @@ impl State {
             if version < 44 {
                 namespace_client::creator_import::require_pre44(&tx)?;
             }
-            if (43..=46).contains(&version) {
+            if (43..=47).contains(&version) {
                 tx.pragma_update(None, "user_version", SCHEMA_VERSION)?;
             }
             chunk_mount::check_schema(&tx)?;
@@ -407,6 +411,7 @@ impl State {
             _directory: None,
             incarnation: None,
             source_pin_witness: None,
+            native_sparse: Default::default(),
         })
     }
 

@@ -257,6 +257,6 @@ pub(crate) fn quota_fixture(
         }
     }
     let records = all(db)?;
-    capacity(&records)?;
+    capacity(db, &records)?;
     Ok(())
 }

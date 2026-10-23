@@ -6,6 +6,7 @@ on:
 
 env:
   RUST_TEST_THREADS: "4"
+  CARGO_BUILD_JOBS: "4"
 
 permissions:
   contents: read
@@ -43,6 +44,8 @@ jobs:
         run: cargo test -p s3drive-cli --test chunk_publication cold_namespace --locked -- --nocapture --test-threads=4
       - name: Verify owned sparse SDK and killed recovery
         run: cargo test -p s3drive-cli --test chunk_publication owned_sparse --locked -- --nocapture --test-threads=4
+      - name: Verify native sparse atomic admission Close and cold fences
+        run: cargo test -p s3drive-state native_sparse --locked -- --nocapture --test-threads=4
       - name: Verify typed owned sparse state and crash recovery
         run: cargo test -p s3drive-state owned_sparse --locked -- --test-threads=4
       - name: Verify Windows callback stack bound
@@ -94,22 +97,34 @@ jobs:
         run: cargo test -p s3drive-cli --test windows_mount actual_managed_windows_disposition_lifecycle --locked -- --ignored --nocapture --test-threads=1
       - run: cargo test --workspace --locked
       - run: cargo build --workspace --locked
-      - name: Verify actual schema46/schema47 compatibility
+      - name: Verify actual schema46/schema47 and schema47/schema48 compatibility
         if: runner.os == 'Linux'
         run: |
-          cp target/debug/s3drive "$RUNNER_TEMP/s3drive-schema47"
-          git fetch origin 5343eb41b6132ba3a8a5cfc2f74b4d6ff01d0b28
+          cp target/debug/s3drive "$RUNNER_TEMP/s3drive-schema48"
+          git fetch origin 5343eb41b6132ba3a8a5cfc2f74b4d6ff01d0b28 82c46803560773b90e405c935e1f6846616c5d7b
           git worktree add --detach "$RUNNER_TEMP/s3drive-schema46-source" 5343eb41b6132ba3a8a5cfc2f74b4d6ff01d0b28
-          CARGO_TARGET_DIR="$RUNNER_TEMP/s3drive-schema46-target" cargo build --manifest-path "$RUNNER_TEMP/s3drive-schema46-source/Cargo.toml" -p s3drive-cli --locked
-          cp "$RUNNER_TEMP/s3drive-schema46-target/debug/s3drive" "$RUNNER_TEMP/s3drive-schema46"
-          python3 scripts/test-owned-sparse-compatibility.py "$RUNNER_TEMP/s3drive-schema46" "$RUNNER_TEMP/s3drive-schema47" "$RUNNER_TEMP/owned-sparse-compatibility"
-          cmp target/debug/s3drive "$RUNNER_TEMP/s3drive-schema47"
+          CARGO_TARGET_DIR="$RUNNER_TEMP/s3drive-compat-target" cargo build --manifest-path "$RUNNER_TEMP/s3drive-schema46-source/Cargo.toml" -p s3drive-cli --locked
+          cp "$RUNNER_TEMP/s3drive-compat-target/debug/s3drive" "$RUNNER_TEMP/s3drive-schema46"
+          git worktree add --detach "$RUNNER_TEMP/s3drive-schema47-source" 82c46803560773b90e405c935e1f6846616c5d7b
+          CARGO_TARGET_DIR="$RUNNER_TEMP/s3drive-compat-target" cargo build --manifest-path "$RUNNER_TEMP/s3drive-schema47-source/Cargo.toml" -p s3drive-cli --locked
+          cp "$RUNNER_TEMP/s3drive-compat-target/debug/s3drive" "$RUNNER_TEMP/s3drive-schema47"
+          S3DRIVE_COMPAT_NEW_SHA=82c46803560773b90e405c935e1f6846616c5d7b python3 scripts/test-owned-sparse-compatibility.py "$RUNNER_TEMP/s3drive-schema46" "$RUNNER_TEMP/s3drive-schema47" "$RUNNER_TEMP/owned-sparse-compatibility"
+          S3DRIVE_COMPAT_OLD_SCHEMA=47 S3DRIVE_COMPAT_NEW_SCHEMA=48 S3DRIVE_COMPAT_OLD_SHA=82c46803560773b90e405c935e1f6846616c5d7b python3 scripts/test-owned-sparse-compatibility.py "$RUNNER_TEMP/s3drive-schema47" "$RUNNER_TEMP/s3drive-schema48" "$RUNNER_TEMP/native-sparse-close-compatibility"
+          cmp target/debug/s3drive "$RUNNER_TEMP/s3drive-schema48"
       - name: Retain schema compatibility observations
         if: runner.os == 'Linux' && always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: owned-sparse-schema-compatibility-${{ github.sha }}
           path: ${{ runner.temp }}/owned-sparse-compatibility/report.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Retain native sparse schema compatibility observations
+        if: runner.os == 'Linux' && always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: native-sparse-close-schema-compatibility-${{ github.sha }}
+          path: ${{ runner.temp }}/native-sparse-close-compatibility/report.json
           if-no-files-found: error
           retention-days: 30
       - name: Verify Windows supervisor retry policy

@@ -36,6 +36,9 @@ fn metadata(db: &Connection) -> Result<ledger::Meta> {
     {
         return Err(Failure::Corrupt.into());
     }
+    if crate::chunk_mount::load(db)?.is_some() {
+        crate::sparse_views::preparation::native::validate_metadata(db)?;
+    }
     let meta = ledger::inspect(db)?;
     if version == 33 && meta.records.values().any(|r| r.input.predecessor.is_some()) {
         return Err(Failure::Corrupt.into());
