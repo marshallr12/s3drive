@@ -1,7 +1,7 @@
 # Retry fencing and checkpoint state prerequisite
 
-Candidate contract,2026-10-23. **Not accepted; no history reclamation.**
-Based on accepted main86d1e0e. This is a bounded state-library prerequisite, not a
+Accepted bounded state contract,2026-10-23. **No history reclamation.**
+Implemented at main8702843, based on accepted main86d1e0e. This is a bounded state-library prerequisite, not a
 claim that populated/native owners can yet retire history. See the broader
 [retention plan](mixed-retention-plan.md).
 
@@ -74,15 +74,34 @@ existing tmpfs guard (eight cases; child entry alone passed). This is not passin
 durability evidence. The cloud filesystem guard remains unchanged. Local documentation links pass (110 Markdown files), but mdbook is not installed
 on this workstation; the hosted book job remains mandatory. The full local gate
 also fails at existing storage-dependent authority cases. Final-source standard
-Linux/Windows Actions and full evidence review are still required.
+Linux/Windows Actions and full evidence review passed independently for candidate
+and merged main, as recorded below.
 
-Actual48/49 compatibility must use separately built accepted48 and candidate49
-executables, prove old48 refuses fresh/upgraded49 without changing database or
-sidecar bytes, and preserve the complete original48 schema/data dump apart from
+Actual48/49 compatibility used separately built accepted48 and candidate49
+executables, proved old48 refuses fresh/upgraded49 without changing database or
+sidecar bytes, and preserved the complete original48 schema/data dump apart from
 the one verified empty additive table. Existing genuine46/47 and47/48 tests remain
 separate. The structural catalog allowlist accounts for exactly the new table;
 source/plan/blob/admission quotas, corruption gates and deadlines do not change.
 Complete native regressions and raw typed artifact/source review remain mandatory.
+
+### Exact accepted evidence
+
+Source `870284330d3ce61983fe0080bc1acbe877ec9259` passed candidate
+[39998336518](https://github.com/marshallr12/s3drive/actions/runs/39998336518)
+and unchanged main
+[40004695124](https://github.com/marshallr12/s3drive/actions/runs/40004695124).
+Each run passed Linux1026/Windows1022 workspace tests across37 cohorts,all12
+retry/checkpoint cases on both OSes,26 native state cases,nine shared lifecycle
+cases and three actual native cases per OS in debug/release. All784 source files,
+five artifact ZIP digests,35 typed native reference records and actual46/47,
+47/48,48/49 compatibility reports were independently reviewed.
+
+Candidate whole native debug/release timing was60.94/9.45 seconds on Linux and
+81.60/14.68 on Windows. Main was62.14/9.53 and106.24/20.11 respectively; the
+120-second complete-sequence deadline was not relaxed. These are regression
+results, not activation or native retirement acceptance. Historical performance
+failures remain recorded in the handover and native lifecycle contract.
 
 ## Still open
 

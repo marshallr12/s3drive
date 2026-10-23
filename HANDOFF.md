@@ -4,7 +4,19 @@ Updated 2026-10-23. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
-## Accepted performance baseline; retry-checkpoint prerequisite under development
+## Accepted retry/checkpoint state prerequisite; no history reclamation
+
+Main `870284330d3ce61983fe0080bc1acbe877ec9259` is accepted for the bounded
+schema49 retry/checkpoint state prerequisite. Exact candidate
+[run39998336518](https://github.com/marshallr12/s3drive/actions/runs/39998336518)
+and unchanged main
+[run40004695124](https://github.com/marshallr12/s3drive/actions/runs/40004695124)
+passed full source/log/artifact review: Linux1026/Windows1022 workspace tests in
+37 cohorts,12 retry/checkpoint cases per OS,26 native state cases,nine shared and
+three actual native cases per OS in debug/release,784 exact source files,five ZIP
+digests,35 typed reference records and genuine46/47,47/48,48/49 executable
+compatibility. Main whole native debug/release timings were62.14/9.53 seconds on
+Linux and106.24/20.11 on Windows, below the unchanged120-second bound.
 
 Main `86d1e0ea7e27889e418863e3ab1b58e6e629f56c` is accepted after complete
 [run39977846665](https://github.com/marshallr12/s3drive/actions/runs/39977846665)
@@ -24,7 +36,7 @@ Accepted corrections remain transaction-local; no cross-command proof caching,
 relaxed deadlines or suppressed native workload failures are permitted.
 
 The new [retry/checkpoint prerequisite](docs/src/retry-checkpoint-safety.md) is
-an unaccepted schema49 candidate. Its permanent explicit state-library opt-in
+an accepted schema49 state-library prerequisite. Its permanent explicit opt-in
 closes preparation/root/physical admission over a source epoch and derives a
 revalidated observational clean-checkpoint/terminal-evidence capability. It must
 refuse activation on populated downstream/native owners without changing them.
@@ -33,10 +45,12 @@ ancestors, reclaim rows/bytes, or complete the full retry/retention protocol.
 Unknown outcomes, dirty heads and reader pins remain protective. A released
 reader token is never evidence of history reclamation.
 
-Candidate acceptance requires its own complete Linux/Windows standard Actions,
-new48/49 actual executable compatibility alongside46/47 and47/48, exact source,
-full logs and all native artifact checks. Failed local/cohort evidence stays
-private and retained. Do not merge before that review; verify main afterward.
+Acceptance covers only this opt-in prerequisite and the regression evidence above.
+The new48/49 check uses separately built old/current executables, verifies old48
+refusal without byte changes, and preserves the complete old schema/data dump
+apart from the exactly verified empty additive mode table. Local durable tests
+remain blocked by the unchanged filesystem guard; hosted evidence supplies that
+gate. Failed local/cohort evidence stays private and retained.
 
 Native activation still requires managed version8 sparse-lifecycle=owned-unlinked-v1.
 Omission preserves the default. Retention/GC, sparse delete-on-close/deferred

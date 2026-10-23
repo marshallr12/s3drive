@@ -7,7 +7,7 @@ This follows [clean epochs](mixed-clean-epochs.md) and
 continuous mounted chunk writes can exceed the current retained-history quotas.
 A successful publication alone does not make its local dependencies disposable.
 
-## Retry/checkpoint prerequisite (2026-10-23, candidate)
+## Retry/checkpoint prerequisite (2026-10-23, accepted state contract)
 
 The [bounded state contract](retry-checkpoint-safety.md) adds explicit downstream
 retry fencing and revalidated observational checkpoint evidence, without deletion.

@@ -24,8 +24,10 @@ Main86d1e0e passed full exact-source verification in
 Linux1014/Windows1010 tests,37 cohorts,26 native state cases and780 source files.
 The retained-history performance phase is accepted, with unchanged120-second
 whole native sequence limits. It does not bound retained bytes or enable GC.
-The current bounded next step is the [retry/checkpoint state prerequisite](retry-checkpoint-safety.md).
-Its schema49 candidate still requires independent acceptance. Populated native
+The [retry/checkpoint state prerequisite](retry-checkpoint-safety.md) is accepted
+at schema49 main8702843 after candidate39998336518 and main40004695124 full
+exact-source review (Linux1026/Windows1022 tests,12 dedicated cases per OS and
+genuine48/49 compatibility). Populated native
 owner upgrades, history severance and actual reclamation remain blocked and are
 not claimed by this library-only contract. Defaults and provider behavior remain
 unchanged.
