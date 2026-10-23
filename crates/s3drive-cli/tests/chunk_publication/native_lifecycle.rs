@@ -142,110 +142,94 @@ pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
     mount_configuration(config, root, s).await;
     let mut mount = Mount::start(root).await;
     let base = mount.path.clone();
-    let unlink_base = base.clone();
+    // Keep the original single 120-second bound for the entire live-mount
+    // sequence. Per-call measurements distinguish validation cost from waits;
+    // splitting diagnostic phases is not acceptance of the original regression.
     blocking(&mut mount, move || {
-        let base = unlink_base;
-        let started = std::time::Instant::now();
-        let stage = |name| {
-            eprintln!(
-                "NATIVE_LIFECYCLE_STAGE {name} elapsed={:?}",
-                started.elapsed()
-            )
-        };
-        stage("unlink-start");
+        let sequence = std::time::Instant::now();
+        macro_rules! call {
+            ($name:literal, $operation:expr) => {{
+                let started = std::time::Instant::now();
+                let result = $operation;
+                eprintln!(
+                    "NATIVE_LIFECYCLE_CALL {} duration={:?} sequence={:?}",
+                    $name,
+                    started.elapsed(),
+                    sequence.elapsed()
+                );
+                result
+            }};
+        }
         let path = base.join("unlink 日本語 🦀.bin");
-        let mut file = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create_new(true)
-            .open(&path)
-            .unwrap();
-        let mut other = std::fs::File::open(&path).unwrap();
-        file.seek(SeekFrom::Start(3)).unwrap();
-        file.write_all("日本語 🦀\0".as_bytes()).unwrap();
+        let mut file = call!(
+            "unlink-create",
+            std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create_new(true)
+                .open(&path)
+        )
+        .unwrap();
+        let mut other = call!("unlink-open-other", std::fs::File::open(&path)).unwrap();
+        call!("unlink-seek-writer", file.seek(SeekFrom::Start(3))).unwrap();
+        call!("unlink-write", file.write_all("日本語 🦀\0".as_bytes())).unwrap();
         let mut bytes = vec![0; "日本語 🦀\0".len()];
-        other.seek(SeekFrom::Start(3)).unwrap();
-        other.read_exact(&mut bytes).unwrap();
+        call!("unlink-seek-reader", other.seek(SeekFrom::Start(3))).unwrap();
+        call!("unlink-dirty-read", other.read_exact(&mut bytes)).unwrap();
         assert_eq!(bytes, "日本語 🦀\0".as_bytes());
-        std::fs::remove_file(&path).unwrap();
-        assert!(!path.exists());
-        file.seek(SeekFrom::Start(1)).unwrap();
-        file.write_all(b"z").unwrap();
-        file.sync_all().unwrap();
-        drop(file);
-        other.seek(SeekFrom::Start(0)).unwrap();
+        call!("unlink-remove", std::fs::remove_file(&path)).unwrap();
+        assert!(!call!("unlink-exists", path.exists()));
+        call!("unlinked-seek-writer", file.seek(SeekFrom::Start(1))).unwrap();
+        call!("unlinked-write", file.write_all(b"z")).unwrap();
+        call!("unlinked-sync", file.sync_all()).unwrap();
+        call!("unlinked-close-writer", drop(file));
+        call!("unlinked-seek-reader", other.seek(SeekFrom::Start(0))).unwrap();
         let mut bytes = [9; 3];
-        other.read_exact(&mut bytes).unwrap();
+        call!("unlinked-read", other.read_exact(&mut bytes)).unwrap();
         assert_eq!(bytes, [0, b'z', 0]);
-        drop(other);
-        stage("unlink-finished");
-    })
-    .await;
-    // Each independent scenario keeps the original 120-second syscall bound.
-    // The same live mount carries its retained history into replacement.
-    blocking(&mut mount, move || {
-        let started = std::time::Instant::now();
-        let stage = |name| {
-            eprintln!(
-                "NATIVE_LIFECYCLE_STAGE {name} elapsed={:?}",
-                started.elapsed()
-            )
-        };
+        call!("unlinked-last-close", drop(other));
         let saved = base.join("saved 日本語.bin");
         let temporary = base.join("temporary.bin");
-        let mut old = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create_new(true)
-            .open(&saved)
-            .unwrap();
-        old.write_all(b"old body").unwrap();
-        let mut temp = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create_new(true)
-            .open(&temporary)
-            .unwrap();
-        temp.write_all(b"new body").unwrap();
-        stage("replacement-before-rename");
-        std::fs::rename(&temporary, &saved).unwrap();
-        stage("replacement-after-rename");
-        assert!(!temporary.exists());
-        old.seek(SeekFrom::Start(0)).unwrap();
+        let mut old = call!(
+            "replace-create-old",
+            std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create_new(true)
+                .open(&saved)
+        )
+        .unwrap();
+        call!("replace-write-old", old.write_all(b"old body")).unwrap();
+        let mut temp = call!(
+            "replace-create-temp",
+            std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create_new(true)
+                .open(&temporary)
+        )
+        .unwrap();
+        call!("replace-write-temp", temp.write_all(b"new body")).unwrap();
+        call!("replace-rename", std::fs::rename(&temporary, &saved)).unwrap();
+        assert!(!call!("replace-temp-exists", temporary.exists()));
+        call!("replace-seek-old", old.seek(SeekFrom::Start(0))).unwrap();
         let mut bytes = [0; 8];
-        old.read_exact(&mut bytes).unwrap();
+        call!("replace-read-old", old.read_exact(&mut bytes)).unwrap();
         assert_eq!(&bytes, b"old body");
-        assert_eq!(std::fs::read(&saved).unwrap(), b"new body");
-        old.seek(SeekFrom::Start(0)).unwrap();
-        old.write_all(b"OLD").unwrap();
-        old.sync_all().unwrap();
-        stage("replacement-before-close");
-        drop(old);
-        stage("replacement-old-closed");
-        drop(temp);
-        stage("replacement-temp-closed-before-reopen");
-    })
-    .await;
-    let saved = mount.path.join("saved 日本語.bin");
-    blocking(&mut mount, move || {
-        let started = std::time::Instant::now();
-        let mut file = std::fs::File::open(saved).unwrap();
-        eprintln!(
-            "NATIVE_LIFECYCLE_STAGE final-reopen-opened elapsed={:?}",
-            started.elapsed()
+        assert_eq!(
+            call!("replace-read-path", std::fs::read(&saved)).unwrap(),
+            b"new body"
         );
+        call!("replace-seek-detached", old.seek(SeekFrom::Start(0))).unwrap();
+        call!("replace-write-detached", old.write_all(b"OLD")).unwrap();
+        call!("replace-sync-detached", old.sync_all()).unwrap();
+        call!("replace-close-old", drop(old));
+        call!("replace-close-temp", drop(temp));
+        let mut file = call!("final-reopen", std::fs::File::open(saved)).unwrap();
         let mut bytes = Vec::new();
-        file.read_to_end(&mut bytes).unwrap();
-        eprintln!(
-            "NATIVE_LIFECYCLE_STAGE final-reopen-read elapsed={:?}",
-            started.elapsed()
-        );
+        call!("final-read", file.read_to_end(&mut bytes)).unwrap();
         assert_eq!(bytes, b"new body");
-        drop(file);
-        eprintln!(
-            "NATIVE_LIFECYCLE_STAGE final-reopen-closed elapsed={:?}",
-            started.elapsed()
-        );
+        call!("final-close", drop(file));
     })
     .await;
     mount.stop().await;

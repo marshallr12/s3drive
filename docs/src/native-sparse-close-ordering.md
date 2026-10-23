@@ -383,3 +383,15 @@ roots, rejection of physical corruption in an unselected root without repair, an
 fresh rejection after a late trigger between commands. Local feature Clippy passes;
 local execution is blocked by the unchanged persistent-storage guard on tmpfs.
 Hosted correctness and measured latency improvement are still unverified.
+
+Run39890347335 passes the dedicated new native gate on both platforms and all
+three batching/corruption tests; its full regression and latency review are still
+pending. Diagnostic baseline39889331988 still exceeds the Windows bound. Its
+rename serialization lock takes microseconds, while repeated history/publication
+validation consumes tens of seconds. To prevent phase splitting from masking this
+regression, the next fixture restores the original single120-second live-mount
+sequence bound across unlink, replacement and final reopen. Each filesystem call
+reports its individual duration and cumulative elapsed time. The existing
+180-second outer child bound and production operation deadlines are unchanged.
+Passing this restored bound is required before activation; it is a correctness
+regression ceiling, not a claim of interactive performance at scale.
