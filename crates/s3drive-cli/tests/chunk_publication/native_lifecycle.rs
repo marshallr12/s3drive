@@ -142,7 +142,9 @@ pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
     mount_configuration(config, root, s).await;
     let mut mount = Mount::start(root).await;
     let base = mount.path.clone();
+    let unlink_base = base.clone();
     blocking(&mut mount, move || {
+        let base = unlink_base;
         let started = std::time::Instant::now();
         let stage = |name| {
             eprintln!(
@@ -177,6 +179,18 @@ pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
         assert_eq!(bytes, [0, b'z', 0]);
         drop(other);
         stage("unlink-finished");
+    })
+    .await;
+    // Each independent scenario keeps the original 120-second syscall bound.
+    // The same live mount carries its retained history into replacement.
+    blocking(&mut mount, move || {
+        let started = std::time::Instant::now();
+        let stage = |name| {
+            eprintln!(
+                "NATIVE_LIFECYCLE_STAGE {name} elapsed={:?}",
+                started.elapsed()
+            )
+        };
         let saved = base.join("saved 日本語.bin");
         let temporary = base.join("temporary.bin");
         let mut old = std::fs::OpenOptions::new()
@@ -537,7 +551,7 @@ pub async fn ordered_flush(config: &s3drive_core::Config, root: &Path, s: &Serve
 }
 
 // Shared adapter/controller control, not a claim of actual Windows callbacks.
-pub async fn disposition(config: &s3drive_core::Config, root: &Path, s: &Server) {
+pub async fn disposition(config: &s3drive_core::Config, root: &Path, s: &Server, concurrent: bool) {
     let c = configuration(config, root, s).await;
     let fs = ReadOnlyFs::new(&c).await.unwrap();
     let file = fs
@@ -552,12 +566,21 @@ pub async fn disposition(config: &s3drive_core::Config, root: &Path, s: &Server)
     let object = deleting.native_object().unwrap();
     object.set_delete(true).await.unwrap();
     object.cleanup(1).await.unwrap();
-    object.close().await.unwrap();
-    drop((deleting, object));
-    assert!(fs.lookup(ROOT, "callback unlink.bin").await.is_err());
+    let mut closing = Some(object.close());
+    if !concurrent {
+        closing.take().unwrap().await.unwrap();
+    }
+    // Actual Close is already synchronously fenced. A different still-open
+    // handle waits for that original job, rather than racing its state fence.
     file.write(0, Arc::from(&b"later"[..]), false, false)
         .await
         .unwrap();
+    if let Some(pending) = closing.take() {
+        pending.await.unwrap();
+    }
+    drop(closing);
+    drop((deleting, object));
+    assert!(fs.lookup(ROOT, "callback unlink.bin").await.is_err());
     assert_eq!(other.read(0, 8).await.unwrap(), b"laternal");
     file.native_object().unwrap().close().await.unwrap();
     other.native_object().unwrap().close().await.unwrap();

@@ -1312,7 +1312,13 @@ fn dispatch<'a>(
         #[cfg(any(target_os = "linux", windows))]
         "native_writer_mount" => Box::pin(native_writer::mount(config, root, s)),
         #[cfg(feature = "native-sparse-candidate")]
-        "native_lifecycle_disposition" => Box::pin(native_lifecycle::disposition(config, root, s)),
+        "native_lifecycle_disposition" => {
+            Box::pin(native_lifecycle::disposition(config, root, s, false))
+        }
+        #[cfg(feature = "native-sparse-candidate")]
+        "native_lifecycle_disposition_concurrent" => {
+            Box::pin(native_lifecycle::disposition(config, root, s, true))
+        }
         #[cfg(feature = "native-sparse-candidate")]
         "native_lifecycle_ordered" => Box::pin(native_lifecycle::ordered_flush(config, root, s)),
         #[cfg(feature = "native-sparse-candidate")]
@@ -1803,7 +1809,7 @@ async fn run(mode: &str) {
         "native_lifecycle_replace" => 8,
         "native_lifecycle_profile" => 5,
         "native_lifecycle_ordered" => 5,
-        "native_lifecycle_disposition" => 5,
+        "native_lifecycle_disposition" | "native_lifecycle_disposition_concurrent" => 5,
         "native_writer" => 5,
         "native_directories" => 3,
         "native_directories_only" => 0,
@@ -2280,4 +2286,10 @@ async fn native_lifecycle_shared_flush_orders_later_write_and_close() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn native_lifecycle_shared_disposition_owner_close_preserves_other_handles() {
     run("native_lifecycle_disposition").await;
+}
+
+#[cfg(feature = "native-sparse-candidate")]
+#[tokio::test]
+async fn native_lifecycle_shared_surviving_write_joins_original_close() {
+    run("native_lifecycle_disposition_concurrent").await;
 }

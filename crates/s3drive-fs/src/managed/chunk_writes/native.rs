@@ -5,6 +5,8 @@ use s3drive_managed::{
     disposition::{Controller, NativeContent, Task},
 };
 use s3drive_state::namespace_client::opens::{Callback, OpenInput};
+use std::sync::atomic::AtomicU8;
+use tokio::sync::Notify;
 
 pub(super) struct Mount {
     session: String,
@@ -18,6 +20,39 @@ pub(super) struct Mount {
 struct Entry {
     native: NativeSparseFile,
     file: Arc<File>,
+    close: Arc<CloseSignal>,
+}
+#[derive(Default)]
+struct CloseSignal {
+    // 0 open, 1 actual Close in flight, 2 completed, 3 retained failure.
+    state: AtomicU8,
+    changed: Notify,
+}
+impl CloseSignal {
+    fn finish(&self, state: u8) {
+        self.state.store(state, Ordering::Release);
+        self.changed.notify_waiters();
+    }
+    async fn wait(&self) -> Result<()> {
+        loop {
+            let changed = self.changed.notified();
+            tokio::pin!(changed);
+            changed.as_mut().enable();
+            match self.state.load(Ordering::Acquire) {
+                0 | 2 => return Ok(()),
+                1 => changed.await,
+                _ => return Err(Error::Conflict),
+            }
+        }
+    }
+}
+struct CloseRun(Arc<CloseSignal>);
+impl Drop for CloseRun {
+    fn drop(&mut self) {
+        if self.0.state.load(Ordering::Acquire) == 1 {
+            self.0.finish(3);
+        }
+    }
 }
 #[derive(Clone)]
 pub(crate) struct Object {
@@ -93,8 +128,43 @@ impl Writes {
         }
         Ok(())
     }
+    async fn serial_after_closes(
+        &self,
+        node: &str,
+        own: Option<&Entry>,
+    ) -> Result<tokio::sync::MutexGuard<'_, ()>> {
+        loop {
+            let serial = self.native_serial.lock().await;
+            if own.is_some_and(|e| e.close.state.load(Ordering::Acquire) != 0) {
+                return Err(Error::Conflict);
+            }
+            let pending = self
+                .native
+                .get()
+                .ok_or(Error::Internal)?
+                .opens
+                .lock()
+                .map_err(|_| Error::Internal)?
+                .values()
+                .filter(|e| e.file.binding.base().is_ok_and(|b| b.node() == node))
+                .find(|e| matches!(e.close.state.load(Ordering::Acquire), 1 | 3))
+                .map(|e| e.close.clone());
+            let Some(pending) = pending else {
+                return Ok(serial);
+            };
+            // Actual Close fenced the state before it could acquire this lock.
+            // Let its original job finish; never manufacture completion or drop
+            // the fence to admit a surviving handle's next source epoch.
+            drop(serial);
+            pending.wait().await?;
+        }
+    }
     pub(crate) async fn native_object(self: &Arc<Self>, file: Arc<File>) -> Result<Object> {
         let _open = self.open_serial.lock().await;
+        drop(
+            self.serial_after_closes(file.binding.base().map_err(error)?.node(), None)
+                .await?,
+        );
         let mount = self.native.get().ok_or(Error::Internal)?;
         if mount.opens.lock().map_err(|_| Error::Internal)?.len() >= 256 {
             return Err(Error::Busy);
@@ -139,7 +209,11 @@ impl Writes {
         )
         .await
         .map_err(error)?;
-        let entry = Entry { native, file };
+        let entry = Entry {
+            native,
+            file,
+            close: Arc::new(CloseSignal::default()),
+        };
         mount
             .opens
             .lock()
@@ -392,23 +466,42 @@ impl Object {
         append: bool,
         constrained: bool,
     ) -> Result<usize> {
-        let _serial = self.writer.native_serial.lock().await;
+        let _serial = self
+            .writer
+            .serial_after_closes(
+                self.entry.file.binding.base().map_err(error)?.node(),
+                Some(&self.entry),
+            )
+            .await
+            .inspect_err(|_| eprintln!("Native sparse write refused by Close coordination"))?;
         let _file = self.entry.file.serial.lock().await;
         self.allow_write()?;
-        let head = self.entry.file.head().await?;
+        let head = self
+            .entry
+            .file
+            .head()
+            .await
+            .inspect_err(|_| eprintln!("Native sparse write current-head lookup failed"))?;
         let offset = if append { head.size() } else { offset };
         let count = if constrained {
             bytes.len().min(head.size().saturating_sub(offset) as usize)
         } else {
             bytes.len()
         };
-        let edited = self.entry.edited(&head).await?;
+        let edited = self
+            .entry
+            .edited(&head)
+            .await
+            .inspect_err(|_| eprintln!("Native sparse write base refresh failed"))?;
         let next = self
             .entry
             .native
             .write(&edited, fresh()?, offset, bytes[..count].to_vec())
             .await
-            .map_err(error)?;
+            .map_err(|failure| {
+                eprintln!("Native sparse source mutation rejected");
+                error(failure)
+            })?;
         self.entry
             .file
             .metadata
@@ -418,7 +511,13 @@ impl Object {
         Ok(count)
     }
     async fn truncate_inner(&self, size: u64) -> Result<()> {
-        let _serial = self.writer.native_serial.lock().await;
+        let _serial = self
+            .writer
+            .serial_after_closes(
+                self.entry.file.binding.base().map_err(error)?.node(),
+                Some(&self.entry),
+            )
+            .await?;
         let _file = self.entry.file.serial.lock().await;
         self.allow_write()?;
         let head = self.entry.file.head().await?;
@@ -449,6 +548,11 @@ impl Object {
     pub(crate) fn close(&self) -> impl std::future::Future<Output = Result<()>> + Send + 'static {
         let object = self.clone();
         let cb = callback(self.entry.native.open(), b"close");
+        let signal = self.entry.close.clone();
+        let first = signal
+            .state
+            .compare_exchange(0, 1, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok();
         let observed = self.entry.native.observe_close(&cb).map_err(error);
         let permit = object.writer.admit();
         // Spawn through the mount's runtime at callback entry, including from a
@@ -457,9 +561,13 @@ impl Object {
         let runtime = object.writer.native.get().map(|m| m.runtime.clone());
         let task = runtime.map(|runtime| {
             runtime.spawn(async move {
+                if !first {
+                    return signal.wait().await;
+                }
+                let completion = CloseRun(signal);
                 observed?;
                 let _permit = permit?;
-                tokio::time::timeout(DEADLINE, async {
+                let result = tokio::time::timeout(DEADLINE, async {
                     object.entry.native.close(cb.clone()).await.map_err(error)?;
                     object
                         .controller
@@ -478,7 +586,9 @@ impl Object {
                     Ok(())
                 })
                 .await
-                .map_err(|_| Error::Timeout)?
+                .map_err(|_| Error::Timeout)?;
+                completion.0.finish(if result.is_ok() { 2 } else { 3 });
+                result
             })
         });
         async move {
@@ -542,5 +652,42 @@ impl Object {
         })
         .await
         .map_err(|_| Error::Internal)?
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[tokio::test]
+    async fn native_close_join_waits_for_exact_job_completion() {
+        let signal = Arc::new(CloseSignal::default());
+        signal.state.store(1, Ordering::Release);
+        let waiting = signal.wait();
+        tokio::pin!(waiting);
+        assert!(
+            tokio::time::timeout(Duration::from_millis(10), &mut waiting)
+                .await
+                .is_err()
+        );
+        signal.finish(2);
+        waiting.await.unwrap();
+    }
+    #[tokio::test]
+    async fn native_close_join_retains_failed_or_cancelled_job() {
+        let signal = Arc::new(CloseSignal::default());
+        signal.state.store(1, Ordering::Release);
+        drop(CloseRun(signal.clone()));
+        assert!(matches!(signal.wait().await, Err(Error::Conflict)));
+        assert_eq!(signal.state.load(Ordering::Acquire), 3);
+    }
+    #[tokio::test]
+    async fn native_close_join_completion_is_not_replaced_by_guard_drop() {
+        let signal = Arc::new(CloseSignal::default());
+        signal.state.store(1, Ordering::Release);
+        let job = CloseRun(signal.clone());
+        signal.finish(2);
+        drop(job);
+        signal.wait().await.unwrap();
+        assert_eq!(signal.state.load(Ordering::Acquire), 2);
     }
 }

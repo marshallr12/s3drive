@@ -50,6 +50,8 @@ jobs:
         run: cargo test -p s3drive-cli --test chunk_publication native_sparse_sdk --locked -- --nocapture --test-threads=4
       - name: Compile candidate native sparse adapter without enabling defaults
         run: cargo clippy --workspace --all-targets --features s3drive-cli/native-sparse-candidate --locked -- -D warnings
+      - name: Verify bounded native Close join signals
+        run: cargo test -p s3drive-fs --features native-sparse-candidate native_close_join --locked -- --nocapture
       - name: Verify candidate shared native sparse unlink replacement and Close
         run: cargo test -p s3drive-cli --test chunk_publication --features native-sparse-candidate native_lifecycle_shared --locked -- --nocapture --test-threads=4
       - name: Verify legacy version8 unchanged with candidate compiled

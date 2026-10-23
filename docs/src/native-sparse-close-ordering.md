@@ -341,3 +341,19 @@ startup on a Tokio worker. The small caller stack only awaits its join handle;
 dropping the startup await aborts that owned task instead of detaching a mount.
 Recovery requests, ownership fences and fixture stack/deadline bounds are unchanged.
 Actual OS acceptance remains pending; this correction is not a passing result.
+
+
+Run39886633963 passes all seven shared cases and both actual killed-owner
+known/unknown cases on Linux and Windows. Windows known-root remount no longer
+overflows. Actual Windows post-unlink write still conflicts. The Linux combined
+fixture reaches final Close at119 seconds and then hits its120-second bound, with
+measured progress throughout. Unlink and replacement now use independent bounded
+phases on the same live mount; each retains the120-second bound and all assertions.
+
+The candidate adapter joins an already observed cross-handle Close job before
+admitting a surviving handle's new write/resize or Open. Synchronous original
+Close fencing remains first; joining never fabricates completion, releases a
+retained failure, or permits the closed handle to write. Failed/cancelled jobs
+remain conflicts. Three portable signal tests and an eighth shared fixture cover
+completion/failure and a surviving write issued before the Close future is joined.
+These corrections still require exact-source actual OS and full regression gates.
