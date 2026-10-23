@@ -602,6 +602,9 @@ fn load(db: &Connection, key: &str) -> Result<Option<(Row, OpenRecord)>> {
     retirement::check(db, &row, &record)?;
     Ok(Some((row, record)))
 }
+pub(super) fn metadata_records(db: &Connection) -> Result<Vec<OpenRecord>> {
+    Ok(all(db)?.into_iter().map(|(_, r)| r).collect())
+}
 fn all(db: &Connection) -> Result<Vec<(Row, OpenRecord)>> {
     session::check_index(db)?;
     retirement::check_index(db)?;

@@ -20,7 +20,7 @@ pub struct Controller {
     backend: Backend,
     session: Option<String>,
 }
-fn identity(open: &str, callback: &str, role: &str) -> String {
+pub(super) fn identity(open: &str, callback: &str, role: &str) -> String {
     let mut h = Sha256::new();
     h.update(b"s3drive-disposition-controller-v1\0");
     h.update(open);

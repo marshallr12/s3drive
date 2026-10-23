@@ -36,6 +36,45 @@ impl Recovery {
             deadline,
         })))
     }
+    /// Enumerate only bounded retained metadata, not source bodies or sessions.
+    pub async fn open_records(&self) -> Result<Vec<OpenRecord>> {
+        self.0.log.open_records().await
+    }
+    /// Reconcile only existing disposition links with their original deterministic
+    /// bookkeeping identity. No callback, reply, completion or session is added.
+    pub async fn recover_controller_links(&self) -> Result<()> {
+        for record in self.open_records().await? {
+            for event in &record.events {
+                let local::opens::Action::Link { callback, input } = &event.action else {
+                    continue;
+                };
+                if record.events.iter().any(|e| matches!(&e.action, local::opens::Action::Acknowledge { operation, .. } if operation == &input.request.operation)) { continue; }
+                let role = ["set", "restore", "promote", "commit", "retain", "release"]
+                    .into_iter()
+                    .find(|role| {
+                        crate::disposition::identity(&record.input.id, callback, role)
+                            == input.request.operation
+                            && crate::disposition::identity(
+                                &record.input.id,
+                                callback,
+                                &format!("link-{role}"),
+                            ) == event.id
+                    })
+                    .ok_or(Failure::Binding)?;
+                self.recover_open_link(
+                    record.input.id.clone(),
+                    crate::disposition::identity(
+                        &record.input.id,
+                        callback,
+                        &format!("ack-{role}"),
+                    ),
+                    input.request.operation.clone(),
+                )
+                .await?;
+            }
+        }
+        Ok(())
+    }
     pub async fn records(&self) -> Result<Vec<local::Record>> {
         self.0.log.records().await
     }

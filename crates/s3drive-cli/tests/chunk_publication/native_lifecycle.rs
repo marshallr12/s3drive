@@ -1,0 +1,372 @@
+//! Candidate shared-engine gates. These do not substitute for real OS callbacks.
+use super::*;
+use s3drive_fs::{ROOT, ReadOnlyFs};
+pub async fn unlink(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    let c = native_writer::configuration(config, root, s).await;
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    assert!(fs.native_posix_unlink_rename_enabled());
+    assert!(!fs.native_lifecycle_enabled());
+    let file = fs
+        .create_file(ROOT, "held 日本語.bin", |a, b| a == b, true)
+        .await
+        .unwrap();
+    let other = fs.open(file.node.id).await.unwrap();
+    file.write(3, Arc::from("日本語 🦀\0".as_bytes()), false, false)
+        .await
+        .unwrap();
+    assert_eq!(other.read(3, 64).await.unwrap(), "日本語 🦀\0".as_bytes());
+    fs.remove_entry(ROOT, "held 日本語.bin", false)
+        .await
+        .unwrap();
+    assert!(fs.lookup(ROOT, "held 日本語.bin").await.is_err());
+    assert!(file.is_unlinked().unwrap());
+    file.write(1, Arc::from(&b"z"[..]), false, false)
+        .await
+        .unwrap();
+    let original = file.native_object().unwrap();
+    let close = original.close();
+    assert!(
+        file.write(0, Arc::from(&b"forbidden"[..]), false, false)
+            .await
+            .is_err()
+    );
+    close.await.unwrap();
+    assert_eq!(other.read(0, 3).await.unwrap(), &[0, b'z', 0]);
+    other.native_object().unwrap().close().await.unwrap();
+    assert!(matches!(
+        ask(
+            &s.direct,
+            Request::PendingRemoval {
+                volume: c.managed.as_ref().unwrap().volume.clone(),
+                node: s
+                    .proxy
+                    .applies()
+                    .into_iter()
+                    .find_map(|a| match a.mutation {
+                        Mutation::ArmRemoval { node, .. } => Some(node.id),
+                        _ => None,
+                    })
+                    .unwrap()
+            }
+        )
+        .await,
+        Reply::PendingRemoval(None)
+    ));
+    drop((file, other, original));
+    native_writer::stop(fs).await;
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    assert!(fs.lookup(ROOT, "held 日本語.bin").await.is_err());
+    native_writer::stop(fs).await;
+}
+pub async fn replace(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    let c = native_writer::configuration(config, root, s).await;
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    let old = fs
+        .create_file(ROOT, "saved 日本語.bin", |a, b| a == b, true)
+        .await
+        .unwrap();
+    old.write(0, Arc::from(&b"old body"[..]), false, false)
+        .await
+        .unwrap();
+    let temp = fs
+        .create_file(ROOT, "temporary.bin", |a, b| a == b, true)
+        .await
+        .unwrap();
+    temp.write(0, Arc::from(&b"new body"[..]), false, false)
+        .await
+        .unwrap();
+    fs.rename_entry(
+        ROOT,
+        "temporary.bin",
+        ROOT,
+        "saved 日本語.bin",
+        true,
+        |a, b| a == b,
+    )
+    .await
+    .unwrap();
+    assert!(old.is_unlinked().unwrap());
+    assert_eq!(old.read(0, 64).await.unwrap(), b"old body");
+    let saved = fs.lookup(ROOT, "saved 日本語.bin").await.unwrap();
+    assert_ne!(saved.id, old.node.id);
+    let current = fs.open(saved.id).await.unwrap();
+    assert_eq!(current.read(0, 64).await.unwrap(), b"new body");
+    old.write(0, Arc::from(&b"OLD"[..]), false, false)
+        .await
+        .unwrap();
+    old.native_object().unwrap().close().await.unwrap();
+    assert_eq!(current.read(0, 64).await.unwrap(), b"new body");
+    temp.native_object().unwrap().close().await.unwrap();
+    current.native_object().unwrap().close().await.unwrap();
+    drop((old, temp, current));
+    native_writer::stop(fs).await;
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    let saved = fs.lookup(ROOT, "saved 日本語.bin").await.unwrap();
+    let current = fs.open(saved.id).await.unwrap();
+    assert_eq!(current.read(0, 64).await.unwrap(), b"new body");
+    current.native_object().unwrap().close().await.unwrap();
+    drop(current);
+    native_writer::stop(fs).await;
+}
+
+#[cfg(any(target_os = "linux", windows))]
+pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    use native_mount::{Mount, blocking};
+    use std::io::{Read, Seek, SeekFrom, Write};
+    native_writer::mount_configuration(config, root, s).await;
+    let mut mount = Mount::start(root).await;
+    let base = mount.path.clone();
+    blocking(&mut mount, move || {
+        let path = base.join("unlink 日本語 🦀.bin");
+        let mut file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create_new(true)
+            .open(&path)
+            .unwrap();
+        let mut other = std::fs::File::open(&path).unwrap();
+        file.seek(SeekFrom::Start(3)).unwrap();
+        file.write_all("日本語 🦀\0".as_bytes()).unwrap();
+        let mut bytes = vec![0; "日本語 🦀\0".len()];
+        other.seek(SeekFrom::Start(3)).unwrap();
+        other.read_exact(&mut bytes).unwrap();
+        assert_eq!(bytes, "日本語 🦀\0".as_bytes());
+        std::fs::remove_file(&path).unwrap();
+        assert!(!path.exists());
+        file.seek(SeekFrom::Start(1)).unwrap();
+        file.write_all(b"z").unwrap();
+        file.sync_all().unwrap();
+        drop(file);
+        other.seek(SeekFrom::Start(0)).unwrap();
+        let mut bytes = [9; 3];
+        other.read_exact(&mut bytes).unwrap();
+        assert_eq!(bytes, [0, b'z', 0]);
+        drop(other);
+        let saved = base.join("saved 日本語.bin");
+        let temporary = base.join("temporary.bin");
+        let mut old = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create_new(true)
+            .open(&saved)
+            .unwrap();
+        old.write_all(b"old body").unwrap();
+        let mut temp = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create_new(true)
+            .open(&temporary)
+            .unwrap();
+        temp.write_all(b"new body").unwrap();
+        std::fs::rename(&temporary, &saved).unwrap();
+        assert!(!temporary.exists());
+        old.seek(SeekFrom::Start(0)).unwrap();
+        let mut bytes = [0; 8];
+        old.read_exact(&mut bytes).unwrap();
+        assert_eq!(&bytes, b"old body");
+        assert_eq!(std::fs::read(&saved).unwrap(), b"new body");
+        old.seek(SeekFrom::Start(0)).unwrap();
+        old.write_all(b"OLD").unwrap();
+        old.sync_all().unwrap();
+        drop(old);
+        drop(temp);
+        assert_eq!(std::fs::read(&saved).unwrap(), b"new body");
+    })
+    .await;
+    mount.stop().await;
+    drop(mount);
+    let mut mount = Mount::start(root).await;
+    let base = mount.path.clone();
+    blocking(&mut mount, move || {
+        assert!(!base.join("unlink 日本語 🦀.bin").exists());
+        assert_eq!(
+            std::fs::read(base.join("saved 日本語.bin")).unwrap(),
+            b"new body"
+        );
+    })
+    .await;
+    mount.stop().await;
+}
+
+pub async fn cold_known(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    let c = native_writer::configuration(config, root, s).await;
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    let file = fs
+        .create_file(ROOT, "cold known.bin", |a, b| a == b, true)
+        .await
+        .unwrap();
+    file.write(0, Arc::from(&b"known root after crash"[..]), false, false)
+        .await
+        .unwrap();
+    s.proxy.mode.store(2, Ordering::SeqCst);
+    assert!(file.native_object().unwrap().close().await.is_err());
+    let saved = s
+        .proxy
+        .applies()
+        .into_iter()
+        .filter(|a| matches!(a.mutation, Mutation::Publish { .. }))
+        .collect::<Vec<_>>();
+    assert_eq!(saved.len(), 1);
+    let cache = fs.cache_control().unwrap();
+    drop((file, fs));
+    cache.close().await.unwrap();
+    drop(cache);
+    s.proxy.clear();
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    let replay = s
+        .proxy
+        .applies()
+        .into_iter()
+        .filter(|a| matches!(a.mutation, Mutation::Publish { .. }))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        replay, saved,
+        "cold startup changed the saved root operation"
+    );
+    let node = fs.lookup(ROOT, "cold known.bin").await.unwrap();
+    let file = fs.open(node.id).await.unwrap();
+    assert_eq!(file.read(0, 64).await.unwrap(), b"known root after crash");
+    file.native_object().unwrap().close().await.unwrap();
+    drop(file);
+    native_writer::stop(fs).await;
+}
+pub async fn cold_unknown(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    let c = native_writer::configuration(config, root, s).await;
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    let file = fs
+        .create_file(ROOT, "unprepared retained.bin", |a, b| a == b, true)
+        .await
+        .unwrap();
+    file.write(
+        0,
+        Arc::from(&b"must not adopt this original epoch"[..]),
+        false,
+        false,
+    )
+    .await
+    .unwrap();
+    let cache = fs.cache_control().unwrap();
+    drop((file, fs));
+    cache.close().await.unwrap();
+    drop(cache);
+    fn retained(path: &Path) -> (Vec<Vec<u8>>, Vec<Vec<u8>>) {
+        let db =
+            rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+                .unwrap();
+        let query = |sql| {
+            db.prepare(sql)
+                .unwrap()
+                .query_map([], |r| r.get::<_, Vec<u8>>(0))
+                .unwrap()
+                .collect::<std::result::Result<Vec<_>, _>>()
+                .unwrap()
+        };
+        (
+            query("SELECT data FROM sparse_view_blocks ORDER BY block"),
+            query("SELECT action FROM windows_open_events ORDER BY event_id"),
+        )
+    }
+    let database = c
+        .writes
+        .as_ref()
+        .unwrap()
+        .directory
+        .join("metadata.sqlite3");
+    let before = retained(&database);
+    s.proxy.clear();
+    assert!(ReadOnlyFs::new(&c).await.is_err());
+    assert_eq!(
+        retained(&database),
+        before,
+        "cold refusal changed original source/callback evidence"
+    );
+    assert!(
+        !s.proxy
+            .applies()
+            .iter()
+            .any(|a| matches!(a.mutation, Mutation::Publish { .. })),
+        "cold startup minted fresh publication"
+    );
+}
+
+#[cfg(any(target_os = "linux", windows))]
+pub async fn mounted_crash(config: &s3drive_core::Config, root: &Path, s: &Server, known: bool) {
+    use native_mount::{Mount, blocking};
+    use std::io::Write;
+    native_writer::mount_configuration(config, root, s).await;
+    let mut mount = Mount::start(root).await;
+    let path = mount.path.join("killed owner 日本語.bin");
+    let file = blocking(&mut mount, move || {
+        let mut file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create_new(true)
+            .open(&path)
+            .unwrap();
+        file.write_all(b"retained original bytes").unwrap();
+        file
+    })
+    .await;
+    if known {
+        s.proxy.mode.store(2, Ordering::SeqCst);
+        let file = blocking(&mut mount, move || {
+            assert!(file.sync_all().is_err());
+            file
+        })
+        .await;
+        mount.crash().await;
+        drop(file);
+    } else {
+        mount.crash().await;
+        drop(file);
+    }
+    drop(mount);
+    let saved = s
+        .proxy
+        .applies()
+        .into_iter()
+        .filter(|a| matches!(a.mutation, Mutation::Publish { .. }))
+        .collect::<Vec<_>>();
+    assert_eq!(saved.len(), usize::from(known));
+    s.proxy.clear();
+    if known {
+        let mut mount = Mount::start(root).await;
+        let path = mount.path.join("killed owner 日本語.bin");
+        blocking(&mut mount, move || {
+            assert_eq!(std::fs::read(path).unwrap(), b"retained original bytes");
+        })
+        .await;
+        let replay = s
+            .proxy
+            .applies()
+            .into_iter()
+            .filter(|a| matches!(a.mutation, Mutation::Publish { .. }))
+            .collect::<Vec<_>>();
+        assert_eq!(replay, saved);
+        mount.stop().await;
+    } else {
+        fn source(root: &Path) -> Vec<Vec<u8>> {
+            let db = rusqlite::Connection::open_with_flags(
+                root.join("native-state/metadata.sqlite3"),
+                rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+            )
+            .unwrap();
+            db.prepare("SELECT data FROM sparse_view_blocks ORDER BY block")
+                .unwrap()
+                .query_map([], |r| r.get(0))
+                .unwrap()
+                .collect::<std::result::Result<_, _>>()
+                .unwrap()
+        }
+        let before = source(root);
+        assert!(!before.is_empty());
+        Mount::refused(root).await;
+        assert_eq!(source(root), before);
+        assert!(
+            !s.proxy
+                .applies()
+                .iter()
+                .any(|a| matches!(a.mutation, Mutation::Publish { .. }))
+        );
+    }
+}

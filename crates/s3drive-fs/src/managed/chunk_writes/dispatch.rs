@@ -9,7 +9,7 @@ impl<T> Drop for Task<T> {
         self.0.abort();
     }
 }
-fn run<T: Send + 'static>(
+pub(super) fn run<T: Send + 'static>(
     future: impl Future<Output = Result<T>> + Send + 'static,
 ) -> impl Future<Output = Result<T>> + Send {
     // Construct the owned job before the join future. Callers must prove Send

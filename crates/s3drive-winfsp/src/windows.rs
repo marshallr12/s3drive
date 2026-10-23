@@ -308,11 +308,14 @@ impl FileSystemContext for Adapter {
             if normalized.len() * 2 > usize::from(output.normalized_name_size()) {
                 return Err(STATUS_NAME_TOO_LONG.into());
             }
-            let native = self
-                .fs
-                .native_file_object(node.id, options & 0x1000 != 0)
-                .await
-                .map_err(storage_error)?;
+            let native = match file.as_ref().and_then(|f| f.native_object()) {
+                Some(object) => Some(object),
+                None => self
+                    .fs
+                    .native_file_object(node.id, options & 0x1000 != 0)
+                    .await
+                    .map_err(storage_error)?,
+            };
             output.set_normalized_name(&normalized, None);
             *output.as_mut() = info.clone();
             Ok(FileContext {
@@ -437,11 +440,14 @@ impl FileSystemContext for Adapter {
             let info = self.file_info(&node, metadata.as_ref());
             let native = match object {
                 Some(object) => Some(object),
-                None => self
-                    .fs
-                    .native_file_object(node.id, false)
-                    .await
-                    .map_err(storage_error)?,
+                None => match file.as_ref().and_then(|f| f.native_object()) {
+                    Some(object) => Some(object),
+                    None => self
+                        .fs
+                        .native_file_object(node.id, false)
+                        .await
+                        .map_err(storage_error)?,
+                },
             };
             output.set_normalized_name(&normalized, None);
             *output.as_mut() = info.clone();
@@ -765,7 +771,7 @@ pub async fn run(
         let read_only=fs.is_read_only();
         let descriptor = native::owner_descriptor(!read_only,fs.namespace_mutation())?;
         let (cancel, cancelled) = watch::channel(false);
-        let posix=fs.native_lifecycle_enabled();
+        let posix=fs.native_posix_unlink_rename_enabled();
         let adapter = Adapter { fs, runtime, cancelled, descriptor, handles: Arc::new(Semaphore::new(256)), entries: Arc::new(Semaphore::new(100_000)) };
         let mut params = VolumeParams::new();
         params.filesystem_name("S3Drive").sector_size(512).sectors_per_allocation_unit(8).max_component_length(255)

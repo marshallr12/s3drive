@@ -235,9 +235,7 @@ pub async fn concurrency(config: &s3drive_core::Config, root: &Path, s: &Server)
 }
 
 #[cfg(any(target_os = "linux", windows))]
-pub async fn mount(config: &s3drive_core::Config, root: &Path, s: &Server) {
-    use super::native_mount::{Mount, blocking};
-    use std::io::{Read, Seek, SeekFrom, Write};
+pub(super) async fn mount_configuration(config: &s3drive_core::Config, root: &Path, s: &Server) {
     let seed = setup(config, root, s).await;
     seed.storage().close().await.unwrap();
     drop(seed);
@@ -265,6 +263,11 @@ pub async fn mount(config: &s3drive_core::Config, root: &Path, s: &Server) {
     let text = toml::to_string(&cfg).unwrap();
     s3drive_core::Config::parse(&text).unwrap();
     std::fs::write(root.join("native-drive.toml"), text).unwrap();
+}
+pub async fn mount(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    use super::native_mount::{Mount, blocking};
+    use std::io::{Read, Seek, SeekFrom, Write};
+    mount_configuration(config, root, s).await;
     fn enumerate(path: &Path) {
         let nested = path.parent().unwrap();
         let top = nested.parent().unwrap();

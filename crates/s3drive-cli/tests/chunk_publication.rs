@@ -22,6 +22,9 @@ mod mixed_uploads;
 mod namespace_recovery;
 #[path = "chunk_publication/native_directories.rs"]
 mod native_directories;
+#[cfg(feature = "native-sparse-candidate")]
+#[path = "chunk_publication/native_lifecycle.rs"]
+mod native_lifecycle;
 #[cfg(any(target_os = "linux", windows))]
 #[path = "chunk_publication/native_mount.rs"]
 mod native_mount;
@@ -1308,6 +1311,26 @@ fn dispatch<'a>(
         "owned_sparse_crash" => Box::pin(owned_sparse::crash(config, root, s)),
         #[cfg(any(target_os = "linux", windows))]
         "native_writer_mount" => Box::pin(native_writer::mount(config, root, s)),
+        #[cfg(feature = "native-sparse-candidate")]
+        "native_lifecycle_unlink" => Box::pin(native_lifecycle::unlink(config, root, s)),
+        #[cfg(all(feature = "native-sparse-candidate", any(target_os = "linux", windows)))]
+        "native_lifecycle_mounted" => Box::pin(native_lifecycle::mounted(config, root, s)),
+        #[cfg(all(feature = "native-sparse-candidate", any(target_os = "linux", windows)))]
+        "native_lifecycle_mounted_known" => {
+            Box::pin(native_lifecycle::mounted_crash(config, root, s, true))
+        }
+        #[cfg(all(feature = "native-sparse-candidate", any(target_os = "linux", windows)))]
+        "native_lifecycle_mounted_unknown" => {
+            Box::pin(native_lifecycle::mounted_crash(config, root, s, false))
+        }
+        #[cfg(feature = "native-sparse-candidate")]
+        "native_lifecycle_replace" => Box::pin(native_lifecycle::replace(config, root, s)),
+        #[cfg(feature = "native-sparse-candidate")]
+        "native_lifecycle_cold_known" => Box::pin(native_lifecycle::cold_known(config, root, s)),
+        #[cfg(feature = "native-sparse-candidate")]
+        "native_lifecycle_cold_unknown" => {
+            Box::pin(native_lifecycle::cold_unknown(config, root, s))
+        }
         "native_writer" => Box::pin(native_writer::flow(config, root, s)),
         "native_directories" => Box::pin(native_directories::flow(config, root, s)),
         "native_directories_only" => Box::pin(native_directories::only(config, root, s)),
@@ -1763,6 +1786,13 @@ async fn run(mode: &str) {
         "deferred_client_controls" => 2,
         "empty_flow" | "empty_recovery" | "empty_crash" | "empty_physical" | "empty_deadline" => 1,
         "native_writer_mount" => 6,
+        "native_lifecycle_cold_known" => 3,
+        "native_lifecycle_cold_unknown" => 1,
+        "native_lifecycle_unlink" => 5,
+        "native_lifecycle_mounted" => 13,
+        "native_lifecycle_mounted_known" => 3,
+        "native_lifecycle_mounted_unknown" => 1,
+        "native_lifecycle_replace" => 8,
         "native_writer" => 5,
         "native_directories" => 3,
         "native_directories_only" => 0,
@@ -2179,4 +2209,46 @@ async fn native_sparse_sdk_controller_linked() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn native_sparse_sdk_controller_unlinked() {
     run("native_sparse_sdk_controller_unlinked").await;
+}
+
+#[cfg(feature = "native-sparse-candidate")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_lifecycle_shared_unlink_close_and_remount() {
+    run("native_lifecycle_unlink").await;
+}
+#[cfg(feature = "native-sparse-candidate")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_lifecycle_shared_replacement_preserves_old_handles() {
+    run("native_lifecycle_replace").await;
+}
+
+#[cfg(all(feature = "native-sparse-candidate", any(target_os = "linux", windows)))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "dedicated NEW native sparse lifecycle; real FUSE/WinFsp required"]
+async fn native_lifecycle_actual_unlink_replace_dirty_handles_and_remount() {
+    run("native_lifecycle_mounted").await;
+}
+
+#[cfg(feature = "native-sparse-candidate")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_lifecycle_shared_cold_known_replays_original_root() {
+    run("native_lifecycle_cold_known").await;
+}
+#[cfg(feature = "native-sparse-candidate")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_lifecycle_shared_cold_unknown_retains_original_dirty_epoch() {
+    run("native_lifecycle_cold_unknown").await;
+}
+
+#[cfg(all(feature = "native-sparse-candidate", any(target_os = "linux", windows)))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "dedicated NEW native sparse killed-owner known outcome recovery"]
+async fn native_lifecycle_actual_killed_owner_known_root_recovery() {
+    run("native_lifecycle_mounted_known").await;
+}
+#[cfg(all(feature = "native-sparse-candidate", any(target_os = "linux", windows)))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "dedicated NEW native sparse killed-owner unknown epoch refusal"]
+async fn native_lifecycle_actual_killed_owner_unknown_epoch_refusal() {
+    run("native_lifecycle_mounted_unknown").await;
 }

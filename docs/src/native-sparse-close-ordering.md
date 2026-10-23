@@ -202,3 +202,81 @@ schema fixture expectations and109 Markdown link checks pass. All five SDK cases
 compile, but execution stops during durable authority startup on this cloud
 workstation (overlayfs/tmpfs). This is not a test pass; the guard stays intact and
 standard hosted Linux/Windows runners must execute the dedicated cases.
+
+## Adapter candidate (2026-10-23, not accepted or enabled)
+
+The explicit Cargo feature `native-sparse-candidate` is an acceptance build only.
+Default version8 capability flags remain disabled. Candidate FUSE RELEASE observes
+actual Close, independently of FLUSH; WinFsp reuses the same original file object
+for data, Cleanup and Close. The mount keeps at most256 original capabilities,
+with four admitted I/O jobs and120-second outer deadlines. Close observes its
+shared fence synchronously and queues a retained, bounded job on the owning
+runtime before returning its join future. Other I/O retains cancellation behavior.
+
+All native source mutation, namespace policy and Close content barriers share a
+serialization gate. A dirty read refreshes only the same verified pinned binding;
+after source acknowledgment, the existing reader verifies the new binding. Every
+Close flushes all retained native plans in lineage order using their original
+publisher, even when another handle remains. Exact acknowledged plans are skipped;
+a missing original runtime capability is a conflict, not adoption. POSIX unlink
+and held-target replacement first flush content and record an owned removal before
+the actual namespace effect. Actual Windows Cleanup remains distinct from Close.
+Delete-on-close/deferred creation is still unsupported for the sparse adapter.
+
+Cold startup classifies existing storage under exclusive read-only ownership.
+Classification cannot migrate, acknowledge data or authorize an effect. Existing
+current-schema chunk state must pass restricted namespace/open metadata validation
+and exact saved-request replay before full State, policy, feature or provider
+startup. Recognized older stores proceed only through the ordinary full validator
+and migration before fresh startup checks; errors never fall back. A current cache
+without a chunk role must contain no native provenance and still passes full State.
+Bounded retained-open enumeration allows exact original controller-link ACK IDs,
+not inferred callbacks, completion or session recreation. Unknown dirty native
+epochs remain preserved conflicts. Saved root results use existing exact SDK
+recovery and source ACK; clean obsolete sessions use explicit abandonment policy.
+
+Prepared dedicated gates, still requiring execution and full review:
+
+- Four shared-engine cases: held unlink, held-target replacement, exact cold-known
+  root replay, and cold-unknown refusal with unchanged bytes/callback evidence.
+- Three actual OS cases on each platform: unlink/replace/dirty handles/remount,
+  killed daemon with a known saved root result, and killed daemon with an
+  unprepared epoch that must refuse mounting without changing source bytes.
+- Two additional metadata startup state tests cover read-only classification,
+  source-body independence, bounded open enumeration, exclusive ownership,
+  nonmigration and current-role corruption without fallback.
+
+These are not passes merely because the fixtures compile. Complete legacy native
+regressions, exact-source logs/artifacts and both actual OS cohorts are mandatory.
+No real provider mutation, new credential or user-machine installation is involved.
+
+## State checkpoint acceptance (2026-10-23)
+
+Exact a1217b85c7470bbd4f97c0e8dc79cbe8c8e9747a passed
+[39872409080](https://github.com/marshallr12/s3drive/actions/runs/39872409080).
+Full logs confirm Linux983/Windows979 tests across37 cohorts, the17 dedicated
+native state cases, prior16 owned state/six SDK and eight cold state/three SDK
+cases, and all existing native/startup regressions. Four artifact ZIP hashes
+were checked, both actual47/48 and historical46/47 binary compatibility records
+were reviewed, and35 native records matched typed fixtures and full Windows logs.
+All771 source files matched the accepted Git tree. Source ZIP SHA-256:
+`53cea62632456f653f0b6b08ea1e4ccdba8c9b332a1b9c66ecd373e41ba71454`.
+The unchanged accepted tree was merged at8f8f51abc0c1c1cf253c3a50288970586045fda1;
+[main39876643605](https://github.com/marshallr12/s3drive/actions/runs/39876643605)
+is still under verification. This does not accept SDK/controller or adapter work.
+
+Candidate WinFsp POSIX unlink/rename advertisement is separate from delete-on-close
+admission. Only the explicit test feature enables the sparse POSIX path; sparse
+FILE_DELETE_ON_CLOSE remains unsupported. Default capabilities remain unchanged.
+
+## SDK/controller bridge acceptance (2026-10-23)
+
+Exact6ec538d76a26fd12a36f8def6847ad4502e00c78 passed
+[39873777798](https://github.com/marshallr12/s3drive/actions/runs/39873777798).
+Linux988/Windows984 tests passed across37 cohorts; all five new bridge cases ran
+in dedicated gates and the full suite on both OSes. Full logs, four artifact ZIP
+hashes, actual47/48 and historical46/47 compatibility, and35 strictly compared
+native reference records were reviewed. All774 source files matched. Source ZIP
+SHA-256: `87db4eeabb5bb0aa7af08f5b1fad3de9ac10395aeff719077f5f1147f5197481`.
+The bridge remains on the feature branch, not main. No adapter acceptance or
+native capability enablement follows merely from this bridge checkpoint.

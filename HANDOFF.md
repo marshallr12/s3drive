@@ -4,22 +4,34 @@ Updated 2026-10-22. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
-## In-progress candidate: native sparse state ordering, not native enablement
+## In-progress native adapter acceptance build
 
-Read `docs/src/native-sparse-close-ordering.md`. The schema48 candidate adds
-original epoch ownership, synchronous Close observation, atomic final admission
-and frozen plans, exact native completion witnesses and cold clean-session fences.
-Its17 dedicated state tests and16 killed boundaries pass dedicated Linux/Windows
-steps in run39872409080; the full exact-source run/review is still pending.
-Actual46/47 compatibility remains; a separate actual47/48 gate is added.
-The SDK/controller bridge and five local-HTTP fixtures are now candidates;
-adapter integration and dedicated new lifecycle OS gates are still outstanding. All new native capability flags remain disabled. The accepted
-cold-recovery checkpoint below remains distinct; do not call this candidate accepted
-or promote the candidate without exact-source acceptance and review.
-The accepted cold-recovery prerequisite was merged at8777d30; its full main CI
-39867508230 and exact-source/log/artifact review passed (966 Linux/962 Windows
-tests,37 cohorts,35 typed native regression records). Candidate run39867493619 failed; see
-the correction record in the state ordering document.
+Read the adapter candidate section in `docs/src/native-sparse-close-ordering.md`.
+The `native-sparse-candidate` Cargo feature alone activates candidate adapter paths;
+default flags remain disabled. Four shared-engine lifecycle fixtures and three
+actual OS fixtures cover unlink, save/replace, dirty handles, Close, remount and
+killed known/unknown owners. Two state startup tests cover restricted metadata
+classification and enumeration. They compile locally but are not accepted until
+hosted execution/full review passes on both OSes. Keep failed/partial evidence.
+Sparse delete-on-close/deferred creation, provider writes and deployment are not
+implicitly enabled by this candidate. Never substitute old native gates for these.
+
+## Accepted native sparse state ordering; bridge/adapters still gated
+
+Exact state candidate a1217b85 passed full acceptance in
+[39872409080](https://github.com/marshallr12/s3drive/actions/runs/39872409080):
+Linux983/Windows979 tests across37 cohorts,17 dedicated state lifecycle cases on
+both OSes, actual47/48 and46/47 compatibility,35 exact typed native reference
+records and all771 source files reviewed. It was merged with its unchanged tree
+at8f8f51abc0c1c1cf253c3a50288970586045fda1. Main verification run39876643605 is
+pending. Read `docs/src/native-sparse-close-ordering.md` for the bounded contract.
+This is state ordering acceptance only, not new native filesystem acceptance.
+The SDK/controller bridge6ec538d passed full review of39873777798: Linux988/
+Windows984 tests,37 cohorts, five dedicated bridge cases on each OS, four artifacts
+and774 exact source files. It remains on the feature branch; adapter feature
+acceptance and production activation are still pending.
+Recovery prerequisite main8777d30 was separately verified by39867508230:
+Linux966/Windows962 tests,37 cohorts,35 native records and764 exact source files.
 
 ## Current checkpoint: accepted cold-recovery prerequisite, native work ongoing
 

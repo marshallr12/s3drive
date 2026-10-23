@@ -23,6 +23,52 @@ pub(super) fn metadata(db: &Connection, key: &chunk_mount::Key) -> Result<()> {
     Ok(())
 }
 impl RecoveryStore {
+    /// Read-only startup classification under exclusive directory ownership.
+    /// False permits only the ordinary State validator/migrator next, never an
+    /// effect or a weaker recovery path. Current chunk roles require replay.
+    pub fn needs_startup_replay(directory: &Path) -> Result<bool> {
+        let owner = OwnedDirectory::acquire_existing(directory)?;
+        owner.verify_staging_storage()?;
+        let mut db = Connection::open_with_flags(
+            owner.database_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY
+                | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX
+                | rusqlite::OpenFlags::SQLITE_OPEN_NOFOLLOW,
+        )?;
+        db.busy_timeout(Duration::from_secs(5))?;
+        db.pragma_update(None, "trusted_schema", false)?;
+        db.pragma_update(None, "foreign_keys", true)?;
+        let tx = db.transaction_with_behavior(TransactionBehavior::Deferred)?;
+        let app: i32 = tx.pragma_query_value(None, "application_id", |r| r.get(0))?;
+        let version: i32 = tx.pragma_query_value(None, "user_version", |r| r.get(0))?;
+        if app != crate::APPLICATION_ID || !(1..=crate::SCHEMA_VERSION).contains(&version) {
+            return Err("unrecognized startup client schema".into());
+        }
+        let needed = if version == crate::SCHEMA_VERSION {
+            if let Some(binding) = chunk_mount::load(&tx)? {
+                metadata(&tx, &binding.key())?;
+                true
+            } else {
+                // An unbound/new cache can proceed only through full State
+                // validation. Native provenance without its chunk role fails.
+                crate::sparse_views::preparation::native::require_pre48(&tx)?;
+                false
+            }
+        } else {
+            false
+        };
+        tx.commit()?;
+        Ok(needed)
+    }
+    pub fn open_records(&mut self) -> Result<Vec<opens::OpenRecord>> {
+        let tx = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred)?;
+        metadata(&tx, &self.key)?;
+        let records = opens::metadata_records(&tx)?;
+        tx.commit()?;
+        Ok(records)
+    }
     pub fn open(directory: &Path, volume: &str) -> Result<Self> {
         let owner = OwnedDirectory::acquire_existing(directory)?;
         owner.verify_staging_storage()?;
@@ -256,6 +302,9 @@ impl RecoveryClient {
     }
     pub async fn records(&self) -> Result<Vec<Record>> {
         self.call(|s| s.records()).await
+    }
+    pub async fn open_records(&self) -> Result<Vec<opens::OpenRecord>> {
+        self.call(|s| s.open_records()).await
     }
     pub async fn open_record(&self, id: String) -> Result<opens::OpenRecord> {
         self.call(move |s| s.open_record(&id)).await

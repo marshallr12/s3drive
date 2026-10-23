@@ -48,6 +48,10 @@ jobs:
         run: cargo test -p s3drive-state native_sparse --locked -- --nocapture --test-threads=4
       - name: Verify original-open sparse SDK and chunk disposition controller
         run: cargo test -p s3drive-cli --test chunk_publication native_sparse_sdk --locked -- --nocapture --test-threads=4
+      - name: Compile candidate native sparse adapter without enabling defaults
+        run: cargo clippy --workspace --all-targets --features s3drive-cli/native-sparse-candidate --locked -- -D warnings
+      - name: Verify candidate shared native sparse unlink replacement and Close
+        run: cargo test -p s3drive-cli --test chunk_publication --features native-sparse-candidate native_lifecycle_shared --locked -- --nocapture --test-threads=4
       - name: Verify typed owned sparse state and crash recovery
         run: cargo test -p s3drive-state owned_sparse --locked -- --test-threads=4
       - name: Verify Windows callback stack bound
@@ -163,6 +167,9 @@ jobs:
           path: ${{ runner.temp }}/windows-disposition-reference.json
           if-no-files-found: error
           retention-days: 30
+      - name: Verify NEW real native sparse unlink replacement dirty handles and remount
+        timeout-minutes: 10
+        run: cargo test -p s3drive-cli --test chunk_publication --features native-sparse-candidate native_lifecycle_actual_ --locked -- --ignored --nocapture --test-threads=1
       - name: Verify real Linux mount and teardown
         if: runner.os == 'Linux'
         timeout-minutes: 10
