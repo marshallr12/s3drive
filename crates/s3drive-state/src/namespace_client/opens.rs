@@ -1090,8 +1090,15 @@ fn scope_record(b: &crate::chunk_mount::Binding, r: &OpenRecord) -> Result<()> {
 }
 pub(super) fn chunk_scope(db: &Connection, b: &crate::chunk_mount::Binding) -> Result<()> {
     bounded(db)?;
-    all(db)?;
-    let mut q = db.prepare("SELECT open_id FROM windows_open_journal ORDER BY open_id")?;
+    // all() already replays every non-retired record, validates the live quota,
+    // indexes and orphan-event count. Reuse those records only within this
+    // read-only scope inspection; do not replay them a second time below.
+    for (_, record) in all(db)? {
+        scope_record(b, &record)?;
+    }
+    // Retirement releases live capacity, not validation responsibility. Stream
+    // every retired history as before; no retained evidence is skipped or cached.
+    let mut q = db.prepare("SELECT j.open_id FROM windows_open_journal j JOIN retired_windows_opens r USING(open_id) ORDER BY j.open_id")?;
     for row in q.query_map([], |r| r.get::<_, String>(0))? {
         let key = row?;
         let (_, record) = load(db, &key)?.ok_or("chunk open history missing")?;

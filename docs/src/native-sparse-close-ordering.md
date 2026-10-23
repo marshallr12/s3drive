@@ -31,6 +31,46 @@ candidate phase, not yet accepted. No retention/GC, provider deployment or defau
 activation is implied. Existing native whole-sequence deadlines and all independent
 acceptance gates remain unchanged.
 
+### Bounded retained-history performance candidate
+
+The profiling baseline is `b2eb0eabf8bbc3e92639a87cb3ac0655257e0fb4`, based on
+accepted main7a312b7 with test-only counters and the handover correction. Its
+[hosted run39965818828](https://github.com/marshallr12/s3drive/actions/runs/39965818828)
+uses the unchanged standard Linux/Windows workflow. The fixture constructs real
+durable journals at1/4/8 retained epochs, preparations and original opens, with
+2/8/16 source views. It reports replay/lookup work separately from elapsed time;
+single hosted timings are diagnostics, not a capacity or latency guarantee.
+
+The bounded candidate makes two read-only changes:
+
+- Chunk scope inspection reuses each already-replayed non-retired record from
+  its own `all()` result. It still validates the live quota, session/retirement
+  indexes, orphan-event counts, scope and every retired open's complete event
+  history. Retirement is not permission to skip old evidence. There is no
+  cross-call cache and no mutation between replay and scope comparison.
+- Native epoch validation builds a private operation-to-source index from its
+  own fully checked source snapshot, then looks up each epoch's first mutation.
+  All parent-cleanliness, operation/binding, original-open, plan, root, frozen
+  set and completion comparisons remain. The temporary index holds references
+  bounded by existing source quotas and cannot survive the inspection. Its
+  work is V indexed source rows plus E lookups, with logarithmic map operations,
+  rather than E repeated linear searches across V retained views.
+
+Deterministic regressions require2N open replays for native metadata inspection
+and3N for complete chunk-role validation at1/4/8 live opens, plus V+E source-index
+visits. A separate1/4/8-plan history on one epoch must keep exactly two original
+replays, not one per plan. Mixed live/retired evidence is replayed once per fresh
+scope inspection; late retired-open and oldest-plan corruption must fail without
+repair. Existing late-trigger, unselected-open, crash, disk-full, proof and body
+checks remain. No schema, on-disk format, native flag, admission quota or deadline
+changes; debug and release still run the whole native sequence independently.
+
+This does not eliminate whole-history validation, bound retained disk growth or
+establish large-history capacity. Retired records, source graphs and bodies still
+have validation costs. Retention/GC and real-provider or workstation deployment
+remain separate work. The new candidate requires full exact-source hosted review;
+local tmpfs/overlayfs cannot substitute for durable acceptance.
+
 ### Earlier candidate evidence
 
 Native candidate `a3db497afca3a685cffa586294ca1c6e29637b05` passed complete

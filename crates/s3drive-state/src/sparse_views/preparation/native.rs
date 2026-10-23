@@ -412,7 +412,9 @@ fn is_bound(record: &OpenRecord) -> bool {
         .iter()
         .any(|event| matches!(event.action, Action::BindSparse))
 }
-pub(super) mod metadata;
+mod metadata;
+#[cfg(test)]
+pub(super) use metadata::epoch_source_visits;
 pub(crate) use metadata::validate as validate_metadata;
 
 pub(crate) fn reserved_events<'a>(

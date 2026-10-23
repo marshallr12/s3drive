@@ -34,6 +34,17 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
     }
     let source = views::inspect_metadata(db)?;
     let roots = publication::ledger::inspect(db)?;
+    // Index only the fully validated immutable source snapshot from this call.
+    // Each epoch used to linearly search every retained view. No validation or
+    // proof is cached across another inspection, mutation or transaction.
+    let mut operations = BTreeMap::new();
+    for saved in source.records.values() {
+        #[cfg(test)]
+        EPOCH_SOURCE_VISITS.set(EPOCH_SOURCE_VISITS.get() + 1);
+        if operations.insert(saved.record.operation, saved).is_some() {
+            return Err(Failure::Corrupt.into());
+        }
+    }
     let mut epochs = BTreeMap::new();
     for record in &records {
         for event in &record.events {
@@ -46,15 +57,9 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
             {
                 let proof = Provenance::capture(record, binding, *operation)?;
                 proof.historical_record(record, binding)?;
-                let first = source
-                    .records
-                    .values()
-                    .find(|r| {
-                        #[cfg(test)]
-                        EPOCH_SOURCE_VISITS.set(EPOCH_SOURCE_VISITS.get() + 1);
-                        r.record.operation == *operation
-                    })
-                    .ok_or(Failure::Corrupt)?;
+                #[cfg(test)]
+                EPOCH_SOURCE_VISITS.set(EPOCH_SOURCE_VISITS.get() + 1);
+                let first = operations.get(operation).ok_or(Failure::Corrupt)?;
                 let parent = source
                     .records
                     .get(&first.record.parent.ok_or(Failure::Corrupt)?)
