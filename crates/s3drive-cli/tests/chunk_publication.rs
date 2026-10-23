@@ -1312,6 +1312,12 @@ fn dispatch<'a>(
         #[cfg(any(target_os = "linux", windows))]
         "native_writer_mount" => Box::pin(native_writer::mount(config, root, s)),
         #[cfg(feature = "native-sparse-candidate")]
+        "native_lifecycle_ordered" => Box::pin(native_lifecycle::ordered_flush(config, root, s)),
+        #[cfg(feature = "native-sparse-candidate")]
+        "native_lifecycle_profile" => {
+            Box::pin(native_lifecycle::profile_transition(config, root, s))
+        }
+        #[cfg(feature = "native-sparse-candidate")]
         "native_lifecycle_unlink" => Box::pin(native_lifecycle::unlink(config, root, s)),
         #[cfg(all(feature = "native-sparse-candidate", any(target_os = "linux", windows)))]
         "native_lifecycle_mounted" => Box::pin(native_lifecycle::mounted(config, root, s)),
@@ -1793,6 +1799,8 @@ async fn run(mode: &str) {
         "native_lifecycle_mounted_known" => 3,
         "native_lifecycle_mounted_unknown" => 1,
         "native_lifecycle_replace" => 8,
+        "native_lifecycle_profile" => 5,
+        "native_lifecycle_ordered" => 5,
         "native_writer" => 5,
         "native_directories" => 3,
         "native_directories_only" => 0,
@@ -2251,4 +2259,16 @@ async fn native_lifecycle_actual_killed_owner_known_root_recovery() {
 #[ignore = "dedicated NEW native sparse killed-owner unknown epoch refusal"]
 async fn native_lifecycle_actual_killed_owner_unknown_epoch_refusal() {
     run("native_lifecycle_mounted_unknown").await;
+}
+
+#[cfg(feature = "native-sparse-candidate")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_lifecycle_shared_profile_transition_preserves_original_epochs() {
+    run("native_lifecycle_profile").await;
+}
+
+#[cfg(feature = "native-sparse-candidate")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_lifecycle_shared_flush_orders_later_write_and_close() {
+    run("native_lifecycle_ordered").await;
 }

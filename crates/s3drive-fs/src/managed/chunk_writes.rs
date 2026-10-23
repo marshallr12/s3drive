@@ -61,6 +61,8 @@ pub(crate) struct Writes {
     #[cfg(feature = "native-sparse-candidate")]
     native: std::sync::OnceLock<native::Mount>,
     #[cfg(feature = "native-sparse-candidate")]
+    native_lifecycle: bool,
+    #[cfg(feature = "native-sparse-candidate")]
     native_serial: Arc<AsyncMutex<()>>,
 }
 pub(crate) enum Opened {
@@ -116,6 +118,10 @@ impl File {
     }
 }
 impl Writes {
+    #[cfg(feature = "native-sparse-candidate")]
+    pub(crate) fn native_enabled(&self) -> bool {
+        self.native_lifecycle
+    }
     pub async fn new(
         storage: Storage,
         authority: WireClient,
@@ -123,7 +129,12 @@ impl Writes {
         reader: Reader,
         executors: HashMap<String, Executor>,
         default_store: String,
+        native_lifecycle: bool,
     ) -> Result<Self> {
+        #[cfg(not(feature = "native-sparse-candidate"))]
+        if native_lifecycle {
+            return Err(Error::Configuration);
+        }
         let mut stores = HashMap::new();
         let mut controls = Vec::new();
         for (id, e) in executors {
@@ -200,6 +211,8 @@ impl Writes {
             closing: AtomicBool::new(false),
             #[cfg(feature = "native-sparse-candidate")]
             native: std::sync::OnceLock::new(),
+            #[cfg(feature = "native-sparse-candidate")]
+            native_lifecycle,
             #[cfg(feature = "native-sparse-candidate")]
             native_serial: Arc::new(AsyncMutex::new(())),
         };
@@ -645,19 +658,17 @@ impl Writes {
     }
     async fn flush_heads(&self) -> Result<()> {
         #[cfg(feature = "native-sparse-candidate")]
-        {
+        if self.native_lifecycle {
             let _serial = self.native_serial.lock().await;
             self.recover().await?;
             for h in self.local.heads().await.map_err(error)? {
                 self.flush_native_node(h.binding().base().map_err(error)?.node())
                     .await?;
             }
-            Ok(())
+            return Ok(());
         }
-        #[cfg(not(feature = "native-sparse-candidate"))]
         self.flush_heads_legacy().await
     }
-    #[cfg(not(feature = "native-sparse-candidate"))]
     async fn flush_heads_legacy(&self) -> Result<()> {
         self.recover().await?;
         for h in self.local.heads().await.map_err(error)? {

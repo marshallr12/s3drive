@@ -35,6 +35,21 @@ fn callback(open: &str, role: &[u8]) -> String {
 }
 impl Writes {
     pub(crate) async fn start_native(self: &Arc<Self>) -> Result<()> {
+        // Opting in does not adopt an epoch created by the legacy profile.
+        // Saved known roots were reconciled by the constructor; unknown native
+        // heads retain their original records and use recover_previous below.
+        let retained = self._capability.opens().records().await.map_err(error)?;
+        for head in self.local.heads().await.map_err(error)? {
+            let base = head.binding().base().map_err(error)?;
+            let node = base.node();
+            if !head.is_clean()
+                && !retained
+                    .iter()
+                    .any(|r| r.input.volume == self.volume && r.input.node == node)
+            {
+                return Err(Error::Conflict);
+            }
+        }
         let session = hex(&fresh()?[..16]);
         let mut controllers = HashMap::new();
         for (id, (store, executor, _)) in &self.stores {

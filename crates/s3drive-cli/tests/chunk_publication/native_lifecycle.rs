@@ -1,8 +1,30 @@
 //! Candidate shared-engine gates. These do not substitute for real OS callbacks.
 use super::*;
 use s3drive_fs::{ROOT, ReadOnlyFs};
+async fn configuration(
+    config: &s3drive_core::Config,
+    root: &Path,
+    s: &Server,
+) -> s3drive_core::Config {
+    let mut c = native_writer::configuration(config, root, s).await;
+    c.managed.as_mut().unwrap().sparse_lifecycle =
+        Some(s3drive_core::SparseLifecycle::OwnedUnlinkedV1);
+    c.validate().unwrap();
+    c
+}
+#[cfg(any(target_os = "linux", windows))]
+async fn mount_configuration(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    native_writer::mount_configuration(config, root, s).await;
+    let path = root.join("native-drive.toml");
+    let mut c: toml::Value = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    c["managed"]["sparse-lifecycle"] = "owned-unlinked-v1".into();
+    let text = toml::to_string(&c).unwrap();
+    s3drive_core::Config::parse(&text).unwrap();
+    std::fs::write(path, text).unwrap();
+}
+
 pub async fn unlink(config: &s3drive_core::Config, root: &Path, s: &Server) {
-    let c = native_writer::configuration(config, root, s).await;
+    let c = configuration(config, root, s).await;
     let fs = ReadOnlyFs::new(&c).await.unwrap();
     assert!(fs.native_posix_unlink_rename_enabled());
     assert!(!fs.native_lifecycle_enabled());
@@ -59,7 +81,7 @@ pub async fn unlink(config: &s3drive_core::Config, root: &Path, s: &Server) {
     native_writer::stop(fs).await;
 }
 pub async fn replace(config: &s3drive_core::Config, root: &Path, s: &Server) {
-    let c = native_writer::configuration(config, root, s).await;
+    let c = configuration(config, root, s).await;
     let fs = ReadOnlyFs::new(&c).await.unwrap();
     let old = fs
         .create_file(ROOT, "saved 日本語.bin", |a, b| a == b, true)
@@ -113,7 +135,7 @@ pub async fn replace(config: &s3drive_core::Config, root: &Path, s: &Server) {
 pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
     use native_mount::{Mount, blocking};
     use std::io::{Read, Seek, SeekFrom, Write};
-    native_writer::mount_configuration(config, root, s).await;
+    mount_configuration(config, root, s).await;
     let mut mount = Mount::start(root).await;
     let base = mount.path.clone();
     blocking(&mut mount, move || {
@@ -189,7 +211,7 @@ pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
 }
 
 pub async fn cold_known(config: &s3drive_core::Config, root: &Path, s: &Server) {
-    let c = native_writer::configuration(config, root, s).await;
+    let c = configuration(config, root, s).await;
     let fs = ReadOnlyFs::new(&c).await.unwrap();
     let file = fs
         .create_file(ROOT, "cold known.bin", |a, b| a == b, true)
@@ -231,7 +253,7 @@ pub async fn cold_known(config: &s3drive_core::Config, root: &Path, s: &Server) 
     native_writer::stop(fs).await;
 }
 pub async fn cold_unknown(config: &s3drive_core::Config, root: &Path, s: &Server) {
-    let c = native_writer::configuration(config, root, s).await;
+    let mut c = configuration(config, root, s).await;
     let fs = ReadOnlyFs::new(&c).await.unwrap();
     let file = fs
         .create_file(ROOT, "unprepared retained.bin", |a, b| a == b, true)
@@ -275,6 +297,14 @@ pub async fn cold_unknown(config: &s3drive_core::Config, root: &Path, s: &Server
     let before = retained(&database);
     s.proxy.clear();
     assert!(ReadOnlyFs::new(&c).await.is_err());
+    c.managed.as_mut().unwrap().sparse_lifecycle = None;
+    assert!(
+        matches!(
+            ReadOnlyFs::new(&c).await,
+            Err(s3drive_fs::Error::Configuration)
+        ),
+        "removing opt-in adopted a native epoch"
+    );
     assert_eq!(
         retained(&database),
         before,
@@ -293,7 +323,7 @@ pub async fn cold_unknown(config: &s3drive_core::Config, root: &Path, s: &Server
 pub async fn mounted_crash(config: &s3drive_core::Config, root: &Path, s: &Server, known: bool) {
     use native_mount::{Mount, blocking};
     use std::io::Write;
-    native_writer::mount_configuration(config, root, s).await;
+    mount_configuration(config, root, s).await;
     let mut mount = Mount::start(root).await;
     let path = mount.path.join("killed owner 日本語.bin");
     let file = blocking(&mut mount, move || {
@@ -369,4 +399,109 @@ pub async fn mounted_crash(config: &s3drive_core::Config, root: &Path, s: &Serve
                 .any(|a| matches!(a.mutation, Mutation::Publish { .. }))
         );
     }
+}
+
+pub async fn profile_transition(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    let mut c = native_writer::configuration(config, root, s).await;
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    assert!(!fs.namespace_mutation());
+    assert!(!fs.native_posix_unlink_rename_enabled());
+    let file = fs
+        .create_file(ROOT, "legacy epoch.bin", |a, b| a == b, true)
+        .await
+        .unwrap();
+    assert!(file.native_object().is_none());
+    file.write(0, Arc::from(&b"legacy retained epoch"[..]), false, false)
+        .await
+        .unwrap();
+    let cache = fs.cache_control().unwrap();
+    drop((file, fs));
+    cache.close().await.unwrap();
+    drop(cache);
+    c.managed.as_mut().unwrap().sparse_lifecycle =
+        Some(s3drive_core::SparseLifecycle::OwnedUnlinkedV1);
+    s.proxy.clear();
+    assert!(
+        matches!(ReadOnlyFs::new(&c).await, Err(s3drive_fs::Error::Conflict)),
+        "opt-in adopted an old unprepared epoch"
+    );
+    assert!(
+        !s.proxy
+            .applies()
+            .iter()
+            .any(|a| matches!(a.mutation, Mutation::Publish { .. }))
+    );
+    c.managed.as_mut().unwrap().sparse_lifecycle = None;
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    let node = fs.lookup(ROOT, "legacy epoch.bin").await.unwrap();
+    let file = fs.open(node.id).await.unwrap();
+    assert_eq!(file.read(0, 64).await.unwrap(), b"legacy retained epoch");
+    fs.flush_all().await.unwrap();
+    drop(file);
+    native_writer::stop(fs).await;
+    c.managed.as_mut().unwrap().sparse_lifecycle =
+        Some(s3drive_core::SparseLifecycle::OwnedUnlinkedV1);
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    assert!(fs.namespace_mutation());
+    let node = fs.lookup(ROOT, "legacy epoch.bin").await.unwrap();
+    let file = fs.open(node.id).await.unwrap();
+    assert_eq!(file.read(0, 64).await.unwrap(), b"legacy retained epoch");
+    file.native_object().unwrap().close().await.unwrap();
+    drop(file);
+    native_writer::stop(fs).await;
+    c.managed.as_mut().unwrap().sparse_lifecycle = None;
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    assert!(!fs.namespace_mutation());
+    let node = fs.lookup(ROOT, "legacy epoch.bin").await.unwrap();
+    let file = fs.open_write(node.id).await.unwrap();
+    assert!(file.native_object().is_none());
+    file.write(0, Arc::from(&b"settled"[..]), false, false)
+        .await
+        .unwrap();
+    file.flush().await.unwrap();
+    assert_eq!(file.read(0, 7).await.unwrap(), b"settled");
+    drop(file);
+    native_writer::stop(fs).await;
+}
+
+pub async fn ordered_flush(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    let c = configuration(config, root, s).await;
+    let fs = Arc::new(ReadOnlyFs::new(&c).await.unwrap());
+    let file = Arc::new(
+        fs.create_file(ROOT, "ordered epoch.bin", |a, b| a == b, true)
+            .await
+            .unwrap(),
+    );
+    file.write(0, Arc::from(&b"older"[..]), false, false)
+        .await
+        .unwrap();
+    s.proxy.mode.store(15, Ordering::SeqCst);
+    let owner = fs.clone();
+    let flush = tokio::spawn(async move { owner.flush_all().await });
+    s.proxy.publish_gate.wait().await;
+    let held = file.clone();
+    let mut write =
+        tokio::spawn(async move { held.write(0, Arc::from(&b"newer!"[..]), false, false).await });
+    assert!(
+        tokio::time::timeout(Duration::from_millis(50), &mut write)
+            .await
+            .is_err(),
+        "opted-in write bypassed the publication barrier"
+    );
+    s.proxy.mode.store(0, Ordering::SeqCst);
+    s.proxy.publish_gate.wait().await;
+    flush.await.unwrap().unwrap();
+    assert_eq!(write.await.unwrap().unwrap(), 6);
+    assert_eq!(file.read(0, 6).await.unwrap(), b"newer!");
+    let object = file.native_object().unwrap();
+    let close = object.close();
+    assert!(
+        file.write(0, Arc::from(&b"late"[..]), false, false)
+            .await
+            .is_err()
+    );
+    close.await.unwrap();
+    drop((object, file));
+    let fs = Arc::try_unwrap(fs).ok().unwrap();
+    native_writer::stop(fs).await;
 }

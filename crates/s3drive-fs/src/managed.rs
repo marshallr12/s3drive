@@ -25,6 +25,11 @@ impl Backend {
 }
 pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
     let settings = config.managed.as_ref().ok_or(Error::Configuration)?;
+    let native_lifecycle = settings.sparse_lifecycle.is_some();
+    #[cfg(not(feature = "native-sparse-candidate"))]
+    if native_lifecycle {
+        return Err(Error::Configuration);
+    }
     let token = Token::from_private_file(&settings.token_file).map_err(|_| Error::Configuration)?;
     let authority = WireClient::from_config(settings, token).map_err(|_| Error::Configuration)?;
     #[cfg(feature = "native-sparse-candidate")]
@@ -62,13 +67,20 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
             )
             .await
             .map_err(error)?;
-            for record in recovery.records().await.map_err(error)? {
-                recovery
-                    .recover(record.input.request.operation)
-                    .await
-                    .map_err(error)?;
+            if native_lifecycle {
+                for record in recovery.records().await.map_err(error)? {
+                    recovery
+                        .recover(record.input.request.operation)
+                        .await
+                        .map_err(error)?;
+                }
+                recovery.recover_controller_links().await.map_err(error)?;
+            } else if !recovery.open_records().await.map_err(error)?.is_empty() {
+                // Removing the opt-in cannot adopt retained original opens or
+                // turn unknown native work into ordinary v8 retry permission.
+                recovery.close().await.map_err(error)?;
+                return Err(Error::Configuration);
             }
-            recovery.recover_controller_links().await.map_err(error)?;
             recovery.close().await.map_err(error)?;
         }
     }
@@ -111,13 +123,15 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
         }
         if config.version == 8 {
             #[cfg(feature = "native-sparse-candidate")]
-            required.extend([
-                "pending-removal-v1",
-                "deferred-removal-v1",
-                "namespace-entry-cas-v1",
-                "owned-target-replace-v1",
-                "deferred-owner-move-v1",
-            ]);
+            if native_lifecycle {
+                required.extend([
+                    "pending-removal-v1",
+                    "deferred-removal-v1",
+                    "namespace-entry-cas-v1",
+                    "owned-target-replace-v1",
+                    "deferred-owner-move-v1",
+                ]);
+            }
             required.extend([
                 "manifest-root-v1",
                 "manifest-history-v1",
@@ -236,6 +250,7 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
                 chunks.clone().ok_or(Error::Configuration)?,
                 chunk_executors,
                 settings.default_store.clone().ok_or(Error::Configuration)?,
+                native_lifecycle,
             ))
             .await?,
         ))
@@ -243,7 +258,7 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
         None
     };
     #[cfg(feature = "native-sparse-candidate")]
-    if let Some(w) = &chunk_writes {
+    if native_lifecycle && let Some(w) = &chunk_writes {
         w.start_native().await?;
     }
     let writes = storage.filter(|_| config.version != 8).map(|s| {

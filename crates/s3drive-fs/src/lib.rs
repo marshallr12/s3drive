@@ -547,7 +547,7 @@ impl ReadOnlyFs {
         if self
             .managed
             .as_ref()
-            .is_some_and(|m| m.chunk_writes.is_some())
+            .is_some_and(|m| m.chunk_writes.as_ref().is_some_and(|w| w.native_enabled()))
         {
             return true;
         }
@@ -562,7 +562,7 @@ impl ReadOnlyFs {
         if self
             .managed
             .as_ref()
-            .is_some_and(|m| m.chunk_writes.is_some())
+            .is_some_and(|m| m.chunk_writes.as_ref().is_some_and(|w| w.native_enabled()))
         {
             return true;
         }
@@ -744,7 +744,9 @@ impl ReadOnlyFs {
             Opened::Legacy(file) => (managed::metadata(file.metadata()), Some(*file), None, None),
         };
         #[cfg(feature = "native-sparse-candidate")]
-        let native = if let Some((w, f)) = &chunk_write {
+        let native = if let Some((w, f)) = &chunk_write
+            && w.native_enabled()
+        {
             Some(NativeFileObject(managed::native::BackendObject::Sparse(
                 Arc::new(w.native_object(f.clone()).await?),
             )))
@@ -914,7 +916,12 @@ impl ReadOnlyFs {
             .find(|n| same_name(&n.name, name))
             .ok_or(Error::NotFound)?;
         #[cfg(feature = "native-sparse-candidate")]
-        if let Some(w) = self.managed.as_ref().and_then(|m| m.chunk_writes.as_ref()) {
+        if let Some(w) = self
+            .managed
+            .as_ref()
+            .and_then(|m| m.chunk_writes.as_ref())
+            .filter(|w| w.native_enabled())
+        {
             let changed = w
                 .native_rename(
                     &source.key,
@@ -964,7 +971,12 @@ impl ReadOnlyFs {
         }
         let source = self.lookup(parent, name).await?;
         #[cfg(feature = "native-sparse-candidate")]
-        if let Some(w) = self.managed.as_ref().and_then(|m| m.chunk_writes.as_ref()) {
+        if let Some(w) = self
+            .managed
+            .as_ref()
+            .and_then(|m| m.chunk_writes.as_ref())
+            .filter(|w| w.native_enabled())
+        {
             return w.native_remove(&source.key, &p.key, name, directory).await;
         }
         self.managed

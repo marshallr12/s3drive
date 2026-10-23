@@ -26,6 +26,7 @@ pub(super) async fn configuration(
     c.managed = Some(s3drive_core::ManagedConfig {
         authority_ca_file: None,
         windows_disposition: None,
+        sparse_lifecycle: None,
         default_store: Some(id(200)),
         authority: s.url.clone(),
         volume: info(&s.direct).await.id,

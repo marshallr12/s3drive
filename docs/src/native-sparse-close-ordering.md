@@ -291,3 +291,24 @@ control. The adapter now supplies a second control only when the destination's
 complete store/source/fingerprint control differs from the source; distinct
 controls remain required and validated. The existing replacement fixture is
 unchanged. Actual OS tests were not reached in that failed Linux run.
+
+## Explicit opt-in profile (2026-10-23, candidate)
+
+The owner chose explicit opt-in rather than changing existing version8 behavior.
+The version8 managed setting `sparse-lifecycle = 'owned-unlinked-v1'` selects the
+new contract only in the acceptance build until final-source gates pass. Omission
+preserves the existing version8 dirty-head recovery, captured-view concurrency,
+creation and directory behavior. Unknown option values or other config versions
+are rejected; builds without the candidate feature reject the opt-in explicitly.
+Sparse delete-on-close/deferred creation remains unsupported.
+
+Opted-in writes serialize behind publication/namespace barriers. Close still
+observes its original fence synchronously. Cold unprepared native epochs remain
+conflicts; removing the opt-in cannot adopt retained original opens. Conversely,
+opt-in cannot adopt an old legacy dirty epoch: settle it under its original profile
+before switching. Known roots are reconciled before clean transition, with no fresh
+IDs, policy bypass or source repair. Two additional shared cases verify these
+profile transitions and ordered writes/Close; six shared plus three actual OS
+fixtures now apply. Unchanged legacy version8 shared and real mount gates also run
+with candidate code compiled, not only with the feature absent. Full final-source
+and main verification remain required before production availability.

@@ -7,8 +7,10 @@ docs/src/implementation-plan.md before continuing.
 ## In-progress native adapter acceptance build
 
 Read the adapter candidate section in `docs/src/native-sparse-close-ordering.md`.
-The `native-sparse-candidate` Cargo feature alone activates candidate adapter paths;
-default flags remain disabled. Four shared-engine lifecycle fixtures and three
+The `native-sparse-candidate` Cargo feature compiles candidate adapter paths;
+default flags remain disabled. Runtime activation also requires the explicit
+version8 managed sparse-lifecycle=owned-unlinked-v1 opt-in, as chosen by the owner.
+Six shared-engine lifecycle fixtures and three
 actual OS fixtures cover unlink, save/replace, dirty handles, Close, remount and
 killed known/unknown owners. Two state startup tests cover restricted metadata
 classification and enumeration. They compile locally but are not accepted until
@@ -23,8 +25,8 @@ Exact state candidate a1217b85 passed full acceptance in
 Linux983/Windows979 tests across37 cohorts,17 dedicated state lifecycle cases on
 both OSes, actual47/48 and46/47 compatibility,35 exact typed native reference
 records and all771 source files reviewed. It was merged with its unchanged tree
-at8f8f51abc0c1c1cf253c3a50288970586045fda1. Main verification run39876643605 is
-pending. Read `docs/src/native-sparse-close-ordering.md` for the bounded contract.
+at8f8f51abc0c1c1cf253c3a50288970586045fda1. Main verification run39876643605 passed full exact-source review (same counts,
+all771 files and four artifacts). Read `docs/src/native-sparse-close-ordering.md` for the bounded contract.
 This is state ordering acceptance only, not new native filesystem acceptance.
 The SDK/controller bridge6ec538d passed full review of39873777798: Linux988/
 Windows984 tests,37 cohorts, five dedicated bridge cases on each OS, four artifacts
