@@ -1,8 +1,55 @@
 # Native sparse epoch ownership and Close ordering
 
-Implemented state candidate, not yet accepted, 2026-10-22. This is not accepted state behavior or native
-activation. Base prerequisite source: cb568aa0417cf84d829a58236f9ac45c707b4ef8.
-The existing schema47 sparse admission and fresh-send guards remain the baseline.
+## Current opt-in contract (2026-10-23)
+
+Native candidate `a3db497afca3a685cffa586294ca1c6e29637b05` passed complete
+[Linux/Windows acceptance](https://github.com/marshallr12/s3drive/actions/runs/39892868332):
+Linux993/Windows989 workspace tests across37 cohorts, nine shared lifecycle cases,
+three actual FUSE/WinFsp lifecycle cases per OS, three Close-join tests, three
+transaction-local validation tests, all existing native/default-profile regressions,
+real46/47 and47/48 compatibility, four artifacts with35 typed native reference
+records, and779 exact source files. Complete logs and artifact digests were reviewed.
+
+The normal build now contains the adapter; the temporary acceptance-only Cargo
+feature is removed. Activation still requires an explicit version8 managed option:
+
+```toml
+[managed]
+# In an otherwise valid, policy-bound version8 managed configuration:
+sparse-lifecycle = "owned-unlinked-v1"
+```
+
+Omitting this option preserves the existing version8 profile. Other versions and
+unknown values are rejected. Existing policy/source binding requirements remain.
+The opt-in supports unlink while open, replacement while old handles remain open,
+dirty reads through surviving handles, ordered last Close and exact known-root
+cold/remount recovery. Unknown/unprepared old epochs remain explicit conflicts
+with data retained. Switching profiles cannot adopt retained original opens or
+legacy dirty epochs: settle work under its original profile before changing it.
+Sparse delete-on-close/deferred creation, real-provider writes and deployment are
+not enabled by this work.
+
+The original120-second single live-sequence debug gate is retained, including
+unlink, replacement and final reopen. Candidate elapsed times were103.29 seconds
+on Linux and91.61 on Windows; rename alone was27.00/27.35 seconds and final reopen
+15.47/5.80 seconds. These are unoptimized hosted measurements, not an interactive
+performance guarantee. Retained-history validation remains expensive and bounded
+by existing admission limits; capacity/performance at scale is not established.
+Failed earlier bounds remain recorded below, not relabeled as acceptance.
+
+Production availability changes require their own full exact-source CI before
+merge, plus main verification afterward. CI now runs the same actual lifecycle
+fixtures in both debug and release builds, keeping the original debug deadline;
+release results are measured independently and never substitute for it. Routine
+runtime timing noise is removed; fixture per-call timings remain in CI logs.
+
+## Historical design and implementation checkpoints
+
+The following records preserve the prerequisite design and failed/partial runs.
+Their candidate/disabled status describes those earlier sources, not the current
+runtime opt-in contract above. Base prerequisite source was
+cb568aa0417cf84d829a58236f9ac45c707b4ef8; schema48 state ordering was accepted
+separately before native integration.
 
 ## Problem
 
@@ -162,3 +209,280 @@ the fixture now asserts that identity and still rejects fresh/stale admission.
 Preparation additionally rejects a caller token for another node/source/control,
 including before returning a known plan. A new assertion exercises that boundary.
 These changes still require full hosted acceptance.
+
+## SDK/controller bridge candidate (not native acceptance)
+
+The SDK now has a nonserializable original-open bridge. Its Close constructor
+marks the synchronous fence before the returned future can be polled or dropped.
+Edits use authenticated pinned root/page context and exact worker, node, source,
+store and fingerprint binding. Known preparations are replayed without changing
+their original publisher; fresh preparation remains state-guarded. Frozen work
+still independently passes existing reader, immutable upload, root publication
+and exact source-acknowledgment gates.
+
+The shared disposition controller can use the chunk owner's namespace/Open
+capability instead of constructing a whole-file publisher for a chunk store.
+Its content hook must flush every Close, including non-last Close, and complete
+through the native source witness. Namespace transitions share the adapter's
+serialization gate and flush retained native content first. Actual Cleanup remains
+separate; obsolete-session Close is not fabricated or marked complete during cold
+recovery. Existing whole-file behavior retains its original backend and barriers.
+
+Five dedicated local-HTTP SDK/controller fixtures compile: linked, pending and
+committed removal source publication; linked controller Close; committed-removal
+controller Close/release. They exercise dropped-unpolled Close futures, multi-plan
+lineage, refusal before exact source acknowledgments, dirty read through pinned
+handles, and source completion without inventing POSIX Cleanup. Hosted execution,
+full legacy regressions and the new Linux/Windows adapter lifecycle gates remain
+outstanding. This bridge does not activate native filesystem capability flags.
+
+Recovery prerequisite main8777d3078cdf87360893899fe448b0dc53c7b742 was independently
+verified in [39867508230](https://github.com/marshallr12/s3drive/actions/runs/39867508230):
+Linux966/Windows962 tests across37 cohorts; eight cold state and three cold SDK
+cases, prior owned sparse gates, actual46/47 compatibility, and35 strictly compared
+native reference artifact records. All764 source files and full logs/artifact
+hashes were reviewed. Those existing native references are not acceptance of this
+new SDK/controller or adapter behavior.
+
+Local bridge verification: workspace Clippy with warnings denied, formatting,
+schema fixture expectations and109 Markdown link checks pass. All five SDK cases
+compile, but execution stops during durable authority startup on this cloud
+workstation (overlayfs/tmpfs). This is not a test pass; the guard stays intact and
+standard hosted Linux/Windows runners must execute the dedicated cases.
+
+## Adapter candidate (2026-10-23, not accepted or enabled)
+
+The explicit Cargo feature `native-sparse-candidate` is an acceptance build only.
+Default version8 capability flags remain disabled. Candidate FUSE RELEASE observes
+actual Close, independently of FLUSH; WinFsp reuses the same original file object
+for data, Cleanup and Close. The mount keeps at most256 original capabilities,
+with four admitted I/O jobs and120-second outer deadlines. Close observes its
+shared fence synchronously and queues a retained, bounded job on the owning
+runtime before returning its join future. Other I/O retains cancellation behavior.
+
+All native source mutation, namespace policy and Close content barriers share a
+serialization gate. A dirty read refreshes only the same verified pinned binding;
+after source acknowledgment, the existing reader verifies the new binding. Every
+Close flushes all retained native plans in lineage order using their original
+publisher, even when another handle remains. Exact acknowledged plans are skipped;
+a missing original runtime capability is a conflict, not adoption. POSIX unlink
+and held-target replacement first flush content and record an owned removal before
+the actual namespace effect. Actual Windows Cleanup remains distinct from Close.
+Delete-on-close/deferred creation is still unsupported for the sparse adapter.
+
+Cold startup classifies existing storage under exclusive read-only ownership.
+Classification cannot migrate, acknowledge data or authorize an effect. Existing
+current-schema chunk state must pass restricted namespace/open metadata validation
+and exact saved-request replay before full State, policy, feature or provider
+startup. Recognized older stores proceed only through the ordinary full validator
+and migration before fresh startup checks; errors never fall back. A current cache
+without a chunk role must contain no native provenance and still passes full State.
+Bounded retained-open enumeration allows exact original controller-link ACK IDs,
+not inferred callbacks, completion or session recreation. Unknown dirty native
+epochs remain preserved conflicts. Saved root results use existing exact SDK
+recovery and source ACK; clean obsolete sessions use explicit abandonment policy.
+
+Prepared dedicated gates, still requiring execution and full review:
+
+- Four shared-engine cases: held unlink, held-target replacement, exact cold-known
+  root replay, and cold-unknown refusal with unchanged bytes/callback evidence.
+- Three actual OS cases on each platform: unlink/replace/dirty handles/remount,
+  killed daemon with a known saved root result, and killed daemon with an
+  unprepared epoch that must refuse mounting without changing source bytes.
+- Two additional metadata startup state tests cover read-only classification,
+  source-body independence, bounded open enumeration, exclusive ownership,
+  nonmigration and current-role corruption without fallback.
+
+These are not passes merely because the fixtures compile. Complete legacy native
+regressions, exact-source logs/artifacts and both actual OS cohorts are mandatory.
+No real provider mutation, new credential or user-machine installation is involved.
+
+## State checkpoint acceptance (2026-10-23)
+
+Exact a1217b85c7470bbd4f97c0e8dc79cbe8c8e9747a passed
+[39872409080](https://github.com/marshallr12/s3drive/actions/runs/39872409080).
+Full logs confirm Linux983/Windows979 tests across37 cohorts, the17 dedicated
+native state cases, prior16 owned state/six SDK and eight cold state/three SDK
+cases, and all existing native/startup regressions. Four artifact ZIP hashes
+were checked, both actual47/48 and historical46/47 binary compatibility records
+were reviewed, and35 native records matched typed fixtures and full Windows logs.
+All771 source files matched the accepted Git tree. Source ZIP SHA-256:
+`53cea62632456f653f0b6b08ea1e4ccdba8c9b332a1b9c66ecd373e41ba71454`.
+The unchanged accepted tree was merged at8f8f51abc0c1c1cf253c3a50288970586045fda1;
+[main39876643605](https://github.com/marshallr12/s3drive/actions/runs/39876643605)
+is still under verification. This does not accept SDK/controller or adapter work.
+
+Candidate WinFsp POSIX unlink/rename advertisement is separate from delete-on-close
+admission. Only the explicit test feature enables the sparse POSIX path; sparse
+FILE_DELETE_ON_CLOSE remains unsupported. Default capabilities remain unchanged.
+
+## SDK/controller bridge acceptance (2026-10-23)
+
+Exact6ec538d76a26fd12a36f8def6847ad4502e00c78 passed
+[39873777798](https://github.com/marshallr12/s3drive/actions/runs/39873777798).
+Linux988/Windows984 tests passed across37 cohorts; all five new bridge cases ran
+in dedicated gates and the full suite on both OSes. Full logs, four artifact ZIP
+hashes, actual47/48 and historical46/47 compatibility, and35 strictly compared
+native reference records were reviewed. All774 source files matched. Source ZIP
+SHA-256: `87db4eeabb5bb0aa7af08f5b1fad3de9ac10395aeff719077f5f1147f5197481`.
+The bridge remains on the feature branch, not main. No adapter acceptance or
+native capability enablement follows merely from this bridge checkpoint.
+
+## First adapter gate correction (2026-10-23)
+
+Candidate8d224b5/run39880794317 is not accepted. Linux shared-engine tests passed
+held unlink and both cold-known/cold-unknown recovery cases, but held-target
+replacement failed because the adapter supplied a duplicate same-control
+`destination_control`. The state validator correctly rejects that redundant
+control. The adapter now supplies a second control only when the destination's
+complete store/source/fingerprint control differs from the source; distinct
+controls remain required and validated. The existing replacement fixture is
+unchanged. Actual OS tests were not reached in that failed Linux run.
+
+## Explicit opt-in profile (2026-10-23, candidate)
+
+The owner chose explicit opt-in rather than changing existing version8 behavior.
+The version8 managed setting `sparse-lifecycle = 'owned-unlinked-v1'` selects the
+new contract only in the acceptance build until final-source gates pass. Omission
+preserves the existing version8 dirty-head recovery, captured-view concurrency,
+creation and directory behavior. Unknown option values or other config versions
+are rejected; builds without the candidate feature reject the opt-in explicitly.
+Sparse delete-on-close/deferred creation remains unsupported.
+
+Opted-in writes serialize behind publication/namespace barriers. Close still
+observes its original fence synchronously. Cold unprepared native epochs remain
+conflicts; removing the opt-in cannot adopt retained original opens. Conversely,
+opt-in cannot adopt an old legacy dirty epoch: settle it under its original profile
+before switching. Known roots are reconciled before clean transition, with no fresh
+IDs, policy bypass or source repair. Two additional shared cases verify these
+profile transitions and ordered writes/Close; six shared plus three actual OS
+fixtures now apply. Unchanged legacy version8 shared and real mount gates also run
+with candidate code compiled, not only with the feature absent. Full final-source
+and main verification remain required before production availability.
+
+Opt-in run39883093594 rejected two immediate profile retry checks: startup
+correctly refused dirty epoch adoption, but returned before its ordinary storage
+worker released the exclusive directory lock. Failed native startup now explicitly
+awaits storage-owner closure before returning its original refusal. No filesystem
+callback exists yet; this is not native Close/completion or source acknowledgment.
+The transition checks retain their exact error/byte expectations.
+
+
+Run39883860660 verifies the startup-owner closure correction: all six shared
+profile/lifecycle cases and seven compiled-feature legacy cases pass on both OSes.
+Its actual gates did not mount: the fixture tried indexing an absent TOML opt-in
+key. The fixture now inserts that key into the managed table explicitly. This is
+not native acceptance. Earlier run39881340386 exposed Windows known-root remount
+stack overflow, Windows post-unlink write conflict, and a Linux combined fixture
+timeout; those failures remain open until dedicated reruns establish otherwise.
+Cold startup recovery awaits are boxed, and the known-root shared remount now runs
+on a 128-KiB thread. A seventh shared case isolates Windows-style transient
+SetDelete/Cleanup/Close while other handles survive. It does not substitute for
+actual WinFsp callbacks. Native operation and fixture deadlines remain unchanged.
+
+Run39885763631 passes six of seven shared cases on both OSes, including the
+transient disposition-owner Close sequence. The unchanged 128-KiB cold-start case
+still overflows; boxing nested awaits alone did not bound the caller stack.
+Candidate version8 managed construction now owns a cloned configuration and polls
+startup on a Tokio worker. The small caller stack only awaits its join handle;
+dropping the startup await aborts that owned task instead of detaching a mount.
+Recovery requests, ownership fences and fixture stack/deadline bounds are unchanged.
+Actual OS acceptance remains pending; this correction is not a passing result.
+
+
+Run39886633963 passes all seven shared cases and both actual killed-owner
+known/unknown cases on Linux and Windows. Windows known-root remount no longer
+overflows. Actual Windows post-unlink write still conflicts. The Linux combined
+fixture reaches final Close at119 seconds and then hits its120-second bound, with
+measured progress throughout. Unlink and replacement now use independent bounded
+phases on the same live mount; each retains the120-second bound and all assertions.
+
+The candidate adapter joins an already observed cross-handle Close job before
+admitting a surviving handle's new write/resize or Open. Synchronous original
+Close fencing remains first; joining never fabricates completion, releases a
+retained failure, or permits the closed handle to write. Failed/cancelled jobs
+remain conflicts. Three portable signal tests and an eighth shared fixture cover
+completion/failure and a surviving write issued before the Close future is joined.
+These corrections still require exact-source actual OS and full regression gates.
+
+Run39887940131 passes all eight shared cases, three Close-join tests and both
+actual crash/recovery cases on each OS. Actual Windows post-unlink writes now
+succeed. Replacement still exceeds the cumulative fixture phase budget: measured
+rename is about40 seconds on Linux and56 seconds on Windows for tiny files.
+This is an unresolved latency issue, not acceptance. Final reopen is isolated for
+measurement, with individual open/read/close timings and candidate internal
+publication/Open/Close/rename phase timings. The180-second whole-child,
+120-second blocking-phase and existing operation deadlines remain unchanged.
+Splitting a fixture alone does not resolve or accept these excessive costs.
+
+
+### Transaction-local validation batching candidate
+
+Publication validation previously rebuilt the complete preparation/source graph
+and whole physical-receipt proof once per root, in addition to its initial source
+snapshot. The candidate reuses one fully checked source snapshot and one compact
+physical proof only inside the same immutable read transaction/owner command.
+Every root, admitted object, source relationship and exact receipt is still checked;
+no proof is cached across writes, commits, commands or awaits. Global trigger and
+unselected-row corruption checks remain in force. No schema or admission rule changes.
+Three dedicated `publication_batch` cases assert one source inspection for two
+roots, rejection of physical corruption in an unselected root without repair, and
+fresh rejection after a late trigger between commands. Local feature Clippy passes;
+local execution is blocked by the unchanged persistent-storage guard on tmpfs.
+Hosted correctness and measured latency improvement are still unverified.
+
+Run39890347335 passes the dedicated new native gate on both platforms and all
+three batching/corruption tests; its full regression and latency review are still
+pending. Diagnostic baseline39889331988 still exceeds the Windows bound. Its
+rename serialization lock takes microseconds, while repeated history/publication
+validation consumes tens of seconds. To prevent phase splitting from masking this
+regression, the next fixture restores the original single120-second live-mount
+sequence bound across unlink, replacement and final reopen. Each filesystem call
+reports its individual duration and cumulative elapsed time. The existing
+180-second outer child bound and production operation deadlines are unchanged.
+Passing this restored bound is required before activation; it is a correctness
+regression ceiling, not a claim of interactive performance at scale.
+
+The restored bound in39891291432 passes Linux but fails Windows at120 seconds;
+Windows rename is51.9 seconds, and the detached sync is interrupted by fixture
+teardown. The batching change alone is insufficient, despite improving Linux's
+measured live sequence from116 to81 seconds. This remains failed acceptance.
+The next adapter correction collects acknowledged plan IDs once per flush under
+its existing publication barrier, instead of revalidating the entire root history
+for every historical plan. This list selects pending work only: no authority or
+transaction proof is reused across an await, and each selected original publisher
+still performs unchanged fresh SDK checks before upload, publication and ACK.
+Three retained epochs from two original publishers, repeated clean flushes,
+unlink, Close and cold remount have a ninth shared fixture with exactly seven
+expected PUTs. The original120-second actual sequence bound remains intact.
+
+### Final availability-source local checks
+
+The normal-build opt-in source passes formatting, all-target Clippy, all three
+portable Close-join tests, explicit profile parsing/rejection tests and local
+document links. The aggregate local gate stops at authority startup:11 tests pass
+and four return Internal from Authority::open on the unsupported cloud local
+filesystem. No durability guard is relaxed. Hosted final-source gates remain the
+authority for persistent-state and actual OS acceptance.
+
+### Final-source latency correction in progress
+
+Normal-build source4dc450e/run39896504446 again exceeded the unchanged120-second
+Windows debug bound (rename56.3 seconds). Its Linux debug and release actual gates
+pass, but that is not final-source acceptance and it must not merge on that basis.
+Original-open metadata validation was replaying the same complete event chain for
+each epoch and each plan in a single immutable command. The correction reuses the
+already checked original record only within that command and performs every
+provenance comparison unchanged. Fresh SDK admission and later commands still
+reload/recheck state; no proof crosses a mutation, commit or await. Two new state
+cases require one direct provenance replay above mandatory source-isolation
+checks, and rejection of later corruption in an
+unselected open without repair. Their correctness and latency benefit require new
+hosted acceptance; the actual bounds and all default/opt-in gates remain intact.
+
+The first replay-count fixture in39898041537 assumed the entire command performed
+only one open load. Both OSes observed five: four mandatory source-isolation/role
+checks plus one direct original-provenance load. The corruption test and other18
+state cases pass. The corrected assertion measures the independent source-check
+baseline and requires exactly one additional provenance load, preserving those
+checks rather than weakening them. This test correction is not runtime acceptance.

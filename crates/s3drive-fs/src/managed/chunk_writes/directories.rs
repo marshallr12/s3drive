@@ -65,6 +65,10 @@ impl Writes {
             for r in page {
                 // No fresh policy/feature lookup may replace or block a saved
                 // request. The owner-bound journal validates retained controls.
+                if self.native_lifecycle {
+                    self.native_saved_change(r.input).await?;
+                    continue;
+                }
                 self.apply_directory(r.input).await?;
             }
         }

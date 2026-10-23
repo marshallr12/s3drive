@@ -1,23 +1,52 @@
 # S3Drive handoff
 
-Updated 2026-10-22. Event-bound manifest authority is accepted at schema46;
+Updated 2026-10-23. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
-## In-progress candidate: native sparse state ordering, not native enablement
+## Native lifecycle accepted; final runtime opt-in verification
 
-Read `docs/src/native-sparse-close-ordering.md`. The schema48 candidate adds
-original epoch ownership, synchronous Close observation, atomic final admission
-and frozen plans, exact native completion witnesses and cold clean-session fences.
-Its17 dedicated state tests and16 killed boundaries still require hosted acceptance.
-Actual46/47 compatibility remains; a separate actual47/48 gate is added.
-SDK/controller/adapter integration and dedicated new lifecycle OS gates are still
-outstanding. All new native capability flags remain disabled. The accepted
-cold-recovery checkpoint below remains distinct; do not call this candidate accepted
-or promote the candidate without exact-source acceptance and review.
-The accepted cold-recovery prerequisite was merged at8777d30; its full main CI
-39867508230 is still under verification. Candidate run39867493619 failed; see
-the correction record in the state ordering document.
+Read the current contract in `docs/src/native-sparse-close-ordering.md`.
+Candidate a3db497 passed full exact-source review of39892868332: Linux993/
+Windows989 workspace tests,37 cohorts each, nine shared and three actual lifecycle
+cases per OS, three Close-join and three proof-batching tests, real47/48 and46/47
+compatibility, four artifacts/35 typed native records, and779 source files.
+The original single120-second live native sequence passed both OSes. Debug
+rename/reopen costs remain substantial; do not claim interactive-scale performance.
+
+The temporary compile-only feature is removed. The normal build makes the new
+contract available only through managed version8 sparse-lifecycle=owned-unlinked-v1.
+Omission preserves the existing default profile, including its distinct recovery
+behavior. Unknown dirty epochs and incompatible profile transitions remain explicit
+conflicts with original data retained. Sparse delete-on-close/deferred creation,
+real-provider writes and deployment are not enabled.
+
+This availability change must pass its own full exact-source CI before merge,
+including both runtime profiles and debug/release actual native gates; verify main
+again after conditional merge. Keep prior failed evidence and original bounds.
+Final-source run39896504446 failed its Windows debug sequence bound despite
+passing Linux debug/release actual gates. Do not merge that source or substitute
+its release result for the failed debug gate. A further command-local original-
+record validation correction and two additional state fault tests require their
+own exact-source acceptance. Main remains at the accepted prerequisite checkpoint.
+No private validation archive belongs in the public repository.
+
+## Accepted native sparse state baseline (historical)
+
+Exact state candidate a1217b85 passed full acceptance in
+[39872409080](https://github.com/marshallr12/s3drive/actions/runs/39872409080):
+Linux983/Windows979 tests across37 cohorts,17 dedicated state lifecycle cases on
+both OSes, actual47/48 and46/47 compatibility,35 exact typed native reference
+records and all771 source files reviewed. It was merged with its unchanged tree
+at8f8f51abc0c1c1cf253c3a50288970586045fda1. Main verification run39876643605 passed full exact-source review (same counts,
+all771 files and four artifacts). Read `docs/src/native-sparse-close-ordering.md` for the bounded contract.
+This is state ordering acceptance only, not new native filesystem acceptance.
+The SDK/controller bridge6ec538d passed full review of39873777798: Linux988/
+Windows984 tests,37 cohorts, five dedicated bridge cases on each OS, four artifacts
+and774 exact source files. It remains on the feature branch; adapter feature
+acceptance and production activation are still pending.
+Recovery prerequisite main8777d30 was separately verified by39867508230:
+Linux966/Windows962 tests,37 cohorts,35 native records and764 exact source files.
 
 ## Current checkpoint: accepted cold-recovery prerequisite, native work ongoing
 

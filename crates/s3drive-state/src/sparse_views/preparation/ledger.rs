@@ -82,7 +82,15 @@ pub(super) fn no_triggers(db: &Connection) -> Result<()> {
     }
     Ok(())
 }
+#[cfg(test)]
+thread_local! { static INSPECTIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
+#[cfg(test)]
+pub(super) fn inspection_count() -> usize {
+    INSPECTIONS.get()
+}
 pub(super) fn inspect(db: &Connection) -> Result<Snapshot> {
+    #[cfg(test)]
+    INSPECTIONS.set(INSPECTIONS.get() + 1);
     no_triggers(db)?;
     if !db.pragma_query_value(None, "foreign_keys", |r| r.get::<_, bool>(0))? {
         return Err(Failure::Corrupt.into());

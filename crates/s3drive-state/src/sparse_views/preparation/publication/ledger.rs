@@ -257,6 +257,12 @@ pub(super) fn validate_source_snapshot(
     s: &super::super::ledger::Snapshot,
 ) -> Result<()> {
     validate_checks(meta, s)?;
+    if meta.records.is_empty() {
+        return Ok(());
+    }
+    // `s` was fully validated in this same read transaction. Reuse it and one
+    // whole physical-ledger proof for all roots, never across mutation/await.
+    let trees = super::super::transfers::checked_trees(db, s)?;
     for (plan, r) in &meta.records {
         if !r.input.matches(&s.info(*plan)?)? {
             return Err(Failure::Corrupt.into());
@@ -268,7 +274,7 @@ pub(super) fn validate_source_snapshot(
             }
         }
         coverage(meta, s, *plan)?;
-        let tree = super::super::transfers::inspect_tree(db, *plan)?;
+        let tree = trees.tree(*plan)?;
         if Physical::from_tree(&tree)? != r.physical {
             return Err(Failure::Corrupt.into());
         }

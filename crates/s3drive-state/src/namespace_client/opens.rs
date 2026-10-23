@@ -531,7 +531,15 @@ fn reduce(db: &Connection, record: &mut OpenRecord, event: &Event) -> Result<()>
     Ok(())
 }
 type RawRow = (String, Vec<u8>, i64, Option<Vec<u8>>, Vec<u8>);
+#[cfg(test)]
+thread_local! { static LOADS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
+#[cfg(test)]
+pub(crate) fn load_count() -> usize {
+    LOADS.get()
+}
 fn load(db: &Connection, key: &str) -> Result<Option<(Row, OpenRecord)>> {
+    #[cfg(test)]
+    LOADS.set(LOADS.get() + 1);
     let bad:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM windows_open_journal WHERE open_id=?1 AND (length(CAST(owner_id AS BLOB))!=32 OR typeof(input)!='blob' OR length(input) NOT BETWEEN 1 AND 16384 OR event_count NOT BETWEEN 0 AND 4096 OR length(state_hash)!=32 OR (head_hash IS NOT NULL AND length(head_hash)!=32))) OR EXISTS(SELECT 1 FROM windows_open_events WHERE open_id=?1 AND (typeof(action)!='blob' OR length(action) NOT BETWEEN 1 AND 16384 OR length(state_hash)!=32 OR length(CAST(event_id AS BLOB))!=32 OR (previous_hash IS NOT NULL AND length(previous_hash)!=32)))",[key],|r|r.get(0))?;
     if bad {
         return Err("per-open bounded metadata shape changed".into());
@@ -601,6 +609,9 @@ fn load(db: &Connection, key: &str) -> Result<Option<(Row, OpenRecord)>> {
     }
     retirement::check(db, &row, &record)?;
     Ok(Some((row, record)))
+}
+pub(super) fn metadata_records(db: &Connection) -> Result<Vec<OpenRecord>> {
+    Ok(all(db)?.into_iter().map(|(_, r)| r).collect())
 }
 fn all(db: &Connection) -> Result<Vec<(Row, OpenRecord)>> {
     session::check_index(db)?;

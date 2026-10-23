@@ -1,7 +1,7 @@
 //! Shared S3 namespace, journal-backed file I/O and revision-bound clean cache.
 pub mod edits;
 mod managed;
-pub use managed::writes::lifecycle::NativeFileObject;
+pub use managed::native::NativeFileObject;
 mod writable;
 use s3drive_core::Config;
 use s3drive_s3::{ListPage, MAX_READ_BYTES, ObjectMetadata, ReadHandle, S3Reader};
@@ -116,6 +116,7 @@ struct CacheBackend {
 
 pub struct OpenFile {
     pub node: Arc<Node>,
+    native: Option<NativeFileObject>,
     handle: Option<ReadHandle>,
     initial_metadata: ObjectMetadata,
     managed: Option<s3drive_managed::FileSnapshot>,
@@ -132,7 +133,19 @@ pub struct OpenFile {
     writable_open: bool,
 }
 impl OpenFile {
+    pub fn native_object(&self) -> Option<NativeFileObject> {
+        self.native.clone()
+    }
+    fn sparse_native(&self) -> Option<&managed::chunk_writes::native::Object> {
+        match self.native.as_ref().map(|n| &n.0) {
+            Some(managed::native::BackendObject::Sparse(n)) => Some(n),
+            _ => None,
+        }
+    }
     pub fn is_unlinked(&self) -> Result<bool> {
+        if let Some(n) = self.sparse_native() {
+            return Ok(n.is_unlinked());
+        }
         match &self.managed_write {
             Some((w, f)) => w.is_unlinked(f),
             None => Ok(false),
@@ -160,6 +173,9 @@ impl OpenFile {
         if !self.writable_open {
             return Err(Error::ReadOnly);
         }
+        if let Some(native) = self.sparse_native() {
+            return native.write(offset, bytes, append, constrained).await;
+        }
         if let Some((writer, file)) = &self.chunk_write {
             return Box::pin(writer.write(file, offset, bytes, append, constrained)).await;
         }
@@ -173,6 +189,9 @@ impl OpenFile {
         if !self.writable_open {
             return Err(Error::ReadOnly);
         }
+        if let Some(native) = self.sparse_native() {
+            return native.truncate(size).await;
+        }
         if let Some((writer, file)) = &self.chunk_write {
             return Box::pin(writer.truncate(file, size)).await;
         }
@@ -183,6 +202,9 @@ impl OpenFile {
         Box::pin(writer.truncate(file, size)).await
     }
     pub async fn flush(&self) -> Result<()> {
+        if let Some(native) = self.sparse_native() {
+            return native.flush().await;
+        }
         if let Some((writer, file)) = &self.chunk_write {
             Box::pin(writer.flush(file)).await?;
         }
@@ -204,6 +226,9 @@ impl OpenFile {
         &self.initial_metadata
     }
     pub async fn read(&self, offset: u64, length: usize) -> Result<Vec<u8>> {
+        if let Some(native) = self.sparse_native() {
+            return native.read(offset, length).await;
+        }
         if let Some((writer, file)) = &self.chunk_write {
             return Box::pin(writer.read(file, offset, length)).await;
         }
@@ -314,6 +339,22 @@ fn cache_error(error: Box<dyn std::error::Error + Send + Sync>) -> Error {
 
 impl ReadOnlyFs {
     pub async fn new(config: &Config) -> Result<Self> {
+        if config.version == 8 && config.managed.is_some() {
+            // Native startup recovery may replay a deep saved SDK operation.
+            // Poll it on the runtime worker, not Windows main or a driver stack.
+            // Cancellation aborts the owner task; journal recovery remains exact.
+            struct Startup(tokio::task::JoinHandle<Result<ReadOnlyFs>>);
+            impl Drop for Startup {
+                fn drop(&mut self) {
+                    self.0.abort();
+                }
+            }
+            let config = config.clone();
+            let mut task = Startup(tokio::spawn(async move {
+                Box::pin(Self::new_inner(&config)).await
+            }));
+            return (&mut task.0).await.map_err(|_| Error::Internal)?;
+        }
         Box::pin(Self::new_inner(config)).await
     }
     async fn new_inner(config: &Config) -> Result<Self> {
@@ -512,10 +553,28 @@ impl ReadOnlyFs {
             })
     }
     pub fn namespace_mutation(&self) -> bool {
+        if self
+            .managed
+            .as_ref()
+            .is_some_and(|m| m.chunk_writes.as_ref().is_some_and(|w| w.native_enabled()))
+        {
+            return true;
+        }
         self.managed
             .as_ref()
             .and_then(|m| m.writes.as_ref())
             .is_some_and(|w| w.mutations_enabled())
+    }
+    /// POSIX unlink/replace support is independent of delete-on-close admission.
+    pub fn native_posix_unlink_rename_enabled(&self) -> bool {
+        if self
+            .managed
+            .as_ref()
+            .is_some_and(|m| m.chunk_writes.as_ref().is_some_and(|w| w.native_enabled()))
+        {
+            return true;
+        }
+        self.native_lifecycle_enabled()
     }
     pub fn native_lifecycle_enabled(&self) -> bool {
         self.managed
@@ -530,7 +589,10 @@ impl ReadOnlyFs {
     ) -> Result<Option<NativeFileObject>> {
         let node = self.node(node)?;
         match self.managed.as_ref().and_then(|m| m.writes.as_ref()) {
-            Some(w) => w.native_open(&node.key, doc).await,
+            Some(w) => w
+                .native_open(&node.key, doc)
+                .await
+                .map(|o| o.map(|n| NativeFileObject(managed::native::BackendObject::Whole(n)))),
             None => {
                 if doc {
                     Err(Error::ReadOnly)
@@ -575,7 +637,10 @@ impl ReadOnlyFs {
             .lock()
             .map_err(|_| Error::Internal)?
             .insert_managed(&created, parent.id)?;
-        Ok((node, object))
+        Ok((
+            node,
+            NativeFileObject(managed::native::BackendObject::Whole(object)),
+        ))
     }
     pub async fn rename_native_object(
         &self,
@@ -667,9 +732,9 @@ impl ReadOnlyFs {
             return Err(Error::IsDirectory);
         }
         let selected = Box::pin(w.open(&node.key, writing, backend.reader.clone())).await?;
-        Self::chunk_open_file(node, w, writing, selected)
+        Self::chunk_open_file(node, w, writing, selected).await
     }
-    fn chunk_open_file(
+    async fn chunk_open_file(
         node: Arc<Node>,
         writer: &Arc<managed::chunk_writes::Writes>,
         writing: bool,
@@ -686,8 +751,18 @@ impl ReadOnlyFs {
             ),
             Opened::Legacy(file) => (managed::metadata(file.metadata()), Some(*file), None, None),
         };
+        let native = if let Some((w, f)) = &chunk_write
+            && w.native_enabled()
+        {
+            Some(NativeFileObject(managed::native::BackendObject::Sparse(
+                Arc::new(w.native_object(f.clone()).await?),
+            )))
+        } else {
+            None
+        };
         Ok(OpenFile {
             node,
+            native,
             handle: None,
             initial_metadata,
             managed,
@@ -845,6 +920,27 @@ impl ReadOnlyFs {
             .into_iter()
             .find(|n| same_name(&n.name, name))
             .ok_or(Error::NotFound)?;
+        if let Some(w) = self
+            .managed
+            .as_ref()
+            .and_then(|m| m.chunk_writes.as_ref())
+            .filter(|w| w.native_enabled())
+        {
+            let changed = w
+                .native_rename(
+                    &source.key,
+                    &target_parent.key,
+                    new_name,
+                    replace,
+                    same_name,
+                )
+                .await?;
+            return self
+                .nodes
+                .lock()
+                .map_err(|_| Error::Internal)?
+                .insert_managed(&changed, target_parent.id);
+        }
         let writes = self
             .managed
             .as_ref()
@@ -878,6 +974,14 @@ impl ReadOnlyFs {
             return Err(Error::NotDirectory);
         }
         let source = self.lookup(parent, name).await?;
+        if let Some(w) = self
+            .managed
+            .as_ref()
+            .and_then(|m| m.chunk_writes.as_ref())
+            .filter(|w| w.native_enabled())
+        {
+            return w.native_remove(&source.key, &p.key, name, directory).await;
+        }
         self.managed
             .as_ref()
             .and_then(|m| m.writes.as_ref())
@@ -1072,7 +1176,7 @@ impl ReadOnlyFs {
             }
             if let Some(w) = &backend.chunk_writes {
                 let selected = Box::pin(w.open(&node.key, writing, backend.reader.clone())).await?;
-                return Self::chunk_open_file(node, w, writing, selected);
+                return Self::chunk_open_file(node, w, writing, selected).await;
             }
             if let Some(reader) = &backend.chunks {
                 let live = Box::pin(backend.node(&node.key)).await?;
@@ -1098,6 +1202,7 @@ impl ReadOnlyFs {
                         managed: None,
                         managed_chunks: Some(file),
                         managed_write: None,
+                        native: None,
                         chunk_write: None,
                         cache: None,
                         snapshot: OnceCell::new(),
@@ -1132,6 +1237,7 @@ impl ReadOnlyFs {
                     None
                 },
                 managed_write,
+                native: None,
                 chunk_write: None,
                 managed_chunks: None,
                 cache: None,
@@ -1181,6 +1287,7 @@ impl ReadOnlyFs {
             handle: Some(handle),
             managed: None,
             managed_write: None,
+            native: None,
             chunk_write: None,
             cache,
             snapshot: OnceCell::new(),

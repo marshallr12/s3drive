@@ -19,6 +19,8 @@ use sha2::{Digest, Sha256};
 use std::sync::Weak;
 mod directories;
 mod dispatch;
+pub(crate) mod native;
+mod native_namespace;
 const DEADLINE: Duration = Duration::from_secs(120);
 fn derived(domain: &[u8], id: &[u8; 32]) -> [u8; 32] {
     let mut h = Sha256::new();
@@ -54,6 +56,9 @@ pub(crate) struct Writes {
     publish_serial: AsyncMutex<()>,
     slots: Arc<Semaphore>,
     closing: AtomicBool,
+    native: std::sync::OnceLock<native::Mount>,
+    native_lifecycle: bool,
+    native_serial: Arc<AsyncMutex<()>>,
 }
 pub(crate) enum Opened {
     Sparse(Arc<File>),
@@ -62,6 +67,7 @@ pub(crate) enum Opened {
 }
 pub(crate) struct File {
     binding: Binding,
+    unlinked: AtomicBool,
     reader: Reader,
     local: views::Client,
     metadata: Mutex<ObjectMetadata>,
@@ -106,6 +112,9 @@ impl File {
     }
 }
 impl Writes {
+    pub(crate) fn native_enabled(&self) -> bool {
+        self.native_lifecycle
+    }
     pub async fn new(
         storage: Storage,
         authority: WireClient,
@@ -113,6 +122,7 @@ impl Writes {
         reader: Reader,
         executors: HashMap<String, Executor>,
         default_store: String,
+        native_lifecycle: bool,
     ) -> Result<Self> {
         let mut stores = HashMap::new();
         let mut controls = Vec::new();
@@ -188,6 +198,9 @@ impl Writes {
             publish_serial: AsyncMutex::new(()),
             slots: Arc::new(Semaphore::new(4)),
             closing: AtomicBool::new(false),
+            native: std::sync::OnceLock::new(),
+            native_lifecycle,
+            native_serial: Arc::new(AsyncMutex::new(())),
         };
         tokio::time::timeout(DEADLINE, writer.recover())
             .await
@@ -453,6 +466,7 @@ impl Writes {
         metadata.size = head.size();
         let file = Arc::new(File {
             binding: head.binding().clone(),
+            unlinked: AtomicBool::new(false),
             reader: self.reader.clone(),
             local: self.local.clone(),
             metadata: Mutex::new(metadata),
@@ -628,6 +642,18 @@ impl Writes {
         Ok(())
     }
     async fn flush_heads(&self) -> Result<()> {
+        if self.native_lifecycle {
+            let _serial = self.native_serial.lock().await;
+            self.recover().await?;
+            for h in self.local.heads().await.map_err(error)? {
+                self.flush_native_node(h.binding().base().map_err(error)?.node())
+                    .await?;
+            }
+            return Ok(());
+        }
+        self.flush_heads_legacy().await
+    }
+    async fn flush_heads_legacy(&self) -> Result<()> {
         self.recover().await?;
         for h in self.local.heads().await.map_err(error)? {
             self.flush_view(h).await?

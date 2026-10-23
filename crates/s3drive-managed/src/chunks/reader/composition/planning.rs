@@ -77,7 +77,7 @@ impl EditedFile {
         )
         .await
     }
-    fn original_context(&self) -> Result<(RootDescriptor, Vec<u8>)> {
+    pub(super) fn original_context(&self) -> Result<(RootDescriptor, Vec<u8>)> {
         let Content::Manifest { root, .. } = &self.base.0.content else {
             return Err(ReadFailure::UnsupportedContent.into());
         };
@@ -185,7 +185,7 @@ impl Preparation {
     pub fn view(&self) -> &View {
         self.edited.view()
     }
-    fn scope(&self, info: &plans::Info) -> Result<()> {
+    pub(super) fn scope(&self, info: &plans::Info) -> Result<()> {
         if info.id()? != self.id
             || info.view() != self.edited.view()
             || info.original_root()? != self.edited.original_context()?.0

@@ -1,5 +1,6 @@
 use super::*;
 pub(super) mod chunk_writes;
+pub(crate) mod native;
 pub(super) mod writes;
 use s3drive_authority::{Token, WireClient};
 pub(super) struct Backend {
@@ -24,8 +25,74 @@ impl Backend {
 }
 pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
     let settings = config.managed.as_ref().ok_or(Error::Configuration)?;
+    let native_lifecycle = settings.sparse_lifecycle.is_some();
     let token = Token::from_private_file(&settings.token_file).map_err(|_| Error::Configuration)?;
     let authority = WireClient::from_config(settings, token).map_err(|_| Error::Configuration)?;
+    if config.version == 8
+        && let Some(w) = &config.writes
+    {
+        let directory = w.directory.clone();
+        let inspect = tokio::task::spawn_blocking(move || -> s3drive_state::Result<bool> {
+            match std::fs::symlink_metadata(&directory) {
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+                Err(e) => Err(e.into()),
+                Ok(_) => {
+                    // An explicitly empty directory is also a fresh initialization.
+                    // Links, foreign contents and partial stores use strict checks.
+                    if std::fs::read_dir(&directory)?.next().is_none() {
+                        return Ok(false);
+                    }
+                    s3drive_state::namespace_client::recovery::RecoveryStore::needs_startup_replay(
+                        &directory,
+                    )
+                }
+            }
+        });
+        let needed = tokio::time::timeout(Duration::from_secs(30), inspect)
+            .await
+            .map_err(|_| Error::Timeout)?
+            .map_err(|_| Error::Internal)?
+            .map_err(error)?;
+        if needed {
+            let recovery = s3drive_managed::namespace_recovery::Recovery::open_existing(
+                &w.directory,
+                authority.clone(),
+                settings.volume.clone(),
+                Duration::from_secs(30),
+            )
+            .await
+            .map_err(error)?;
+            if native_lifecycle {
+                for record in recovery.records().await.map_err(error)? {
+                    Box::pin(recovery.recover(record.input.request.operation))
+                        .await
+                        .map_err(error)?;
+                }
+                Box::pin(recovery.recover_controller_links())
+                    .await
+                    .map_err(error)?;
+            } else if !recovery.open_records().await.map_err(error)?.is_empty() {
+                // Removing the opt-in cannot adopt retained original opens or
+                // turn unknown native work into ordinary v8 retry permission.
+                recovery.close().await.map_err(error)?;
+                return Err(Error::Configuration);
+            }
+            recovery.close().await.map_err(error)?;
+        }
+    }
+    let storage = if let Some(w) = &config.writes {
+        Some(
+            s3drive_state::worker::Storage::open(
+                &w.directory,
+                Options::default(),
+                s3drive_state::journal::Options::default(),
+            )
+            .await
+            .map_err(error)?,
+        )
+    } else {
+        None
+    };
     if config.writes.is_some() {
         let reply = authority
             .request(&s3drive_authority::Request::Features {})
@@ -51,6 +118,15 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
             ]);
         }
         if config.version == 8 {
+            if native_lifecycle {
+                required.extend([
+                    "pending-removal-v1",
+                    "deferred-removal-v1",
+                    "namespace-entry-cas-v1",
+                    "owned-target-replace-v1",
+                    "deferred-owner-move-v1",
+                ]);
+            }
             required.extend([
                 "manifest-root-v1",
                 "manifest-history-v1",
@@ -64,19 +140,6 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
             return Err(Error::Configuration);
         }
     }
-    let storage = if let Some(w) = &config.writes {
-        Some(
-            s3drive_state::worker::Storage::open(
-                &w.directory,
-                Options::default(),
-                s3drive_state::journal::Options::default(),
-            )
-            .await
-            .map_err(error)?,
-        )
-    } else {
-        None
-    };
     let mut bindings = Vec::new();
     let mut publishers = HashMap::new();
     let mut chunk_executors = HashMap::new();
@@ -182,12 +245,24 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
                 chunks.clone().ok_or(Error::Configuration)?,
                 chunk_executors,
                 settings.default_store.clone().ok_or(Error::Configuration)?,
+                native_lifecycle,
             ))
             .await?,
         ))
     } else {
         None
     };
+    if native_lifecycle
+        && let Some(w) = &chunk_writes
+        && let Err(failure) = Box::pin(w.start_native()).await
+    {
+        // Mount admission has not exposed callbacks. Release the one storage
+        // owner before reporting refusal so an immediate original-profile
+        // retry cannot race a dropped worker's directory lock. This only closes
+        // SQLite ownership; it never fabricates a file-object Close or ACK.
+        w.storage.close().await.map_err(error)?;
+        return Err(failure);
+    }
     let writes = storage.filter(|_| config.version != 8).map(|s| {
         Arc::new(writes::Writes::new(
             s,

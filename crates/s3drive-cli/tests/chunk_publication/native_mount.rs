@@ -104,7 +104,10 @@ impl Mount {
             .unwrap()
             .unwrap();
         assert!(
-            status.success() && log.len() <= 65536,
+            status.success()
+                && log.len() <= 65536
+                && !log.contains("Native close retained for recovery")
+                && !log.contains("Native cleanup retained for recovery"),
             "native chunk writer daemon failed: {status}: {log}"
         );
     }
@@ -142,4 +145,57 @@ pub(super) async fn blocking<T: Send + 'static>(
     }
     let log = tokio::time::timeout(Duration::from_secs(5), &mut mount.log).await;
     panic!("native filesystem worker failed or exceeded its bound; daemon reaped: {log:?}");
+}
+
+#[cfg(any(target_os = "linux", windows))]
+impl Mount {
+    pub(super) async fn crash(&mut self) {
+        tokio::time::timeout(Duration::from_secs(10), self.child.kill())
+            .await
+            .unwrap()
+            .unwrap();
+        let status = tokio::time::timeout(Duration::from_secs(10), self.child.wait())
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(!status.success());
+        let log = tokio::time::timeout(Duration::from_secs(5), &mut self.log)
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(log.len() <= 65536);
+        #[cfg(target_os = "linux")]
+        {
+            let status = tokio::time::timeout(
+                Duration::from_secs(10),
+                tokio::process::Command::new("fusermount3")
+                    .arg("-uz")
+                    .arg(&self.path)
+                    .status(),
+            )
+            .await
+            .unwrap()
+            .unwrap();
+            assert!(status.success());
+        }
+    }
+    pub(super) async fn refused(root: &Path) {
+        let path = root.join("native mount 日本語");
+        let mut command = tokio::process::Command::new(env!("CARGO_BIN_EXE_s3drive"));
+        command
+            .arg("mount")
+            .arg(root.join("native-drive.toml"))
+            .arg(&path)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true);
+        let result = tokio::time::timeout(Duration::from_secs(45), command.output())
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(!result.status.success());
+        let log = String::from_utf8_lossy(&result.stderr);
+        assert!(!log.contains("Mounted "), "dirty cold epoch was adopted");
+    }
 }

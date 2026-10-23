@@ -47,12 +47,12 @@ impl Handles {
         self.entries.insert(id, Arc::new(handle));
         Ok(id)
     }
-    fn remove(&mut self, id: u64) {
-        if let Some(handle) = self.entries.remove(&id)
-            && let OpenHandle::Directory { entries, .. } = &*handle
-        {
+    fn remove(&mut self, id: u64) -> Option<Arc<OpenHandle>> {
+        let handle = self.entries.remove(&id);
+        if let Some(OpenHandle::Directory { entries, .. }) = handle.as_deref() {
             self.directory_references -= entries.len();
         }
+        handle
     }
 }
 struct Adapter {
@@ -577,12 +577,34 @@ impl Filesystem for Adapter {
 }
 impl Adapter {
     fn release_handle(&self, fh: FileHandle, reply: ReplyEmpty) {
-        match self.handles.lock() {
-            Ok(mut handles) => {
-                handles.remove(fh.0);
-                reply.ok();
+        // RELEASE is the actual file-object Close; FLUSH may precede it for
+        // duplicated descriptors and must never close the original capability.
+        let handle = match self.handles.lock() {
+            Ok(mut handles) => handles.remove(fh.0),
+            Err(_) => {
+                reply.error(Errno::EIO);
+                return;
             }
-            Err(_) => reply.error(Errno::EIO),
+        };
+        let result = match handle.as_deref() {
+            Some(OpenHandle::File(file)) => match file.native_object() {
+                Some(object) => self.wait(object.close()),
+                None => Ok(()),
+            },
+            _ => Ok(()),
+        };
+        match result {
+            Ok(()) => reply.ok(),
+            Err(e) => {
+                // RELEASE errors may not reach the closing application. Keep
+                // failures observable; the mount retains original recovery state.
+                use std::io::Write;
+                let _ = writeln!(
+                    std::io::stderr().lock(),
+                    "Native close retained for recovery: {e:?}"
+                );
+                reply.error(e);
+            }
         }
     }
     fn flush_handle(&self, ino: INodeNo, fh: FileHandle, reply: ReplyEmpty, closing: bool) {

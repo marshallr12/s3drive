@@ -25,7 +25,7 @@ pub use base::BaseDescriptor;
 pub use composition::{
     ChunkContent, CleanObservation, EditedFile, MixedPublisher, MixedRecovery,
     MixedRecoveryFailure, MixedRootCommit, MixedRootFailure, MixedRootRecovery, MixedSourceReceipt,
-    MixedUploader, ObservationKind, OwnedPreparation, Preparation, PreparedChunk,
+    MixedUploader, NativeSparseFile, ObservationKind, OwnedPreparation, Preparation, PreparedChunk,
     PreparedDependency,
 };
 mod provenance;

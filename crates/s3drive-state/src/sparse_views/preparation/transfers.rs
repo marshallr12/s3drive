@@ -408,10 +408,41 @@ impl Journal<'_> {
         Ok(result)
     }
 }
+/// One immutable validation section in an exclusive owner command. Neither the
+/// source snapshot nor physical proof may cross a write, commit or await.
+/// Every tree still checks all admitted objects and each exact receipt.
+pub(super) struct CheckedTrees<'a> {
+    db: &'a Connection,
+    source: &'a ledger::Snapshot,
+    physical: remote::CheckedFlushes,
+}
+pub(super) fn checked_trees<'a>(
+    db: &'a Connection,
+    source: &'a ledger::Snapshot,
+) -> Result<CheckedTrees<'a>> {
+    no_triggers(db)?;
+    Ok(CheckedTrees {
+        db,
+        source,
+        physical: remote::checked_flushes(db)?,
+    })
+}
+impl CheckedTrees<'_> {
+    pub(super) fn tree(&self, plan: Id) -> Result<TreeReceipt> {
+        inspect_tree_checked(self.db, self.source, &self.physical, plan)
+    }
+}
 pub(super) fn inspect_tree(db: &Connection, plan: Id) -> Result<TreeReceipt> {
     let s = inspect(db)?;
-    let checked = remote::checked_flushes(db)?;
-    let i = ready(&s, plan)?;
+    checked_trees(db, &s)?.tree(plan)
+}
+fn inspect_tree_checked(
+    db: &Connection,
+    s: &ledger::Snapshot,
+    checked: &remote::CheckedFlushes,
+    plan: Id,
+) -> Result<TreeReceipt> {
+    let i = ready(s, plan)?;
     let root = i.root()?.ok_or(Failure::Invalid)?;
     let mut root_receipt = None;
     let mut new_objects = 0;
@@ -420,14 +451,14 @@ pub(super) fn inspect_tree(db: &Connection, plan: Id) -> Result<TreeReceipt> {
     for ((_, level, slot), o) in s.objects.range((plan, -1, 0)..=(plan, 2, u64::MAX)) {
         if let Some(t) = transfer(
             db,
-            &s,
+            s,
             &i,
             Position {
                 level: *level,
                 slot: *slot,
             },
         )? {
-            let r = check_receipt(db, &checked, &t)?;
+            let r = check_receipt(db, checked, &t)?;
             new_objects += 1;
             if t.reference() == root.page() {
                 root_receipt = Some(r);
@@ -448,7 +479,6 @@ pub(super) fn inspect_tree(db: &Connection, plan: Id) -> Result<TreeReceipt> {
         inherited_objects,
         hole_records,
     };
-    drop(checked);
     Ok(result)
 }
 

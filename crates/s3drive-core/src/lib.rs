@@ -11,14 +11,14 @@ use std::{
 use url::Url;
 
 /// Phase 0 deliberately accepts only the first planned mount mode.
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum Mode {
     ReadOnly,
     ReadWrite,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     pub version: u32,
@@ -29,25 +29,33 @@ pub struct Config {
     pub managed: Option<ManagedConfig>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ManagedConfig {
     /// Optional owner-private PEM roots for HTTPS; replaces platform trust.
     pub authority_ca_file: Option<PathBuf>,
     #[serde(rename = "windows-disposition")]
     pub windows_disposition: Option<WindowsDisposition>,
+    /// Explicit stricter original-open sparse lifecycle; absent preserves v8.
+    #[serde(rename = "sparse-lifecycle")]
+    pub sparse_lifecycle: Option<SparseLifecycle>,
     pub default_store: Option<String>,
     pub authority: String,
     pub volume: String,
     pub token_file: PathBuf,
     pub stores: Vec<ManagedStore>,
 }
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum WindowsDisposition {
     PosixV1,
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum SparseLifecycle {
+    OwnedUnlinkedV1,
+}
+#[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ManagedStore {
     pub id: String,
@@ -98,13 +106,13 @@ impl ManagedConfig {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct WritesConfig {
     pub directory: PathBuf,
     pub sources: Vec<WriteSource>,
 }
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct WriteSource {
     pub alias: String,
@@ -118,7 +126,7 @@ fn absolute_local(path: &std::path::Path) -> bool {
         && !path.as_os_str().as_encoded_bytes().contains(&0)
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CacheConfig {
     /// Explicit private local directory outside the mounted tree.
@@ -222,6 +230,9 @@ impl Config {
                 return Err("managed mode requires version 3/read-only or versions 4/5/6/7/8 read-write with policies, without a separate cache".into());
             }
             managed.validate(&self.sources)?;
+            if managed.sparse_lifecycle.is_some() && self.version != 8 {
+                return Err("sparse-lifecycle requires managed version 8".into());
+            }
             if (self.version == 7) != managed.windows_disposition.is_some() {
                 return Err("managed version 7 requires windows-disposition = 'posix-v1'; other versions must omit it".into());
             }
@@ -479,6 +490,21 @@ mod tests {
         assert!(Config::parse(&writable).is_ok());
         let chunks = writable.replace("version = 4", "version = 8");
         assert!(Config::parse(&chunks).is_ok());
+        let opted = chunks.replace(
+            "[managed]",
+            "[managed]\nsparse-lifecycle='owned-unlinked-v1'",
+        );
+        assert!(Config::parse(&opted).is_ok());
+        assert!(Config::parse(&opted.replace("owned-unlinked-v1", "guessed-v1")).is_err());
+        assert!(Config::parse(&opted.replace("version = 8", "version = 4")).is_err());
+        assert!(
+            Config::parse(&chunks)
+                .unwrap()
+                .managed
+                .unwrap()
+                .sparse_lifecycle
+                .is_none()
+        );
         assert!(
             Config::parse(
                 &chunks.replace("[managed]", "[managed]\nwindows-disposition='posix-v1'")

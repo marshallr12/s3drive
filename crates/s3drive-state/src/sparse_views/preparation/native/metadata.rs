@@ -38,7 +38,7 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
             } = &event.action
             {
                 let proof = Provenance::capture(record, binding, *operation)?;
-                proof.historical(db, binding)?;
+                proof.historical_record(record, binding)?;
                 let first = source
                     .records
                     .values()
@@ -73,7 +73,11 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
             .ok_or(Failure::Corrupt)?
             .record;
         let binding = &view.request.binding;
-        proof.historical(db, binding)?;
+        let original = records
+            .iter()
+            .find(|r| r.input.id == proof.open)
+            .ok_or(Failure::Corrupt)?;
+        proof.historical_record(original, binding)?;
         // The plain BLOB key and domain-separated manifest page digest are
         // intentionally different. Bind both exact original intent identities
         // through the source-epoch event; do not fetch private page bodies.
