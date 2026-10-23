@@ -45,8 +45,15 @@ impl Provenance {
     }
     fn historical(&self, db: &Connection, binding: &Binding) -> Result<OpenRecord> {
         let record = opens::sparse_open(db, &self.open)?;
+        self.historical_record(&record, binding)?;
+        Ok(record)
+    }
+    // A fully loaded original record from this immutable validation command.
+    // This only avoids repeated replay of its identical event chain; all
+    // provenance comparisons below remain mandatory for every source/plan.
+    fn historical_record(&self, record: &OpenRecord, binding: &Binding) -> Result<()> {
         let base = binding.base()?;
-        if !record.active() || !record.input.controlled || !record.input.session_bound
+        if record.input.id != self.open || !record.active() || !record.input.controlled || !record.input.session_bound
             || record.input.session != self.session || record.owner != self.owner
             || record.input.volume != base.volume() || record.input.node != base.node()
             || record.input.source != *binding.source()
@@ -57,7 +64,7 @@ impl Provenance {
             || !record.events.iter().any(|e| matches!(&e.action,
                 Action::OwnSparseEpoch { binding: b, operation, .. } if b.as_ref() == binding && *operation == self.operation))
         { return Err(Failure::Corrupt.into()); }
-        Ok(record)
+        Ok(())
     }
 }
 
@@ -207,13 +214,18 @@ pub(crate) fn require_pre48(db: &Connection) -> Result<()> {
 
 pub(super) fn validate_snapshot(db: &Connection, snapshot: &ledger::Snapshot) -> Result<()> {
     let version: i32 = db.pragma_query_value(None, "user_version", |r| r.get(0))?;
+    let mut originals = BTreeMap::new();
     for saved in snapshot.plans.values() {
         let info = saved.info(&snapshot.views)?;
         if let Some(p) = info.native_ownership() {
             if version < 48 {
                 return Err(Failure::Corrupt.into());
             }
-            let record = p.historical(db, info.view().binding())?;
+            if !originals.contains_key(&p.open) {
+                originals.insert(p.open.clone(), opens::sparse_open(db, &p.open)?);
+            }
+            let record = originals.get(&p.open).ok_or(Failure::Corrupt)?;
+            p.historical_record(record, info.view().binding())?;
             if info
                 .ownership()
                 .is_some_and(|owned| owned.original_open() != &record.input)

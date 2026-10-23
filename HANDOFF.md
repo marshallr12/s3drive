@@ -24,6 +24,11 @@ real-provider writes and deployment are not enabled.
 This availability change must pass its own full exact-source CI before merge,
 including both runtime profiles and debug/release actual native gates; verify main
 again after conditional merge. Keep prior failed evidence and original bounds.
+Final-source run39896504446 failed its Windows debug sequence bound despite
+passing Linux debug/release actual gates. Do not merge that source or substitute
+its release result for the failed debug gate. A further command-local original-
+record validation correction and two additional state fault tests require their
+own exact-source acceptance. Main remains at the accepted prerequisite checkpoint.
 No private validation archive belongs in the public repository.
 
 ## Accepted native sparse state baseline (historical)

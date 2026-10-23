@@ -1231,3 +1231,87 @@ async fn native_sparse_frozen_owned_plans_keep_original_open_and_exact_removal_c
         n.storage.close().await.unwrap();
     }
 }
+
+#[tokio::test]
+async fn native_sparse_metadata_batch_replays_each_original_once() {
+    let temp = tempfile::tempdir().unwrap();
+    let n = setup(&temp.path().join("batch"), 16).await;
+    let view = dirty(&n, &n.view, 2, 5).await;
+    n.client
+        .prepare(n.token.clone(), context(&view))
+        .await
+        .unwrap();
+    n.storage
+        .cache()
+        .owner
+        .call(|store| {
+            let db = &store.state.connection;
+            let before = opens::load_count();
+            crate::sparse_views::preparation::native::validate_metadata(db)?;
+            assert_eq!(
+                opens::load_count() - before,
+                1,
+                "same command replayed the original event chain per epoch/plan"
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    n.storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_sparse_metadata_batch_rechecks_unselected_open_after_mutation() {
+    let temp = tempfile::tempdir().unwrap();
+    let n = setup(&temp.path().join("batch-corrupt"), 16).await;
+    let other = second(&n).await;
+    let view = dirty(&n, &n.view, 2, 5).await;
+    n.client
+        .prepare(n.token.clone(), context(&view))
+        .await
+        .unwrap();
+    n.storage
+        .cache()
+        .owner
+        .call(|store| {
+            crate::sparse_views::preparation::native::validate_metadata(&store.state.connection)
+        })
+        .await
+        .unwrap();
+    let id = other.input().id.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let db = &store.state.connection;
+            assert!(
+                db.execute(
+                    "UPDATE windows_open_events SET state_hash=zeroblob(32) WHERE open_id=?1",
+                    [id]
+                )? > 0
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    n.storage
+        .cache()
+        .owner
+        .call(|store| {
+            let db = &store.state.connection;
+            assert!(crate::sparse_views::preparation::native::validate_metadata(db).is_err());
+            let damaged: i64 = db.query_row(
+                "SELECT count(*) FROM windows_open_events WHERE state_hash=zeroblob(32)",
+                [],
+                |r| r.get(0),
+            )?;
+            assert!(
+                damaged > 0,
+                "validation repaired unselected callback evidence"
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    n.storage.close().await.unwrap();
+}

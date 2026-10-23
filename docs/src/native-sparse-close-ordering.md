@@ -464,3 +464,17 @@ document links. The aggregate local gate stops at authority startup:11 tests pas
 and four return Internal from Authority::open on the unsupported cloud local
 filesystem. No durability guard is relaxed. Hosted final-source gates remain the
 authority for persistent-state and actual OS acceptance.
+
+### Final-source latency correction in progress
+
+Normal-build source4dc450e/run39896504446 again exceeded the unchanged120-second
+Windows debug bound (rename56.3 seconds). Its Linux debug and release actual gates
+pass, but that is not final-source acceptance and it must not merge on that basis.
+Original-open metadata validation was replaying the same complete event chain for
+each epoch and each plan in a single immutable command. The correction reuses the
+already checked original record only within that command and performs every
+provenance comparison unchanged. Fresh SDK admission and later commands still
+reload/recheck state; no proof crosses a mutation, commit or await. Two new state
+cases require one replay per original and rejection of later corruption in an
+unselected open without repair. Their correctness and latency benefit require new
+hosted acceptance; the actual bounds and all default/opt-in gates remain intact.
