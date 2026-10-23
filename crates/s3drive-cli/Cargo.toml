@@ -9,10 +9,6 @@ repository.workspace = true
 name = "s3drive"
 path = "src/main.rs"
 
-[features]
-# Acceptance build only. Default native lifecycle flags remain disabled.
-native-sparse-candidate = ["s3drive-fs/native-sparse-candidate"]
-
 [dependencies]
 s3drive-authority.workspace = true
 getrandom.workspace = true

@@ -26,13 +26,8 @@ impl Backend {
 pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
     let settings = config.managed.as_ref().ok_or(Error::Configuration)?;
     let native_lifecycle = settings.sparse_lifecycle.is_some();
-    #[cfg(not(feature = "native-sparse-candidate"))]
-    if native_lifecycle {
-        return Err(Error::Configuration);
-    }
     let token = Token::from_private_file(&settings.token_file).map_err(|_| Error::Configuration)?;
     let authority = WireClient::from_config(settings, token).map_err(|_| Error::Configuration)?;
-    #[cfg(feature = "native-sparse-candidate")]
     if config.version == 8
         && let Some(w) = &config.writes
     {
@@ -123,7 +118,6 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
             ]);
         }
         if config.version == 8 {
-            #[cfg(feature = "native-sparse-candidate")]
             if native_lifecycle {
                 required.extend([
                     "pending-removal-v1",
@@ -258,7 +252,6 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
     } else {
         None
     };
-    #[cfg(feature = "native-sparse-candidate")]
     if native_lifecycle
         && let Some(w) = &chunk_writes
         && let Err(failure) = Box::pin(w.start_native()).await

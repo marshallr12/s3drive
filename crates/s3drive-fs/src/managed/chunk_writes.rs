@@ -19,9 +19,7 @@ use sha2::{Digest, Sha256};
 use std::sync::Weak;
 mod directories;
 mod dispatch;
-#[cfg(feature = "native-sparse-candidate")]
 pub(crate) mod native;
-#[cfg(feature = "native-sparse-candidate")]
 mod native_namespace;
 const DEADLINE: Duration = Duration::from_secs(120);
 fn derived(domain: &[u8], id: &[u8; 32]) -> [u8; 32] {
@@ -58,11 +56,8 @@ pub(crate) struct Writes {
     publish_serial: AsyncMutex<()>,
     slots: Arc<Semaphore>,
     closing: AtomicBool,
-    #[cfg(feature = "native-sparse-candidate")]
     native: std::sync::OnceLock<native::Mount>,
-    #[cfg(feature = "native-sparse-candidate")]
     native_lifecycle: bool,
-    #[cfg(feature = "native-sparse-candidate")]
     native_serial: Arc<AsyncMutex<()>>,
 }
 pub(crate) enum Opened {
@@ -72,7 +67,6 @@ pub(crate) enum Opened {
 }
 pub(crate) struct File {
     binding: Binding,
-    #[cfg(feature = "native-sparse-candidate")]
     unlinked: AtomicBool,
     reader: Reader,
     local: views::Client,
@@ -118,7 +112,6 @@ impl File {
     }
 }
 impl Writes {
-    #[cfg(feature = "native-sparse-candidate")]
     pub(crate) fn native_enabled(&self) -> bool {
         self.native_lifecycle
     }
@@ -131,10 +124,6 @@ impl Writes {
         default_store: String,
         native_lifecycle: bool,
     ) -> Result<Self> {
-        #[cfg(not(feature = "native-sparse-candidate"))]
-        if native_lifecycle {
-            return Err(Error::Configuration);
-        }
         let mut stores = HashMap::new();
         let mut controls = Vec::new();
         for (id, e) in executors {
@@ -209,11 +198,8 @@ impl Writes {
             publish_serial: AsyncMutex::new(()),
             slots: Arc::new(Semaphore::new(4)),
             closing: AtomicBool::new(false),
-            #[cfg(feature = "native-sparse-candidate")]
             native: std::sync::OnceLock::new(),
-            #[cfg(feature = "native-sparse-candidate")]
             native_lifecycle,
-            #[cfg(feature = "native-sparse-candidate")]
             native_serial: Arc::new(AsyncMutex::new(())),
         };
         tokio::time::timeout(DEADLINE, writer.recover())
@@ -480,7 +466,6 @@ impl Writes {
         metadata.size = head.size();
         let file = Arc::new(File {
             binding: head.binding().clone(),
-            #[cfg(feature = "native-sparse-candidate")]
             unlinked: AtomicBool::new(false),
             reader: self.reader.clone(),
             local: self.local.clone(),
@@ -657,7 +642,6 @@ impl Writes {
         Ok(())
     }
     async fn flush_heads(&self) -> Result<()> {
-        #[cfg(feature = "native-sparse-candidate")]
         if self.native_lifecycle {
             let _serial = self.native_serial.lock().await;
             self.recover().await?;

@@ -22,7 +22,6 @@ mod mixed_uploads;
 mod namespace_recovery;
 #[path = "chunk_publication/native_directories.rs"]
 mod native_directories;
-#[cfg(feature = "native-sparse-candidate")]
 #[path = "chunk_publication/native_lifecycle.rs"]
 mod native_lifecycle;
 #[cfg(any(target_os = "linux", windows))]
@@ -1311,41 +1310,32 @@ fn dispatch<'a>(
         "owned_sparse_crash" => Box::pin(owned_sparse::crash(config, root, s)),
         #[cfg(any(target_os = "linux", windows))]
         "native_writer_mount" => Box::pin(native_writer::mount(config, root, s)),
-        #[cfg(feature = "native-sparse-candidate")]
         "native_lifecycle_disposition" => {
             Box::pin(native_lifecycle::disposition(config, root, s, false))
         }
-        #[cfg(feature = "native-sparse-candidate")]
         "native_lifecycle_disposition_concurrent" => {
             Box::pin(native_lifecycle::disposition(config, root, s, true))
         }
-        #[cfg(feature = "native-sparse-candidate")]
         "native_lifecycle_history" => {
             Box::pin(native_lifecycle::acknowledged_history(config, root, s))
         }
-        #[cfg(feature = "native-sparse-candidate")]
         "native_lifecycle_ordered" => Box::pin(native_lifecycle::ordered_flush(config, root, s)),
-        #[cfg(feature = "native-sparse-candidate")]
         "native_lifecycle_profile" => {
             Box::pin(native_lifecycle::profile_transition(config, root, s))
         }
-        #[cfg(feature = "native-sparse-candidate")]
         "native_lifecycle_unlink" => Box::pin(native_lifecycle::unlink(config, root, s)),
-        #[cfg(all(feature = "native-sparse-candidate", any(target_os = "linux", windows)))]
+        #[cfg(any(target_os = "linux", windows))]
         "native_lifecycle_mounted" => Box::pin(native_lifecycle::mounted(config, root, s)),
-        #[cfg(all(feature = "native-sparse-candidate", any(target_os = "linux", windows)))]
+        #[cfg(any(target_os = "linux", windows))]
         "native_lifecycle_mounted_known" => {
             Box::pin(native_lifecycle::mounted_crash(config, root, s, true))
         }
-        #[cfg(all(feature = "native-sparse-candidate", any(target_os = "linux", windows)))]
+        #[cfg(any(target_os = "linux", windows))]
         "native_lifecycle_mounted_unknown" => {
             Box::pin(native_lifecycle::mounted_crash(config, root, s, false))
         }
-        #[cfg(feature = "native-sparse-candidate")]
         "native_lifecycle_replace" => Box::pin(native_lifecycle::replace(config, root, s)),
-        #[cfg(feature = "native-sparse-candidate")]
         "native_lifecycle_cold_known" => Box::pin(native_lifecycle::cold_known(config, root, s)),
-        #[cfg(feature = "native-sparse-candidate")]
         "native_lifecycle_cold_unknown" => {
             Box::pin(native_lifecycle::cold_unknown(config, root, s))
         }
@@ -2236,73 +2226,64 @@ async fn native_sparse_sdk_controller_unlinked() {
     run("native_sparse_sdk_controller_unlinked").await;
 }
 
-#[cfg(feature = "native-sparse-candidate")]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn native_lifecycle_shared_unlink_close_and_remount() {
     run("native_lifecycle_unlink").await;
 }
-#[cfg(feature = "native-sparse-candidate")]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn native_lifecycle_shared_replacement_preserves_old_handles() {
     run("native_lifecycle_replace").await;
 }
 
-#[cfg(all(feature = "native-sparse-candidate", any(target_os = "linux", windows)))]
+#[cfg(any(target_os = "linux", windows))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "dedicated NEW native sparse lifecycle; real FUSE/WinFsp required"]
 async fn native_lifecycle_actual_unlink_replace_dirty_handles_and_remount() {
     run("native_lifecycle_mounted").await;
 }
 
-#[cfg(feature = "native-sparse-candidate")]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn native_lifecycle_shared_cold_known_replays_original_root() {
     run("native_lifecycle_cold_known").await;
 }
-#[cfg(feature = "native-sparse-candidate")]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn native_lifecycle_shared_cold_unknown_retains_original_dirty_epoch() {
     run("native_lifecycle_cold_unknown").await;
 }
 
-#[cfg(all(feature = "native-sparse-candidate", any(target_os = "linux", windows)))]
+#[cfg(any(target_os = "linux", windows))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "dedicated NEW native sparse killed-owner known outcome recovery"]
 async fn native_lifecycle_actual_killed_owner_known_root_recovery() {
     run("native_lifecycle_mounted_known").await;
 }
-#[cfg(all(feature = "native-sparse-candidate", any(target_os = "linux", windows)))]
+#[cfg(any(target_os = "linux", windows))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "dedicated NEW native sparse killed-owner unknown epoch refusal"]
 async fn native_lifecycle_actual_killed_owner_unknown_epoch_refusal() {
     run("native_lifecycle_mounted_unknown").await;
 }
 
-#[cfg(feature = "native-sparse-candidate")]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn native_lifecycle_shared_profile_transition_preserves_original_epochs() {
     run("native_lifecycle_profile").await;
 }
 
-#[cfg(feature = "native-sparse-candidate")]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn native_lifecycle_shared_flush_orders_later_write_and_close() {
     run("native_lifecycle_ordered").await;
 }
 
-#[cfg(feature = "native-sparse-candidate")]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn native_lifecycle_shared_disposition_owner_close_preserves_other_handles() {
     run("native_lifecycle_disposition").await;
 }
 
-#[cfg(feature = "native-sparse-candidate")]
 #[tokio::test]
 async fn native_lifecycle_shared_surviving_write_joins_original_close() {
     run("native_lifecycle_disposition_concurrent").await;
 }
 
-#[cfg(feature = "native-sparse-candidate")]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn native_lifecycle_shared_acknowledged_history_never_reuploads() {
     run("native_lifecycle_history").await;

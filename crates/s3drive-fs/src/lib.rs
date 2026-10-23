@@ -136,7 +136,6 @@ impl OpenFile {
     pub fn native_object(&self) -> Option<NativeFileObject> {
         self.native.clone()
     }
-    #[cfg(feature = "native-sparse-candidate")]
     fn sparse_native(&self) -> Option<&managed::chunk_writes::native::Object> {
         match self.native.as_ref().map(|n| &n.0) {
             Some(managed::native::BackendObject::Sparse(n)) => Some(n),
@@ -144,7 +143,6 @@ impl OpenFile {
         }
     }
     pub fn is_unlinked(&self) -> Result<bool> {
-        #[cfg(feature = "native-sparse-candidate")]
         if let Some(n) = self.sparse_native() {
             return Ok(n.is_unlinked());
         }
@@ -175,7 +173,6 @@ impl OpenFile {
         if !self.writable_open {
             return Err(Error::ReadOnly);
         }
-        #[cfg(feature = "native-sparse-candidate")]
         if let Some(native) = self.sparse_native() {
             return native.write(offset, bytes, append, constrained).await;
         }
@@ -192,7 +189,6 @@ impl OpenFile {
         if !self.writable_open {
             return Err(Error::ReadOnly);
         }
-        #[cfg(feature = "native-sparse-candidate")]
         if let Some(native) = self.sparse_native() {
             return native.truncate(size).await;
         }
@@ -206,7 +202,6 @@ impl OpenFile {
         Box::pin(writer.truncate(file, size)).await
     }
     pub async fn flush(&self) -> Result<()> {
-        #[cfg(feature = "native-sparse-candidate")]
         if let Some(native) = self.sparse_native() {
             return native.flush().await;
         }
@@ -231,7 +226,6 @@ impl OpenFile {
         &self.initial_metadata
     }
     pub async fn read(&self, offset: u64, length: usize) -> Result<Vec<u8>> {
-        #[cfg(feature = "native-sparse-candidate")]
         if let Some(native) = self.sparse_native() {
             return native.read(offset, length).await;
         }
@@ -345,7 +339,6 @@ fn cache_error(error: Box<dyn std::error::Error + Send + Sync>) -> Error {
 
 impl ReadOnlyFs {
     pub async fn new(config: &Config) -> Result<Self> {
-        #[cfg(feature = "native-sparse-candidate")]
         if config.version == 8 && config.managed.is_some() {
             // Native startup recovery may replay a deep saved SDK operation.
             // Poll it on the runtime worker, not Windows main or a driver stack.
@@ -560,7 +553,6 @@ impl ReadOnlyFs {
             })
     }
     pub fn namespace_mutation(&self) -> bool {
-        #[cfg(feature = "native-sparse-candidate")]
         if self
             .managed
             .as_ref()
@@ -575,7 +567,6 @@ impl ReadOnlyFs {
     }
     /// POSIX unlink/replace support is independent of delete-on-close admission.
     pub fn native_posix_unlink_rename_enabled(&self) -> bool {
-        #[cfg(feature = "native-sparse-candidate")]
         if self
             .managed
             .as_ref()
@@ -760,7 +751,6 @@ impl ReadOnlyFs {
             ),
             Opened::Legacy(file) => (managed::metadata(file.metadata()), Some(*file), None, None),
         };
-        #[cfg(feature = "native-sparse-candidate")]
         let native = if let Some((w, f)) = &chunk_write
             && w.native_enabled()
         {
@@ -770,8 +760,6 @@ impl ReadOnlyFs {
         } else {
             None
         };
-        #[cfg(not(feature = "native-sparse-candidate"))]
-        let native = None;
         Ok(OpenFile {
             node,
             native,
@@ -932,7 +920,6 @@ impl ReadOnlyFs {
             .into_iter()
             .find(|n| same_name(&n.name, name))
             .ok_or(Error::NotFound)?;
-        #[cfg(feature = "native-sparse-candidate")]
         if let Some(w) = self
             .managed
             .as_ref()
@@ -987,7 +974,6 @@ impl ReadOnlyFs {
             return Err(Error::NotDirectory);
         }
         let source = self.lookup(parent, name).await?;
-        #[cfg(feature = "native-sparse-candidate")]
         if let Some(w) = self
             .managed
             .as_ref()

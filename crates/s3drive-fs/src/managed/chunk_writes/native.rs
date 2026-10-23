@@ -1,4 +1,4 @@
-//! Candidate-only original-handle adapter. No default capability activation.
+//! Original-handle adapter, enabled only by the explicit version8 runtime profile.
 use super::*;
 use s3drive_managed::{
     chunks::NativeSparseFile,
@@ -160,7 +160,6 @@ impl Writes {
         }
     }
     pub(crate) async fn native_object(self: &Arc<Self>, file: Arc<File>) -> Result<Object> {
-        let started = std::time::Instant::now();
         let _open = self.open_serial.lock().await;
         drop(
             self.serial_after_closes(file.binding.base().map_err(error)?.node(), None)
@@ -201,7 +200,6 @@ impl Writes {
             })
             .await
             .map_err(error)?;
-        eprintln!("NATIVE_TIMING open-controller {:?}", started.elapsed());
         let native = NativeSparseFile::attach(
             &self._capability,
             self.local.clone(),
@@ -211,7 +209,6 @@ impl Writes {
         )
         .await
         .map_err(error)?;
-        eprintln!("NATIVE_TIMING open-attached {:?}", started.elapsed());
         let entry = Entry {
             native,
             file,
@@ -229,7 +226,6 @@ impl Writes {
         })
     }
     pub(super) async fn flush_native_node(&self, node: &str) -> Result<()> {
-        let started = std::time::Instant::now();
         // Caller owns native_serial. Never reacquire it from the content hook.
         let _publishing = self.publish_serial.lock().await;
         let mount = self.native.get().ok_or(Error::Internal)?;
@@ -257,14 +253,12 @@ impl Writes {
             };
         };
         let head = first.file.head().await?;
-        eprintln!("NATIVE_TIMING flush-head {:?}", started.elapsed());
         let mut plans = first.entry_plans().await?;
         if !head.is_clean() && !plans.iter().any(|p| p.view().id() == head.id()) {
             let edited = first.edited(&head).await?;
             first.native.prepare(&edited).await.map_err(error)?;
             plans = first.entry_plans().await?;
         }
-        eprintln!("NATIVE_TIMING flush-prepared {:?}", started.elapsed());
         // This is only a work-selection snapshot under the native publication
         // barrier. ACK identities are immutable; no saved record/proof crosses
         // an await. Each selected original plan still reopens and freshly checks
@@ -292,17 +286,12 @@ impl Writes {
                 .get(owner)
                 .cloned()
                 .ok_or(Error::Conflict)?;
-            eprintln!("NATIVE_TIMING flush-plan-checked {:?}", started.elapsed());
             let prep = original
                 .native
                 .reopen(&self.reader, plan)
                 .await
                 .map_err(error)?;
             prep.prepare().await.map_err(error)?;
-            eprintln!(
-                "NATIVE_TIMING flush-upload-prepared {:?}",
-                started.elapsed()
-            );
             let (_, executor, _) = self
                 .stores
                 .get(&hex(info.view().binding().store()))
@@ -312,12 +301,10 @@ impl Writes {
                 .upload_tree()
                 .await
                 .map_err(error)?;
-            eprintln!("NATIVE_TIMING flush-uploaded {:?}", started.elapsed());
             let publisher = prep
                 .publisher(executor.clone(), roots::Limits::default())
                 .map_err(error)?;
             publisher.check_semantics().await.map_err(error)?;
-            eprintln!("NATIVE_TIMING flush-semantic-check {:?}", started.elapsed());
             publisher
                 .begin(hex(
                     &derived(b"s3drive-native-sparse-publish-v1\0", &plan)[..16]
@@ -325,7 +312,6 @@ impl Writes {
                 .await
                 .map_err(error)?;
             publisher.resume().await.map_err(error)?;
-            eprintln!("NATIVE_TIMING flush-published {:?}", started.elapsed());
             publisher
                 .acknowledge_scoped(
                     token(
@@ -336,9 +322,7 @@ impl Writes {
                 )
                 .await
                 .map_err(error)?;
-            eprintln!("NATIVE_TIMING flush-acknowledged {:?}", started.elapsed());
         }
-        eprintln!("NATIVE_TIMING flush-done {:?}", started.elapsed());
         Ok(())
     }
 }
@@ -589,16 +573,14 @@ impl Object {
                 let completion = CloseRun(signal);
                 observed?;
                 let _permit = permit?;
-                let started = std::time::Instant::now();
+
                 let result = tokio::time::timeout(DEADLINE, async {
                     object.entry.native.close(cb.clone()).await.map_err(error)?;
-                    eprintln!("NATIVE_TIMING close-admitted {:?}", started.elapsed());
                     object
                         .controller
                         .close(object.entry.native.open(), &cb)
                         .await
                         .map_err(error)?;
-                    eprintln!("NATIVE_TIMING close-completed {:?}", started.elapsed());
                     object
                         .writer
                         .native

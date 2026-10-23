@@ -1,8 +1,55 @@
 # Native sparse epoch ownership and Close ordering
 
-Implemented state candidate, not yet accepted, 2026-10-22. This is not accepted state behavior or native
-activation. Base prerequisite source: cb568aa0417cf84d829a58236f9ac45c707b4ef8.
-The existing schema47 sparse admission and fresh-send guards remain the baseline.
+## Current opt-in contract (2026-10-23)
+
+Native candidate `a3db497afca3a685cffa586294ca1c6e29637b05` passed complete
+[Linux/Windows acceptance](https://github.com/marshallr12/s3drive/actions/runs/39892868332):
+Linux993/Windows989 workspace tests across37 cohorts, nine shared lifecycle cases,
+three actual FUSE/WinFsp lifecycle cases per OS, three Close-join tests, three
+transaction-local validation tests, all existing native/default-profile regressions,
+real46/47 and47/48 compatibility, four artifacts with35 typed native reference
+records, and779 exact source files. Complete logs and artifact digests were reviewed.
+
+The normal build now contains the adapter; the temporary acceptance-only Cargo
+feature is removed. Activation still requires an explicit version8 managed option:
+
+```toml
+[managed]
+# In an otherwise valid, policy-bound version8 managed configuration:
+sparse-lifecycle = "owned-unlinked-v1"
+```
+
+Omitting this option preserves the existing version8 profile. Other versions and
+unknown values are rejected. Existing policy/source binding requirements remain.
+The opt-in supports unlink while open, replacement while old handles remain open,
+dirty reads through surviving handles, ordered last Close and exact known-root
+cold/remount recovery. Unknown/unprepared old epochs remain explicit conflicts
+with data retained. Switching profiles cannot adopt retained original opens or
+legacy dirty epochs: settle work under its original profile before changing it.
+Sparse delete-on-close/deferred creation, real-provider writes and deployment are
+not enabled by this work.
+
+The original120-second single live-sequence debug gate is retained, including
+unlink, replacement and final reopen. Candidate elapsed times were103.29 seconds
+on Linux and91.61 on Windows; rename alone was27.00/27.35 seconds and final reopen
+15.47/5.80 seconds. These are unoptimized hosted measurements, not an interactive
+performance guarantee. Retained-history validation remains expensive and bounded
+by existing admission limits; capacity/performance at scale is not established.
+Failed earlier bounds remain recorded below, not relabeled as acceptance.
+
+Production availability changes require their own full exact-source CI before
+merge, plus main verification afterward. CI now runs the same actual lifecycle
+fixtures in both debug and release builds, keeping the original debug deadline;
+release results are measured independently and never substitute for it. Routine
+runtime timing noise is removed; fixture per-call timings remain in CI logs.
+
+## Historical design and implementation checkpoints
+
+The following records preserve the prerequisite design and failed/partial runs.
+Their candidate/disabled status describes those earlier sources, not the current
+runtime opt-in contract above. Base prerequisite source was
+cb568aa0417cf84d829a58236f9ac45c707b4ef8; schema48 state ordering was accepted
+separately before native integration.
 
 ## Problem
 
@@ -408,3 +455,12 @@ still performs unchanged fresh SDK checks before upload, publication and ACK.
 Three retained epochs from two original publishers, repeated clean flushes,
 unlink, Close and cold remount have a ninth shared fixture with exactly seven
 expected PUTs. The original120-second actual sequence bound remains intact.
+
+### Final availability-source local checks
+
+The normal-build opt-in source passes formatting, all-target Clippy, all three
+portable Close-join tests, explicit profile parsing/rejection tests and local
+document links. The aggregate local gate stops at authority startup:11 tests pass
+and four return Internal from Authority::open on the unsupported cloud local
+filesystem. No durability guard is relaxed. Hosted final-source gates remain the
+authority for persistent-state and actual OS acceptance.

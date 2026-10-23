@@ -103,9 +103,6 @@ impl Mount {
             .await
             .unwrap()
             .unwrap();
-        if log.contains("NATIVE_TIMING") {
-            eprintln!("{log}");
-        }
         assert!(
             status.success()
                 && log.len() <= 65536
@@ -150,7 +147,7 @@ pub(super) async fn blocking<T: Send + 'static>(
     panic!("native filesystem worker failed or exceeded its bound; daemon reaped: {log:?}");
 }
 
-#[cfg(all(feature = "native-sparse-candidate", any(target_os = "linux", windows)))]
+#[cfg(any(target_os = "linux", windows))]
 impl Mount {
     pub(super) async fn crash(&mut self) {
         tokio::time::timeout(Duration::from_secs(10), self.child.kill())

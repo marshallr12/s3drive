@@ -1,4 +1,4 @@
-//! Candidate shared-engine gates. These do not substitute for real OS callbacks.
+//! Opt-in shared-engine gates. These do not substitute for real OS callbacks.
 use super::*;
 use s3drive_fs::{ROOT, ReadOnlyFs};
 async fn configuration(

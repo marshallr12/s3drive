@@ -5,10 +5,6 @@ edition.workspace = true
 publish.workspace = true
 repository.workspace = true
 
-[features]
-# Acceptance build only. Default native lifecycle flags remain disabled.
-native-sparse-candidate = []
-
 [dependencies]
 s3drive-authority.workspace = true
 s3drive-managed.workspace = true

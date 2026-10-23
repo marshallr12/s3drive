@@ -15,6 +15,13 @@ owner. P5a2b implements local file-edit plans and pinned-base hydration; remote 
 and opt-in writable OS callbacks have subsequently passed native acceptance.
 The user selected managed layout on 2026-10-16; P6m phases now define the target.
 
+The new version8 native owned/unlinked sparse lifecycle has passed candidate
+acceptance on Linux FUSE and Windows WinFsp. The normal build exposes it only via
+an explicit runtime opt-in, preserving the previous default profile. See the
+[current contract and acceptance evidence](native-sparse-close-ordering.md).
+Final availability-source gates and main verification remain mandatory; this does
+not enable deferred creation, sparse delete-on-close or real-provider deployment.
+
 The next deferred-creation step is the [prospective creation/open admission
 proposal](creator-open-admission.md), reviewed against `daf5806` on 2026-10-21.
 It reserves namespace closing capacity and an inactive open in one local

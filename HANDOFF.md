@@ -1,28 +1,32 @@
 # S3Drive handoff
 
-Updated 2026-10-22. Event-bound manifest authority is accepted at schema46;
+Updated 2026-10-23. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
-## In-progress native adapter acceptance build
+## Native lifecycle accepted; final runtime opt-in verification
 
-Read the adapter candidate section in `docs/src/native-sparse-close-ordering.md`.
-The `native-sparse-candidate` Cargo feature compiles candidate adapter paths;
-default flags remain disabled. Runtime activation also requires the explicit
-version8 managed sparse-lifecycle=owned-unlinked-v1 opt-in, as chosen by the owner.
-Nine shared-engine lifecycle fixtures and three
-actual OS fixtures cover unlink, save/replace, dirty handles, Close, remount and
-killed known/unknown owners. Two state startup tests cover restricted metadata
-classification and enumeration. They compile locally but are not accepted until
-hosted execution/full review passes on both OSes. Keep failed/partial evidence.
-A transaction-local publication-validation batching candidate adds three strict
-state gates; it must not cache proofs across mutation/commit/await or skip any
-unselected row/receipt validation. Its latency benefit and full acceptance remain
-unverified alongside the native gates.
-Sparse delete-on-close/deferred creation, provider writes and deployment are not
-implicitly enabled by this candidate. Never substitute old native gates for these.
+Read the current contract in `docs/src/native-sparse-close-ordering.md`.
+Candidate a3db497 passed full exact-source review of39892868332: Linux993/
+Windows989 workspace tests,37 cohorts each, nine shared and three actual lifecycle
+cases per OS, three Close-join and three proof-batching tests, real47/48 and46/47
+compatibility, four artifacts/35 typed native records, and779 source files.
+The original single120-second live native sequence passed both OSes. Debug
+rename/reopen costs remain substantial; do not claim interactive-scale performance.
 
-## Accepted native sparse state ordering; bridge/adapters still gated
+The temporary compile-only feature is removed. The normal build makes the new
+contract available only through managed version8 sparse-lifecycle=owned-unlinked-v1.
+Omission preserves the existing default profile, including its distinct recovery
+behavior. Unknown dirty epochs and incompatible profile transitions remain explicit
+conflicts with original data retained. Sparse delete-on-close/deferred creation,
+real-provider writes and deployment are not enabled.
+
+This availability change must pass its own full exact-source CI before merge,
+including both runtime profiles and debug/release actual native gates; verify main
+again after conditional merge. Keep prior failed evidence and original bounds.
+No private validation archive belongs in the public repository.
+
+## Accepted native sparse state baseline (historical)
 
 Exact state candidate a1217b85 passed full acceptance in
 [39872409080](https://github.com/marshallr12/s3drive/actions/runs/39872409080):

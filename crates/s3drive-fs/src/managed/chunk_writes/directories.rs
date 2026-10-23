@@ -65,7 +65,6 @@ impl Writes {
             for r in page {
                 // No fresh policy/feature lookup may replace or block a saved
                 // request. The owner-bound journal validates retained controls.
-                #[cfg(feature = "native-sparse-candidate")]
                 if self.native_lifecycle {
                     self.native_saved_change(r.input).await?;
                     continue;
