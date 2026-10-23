@@ -69,12 +69,13 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
             .map_err(error)?;
             if native_lifecycle {
                 for record in recovery.records().await.map_err(error)? {
-                    recovery
-                        .recover(record.input.request.operation)
+                    Box::pin(recovery.recover(record.input.request.operation))
                         .await
                         .map_err(error)?;
                 }
-                recovery.recover_controller_links().await.map_err(error)?;
+                Box::pin(recovery.recover_controller_links())
+                    .await
+                    .map_err(error)?;
             } else if !recovery.open_records().await.map_err(error)?.is_empty() {
                 // Removing the opt-in cannot adopt retained original opens or
                 // turn unknown native work into ordinary v8 retry permission.
@@ -260,7 +261,7 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
     #[cfg(feature = "native-sparse-candidate")]
     if native_lifecycle
         && let Some(w) = &chunk_writes
-        && let Err(failure) = w.start_native().await
+        && let Err(failure) = Box::pin(w.start_native()).await
     {
         // Mount admission has not exposed callbacks. Release the one storage
         // owner before reporting refusal so an immediate original-profile

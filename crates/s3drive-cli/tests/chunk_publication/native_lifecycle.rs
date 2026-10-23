@@ -17,7 +17,11 @@ async fn mount_configuration(config: &s3drive_core::Config, root: &Path, s: &Ser
     native_writer::mount_configuration(config, root, s).await;
     let path = root.join("native-drive.toml");
     let mut c: toml::Value = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    c["managed"]["sparse-lifecycle"] = "owned-unlinked-v1".into();
+    c.get_mut("managed")
+        .unwrap()
+        .as_table_mut()
+        .unwrap()
+        .insert("sparse-lifecycle".into(), "owned-unlinked-v1".into());
     let text = toml::to_string(&c).unwrap();
     s3drive_core::Config::parse(&text).unwrap();
     std::fs::write(path, text).unwrap();
@@ -249,7 +253,18 @@ pub async fn cold_known(config: &s3drive_core::Config, root: &Path, s: &Server) 
     cache.close().await.unwrap();
     drop(cache);
     s.proxy.clear();
-    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    let runtime = tokio::runtime::Handle::current();
+    let fs = tokio::task::spawn_blocking(move || {
+        std::thread::Builder::new()
+            .name("native-cold-small-stack".into())
+            .stack_size(128 * 1024)
+            .spawn(move || runtime.block_on(Box::pin(ReadOnlyFs::new(&c))).unwrap())
+            .unwrap()
+            .join()
+            .unwrap()
+    })
+    .await
+    .unwrap();
     let replay = s
         .proxy
         .applies()
@@ -518,5 +533,34 @@ pub async fn ordered_flush(config: &s3drive_core::Config, root: &Path, s: &Serve
     close.await.unwrap();
     drop((object, file));
     let fs = Arc::try_unwrap(fs).ok().unwrap();
+    native_writer::stop(fs).await;
+}
+
+// Shared adapter/controller control, not a claim of actual Windows callbacks.
+pub async fn disposition(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    let c = configuration(config, root, s).await;
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    let file = fs
+        .create_file(ROOT, "callback unlink.bin", |a, b| a == b, true)
+        .await
+        .unwrap();
+    let other = fs.open(file.node.id).await.unwrap();
+    file.write(0, Arc::from(&b"original"[..]), false, false)
+        .await
+        .unwrap();
+    let deleting = fs.open(file.node.id).await.unwrap();
+    let object = deleting.native_object().unwrap();
+    object.set_delete(true).await.unwrap();
+    object.cleanup(1).await.unwrap();
+    object.close().await.unwrap();
+    drop((deleting, object));
+    assert!(fs.lookup(ROOT, "callback unlink.bin").await.is_err());
+    file.write(0, Arc::from(&b"later"[..]), false, false)
+        .await
+        .unwrap();
+    assert_eq!(other.read(0, 8).await.unwrap(), b"laternal");
+    file.native_object().unwrap().close().await.unwrap();
+    other.native_object().unwrap().close().await.unwrap();
+    drop((file, other));
     native_writer::stop(fs).await;
 }

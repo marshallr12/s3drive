@@ -319,3 +319,16 @@ worker released the exclusive directory lock. Failed native startup now explicit
 awaits storage-owner closure before returning its original refusal. No filesystem
 callback exists yet; this is not native Close/completion or source acknowledgment.
 The transition checks retain their exact error/byte expectations.
+
+
+Run39883860660 verifies the startup-owner closure correction: all six shared
+profile/lifecycle cases and seven compiled-feature legacy cases pass on both OSes.
+Its actual gates did not mount: the fixture tried indexing an absent TOML opt-in
+key. The fixture now inserts that key into the managed table explicitly. This is
+not native acceptance. Earlier run39881340386 exposed Windows known-root remount
+stack overflow, Windows post-unlink write conflict, and a Linux combined fixture
+timeout; those failures remain open until dedicated reruns establish otherwise.
+Cold startup recovery awaits are boxed, and the known-root shared remount now runs
+on a 128-KiB thread. A seventh shared case isolates Windows-style transient
+SetDelete/Cleanup/Close while other handles survive. It does not substitute for
+actual WinFsp callbacks. Native operation and fixture deadlines remain unchanged.

@@ -10,7 +10,7 @@ Read the adapter candidate section in `docs/src/native-sparse-close-ordering.md`
 The `native-sparse-candidate` Cargo feature compiles candidate adapter paths;
 default flags remain disabled. Runtime activation also requires the explicit
 version8 managed sparse-lifecycle=owned-unlinked-v1 opt-in, as chosen by the owner.
-Six shared-engine lifecycle fixtures and three
+Seven shared-engine lifecycle fixtures and three
 actual OS fixtures cover unlink, save/replace, dirty handles, Close, remount and
 killed known/unknown owners. Two state startup tests cover restricted metadata
 classification and enumeration. They compile locally but are not accepted until
