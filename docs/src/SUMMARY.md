@@ -72,6 +72,7 @@
 - [Bounded local retention plan](mixed-retention-plan.md)
   - [Retry/checkpoint state prerequisite](retry-checkpoint-safety.md)
   - [Populated ordinary-store retry migration](populated-retry-migration.md)
+  - [Physical snapshot lifetime protection](physical-snapshot-retention.md)
 - [Observing external clean versions: proposal](external-clean-adoption.md)
 - [Local clean adoption intent](external-clean-local.md)
 - [Authenticated clean observation](external-clean-reader.md)

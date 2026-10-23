@@ -252,6 +252,7 @@ fn deferred_client_state_old_marker_refuses_new_intent_and_format2_recovery_with
         _directory: None,
         incarnation: None,
         source_pin_witness: None,
+        staging_readers: Default::default(),
         native_sparse: Default::default(),
     };
     assert_eq!(rows(&s), before);

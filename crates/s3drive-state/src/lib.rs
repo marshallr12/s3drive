@@ -21,6 +21,7 @@ pub mod namespace;
 pub mod namespace_client;
 pub mod remote;
 pub mod sparse_views;
+mod staging_readers;
 pub mod worker;
 
 use rusqlite::{Connection, TransactionBehavior, params};
@@ -40,6 +41,7 @@ pub struct State {
     _directory: Option<directory::OwnedDirectory>,
     incarnation: Option<String>,
     source_pin_witness: Option<[u8; 32]>,
+    staging_readers: staging_readers::Readers,
     native_sparse: sparse_views::preparation::native::Runtime,
 }
 
@@ -414,6 +416,7 @@ impl State {
             _directory: None,
             incarnation: None,
             source_pin_witness: None,
+            staging_readers: Default::default(),
             native_sparse: Default::default(),
         })
     }

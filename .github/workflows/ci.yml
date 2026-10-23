@@ -40,6 +40,8 @@ jobs:
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Verify retry fencing checkpoints rollback and killed owners
         run: cargo test -p s3drive-state retry_safety --locked -- --nocapture --test-threads=4
+      - name: Verify physical snapshot lifetimes lost replies and killed owners
+        run: cargo test -p s3drive-state physical_readers --locked -- --nocapture --test-threads=4
       - name: Verify cold namespace state rollback and killed transactions
         run: cargo test -p s3drive-state namespace_cold --locked -- --nocapture --test-threads=4
       - name: Verify cold namespace SDK exact replay and killed owner

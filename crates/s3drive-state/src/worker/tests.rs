@@ -765,3 +765,177 @@ async fn last_client_drop_drains_accepted_work_and_snapshots_hold_the_owner() {
     );
     reopened.close().await.unwrap();
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn physical_readers_lost_acquisition_reply_releases_only_unexposed_token() {
+    tokio::time::timeout(Duration::from_secs(30), async {
+        let temp = tempfile::tempdir().unwrap();
+        let storage = open(&temp.path().join("physical reply café")).await;
+        let id = generation(&storage.staging(), None, b"retained")
+            .await
+            .generation;
+        let live = storage.staging().snapshot(id).await.unwrap();
+        let (ready, started) = oneshot::channel();
+        let (release, wait) = blocking::channel();
+        let owner = storage.owner.clone();
+        let lost = tokio::spawn(async move {
+            owner
+                .call_with_deadline(
+                    move |store| {
+                        let journal = Journal::new(&mut store.state, journal::Options::default())?;
+                        journal.read(id, 0, 0)?;
+                        let pin = store.state.staging_readers.acquire(id);
+                        ready.send(()).unwrap();
+                        wait.recv_timeout(Duration::from_secs(10)).unwrap();
+                        Ok(pin)
+                    },
+                    Duration::from_secs(2),
+                )
+                .await
+        });
+        started.await.unwrap();
+        assert_worker_failure(lost.await.unwrap(), Failure::OutcomeUnknown);
+        release.send(()).unwrap();
+        assert_eq!(
+            storage
+                .owner
+                .call(|store| Ok(store.state.staging_readers.active()))
+                .await
+                .unwrap(),
+            vec![id]
+        );
+        assert_eq!(live.read(0, 8).await.unwrap(), b"retained");
+        drop(live);
+        assert!(
+            storage
+                .owner
+                .call(|store| Ok(store.state.staging_readers.active()))
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            storage
+                .staging()
+                .snapshot(GenerationId::try_from(id.value() + 1).unwrap())
+                .await
+                .is_err()
+        );
+        assert!(
+            storage
+                .owner
+                .call(|store| Ok(store.state.staging_readers.active()))
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        storage.close().await.unwrap();
+    })
+    .await
+    .expect("bounded lost snapshot reply test timed out");
+}
+
+#[tokio::test]
+async fn physical_readers_crash_child() {
+    let Some(path) = std::env::var_os("S3DRIVE_PHYSICAL_READER_DIR") else {
+        return;
+    };
+    let storage = open(Path::new(&path)).await;
+    let id = GenerationId::try_from(
+        std::env::var("S3DRIVE_PHYSICAL_READER_ID")
+            .unwrap()
+            .parse::<i64>()
+            .unwrap(),
+    )
+    .unwrap();
+    let reader = storage.staging().snapshot(id).await.unwrap();
+    let clone = reader.clone();
+    drop(reader);
+    assert_eq!(clone.read(0, 8).await.unwrap(), b"retained");
+    assert_eq!(
+        storage
+            .owner
+            .call(|store| Ok(store.state.staging_readers.active()))
+            .await
+            .unwrap(),
+        vec![id]
+    );
+    let ready =
+        std::path::PathBuf::from(std::env::var_os("S3DRIVE_PHYSICAL_READER_READY").unwrap());
+    let temporary = ready.with_extension("tmp");
+    std::fs::write(&temporary, b"ready").unwrap();
+    std::fs::rename(temporary, ready).unwrap();
+    use std::io::Read;
+    std::io::stdin().read_exact(&mut [0]).unwrap();
+    panic!("physical reader child must be killed");
+}
+#[tokio::test]
+async fn physical_readers_killed_owner_cannot_leave_live_capability_on_replacement() {
+    use std::process::{Command, Stdio};
+    use std::time::Instant;
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("physical crash café 🦀");
+    let ready = temp.path().join("ready");
+    let storage = open(&path).await;
+    let id = generation(&storage.staging(), None, b"retained")
+        .await
+        .generation;
+    storage.close().await.unwrap();
+    let mut child = Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "worker::tests::physical_readers_crash_child",
+            "--nocapture",
+        ])
+        .env("S3DRIVE_PHYSICAL_READER_DIR", &path)
+        .env("S3DRIVE_PHYSICAL_READER_ID", id.value().to_string())
+        .env("S3DRIVE_PHYSICAL_READER_READY", &ready)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let start = Instant::now();
+    while !ready.exists() {
+        if let Some(status) = child.try_wait().unwrap() {
+            use std::io::Read;
+            let mut err = String::new();
+            child
+                .stderr
+                .take()
+                .unwrap()
+                .read_to_string(&mut err)
+                .unwrap();
+            panic!("physical reader child {status}: {err}");
+        }
+        if start.elapsed() > Duration::from_secs(30) {
+            child.kill().unwrap();
+            child.wait().unwrap();
+            panic!("physical reader child timed out");
+        }
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    assert!(State::open_managed(&path).is_err());
+    child.kill().unwrap();
+    assert!(!child.wait().unwrap().success());
+    let storage = open(&path).await;
+    assert!(
+        storage
+            .owner
+            .call(|store| Ok(store.state.staging_readers.active()))
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    let reader = storage.staging().snapshot(id).await.unwrap();
+    assert_eq!(reader.read(0, 8).await.unwrap(), b"retained");
+    assert_eq!(
+        storage
+            .owner
+            .call(|store| Ok(store.state.staging_readers.active()))
+            .await
+            .unwrap(),
+        vec![id]
+    );
+    storage.close().await.unwrap();
+}

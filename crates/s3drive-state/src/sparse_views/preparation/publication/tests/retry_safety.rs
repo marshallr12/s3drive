@@ -808,3 +808,107 @@ async fn retry_safety_populated_migration_preserves_concurrent_cloned_readers() 
     .await
     .expect("bounded migration reader test timed out");
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn retry_safety_physical_readers_block_checkpoint_until_last_clone_drops() {
+    tokio::time::timeout(std::time::Duration::from_secs(30), async {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("physical reader café 🦀");
+        let mut s = State::open_managed(&path).unwrap();
+        let f = fixture();
+        let (v, t) = start(&mut s, &f);
+        let i = prepared(&mut s, &f, &v, t);
+        complete(&mut s, &f, &i, t);
+        let p = i.id().unwrap();
+        let g = pj(&mut s)
+            .transfers(p, None, 1)
+            .unwrap()
+            .remove(0)
+            .generation()
+            .unwrap();
+        let before = migration_rows(&s);
+        drop(s);
+        let storage = crate::worker::Storage::open(
+            &path,
+            crate::cache::Options::default(),
+            crate::journal::Options::default(),
+        )
+        .await
+        .unwrap();
+        let plans = storage
+            .sparse_views(views::Options::default())
+            .unwrap()
+            .preparations(Options::default())
+            .unwrap();
+        let cp = plans.checkpoint(p).await.unwrap();
+        assert!(cp.unblocked());
+        let reader = storage.staging().snapshot(g).await.unwrap();
+        let clone = reader.clone();
+        assert!(plans.verify_checkpoint(cp).await.is_err());
+        let cp = plans.checkpoint(p).await.unwrap();
+        assert_eq!(cp.protected_generations(), &[g]);
+        assert!(cp.protected_views().is_empty());
+        assert!(!cp.unblocked());
+        let expected = reader.read(0, 17).await.unwrap();
+        drop(reader);
+        let (read, check) = tokio::join!(clone.read(0, 17), plans.checkpoint(p));
+        assert_eq!(read.unwrap(), expected);
+        assert_eq!(check.unwrap().protected_generations(), &[g]);
+        drop(clone);
+        assert!(plans.checkpoint(p).await.unwrap().unblocked());
+        assert!(plans.verify_checkpoint(cp).await.is_err());
+        storage.close().await.unwrap();
+        let s = State::open_managed(&path).unwrap();
+        assert_eq!(migration_rows(&s), before);
+    })
+    .await
+    .expect("bounded physical reader checkpoint test timed out");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn retry_safety_physical_readers_close_fences_old_owner_before_replacement() {
+    tokio::time::timeout(std::time::Duration::from_secs(30), async {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("physical replacement café");
+        let mut s = State::open_managed(&path).unwrap();
+        let f = fixture();
+        let (v, t) = start(&mut s, &f);
+        let i = prepared(&mut s, &f, &v, t);
+        complete(&mut s, &f, &i, t);
+        let p = i.id().unwrap();
+        let g = pj(&mut s)
+            .transfers(p, None, 1)
+            .unwrap()
+            .remove(0)
+            .generation()
+            .unwrap();
+        drop(s);
+        let storage = crate::worker::Storage::open(
+            &path,
+            crate::cache::Options::default(),
+            crate::journal::Options::default(),
+        )
+        .await
+        .unwrap();
+        let old = storage.staging().snapshot(g).await.unwrap();
+        let clone = old.clone();
+        let expected = clone.read(0, 17).await.unwrap();
+        assert!(State::open_managed(&path).is_err());
+        storage.close().await.unwrap();
+        let mut replacement = State::open_managed(&path).unwrap();
+        assert!(pj(&mut replacement).checkpoint(p).unwrap().unblocked());
+        for reader in [&old, &clone] {
+            let e = reader.read(0, 17).await.unwrap_err();
+            assert_eq!(
+                e.downcast_ref::<crate::worker::Failure>(),
+                Some(&crate::worker::Failure::Closed)
+            );
+        }
+        let physical =
+            crate::journal::Journal::new(&mut replacement, crate::journal::Options::default())
+                .unwrap();
+        assert_eq!(physical.read(g, 0, 17).unwrap(), expected);
+    })
+    .await
+    .expect("bounded replacement reader test timed out");
+}

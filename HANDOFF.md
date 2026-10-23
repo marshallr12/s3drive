@@ -4,6 +4,14 @@ Updated 2026-10-23. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
+## Physical snapshot retention candidate (2026-10-23)
+
+[Physical reader lifetimes](docs/src/physical-snapshot-retention.md) now have a
+candidate same-owner capability and checkpoint protection. Clones, lost replies,
+close/replacement and killed owners need full hosted verification. Schema49 is
+unchanged; no cleanup or native migration is enabled. Do not infer deletion
+permission from an unblocked observational checkpoint.
+
 ## Populated migration candidate (2026-10-23)
 
 The [explicit ordinary-store migration](docs/src/populated-retry-migration.md)
