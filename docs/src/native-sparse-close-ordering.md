@@ -395,3 +395,16 @@ reports its individual duration and cumulative elapsed time. The existing
 180-second outer child bound and production operation deadlines are unchanged.
 Passing this restored bound is required before activation; it is a correctness
 regression ceiling, not a claim of interactive performance at scale.
+
+The restored bound in39891291432 passes Linux but fails Windows at120 seconds;
+Windows rename is51.9 seconds, and the detached sync is interrupted by fixture
+teardown. The batching change alone is insufficient, despite improving Linux's
+measured live sequence from116 to81 seconds. This remains failed acceptance.
+The next adapter correction collects acknowledged plan IDs once per flush under
+its existing publication barrier, instead of revalidating the entire root history
+for every historical plan. This list selects pending work only: no authority or
+transaction proof is reused across an await, and each selected original publisher
+still performs unchanged fresh SDK checks before upload, publication and ACK.
+Three retained epochs from two original publishers, repeated clean flushes,
+unlink, Close and cold remount have a ninth shared fixture with exactly seven
+expected PUTs. The original120-second actual sequence bound remains intact.

@@ -258,24 +258,30 @@ impl Writes {
         };
         let head = first.file.head().await?;
         eprintln!("NATIVE_TIMING flush-head {:?}", started.elapsed());
-        if !head.is_clean() {
-            let known = first.entry_plans().await?;
-            if !known.iter().any(|p| p.view().id() == head.id()) {
-                let edited = first.edited(&head).await?;
-                first.native.prepare(&edited).await.map_err(error)?;
-            }
+        let mut plans = first.entry_plans().await?;
+        if !head.is_clean() && !plans.iter().any(|p| p.view().id() == head.id()) {
+            let edited = first.edited(&head).await?;
+            first.native.prepare(&edited).await.map_err(error)?;
+            plans = first.entry_plans().await?;
         }
         eprintln!("NATIVE_TIMING flush-prepared {:?}", started.elapsed());
-        for info in first.entry_plans().await? {
+        // This is only a work-selection snapshot under the native publication
+        // barrier. ACK identities are immutable; no saved record/proof crosses
+        // an await. Each selected original plan still reopens and freshly checks
+        // all state through the ordinary SDK before every effect/acknowledgment.
+        // Re-reading the whole root history per already-ACKed plan is quadratic.
+        let acknowledged: HashSet<_> = self
+            .roots
+            .records()
+            .await
+            .map_err(error)?
+            .into_iter()
+            .filter(|r| r.acknowledgment().is_some())
+            .map(|r| r.input().plan())
+            .collect();
+        for info in plans {
             let plan = info.id().map_err(error)?;
-            if self
-                .roots
-                .records()
-                .await
-                .map_err(error)?
-                .iter()
-                .any(|r| r.input().plan() == plan && r.acknowledgment().is_some())
-            {
+            if acknowledged.contains(&plan) {
                 continue;
             }
             let owner = info.native_ownership().ok_or(Error::Conflict)?.open();

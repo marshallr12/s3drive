@@ -591,3 +591,43 @@ pub async fn disposition(config: &s3drive_core::Config, root: &Path, s: &Server,
     drop((file, other));
     native_writer::stop(fs).await;
 }
+
+// Three acknowledged epochs from two original publishers, including a detached
+// epoch. Repeated clean flushes/Close must never replay already completed PUTs.
+pub async fn acknowledged_history(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    let c = configuration(config, root, s).await;
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    let first = fs
+        .create_file(ROOT, "history.bin", |a, b| a == b, true)
+        .await
+        .unwrap();
+    let second = fs.open_write(first.node.id).await.unwrap();
+    first
+        .write(0, Arc::from(&b"epoch-one"[..]), false, false)
+        .await
+        .unwrap();
+    first.flush().await.unwrap();
+    second
+        .write(0, Arc::from(&b"epoch-two"[..]), false, false)
+        .await
+        .unwrap();
+    second.flush().await.unwrap();
+    fs.remove_entry(ROOT, "history.bin", false).await.unwrap();
+    first
+        .write(0, Arc::from(&b"epoch-end"[..]), false, false)
+        .await
+        .unwrap();
+    first.flush().await.unwrap();
+    for _ in 0..2 {
+        second.flush().await.unwrap();
+        first.flush().await.unwrap();
+        assert_eq!(second.read(0, 9).await.unwrap(), b"epoch-end");
+    }
+    first.native_object().unwrap().close().await.unwrap();
+    second.native_object().unwrap().close().await.unwrap();
+    drop((first, second));
+    native_writer::stop(fs).await;
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    assert!(fs.lookup(ROOT, "history.bin").await.is_err());
+    native_writer::stop(fs).await;
+}

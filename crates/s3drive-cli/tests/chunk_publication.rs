@@ -1320,6 +1320,10 @@ fn dispatch<'a>(
             Box::pin(native_lifecycle::disposition(config, root, s, true))
         }
         #[cfg(feature = "native-sparse-candidate")]
+        "native_lifecycle_history" => {
+            Box::pin(native_lifecycle::acknowledged_history(config, root, s))
+        }
+        #[cfg(feature = "native-sparse-candidate")]
         "native_lifecycle_ordered" => Box::pin(native_lifecycle::ordered_flush(config, root, s)),
         #[cfg(feature = "native-sparse-candidate")]
         "native_lifecycle_profile" => {
@@ -1812,6 +1816,7 @@ async fn run(mode: &str) {
         "native_lifecycle_replace" => 8,
         "native_lifecycle_profile" => 5,
         "native_lifecycle_ordered" => 5,
+        "native_lifecycle_history" => 7,
         "native_lifecycle_disposition" | "native_lifecycle_disposition_concurrent" => 5,
         "native_writer" => 5,
         "native_directories" => 3,
@@ -2295,4 +2300,10 @@ async fn native_lifecycle_shared_disposition_owner_close_preserves_other_handles
 #[tokio::test]
 async fn native_lifecycle_shared_surviving_write_joins_original_close() {
     run("native_lifecycle_disposition_concurrent").await;
+}
+
+#[cfg(feature = "native-sparse-candidate")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_lifecycle_shared_acknowledged_history_never_reuploads() {
+    run("native_lifecycle_history").await;
 }
