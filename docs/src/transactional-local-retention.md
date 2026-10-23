@@ -3,8 +3,9 @@
 Candidate, 2026-10-23. **Not accepted until exact-source hosted gates pass.**
 This schema50 state-library slice follows [populated ordinary migration](populated-retry-migration.md)
 and [physical reader protection](physical-snapshot-retention.md). It is explicit,
-local-only and unavailable to native/owned owners. No SDK/native wiring, default
-activation, provider deletion or deployment is included.
+local-only and unavailable to native/owned owners. No native wiring, default activation, provider deletion or deployment is included.
+The follow-on ordinary SDK candidate adds explicit scoped preparation and root
+admission, not automatic migration or cleanup.
 
 ## Contract
 
@@ -82,3 +83,29 @@ and rederives that exact operation from the retained root and plan. New tests
 cover a pending unrelated target with nested inherited witness pages and a fully
 rehashed forged plan/source/anchor with unchanged physical evidence. These fixes
 require their own hosted and independent review; the earlier tree is not accepted.
+
+## Ordinary SDK follow-on candidate
+
+`EditedFile::begin_scoped_preparation` derives exact preparation/generation
+identities from an explicit epoch token. Known exact plans replay before fresh
+network authorization; new plans retain the original source and policy checks.
+`MixedPublisher::begin_scoped` requires that exact admitted token and derives its
+root operation. Neither method changes defaults or activates retry mode. Explicit
+local migration/checkpoint/retirement remains on the same state owner client.
+
+An authenticated loopback SDK fixture starts with populated legacy ordinary
+history, migrates it explicitly, runs three more scoped publication/retirement
+cycles and reopens after each. It checks binary/Unicode reads, held EditedFile
+clones, lost publication replies, exact no-RPC preparation replay and retired
+recovery refusal without RPC. Modeled state receipts are not substituted for this
+SDK test. The fixture uses disposable local authority/provider servers and dummy
+profiles only. Hosted verification remains required; no real-provider acceptance
+is inferred and native populated migration remains blocked.
+
+Initial Linux run40025691644 passed all13 selected retention cases, including
+300 cycles with database peak1,474,560 bytes and WAL peak4,420,792 bytes; late
+peaks matched. It subsequently failed an existing future-version corruption
+fixture whose literal50 became the current schema. The fixture now derives
+SCHEMA_VERSION+1 and still requires refusal. This failed run is historical partial
+evidence only, not candidate acceptance; Windows and corrected full gates remain
+required.

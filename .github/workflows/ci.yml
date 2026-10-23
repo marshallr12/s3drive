@@ -42,6 +42,8 @@ jobs:
         run: cargo test -p s3drive-state retry_safety --locked -- --nocapture --test-threads=4
       - name: Verify transactional local retirement bounds corruption rollback and killed owners
         run: cargo test -p s3drive-state retention_ --locked -- --nocapture --test-threads=4
+      - name: Verify scoped SDK populated migration and local retention
+        run: cargo test -p s3drive-cli --test chunk_publication local_retention_sdk --locked -- --nocapture --test-threads=1
       - name: Verify physical snapshot lifetimes lost replies and killed owners
         run: cargo test -p s3drive-state physical_readers --locked -- --nocapture --test-threads=4
       - name: Verify cold namespace state rollback and killed transactions

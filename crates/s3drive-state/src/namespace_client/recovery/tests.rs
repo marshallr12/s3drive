@@ -513,10 +513,11 @@ fn namespace_cold_startup_classifies_without_migration_or_source_reads() {
 }
 #[test]
 fn namespace_cold_startup_never_falls_back_from_current_role_corruption() {
+    let future_schema = format!("PRAGMA user_version={}", crate::SCHEMA_VERSION + 1);
     for sql in [
         "DELETE FROM chunk_mount_role",
         "PRAGMA application_id=1",
-        "PRAGMA user_version=50",
+        future_schema.as_str(),
         "UPDATE windows_open_journal SET state_hash=zeroblob(32)",
     ] {
         let temp = tempfile::tempdir().unwrap();

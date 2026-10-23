@@ -77,6 +77,55 @@ impl EditedFile {
         )
         .await
     }
+    /// Explicit epoch-scoped admission for a retry-safe ordinary owner. Known
+    /// exact operations replay before fresh network checks; no activation occurs.
+    pub async fn begin_scoped_preparation(
+        &self,
+        token: plans::retry::Operation,
+        options: plans::Options,
+    ) -> Result<Preparation> {
+        if token.epoch() != self.view.binding().epoch()? {
+            return Err(ReadFailure::Binding.into());
+        }
+        let _active = self
+            .base
+            .0
+            .reader
+            .0
+            .active
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| ReadFailure::Busy)?;
+        bounded(
+            self.base.0.reader.0.options,
+            Box::pin(async {
+                let client = self.local.preparations(options)?;
+                let (root, page) = self.original_context()?;
+                let request = plans::Request {
+                    operation: token.id()?,
+                    view: self.view.id(),
+                    generation: token.generation()?,
+                    base_root: root.encode().to_vec(),
+                    base_page: page,
+                };
+                if client.operation(request.operation).await?.is_none() {
+                    if self.local.view(self.view.id()).await? != *self.view {
+                        return Err(ReadFailure::Binding.into());
+                    }
+                    Box::pin(self.base.authorize_sparse()).await?;
+                }
+                let info = client.begin_scoped(token, request).await?;
+                let result = Preparation {
+                    edited: self.clone(),
+                    client,
+                    id: info.id()?,
+                };
+                result.scope(&info)?;
+                Ok(result)
+            }),
+        )
+        .await
+    }
     pub(super) fn original_context(&self) -> Result<(RootDescriptor, Vec<u8>)> {
         let Content::Manifest { root, .. } = &self.base.0.content else {
             return Err(ReadFailure::UnsupportedContent.into());
