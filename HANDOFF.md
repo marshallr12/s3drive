@@ -4,6 +4,32 @@ Updated 2026-10-23. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
+## Accepted ordinary-store cleanup and migration candidate (2026-10-23)
+
+Exact candidate `f77f75684436c0afbed0fba15797d9819ffa61b0` passed independent
+source/log/artifact review of [run40030136888](https://github.com/marshallr12/s3drive/actions/runs/40030136888).
+This accepts schema50 [transactional local retention](docs/src/transactional-local-retention.md),
+[populated ordinary-store migration](docs/src/populated-retry-migration.md),
+[physical snapshot lifetime protection](docs/src/physical-snapshot-retention.md)
+and explicit ordinary SDK scoped admission. Main verification is pending at this
+handoff revision; acceptance here identifies the exact candidate, not a later merge.
+
+Linux1053/Windows1049 workspace tests passed in37 cohorts, with20 retry-safety,
+seven physical-reader and15 retention-filter cases per OS, the ordinary SDK
+loopback migration/retirement fixture, and unchanged native debug/release gates.
+All794 source files, six artifact ZIPs and genuine46/47,47/48,48/49 and49/50
+executable compatibility were reviewed. Both OS300-cycle fixtures retained one
+source anchor and one physical root, with DB peak1,474,560 bytes and WAL
+peak4,420,792 bytes; late peaks were identical. Actual full-disk rollback, killed
+owners, forged anchors, unrelated inherited witnesses and cloned readers passed.
+
+This is explicit ordinary-library support, not native/populated-native migration
+or automatic mounted cleanup. Native/owned owners remain refused, as do dirty,
+conflicting, uncertain and reader-protected histories. Defaults, quotas, corruption
+proofs and native deadlines are unchanged. No real user store or provider object
+was cleaned or migrated. Historical failed candidates and their corrections are
+recorded in the retention document; private validation archives remain unpublished.
+
 ## Accepted retry/checkpoint state prerequisite; no history reclamation
 
 Main `870284330d3ce61983fe0080bc1acbe877ec9259` is accepted for the bounded

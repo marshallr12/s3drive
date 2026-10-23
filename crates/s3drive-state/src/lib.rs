@@ -21,13 +21,14 @@ pub mod namespace;
 pub mod namespace_client;
 pub mod remote;
 pub mod sparse_views;
+mod staging_readers;
 pub mod worker;
 
 use rusqlite::{Connection, TransactionBehavior, params};
 use std::{error::Error, path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x5333_4452;
-pub const SCHEMA_VERSION: i32 = 49;
+pub const SCHEMA_VERSION: i32 = 50;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[cfg(test)]
 mod authority_restart_tests;
@@ -40,6 +41,7 @@ pub struct State {
     _directory: Option<directory::OwnedDirectory>,
     incarnation: Option<String>,
     source_pin_witness: Option<[u8; 32]>,
+    staging_readers: staging_readers::Readers,
     native_sparse: sparse_views::preparation::native::Runtime,
 }
 
@@ -320,6 +322,9 @@ impl State {
             if version < 49 {
                 tx.execute_batch(include_str!("../migrations/049.sql"))?;
             }
+            if version < 50 {
+                tx.execute_batch(include_str!("../migrations/050.sql"))?;
+            }
             // Imported creation records cannot be laundered through an old
             // marker. Existing43/44 roles keep every byte; a transaction-local
             // current marker enables their strict role validators. Any failure
@@ -414,6 +419,7 @@ impl State {
             _directory: None,
             incarnation: None,
             source_pin_witness: None,
+            staging_readers: Default::default(),
             native_sparse: Default::default(),
         })
     }

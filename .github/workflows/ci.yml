@@ -40,6 +40,14 @@ jobs:
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Verify retry fencing checkpoints rollback and killed owners
         run: cargo test -p s3drive-state retry_safety --locked -- --nocapture --test-threads=4
+      - name: Verify historical upgrade row and schema preservation
+        run: cargo test -p s3drive-state upgrade --locked -- --nocapture --test-threads=4
+      - name: Verify transactional local retirement bounds corruption rollback and killed owners
+        run: cargo test -p s3drive-state retention_ --locked -- --nocapture --test-threads=4
+      - name: Verify scoped SDK populated migration and local retention
+        run: cargo test -p s3drive-cli --test chunk_publication local_retention_sdk --locked -- --nocapture --test-threads=1
+      - name: Verify physical snapshot lifetimes lost replies and killed owners
+        run: cargo test -p s3drive-state physical_readers --locked -- --nocapture --test-threads=4
       - name: Verify cold namespace state rollback and killed transactions
         run: cargo test -p s3drive-state namespace_cold --locked -- --nocapture --test-threads=4
       - name: Verify cold namespace SDK exact replay and killed owner
@@ -126,11 +134,11 @@ jobs:
         run: cargo test -p s3drive-cli --test windows_mount actual_managed_windows_disposition_lifecycle --locked -- --ignored --nocapture --test-threads=1
       - run: cargo test --workspace --locked
       - run: cargo build --workspace --locked
-      - name: Verify actual schema46/schema47, schema47/schema48 and schema48/schema49 compatibility
+      - name: Verify actual schema46/schema47, schema47/schema48, schema48/schema49 and schema49/schema50 compatibility
         if: runner.os == 'Linux'
         run: |
-          cp target/debug/s3drive "$RUNNER_TEMP/s3drive-schema49"
-          git fetch origin 5343eb41b6132ba3a8a5cfc2f74b4d6ff01d0b28 82c46803560773b90e405c935e1f6846616c5d7b 86d1e0ea7e27889e418863e3ab1b58e6e629f56c
+          cp target/debug/s3drive "$RUNNER_TEMP/s3drive-schema50"
+          git fetch origin 5343eb41b6132ba3a8a5cfc2f74b4d6ff01d0b28 82c46803560773b90e405c935e1f6846616c5d7b 86d1e0ea7e27889e418863e3ab1b58e6e629f56c ad4d966e9ccf37aeed0d5cab6cdb77366ca88a5f
           git worktree add --detach "$RUNNER_TEMP/s3drive-schema46-source" 5343eb41b6132ba3a8a5cfc2f74b4d6ff01d0b28
           CARGO_TARGET_DIR="$RUNNER_TEMP/s3drive-compat-target" cargo build --manifest-path "$RUNNER_TEMP/s3drive-schema46-source/Cargo.toml" -p s3drive-cli --locked
           cp "$RUNNER_TEMP/s3drive-compat-target/debug/s3drive" "$RUNNER_TEMP/s3drive-schema46"
@@ -140,10 +148,15 @@ jobs:
           git worktree add --detach "$RUNNER_TEMP/s3drive-schema48-source" 86d1e0ea7e27889e418863e3ab1b58e6e629f56c
           CARGO_TARGET_DIR="$RUNNER_TEMP/s3drive-compat-target" cargo build --manifest-path "$RUNNER_TEMP/s3drive-schema48-source/Cargo.toml" -p s3drive-cli --locked
           cp "$RUNNER_TEMP/s3drive-compat-target/debug/s3drive" "$RUNNER_TEMP/s3drive-schema48"
+          git worktree add --detach "$RUNNER_TEMP/s3drive-schema49-source" ad4d966e9ccf37aeed0d5cab6cdb77366ca88a5f
+          CARGO_TARGET_DIR="$RUNNER_TEMP/s3drive-compat-target" cargo build --manifest-path "$RUNNER_TEMP/s3drive-schema49-source/Cargo.toml" -p s3drive-cli --locked
+          cp "$RUNNER_TEMP/s3drive-compat-target/debug/s3drive" "$RUNNER_TEMP/s3drive-schema49"
           S3DRIVE_COMPAT_NEW_SHA=82c46803560773b90e405c935e1f6846616c5d7b python3 scripts/test-owned-sparse-compatibility.py "$RUNNER_TEMP/s3drive-schema46" "$RUNNER_TEMP/s3drive-schema47" "$RUNNER_TEMP/owned-sparse-compatibility"
           S3DRIVE_COMPAT_OLD_SCHEMA=47 S3DRIVE_COMPAT_NEW_SCHEMA=48 S3DRIVE_COMPAT_NEW_SHA=86d1e0ea7e27889e418863e3ab1b58e6e629f56c S3DRIVE_COMPAT_OLD_SHA=82c46803560773b90e405c935e1f6846616c5d7b python3 scripts/test-owned-sparse-compatibility.py "$RUNNER_TEMP/s3drive-schema47" "$RUNNER_TEMP/s3drive-schema48" "$RUNNER_TEMP/native-sparse-close-compatibility"
-          S3DRIVE_COMPAT_OLD_SCHEMA=48 S3DRIVE_COMPAT_NEW_SCHEMA=49 S3DRIVE_COMPAT_OLD_SHA=86d1e0ea7e27889e418863e3ab1b58e6e629f56c python3 scripts/test-owned-sparse-compatibility.py "$RUNNER_TEMP/s3drive-schema48" "$RUNNER_TEMP/s3drive-schema49" "$RUNNER_TEMP/retry-checkpoint-compatibility"
-          cmp target/debug/s3drive "$RUNNER_TEMP/s3drive-schema49"
+          S3DRIVE_COMPAT_NEW_SHA=ad4d966e9ccf37aeed0d5cab6cdb77366ca88a5f S3DRIVE_COMPAT_OLD_SCHEMA=48 S3DRIVE_COMPAT_NEW_SCHEMA=49 S3DRIVE_COMPAT_OLD_SHA=86d1e0ea7e27889e418863e3ab1b58e6e629f56c python3 scripts/test-owned-sparse-compatibility.py "$RUNNER_TEMP/s3drive-schema48" "$RUNNER_TEMP/s3drive-schema49" "$RUNNER_TEMP/retry-checkpoint-compatibility"
+          S3DRIVE_COMPAT_OLD_SCHEMA=49 S3DRIVE_COMPAT_NEW_SCHEMA=50 S3DRIVE_COMPAT_OLD_SHA=ad4d966e9ccf37aeed0d5cab6cdb77366ca88a5f python3 scripts/test-owned-sparse-compatibility.py "$RUNNER_TEMP/s3drive-schema49" "$RUNNER_TEMP/s3drive-schema50" "$RUNNER_TEMP/local-retention-compatibility"
+          S3DRIVE_RETENTION_OLD_BINARY="$RUNNER_TEMP/s3drive-schema49" cargo test -p s3drive-state retention_actual_old_binary_refuses_reclaimed_store --locked -- --nocapture
+          cmp target/debug/s3drive "$RUNNER_TEMP/s3drive-schema50"
       - name: Retain schema compatibility observations
         if: runner.os == 'Linux' && always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -166,6 +179,14 @@ jobs:
         with:
           name: retry-checkpoint-schema-compatibility-${{ github.sha }}
           path: ${{ runner.temp }}/retry-checkpoint-compatibility/report.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Retain local retirement schema compatibility observations
+        if: runner.os == 'Linux' && always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: local-retention-schema-compatibility-${{ github.sha }}
+          path: ${{ runner.temp }}/local-retention-compatibility/report.json
           if-no-files-found: error
           retention-days: 30
       - name: Verify Windows supervisor retry policy

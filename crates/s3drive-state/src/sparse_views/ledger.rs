@@ -31,11 +31,23 @@ impl Saved {
 #[derive(Clone, Default, PartialEq, Eq)]
 pub(super) struct Ledger {
     pub read_pins: pins::Ledger,
+    pub anchors: BTreeMap<Id, preparation::publication::retention::Anchor>,
     pub files: BTreeMap<Id, File>,
     pub records: BTreeMap<Id, Saved>,
     pub blocks: BTreeMap<Id, Vec<u8>>,
 }
 impl Ledger {
+    pub fn anchor(&self, id: Id) -> Option<&preparation::publication::retention::Anchor> {
+        self.anchors.values().find(|a| a.view().id == id)
+    }
+    pub fn parent(&self, id: Id) -> Result<Option<Id>> {
+        let record = self.record(id)?;
+        Ok(if self.anchor(id).is_some() {
+            None
+        } else {
+            record.parent
+        })
+    }
     pub fn record(&self, id: Id) -> Result<&Record> {
         self.records
             .get(&id)
@@ -54,6 +66,13 @@ impl Ledger {
                 .records
                 .values()
                 .map(|r| (r.raw.len() + r.request.len()) as u64)
+                .sum::<u64>()
+            + self
+                .anchors
+                .values()
+                .map(|a| a.bytes().map(|n| n as u64))
+                .collect::<Result<Vec<_>>>()?
+                .into_iter()
                 .sum::<u64>();
         let extents = self
             .records
@@ -115,9 +134,13 @@ fn load(db: &Connection, patches: bool, bodies: bool) -> Result<Ledger> {
     }
     let mut out = Ledger::default();
     if patches {
+        out.anchors = preparation::publication::retention::load(db)?;
         out.read_pins = pins::load_in(&mut scope)?;
     }
     if counts == [0; 5] {
+        if !out.anchors.is_empty() {
+            return Err(Failure::Corrupt.into());
+        }
         return Ok(out);
     }
     if counts[0] != 1
@@ -146,6 +169,14 @@ fn load(db: &Connection, patches: bool, bodies: bool) -> Result<Ledger> {
         db,
         "SELECT (SELECT coalesce(sum(length(binding)),0) FROM sparse_view_files)+(SELECT coalesce(sum(length(record)),0) FROM sparse_views)+(SELECT coalesce(sum(length(request)),0) FROM sparse_view_operations)",
     )?;
+    let metadata = metadata
+        + out
+            .anchors
+            .values()
+            .map(|a| a.bytes().map(|n| n as u64))
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .sum::<u64>();
     if metadata > HARD_METADATA {
         return Err(Failure::Corrupt.into());
     }
@@ -323,14 +354,30 @@ fn load(db: &Connection, patches: bool, bodies: bool) -> Result<Ledger> {
                 return Err(Failure::Corrupt.into());
             }
             chain.push(key);
-            next = row.record.parent;
+            next = out.parent(key)?;
         }
         let mut parent = None;
         for key in chain.into_iter().rev() {
             let record = &out.records.get(&key).ok_or(Failure::Corrupt)?.record;
-            record.validate(parent)?;
+            if let Some(anchor) = out.anchor(key) {
+                if parent.is_some()
+                    || anchor.view() != record
+                    || record.parent.is_none_or(|p| out.records.contains_key(&p))
+                {
+                    return Err(Failure::Corrupt.into());
+                }
+            } else {
+                record.validate(parent)?;
+            }
             parent = Some(record);
         }
+    }
+    if out
+        .anchors
+        .values()
+        .any(|a| !visited.contains(&a.view().id))
+    {
+        return Err(Failure::Corrupt.into());
     }
     if visited.len() != out.records.len() {
         return Err(Failure::Corrupt.into());

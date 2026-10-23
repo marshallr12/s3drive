@@ -159,7 +159,7 @@ fn schema35_migration_preserves_literal_source_rows_and_mode_collisions_rollback
     let before = rows(&state.connection);
     state
         .connection
-        .execute_batch("DROP TABLE sparse_retry_mode; DROP TABLE chunk_mount_role; DROP TABLE manifest_creations; DROP TABLE manifest_creation_role; DROP TABLE source_read_pins; DROP TABLE source_read_pin_session; DROP TABLE sparse_scoped_mode; PRAGMA user_version=35")
+        .execute_batch("DROP TABLE sparse_retention_anchors; DROP TABLE sparse_retention_role; DROP TABLE sparse_retry_mode; DROP TABLE chunk_mount_role; DROP TABLE manifest_creations; DROP TABLE manifest_creation_role; DROP TABLE source_read_pins; DROP TABLE source_read_pin_session; DROP TABLE sparse_scoped_mode; PRAGMA user_version=35")
         .unwrap();
     drop(state);
     let mut state = State::open_managed(&path).unwrap();

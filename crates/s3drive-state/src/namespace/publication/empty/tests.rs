@@ -227,6 +227,7 @@ fn atomic_empty_pre39_marker_preserves_literal_rows_and_refuses_new_record_laund
         _directory: None,
         incarnation: None,
         source_pin_witness: None,
+        staging_readers: Default::default(),
         native_sparse: Default::default(),
     };
     assert_eq!(rows(&state), before);

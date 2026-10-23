@@ -6,7 +6,7 @@ pub struct DataNeed {
     pub uses_base: bool,
 }
 pub struct Journal<'a> {
-    state: &'a mut State,
+    pub(super) state: &'a mut State,
     limits: Limits,
 }
 impl<'a> Journal<'a> {
@@ -373,7 +373,7 @@ impl Client {
     pub fn same_storage(&self, storage: &crate::worker::Storage) -> bool {
         storage.same_owner(&self.owner)
     }
-    async fn call<T: Send + 'static>(
+    pub(super) async fn call<T: Send + 'static>(
         &self,
         f: impl FnOnce(&mut Journal<'_>) -> Result<T> + Send + 'static,
     ) -> Result<T> {

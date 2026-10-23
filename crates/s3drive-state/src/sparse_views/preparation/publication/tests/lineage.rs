@@ -231,7 +231,7 @@ fn schema_thirty_four_keeps_literal_old_publication_blobs_hashes_and_requests() 
             .contains("predecessor")
     );
     s.connection
-        .execute_batch("DROP TABLE sparse_retry_mode; DROP TABLE chunk_mount_role; DROP TABLE manifest_creations; DROP TABLE manifest_creation_role; DROP TABLE source_read_pins; DROP TABLE source_read_pin_session; DROP TABLE sparse_scoped_mode")
+        .execute_batch("DROP TABLE sparse_retention_anchors; DROP TABLE sparse_retention_role; DROP TABLE sparse_retry_mode; DROP TABLE chunk_mount_role; DROP TABLE manifest_creations; DROP TABLE manifest_creation_role; DROP TABLE source_read_pins; DROP TABLE source_read_pin_session; DROP TABLE sparse_scoped_mode")
         .unwrap();
     crate::test_schema::demote(&s.connection, 33).unwrap();
     drop(s);
@@ -336,7 +336,7 @@ fn schema_thirty_three_pending_publish_recovers_without_source_or_migration() {
         )
         .unwrap();
     s.connection
-        .execute_batch("DROP TABLE sparse_retry_mode; DROP TABLE chunk_mount_role; DROP TABLE manifest_creations; DROP TABLE manifest_creation_role; DROP TABLE source_read_pins; DROP TABLE source_read_pin_session; DROP TABLE sparse_scoped_mode")
+        .execute_batch("DROP TABLE sparse_retention_anchors; DROP TABLE sparse_retention_role; DROP TABLE sparse_retry_mode; DROP TABLE chunk_mount_role; DROP TABLE manifest_creations; DROP TABLE manifest_creation_role; DROP TABLE source_read_pins; DROP TABLE source_read_pin_session; DROP TABLE sparse_scoped_mode")
         .unwrap();
     crate::test_schema::demote(&s.connection, 33).unwrap();
     drop(s);

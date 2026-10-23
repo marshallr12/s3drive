@@ -64,7 +64,7 @@ impl SourceReceipt {
         })
     }
 }
-fn request(r: &Record) -> Result<ViewRequest> {
+pub(super) fn request(r: &Record) -> Result<ViewRequest> {
     let receipt = r.receipt.as_ref().ok_or(Failure::Incomplete)?;
     let payload = receipt.node.payload.as_ref().ok_or(Failure::Corrupt)?;
     let reference = ns::payload_reference(&receipt.node.payload).ok_or(Failure::Corrupt)?;
@@ -131,7 +131,7 @@ fn descends(s: &Ledger, older: Id, newer: Id) -> Result<bool> {
         if id == older {
             return Ok(true);
         }
-        at = s.record(id)?.parent;
+        at = s.parent(id)?;
     }
     Err(Failure::Corrupt.into())
 }
@@ -188,6 +188,12 @@ pub(in crate::sparse_views) fn validate_views(db: &Connection, s: &Ledger) -> Re
     }
     for row in s.records.values() {
         if let Some(Change::Rebase { publication, .. }) = &row.record.request.edit {
+            if let Some(anchor) = s.anchor(row.record.id) {
+                if anchor.view() != &row.record || meta.records.contains_key(publication) {
+                    return Err(Failure::Corrupt.into());
+                }
+                continue;
+            }
             let r = meta.records.get(publication).ok_or(Failure::Corrupt)?;
             let a = r.acknowledgment.as_ref().ok_or(Failure::Corrupt)?;
             if a.clean_view != Some(row.record.id) || a.operation != row.record.operation {

@@ -12,6 +12,8 @@ mod deferred_creation;
 mod empty_creation;
 #[path = "support/fixture.rs"]
 pub mod fixture;
+#[path = "chunk_publication/local_retention.rs"]
+mod local_retention;
 #[path = "chunk_publication/mixed_epochs.rs"]
 mod mixed_epochs;
 #[path = "chunk_publication/mixed_roots.rs"]
@@ -1374,6 +1376,7 @@ fn dispatch<'a>(
         "empty_flow" => Box::pin(empty_creation::flow(config, root, s)),
         "empty_controls" => Box::pin(empty_creation::controls(config, root, s)),
         "empty_recovery" => Box::pin(empty_creation::recovery(config, root, s)),
+        "local_retention" => Box::pin(local_retention::flow(config, root, s)),
         "mixed_scoped" => Box::pin(mixed_epochs::run_scoped_case(config, root, s)),
         "mixed_epochs" => Box::pin(mixed_epochs::run_case(config, root, s)),
         "mixed_lineage" => Box::pin(mixed_roots::lineage(config, root, s)),
@@ -1817,6 +1820,7 @@ async fn run(mode: &str) {
         "native_concurrency" => 5,
         "composition" => 1,
         "empty_controls" => 2,
+        "local_retention" => 10,
         "mixed_epochs" | "mixed_scoped" => 13,
         "mixed_lineage" => 12,
         "mixed_roots_controls" => 9,
@@ -2287,4 +2291,9 @@ async fn native_lifecycle_shared_surviving_write_joins_original_close() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn native_lifecycle_shared_acknowledged_history_never_reuploads() {
     run("native_lifecycle_history").await;
+}
+
+#[tokio::test]
+async fn local_retention_sdk_migrates_legacy_and_preserves_cloned_reads_across_scoped_cycles() {
+    run("local_retention").await;
 }

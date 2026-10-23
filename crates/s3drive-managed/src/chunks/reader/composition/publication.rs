@@ -502,6 +502,14 @@ impl MixedPublisher {
         )
         .await
     }
+    /// Derive the reserved root identity from the exact admitted scoped plan.
+    /// No raw-operation fallback and no retry-mode activation are performed.
+    pub async fn begin_scoped(&self, token: plans::retry::Operation) -> Result<roots::Record> {
+        if self.0.preparation.info().await?.retry_operation() != Some(token) {
+            return Err(MixedRootFailure::Binding.into());
+        }
+        self.begin(token.publish_operation()?).await
+    }
     /// Save the exact reserve; never sends a mutation from this method.
     pub async fn begin(&self, publish_operation: String) -> Result<roots::Record> {
         let _slot = self

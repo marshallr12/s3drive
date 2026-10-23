@@ -1,5 +1,6 @@
 //! Opt-in retry closure and revalidated retirement evidence. Never deletes data.
 use super::*;
+mod migration;
 use crate::journal::{Base, GenerationId, Target};
 
 /// Persist the complete token before an uncertain begin. A new epoch/nonce is a
@@ -319,6 +320,7 @@ pub struct Checkpoint {
     terminal_plans: Vec<Id>,
     blocked_plans: Vec<Id>,
     protected_views: Vec<Id>,
+    protected_generations: Vec<GenerationId>,
     evidence: Id,
 }
 impl fmt::Debug for Checkpoint {
@@ -327,6 +329,9 @@ impl fmt::Debug for Checkpoint {
     }
 }
 impl Checkpoint {
+    pub fn plan(&self) -> Id {
+        self.plan
+    }
     pub fn anchor(&self) -> Id {
         self.anchor
     }
@@ -342,12 +347,21 @@ impl Checkpoint {
     pub fn protected_views(&self) -> &[Id] {
         &self.protected_views
     }
+    pub fn protected_generations(&self) -> &[GenerationId] {
+        &self.protected_generations
+    }
     /// Necessary local retirement conditions only. Actual retirement is absent.
     pub fn unblocked(&self) -> bool {
-        self.blocked_plans.is_empty() && self.protected_views.is_empty()
+        self.blocked_plans.is_empty()
+            && self.protected_views.is_empty()
+            && self.protected_generations.is_empty()
     }
 }
-fn checkpoint(db: &Connection, plan: Id) -> Result<Checkpoint> {
+pub(in crate::sparse_views::preparation) fn checkpoint(
+    db: &Connection,
+    plan: Id,
+    physical_readers: &[GenerationId],
+) -> Result<Checkpoint> {
     if !enabled(db)? {
         return Err(Failure::ScopedDisabled.into());
     }
@@ -416,6 +430,36 @@ fn checkpoint(db: &Connection, plan: Id) -> Result<Checkpoint> {
             }
         })
         .collect::<Result<Vec<_>>>()?;
+    let mut protected_generations = Vec::new();
+    for (id, saved) in &s.plans {
+        let i = saved.info(&s.views)?;
+        if i.view.binding().target()? != info.view.binding().target()? || i.root()?.is_none() {
+            continue;
+        }
+        for (_, level, slot) in s.objects.keys().filter(|(p, _, _)| p == id) {
+            if let Some(t) = transfers::transfer(
+                db,
+                &s,
+                &i,
+                Position {
+                    level: *level,
+                    slot: *slot,
+                },
+            )? && let Some(generation) = t.generation()
+                && physical_readers.contains(&generation)
+                && !protected_generations.contains(&generation)
+            {
+                protected_generations.push(generation);
+            }
+        }
+    }
+    if let Some(anchor) = s.views.anchors.get(&info.view.binding().target()?) {
+        let generation = anchor.generation();
+        if physical_readers.contains(&generation) && !protected_generations.contains(&generation) {
+            protected_generations.push(generation);
+        }
+    }
+    protected_generations.sort_by_key(|g| g.value());
     // Exact retained graph/body hashes and root records bind the proof; neither
     // a copied row hash nor a self-consistent rewritten anchor is accepted alone.
     let evidence = hash(
@@ -427,6 +471,10 @@ fn checkpoint(db: &Connection, plan: Id) -> Result<Checkpoint> {
             &terminal_plans,
             &blocked_plans,
             &protected_views,
+            protected_generations
+                .iter()
+                .map(|g| g.value())
+                .collect::<Vec<_>>(),
             s.views.records.values().map(|v| &v.raw).collect::<Vec<_>>(),
             s.plans
                 .values()
@@ -442,16 +490,18 @@ fn checkpoint(db: &Connection, plan: Id) -> Result<Checkpoint> {
         terminal_plans,
         blocked_plans,
         protected_views,
+        protected_generations,
         evidence,
     })
 }
 impl Journal<'_> {
     pub fn checkpoint(&mut self, plan: Id) -> Result<Checkpoint> {
+        let physical_readers = self.state.staging_readers.active();
         let tx = self
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Deferred)?;
-        let result = checkpoint(&tx, plan)?;
+        let result = checkpoint(&tx, plan, &physical_readers)?;
         tx.commit()?;
         Ok(result)
     }

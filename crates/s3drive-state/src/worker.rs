@@ -506,20 +506,25 @@ impl Staging {
         .await
     }
 
-    /// A lightweight immutable generation handle. This stores no whole-file
-    /// buffer; sealed generations already cannot be reclaimed by the journal.
-    /// A future GC implementation must add explicit pin accounting here.
+    /// A lightweight immutable generation handle with same-owner retention.
+    /// Acquisition and manifest validation run in one serialized owner command.
+    /// Clones share the pin; a lost reply cannot expose an unprotected handle.
     pub async fn snapshot(&self, id: GenerationId) -> Result<Snapshot> {
-        let generation = self
-            .call(move |journal| {
+        let options = self.options;
+        let (generation, retention) = self
+            .owner
+            .call(move |store| {
+                let journal = Journal::new(&mut store.state, options)?;
                 let generation = journal.info(id)?;
-                journal.read(id, 0, 0)?; // Validate phase and complete manifest.
-                Ok(generation)
+                journal.read(id, 0, 0)?;
+                let retention = store.state.staging_readers.acquire(id);
+                Ok((generation, retention))
             })
             .await?;
         Ok(Snapshot {
             staging: self.clone(),
             generation,
+            retention,
         })
     }
 }
@@ -528,6 +533,7 @@ impl Staging {
 pub struct Snapshot {
     staging: Staging,
     generation: Generation,
+    retention: Arc<crate::staging_readers::Pin>,
 }
 impl Snapshot {
     pub fn metadata(&self) -> &Generation {
@@ -537,7 +543,10 @@ impl Snapshot {
         if length > journal::MAX_READ_BYTES {
             return Err("staged read exceeds bounded range".into());
         }
-        let id = self.generation.id;
+        let id = self.retention.generation();
+        if id != self.generation.id {
+            return Err("staged snapshot retention identity changed".into());
+        }
         let expected = self.generation.manifest_hash;
         self.staging
             .call(move |journal| {
