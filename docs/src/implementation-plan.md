@@ -32,7 +32,13 @@ owner upgrades, history severance and actual reclamation remain blocked and are
 not claimed by this library-only contract. Defaults and provider behavior remain
 unchanged.
 
-The next cleanup/migration work starts with the separate
+The schema50 [transactional local retention candidate](transactional-local-retention.md)
+adds explicit ordinary-owner history retirement and compact checked anchors. Its
+300-cycle/full-disk/crash/corruption/reader and actual49/50 executable gates are
+pending. Native populated migration and SDK/native cleanup integration remain
+unsupported; defaults, deadlines and provider behavior stay unchanged.
+
+The cleanup/migration prerequisites started with the separate
 [populated ordinary-store retry migration candidate](populated-retry-migration.md).
 It must retain legacy operation identities and preserve dirty/uncertain/native
 refusals. Full terminal retirement and bounded local reclamation are subsequent

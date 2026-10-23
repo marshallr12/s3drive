@@ -507,7 +507,7 @@ fn event_manifest_genuine_legacy45_upgrade_preserves_every_original_request_and_
     let p = publish(&mut s, &r, 5);
     let done = s.namespace_apply(&p).unwrap();
     let before = outputs(&s);
-    s.connection.execute_batch("CREATE TABLE user_bytes(data BLOB);INSERT INTO user_bytes VALUES(CAST('{\"removal_claim\":null}' AS BLOB));DROP TABLE sparse_retry_mode;PRAGMA user_version=45").unwrap();
+    s.connection.execute_batch("CREATE TABLE user_bytes(data BLOB);INSERT INTO user_bytes VALUES(CAST('{\"removal_claim\":null}' AS BLOB));DROP TABLE sparse_retention_anchors; DROP TABLE sparse_retention_role; DROP TABLE sparse_retry_mode;PRAGMA user_version=45").unwrap();
     drop(s);
     let mut s = State::open_managed(&path).unwrap();
     assert_eq!(s.info().unwrap().schema_version, crate::SCHEMA_VERSION);

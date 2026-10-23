@@ -329,6 +329,9 @@ impl fmt::Debug for Checkpoint {
     }
 }
 impl Checkpoint {
+    pub fn plan(&self) -> Id {
+        self.plan
+    }
     pub fn anchor(&self) -> Id {
         self.anchor
     }
@@ -354,7 +357,11 @@ impl Checkpoint {
             && self.protected_generations.is_empty()
     }
 }
-fn checkpoint(db: &Connection, plan: Id, physical_readers: &[GenerationId]) -> Result<Checkpoint> {
+pub(in crate::sparse_views::preparation) fn checkpoint(
+    db: &Connection,
+    plan: Id,
+    physical_readers: &[GenerationId],
+) -> Result<Checkpoint> {
     if !enabled(db)? {
         return Err(Failure::ScopedDisabled.into());
     }
@@ -444,6 +451,12 @@ fn checkpoint(db: &Connection, plan: Id, physical_readers: &[GenerationId]) -> R
             {
                 protected_generations.push(generation);
             }
+        }
+    }
+    if let Some(anchor) = s.views.anchors.get(&info.view.binding().target()?) {
+        let generation = anchor.generation();
+        if physical_readers.contains(&generation) && !protected_generations.contains(&generation) {
+            protected_generations.push(generation);
         }
     }
     protected_generations.sort_by_key(|g| g.value());

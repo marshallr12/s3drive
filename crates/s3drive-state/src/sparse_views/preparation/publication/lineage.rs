@@ -4,13 +4,13 @@ use super::ledger::Meta;
 use super::*;
 
 pub(super) fn ancestor(s: &Snapshot, older: Id, newer: Id) -> Result<bool> {
-    let mut next = s.views.record(newer)?.parent;
+    let mut next = s.views.parent(newer)?;
     for _ in 0..super::super::super::HARD_VIEWS {
         let Some(id) = next else { return Ok(false) };
         if id == older {
             return Ok(true);
         }
-        next = s.views.record(id)?.parent;
+        next = s.views.parent(id)?;
     }
     Err(Failure::Corrupt.into())
 }

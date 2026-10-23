@@ -477,7 +477,7 @@ async fn retry_safety_concurrent_cloned_readers_keep_history_protected() {
     .expect("bounded concurrent reader checkpoint test timed out");
 }
 
-fn legacy_complete(s: &mut State, f: &Fixture) -> Info {
+pub(super) fn legacy_complete(s: &mut State, f: &Fixture) -> Info {
     let i = prepare(s, f, false);
     let p = i.id().unwrap();
     physical(s, p);
@@ -501,7 +501,7 @@ fn legacy_request(f: &Fixture, i: &Info) -> Request {
 }
 // Compare every original SQL value, not just selected ledger counts. Mode rows
 // are the only allowed delta. Schema and sqlite_sequence are included.
-fn migration_rows(s: &State) -> Vec<String> {
+pub(super) fn migration_rows(s: &State) -> Vec<String> {
     let mut out = s
         .connection
         .prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY type,name")

@@ -73,6 +73,7 @@
   - [Retry/checkpoint state prerequisite](retry-checkpoint-safety.md)
   - [Populated ordinary-store retry migration](populated-retry-migration.md)
   - [Physical snapshot lifetime protection](physical-snapshot-retention.md)
+  - [Transactional ordinary-store local retention](transactional-local-retention.md)
 - [Observing external clean versions: proposal](external-clean-adoption.md)
 - [Local clean adoption intent](external-clean-local.md)
 - [Authenticated clean observation](external-clean-reader.md)

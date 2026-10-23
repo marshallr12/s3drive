@@ -8,7 +8,7 @@ impl Meta {
     pub fn empty(&self) -> bool {
         self.records.is_empty() && self.checks.is_empty()
     }
-    fn role(&self) -> Result<Id> {
+    pub(super) fn role(&self) -> Result<Id> {
         hash(
             b"s3drive-mixed-root-role-v1\0",
             &(

@@ -19,6 +19,7 @@ pub use journal::{Client, DataNeed, Journal};
 pub(in crate::sparse_views) mod settlement;
 pub use settlement::{Acknowledgment, SourceReceipt};
 mod recovery;
+pub mod retention;
 pub use recovery::{RecoveryClient, RecoveryStore};
 const MAX_RECORDS: usize = 256;
 const MAX_CHECKS: usize = 262144;

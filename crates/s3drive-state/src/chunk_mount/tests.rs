@@ -582,7 +582,7 @@ fn removed_role_or_downgraded_marker_never_launders_the_independent_chunk_identi
         if downgrade {
             state
                 .connection
-                .execute_batch("DROP TABLE sparse_retry_mode; DROP TABLE chunk_mount_role; PRAGMA user_version=40")
+                .execute_batch("DROP TABLE sparse_retention_anchors; DROP TABLE sparse_retention_role; DROP TABLE sparse_retry_mode; DROP TABLE chunk_mount_role; PRAGMA user_version=40")
                 .unwrap();
         } else {
             state

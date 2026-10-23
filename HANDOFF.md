@@ -4,6 +4,16 @@ Updated 2026-10-23. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
+## Transactional local retention candidate (2026-10-23)
+
+[Schema50 ordinary-owner retention](docs/src/transactional-local-retention.md)
+adds explicit transactional retirement with compact independently checked clean
+anchors and unchanged permanent retry fences. Candidate tests cover300 cycles,
+actual SQLITE_FULL, killed owners, corrupt proofs and cloned readers. Runtime and
+actual49/50 compatibility acceptance are pending. Native/populated native owners
+remain refused; no default activation or real user/provider cleanup is authorized.
+The following schema49 candidates remain separately reviewed prerequisites.
+
 ## Physical snapshot retention candidate (2026-10-23)
 
 [Physical reader lifetimes](docs/src/physical-snapshot-retention.md) now have a
