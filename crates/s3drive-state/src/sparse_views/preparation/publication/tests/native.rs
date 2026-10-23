@@ -1322,3 +1322,66 @@ async fn native_sparse_metadata_batch_rechecks_unselected_open_after_mutation() 
         .unwrap();
     n.storage.close().await.unwrap();
 }
+
+#[tokio::test]
+async fn native_sparse_source_isolation_once_per_snapshot_with_live_pin() {
+    let temp = tempfile::tempdir().unwrap();
+    let n = setup(&temp.path().join("isolation-once"), 16).await;
+    let id = n.view.id();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let pin = crate::sparse_views::pins::acquire(&mut store.state, id)?;
+            let db = &store.state.connection;
+            let before = crate::sparse_views::isolation_count();
+            crate::sparse_views::ledger::inspect(db)?;
+            assert_eq!(crate::sparse_views::isolation_count() - before, 1);
+            let before = crate::sparse_views::isolation_count();
+            crate::sparse_views::ledger::inspect_metadata(db)?;
+            assert_eq!(crate::sparse_views::isolation_count() - before, 1);
+            crate::sparse_views::pins::release(&mut store.state, &pin)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    n.storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_sparse_source_isolation_rechecks_late_unselected_open_corruption() {
+    let temp = tempfile::tempdir().unwrap();
+    let n = setup(&temp.path().join("isolation-corrupt"), 16).await;
+    let other = second(&n).await;
+    let id = other.input().id.clone();
+    n.storage.cache().owner.call(move |store| {
+        let db = &store.state.connection;
+        crate::sparse_views::ledger::inspect(db)?;
+        assert!(db.execute("UPDATE windows_open_events SET state_hash=zeroblob(32) WHERE open_id=?", [&id])? > 0);
+        assert!(crate::sparse_views::ledger::inspect(db).is_err());
+        assert!(crate::sparse_views::ledger::inspect_metadata(db).is_err());
+        let damaged: i64 = db.query_row("SELECT count(*) FROM windows_open_events WHERE open_id=? AND state_hash=zeroblob(32)", [&id], |r|r.get(0))?;
+        assert!(damaged > 0, "isolation must not repair callback evidence");
+        Ok(())
+    }).await.unwrap();
+    n.storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_sparse_source_isolation_rechecks_late_trigger_without_repair() {
+    let temp = tempfile::tempdir().unwrap();
+    let n = setup(&temp.path().join("isolation-trigger"), 16).await;
+    n.storage.cache().owner.call(|store| {
+        let db = &store.state.connection;
+        crate::sparse_views::ledger::inspect(db)?;
+        db.execute_batch("CREATE TRIGGER native_scope_probe AFTER INSERT ON sparse_view_blocks BEGIN SELECT 1; END")?;
+        assert!(crate::sparse_views::ledger::inspect(db).is_err());
+        assert!(crate::sparse_views::ledger::inspect_metadata(db).is_err());
+        let retained: bool = db.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE name='native_scope_probe')", [], |r|r.get(0))?;
+        assert!(retained);
+        db.execute_batch("DROP TRIGGER native_scope_probe")?;
+        crate::sparse_views::ledger::inspect(db)?;
+        Ok(())
+    }).await.unwrap();
+    n.storage.close().await.unwrap();
+}

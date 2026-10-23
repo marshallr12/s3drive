@@ -40,6 +40,10 @@ pub(crate) fn check_schema(db: &Connection) -> Result<()> {
     Ok(())
 }
 pub(crate) fn enabled(db: &Connection) -> Result<bool> {
+    enabled_in(&mut IsolationCheck::new(db))
+}
+pub(super) fn enabled_in(scope: &mut IsolationCheck<'_>) -> Result<bool> {
+    let db = scope.db;
     // Disabled mode is the common legacy path. One bounded typed query avoids
     // rescanning sqlite_schema during every full source/transfer validation.
     let mut query = match db
@@ -86,7 +90,7 @@ pub(crate) fn enabled(db: &Connection) -> Result<bool> {
     )? {
         return Err(Failure::Corrupt.into());
     }
-    isolation(db)?;
+    scope.require()?;
     Ok(true)
 }
 pub(crate) fn require_legacy(db: &Connection) -> Result<()> {

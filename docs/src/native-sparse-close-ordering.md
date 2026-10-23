@@ -2,6 +2,26 @@
 
 ## Current opt-in contract (2026-10-23)
 
+The final normal-build candidate1ae0d16 passed full CI39898701182 review
+(Linux1007/Windows1003,37 cohorts,19 native state tests, nine shared lifecycle
+cases and three actual cases per OS in debug and release, four artifacts/35 native
+records,779 exact source files). Its unchanged tree was merged ataffbf519.
+Main verification39931022610 failed Windows' original120-second debug sequence:
+rename43.79 seconds and detached sync reached120.004 seconds. Known/unknown
+killed-owner recovery passed; release was skipped after that failure. Main is not
+accepted based solely on the earlier candidate run.
+
+The pending correction removes repeated identical isolation scans within one
+immutable source snapshot. Mode, pin and graph validators share a private lazy
+checker tied to that connection and call. It never crosses mutations, commands,
+transaction boundaries or awaits, and stores no source/physical/publication proof.
+Mode/trigger checks, all pin checks and full graph/body validation remain intact.
+Three additional state cases assert one scan with a live pin, rejection of late
+unselected-open corruption and rejection of a late trigger without repair. Both
+profiles and the unchanged debug/release native bounds require fresh full gates.
+
+### Earlier candidate evidence
+
 Native candidate `a3db497afca3a685cffa586294ca1c6e29637b05` passed complete
 [Linux/Windows acceptance](https://github.com/marshallr12/s3drive/actions/runs/39892868332):
 Linux993/Windows989 workspace tests across37 cohorts, nine shared lifecycle cases,

@@ -168,7 +168,34 @@ fn hash<T: Serialize>(domain: &[u8], v: &T) -> Result<Id> {
 fn role_hash() -> Result<Id> {
     hash(b"s3drive-sparse-role-v1\0", &1u8)
 }
+// One immutable source inspection may encounter the same isolation boundary
+// through mode, pins and graph headers. Never retain this across a mutation,
+// command, transaction boundary or await; it stores no source/publication proof.
+struct IsolationCheck<'a> {
+    db: &'a Connection,
+    checked: bool,
+}
+impl<'a> IsolationCheck<'a> {
+    fn new(db: &'a Connection) -> Self {
+        Self { db, checked: false }
+    }
+    fn require(&mut self) -> Result<()> {
+        if !self.checked {
+            isolation(self.db)?;
+            self.checked = true;
+        }
+        Ok(())
+    }
+}
+#[cfg(test)]
+thread_local! { static ISOLATION_CHECKS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
+#[cfg(test)]
+fn isolation_count() -> usize {
+    ISOLATION_CHECKS.get()
+}
 fn isolation(db: &Connection) -> Result<()> {
+    #[cfg(test)]
+    ISOLATION_CHECKS.set(ISOLATION_CHECKS.get() + 1);
     let combined = crate::chunk_mount::compatible(db)?;
     for table in EXCLUDED {
         if combined && crate::chunk_mount::CLIENT_TABLES.contains(table) {
