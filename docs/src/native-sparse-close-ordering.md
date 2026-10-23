@@ -2,23 +2,34 @@
 
 ## Current opt-in contract (2026-10-23)
 
-The final normal-build candidate1ae0d16 passed full CI39898701182 review
-(Linux1007/Windows1003,37 cohorts,19 native state tests, nine shared lifecycle
-cases and three actual cases per OS in debug and release, four artifacts/35 native
-records,779 exact source files). Its unchanged tree was merged ataffbf519.
-Main verification39931022610 failed Windows' original120-second debug sequence:
-rename43.79 seconds and detached sync reached120.004 seconds. Known/unknown
-killed-owner recovery passed; release was skipped after that failure. Main is not
-accepted based solely on the earlier candidate run.
+Main `7a312b7c2fcc788348dcbdec1261c7182ae754f4` is accepted after complete
+[run39938915190](https://github.com/marshallr12/s3drive/actions/runs/39938915190)
+log and artifact review: Linux1010/Windows1006 tests in37 cohorts,22 native state
+cases, nine shared lifecycle cases, three actual native cases per OS in debug and
+release, actual46/47 and47/48 compatibility, four artifacts/35 typed native
+reference records and779 exact source files. The complete debug lifecycle took
+64.89/110.70 seconds (Linux/Windows) within the original120-second bound; release
+9.84/20.10 seconds. Main verification is no longer pending.
 
-The pending correction removes repeated identical isolation scans within one
+Historical failure: normal-build candidate1ae0d16 passed CI39898701182
+(Linux1007/Windows1003,19 native state cases) and was merged unchanged ataffbf519.
+Main verification39931022610 then failed Windows' original120-second debug
+sequence: rename43.79 seconds and detached sync120.004 seconds. Known/unknown
+killed-owner recovery passed; release was skipped after that failure. That failed
+run remains a failure, not evidence of acceptance or a rerun-to-green claim.
+
+The accepted correction removes repeated identical isolation scans within one
 immutable source snapshot. Mode, pin and graph validators share a private lazy
 checker tied to that connection and call. It never crosses mutations, commands,
 transaction boundaries or awaits, and stores no source/physical/publication proof.
 Mode/trigger checks, all pin checks and full graph/body validation remain intact.
 Three additional state cases assert one scan with a live pin, rejection of late
-unselected-open corruption and rejection of a late trigger without repair. Both
-profiles and the unchanged debug/release native bounds require fresh full gates.
+unselected-open corruption and rejection of a late trigger without repair.
+
+Retained-history profiling and bounded performance improvements are now a separate
+candidate phase, not yet accepted. No retention/GC, provider deployment or default
+activation is implied. Existing native whole-sequence deadlines and all independent
+acceptance gates remain unchanged.
 
 ### Earlier candidate evidence
 

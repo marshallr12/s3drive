@@ -2,6 +2,13 @@
 use super::*;
 use crate::sparse_views::{Change, ledger as views};
 
+#[cfg(test)]
+thread_local! { static EPOCH_SOURCE_VISITS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
+#[cfg(test)]
+pub(in crate::sparse_views::preparation) fn epoch_source_visits() -> usize {
+    EPOCH_SOURCE_VISITS.get()
+}
+
 pub(crate) fn validate(db: &Connection) -> Result<()> {
     let mut records = opens::sparse_records(db)?;
     let live = records
@@ -42,7 +49,11 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
                 let first = source
                     .records
                     .values()
-                    .find(|r| r.record.operation == *operation)
+                    .find(|r| {
+                        #[cfg(test)]
+                        EPOCH_SOURCE_VISITS.set(EPOCH_SOURCE_VISITS.get() + 1);
+                        r.record.operation == *operation
+                    })
                     .ok_or(Failure::Corrupt)?;
                 let parent = source
                     .records

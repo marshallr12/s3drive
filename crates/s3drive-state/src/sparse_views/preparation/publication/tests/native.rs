@@ -1385,3 +1385,5 @@ async fn native_sparse_source_isolation_rechecks_late_trigger_without_repair() {
     }).await.unwrap();
     n.storage.close().await.unwrap();
 }
+
+mod history;

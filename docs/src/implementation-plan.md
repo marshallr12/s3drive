@@ -19,8 +19,11 @@ The new version8 native owned/unlinked sparse lifecycle has passed candidate
 acceptance on Linux FUSE and Windows WinFsp. The normal build exposes it only via
 an explicit runtime opt-in, preserving the previous default profile. See the
 [current contract and acceptance evidence](native-sparse-close-ordering.md).
-Final availability-source gates and main verification remain mandatory; this does
-not enable deferred creation, sparse delete-on-close or real-provider deployment.
+Main7a312b7 passed full exact-source verification in run39938915190. New
+performance candidates still require their own gates and post-merge verification.
+This does not enable deferred creation, sparse delete-on-close or real-provider
+deployment. The current bounded next step is retained-history profiling and
+correctness-preserving performance work, not retention/GC or beta deployment.
 
 The next deferred-creation step is the [prospective creation/open admission
 proposal](creator-open-admission.md), reviewed against `daf5806` on 2026-10-21.
@@ -73,13 +76,14 @@ The [typed owned sparse state layer](owned-unlinked-sparse-state.md) is accepted
 at schema47/source499aa637, full/native run39796709806. SDK integration and
 separate owned-unlinked native lifecycle acceptance remain subsequent work.
 
-## Native sparse ordering candidate, not accepted
+## Native sparse ordering historical checkpoint
 
-The [native epoch/Close state contract](native-sparse-close-ordering.md) now has a
-schema48 implementation candidate and16 dedicated state cases, including16 killed
-transaction boundaries. Durable full Linux/Windows acceptance and actual47/48
-compatibility remain required. It does not enable lifecycle flags or complete
-SDK/controller/adapter integration. Preserve actual46/47 compatibility separately.
+The [native epoch/Close state contract](native-sparse-close-ordering.md) began as a
+schema48 candidate with16 dedicated state cases, including16 killed transaction
+boundaries. State and subsequent SDK/controller/adapter integration are now
+accepted as described above; main verification includes22 native state cases and
+actual47/48 compatibility. Preserve actual46/47 compatibility separately. This
+history does not authorize default activation or the deferred feature additions.
 
 ## Current sparse lifecycle prerequisite
 

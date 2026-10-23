@@ -4,32 +4,37 @@ Updated 2026-10-23. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
-## Native opt-in merged; main verification performance correction pending
+## Native opt-in accepted on main; retained-history performance work underway
 
-Exact normal-build source1ae0d16 passed full review of CI39898701182:
-Linux1007/Windows1003 tests,37 cohorts,19 native state cases, nine shared cases,
-three actual native cases per OS in both debug and release, four artifacts with35
-native reference records, actual46/47 and47/48 compatibility, and779 source files.
-It was merged unchanged at affbf519461557209ba9be8c874be8d4636a2558.
+Main `7a312b7c2fcc788348dcbdec1261c7182ae754f4` passed full exact-source review
+of [run39938915190](https://github.com/marshallr12/s3drive/actions/runs/39938915190):
+Linux1010/Windows1006 workspace tests in37 cohorts,22 native state cases, nine
+shared lifecycle cases and three actual native cases per OS in both debug and
+release, actual46/47 and47/48 compatibility, four artifact ZIPs,35 typed Windows
+native reference records and779 source files. The complete debug lifecycle took
+64.89 seconds on Linux and110.70 seconds on Windows under the unchanged120-second
+bound; release took9.84/20.10 seconds. These are hosted measurements, not an
+interactive-performance or retained-history capacity guarantee.
 
-Main run39931022610 then failed the Windows combined debug live sequence's
-original120-second bound (known/unknown killed-recovery cases passed). Rename
-consumed43.79 seconds; detached sync reached120.004 seconds before final Close and
-reopen. Main is not fully verified. Do not substitute candidate acceptance or
-rerun-to-green for this failure. Linux debug/release native gates passed; the full
-Linux suite was still running when this correction was prepared.
+Historical failure remains relevant: normal-build source1ae0d16 passed
+CI39898701182 and was merged unchanged ataffbf519461557209ba9be8c874be8d4636a2558,
+but main run39931022610 failed the Windows complete debug sequence. Rename took
+43.79 seconds and detached sync reached120.004 seconds before final Close/reopen.
+The subsequent accepted correction shares one lazy isolation check inside a single
+immutable source inspection. It does not cache across mutations, commands,
+transaction boundaries or awaits. Late unselected-open corruption and trigger
+checks remain mandatory; the failed run is not relabeled as a pass.
 
-The correction shares one lazy isolation check across mode, read-pin and graph
-validation inside a single immutable source inspection. All existing checks run;
-no result survives mutation, another command, transaction boundary or await. Three
-state fixtures require one isolation scan with a live pin and fresh rejection of
-late unselected-open corruption and SQL triggers. Original debug and release native
-bounds, both runtime profiles and full hosted gates remain mandatory.
+The next bounded phase profiles retained epochs/plans/opens, corrects measured
+repeated work and adds deterministic history-size regressions. Its new candidate
+requires separate full Linux/Windows hosted acceptance before merge; main's
+accepted baseline does not validate subsequent edits. Keep all original timeouts,
+whole-sequence native checks, proof/corruption/recovery gates and default behavior.
 
 Activation still requires managed version8 sparse-lifecycle=owned-unlinked-v1.
 Omission preserves the default. Unknown dirty epochs remain conflicts with data
-retained. Sparse delete-on-close/deferred creation and real-provider deployment
-are not enabled. Performance and retained-history capacity remain limited.
+retained. Retention/GC, sparse delete-on-close/deferred creation, real-provider
+writes/deployment and beta installation are not part of this performance phase.
 Read `docs/src/native-sparse-close-ordering.md`. Keep validation archives private.
 
 ## Accepted native sparse state baseline (historical)
