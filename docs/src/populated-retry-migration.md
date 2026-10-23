@@ -1,13 +1,14 @@
 # Populated ordinary-store retry migration
 
-Candidate, 2026-10-23. **Not accepted yet. No history reclamation or native
-migration.** Builds on the accepted [retry/checkpoint contract](retry-checkpoint-safety.md).
+Accepted ordinary-store migration prerequisite, 2026-10-23. **Migration itself
+does not reclaim history; native migration remains unsupported.** Builds on the accepted [retry/checkpoint contract](retry-checkpoint-safety.md).
 
 ## Explicit migration boundary
 
 `migrate_retry_safety` is a distinct, explicitly requested state-library action.
 The original empty-downstream `enable_retry_safety` keeps its stricter refusal.
-Neither SDK/native profiles nor startup invoke migration. Schema49 is unchanged.
+Neither SDK/native profiles nor startup invoke migration. This prerequisite was
+additive behavior at schema49; the separately accepted collector uses schema50.
 
 The migration acquires the single owner's immediate SQLite transaction, validates
 the full source/preparation/root/physical forest, and accepts only ordinary plans
@@ -44,26 +45,20 @@ must remain unchanged. Final candidate workspace Clippy and build pass, and111 l
 links pass. The full local gate stops at four existing storage-dependent authority
 cases. The focused suite stops at the unchanged persistent-storage guard (16
 failures, two child-entry controls pass). Neither is durability acceptance.
-Standard Linux/Windows verification is pending; no passing durability claim is
-made here.
+Standard Linux/Windows verification and independent exact-source review passed
+in the [accepted combined candidate](transactional-local-retention.md#accepted-exact-candidate-evidence).
+The earlier local failures remain non-acceptance evidence, not relaxed guards.
 
 ## Separate cleanup boundary
 
-This migration deliberately retains legacy identity rows forever until a later
-safe terminal-retirement format is implemented. It does not make legacy plans
-eligible for the scoped observational checkpoint, permit severed ancestor edges,
-free staging or database pages, or demonstrate bounded disk use. It therefore
-cannot solve retained-history quota exhaustion by itself.
+Migration alone retains all legacy identity rows. It does not make legacy plans
+eligible for the scoped observational checkpoint, free staging or database pages,
+or solve retained-history quota exhaustion by itself. After a new scoped clean
+publication, the separately accepted [transactional collector](transactional-local-retention.md)
+can retire eligible legacy history with independently validated anchors, permanently
+closed retry identities and transactional revalidation. [Physical snapshot tokens](physical-snapshot-retention.md)
+protect independent staging readers; source-view pins alone never authorize deletion.
 
-Actual cleanup still needs compact independently validated clean anchors,
-bounded closure of all old source/preparation/root/physical retry identities,
-transactional row retirement, and physical staging/DB/WAL measurements over
-repeated cycles beyond prototype limits. Crash/restart and actual full-disk
-rollback, pinned/uncertain history preservation, forged/cross-owner anchors and
-separate native original-open/epoch-history proofs remain acceptance gates.
-None of these may be replaced by deleting missing-row checks or raising quotas.
-
-Physical staging snapshots are another explicit prerequisite: `worker::Snapshot`
-currently depends on sealed generations never being reclaimed and has no physical
-pin accounting. Source-view pins alone cannot authorize staging deletion. Add
-same-owner physical-reader lifetime protection before implementing reclamation.
+Native original-open/epoch-history and namespace/Close retry contracts remain an
+unimplemented boundary. Populated native migration and automatic mounted cleanup
+remain refused; ordinary acceptance must not be generalized to those stores.

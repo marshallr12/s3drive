@@ -1,19 +1,31 @@
 # Bounded local retention for managed chunks
 
-Research and design proposal,2026-10-19. **Reclamation is not implemented. Pins and managed-reader guards are now accepted;
+Historical research and design baseline,2026-10-19. **Reclamation was not implemented at this baseline. Pins and managed-reader guards were accepted;
 see [combined acceptance](managed-reader-guards.md).**
 This follows [clean epochs](mixed-clean-epochs.md) and
 [scoped source operations](scoped-source-operations.md). It is required before
 continuous mounted chunk writes can exceed the current retained-history quotas.
 A successful publication alone does not make its local dependencies disposable.
 
+## Ordinary-store implementation update (2026-10-23)
+
+The [schema50 ordinary-store candidate](transactional-local-retention.md#accepted-exact-candidate-evidence)
+is accepted after full Linux/Windows/source/artifact review. It supplies explicit
+populated ordinary migration, physical reader lifetimes, authenticated clean
+anchors, terminal local retirement and an ordinary SDK scoped-admission bridge.
+Both OS300-cycle disposable fixtures bounded DB/WAL/staging without higher quotas.
+Main verification is pending at this documentation revision. Native/populated-native
+migration, automatic mounted cleanup and collection around long-lived protected
+history remain unsupported. The historical dependency analysis below explains
+why ordinary acceptance does not remove those remaining native contracts.
+
 ## Retry/checkpoint prerequisite (2026-10-23, accepted state contract)
 
 The [bounded state contract](retry-checkpoint-safety.md) adds explicit downstream
 retry fencing and revalidated observational checkpoint evidence, without deletion.
 It deliberately refuses populated/native-owner activation and still requires all
-ancestor rows. Full history severance, native-owner upgrade and bounded local
-storage remain open. The accepted retained-history performance improvement at
+ancestor rows. At that prerequisite, history severance and bounded local storage remained open;
+the ordinary subset is now accepted above, while native-owner upgrade remains open. The accepted retained-history performance improvement at
 main86d1e0e does not satisfy these retention gates.
 
 ## What the current code requires

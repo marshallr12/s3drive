@@ -1,10 +1,10 @@
 # Transactional ordinary-store local retention
 
-Candidate, 2026-10-23. **Not accepted until exact-source hosted gates pass.**
+Accepted ordinary-store candidate, 2026-10-23. **Native/populated-native migration remains unsupported.**
 This schema50 state-library slice follows [populated ordinary migration](populated-retry-migration.md)
 and [physical reader protection](physical-snapshot-retention.md). It is explicit,
 local-only and unavailable to native/owned owners. No native wiring, default activation, provider deletion or deployment is included.
-The follow-on ordinary SDK candidate adds explicit scoped preparation and root
+The ordinary SDK bridge adds explicit scoped preparation and root
 admission, not automatic migration or cleanup.
 
 ## Contract
@@ -81,10 +81,10 @@ independently bind its copied plan to the original physical staging operation.
 The correction uses the complete validated object-blob dependency enumeration
 and rederives that exact operation from the retained root and plan. New tests
 cover a pending unrelated target with nested inherited witness pages and a fully
-rehashed forged plan/source/anchor with unchanged physical evidence. These fixes
-require their own hosted and independent review; the earlier tree is not accepted.
+rehashed forged plan/source/anchor with unchanged physical evidence. These fixes passed structural review at970eca9 and the full accepted run below;
+the earlier tree is not accepted.
 
-## Ordinary SDK follow-on candidate
+## Explicit ordinary SDK bridge
 
 `EditedFile::begin_scoped_preparation` derives exact preparation/generation
 identities from an explicit epoch token. Known exact plans replay before fresh
@@ -99,8 +99,8 @@ cycles and reopens after each. It checks binary/Unicode reads, held EditedFile
 clones, lost publication replies, exact no-RPC preparation replay and retired
 recovery refusal without RPC. Modeled state receipts are not substituted for this
 SDK test. The fixture uses disposable local authority/provider servers and dummy
-profiles only. Hosted verification remains required; no real-provider acceptance
-is inferred and native populated migration remains blocked.
+profiles only. Its hosted gates passed in the accepted run below; no real-provider
+acceptance is inferred and native populated migration remains blocked.
 
 Initial Linux run40025691644 passed all13 selected retention cases, including
 300 cycles with database peak1,474,560 bytes and WAL peak4,420,792 bytes; late
@@ -115,5 +115,24 @@ workspace acceptance found two historical43/44 upgrade-oracle failures. Log
 comparison showed no changed legacy definitions or rows: only the two exactly
 empty schema50 tables were additional. The corrected oracle verifies their exact
 DDL and emptiness alongside schema49's existing addition, then retains the full
-original catalog comparison. It does not ignore arbitrary tables or data. Full
-reruns remain required;42eb926 is not accepted.
+original catalog comparison. It does not ignore arbitrary tables or data. The corrected full rerun passed below;42eb926 itself is not accepted.
+
+## Accepted exact candidate evidence
+
+Candidate `f77f75684436c0afbed0fba15797d9819ffa61b0`, tree
+`0fccf3615a4879e3d85879a515448d28d0412b72`, passed independent review of
+[run40030136888](https://github.com/marshallr12/s3drive/actions/runs/40030136888):
+Linux1053/Windows1049 workspace tests in37 cohorts;20 retry-safety, seven
+physical-reader and15 retention-filter cases per OS; the ordinary SDK fixture;
+full native regression gates in debug/release;794 exact source files and six
+artifact ZIPs. Genuine46/47,47/48,48/49 and49/50 executable compatibility passed,
+including an actual old executable refusing a reclaimed store unchanged.
+
+Both OS300-cycle fixtures measured DB peak1,474,560 bytes and WAL peak4,420,792
+bytes, with identical late peaks and one retained physical root/source anchor.
+These are bounded disposable-fixture results, not arbitrary-workload capacity or
+native mounted-history acceptance. The original quotas, storage guard and
+120-second native sequence deadline were preserved. Local Clippy/build/schema
+and documentation checks passed; local durability acceptance was not substituted
+for hosted evidence. Main verification remains pending at this documentation
+revision. No real user data or provider objects were migrated or reclaimed.

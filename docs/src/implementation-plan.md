@@ -32,17 +32,21 @@ owner upgrades, history severance and actual reclamation remain blocked and are
 not claimed by this library-only contract. Defaults and provider behavior remain
 unchanged.
 
-The schema50 [transactional local retention candidate](transactional-local-retention.md)
-adds explicit ordinary-owner history retirement and compact checked anchors. Its
-300-cycle/full-disk/crash/corruption/reader and actual49/50 executable gates are
-pending. Native populated migration and SDK/native cleanup integration remain
-unsupported; defaults, deadlines and provider behavior stay unchanged.
+The schema50 [transactional local retention](transactional-local-retention.md)
+ordinary-store candidate f77f756 passed independent full exact-source review of
+[run40030136888](https://github.com/marshallr12/s3drive/actions/runs/40030136888):
+Linux1053/Windows1049 tests,37 cohorts,794 source files and six artifact ZIPs.
+Explicit [populated ordinary migration](populated-retry-migration.md), physical
+reader protection and ordinary SDK scoped admission are included. Both OS300-cycle
+fixtures bounded DB/WAL/staging with unchanged quotas; crash, actual full-disk,
+corrupt/forged proof, cloned-reader and genuine49/50 executable gates passed.
+Main verification is pending at this documentation revision.
 
-The cleanup/migration prerequisites started with the separate
-[populated ordinary-store retry migration candidate](populated-retry-migration.md).
-It must retain legacy operation identities and preserve dirty/uncertain/native
-refusals. Full terminal retirement and bounded local reclamation are subsequent
-required slices, not inferred from migration acceptance.
+This accepts explicit ordinary-library cleanup, not native/populated-native
+migration or automatic mounted cleanup. Native original-open, namespace and Close
+retry closure remains a required subsequent contract. Dirty/conflicting/uncertain
+work and protected readers remain blockers; defaults, deadlines and provider
+behavior stay unchanged. No real user store or S3 object was migrated or reclaimed.
 
 The next deferred-creation step is the [prospective creation/open admission
 proposal](creator-open-admission.md), reviewed against `daf5806` on 2026-10-21.
