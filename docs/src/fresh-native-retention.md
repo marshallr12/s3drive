@@ -294,3 +294,21 @@ cover 0, 1, 2 and 256 entries, escaping and Unicode, ordering and duplicates.
 Noncanonical whitespace or key order still fails. No stored hash definition or
 format changes. Hosted fault/integrity, actual FS/profile measurements and every
 original cross-platform acceptance gate remain required before acceptance.
+
+The immutable-anchor package at `62c8ed3` passed Linux shared, actual mounted
+debug and release 300-save gates, but its full workspace suite exposed a test
+harness stack overflow in the mixed-lineage child. It is not accepted. The
+workspace-unified local debug binary had a synchronous dispatcher frame of
+`0x1ce468` bytes before its child and selected constructor frames. Constructing
+all concrete arm futures directly as boxing arguments caused that large frame;
+the lineage scenario does not install native retention state.
+
+The test-only correction moves each selected future's immediate construction
+into a non-inlined closure factory. All dispatch cases, borrowed lifetimes,
+assertions and stack limits remain unchanged. The same local workspace build
+now measures `0xbb8` bytes for dispatch and `0x48` for the selected lineage
+factory; the lineage constructor remains `0x10568`. A pure regression verifies
+construction happens exactly once immediately and polling only afterward.
+These local frame measurements use the workstation's reduced-debug-info build,
+not hosted acceptance. CI adds an early workspace-unified exact lineage test;
+the full workspace and all native gates still must pass on the final source.

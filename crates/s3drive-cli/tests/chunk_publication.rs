@@ -1269,6 +1269,38 @@ async fn chunk_child() {
     }
     s.close().await;
 }
+// Build immediately and exactly once, but outside the dispatcher's stack frame.
+// Passing a constructed future to a generic boxer would retain the large caller
+// temporary. This factory receives only its small borrowed-argument closure.
+#[inline(never)]
+fn boxed_case<Build, F>(build: Build) -> std::pin::Pin<Box<F>>
+where
+    Build: FnOnce() -> F,
+    F: std::future::Future<Output = ()>,
+{
+    Box::pin(build())
+}
+#[test]
+fn chunk_dispatch_factory_constructs_once_now_and_polls_later() {
+    let constructed = std::cell::Cell::new(0);
+    let polled = std::cell::Cell::new(0);
+    let borrowed = String::from("borrowed non-static fixture input");
+    let future = boxed_case(|| {
+        constructed.set(constructed.get() + 1);
+        async {
+            polled.set(polled.get() + 1);
+            assert_eq!(borrowed, "borrowed non-static fixture input");
+        }
+    });
+    assert_eq!(constructed.get(), 1);
+    assert_eq!(polled.get(), 0);
+    tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap()
+        .block_on(future);
+    assert_eq!(constructed.get(), 1);
+    assert_eq!(polled.get(), 1);
+}
 // Construct one heap-owned case before polling it. Keeping every case's
 // concrete future in the shared async dispatcher inflated unrelated cases'
 // debug-build stack frames under workspace feature unification.
@@ -1279,145 +1311,142 @@ fn dispatch<'a>(
     s: &'a Server,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + 'a>> {
     match mode {
-        "cold_namespace_crash" => Box::pin(namespace_recovery::seed(
-            config,
-            root,
-            s,
-            "cold_namespace_crash",
-        )),
-        "cold_namespace_known" => Box::pin(namespace_recovery::seed(
-            config,
-            root,
-            s,
-            "cold_namespace_known",
-        )),
-        "cold_namespace_rejected" => Box::pin(namespace_recovery::seed(
-            config,
-            root,
-            s,
-            "cold_namespace_rejected",
-        )),
+        "cold_namespace_crash" => {
+            boxed_case(|| namespace_recovery::seed(config, root, s, "cold_namespace_crash"))
+        }
+        "cold_namespace_known" => {
+            boxed_case(|| namespace_recovery::seed(config, root, s, "cold_namespace_known"))
+        }
+        "cold_namespace_rejected" => {
+            boxed_case(|| namespace_recovery::seed(config, root, s, "cold_namespace_rejected"))
+        }
         "native_sparse_sdk_controller_interleaving" => {
-            Box::pin(native_sparse_sdk::flow(config, root, s, 6))
+            boxed_case(|| native_sparse_sdk::flow(config, root, s, 6))
         }
         "native_sparse_sdk_controller_linked" => {
-            Box::pin(native_sparse_sdk::flow(config, root, s, 3))
+            boxed_case(|| native_sparse_sdk::flow(config, root, s, 3))
         }
         "native_sparse_sdk_controller_unlinked" => {
-            Box::pin(native_sparse_sdk::flow(config, root, s, 5))
+            boxed_case(|| native_sparse_sdk::flow(config, root, s, 5))
         }
-        "native_sparse_sdk_linked" => Box::pin(native_sparse_sdk::flow(config, root, s, 0)),
-        "native_sparse_sdk_pending" => Box::pin(native_sparse_sdk::flow(config, root, s, 1)),
-        "native_sparse_sdk_committed" => Box::pin(native_sparse_sdk::flow(config, root, s, 2)),
-        "owned_sparse_pending" => Box::pin(owned_sparse::flow(config, root, s, false)),
-        "owned_sparse_committed" => Box::pin(owned_sparse::flow(config, root, s, true)),
-        "owned_sparse_physical" => Box::pin(owned_sparse::physical(config, root, s)),
-        "owned_sparse_controls" => Box::pin(owned_sparse::controls(config, root, s)),
-        "owned_sparse_rejected" => Box::pin(owned_sparse::rejected(config, root, s)),
-        "owned_sparse_crash" => Box::pin(owned_sparse::crash(config, root, s)),
+        "native_sparse_sdk_linked" => boxed_case(|| native_sparse_sdk::flow(config, root, s, 0)),
+        "native_sparse_sdk_pending" => boxed_case(|| native_sparse_sdk::flow(config, root, s, 1)),
+        "native_sparse_sdk_committed" => boxed_case(|| native_sparse_sdk::flow(config, root, s, 2)),
+        "owned_sparse_pending" => boxed_case(|| owned_sparse::flow(config, root, s, false)),
+        "owned_sparse_committed" => boxed_case(|| owned_sparse::flow(config, root, s, true)),
+        "owned_sparse_physical" => boxed_case(|| owned_sparse::physical(config, root, s)),
+        "owned_sparse_controls" => boxed_case(|| owned_sparse::controls(config, root, s)),
+        "owned_sparse_rejected" => boxed_case(|| owned_sparse::rejected(config, root, s)),
+        "owned_sparse_crash" => boxed_case(|| owned_sparse::crash(config, root, s)),
         #[cfg(any(target_os = "linux", windows))]
-        "native_writer_mount" => Box::pin(native_writer::mount(config, root, s)),
+        "native_writer_mount" => boxed_case(|| native_writer::mount(config, root, s)),
         "native_lifecycle_disposition" => {
-            Box::pin(native_lifecycle::disposition(config, root, s, false))
+            boxed_case(|| native_lifecycle::disposition(config, root, s, false))
         }
         "native_lifecycle_disposition_concurrent" => {
-            Box::pin(native_lifecycle::disposition(config, root, s, true))
+            boxed_case(|| native_lifecycle::disposition(config, root, s, true))
         }
         "native_lifecycle_history" => {
-            Box::pin(native_lifecycle::acknowledged_history(config, root, s))
+            boxed_case(|| native_lifecycle::acknowledged_history(config, root, s))
         }
-        "native_lifecycle_ordered" => Box::pin(native_lifecycle::ordered_flush(config, root, s)),
+        "native_lifecycle_ordered" => {
+            boxed_case(|| native_lifecycle::ordered_flush(config, root, s))
+        }
         "native_lifecycle_profile" => {
-            Box::pin(native_lifecycle::profile_transition(config, root, s))
+            boxed_case(|| native_lifecycle::profile_transition(config, root, s))
         }
-        "native_lifecycle_unlink" => Box::pin(native_lifecycle::unlink(config, root, s)),
+        "native_lifecycle_unlink" => boxed_case(|| native_lifecycle::unlink(config, root, s)),
         #[cfg(any(target_os = "linux", windows))]
-        "native_retention_seed" => Box::pin(native_retention::seed(config, root, s)),
-        "native_retention_shared" => Box::pin(native_retention::shared(root, s)),
-        "native_retention_profile_warmup" => Box::pin(native_retention::profile_warmup(root, s)),
-        "native_retention_profile_saves" => Box::pin(native_retention::profile_saves(root, s)),
-        "native_retention_final_profile" => Box::pin(native_retention::final_profile(root, s)),
-        "native_retention_final_shared" => Box::pin(native_retention::final_shared(root, s)),
+        "native_retention_seed" => boxed_case(|| native_retention::seed(config, root, s)),
+        "native_retention_shared" => boxed_case(|| native_retention::shared(root, s)),
+        "native_retention_profile_warmup" => {
+            boxed_case(|| native_retention::profile_warmup(root, s))
+        }
+        "native_retention_profile_saves" => boxed_case(|| native_retention::profile_saves(root, s)),
+        "native_retention_final_profile" => boxed_case(|| native_retention::final_profile(root, s)),
+        "native_retention_final_shared" => boxed_case(|| native_retention::final_shared(root, s)),
         "native_retention_final_diagnostic" => {
-            Box::pin(native_retention::final_diagnostic(root, s))
+            boxed_case(|| native_retention::final_diagnostic(root, s))
         }
         #[cfg(any(target_os = "linux", windows))]
-        "native_retention_final_mounted" => Box::pin(native_retention::final_mounted(root, s)),
+        "native_retention_final_mounted" => boxed_case(|| native_retention::final_mounted(root, s)),
         #[cfg(any(target_os = "linux", windows))]
-        "native_retention_mounted" => Box::pin(native_retention::mounted(root, s)),
-        "native_lifecycle_mounted" => Box::pin(native_lifecycle::mounted(config, root, s)),
+        "native_retention_mounted" => boxed_case(|| native_retention::mounted(root, s)),
+        "native_lifecycle_mounted" => boxed_case(|| native_lifecycle::mounted(config, root, s)),
         #[cfg(any(target_os = "linux", windows))]
         "native_lifecycle_mounted_known" => {
-            Box::pin(native_lifecycle::mounted_crash(config, root, s, true))
+            boxed_case(|| native_lifecycle::mounted_crash(config, root, s, true))
         }
         #[cfg(any(target_os = "linux", windows))]
         "native_lifecycle_mounted_unknown" => {
-            Box::pin(native_lifecycle::mounted_crash(config, root, s, false))
+            boxed_case(|| native_lifecycle::mounted_crash(config, root, s, false))
         }
-        "native_lifecycle_replace" => Box::pin(native_lifecycle::replace(config, root, s)),
-        "native_lifecycle_cold_known" => Box::pin(native_lifecycle::cold_known(config, root, s)),
+        "native_lifecycle_replace" => boxed_case(|| native_lifecycle::replace(config, root, s)),
+        "native_lifecycle_cold_known" => {
+            boxed_case(|| native_lifecycle::cold_known(config, root, s))
+        }
         "native_lifecycle_cold_unknown" => {
-            Box::pin(native_lifecycle::cold_unknown(config, root, s))
+            boxed_case(|| native_lifecycle::cold_unknown(config, root, s))
         }
-        "native_writer" => Box::pin(native_writer::flow(config, root, s)),
-        "native_directories" => Box::pin(native_directories::flow(config, root, s)),
-        "native_directories_only" => Box::pin(native_directories::only(config, root, s)),
+        "native_writer" => boxed_case(|| native_writer::flow(config, root, s)),
+        "native_directories" => boxed_case(|| native_directories::flow(config, root, s)),
+        "native_directories_only" => boxed_case(|| native_directories::only(config, root, s)),
         "native_directory_concurrency" => {
-            Box::pin(native_directories::concurrency(config, root, s))
+            boxed_case(|| native_directories::concurrency(config, root, s))
         }
-        "native_small_stack" => Box::pin(native_writer::small_stack(config, root, s)),
-        "native_policy" => Box::pin(native_writer::policy(config, root, s)),
-        "native_concurrency" => Box::pin(native_writer::concurrency(config, root, s)),
-        "composition" => Box::pin(composition::flow(config, root, s)),
-        "creator_open_flow" => Box::pin(creator_open::flow(config, root, s)),
-        "creator_open_controls" => Box::pin(creator_open::controls(config, root, s)),
-        "creator_open_quotas" => Box::pin(creator_open::quotas(config, root, s)),
-        "creator_open_recovery" => Box::pin(creator_open::recovery(config, root, s)),
-        "creator_open_physical" => Box::pin(creator_open::physical(config, root, s)),
-        "creator_open_unclaimed" => Box::pin(creator_open::unclaimed(config, root, s)),
-        "creator_open_deadline" => Box::pin(creator_open::deadline(config, root, s)),
-        "creator_open_crash" => Box::pin(creator_open::crash(config, root, s)),
-        "creator_open_stores" => Box::pin(creator_open::stores(config, root, s)),
-        "creator_open_rejected" => Box::pin(creator_open::rejected(config, root, s)),
-        "creator_import_flow" => Box::pin(creator_import::flow(config, root, s)),
-        "creator_import_controls" => Box::pin(creator_import::controls(config, root, s)),
-        "creator_import_crash" => Box::pin(creator_import::crash(config, root, s)),
-        "deferred_client_flow" => Box::pin(deferred_creation::flow(config, root, s)),
-        "deferred_client_controls" => Box::pin(deferred_creation::controls(config, root, s)),
-        "deferred_client_recovery" => Box::pin(deferred_creation::recovery(config, root, s)),
-        "deferred_client_physical" => Box::pin(deferred_creation::physical(config, root, s)),
-        "deferred_client_crash" => Box::pin(deferred_creation::crash(config, root, s)),
-        "deferred_client_deadline" => Box::pin(deferred_creation::deadline(config, root, s)),
-        "empty_deadline" => Box::pin(empty_creation::deadline(config, root, s)),
-        "empty_physical" => Box::pin(empty_creation::physical(config, root, s)),
-        "empty_crash" => Box::pin(empty_creation::crash(config, root, s)),
-        "empty_flow" => Box::pin(empty_creation::flow(config, root, s)),
-        "empty_controls" => Box::pin(empty_creation::controls(config, root, s)),
-        "empty_recovery" => Box::pin(empty_creation::recovery(config, root, s)),
-        "local_retention" => Box::pin(local_retention::flow(config, root, s)),
-        "mixed_scoped" => Box::pin(mixed_epochs::run_scoped_case(config, root, s)),
-        "mixed_epochs" => Box::pin(mixed_epochs::run_case(config, root, s)),
-        "mixed_lineage" => Box::pin(mixed_roots::lineage(config, root, s)),
-        "mixed_roots_controls" => Box::pin(mixed_roots::controls(config, root, s)),
-        "mixed_roots_rivals" => Box::pin(mixed_roots::rivals(config, root, s)),
-        "mixed_roots_crash" => Box::pin(mixed_roots::crash(config, root, s)),
-        "mixed_conflict" => Box::pin(mixed_uploads::conflict(config, root, s)),
-        "mixed_concurrency" => Box::pin(mixed_uploads::concurrency(config, root, s)),
-        "mixed_controls" => Box::pin(mixed_uploads::controls(config, root, s)),
-        "mixed_faults" => Box::pin(mixed_uploads::faults(config, root, s)),
-        "mixed_uploads" => Box::pin(mixed_uploads::flow(config, root, s)),
-        "flow" => Box::pin(flow(config, root, s)),
-        "exact" => Box::pin(exact_names(config, root, s)),
-        "races" => Box::pin(races(config, root, s)),
-        "refusals" => Box::pin(refusals(config, root, s)),
-        "proof_fault" => Box::pin(proof_fault(config, root, s)),
-        "policy" => Box::pin(policy_recovery(config, root, s)),
-        "source_flow" => Box::pin(source_settlement::flow(config, root, s)),
-        "source_ack_crash" => Box::pin(source_settlement::ack_crash(config, root, s)),
-        "source_policy" => Box::pin(source_settlement::policy_recovery(config, root, s)),
-        "mixed_roots_recover" => Box::pin(mixed_roots::recover(root, s)),
-        "crash" => Box::pin(crash(config, root, s, false)),
-        "source_crash" => Box::pin(crash(config, root, s, true)),
+        "native_small_stack" => boxed_case(|| native_writer::small_stack(config, root, s)),
+        "native_policy" => boxed_case(|| native_writer::policy(config, root, s)),
+        "native_concurrency" => boxed_case(|| native_writer::concurrency(config, root, s)),
+        "composition" => boxed_case(|| composition::flow(config, root, s)),
+        "creator_open_flow" => boxed_case(|| creator_open::flow(config, root, s)),
+        "creator_open_controls" => boxed_case(|| creator_open::controls(config, root, s)),
+        "creator_open_quotas" => boxed_case(|| creator_open::quotas(config, root, s)),
+        "creator_open_recovery" => boxed_case(|| creator_open::recovery(config, root, s)),
+        "creator_open_physical" => boxed_case(|| creator_open::physical(config, root, s)),
+        "creator_open_unclaimed" => boxed_case(|| creator_open::unclaimed(config, root, s)),
+        "creator_open_deadline" => boxed_case(|| creator_open::deadline(config, root, s)),
+        "creator_open_crash" => boxed_case(|| creator_open::crash(config, root, s)),
+        "creator_open_stores" => boxed_case(|| creator_open::stores(config, root, s)),
+        "creator_open_rejected" => boxed_case(|| creator_open::rejected(config, root, s)),
+        "creator_import_flow" => boxed_case(|| creator_import::flow(config, root, s)),
+        "creator_import_controls" => boxed_case(|| creator_import::controls(config, root, s)),
+        "creator_import_crash" => boxed_case(|| creator_import::crash(config, root, s)),
+        "deferred_client_flow" => boxed_case(|| deferred_creation::flow(config, root, s)),
+        "deferred_client_controls" => boxed_case(|| deferred_creation::controls(config, root, s)),
+        "deferred_client_recovery" => boxed_case(|| deferred_creation::recovery(config, root, s)),
+        "deferred_client_physical" => boxed_case(|| deferred_creation::physical(config, root, s)),
+        "deferred_client_crash" => boxed_case(|| deferred_creation::crash(config, root, s)),
+        "deferred_client_deadline" => boxed_case(|| deferred_creation::deadline(config, root, s)),
+        "empty_deadline" => boxed_case(|| empty_creation::deadline(config, root, s)),
+        "empty_physical" => boxed_case(|| empty_creation::physical(config, root, s)),
+        "empty_crash" => boxed_case(|| empty_creation::crash(config, root, s)),
+        "empty_flow" => boxed_case(|| empty_creation::flow(config, root, s)),
+        "empty_controls" => boxed_case(|| empty_creation::controls(config, root, s)),
+        "empty_recovery" => boxed_case(|| empty_creation::recovery(config, root, s)),
+        "local_retention" => boxed_case(|| local_retention::flow(config, root, s)),
+        "mixed_scoped" => boxed_case(|| mixed_epochs::run_scoped_case(config, root, s)),
+        "mixed_epochs" => boxed_case(|| mixed_epochs::run_case(config, root, s)),
+        "mixed_lineage" => boxed_case(|| mixed_roots::lineage(config, root, s)),
+        "mixed_roots_controls" => boxed_case(|| mixed_roots::controls(config, root, s)),
+        "mixed_roots_rivals" => boxed_case(|| mixed_roots::rivals(config, root, s)),
+        "mixed_roots_crash" => boxed_case(|| mixed_roots::crash(config, root, s)),
+        "mixed_conflict" => boxed_case(|| mixed_uploads::conflict(config, root, s)),
+        "mixed_concurrency" => boxed_case(|| mixed_uploads::concurrency(config, root, s)),
+        "mixed_controls" => boxed_case(|| mixed_uploads::controls(config, root, s)),
+        "mixed_faults" => boxed_case(|| mixed_uploads::faults(config, root, s)),
+        "mixed_uploads" => boxed_case(|| mixed_uploads::flow(config, root, s)),
+        "flow" => boxed_case(|| flow(config, root, s)),
+        "exact" => boxed_case(|| exact_names(config, root, s)),
+        "races" => boxed_case(|| races(config, root, s)),
+        "refusals" => boxed_case(|| refusals(config, root, s)),
+        "proof_fault" => boxed_case(|| proof_fault(config, root, s)),
+        "policy" => boxed_case(|| policy_recovery(config, root, s)),
+        "source_flow" => boxed_case(|| source_settlement::flow(config, root, s)),
+        "source_ack_crash" => boxed_case(|| source_settlement::ack_crash(config, root, s)),
+        "source_policy" => boxed_case(|| source_settlement::policy_recovery(config, root, s)),
+        "mixed_roots_recover" => boxed_case(|| mixed_roots::recover(root, s)),
+        "crash" => boxed_case(|| crash(config, root, s, false)),
+        "source_crash" => boxed_case(|| crash(config, root, s, true)),
         _ => panic!("unknown owned fixture case"),
     }
 }
