@@ -264,7 +264,15 @@ fn foreign(db: &Connection) -> Result<()> {
     }
     Ok(())
 }
+#[cfg(test)]
+thread_local! { static LOADS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
+#[cfg(test)]
+pub(crate) fn load_count() -> usize {
+    LOADS.get()
+}
 pub(crate) fn load(db: &Connection) -> Result<Option<Binding>> {
+    #[cfg(test)]
+    LOADS.set(LOADS.get() + 1);
     if !exists(db)? {
         if names::identity::has_chunk_witness(db)? {
             return Err("chunk mount marker missing beside retained identity".into());

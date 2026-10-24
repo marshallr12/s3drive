@@ -1974,6 +1974,13 @@ async fn native_retry_retained_open_capacity_recovers_after_last_reader_without_
         .owner
         .call(move |store| {
             let s = &mut store.state;
+            let loads = crate::chunk_mount::load_count();
+            crate::chunk_mount::admission::validate(&s.connection)?;
+            assert_eq!(
+                crate::chunk_mount::load_count() - loads,
+                1,
+                "retained frontier validates one binding, not one per ID"
+            );
             input.id = crate::chunk_mount::admission::next(
                 &s.connection,
                 crate::chunk_mount::AdmissionDomain::Open,

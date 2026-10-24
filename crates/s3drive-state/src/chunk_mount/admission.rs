@@ -88,12 +88,11 @@ pub(crate) fn frontier(db: &Connection) -> Result<u64> {
         .and_then(|b| b.frontier)
         .ok_or_else(|| "native frontier missing".into())
 }
-pub(crate) fn retained(db: &Connection, domain: Domain, id: &str) -> Result<()> {
-    let binding = load(db)?.ok_or("native binding missing")?;
+pub(crate) fn retained(binding: &Binding, domain: Domain, id: &str) -> Result<()> {
     let serial = id.get(..16).ok_or("invalid native identity")?;
     let serial = u64::from_str_radix(serial, 16)?;
     if serial > binding.frontier.ok_or("native frontier missing")?
-        || identity(&binding, domain, serial)? != id
+        || identity(binding, domain, serial)? != id
     {
         return Err("native identity is outside admission frontier".into());
     }
@@ -131,9 +130,14 @@ pub(crate) fn witnesses(db: &Connection) -> Result<std::collections::BTreeMap<St
     Ok(load(db)?.map(|b| b.terminals).unwrap_or_default())
 }
 pub(crate) fn validate(db: &Connection) -> Result<()> {
-    if !retry_enabled(db)? {
+    let Some(binding) = load(db)? else {
+        return Ok(());
+    };
+    if binding.format != 2 {
         return Ok(());
     }
+    // Reuse only this call's fully checked immutable binding. Every retained ID
+    // is still checked; no evidence survives another command or transaction.
     for (table, column, domain) in [
         ("windows_open_journal", "open_id", Domain::Open),
         ("windows_mount_sessions", "session_id", Domain::Session),
@@ -146,7 +150,7 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
             return Err("native retained admission capacity exceeded".into());
         }
         for id in ids {
-            retained(db, domain, &id)?;
+            retained(&binding, domain, &id)?;
         }
     }
     Ok(())

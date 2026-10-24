@@ -579,12 +579,12 @@ impl Provenance {
             return Err(Failure::Corrupt.into());
         }
         crate::chunk_mount::admission::retained(
-            db,
+            &mount,
             crate::chunk_mount::AdmissionDomain::Open,
             &original.id,
         )?;
         crate::chunk_mount::admission::retained(
-            db,
+            &mount,
             crate::chunk_mount::AdmissionDomain::Session,
             &original.session,
         )?;
