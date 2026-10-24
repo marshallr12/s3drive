@@ -214,3 +214,23 @@ fixture derives that schedule and checks it after every ten-save stage, seed
 and final read, retaining the final unique immutable-key assertion. This is a
 test correction, not accepted mounted evidence; full exact-source and actual
 FUSE/WinFsp gates remain pending.
+
+Correcting the PUT schedule did not establish cross-platform runtime acceptance:
+run40089367598 timed out at 240 saves on Windows and 190 on Linux, with the
+completed-stage counts correct and storage still bounded. A dirty-save diagnostic
+in run40093411234 measured 82 scope scans in physical staging, 38 in collection
+and 36 in modeled publication commit after a compact anchor. These are state
+primitive costs, not complete SDK or native syscall timings.
+
+The next package batches the materializer's initial immutable checks and obtains
+a separate fresh full snapshot after staging. Staging admission before and after
+source registration remains independent, as do provider-boundary checks. It also
+reuses exact preparation snapshots within publication base/begin/acknowledgment,
+native preparation and checkpoint validation. Collection checks all retired
+native edges before its first witness write and constructs a new full scope only
+after every deletion. No scope crosses a write, commit or await; retained
+snapshots used for equality are expected data, not validation authority. Focused
+tests cover dependency receipts, current-format errors, late semantic/body and
+generation damage, exact checkpoint equality and newly acquired readers. The
+expected physical scope reduction is 82 to 46, subject to hosted confirmation;
+all 300-save, capacity, kill/full-disk and actual mounted gates remain required.

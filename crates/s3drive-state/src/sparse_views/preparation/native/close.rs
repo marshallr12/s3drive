@@ -222,7 +222,7 @@ fn prepare(
     let ownership =
         crate::namespace_client::removals::sparse_claim(tx, base.volume(), base.node())?
             .map(|claim| (key.clone(), original.input.id.clone(), claim));
-    journal::begin_in_transaction(
+    journal::begin_with_snapshot(
         tx,
         options,
         incarnation,
@@ -240,6 +240,7 @@ fn prepare(
             finalizing,
             retry,
         },
+        &saved,
     )
 }
 fn close(state: &mut State, options: Options, token: &Token, callback: &str) -> Result<Close> {

@@ -376,6 +376,24 @@ pub(crate) fn read_scope<'a>(
 ) -> Result<ReadScope<'a>> {
     read_scope_in(tx, key)
 }
+// Only keyless internal storage inspections may use this factory. It proves
+// the current owner snapshot, never produces a caller capability or send permit.
+// Existing APIs accepting a Key must continue checking that caller's exact Key.
+pub(crate) fn read_scope_current<'a>(
+    tx: &'a rusqlite::Transaction<'_>,
+) -> Result<Option<ReadScope<'a>>> {
+    let Some(binding) = load(tx)? else {
+        return Ok(None);
+    };
+    if binding.format != 2 {
+        return Ok(None);
+    }
+    let key = Key {
+        volume: binding.volume,
+        owner: binding.owner,
+    };
+    Ok(Some(read_scope(tx, &key)?))
+}
 fn read_scope_in<'a>(db: &'a Connection, key: &Key) -> Result<ReadScope<'a>> {
     if db.is_autocommit() {
         return Err("mount read scope requires an active transaction".into());

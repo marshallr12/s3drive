@@ -356,19 +356,54 @@ impl Journal<'_> {
         p: Position,
         options: staging::Options,
     ) -> Result<Option<Transfer>> {
-        let info = self.info(plan)?;
-        owned::fresh(
-            &self.state.connection,
-            self.state.incarnation.as_deref(),
-            &self.state.native_sparse,
-            &info,
-        )?;
-        self.require_dependencies(plan, p)?;
-        let s = inspect(&self.state.connection)?;
-        let i = ready(&s, plan)?;
-        let Some(t) = transfer(&self.state.connection, &s, &i, p)? else {
-            return Ok(None);
+        // Selection only: every proof is local to this immutable transaction.
+        // Staging admissions and the post-staging snapshot stay independent.
+        let selected = {
+            let tx = self
+                .state
+                .connection
+                .transaction_with_behavior(TransactionBehavior::Deferred)?;
+            let result: Result<_> = (|| {
+                let Some(scope) = crate::chunk_mount::read_scope_current(&tx)? else {
+                    return Ok(None);
+                };
+                let s = ledger::inspect_scoped(&scope)?;
+                let info = s.info(plan)?;
+                owned::fresh_scoped(
+                    &scope,
+                    self.state.incarnation.as_deref(),
+                    &self.state.native_sparse,
+                    &info,
+                )?;
+                let i = ready(&s, plan)?;
+                let children = dependencies(&tx, &s, &i, p)?;
+                let checked = remote::checked_flushes(&tx)?;
+                for child in children {
+                    check_receipt(&tx, &checked, &child)?;
+                }
+                let t = transfer(&tx, &s, &i, p)?;
+                Ok(Some((s, i, t)))
+            })();
+            tx.rollback()?;
+            result?
         };
+        let (s, _i, t) = if let Some(selected) = selected {
+            selected
+        } else {
+            let info = self.info(plan)?;
+            owned::fresh(
+                &self.state.connection,
+                self.state.incarnation.as_deref(),
+                &self.state.native_sparse,
+                &info,
+            )?;
+            self.require_dependencies(plan, p)?;
+            let s = inspect(&self.state.connection)?;
+            let i = ready(&s, plan)?;
+            let t = transfer(&self.state.connection, &s, &i, p)?;
+            (s, i, t)
+        };
+        let Some(t) = t else { return Ok(None) };
         let o = s.object(plan, p.level, p.slot)?;
         let blob = match o.kind {
             Kind::Data { blob } | Kind::Page { blob } => blob,
@@ -387,19 +422,13 @@ impl Journal<'_> {
             j.append_at(g, 0, bytes)?;
             j.seal(g)?;
         }
-        let after = inspect(&self.state.connection)?;
-        if s != after {
-            return Err(Failure::Corrupt.into());
-        }
-        let actual = transfer(&self.state.connection, &after, &i, p)?.ok_or(Failure::Corrupt)?;
-        if actual.generation != Some(g) {
-            return Err(Failure::Corrupt.into());
-        }
-        let body = staging::read_data(&self.state.connection, g, 0, t.size as usize, false)?;
-        if body != *bytes {
-            return Err(Failure::Corrupt.into());
-        }
-        Ok(Some(actual))
+        let tx = self
+            .state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred)?;
+        let result = validate_materialized(&tx, &s, plan, p, &t, g, bytes);
+        tx.rollback()?;
+        Ok(Some(result?))
     }
     pub fn tree_receipt(&mut self, plan: Id) -> Result<TreeReceipt> {
         let tx = self
@@ -410,6 +439,36 @@ impl Journal<'_> {
         tx.commit()?;
         Ok(result)
     }
+}
+// Fresh post-staging verification. The earlier snapshot is expected data only,
+// never proof that can replace this full reload after staging mutations.
+pub(super) fn validate_materialized(
+    db: &rusqlite::Transaction<'_>,
+    before: &ledger::Snapshot,
+    plan: Id,
+    position: Position,
+    expected: &Transfer,
+    generation: GenerationId,
+    bytes: &[u8],
+) -> Result<Transfer> {
+    let scope = crate::chunk_mount::read_scope_current(db)?;
+    let after = match &scope {
+        Some(scope) => ledger::inspect_scoped(scope)?,
+        None => inspect(db)?,
+    };
+    if *before != after {
+        return Err(Failure::Corrupt.into());
+    }
+    let info = ready(before, plan)?;
+    let actual = transfer(db, &after, &info, position)?.ok_or(Failure::Corrupt)?;
+    if actual.generation != Some(generation) {
+        return Err(Failure::Corrupt.into());
+    }
+    let body = staging::read_data(db, generation, 0, expected.size as usize, false)?;
+    if body != bytes {
+        return Err(Failure::Corrupt.into());
+    }
+    Ok(actual)
 }
 /// One immutable validation section in an exclusive owner command. Neither the
 /// source snapshot nor physical proof may cross a write, commit or await.

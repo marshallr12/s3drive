@@ -233,20 +233,20 @@ pub(super) fn acknowledge(
         .connection
         .transaction_with_behavior(TransactionBehavior::Immediate)?;
     let before = ledger::inspect(&tx)?;
-    ledger::validate_source(&tx, &before)?;
+    let prepared = super::super::ledger::inspect(&tx)?;
+    ledger::validate_source_snapshot(&tx, &before, &prepared)?;
+    let source = prepared.views;
     let r = before.records.get(&plan).ok_or(Failure::Missing)?;
     if let Some(a) = &r.acknowledgment {
         if a.operation != operation {
             return Err(Failure::Conflict.into());
         }
-        let source = views::ledger::inspect(&tx)?;
         let observed = source.record(a.observed_head)?;
         views::scoped::known(&tx, scope, operation, &observed.request.binding)?;
         return SourceReceipt::from_record(r.clone());
     }
     r.receipt.as_ref().ok_or(Failure::Incomplete)?;
     guard_operation(&tx, operation)?;
-    let source = views::ledger::inspect(&tx)?;
     if source.operation(operation).is_some() {
         return Err(Failure::Conflict.into());
     }

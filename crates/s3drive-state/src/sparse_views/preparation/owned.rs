@@ -378,6 +378,18 @@ pub(super) fn fresh(
     info: &Info,
 ) -> Result<()> {
     native::fresh(db, runtime, native_runtime, info)?;
+    fresh_ownership(db, runtime, info)
+}
+pub(super) fn fresh_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+    runtime: Option<&str>,
+    native_runtime: &native::Runtime,
+    info: &Info,
+) -> Result<()> {
+    native::fresh_scoped(scope, runtime, native_runtime, info)?;
+    fresh_ownership(scope.connection(), runtime, info)
+}
+fn fresh_ownership(db: &Connection, runtime: Option<&str>, info: &Info) -> Result<()> {
     require_unsettled(info)?;
     if let Some(p) = info.ownership() {
         p.historical(db, info.view().binding())?;

@@ -244,6 +244,22 @@ pub(super) fn fresh(
     info: &Info,
 ) -> Result<()> {
     metadata::validate(db)?;
+    fresh_after_metadata(db, incarnation, runtime, info)
+}
+pub(super) fn fresh_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+    incarnation: Option<&str>,
+    runtime: &Runtime,
+    info: &Info,
+) -> Result<()> {
+    fresh_after_metadata(scope.connection(), incarnation, runtime, info)
+}
+fn fresh_after_metadata(
+    db: &Connection,
+    incarnation: Option<&str>,
+    runtime: &Runtime,
+    info: &Info,
+) -> Result<()> {
     let Some(p) = info.native_ownership() else {
         if epoch_owner(db, info.view().binding())?.is_some()
             || bound_node(db, info.view().binding())?
@@ -483,8 +499,8 @@ mod metadata;
 #[cfg(test)]
 pub(super) use metadata::epoch_source_visits;
 pub(crate) use metadata::validate as validate_metadata;
-pub(in crate::sparse_views) use metadata::validate_retirement;
 pub(crate) use metadata::validate_scoped as validate_metadata_scoped;
+pub(in crate::sparse_views) use metadata::{validate_retirement, validate_retirement_scoped};
 
 pub(crate) fn reserved_events<'a>(
     db: &Connection,

@@ -2096,6 +2096,9 @@ async fn native_retry_validation_work_pinned_refusal_rechecks_resealed_unselecte
         retry_reopen(&mut n, &f).await;
         f = retry_cycle_mode(&n, f, 2, false).await;
         assert!(!n.client.retire_linked(f.node.id.clone()).await.unwrap());
+        let corrupt_plan = n.client.plans(f.node.id.clone()).await.unwrap()[0]
+            .id()
+            .unwrap();
         let before = n
             .storage
             .cache()
@@ -2216,6 +2219,15 @@ async fn native_retry_validation_work_pinned_refusal_rechecks_resealed_unselecte
             .cache()
             .owner
             .call(move |store| {
+                assert!(
+                    pj(&mut store.state)
+                        .materialize(
+                            corrupt_plan,
+                            crate::sparse_views::preparation::Position { level: 0, slot: 0 },
+                            crate::journal::Options::default()
+                        )
+                        .is_err()
+                );
                 assert!(store.state.connection.is_autocommit());
                 assert_eq!(native_snapshot(&store.state), before);
                 Ok(())
@@ -3359,6 +3371,13 @@ async fn native_retry_validation_work_dirty_save_phases() {
                 let elapsed = start.elapsed();
                 let after = native_work(&n).await;
                 let delta = std::array::from_fn::<_, 9, _>(|j| after[j] - before[j]);
+                if cycle > 0 {
+                    match $name {
+                        "prepare" => assert_eq!(delta[0], 11),
+                        "collect" => assert!(delta[0] <= 15, "collection repeats pre-cut snapshots: {delta:?}"),
+                        _ => {}
+                    }
+                }
                 eprintln!("NATIVE_DIRTY_WORK cycle={cycle} phase={} ms={} scopes_sessions_events_queries_opens_mounts_sources_preps_epoch_sources={delta:?}", $name, elapsed.as_millis());
                 result
             }};
@@ -3390,6 +3409,15 @@ async fn native_retry_validation_work_dirty_save_phases() {
                     let elapsed = start.elapsed();
                     let after = native_work_here();
                     let delta = std::array::from_fn::<_, 9, _>(|j| after[j] - before[j]);
+                    if cycle > 0 {
+                        match $name {
+                            "physical staging" => assert_eq!(delta[0], 46),
+                            "check base" => assert_eq!(delta[0], 4),
+                            "publication begin" => assert_eq!(delta[0], 13),
+                            "acknowledge" => assert_eq!(delta[0], 12),
+                            _ => {}
+                        }
+                    }
                     eprintln!("NATIVE_DIRTY_WORK cycle={cycle} phase={} ms={} scopes_sessions_events_queries_opens_mounts_sources_preps_epoch_sources={delta:?}", $name, elapsed.as_millis());
                     result
                 }};
@@ -3450,5 +3478,261 @@ async fn native_retry_validation_work_dirty_save_phases() {
             measured!("reopen", retry_reopen(&mut n, &f).await);
         }
     }
+    n.storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_current_scope_factory_keeps_modes_and_errors() {
+    for retry in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let n = setup_mode(&tmp.path().join("scope factory"), 16, retry).await;
+        n.storage
+            .cache()
+            .owner
+            .call(move |store| {
+                let s = &mut store.state;
+                let before = native_snapshot(s);
+                let tx = s.connection.transaction()?;
+                assert_eq!(
+                    crate::chunk_mount::read_scope_current(&tx)?.is_some(),
+                    retry
+                );
+                tx.execute("UPDATE chunk_mount_role SET state_hash=zeroblob(32)", [])?;
+                assert!(crate::chunk_mount::read_scope_current(&tx).is_err());
+                tx.rollback()?;
+                assert_eq!(native_snapshot(s), before);
+                Ok(())
+            })
+            .await
+            .unwrap();
+        n.storage.close().await.unwrap();
+    }
+    let tmp = tempfile::tempdir().unwrap();
+    let mut s = State::open_managed(tmp.path()).unwrap();
+    let tx = s.connection.transaction().unwrap();
+    assert!(
+        crate::chunk_mount::read_scope_current(&tx)
+            .unwrap()
+            .is_none()
+    );
+    tx.rollback().unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_materialization_requires_dependencies_in_both_modes() {
+    for retry in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut n = setup_mode(&tmp.path().join("materialize dependencies"), 16, retry).await;
+        n.view = n
+            .client
+            .write(n.token.clone(), context(&n.view), [9; 32], 0, vec![7; 17])
+            .await
+            .unwrap();
+        let info = n
+            .client
+            .prepare(n.token.clone(), context(&n.view))
+            .await
+            .unwrap();
+        let plan = info.id().unwrap();
+        n.storage
+            .cache()
+            .owner
+            .call(move |store| {
+                let s = &mut store.state;
+                let info = pj(s).append(plan, info.cursor(), Candidate::Bytes(vec![7; 17]))?;
+                crate::sparse_views::preparation::tests::fixture::finish(s, info);
+                let before = native_snapshot(s);
+                let root = crate::sparse_views::preparation::Position { level: 0, slot: 0 };
+                assert!(
+                    pj(s)
+                        .materialize(plan, root, crate::journal::Options::default())
+                        .is_err()
+                );
+                assert_eq!(native_snapshot(s), before);
+                let data = crate::sparse_views::preparation::Position { level: -1, slot: 0 };
+                assert!(
+                    pj(s)
+                        .materialize(plan, data, crate::journal::Options::default())?
+                        .is_some()
+                );
+                let staged = native_snapshot(s);
+                // Merely staged data is not an acknowledged physical dependency.
+                assert!(
+                    pj(s)
+                        .materialize(plan, root, crate::journal::Options::default())
+                        .is_err()
+                );
+                assert_eq!(native_snapshot(s), staged);
+                physical(s, plan);
+                assert!(
+                    pj(s)
+                        .materialize(plan, root, crate::journal::Options::default())?
+                        .is_some()
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
+        n.storage.close().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_post_materialization_rechecks_late_damage() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut n = setup_mode(&tmp.path().join("post materialize freshness"), 16, true).await;
+    let original = n.token.input().id.clone();
+    let f = retry_cycle_mode(&n, fixture(), 1, false).await;
+    retry_reopen(&mut n, &f).await;
+    let context =
+        Context::new(&n.view, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
+    n.view = n
+        .client
+        .write(n.token.clone(), context, [9; 32], 0, vec![7; 17])
+        .await
+        .unwrap();
+    let context =
+        Context::new(&n.view, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
+    let info = n.client.prepare(n.token.clone(), context).await.unwrap();
+    let plan = info.id().unwrap();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            let info = pj(s).append(plan, info.cursor(), Candidate::Bytes(vec![7; 17]))?;
+            crate::sparse_views::preparation::tests::fixture::finish(s, info);
+            let position = crate::sparse_views::preparation::Position { level: -1, slot: 0 };
+            let transfer = pj(s)
+                .materialize(plan, position, crate::journal::Options::default())?
+                .unwrap();
+            let generation = transfer.generation().unwrap();
+            let expected = crate::sparse_views::preparation::ledger::inspect(&s.connection)?;
+            let before = native_snapshot(s);
+            for case in 0..4 {
+                let tx = s.connection.transaction()?;
+                {
+                    let scope = crate::chunk_mount::read_scope_current(&tx)?.unwrap();
+                    crate::sparse_views::preparation::ledger::inspect_scoped(&scope)?;
+                }
+                let mut selected = generation;
+                let mut bytes = vec![7; 17];
+                match case {
+                    0 => crate::namespace_client::opens::rewrite_epoch_for_test(&tx, &original)?,
+                    1 => {
+                        tx.execute("UPDATE staged_chunks SET data=zeroblob(length(data))", [])?;
+                    }
+                    2 => {
+                        selected =
+                            crate::journal::GenerationId::from_database(generation.value() + 1000)?;
+                    }
+                    _ => bytes[0] = 8,
+                }
+                // Actual final helper, not an injected mid-staging callback.
+                assert!(
+                    crate::sparse_views::preparation::transfers::validate_materialized(
+                        &tx, &expected, plan, position, &transfer, selected, &bytes
+                    )
+                    .is_err()
+                );
+                tx.rollback()?;
+                assert_eq!(native_snapshot(s), before);
+            }
+            let tx = s.connection.transaction()?;
+            crate::sparse_views::preparation::transfers::validate_materialized(
+                &tx, &expected, plan, position, &transfer, generation, &[7; 17],
+            )?;
+            tx.rollback()?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    n.storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_checkpoint_reuse_rechecks_new_readers() {
+    let tmp = tempfile::tempdir().unwrap();
+    let n = setup_mode(&tmp.path().join("checkpoint snapshot reuse"), 16, true).await;
+    retry_cycle_mode(&n, fixture(), 1, false).await;
+    let (proof, view, generation) = n
+        .storage
+        .cache()
+        .owner
+        .call(|store| {
+            let s = &mut store.state;
+            let tx = s.connection.transaction()?;
+            let before = crate::sparse_views::preparation::ledger::inspect(&tx)?;
+            let plan = *before.plans.keys().next().unwrap();
+            let meta = ledger::inspect(&tx)?;
+            assert!(crate::sparse_views::preparation::retry::enabled(&tx)?);
+            let expected = crate::sparse_views::preparation::retry::checkpoint(&tx, plan, &[])?;
+            let actual = crate::sparse_views::preparation::retry::checkpoint_snapshot(
+                &tx,
+                plan,
+                &[],
+                &before,
+                &meta,
+            )?;
+            assert_eq!(actual, expected);
+            assert!(actual.unblocked());
+            let view = before.info(plan)?.view().id();
+            let generation = meta.records.get(&plan).unwrap().physical.generation;
+            tx.rollback()?;
+            Ok((actual, view, generation))
+        })
+        .await
+        .unwrap();
+    let local = n.storage.sparse_views(views::Options::default()).unwrap();
+    let logical = local.guard(view).await.unwrap();
+    let cp = proof.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let before = native_snapshot(&store.state);
+            assert!(
+                j(&mut store.state)
+                    .retire_checkpoint(&cp, views::Options::default())
+                    .is_err()
+            );
+            assert_eq!(native_snapshot(&store.state), before);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    drop(logical);
+    n.storage.cache().owner.call(|_| Ok(())).await.unwrap();
+    let physical = n.storage.staging().snapshot(generation).await.unwrap();
+    let cp = proof.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let before = native_snapshot(&store.state);
+            assert!(
+                j(&mut store.state)
+                    .retire_checkpoint(&cp, views::Options::default())
+                    .is_err()
+            );
+            assert_eq!(native_snapshot(&store.state), before);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    drop(physical);
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            assert_eq!(
+                j(&mut store.state).retire_checkpoint(&proof, views::Options::default())?,
+                proof.anchor()
+            );
+            crate::chunk_mount::validate_all(&store.state.connection)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     n.storage.close().await.unwrap();
 }

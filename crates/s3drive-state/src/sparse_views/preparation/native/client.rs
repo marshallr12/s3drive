@@ -244,73 +244,63 @@ impl Client {
                 if !crate::chunk_mount::retry_enabled(&state.connection)? {
                     return Ok(false);
                 }
-                // Raw existence only chooses an additional read-only proof path.
-                // It never grants collection or substitutes for pin validation.
-                if state.connection.query_row(
-                    "SELECT EXISTS(SELECT 1 FROM source_read_pins)",
-                    [],
-                    |r| r.get::<_, bool>(0),
-                )? {
+                // Discovery data only. Checkpoint and transactional retirement
+                // each revalidate independently after this read transaction ends.
+                let discovered = {
                     let tx = state
                         .connection
                         .transaction_with_behavior(rusqlite::TransactionBehavior::Deferred)?;
-                    let scope = crate::chunk_mount::read_scope(&tx, &key)?;
-                    let snapshot = ledger::inspect_scoped(&scope)?;
-                    for pin in snapshot.views.read_pins.pins.values() {
-                        let view = snapshot.views.record(pin.view_id())?;
-                        let base = view.request.binding.base()?;
-                        if base.volume() == scope.binding().volume && base.node() == node {
-                            return Ok(false);
+                    let result: Result<_> = (|| {
+                        let scope = crate::chunk_mount::read_scope(&tx, &key)?;
+                        let mount = scope.binding();
+                        let snapshot = ledger::inspect_scoped(&scope)?;
+                        for pin in snapshot.views.read_pins.pins.values() {
+                            let view = snapshot.views.record(pin.view_id())?;
+                            let base = view.request.binding.base()?;
+                            if base.volume() == mount.volume && base.node() == node {
+                                return Ok(None);
+                            }
                         }
-                    }
-                    // Scope cannot escape this transaction or cover later writes.
-                }
-                let mount = crate::chunk_mount::require(&state.connection, &key)?;
-                if opens::sparse_records(&state.connection)?
-                    .iter()
-                    .any(|r| r.input.volume == mount.volume && r.input.node == node)
-                {
+                        if opens::sparse_records(&tx)?
+                            .iter()
+                            .any(|r| r.input.volume == mount.volume && r.input.node == node)
+                        {
+                            return Ok(None);
+                        }
+                        let roots = publication::ledger::inspect(&tx)?;
+                        let mut selected = None;
+                        let mut any = false;
+                        for (id, saved) in &snapshot.plans {
+                            let info = saved.info(&snapshot.views)?;
+                            let base = info.view().binding().base()?;
+                            if base.volume() != mount.volume || base.node() != node {
+                                continue;
+                            }
+                            any = true;
+                            let file = snapshot
+                                .views
+                                .files
+                                .get(&info.view().binding().target()?)
+                                .ok_or(Failure::Corrupt)?;
+                            if roots
+                                .records
+                                .get(id)
+                                .and_then(|r| r.acknowledgment())
+                                .and_then(|a| a.clean_view())
+                                == Some(file.head)
+                                && selected.replace(*id).is_some()
+                            {
+                                return Err(Failure::Corrupt.into());
+                            }
+                        }
+                        Ok(Some((mount.volume.clone(), selected, any)))
+                    })();
+                    tx.rollback()?;
+                    result?
+                };
+                let Some((volume, selected, any)) = discovered else {
                     return Ok(false);
-                }
-                let snapshot = ledger::inspect(&state.connection)?;
-                // A fully checked source pin already forbids any cut. Defer
-                // without repeatedly loading all retired open histories while
-                // a long-lived reader applies backpressure. This issues no
-                // checkpoint and mutates nothing; release still takes the full
-                // terminal/candidate/physical proof path below.
-                for pin in snapshot.views.read_pins.pins.values() {
-                    let view = snapshot.views.record(pin.view_id())?;
-                    let base = view.request.binding.base()?;
-                    if base.volume() == mount.volume && base.node() == node {
-                        return Ok(false);
-                    }
-                }
-                let roots = publication::ledger::inspect(&state.connection)?;
-                let mut selected = None;
-                let mut any = false;
-                for (id, saved) in &snapshot.plans {
-                    let info = saved.info(&snapshot.views)?;
-                    let base = info.view().binding().base()?;
-                    if base.volume() != mount.volume || base.node() != node {
-                        continue;
-                    }
-                    any = true;
-                    let file = snapshot
-                        .views
-                        .files
-                        .get(&info.view().binding().target()?)
-                        .ok_or(Failure::Corrupt)?;
-                    if roots
-                        .records
-                        .get(id)
-                        .and_then(|r| r.acknowledgment())
-                        .and_then(|a| a.clean_view())
-                        == Some(file.head)
-                        && selected.replace(*id).is_some()
-                    {
-                        return Err(Failure::Corrupt.into());
-                    }
-                }
+                };
                 if let Some(plan) = selected {
                     let proof = Journal::new(state, plans)?.checkpoint(plan)?;
                     if !proof.unblocked() {
@@ -329,7 +319,7 @@ impl Client {
                 let tx = state
                     .connection
                     .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
-                let records = opens::native_candidates(&tx, &mount.volume, &node)?;
+                let records = opens::native_candidates(&tx, &volume, &node)?;
                 if records.is_empty() {
                     return Ok(false);
                 }

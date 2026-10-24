@@ -391,7 +391,7 @@ impl Checkpoint {
     }
 }
 pub(in crate::sparse_views::preparation) fn checkpoint(
-    db: &Connection,
+    db: &rusqlite::Transaction<'_>,
     plan: Id,
     physical_readers: &[GenerationId],
 ) -> Result<Checkpoint> {
@@ -400,7 +400,18 @@ pub(in crate::sparse_views::preparation) fn checkpoint(
     }
     let s = ledger::inspect(db)?;
     let meta = publication::ledger::inspect(db)?;
-    publication::ledger::validate_source_snapshot(db, &meta, &s)?;
+    checkpoint_snapshot(db, plan, physical_readers, &s, &meta)
+}
+// Only an unchanged transaction that already checked enabled() may reuse its
+// complete preparation/root snapshots. No physical proof leaves this call.
+pub(super) fn checkpoint_snapshot(
+    db: &rusqlite::Transaction<'_>,
+    plan: Id,
+    physical_readers: &[GenerationId],
+    s: &ledger::Snapshot,
+    meta: &publication::ledger::Meta,
+) -> Result<Checkpoint> {
+    publication::ledger::validate_source_snapshot(db, meta, s)?;
     let info = s.info(plan)?;
     let token = info.input.retry.ok_or(Failure::ScopedRequired)?;
     let record = meta.records.get(&plan).ok_or(Failure::NotFound)?;
@@ -447,7 +458,7 @@ pub(in crate::sparse_views::preparation) fn checkpoint(
         if terminal {
             // Whole-tree proof includes every dependency and verified physical
             // receipt. A prepared/claimed/unknown upload never counts as terminal.
-            transfers::inspect_tree(db, *id)?;
+            transfers::checked_trees(db, s)?.tree(*id)?;
             terminal_plans.push(*id);
         } else {
             blocked_plans.push(*id);
@@ -478,7 +489,7 @@ pub(in crate::sparse_views::preparation) fn checkpoint(
         for (_, level, slot) in s.objects.keys().filter(|(p, _, _)| p == id) {
             if let Some(t) = transfers::transfer(
                 db,
-                &s,
+                s,
                 &i,
                 Position {
                     level: *level,

@@ -21,6 +21,12 @@ pub(in crate::sparse_views) fn validate_retirement(
 ) -> Result<()> {
     validate_in(db, retired, None)
 }
+pub(in crate::sparse_views) fn validate_retirement_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+    retired: &[OpenRecord],
+) -> Result<()> {
+    validate_in(scope.connection(), retired, Some(scope))
+}
 fn validate_in(
     db: &Connection,
     retired: &[OpenRecord],

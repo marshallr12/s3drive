@@ -46,8 +46,8 @@ impl<'a> Journal<'a> {
             .connection
             .transaction_with_behavior(TransactionBehavior::Deferred)?;
         let meta = ledger::inspect(&tx)?;
-        ledger::validate_source(&tx, &meta)?;
         let s = super::super::ledger::inspect(&tx)?;
+        ledger::validate_source_snapshot(&tx, &meta, &s)?;
         lineage::select(&meta, &s, plan, node)?;
         tx.commit()?;
         Ok(())
@@ -152,7 +152,7 @@ impl<'a> Journal<'a> {
         let s = super::super::ledger::inspect(&tx)?;
         let info = s.info(plan)?;
         ledger::coverage(&before, &s, plan)?;
-        let tree = super::super::transfers::inspect_tree(&tx, plan)?;
+        let tree = super::super::transfers::checked_trees(&tx, &s)?.tree(plan)?;
         let root = tree.root().clone();
         let physical = Physical::from_tree(&tree)?;
         let predecessor = lineage::select(&before, &s, plan, &base)?;
