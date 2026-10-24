@@ -30,6 +30,8 @@ impl Saved {
         )
     }
     pub fn info(&self, views: &super::super::ledger::Ledger) -> Result<Info> {
+        #[cfg(test)]
+        model::info_constructed();
         Ok(Info {
             input: self.input.clone(),
             view: View(views.record(self.input.view)?.clone()),

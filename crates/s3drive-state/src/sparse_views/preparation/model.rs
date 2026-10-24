@@ -61,6 +61,8 @@ pub(super) struct Input {
 }
 impl Input {
     pub fn id(&self) -> Result<Id> {
+        #[cfg(test)]
+        INPUT_HASHES.set(INPUT_HASHES.get() + 1);
         hash(b"s3drive-mixed-preparation-input-v1\0", self)
     }
     pub fn validate(&self, view: &View, blobs: &BTreeMap<Id, Vec<u8>>) -> Result<VerifiedPage> {
@@ -128,6 +130,8 @@ impl Info {
         self.progress.settlement.as_ref()
     }
     pub fn id(&self) -> Result<Id> {
+        #[cfg(test)]
+        INFO_IDS.set(INFO_IDS.get() + 1);
         self.input.id()
     }
     pub fn operation(&self) -> Id {
@@ -236,4 +240,20 @@ pub(super) fn ordinal(level: i8, slot: u64) -> u64 {
 
 fn hex(v: &[u8; 16]) -> String {
     v.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+// Diagnostic counters only; no cached value or production behavior change.
+#[cfg(test)]
+thread_local! {
+    static INPUT_HASHES: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+    static INFO_IDS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+    static INFO_CONSTRUCTIONS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+#[cfg(test)]
+pub(in crate::sparse_views) fn info_constructed() {
+    INFO_CONSTRUCTIONS.set(INFO_CONSTRUCTIONS.get() + 1);
+}
+#[cfg(test)]
+pub(in crate::sparse_views) fn identity_work() -> [u64; 3] {
+    [INPUT_HASHES.get(), INFO_IDS.get(), INFO_CONSTRUCTIONS.get()]
 }

@@ -120,6 +120,8 @@ impl Anchor {
         {
             return Err(Failure::Corrupt.into());
         }
+        #[cfg(test)]
+        super::super::model::info_constructed();
         let info = Info {
             input: self.input.clone(),
             view: views::View(parent),

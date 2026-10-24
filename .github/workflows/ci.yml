@@ -399,6 +399,15 @@ jobs:
             head -n 160 "$RUNNER_TEMP/native-cpu-profile/exclusive.txt"
             echo "Inclusive instruction costs and call counts (not elapsed time):"
             head -n 260 "$RUNNER_TEMP/native-cpu-profile/inclusive.txt"
+            # Pure identity work is a separate attribution question. Keep all
+            # symbols in this private report, but emit only the bounded family.
+            callgrind_annotate --auto=no --inclusive=yes --tree=both --threshold=100 "$S3DRIVE_NATIVE_PROFILE_OUTPUT" > "$RUNNER_TEMP/native-cpu-profile/identities.txt"
+            echo "Pure preparation identity derivations (inclusive instruction events):"
+            if grep -E 'preparation::model::(Info|Input).*::id|preparation::ledger::Saved.*::info' "$RUNNER_TEMP/native-cpu-profile/identities.txt" > "$RUNNER_TEMP/native-cpu-profile/identity-family.txt"; then
+              head -n 120 "$RUNNER_TEMP/native-cpu-profile/identity-family.txt"
+            else
+              echo "No matching identity symbols; attribution unavailable, not zero cost."
+            fi
             echo "Targeted validation/serialization/SQL families (inclusive report):"
             grep -E 'retention|Terminal|Anchor|serde|sha2|checked_flushes|read_data|rusqlite|sqlite|preparation.*ledger|sparse_views.*ledger' "$RUNNER_TEMP/native-cpu-profile/inclusive.txt" | awk 'NR <= 200' || true
           else

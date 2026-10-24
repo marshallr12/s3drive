@@ -3366,10 +3366,14 @@ async fn native_retry_validation_work_dirty_save_phases() {
         macro_rules! measured {
             ($name:literal, $work:expr) => {{
                 let before = native_work(&n).await;
+                let identities = n.storage.cache().owner.call(|_| Ok(crate::sparse_views::preparation::model::identity_work())).await.unwrap();
                 let start = std::time::Instant::now();
                 let result = $work;
                 let elapsed = start.elapsed();
                 let after = native_work(&n).await;
+                let current = n.storage.cache().owner.call(|_| Ok(crate::sparse_views::preparation::model::identity_work())).await.unwrap();
+                let identity_delta = std::array::from_fn::<_,3,_>(|j| current[j] - identities[j]);
+                eprintln!("NATIVE_ID_WORK cycle={cycle} phase={} input_hashes_info_ids_construction_attempts={identity_delta:?}", $name);
                 let delta = std::array::from_fn::<_, 9, _>(|j| after[j] - before[j]);
                 if cycle > 0 {
                     match $name {
@@ -3404,10 +3408,14 @@ async fn native_retry_validation_work_dirty_save_phases() {
             macro_rules! phase {
                 ($name:literal, $work:expr) => {{
                     let before = native_work_here();
+                    let identities = crate::sparse_views::preparation::model::identity_work();
                     let start = std::time::Instant::now();
                     let result = $work;
                     let elapsed = start.elapsed();
                     let after = native_work_here();
+                    let current = crate::sparse_views::preparation::model::identity_work();
+                    let identity_delta = std::array::from_fn::<_,3,_>(|j| current[j] - identities[j]);
+                    eprintln!("NATIVE_ID_WORK cycle={cycle} phase={} input_hashes_info_ids_construction_attempts={identity_delta:?}", $name);
                     let delta = std::array::from_fn::<_, 9, _>(|j| after[j] - before[j]);
                     if cycle > 0 {
                         match $name {
