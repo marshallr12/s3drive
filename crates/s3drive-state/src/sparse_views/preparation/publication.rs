@@ -188,14 +188,14 @@ pub(super) fn adoption_fence(
 pub(crate) fn namespace_pending(db: &Connection, volume: &str, node: &str) -> Result<()> {
     checked_namespace_snapshot(db, volume, node).map(|_| ())
 }
-// Complete may use this exact checked snapshot only before its first append.
-// The existing wrapper keeps all other call sites and their proof boundaries.
-pub(super) fn namespace_pending_snapshot(
-    tx: &rusqlite::Transaction<'_>,
+// Complete consumes the scoped body only inside its pre-append read interval.
+pub(super) fn namespace_pending_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
     volume: &str,
     node: &str,
 ) -> Result<super::ledger::Snapshot> {
-    checked_namespace_snapshot(tx, volume, node)
+    let source = super::ledger::inspect_scoped(scope)?;
+    check_namespace_source(scope.connection(), volume, node, source)
 }
 fn checked_namespace_snapshot(
     db: &Connection,
@@ -206,6 +206,14 @@ fn checked_namespace_snapshot(
     // effects before a root publication record exists. Inspect the complete
     // plan/source graph, not just roots or the current (possibly clean) head.
     let source = super::ledger::inspect(db)?;
+    check_namespace_source(db, volume, node, source)
+}
+fn check_namespace_source(
+    db: &Connection,
+    volume: &str,
+    node: &str,
+    source: super::ledger::Snapshot,
+) -> Result<super::ledger::Snapshot> {
     let meta = ledger::inspect(db)?;
     ledger::validate_source_snapshot(db, &meta, &source)?;
     for (plan, saved) in &source.plans {

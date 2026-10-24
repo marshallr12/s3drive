@@ -469,9 +469,9 @@ fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 mod close;
-#[cfg(test)]
-pub(super) use close::validated_result;
 pub use close::{Close, FlushSelection};
+#[cfg(test)]
+pub(super) use close::{validate_completed, validated_result};
 
 fn is_bound(record: &OpenRecord) -> bool {
     record

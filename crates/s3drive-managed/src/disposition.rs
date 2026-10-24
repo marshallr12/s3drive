@@ -717,6 +717,16 @@ impl Controller {
     }
     async fn close_impl(&self, open: &str, cb: &str) -> Result<()> {
         let _serial = self.backend.serial().lock().await;
+        if let Some(session) = &self.session
+            && let Some(record) = self.backend.uncontended_close(session, open, cb).await?
+        {
+            self.scope(&record.input)?;
+            if &record.input.session != session {
+                return Err(Failure::Binding.into());
+            }
+            Box::pin(self.close_after_session(record, open, cb)).await?;
+            return self.backend.opens().retire(open.into()).await;
+        }
         let record = self.record(open).await?;
         self.live(&record.input).await?;
         if self.backend.native_record(&record) {
@@ -748,9 +758,14 @@ impl Controller {
             return Err(Failure::RetainedConflict.into());
         }
         if native {
+            self.live(&record.input).await?;
+        }
+        Box::pin(self.close_after_session(record, open, cb)).await
+    }
+    async fn close_after_session(&self, record: OpenRecord, open: &str, cb: &str) -> Result<()> {
+        if self.backend.native_record(&record) {
             // Even non-last Close must settle its source barriers. The final
             // close cannot adopt an earlier publisher's unfinished work.
-            self.live(&record.input).await?;
             Box::pin(self.flush_retained(&record.input.node)).await?;
         }
         for other in self.records(&record.input.node).await? {

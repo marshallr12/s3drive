@@ -424,41 +424,45 @@ impl Client {
                 let tx = state
                     .connection
                     .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
-                let original = token.validate(&tx, &state.native_sparse)?;
-                if original.close().map(|e| &e.id) != Some(&callback) {
-                    return Err(Failure::Conflict.into());
-                }
-                if original.completed(&callback) {
-                    if original.events.iter().any(|e| e.id == completion
+                let (original, view, frozen) = {
+                    let scope = crate::chunk_mount::read_scope(&tx, &token.key)?;
+                    let original = token.validate_scoped(&scope, &state.native_sparse)?;
+                    if original.close().map(|e| &e.id) != Some(&callback) {
+                        return Err(Failure::Conflict.into());
+                    }
+                    if original.completed(&callback) {
+                        if original.events.iter().any(|e| e.id == completion
                     && matches!(&e.action, Action::Completed { callback: c } if c == &callback)) {
                     return Ok(original);
                 }
-                    return Err(Failure::Conflict.into());
-                }
-                opens::sparse_original_session(
-                    &tx,
-                    state.incarnation.as_deref().ok_or(Failure::Conflict)?,
-                    &original,
-                )?;
-                let saved = publication::namespace_pending_snapshot(
-                    &tx,
-                    &original.input.volume,
-                    &original.input.node,
-                )?;
-                let mut view = None;
-                for file in saved.views.files.values() {
-                    let base = file.binding.base()?;
-                    if base.volume() == original.input.volume && base.node() == original.input.node
-                    {
-                        let head = saved.views.record(file.head)?;
-                        if !head.clean() || view.replace(head.id).is_some() {
-                            return Err(Failure::Conflict.into());
+                        return Err(Failure::Conflict.into());
+                    }
+                    opens::sparse_original_session(
+                        &tx,
+                        state.incarnation.as_deref().ok_or(Failure::Conflict)?,
+                        &original,
+                    )?;
+                    let saved = publication::namespace_pending_scoped(
+                        &scope,
+                        &original.input.volume,
+                        &original.input.node,
+                    )?;
+                    let mut view = None;
+                    for file in saved.views.files.values() {
+                        let base = file.binding.base()?;
+                        if base.volume() == original.input.volume
+                            && base.node() == original.input.node
+                        {
+                            let head = saved.views.record(file.head)?;
+                            if !head.clean() || view.replace(head.id).is_some() {
+                                return Err(Failure::Conflict.into());
+                            }
                         }
                     }
-                }
-                let frozen = frozen_hash(&original)?;
-                // No read proof is carried across the first completion write.
-                drop(saved);
+                    let frozen = frozen_hash(&original)?;
+                    (original, view, frozen)
+                };
+                // No snapshot crosses CompleteSparse or the paired Completed write.
                 opens::append_in_transaction(
                     &tx,
                     Some(&token.key),
@@ -488,7 +492,7 @@ impl Client {
                     false,
                 )?
                 .record;
-                metadata::validate(&tx)?;
+                validate_completed(&tx, &token.key)?;
                 checkpoint("native-complete", "Validated");
                 tx.commit()?;
                 checkpoint("native-complete", "Committed");
@@ -496,4 +500,13 @@ impl Client {
             })
             .await
     }
+}
+
+// The semantic completion pair must be fully appended before this fresh proof.
+pub(in crate::sparse_views::preparation) fn validate_completed(
+    tx: &rusqlite::Transaction<'_>,
+    key: &crate::chunk_mount::Key,
+) -> Result<()> {
+    crate::chunk_mount::read_scope(tx, key)?;
+    Ok(())
 }

@@ -631,6 +631,34 @@ impl Client {
             })
             .await
     }
+    /// Select a sole ordinary native Close prefix. This does not complete or
+    /// retire it, and must never replace fresh checks after content flushing.
+    pub async fn uncontended_close(
+        &self,
+        session: String,
+        open: String,
+        callback: String,
+    ) -> Result<Option<names::opens::OpenRecord>> {
+        let key = self.key.clone();
+        self.owner
+            .call(move |worker| {
+                let state = &mut worker.state;
+                state.verify_staging_storage()?;
+                let runtime = state.incarnation.clone().ok_or("missing native runtime")?;
+                let tx = state
+                    .connection
+                    .transaction_with_behavior(TransactionBehavior::Deferred)?;
+                let result = (|| {
+                    let scope = read_scope(&tx, &key)?;
+                    names::opens::uncontended_native_close(
+                        &scope, &runtime, &session, &open, &callback,
+                    )
+                })();
+                tx.rollback()?;
+                result
+            })
+            .await
+    }
     pub fn namespace(&self) -> crate::worker::Namespace {
         crate::worker::Namespace::chunk(self.owner.clone(), self.options, self.key.clone())
     }

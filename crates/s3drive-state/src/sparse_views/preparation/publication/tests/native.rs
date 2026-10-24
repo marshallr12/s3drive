@@ -13,6 +13,14 @@ async fn setup(path: &std::path::Path, plans: usize) -> Native {
     setup_mode(path, plans, false).await
 }
 async fn setup_mode(path: &std::path::Path, plans: usize, retry: bool) -> Native {
+    setup_mode_posix(path, plans, retry, true).await
+}
+async fn setup_mode_posix(
+    path: &std::path::Path,
+    plans: usize,
+    retry: bool,
+    posix: bool,
+) -> Native {
     let storage = Storage::open(
         path,
         crate::cache::Options::default(),
@@ -40,7 +48,7 @@ async fn setup_mode(path: &std::path::Path, plans: usize, retry: bool) -> Native
             } else {
                 chunk(s, &f)
             };
-            let input = open_with_posix(s, &f, &key, true);
+            let input = open_with_posix(s, &f, &key, posix);
             views::scoped::enable(s)?;
             let view = views::Journal::new(s, views::Options::default())?.begin_scoped(
                 views::ScopedOperation::new(&f.binding, [1; 32])?,
@@ -1518,7 +1526,7 @@ async fn retry_cycle_mode(n: &Native, mut f: Fixture, iteration: u64, collect: b
             .owner
             .call(move |store| {
                 let s = &mut store.state;
-                let retry = info.retry_operation().unwrap();
+                let retry = info.retry_operation();
                 let info = pj(s).append(plan, info.cursor(), Candidate::Bytes(bytes.clone()))?;
                 let info = crate::sparse_views::preparation::tests::fixture::finish(s, info);
                 j(s).check(plan, 0, None)?;
@@ -1528,7 +1536,10 @@ async fn retry_cycle_mode(n: &Native, mut f: Fixture, iteration: u64, collect: b
                     f.node.clone(),
                     f.store.clone(),
                     f.node.revision,
-                    retry.publish_operation()?,
+                    match retry {
+                        Some(retry) => retry.publish_operation()?,
+                        None => hex(&hash(b"test-native-root-publication", &plan)?[..16]),
+                    },
                 )?;
                 let r = lineage::commit(s, r);
                 j(s).acknowledge_scoped(
@@ -2176,6 +2187,24 @@ async fn native_retry_validation_work_pinned_refusal_rechecks_resealed_unselecte
             "flush selection must recheck unselected corruption case {case}"
         );
         assert!(
+            capability
+                .uncontended_close(
+                    n.token.input().session.clone(),
+                    n.token.input().id.clone(),
+                    hex(&[71; 16])
+                )
+                .await
+                .is_err(),
+            "Close prefix must reject late corruption {case}"
+        );
+        assert!(n.client.bind(n.token.input().id.clone()).await.is_err());
+        assert!(
+            n.client
+                .complete(n.token.clone(), hex(&[71; 16]), hex(&[72; 16]))
+                .await
+                .is_err()
+        );
+        assert!(
             n.client.plans(f.node.id).await.is_err(),
             "plans must recheck late corruption case {case}"
         );
@@ -2244,7 +2273,8 @@ async fn native_retry_validation_work_per_open_close() {
                     "guard release" => assert_eq!(delta[0], 3),
                     "plans" | "uncontended open" | "flush selection" => assert_eq!(delta[0], 1),
                     "Close" => assert_eq!(delta[0], 4),
-                    "completion" => assert_eq!(delta[0], 5),
+                    "completion" => assert_eq!(delta[0], 2),
+                    "bind" | "uncontended close" => assert_eq!(delta[0], 1),
                     _ => {}
                 }
                 if [0, 3, 15].contains(&i) {
@@ -2381,6 +2411,20 @@ async fn native_retry_validation_work_per_open_close() {
                 .unwrap()
         );
         assert!(close.plans.is_empty());
+        assert!(
+            measured!(
+                "uncontended close",
+                capability
+                    .uncontended_close(
+                        n.token.input().session.clone(),
+                        n.token.input().id.clone(),
+                        callback.clone()
+                    )
+                    .await
+                    .unwrap()
+            )
+            .is_some()
+        );
         measured!(
             "completion",
             n.client
@@ -2539,6 +2583,24 @@ async fn native_retry_validation_work_close_snapshots_keep_dirty_and_empty_modes
                     .collect::<Vec<_>>()
             );
             assert!(close_native(&n, &n.token, 72).await.is_err());
+            if changed {
+                assert_eq!(
+                    n.client
+                        .complete(n.token.clone(), hex(&[71; 16]), hex(&[73; 16]))
+                        .await
+                        .unwrap_err()
+                        .to_string(),
+                    "settle every sparse preparation before closing this node"
+                );
+            } else {
+                assert!(
+                    n.client
+                        .complete(n.token.clone(), hex(&[71; 16]), hex(&[73; 16]))
+                        .await
+                        .unwrap()
+                        .completed(&hex(&[71; 16]))
+                );
+            }
             n.storage.close().await.unwrap();
         }
     }
@@ -2578,6 +2640,7 @@ async fn native_retry_validation_work_final_close_snapshot_rechecks_after_initia
             }
             // Actual final Close read helper, not an injected mid-Close crash.
             assert!(crate::sparse_views::preparation::native::validated_result(&tx, &key, open).is_err());
+            assert!(crate::sparse_views::preparation::native::validate_completed(&tx, &key).is_err());
             tx.rollback()?;
             assert!(s.connection.is_autocommit());
             assert_eq!(native_snapshot(s), before);
@@ -2669,6 +2732,17 @@ async fn native_retry_validation_work_open_preflight_keeps_obsolete_and_pending_
         .await
         .unwrap();
     assert!(!capability.uncontended_open(input.clone()).await.unwrap());
+    assert!(
+        capability
+            .uncontended_close(
+                input.session.clone(),
+                old.token.input().id.clone(),
+                hex(&[71; 16])
+            )
+            .await
+            .unwrap()
+            .is_none()
+    );
     let pending = journal
         .prepare_recovery(
             input.session.clone(),
@@ -2873,4 +2947,221 @@ async fn native_retry_validation_work_flush_selection_checks_unselected_acknowle
         .await
         .unwrap();
     n.storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_completion_preserves_exact_retries_in_both_modes() {
+    for retry in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let n = setup_mode(&tmp.path().join("complete paired proof modes"), 16, retry).await;
+        retry_cycle_mode(&n, fixture(), 1, false).await;
+        let callback = hex(&hash(b"retry-cycle-close", &n.token.input().id).unwrap()[..16]);
+        let completion = hex(&hash(b"retry-cycle-completion", &n.token.input().id).unwrap()[..16]);
+        let before = n
+            .storage
+            .cache()
+            .owner
+            .call(|store| Ok(native_snapshot(&store.state)))
+            .await
+            .unwrap();
+        assert!(
+            n.client
+                .complete(n.token.clone(), callback.clone(), completion)
+                .await
+                .unwrap()
+                .completed(&callback)
+        );
+        assert!(
+            n.client
+                .complete(n.token.clone(), callback, hex(&[196; 16]))
+                .await
+                .is_err()
+        );
+        assert!(
+            n.client
+                .complete(n.token.clone(), hex(&[195; 16]), hex(&[196; 16]))
+                .await
+                .is_err()
+        );
+        n.storage
+            .cache()
+            .owner
+            .call(move |store| {
+                assert_eq!(native_snapshot(&store.state), before);
+                Ok(())
+            })
+            .await
+            .unwrap();
+        n.storage.close().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_close_prefix_requires_actual_sole_unfinished_close() {
+    for retry in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut n = setup_mode(&tmp.path().join("sole close selection"), 16, retry).await;
+        let capability = crate::chunk_mount::Client::new(
+            n.storage.cache().owner,
+            crate::journal::Options::default(),
+            n.key.clone(),
+        );
+        let token = n.token.clone();
+        let session = token.input().session.clone();
+        let open = token.input().id.clone();
+        assert!(
+            capability
+                .uncontended_close(session.clone(), open.clone(), hex(&[71; 16]))
+                .await
+                .unwrap()
+                .is_none()
+        );
+        close_native(&n, &token, 71).await.unwrap();
+        assert!(
+            capability
+                .uncontended_close(session.clone(), open.clone(), hex(&[70; 16]))
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            capability
+                .uncontended_close(session.clone(), open.clone(), hex(&[71; 16]))
+                .await
+                .unwrap()
+                .is_some()
+        );
+        // The selection does not replace the required post-flush records read:
+        // a new live handle introduced by another command is visible there.
+        let other = if retry {
+            retry_reopen(&mut n, &fixture()).await;
+            n.token.clone()
+        } else {
+            second(&n).await
+        };
+        assert!(
+            capability
+                .opens()
+                .records()
+                .await
+                .unwrap()
+                .iter()
+                .any(|r| r.input.id == other.input().id && r.close().is_none())
+        );
+        assert!(
+            capability
+                .uncontended_close(session.clone(), open.clone(), hex(&[71; 16]))
+                .await
+                .unwrap()
+                .is_none()
+        );
+        close_native(&n, &other, 73).await.unwrap();
+        n.client
+            .complete(other.clone(), hex(&[73; 16]), hex(&[74; 16]))
+            .await
+            .unwrap();
+        capability
+            .opens()
+            .retire(other.input().id.clone())
+            .await
+            .unwrap();
+        assert!(
+            capability
+                .uncontended_close(session.clone(), open.clone(), hex(&[71; 16]))
+                .await
+                .unwrap()
+                .is_some()
+        );
+        n.client
+            .complete(token.clone(), hex(&[71; 16]), hex(&[72; 16]))
+            .await
+            .unwrap();
+        assert!(
+            capability
+                .uncontended_close(session.clone(), open.clone(), hex(&[71; 16]))
+                .await
+                .unwrap()
+                .is_none()
+        );
+        capability.opens().retire(open.clone()).await.unwrap();
+        assert!(
+            capability
+                .uncontended_close(session, open, hex(&[71; 16]))
+                .await
+                .unwrap()
+                .is_none()
+        );
+        n.storage.close().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_close_prefix_keeps_other_callbacks_and_windows_policy() {
+    for cleanup in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let n = setup(&tmp.path().join("close callback fallback"), 16).await;
+        let capability = crate::chunk_mount::Client::new(
+            n.storage.cache().owner,
+            crate::journal::Options::default(),
+            n.key.clone(),
+        );
+        capability
+            .opens()
+            .callback(
+                n.token.input().id.clone(),
+                hex(&[69; 16]),
+                if cleanup {
+                    opens::Callback::Cleanup { flags: 0 }
+                } else {
+                    opens::Callback::SetDelete { delete: false }
+                },
+            )
+            .await
+            .unwrap();
+        close_native(&n, &n.token, 71).await.unwrap();
+        assert!(
+            capability
+                .uncontended_close(
+                    n.token.input().session.clone(),
+                    n.token.input().id.clone(),
+                    hex(&[71; 16])
+                )
+                .await
+                .unwrap()
+                .is_none()
+        );
+        n.storage.close().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_close_prefix_does_not_change_nonposix_policy() {
+    for retry in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let n = setup_mode_posix(
+            &tmp.path().join("nonposix Close fallback"),
+            16,
+            retry,
+            false,
+        )
+        .await;
+        close_native(&n, &n.token, 71).await.unwrap();
+        let capability = crate::chunk_mount::Client::new(
+            n.storage.cache().owner,
+            crate::journal::Options::default(),
+            n.key.clone(),
+        );
+        assert!(
+            capability
+                .uncontended_close(
+                    n.token.input().session.clone(),
+                    n.token.input().id.clone(),
+                    hex(&[71; 16])
+                )
+                .await
+                .unwrap()
+                .is_none()
+        );
+        n.storage.close().await.unwrap();
+    }
 }

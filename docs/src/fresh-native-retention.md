@@ -160,3 +160,20 @@ native locks and Close ordering. Diagnostics require one scope per selection;
 both modes, changed head epochs, wrong bindings, and a coherently resealed
 unselected acknowledged physical proof have focused tests. This reduces repeated
 whole-history scans, but runtime acceptance is still pending.
+
+The flush-selection refactor passed all eleven diagnostics but both runtime
+gates stopped at 226 retained opens. The next package targets the remaining
+repeated whole-history reads together: bind uses one immutable scope instead of
+three, completion uses one scope before its event pair and a new scope only
+after both events (two instead of five), and a sole ordinary POSIX Close may
+replace seven prefix reads with one. The Close selector requires the exact
+observed Close, current session, sole live target record and no other callback,
+creation, admission, namespace or recovery work. Non-POSIX and contended paths
+keep the original policy. Every check after the first flush, both flushes,
+remote inspection, completion and retirement remain unchanged. No scope crosses
+a write or await. Bind now allocates its runtime token only after successful
+read validation, so failed reads leave no dormant token entry. Diagnostics cover
+exact completion retries and barriers in both modes, prefix exclusions and
+fresh later records, plus late corruption against the actual final completion
+validator. Fresh-record testing is command-level, not an injected controller
+flush interleaving. Full runtime and native acceptance remain pending.

@@ -1434,3 +1434,55 @@ pub(crate) fn uncontended_native_open(
             r.input.id == input.id || (r.input.volume == input.volume && r.input.node == input.node)
         }))
 }
+
+// Select only a sole, current, ordinary POSIX native Close. This returns data,
+// not a capability; all post-flush decisions and mutations remain fresh.
+pub(crate) fn uncontended_native_close(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+    runtime: &str,
+    session: &str,
+    open: &str,
+    callback: &str,
+) -> Result<Option<OpenRecord>> {
+    let db = scope.connection();
+    let record = sparse_open(db, open)?;
+    scope.binding().open(&record.input)?;
+    session::current(db, runtime, session, &record.input.volume)?;
+    let records = all(db)?;
+    let pending = session::pending(db, &record.input.volume, &record.input.node)?;
+    if record.input.session != session
+        || !record.input.controlled
+        || !record.input.session_bound
+        || !record.input.posix
+        || record.input.admission.is_some()
+        || record.input.creation.is_some()
+        || record.input.delete_on_close
+        || record.cleanup().is_some()
+        || !record
+            .events
+            .iter()
+            .any(|e| matches!(e.action, Action::BindSparse))
+        || record.close().is_none_or(|e| e.id != callback)
+        || record.completed(callback)
+        || !record.pending().is_empty()
+        || pending.is_some()
+        || record.events.iter().any(|e| {
+            matches!(
+                e.action,
+                Action::Callback(Callback::SetDelete { .. } | Callback::Cleanup { .. })
+                    | Action::Link { .. }
+                    | Action::Reply { .. }
+            )
+        })
+    {
+        return Ok(None);
+    }
+    let target = records
+        .iter()
+        .filter(|(_, r)| r.input.volume == record.input.volume && r.input.node == record.input.node)
+        .collect::<Vec<_>>();
+    if target.len() != 1 || target[0].1.input.id != open {
+        return Ok(None);
+    }
+    Ok(Some(record))
+}

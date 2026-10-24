@@ -31,47 +31,52 @@ impl Client {
                 let tx = state
                     .connection
                     .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
-                let record = opens::sparse_open(&tx, &open)?;
-                crate::chunk_mount::require(&tx, &key)?.open(&record.input)?;
-                opens::sparse_current(
-                    &tx,
-                    state.incarnation.as_deref().ok_or(Failure::Conflict)?,
-                    &record,
-                )?;
-                if !record.input.controlled {
-                    return Err(Failure::Conflict.into());
-                }
+                let record = {
+                    let scope = crate::chunk_mount::read_scope(&tx, &key)?;
+                    let record = opens::sparse_open(&tx, &open)?;
+                    scope.binding().open(&record.input)?;
+                    opens::sparse_current(
+                        &tx,
+                        state.incarnation.as_deref().ok_or(Failure::Conflict)?,
+                        &record,
+                    )?;
+                    if !record.input.controlled {
+                        return Err(Failure::Conflict.into());
+                    }
+                    let saved = ledger::inspect_scoped(&scope)?;
+                    for file in saved.views.files.values() {
+                        let base = file.binding.base()?;
+                        let head = saved.views.record(file.head)?;
+                        if base.volume() == record.input.volume
+                            && base.node() == record.input.node
+                            && !head.clean()
+                            && epoch_owner(&tx, &head.request.binding)?.is_none()
+                        {
+                            return Err(Failure::Conflict.into());
+                        }
+                    }
+                    let roots = publication::ledger::inspect(&tx)?;
+                    for plan in saved.plans.keys() {
+                        let info = saved.info(*plan)?;
+                        let base = info.view().binding().base()?;
+                        if info.native_ownership().is_none()
+                            && base.volume() == record.input.volume
+                            && base.node() == record.input.node
+                            && info.settlement().is_none()
+                            && roots
+                                .records
+                                .get(plan)
+                                .is_none_or(|r| r.acknowledgment().is_none())
+                        {
+                            return Err(Failure::Conflict.into());
+                        }
+                    }
+                    record
+                };
+                // The read proof ends before runtime-token mutation and append.
                 let closing = state.native_sparse.token(&tx, &open)?;
                 if closing.load(Ordering::Acquire) {
                     return Err(Failure::Conflict.into());
-                }
-                let saved = ledger::inspect(&tx)?;
-                for file in saved.views.files.values() {
-                    let base = file.binding.base()?;
-                    let head = saved.views.record(file.head)?;
-                    if base.volume() == record.input.volume
-                        && base.node() == record.input.node
-                        && !head.clean()
-                        && epoch_owner(&tx, &head.request.binding)?.is_none()
-                    {
-                        return Err(Failure::Conflict.into());
-                    }
-                }
-                let roots = publication::ledger::inspect(&tx)?;
-                for plan in saved.plans.keys() {
-                    let info = saved.info(*plan)?;
-                    let base = info.view().binding().base()?;
-                    if info.native_ownership().is_none()
-                        && base.volume() == record.input.volume
-                        && base.node() == record.input.node
-                        && info.settlement().is_none()
-                        && roots
-                            .records
-                            .get(plan)
-                            .is_none_or(|r| r.acknowledgment().is_none())
-                    {
-                        return Err(Failure::Conflict.into());
-                    }
                 }
                 let appended = opens::append_in_transaction(
                     &tx,
