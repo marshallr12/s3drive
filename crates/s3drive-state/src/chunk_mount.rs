@@ -359,8 +359,19 @@ pub(crate) struct ReadScope<'a> {
     db: &'a Connection,
     binding: Binding,
     anchors: Option<crate::sparse_views::preparation::publication::retention::CheckedAnchors>,
+    source_metadata: Option<crate::sparse_views::CheckedMetadata>,
 }
 impl ReadScope<'_> {
+    pub(crate) fn source_metadata(&self) -> Result<Option<&crate::sparse_views::CheckedMetadata>> {
+        if let Some(metadata) = &self.source_metadata {
+            self.anchors
+                .as_ref()
+                .ok_or("missing anchor read proof")?
+                .unchanged(self.db)?;
+            return Ok(Some(metadata));
+        }
+        Ok(None)
+    }
     pub(crate) fn connection(&self) -> &Connection {
         self.db
     }
@@ -411,6 +422,7 @@ fn read_scope_in<'a>(db: &'a Connection, key: &Key) -> Result<ReadScope<'a>> {
         db,
         binding,
         anchors: None,
+        source_metadata: None,
     };
     if scope.binding.format == 2 {
         if !crate::sparse_views::preparation::retry::enabled_scoped(&scope)? {
@@ -422,7 +434,8 @@ fn read_scope_in<'a>(db: &'a Connection, key: &Key) -> Result<ReadScope<'a>> {
             crate::sparse_views::preparation::publication::retention::check_anchors_scoped(&scope)?,
         );
     }
-    crate::sparse_views::preparation::native::validate_metadata_scoped(&scope)?;
+    scope.source_metadata =
+        crate::sparse_views::preparation::native::validate_metadata_scoped(&scope)?;
     Ok(scope)
 }
 fn require_identity(db: &Connection, key: &Key) -> Result<Binding> {

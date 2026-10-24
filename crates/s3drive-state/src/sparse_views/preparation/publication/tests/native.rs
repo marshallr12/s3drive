@@ -3826,7 +3826,11 @@ async fn native_retry_validation_work_isolation_context_rechecks_two_anchors_and
         {
             let tx = s.connection.transaction()?;
             let before = crate::sparse_views::preparation::publication::retention::inspection_counts();
+            let headers_before = views::ledger::inspection_count();
+            let roots_before = ledger::inspection_count();
+            let bodies_before = views::ledger::body_read_count();
             let scope = crate::chunk_mount::read_scope(&tx, &key)?;
+            assert!(scope.source_metadata()?.is_some());
             let constructed = crate::sparse_views::preparation::publication::retention::inspection_counts();
             assert_eq!((constructed.0 - before.0, constructed.1 - before.1), (1, 2));
             // Source/native metadata/preparation reuse only the fully validated
@@ -3834,6 +3838,9 @@ async fn native_retry_validation_work_isolation_context_rechecks_two_anchors_and
             views::ledger::inspect_scoped(&scope)?;
             crate::sparse_views::preparation::ledger::inspect_scoped(&scope)?;
             assert_eq!(crate::sparse_views::preparation::publication::retention::inspection_counts(), constructed);
+            assert_eq!(views::ledger::inspection_count() - headers_before, 1, "one full header/history decode");
+            assert_eq!(ledger::inspection_count() - roots_before, 1, "one complete root metadata decode");
+            assert_eq!(views::ledger::body_read_count() - bodies_before, 2, "both full reads independently inspect every block");
             drop(scope);
             tx.rollback()?;
         }
@@ -3849,6 +3856,8 @@ async fn native_retry_validation_work_isolation_context_rechecks_two_anchors_and
                 _ => { let version:i64 = tx.pragma_query_value(Some("main"), "schema_version", |r|r.get(0))?; tx.pragma_update(Some("main"), "schema_version", version + 1)?; }
             }
             assert!(crate::sparse_views::preparation::publication::retention::load_scoped(&scope).is_err(), "stale anchor scope misuse={misuse}");
+            assert!(views::ledger::inspect_scoped(&scope).is_err(), "stale source scope misuse={misuse}");
+            assert!(crate::sparse_views::preparation::ledger::inspect_scoped(&scope).is_err(), "stale prep scope misuse={misuse}");
             drop(scope);
             if matches!(misuse, 0 | 1 | 3 | 5) {
                 // Legitimate unchanged data/new schema cookie can be validated
@@ -3866,12 +3875,44 @@ async fn native_retry_validation_work_isolation_context_rechecks_two_anchors_and
             // Raw COMMIT/BEGIN is forbidden in production scoped call paths.
             tx.execute_batch("COMMIT")?;
             assert!(crate::sparse_views::preparation::publication::retention::load_scoped(&scope).is_err());
+            assert!(views::ledger::inspect_scoped(&scope).is_err());
             drop(scope);
             drop(tx);
             assert!(s.connection.is_autocommit());
             assert_eq!(native_snapshot(s), original);
         }
 
+        for body_case in 0..4 {
+            let tx = s.connection.transaction()?;
+            let scope = crate::chunk_mount::read_scope(&tx, &key)?;
+            views::ledger::inspect_scoped(&scope)?;
+            let changed = match body_case {
+                0 => tx.execute("DELETE FROM sparse_view_blocks WHERE block=(SELECT block FROM sparse_view_blocks LIMIT 1)", [])?,
+                1 => tx.execute("UPDATE sparse_view_blocks SET data=zeroblob(length(data))", [])?,
+                2 => {
+                    let body = vec![239u8; 19];
+                    tx.execute("INSERT INTO sparse_view_blocks(block,data) VALUES(?1,?2)", params![crate::sparse_views::digest(&body).as_slice(), body])?
+                }
+                _ => tx.execute("UPDATE sparse_view_blocks SET data=substr(data,1,length(data)-1)", [])?,
+            };
+            assert!(changed > 0);
+            assert!(views::ledger::inspect_scoped(&scope).is_err(), "old scope body case={body_case}");
+            drop(scope);
+            // Header-only construction must not invent a source-byte proof.
+            let fresh = crate::chunk_mount::read_scope(&tx, &key)?;
+            assert!(fresh.source_metadata()?.is_some());
+            assert!(views::ledger::inspect_scoped(&fresh).is_err(), "fresh full source body case={body_case}");
+            assert!(crate::sparse_views::preparation::ledger::inspect_scoped(&fresh).is_err(), "fresh full prep body case={body_case}");
+            drop(fresh);
+            tx.rollback()?;
+            assert_eq!(native_snapshot(s), original);
+        }
+        for anchor in anchors.values() {
+            assert_eq!(anchor.bytes()?, serde_json::to_vec(anchor)?.len());
+            let mut value = serde_json::to_value(anchor)?;
+            value["canonical_len"] = serde_json::json!(1);
+            assert!(serde_json::from_value::<crate::sparse_views::preparation::publication::retention::Anchor>(value).is_err());
+        }
         // Every damage is introduced AFTER successful inspections in this same
         // transaction. No context may be reused by the later invocations.
         for case in 0..14 {
@@ -4186,4 +4227,35 @@ async fn native_retry_validation_work_proof_hash_reads_independent_persisted_dig
         .unwrap();
     assert_eq!(heads.len(), 1);
     assert_eq!(heads[0].size(), 17);
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_metadata_absent_cache_preserves_full_source_reads() {
+    for linked in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let n = setup_mode(&tmp.path().join("metadata absent cache"), 16, linked).await;
+        retry_cycle_mode(&n, fixture(), 1, linked).await;
+        let key = n.key.clone();
+        n.storage
+            .cache()
+            .owner
+            .call(move |store| {
+                let tx = store.state.connection.transaction()?;
+                let scope = crate::chunk_mount::read_scope(&tx, &key)?;
+                // No bound open or retained native preparation remains after this
+                // completed cycle. The constructor must not install partial data.
+                assert!(scope.source_metadata()?.is_none());
+                let before = views::ledger::inspection_count();
+                let first = views::ledger::inspect_scoped(&scope)?;
+                let second = views::ledger::inspect_scoped(&scope)?;
+                assert!(first == second);
+                assert_eq!(views::ledger::inspection_count() - before, 2);
+                drop(scope);
+                tx.rollback()?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        n.storage.close().await.unwrap();
+    }
 }

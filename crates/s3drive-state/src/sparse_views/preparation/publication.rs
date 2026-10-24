@@ -15,7 +15,7 @@ mod model;
 use model::Check;
 pub use model::{Input, Physical, Record, Rejection};
 mod journal;
-pub(super) mod ledger;
+pub(in crate::sparse_views) mod ledger;
 mod lineage;
 pub use journal::{Client, DataNeed, Journal};
 pub(in crate::sparse_views) mod settlement;

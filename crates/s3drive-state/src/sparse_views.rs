@@ -10,6 +10,7 @@ mod model;
 pub use model::{Binding, MAX_FILE_BYTES, MAX_RANGE_BYTES, Range, View};
 use model::{BlockRef, Change, Record, Request};
 mod ledger;
+pub(crate) use ledger::CheckedMetadata;
 use ledger::{File, Saved, inspect};
 mod adoption;
 pub use adoption::{Adoption, ObservationStart};

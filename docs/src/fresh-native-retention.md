@@ -393,3 +393,29 @@ current-format persisted anchor/role hashes. Standalone state tests on both OS
 check the new direct dependency without relying on workspace feature unification.
 Actual native20 and all original full 300/fault/compatibility gates remain pending
 for this candidate. No production activation or performance acceptance is claimed.
+
+### Guarded metadata reuse candidate (2026-10-24)
+
+The proof-hash candidate passed the short actual Windows mounted20 fixture in
+80.38s, versus 126.16s for the preceding production bytes. Its full Windows
+mounted300 gate nevertheless reached only 280 saves before the unchanged
+20-minute deadline. Linux mounted debug/release300 passed, but that does not
+replace the missing Windows result. This remains an unaccepted candidate.
+
+The next package removes duplicate representation work within the existing
+private immutable read scope. Each loaded/captured anchor retains the length of
+its exact canonical bytes for quota accounting, without serializing again or
+changing persisted fields. A bound-native scope installs source headers/history,
+pins, anchors and root metadata only after complete native graph validation.
+Subsequent full source reads reuse that metadata but independently read every
+block, enforce block quotas/types/digests, verify every Write reference length,
+and reject missing or unreferenced blocks. No source-byte proof is inferred from
+header validation. Absent-cache and ordinary unscoped paths retain fresh loading.
+
+The scope remains confined to the same audited read-only transaction, with the
+existing supplementary mutation/schema guards. It cannot cross a write, await
+or transaction boundary; these guards are not a defense against arbitrary SQL
+from hostile internal callers. Focused tests count one source-header and root
+metadata decode while requiring two independent body reads, exercise late body
+and metadata damage, and preserve exact rollback checks. Hosted performance and
+all original acceptance gates are still required; no deadline is increased.

@@ -161,6 +161,12 @@ pub(in crate::sparse_views) fn validate_views(db: &Connection, s: &Ledger) -> Re
         return Ok(());
     }
     let meta = ledger::inspect(db)?;
+    validate_views_with_meta(s, &meta)
+}
+pub(in crate::sparse_views) fn validate_views_with_meta(
+    s: &Ledger,
+    meta: &ledger::Meta,
+) -> Result<()> {
     for r in meta.records.values() {
         let Some(a) = &r.acknowledgment else { continue };
         let published = s.record(r.input.view)?;

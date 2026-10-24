@@ -1,6 +1,6 @@
 use super::*;
 #[derive(Clone, Default, PartialEq, Eq)]
-pub(in crate::sparse_views::preparation) struct Meta {
+pub(in crate::sparse_views) struct Meta {
     pub records: BTreeMap<Id, Record>,
     pub(super) checks: BTreeMap<(Id, u64), Check>,
 }
@@ -103,7 +103,15 @@ fn count(db: &Connection, sql: &str) -> Result<u64> {
     let n: i64 = db.query_row(sql, [], |r| r.get(0))?;
     u64::try_from(n).map_err(|_| Failure::Corrupt.into())
 }
-pub(in crate::sparse_views::preparation) fn inspect(db: &Connection) -> Result<Meta> {
+#[cfg(test)]
+thread_local! { static INSPECTIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
+#[cfg(test)]
+pub(in crate::sparse_views) fn inspection_count() -> usize {
+    INSPECTIONS.get()
+}
+pub(in crate::sparse_views) fn inspect(db: &Connection) -> Result<Meta> {
+    #[cfg(test)]
+    INSPECTIONS.set(INSPECTIONS.get() + 1);
     let records = count(db, "SELECT count(*) FROM sparse_publications")?;
     let checks = count(db, "SELECT count(*) FROM sparse_publication_checks")?;
     let roles = count(db, "SELECT count(*) FROM sparse_publication_role")?;

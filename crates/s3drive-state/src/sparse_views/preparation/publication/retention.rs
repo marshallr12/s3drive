@@ -64,6 +64,10 @@ impl Identity {
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(in crate::sparse_views) struct Anchor {
+    // Derived only from this immutable value's exact canonical serialization.
+    // Never persisted and never used as a row/hash/semantic validation proof.
+    #[serde(skip)]
+    canonical_len: usize,
     format: u8,
     owner: Id,
     view: Source,
@@ -82,8 +86,16 @@ impl Anchor {
     pub(in crate::sparse_views) fn generation(&self) -> GenerationId {
         self.publication.physical.generation
     }
+    fn canonical(mut self) -> Result<(Self, Vec<u8>)> {
+        let bytes = serde_json::to_vec(&self)?;
+        self.canonical_len = bytes.len();
+        Ok((self, bytes))
+    }
     pub(in crate::sparse_views) fn bytes(&self) -> Result<usize> {
-        Ok(serde_json::to_vec(self)?.len())
+        if self.canonical_len == 0 {
+            return Err(Failure::Corrupt.into());
+        }
+        Ok(self.canonical_len)
     }
     fn target(&self) -> Result<Id> {
         self.view.request.binding.target()
@@ -213,6 +225,14 @@ fn role_hash(owner: Id, anchors: &BTreeMap<Id, Anchor>) -> Result<Id> {
 pub(crate) struct CheckedAnchors {
     anchors: BTreeMap<Id, Anchor>,
     guard: AnchorReadGuard,
+}
+impl CheckedAnchors {
+    pub(crate) fn unchanged(&self, db: &Connection) -> Result<()> {
+        if self.guard != AnchorReadGuard::capture(db)? {
+            return Err(Failure::Corrupt.into());
+        }
+        Ok(())
+    }
 }
 #[derive(PartialEq, Eq)]
 struct AnchorReadGuard {
@@ -395,7 +415,7 @@ fn load_in(
         let a: Anchor = serde_json::from_slice(&raw)?;
         // Canonical equality is still mandatory. Reuse only those exact bytes
         // for the identical domain-separated row hash, not unverified JSON.
-        let canonical = serde_json::to_vec(&a)?;
+        let (a, canonical) = a.canonical()?;
         if canonical != raw
             || target != a.target()?
             || view != a.view.id

@@ -103,7 +103,8 @@ impl Journal<'_> {
             }
             id
         };
-        let anchor = Anchor {
+        let (anchor, _) = Anchor {
+            canonical_len: 0,
             format: if native_mode { 2 } else { 1 },
             native: if native_mode {
                 Some(native::Terminal::capture(
@@ -131,7 +132,8 @@ impl Journal<'_> {
                 .get(&proof.plan())
                 .ok_or(Failure::Missing)?
                 .clone(),
-        };
+        }
+        .canonical()?;
         // No read proof may cross the first witness or source mutation.
         drop(scope);
         if let Some(terminal) = &anchor.native {
