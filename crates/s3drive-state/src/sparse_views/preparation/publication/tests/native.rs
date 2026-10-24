@@ -1966,7 +1966,26 @@ async fn native_retry_retained_open_capacity_recovers_after_last_reader_without_
             .await
             .unwrap();
     }
+    let before = n
+        .storage
+        .cache()
+        .owner
+        .call(|_| Ok(crate::namespace_client::opens::load_count()))
+        .await
+        .unwrap();
     assert!(!n.client.retire_linked(f.node.id.clone()).await.unwrap());
+    let after = n
+        .storage
+        .cache()
+        .owner
+        .call(|_| Ok(crate::namespace_client::opens::load_count()))
+        .await
+        .unwrap();
+    assert!(
+        after - before <= 300,
+        "pinned refusal repeated retired histories: {}",
+        after - before
+    );
     let key = n.key.clone();
     let mut input = n.token.input().clone();
     n.storage

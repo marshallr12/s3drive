@@ -26,15 +26,22 @@ async fn native_retention_runtime_reader_release_reopens_at_capacity() {
         .env("AWS_CONFIG_FILE", aws_config)
         .env("AWS_EC2_METADATA_DISABLED", "true")
         .kill_on_drop(true);
-    let output = tokio::time::timeout(Duration::from_secs(900), command.output())
-        .await
-        .unwrap()
-        .unwrap();
+    // Keep child progress visible even when the bounded wait expires.
+    command
+        .stdout(std::process::Stdio::inherit())
+        .stderr(std::process::Stdio::inherit());
+    let mut child = command.spawn().unwrap();
+    let status = match tokio::time::timeout(Duration::from_secs(900), child.wait()).await {
+        Ok(status) => status.unwrap(),
+        Err(_) => {
+            child.kill().await.unwrap();
+            child.wait().await.unwrap();
+            panic!("native runtime capacity child exceeded 900 seconds");
+        }
+    };
     assert!(
-        output.status.success(),
-        "{}\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+        status.success(),
+        "native runtime capacity child failed: {status}"
     );
 }
 async fn stop(fs: ReadOnlyFs) {

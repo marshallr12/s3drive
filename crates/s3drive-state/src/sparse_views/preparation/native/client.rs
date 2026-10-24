@@ -192,6 +192,18 @@ impl Client {
                     return Ok(false);
                 }
                 let snapshot = ledger::inspect(&state.connection)?;
+                // A fully checked source pin already forbids any cut. Defer
+                // without repeatedly loading all retired open histories while
+                // a long-lived reader applies backpressure. This issues no
+                // checkpoint and mutates nothing; release still takes the full
+                // terminal/candidate/physical proof path below.
+                for pin in snapshot.views.read_pins.pins.values() {
+                    let view = snapshot.views.record(pin.view_id())?;
+                    let base = view.request.binding.base()?;
+                    if base.volume() == mount.volume && base.node() == node {
+                        return Ok(false);
+                    }
+                }
                 let roots = publication::ledger::inspect(&state.connection)?;
                 let mut selected = None;
                 let mut any = false;
