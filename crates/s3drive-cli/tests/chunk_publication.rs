@@ -1335,6 +1335,9 @@ fn dispatch<'a>(
         "native_retention_seed" => Box::pin(native_retention::seed(config, root, s)),
         "native_retention_shared" => Box::pin(native_retention::shared(root, s)),
         "native_retention_final_shared" => Box::pin(native_retention::final_shared(root, s)),
+        "native_retention_final_diagnostic" => {
+            Box::pin(native_retention::final_diagnostic(root, s))
+        }
         #[cfg(any(target_os = "linux", windows))]
         "native_retention_final_mounted" => Box::pin(native_retention::final_mounted(root, s)),
         #[cfg(any(target_os = "linux", windows))]
@@ -1427,6 +1430,12 @@ async fn run(mode: &str) {
     let mut creator_open_objects = None;
     let mut retention_completed = 0_u64;
     for stage in match mode {
+        "native_retention_validation_work" => vec![
+            "native_retention_seed",
+            "native_retention_shared",
+            "native_retention_shared",
+            "native_retention_final_diagnostic",
+        ],
         "native_retention_shared_cycles" | "native_retention_mounted_cycles" => {
             let mut stages = vec!["native_retention_seed"];
             stages.extend(std::iter::repeat_n(
@@ -1820,6 +1829,10 @@ async fn run(mode: &str) {
         }
     }
     let expected = match mode {
+        "native_retention_validation_work" => {
+            assert_eq!(retention_completed, 20);
+            native_retention::expected_puts(20)
+        }
         "native_retention_shared_cycles" | "native_retention_mounted_cycles" => {
             assert_eq!(retention_completed, 300);
             native_retention::expected_puts(300)
@@ -2349,6 +2362,11 @@ async fn native_lifecycle_shared_acknowledged_history_never_reuploads() {
 #[tokio::test]
 async fn local_retention_sdk_migrates_legacy_and_preserves_cloned_reads_across_scoped_cycles() {
     run("local_retention").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_retention_validation_work_shared_phases() {
+    run("native_retention_validation_work").await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

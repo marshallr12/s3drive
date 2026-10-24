@@ -102,38 +102,106 @@ fn inspect(root: &Path, done: u64, peak: (u64, u64)) {
     );
     std::fs::write(root.join("retention-cycle"), done.to_string()).unwrap();
 }
+// Process CPU ticks cover all threads, but not the loopback fixture/authority
+// subprocesses. The diagnostic job reports CLK_TCK separately on Linux.
+fn cpu_ticks() -> Option<u64> {
+    #[cfg(target_os = "linux")]
+    {
+        let stat = std::fs::read_to_string("/proc/self/stat").ok()?;
+        let (_, tail) = stat.rsplit_once(')')?;
+        let fields = tail.split_whitespace().collect::<Vec<_>>();
+        let user = fields.get(11)?.parse::<u64>().ok()?;
+        let system = fields.get(12)?.parse::<u64>().ok()?;
+        user.checked_add(system)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        None
+    }
+}
+#[derive(Default)]
+struct PhaseStats(std::collections::BTreeMap<&'static str, (u64, u128, Option<u64>)>);
+impl PhaseStats {
+    fn record(
+        &mut self,
+        name: &'static str,
+        elapsed: std::time::Duration,
+        before: Option<u64>,
+        after: Option<u64>,
+    ) {
+        let ticks = before
+            .zip(after)
+            .and_then(|(before, after)| after.checked_sub(before));
+        let entry = self.0.entry(name).or_insert((0, 0, Some(0)));
+        entry.0 += 1;
+        entry.1 += elapsed.as_micros();
+        entry.2 = entry.2.zip(ticks).and_then(|(a, b)| a.checked_add(b));
+    }
+    fn report(&self, start: u64, total: std::time::Duration) {
+        for (phase, (calls, micros, ticks)) in &self.0 {
+            eprintln!(
+                "NATIVE_SAVE_PHASE start={start} phase={phase} calls={calls} wall_us={micros} process_cpu_ticks={ticks:?}"
+            );
+        }
+        eprintln!(
+            "NATIVE_SAVE_OWNER start={start} saves=10 wall_us={}",
+            total.as_micros()
+        );
+    }
+}
 pub async fn shared(root: &Path, s: &Server) {
+    let mut phases = PhaseStats::default();
+    let total = std::time::Instant::now();
+    macro_rules! phase {
+        ($name:literal, $work:expr) => {{
+            let cpu = cpu_ticks();
+            let start = std::time::Instant::now();
+            let result = $work;
+            let elapsed = start.elapsed();
+            phases.record($name, elapsed, cpu, cpu_ticks());
+            result
+        }};
+    }
     let c = config(root, s);
     let state = root.join("native-retention-state");
     let start = std::fs::read_to_string(root.join("retention-cycle"))
         .unwrap()
         .parse::<u64>()
         .unwrap();
-    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    let fs = phase!("construct", ReadOnlyFs::new(&c).await.unwrap());
     let mut peak = (0, 0);
     for n in start..start + 10 {
-        let node = fs.lookup(ROOT, NAME).await.unwrap();
-        let file = fs.open_write(node.id).await.unwrap();
+        let node = phase!("lookup", fs.lookup(ROOT, NAME).await.unwrap());
+        let file = phase!("open", fs.open_write(node.id).await.unwrap());
         if n > 0 {
             assert_eq!(
-                file.read(0, 17).await.unwrap(),
+                phase!("previous read", file.read(0, 17).await.unwrap()),
                 vec![((n - 1) % 251) as u8; 17],
                 "persisted bytes before overwrite"
             );
         }
         let bytes = vec![(n % 251) as u8; 17];
-        file.write(0, Arc::from(bytes.clone()), false, false)
-            .await
-            .unwrap();
-        file.flush().await.unwrap();
-        assert_eq!(file.read(0, 17).await.unwrap(), bytes);
-        file.native_object().unwrap().close().await.unwrap();
-        drop(file);
-        let size = sizes(&state);
+        phase!(
+            "write",
+            file.write(0, Arc::from(bytes.clone()), false, false)
+                .await
+                .unwrap()
+        );
+        phase!("flush", file.flush().await.unwrap());
+        assert_eq!(
+            phase!("verification read", file.read(0, 17).await.unwrap()),
+            bytes
+        );
+        phase!("actual Close", {
+            file.native_object().unwrap().close().await.unwrap();
+            drop(file);
+        });
+        let size = phase!("size probe", sizes(&state));
         peak = (peak.0.max(size.0), peak.1.max(size.1));
     }
-    native_writer::stop(fs).await;
-    inspect(root, start + 10, peak);
+    phase!("shutdown", native_writer::stop(fs).await);
+    phase!("bounds", inspect(root, start + 10, peak));
+    phases.report(start, total.elapsed());
 }
 #[cfg(any(target_os = "linux", windows))]
 pub async fn mounted(root: &Path, s: &Server) {
@@ -184,15 +252,31 @@ pub async fn mounted(root: &Path, s: &Server) {
 }
 
 pub async fn final_shared(root: &Path, s: &Server) {
+    final_shared_at(root, s, 300).await;
+}
+pub async fn final_diagnostic(root: &Path, s: &Server) {
+    final_shared_at(root, s, 20).await;
+}
+async fn final_shared_at(root: &Path, s: &Server, completed: u64) {
+    let started = std::time::Instant::now();
+    let cpu = cpu_ticks();
     let c = config(root, s);
     let fs = ReadOnlyFs::new(&c).await.unwrap();
     let node = fs.lookup(ROOT, NAME).await.unwrap();
     let file = fs.open(node.id).await.unwrap();
-    assert_eq!(file.read(0, 17).await.unwrap(), vec![(299 % 251) as u8; 17]);
+    assert_eq!(
+        file.read(0, 17).await.unwrap(),
+        vec![((completed - 1) % 251) as u8; 17]
+    );
     file.native_object().unwrap().close().await.unwrap();
     drop(file);
     native_writer::stop(fs).await;
-    inspect(root, 300, sizes(&root.join("native-retention-state")));
+    inspect(root, completed, sizes(&root.join("native-retention-state")));
+    eprintln!(
+        "NATIVE_SAVE_COLD completed={completed} wall_us={} process_cpu_ticks={:?}",
+        started.elapsed().as_micros(),
+        cpu.zip(cpu_ticks()).and_then(|(a, b)| b.checked_sub(a))
+    );
 }
 #[cfg(any(target_os = "linux", windows))]
 pub async fn final_mounted(root: &Path, s: &Server) {
