@@ -332,3 +332,32 @@ pub(crate) fn rewrite_epoch_for_test(db: &Connection, key: &str) -> Result<()> {
     );
     Ok(())
 }
+
+#[cfg(test)]
+pub(crate) fn rewrite_session_for_test(
+    db: &Connection,
+    key: &str,
+    wrong_volume: bool,
+) -> Result<()> {
+    let (mut row, _) = load(db, key)?.ok_or("missing test open")?;
+    let unknown = "99999999999999999999999999999999".to_owned();
+    if wrong_volume {
+        row.input.volume = unknown;
+    } else {
+        row.input.session = unknown;
+    }
+    let checksum = checksum(&row)?;
+    db.execute(
+        "UPDATE windows_open_journal SET input=?1,state_hash=?2 WHERE open_id=?3",
+        params![serde_json::to_vec(&row.input)?, checksum, key],
+    )?;
+    db.execute(
+        "UPDATE retained_windows_opens SET input_hash=?1 WHERE open_id=?2",
+        params![anchor(&row)?, key],
+    )?;
+    db.execute(
+        "UPDATE retired_windows_opens SET state_hash=?1 WHERE open_id=?2",
+        params![seal(&checksum), key],
+    )?;
+    Ok(())
+}

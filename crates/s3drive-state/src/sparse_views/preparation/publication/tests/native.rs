@@ -1996,6 +1996,21 @@ async fn native_retry_retained_open_capacity_recovers_after_last_reader_without_
         .owner
         .call(move |store| {
             let s = &mut store.state;
+            let before_scope = crate::namespace_client::opens::scope_counts();
+            let before_loads = crate::namespace_client::opens::load_count();
+            let expected_events: i64 =
+                s.connection
+                    .query_row("SELECT count(*) FROM windows_open_events", [], |r| r.get(0))?;
+            assert!(crate::chunk_mount::compatible(&s.connection)?);
+            let after_scope = crate::namespace_client::opens::scope_counts();
+            assert_eq!(
+                crate::namespace_client::opens::load_count() - before_loads,
+                256
+            );
+            assert_eq!(after_scope.0 - before_scope.0, 1);
+            assert_eq!(after_scope.1 - before_scope.1, 1);
+            assert_eq!(after_scope.3 - before_scope.3, 4);
+            assert_eq!(after_scope.2 - before_scope.2, expected_events as usize);
             let loads = crate::chunk_mount::load_count();
             crate::chunk_mount::admission::validate(&s.connection)?;
             assert_eq!(
@@ -2053,7 +2068,7 @@ fn native_snapshot(s: &State) -> Vec<String> {
 
 #[tokio::test]
 async fn native_retry_pinned_refusal_rechecks_resealed_unselected_edges_frontier_and_modes() {
-    for case in 0..6 {
+    for case in 0..11 {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("pinned semantic corruption");
         let mut n = setup_mode(&path, 16, true).await;
@@ -2110,9 +2125,23 @@ async fn native_retry_pinned_refusal_rechecks_resealed_unselected_edges_frontier
                             [],
                         )?;
                     }
-                    _ => {
+                    5 => {
                         s.connection
                             .execute("UPDATE sparse_scoped_mode SET state_hash=zeroblob(32)", [])?;
+                    }
+                    6 => {
+                        s.connection.execute("UPDATE windows_open_journal SET owner_id=?1 WHERE open_id=?2", params![hex(&[88;16]), original])?;
+                    }
+                    7 => {
+                        s.connection.execute("UPDATE windows_open_events SET state_hash=zeroblob(32) WHERE open_id=?1 AND ordinal=(SELECT max(ordinal) FROM windows_open_events WHERE open_id=?1)", [&original])?;
+                    }
+                    8 | 9 => {
+                        crate::namespace_client::opens::rewrite_session_for_test(&s.connection, &original, case == 9)?;
+                    }
+                    _ => {
+                        s.connection.execute("INSERT INTO windows_mount_sessions SELECT ?1,volume_id,runtime_id,owner_id,zeroblob(32) FROM windows_mount_sessions LIMIT 1", [hex(&[77;16])])?;
+                        // A complete scope scan must validate even unused sessions.
+                        assert!(crate::chunk_mount::compatible(&s.connection).is_err());
                     }
                 }
                 Ok(native_snapshot(s))

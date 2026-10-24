@@ -175,12 +175,25 @@ async fn native_retention_runtime_child() {
     file.flush().await.unwrap();
     file.native_object().unwrap().close().await.unwrap();
     drop(file);
+    let mut open_time = std::time::Duration::ZERO;
+    let mut close_time = std::time::Duration::ZERO;
     for i in 0..255 {
+        let start = std::time::Instant::now();
         let file = fs.open(node.id).await.unwrap();
+        open_time += start.elapsed();
+        let start = std::time::Instant::now();
         file.native_object().unwrap().close().await.unwrap();
+        close_time += start.elapsed();
         drop(file);
-        if i % 64 == 0 {
-            eprintln!("NATIVE_RUNTIME_PRESSURE retained={}", i + 2);
+        if i % 16 == 0 {
+            eprintln!(
+                "NATIVE_RUNTIME_PRESSURE retained={} open_ms={} close_ms={}",
+                i + 2,
+                open_time.as_millis(),
+                close_time.as_millis()
+            );
+            open_time = std::time::Duration::ZERO;
+            close_time = std::time::Duration::ZERO;
         }
     }
     assert!(

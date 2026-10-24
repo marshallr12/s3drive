@@ -45,6 +45,21 @@ pub(super) fn check_schema(db: &Connection) -> Result<()> {
     Ok(())
 }
 pub(super) fn binding(db: &Connection, session: &str, volume: &str) -> Result<String> {
+    binding_in(db, session, volume, None)
+}
+pub(super) fn binding_with_context(
+    context: &ReadContext<'_>,
+    session: &str,
+    volume: &str,
+) -> Result<String> {
+    binding_in(context.db, session, volume, Some(context))
+}
+fn binding_in(
+    db: &Connection,
+    session: &str,
+    volume: &str,
+    context: Option<&ReadContext<'_>>,
+) -> Result<String> {
     if !id(session) || !id(volume) {
         return Err("invalid mount session binding".into());
     }
@@ -59,7 +74,10 @@ pub(super) fn binding(db: &Connection, session: &str, volume: &str) -> Result<St
         || !id(&owner)
         || !id(&v)
         || v != volume
-        || identity::read(db)?.as_ref() != Some(&owner)
+        || match context {
+            Some(context) => context.owner.as_ref() != Some(&owner),
+            None => identity::read(db)?.as_ref() != Some(&owner),
+        }
         || hash != digest(b"s3drive-mount-session-v1\0", &(session, &v, &r, &owner))?
     {
         return Err("mount session binding changed".into());

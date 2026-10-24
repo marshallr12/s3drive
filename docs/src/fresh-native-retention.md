@@ -79,3 +79,13 @@ Late-corruption regressions include a coherently resealed unselected native edge
 and changed frontier, session, identity and both permanent mode rows. The
 256-open pressure check also retains an earlier compact anchor. These fixes
 still require exact-source hosted execution under unchanged limits.
+
+The next runtime-pressure attempt also shares validated owner/session facts and
+four prepared SQL statements within each read-only retained-open scan. Every
+open and event is still reread and replayed, and unused sessions are still
+checked. Standalone mutation readers do not reuse that context. Deterministic
+counters require all 256 histories and every event to be visited while preparing
+only four scan queries and validating the shared owner/session once. Additional
+late-corruption cases cover open owners, event hashes, resealed unknown or
+volume-mismatched sessions, and an unused damaged session. Runtime progress
+reports open and Close cost separately; its deadline remains unchanged.
