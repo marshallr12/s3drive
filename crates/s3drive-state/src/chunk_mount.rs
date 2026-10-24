@@ -358,6 +358,7 @@ pub(crate) fn verify_key(db: &Connection, key: &Key) -> Result<Binding> {
 pub(crate) struct ReadScope<'a> {
     db: &'a Connection,
     binding: Binding,
+    anchors: Option<crate::sparse_views::preparation::publication::retention::CheckedAnchors>,
 }
 impl ReadScope<'_> {
     pub(crate) fn connection(&self) -> &Connection {
@@ -368,6 +369,11 @@ impl ReadScope<'_> {
     }
     pub(crate) fn retry_enabled(&self) -> bool {
         self.binding.format == 2
+    }
+    pub(crate) fn anchors(
+        &self,
+    ) -> Option<&crate::sparse_views::preparation::publication::retention::CheckedAnchors> {
+        self.anchors.as_ref()
     }
 }
 pub(crate) fn read_scope<'a>(
@@ -401,14 +407,20 @@ fn read_scope_in<'a>(db: &'a Connection, key: &Key) -> Result<ReadScope<'a>> {
     let binding = require_identity(db, key)?;
     scopes(db, &binding)?;
     crate::sparse_views::isolation_for_validated_mount(db)?;
-    let scope = ReadScope { db, binding };
+    let mut scope = ReadScope {
+        db,
+        binding,
+        anchors: None,
+    };
     if scope.binding.format == 2 {
         if !crate::sparse_views::preparation::retry::enabled_scoped(&scope)? {
             return Err("native retry mode missing".into());
         }
-        crate::sparse_views::preparation::publication::retention::validate_native_anchors_scoped(
-            &scope,
-        )?;
+        // Install only after every anchor and independent witness has passed.
+        // This partially constructed scope cannot escape to any caller.
+        scope.anchors = Some(
+            crate::sparse_views::preparation::publication::retention::check_anchors_scoped(&scope)?,
+        );
     }
     crate::sparse_views::preparation::native::validate_metadata_scoped(&scope)?;
     Ok(scope)

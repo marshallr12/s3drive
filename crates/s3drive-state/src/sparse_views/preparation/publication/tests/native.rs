@@ -3777,6 +3777,7 @@ async fn native_retry_validation_work_isolation_context_rechecks_two_anchors_and
     let f = retry_cycle(&n, f, 2).await;
     retry_reopen(&mut n, &f).await;
     retry_cycle_mode(&n, f, 3, false).await;
+    let key = n.key.clone();
     n.storage.cache().owner.call(move |store| {
         let s = &mut store.state;
         let anchors = crate::sparse_views::preparation::publication::retention::load(&s.connection)?;
@@ -3794,9 +3795,58 @@ async fn native_retry_validation_work_isolation_context_rechecks_two_anchors_and
             assert_eq!(after[2] - before[2], events as usize * if prep { 2 } else { 1 }, "every event, prep={prep}");
         }
         let original = native_snapshot(s);
+        {
+            let tx = s.connection.transaction()?;
+            let before = crate::sparse_views::preparation::publication::retention::inspection_counts();
+            let scope = crate::chunk_mount::read_scope(&tx, &key)?;
+            let constructed = crate::sparse_views::preparation::publication::retention::inspection_counts();
+            assert_eq!((constructed.0 - before.0, constructed.1 - before.1), (1, 2));
+            // Source/native metadata/preparation reuse only the fully validated
+            // two-anchor set in this same unchanged read transaction.
+            views::ledger::inspect_scoped(&scope)?;
+            crate::sparse_views::preparation::ledger::inspect_scoped(&scope)?;
+            assert_eq!(crate::sparse_views::preparation::publication::retention::inspection_counts(), constructed);
+            drop(scope);
+            tx.rollback()?;
+        }
+        for misuse in 0..6 {
+            let tx = s.connection.transaction()?;
+            let scope = crate::chunk_mount::read_scope(&tx, &key)?;
+            match misuse {
+                0 => { tx.execute("UPDATE sparse_retry_mode SET state_hash=state_hash", [])?; }
+                1 => { tx.execute_batch("SAVEPOINT scope_misuse; UPDATE sparse_retry_mode SET state_hash=state_hash; ROLLBACK TO scope_misuse; RELEASE scope_misuse")?; }
+                2 => { tx.execute_batch("CREATE TRIGGER scope_misuse AFTER UPDATE ON sparse_views BEGIN SELECT 1; END")?; }
+                3 => { tx.execute_batch("CREATE TEMP TABLE scope_misuse(value INTEGER)")?; }
+                4 => { let version:i64 = tx.pragma_query_value(None, "user_version", |r|r.get(0))?; tx.pragma_update(None, "user_version", version + 1)?; }
+                _ => { let version:i64 = tx.pragma_query_value(Some("main"), "schema_version", |r|r.get(0))?; tx.pragma_update(Some("main"), "schema_version", version + 1)?; }
+            }
+            assert!(crate::sparse_views::preparation::publication::retention::load_scoped(&scope).is_err(), "stale anchor scope misuse={misuse}");
+            drop(scope);
+            if matches!(misuse, 0 | 1 | 3 | 5) {
+                // Legitimate unchanged data/new schema cookie can be validated
+                // again. The previous scope must not be silently refreshed.
+                let fresh = crate::chunk_mount::read_scope(&tx, &key)?;
+                views::ledger::inspect_scoped(&fresh)?;
+            }
+            tx.rollback()?;
+            assert_eq!(native_snapshot(s), original);
+        }
+        {
+            let tx = s.connection.transaction()?;
+            let scope = crate::chunk_mount::read_scope(&tx, &key)?;
+            // Deliberate test-only violation: an ended transaction is refused.
+            // Raw COMMIT/BEGIN is forbidden in production scoped call paths.
+            tx.execute_batch("COMMIT")?;
+            assert!(crate::sparse_views::preparation::publication::retention::load_scoped(&scope).is_err());
+            drop(scope);
+            drop(tx);
+            assert!(s.connection.is_autocommit());
+            assert_eq!(native_snapshot(s), original);
+        }
+
         // Every damage is introduced AFTER successful inspections in this same
         // transaction. No context may be reused by the later invocations.
-        for case in 0..12 {
+        for case in 0..14 {
             let tx = s.connection.transaction()?;
             views::ledger::inspect(&tx)?;
             crate::sparse_views::preparation::ledger::inspect(&tx)?;
@@ -3830,9 +3880,34 @@ async fn native_retry_validation_work_isolation_context_rechecks_two_anchors_and
                     let mount: crate::chunk_mount::Binding = serde_json::from_value(raw)?;
                     tx.execute("UPDATE chunk_mount_role SET record=?1,state_hash=?2", params![serde_json::to_vec(&mount)?, hash(b"s3drive-chunk-mount-binding-v1\0", &mount)?.as_slice()])?;
                 }
+                12 | 13 => {
+                    let (target, raw): (Vec<u8>, Vec<u8>) = tx.query_row("SELECT target,record FROM sparse_retention_anchors ORDER BY target LIMIT 1", [], |r|Ok((r.get(0)?,r.get(1)?)))?;
+                    let noncanonical = if case == 12 {
+                        let mut bytes = vec![b' ']; bytes.extend_from_slice(&raw); bytes
+                    } else {
+                        let value: serde_json::Value = serde_json::from_slice(&raw)?;
+                        let mut bytes = b"{".to_vec();
+                        for (index, (key, value)) in value.as_object().unwrap().iter().rev().enumerate() {
+                            if index != 0 { bytes.push(b','); }
+                            bytes.extend(serde_json::to_vec(key)?); bytes.push(b':');
+                            bytes.extend(serde_json::to_vec(value)?);
+                        }
+                        bytes.push(b'}'); bytes
+                    };
+                    assert_ne!(noncanonical, raw);
+                    assert_eq!(tx.execute("UPDATE sparse_retention_anchors SET record=?1 WHERE target=?2", params![noncanonical,target])?, 1);
+                }
                 _ => {
                     assert_eq!(tx.execute("INSERT INTO windows_mount_sessions SELECT ?1,volume_id,?2,owner_id,zeroblob(32) FROM windows_mount_sessions LIMIT 1", params![hex(&[77;16]),hex(&[78;16])])?, 1);
                 }
+            }
+            if case == 4 {
+                // ReadScope validates native/source metadata, not BLOB bodies;
+                // the actual full scoped preparation inspection must read them.
+                let fresh = crate::chunk_mount::read_scope(&tx, &key)?;
+                assert!(crate::sparse_views::preparation::ledger::inspect_scoped(&fresh).is_err());
+            } else {
+                assert!(crate::chunk_mount::read_scope(&tx, &key).is_err(), "new scope case {case}");
             }
             assert!(views::ledger::inspect(&tx).is_err(), "source case {case}");
             assert!(crate::sparse_views::preparation::ledger::inspect(&tx).is_err(), "prep case {case}");

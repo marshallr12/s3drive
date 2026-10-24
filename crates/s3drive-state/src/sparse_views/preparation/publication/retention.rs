@@ -203,12 +203,118 @@ fn role_hash(owner: Id, anchors: &BTreeMap<Id, Anchor>) -> Result<Id> {
         &(owner, anchors.iter().collect::<Vec<_>>()),
     )
 }
+// Opaque proof retained solely by one private immutable ReadScope. The guard
+// detects ordinary DML/DDL/PRAGMA misuse; it is NOT an arbitrary-SQL fence.
+// Correctness still requires no writes, transaction-control SQL or awaits in
+// that audited scope. In particular, deliberately rewriting schema cookies or
+// raw COMMIT/BEGIN is forbidden, not made safe by these supplementary counters.
+pub(crate) struct CheckedAnchors {
+    anchors: BTreeMap<Id, Anchor>,
+    guard: AnchorReadGuard,
+}
+#[derive(PartialEq, Eq)]
+struct AnchorReadGuard {
+    changes: u64,
+    main_schema: i64,
+    temp_schema: i64,
+    user_version: i64,
+    foreign_keys: bool,
+}
+impl AnchorReadGuard {
+    fn capture(db: &Connection) -> Result<Self> {
+        if db.is_autocommit() {
+            return Err(Failure::Corrupt.into());
+        }
+        Ok(Self {
+            changes: db.total_changes(),
+            main_schema: db.pragma_query_value(Some("main"), "schema_version", |r| r.get(0))?,
+            temp_schema: db.pragma_query_value(Some("temp"), "schema_version", |r| r.get(0))?,
+            user_version: db.pragma_query_value(None, "user_version", |r| r.get(0))?,
+            foreign_keys: db.pragma_query_value(None, "foreign_keys", |r| r.get(0))?,
+        })
+    }
+}
+// Always performs the full check, including during ReadScope construction.
+// Never consult a previously installed set here.
+pub(crate) fn check_anchors_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+) -> Result<CheckedAnchors> {
+    let anchors = load_in(
+        &mut views::IsolationCheck::from_mount_scope(scope),
+        Some(scope),
+    )?;
+    Ok(CheckedAnchors {
+        anchors,
+        guard: AnchorReadGuard::capture(scope.connection())?,
+    })
+}
+fn canonical_anchor_hash(bytes: &[u8]) -> Id {
+    let mut hash = Sha256::new();
+    hash.update(b"s3drive-retention-anchor-v1\0");
+    hash.update(bytes);
+    hash.finalize().into()
+}
+// Exact streaming encoding of the existing role_hash tuple, not a new format.
+// Anchor bytes may enter only after the caller proves canonical equality. Keep
+// role_hash's independent serde implementation for writes and differential tests.
+struct CanonicalRoleHash {
+    hash: Sha256,
+    previous: Option<Id>,
+}
+impl CanonicalRoleHash {
+    fn new(owner: Id) -> Result<Self> {
+        let mut hash = Sha256::new();
+        hash.update(b"s3drive-retention-role-v1\0");
+        hash.update(b"[");
+        hash.update(serde_json::to_vec(&owner)?);
+        hash.update(b",[");
+        Ok(Self {
+            hash,
+            previous: None,
+        })
+    }
+    fn push(&mut self, target: Id, canonical: &[u8]) -> Result<()> {
+        if self.previous.is_some_and(|previous| previous >= target) {
+            return Err(Failure::Corrupt.into());
+        }
+        if self.previous.is_some() {
+            self.hash.update(b",");
+        }
+        self.hash.update(b"[");
+        self.hash.update(serde_json::to_vec(&target)?);
+        self.hash.update(b",");
+        self.hash.update(canonical);
+        self.hash.update(b"]");
+        self.previous = Some(target);
+        Ok(())
+    }
+    fn finish(mut self) -> Id {
+        self.hash.update(b"]]");
+        self.hash.finalize().into()
+    }
+}
+#[cfg(test)]
+thread_local! {
+    static ANCHOR_LOADS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+    static ANCHOR_CHECKS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+#[cfg(test)]
+pub(in crate::sparse_views) fn inspection_counts() -> (usize, usize) {
+    (ANCHOR_LOADS.get(), ANCHOR_CHECKS.get())
+}
 pub(in crate::sparse_views) fn load(db: &Connection) -> Result<BTreeMap<Id, Anchor>> {
     load_with_isolation(&mut views::IsolationCheck::new(db))
 }
 pub(in crate::sparse_views) fn load_scoped(
     scope: &crate::chunk_mount::ReadScope<'_>,
 ) -> Result<BTreeMap<Id, Anchor>> {
+    if let Some(checked) = scope.anchors() {
+        if !scope.retry_enabled() || checked.guard != AnchorReadGuard::capture(scope.connection())?
+        {
+            return Err(Failure::Corrupt.into());
+        }
+        return Ok(checked.anchors.clone());
+    }
     load_in(
         &mut views::IsolationCheck::from_mount_scope(scope),
         Some(scope),
@@ -224,6 +330,8 @@ fn load_in(
     scope: Option<&crate::chunk_mount::ReadScope<'_>>,
 ) -> Result<BTreeMap<Id, Anchor>> {
     let db = isolation.db;
+    #[cfg(test)]
+    ANCHOR_LOADS.set(ANCHOR_LOADS.get() + 1);
     let mut q = match db
         .prepare("SELECT singleton,owner,entries,state_hash FROM sparse_retention_role LIMIT 2")
     {
@@ -265,6 +373,7 @@ fn load_in(
     }
     ledger::no_triggers(db)?;
     let mut anchors = BTreeMap::new();
+    let mut role = CanonicalRoleHash::new(owner)?;
     let mut bytes = 0usize;
     let mut q=db.prepare("SELECT target,view_id,generation_id,record,state_hash FROM sparse_retention_anchors ORDER BY target LIMIT 257")?;
     for row in q.query_map([], |r| {
@@ -282,16 +391,23 @@ fn load_in(
             return Err(Failure::Corrupt.into());
         }
         let a: Anchor = serde_json::from_slice(&raw)?;
-        if serde_json::to_vec(&a)? != raw
+        // Canonical equality is still mandatory. Reuse only those exact bytes
+        // for the identical domain-separated row hash, not unverified JSON.
+        let canonical = serde_json::to_vec(&a)?;
+        if canonical != raw
             || target != a.target()?
             || view != a.view.id
             || generation != a.generation().value()
-            || sha != hash(b"s3drive-retention-anchor-v1\0", &a)?
+            || sha != canonical_anchor_hash(&canonical)
         {
             return Err(Failure::Corrupt.into());
         }
+        #[cfg(test)]
+        ANCHOR_CHECKS.set(ANCHOR_CHECKS.get() + 1);
         a.validate_in(isolation, owner, scope)?;
-        if anchors.insert(a.target()?, a).is_some() {
+        let target = a.target()?;
+        role.push(target, &canonical)?;
+        if anchors.insert(target, a).is_some() {
             return Err(Failure::Corrupt.into());
         }
     }
@@ -311,7 +427,7 @@ fn load_in(
     if witnesses != crate::chunk_mount::admission::witnesses(db)? {
         return Err(Failure::Corrupt.into());
     }
-    if anchors.len() != entries as usize || sha != role_hash(owner, &anchors)? {
+    if anchors.len() != entries as usize || sha != role.finish() {
         return Err(Failure::Corrupt.into());
     }
     Ok(anchors)
@@ -336,11 +452,44 @@ fn save(db: &Connection, anchors: &BTreeMap<Id, Anchor>, owner: Id, target: Id) 
     Ok(())
 }
 
-pub(crate) fn validate_native_anchors_scoped(
-    scope: &crate::chunk_mount::ReadScope<'_>,
-) -> Result<()> {
-    load_scoped(scope).map(|_| ())
-}
 pub(crate) fn validate_native_anchors(db: &Connection) -> Result<()> {
     load(db).map(|_| ())
+}
+
+#[cfg(test)]
+mod canonical_encoding_tests {
+    use super::*;
+    #[test]
+    fn native_retry_validation_work_canonical_hash_bytes_match_independent_serde() {
+        for count in [0usize, 1, 2, 256] {
+            let owner = [254; 32];
+            let rows = (0..count).map(|n| {
+                let mut target = [255; 32]; target[0] = n as u8;
+                let value = serde_json::json!({"unicode": "café 日本語 🦀", "escaped": "\"\\\n\t", "nested": [n, true, null, {"z": [0,255]}]});
+                (target, value)
+            }).collect::<BTreeMap<_, _>>();
+            let mut encoded = CanonicalRoleHash::new(owner).unwrap();
+            for (target, value) in &rows {
+                let canonical = serde_json::to_vec(value).unwrap();
+                assert_eq!(
+                    canonical_anchor_hash(&canonical),
+                    hash(b"s3drive-retention-anchor-v1\0", value).unwrap()
+                );
+                encoded.push(*target, &canonical).unwrap();
+            }
+            assert_eq!(
+                encoded.finish(),
+                hash(
+                    b"s3drive-retention-role-v1\0",
+                    &(owner, rows.iter().collect::<Vec<_>>())
+                )
+                .unwrap()
+            );
+        }
+        for invalid in [[1; 32], [0; 32]] {
+            let mut encoded = CanonicalRoleHash::new([9; 32]).unwrap();
+            encoded.push([1; 32], b"{}").unwrap();
+            assert!(encoded.push(invalid, b"{}").is_err());
+        }
+    }
 }

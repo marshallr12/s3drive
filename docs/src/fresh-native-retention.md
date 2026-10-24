@@ -257,3 +257,40 @@ also cover valid dirty intermediate states and late damage with exact rollback.
 Predicted anchored source/preparation isolation scans fall to one and modeled
 physical staging from 46 to 22; these predictions and actual FS timing still
 require hosted execution. All original acceptance gates remain unchanged.
+
+The isolation-only package passed its 24 focused diagnostics and both capacity
+release/reopen gates. Linux also passed shared 300-save/restart validation, but
+Windows shared saves and Linux actual mounted saves each reached only 230 saves
+before the unchanged 20-minute deadline. It is not accepted. The short actual
+FS diagnostic improved from 89.13 to 80.66 seconds across different runners;
+that observation was not sufficient runtime margin.
+
+Run40106383062 profiled the actual FS child with official Ubuntu Callgrind after
+an ordinary save/Close had established a compact anchor. The identical ordinary
+debug binary passed both its unprofiled baseline and profiled two-save sequence,
+including exact previous/final bytes, six PUTs and a final cold read. These are
+instruction-event counts, not CPU-time percentages: retention loading accounted
+for 55.36% inclusively, including anchor validation at 27.38%. There were 158
+scoped anchor loads for 74 immutable read-scope constructions. Profiling overhead
+is not acceptance timing; raw profiling archives are not published.
+
+The proposed correction retains a fully checked anchor set only inside its
+existing private, transaction-borrowed immutable ReadScope. Construction still
+checks every anchor, original terminal, independent witness, physical receipt,
+mode and native semantic graph. Subsequent source/preparation reads in that
+same unchanged interval reuse the anchor set; independent scopes and unscoped
+inspectors remain fresh. Supplemental active-transaction, 64-bit DML-count,
+main/temp schema-cookie, user-version and foreign-key guards reject ordinary
+misuse. They are not a hostile arbitrary-SQL fence: no write, await, raw
+transaction control or deliberately rewritten schema cookie is permitted in
+these audited private call paths. Tests include DML followed by savepoint
+rollback, trigger/temp DDL, pragma changes, ended transactions, fresh-scope
+validation and two-target corruption.
+
+Within each ordinary anchor load, verified canonical JSON bytes are reused for
+the same row hash and the exact existing role-hash tuple encoding. The ordinary
+serde role hash remains an independent write-path oracle; differential tests
+cover 0, 1, 2 and 256 entries, escaping and Unicode, ordering and duplicates.
+Noncanonical whitespace or key order still fails. No stored hash definition or
+format changes. Hosted fault/integrity, actual FS/profile measurements and every
+original cross-platform acceptance gate remain required before acceptance.
