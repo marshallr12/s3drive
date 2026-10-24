@@ -137,19 +137,28 @@ impl PhaseStats {
         entry.1 += elapsed.as_micros();
         entry.2 = entry.2.zip(ticks).and_then(|(a, b)| a.checked_add(b));
     }
-    fn report(&self, start: u64, total: std::time::Duration) {
+    fn report(&self, start: u64, count: u64, total: std::time::Duration) {
         for (phase, (calls, micros, ticks)) in &self.0 {
             eprintln!(
                 "NATIVE_SAVE_PHASE start={start} phase={phase} calls={calls} wall_us={micros} process_cpu_ticks={ticks:?}"
             );
         }
         eprintln!(
-            "NATIVE_SAVE_OWNER start={start} saves=10 wall_us={}",
+            "NATIVE_SAVE_OWNER start={start} saves={count} wall_us={}",
             total.as_micros()
         );
     }
 }
 pub async fn shared(root: &Path, s: &Server) {
+    shared_count(root, s, 10).await;
+}
+pub async fn profile_warmup(root: &Path, s: &Server) {
+    shared_count(root, s, 1).await;
+}
+pub async fn profile_saves(root: &Path, s: &Server) {
+    shared_count(root, s, 2).await;
+}
+async fn shared_count(root: &Path, s: &Server, count: u64) {
     let mut phases = PhaseStats::default();
     let total = std::time::Instant::now();
     macro_rules! phase {
@@ -170,7 +179,7 @@ pub async fn shared(root: &Path, s: &Server) {
         .unwrap();
     let fs = phase!("construct", ReadOnlyFs::new(&c).await.unwrap());
     let mut peak = (0, 0);
-    for n in start..start + 10 {
+    for n in start..start + count {
         let node = phase!("lookup", fs.lookup(ROOT, NAME).await.unwrap());
         let file = phase!("open", fs.open_write(node.id).await.unwrap());
         if n > 0 {
@@ -200,8 +209,8 @@ pub async fn shared(root: &Path, s: &Server) {
         peak = (peak.0.max(size.0), peak.1.max(size.1));
     }
     phase!("shutdown", native_writer::stop(fs).await);
-    phase!("bounds", inspect(root, start + 10, peak));
-    phases.report(start, total.elapsed());
+    phase!("bounds", inspect(root, start + count, peak));
+    phases.report(start, count, total.elapsed());
 }
 #[cfg(any(target_os = "linux", windows))]
 pub async fn mounted(root: &Path, s: &Server) {
@@ -256,6 +265,9 @@ pub async fn final_shared(root: &Path, s: &Server) {
 }
 pub async fn final_diagnostic(root: &Path, s: &Server) {
     final_shared_at(root, s, 20).await;
+}
+pub async fn final_profile(root: &Path, s: &Server) {
+    final_shared_at(root, s, 3).await;
 }
 async fn final_shared_at(root: &Path, s: &Server, completed: u64) {
     let started = std::time::Instant::now();

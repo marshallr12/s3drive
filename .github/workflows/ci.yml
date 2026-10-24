@@ -293,6 +293,74 @@ jobs:
         run: |
           getconf CLK_TCK
           cargo test -p s3drive-cli --test chunk_publication native_retention_validation_work_shared_phases --locked -- --exact --nocapture --test-threads=1
+  native-cpu-profile:
+    # Diagnostic only. Profiler wall time is not native/runtime acceptance.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Restore Rust build cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: native-cpu-profile-${{ github.sha }}
+          restore-keys: |
+            rust-Linux-1.99.1-${{ hashFiles('Cargo.lock') }}-
+            rust-Linux-1.99.1-
+      - name: Install pinned Rust and official Ubuntu profiling tools
+        run: |
+          rustup toolchain install 1.99.1 --profile minimal
+          sudo apt-get update
+          sudo apt-get install -y valgrind linux-tools-generic
+          valgrind --version
+          rustc -Vv
+          git rev-parse HEAD HEAD^{tree}
+          getconf CLK_TCK
+      - name: Select permitted profiler without changing host permissions
+        run: |
+          mkdir -p "$RUNNER_TEMP/native-cpu-profile"
+          perf_binary=$(find /usr/lib/linux-tools -type f -name perf -executable | sort | head -n 1)
+          if [ -n "$perf_binary" ] && "$perf_binary" record --call-graph dwarf,16384 -F 99 -o "$RUNNER_TEMP/native-cpu-profile/probe.data" -- true; then
+            dirname "$perf_binary" >> "$GITHUB_PATH"
+            echo "S3DRIVE_NATIVE_PROFILE_TOOL=perf" >> "$GITHUB_ENV"
+            echo "S3DRIVE_NATIVE_PROFILE_OUTPUT=$RUNNER_TEMP/native-cpu-profile/perf.data" >> "$GITHUB_ENV"
+            "$perf_binary" --version
+          else
+            echo "Native sampling unavailable under unchanged runner permissions; using instruction-count profiling."
+            echo "S3DRIVE_NATIVE_PROFILE_TOOL=callgrind" >> "$GITHUB_ENV"
+            echo "S3DRIVE_NATIVE_PROFILE_OUTPUT=$RUNNER_TEMP/native-cpu-profile/callgrind.out" >> "$GITHUB_ENV"
+          fi
+      - name: Build exact ordinary debug-info filesystem fixture
+        timeout-minutes: 10
+        run: cargo test -p s3drive-cli --test chunk_publication --locked --no-run
+      - name: Run unprofiled identical-binary three-save baseline
+        timeout-minutes: 3
+        env:
+          S3DRIVE_NATIVE_PROFILE_TOOL: none
+        run: cargo test -p s3drive-cli --test chunk_publication native_retention_cpu_profile_post_anchor_saves --locked -- --exact --nocapture --test-threads=1
+      - name: Profile actual child for two post-anchor saves
+        timeout-minutes: 17
+        run: cargo test -p s3drive-cli --test chunk_publication native_retention_cpu_profile_post_anchor_saves --locked -- --exact --nocapture --test-threads=1
+      - name: Report symbolic CPU costs without publishing raw profile archives
+        if: always()
+        run: |
+          if [ "$S3DRIVE_NATIVE_PROFILE_TOOL" = perf ] && [ -f "$S3DRIVE_NATIVE_PROFILE_OUTPUT" ]; then
+            perf report --stdio --sort symbol,dso --percent-limit 1 --input "$S3DRIVE_NATIVE_PROFILE_OUTPUT"
+          elif [ "$S3DRIVE_NATIVE_PROFILE_TOOL" = callgrind ] && [ -f "$S3DRIVE_NATIVE_PROFILE_OUTPUT" ]; then
+            callgrind_annotate --auto=no --inclusive=no --threshold=99 "$S3DRIVE_NATIVE_PROFILE_OUTPUT" > "$RUNNER_TEMP/native-cpu-profile/exclusive.txt"
+            callgrind_annotate --auto=no --inclusive=yes --tree=both --threshold=99 "$S3DRIVE_NATIVE_PROFILE_OUTPUT" > "$RUNNER_TEMP/native-cpu-profile/inclusive.txt"
+            echo "Exclusive instruction costs (not elapsed time):"
+            head -n 160 "$RUNNER_TEMP/native-cpu-profile/exclusive.txt"
+            echo "Inclusive instruction costs and call counts (not elapsed time):"
+            head -n 260 "$RUNNER_TEMP/native-cpu-profile/inclusive.txt"
+            echo "Targeted validation/serialization/SQL families (inclusive report):"
+            grep -E 'retention|Terminal|Anchor|serde|sha2|checked_flushes|read_data|rusqlite|sqlite|preparation.*ledger|sparse_views.*ledger' "$RUNNER_TEMP/native-cpu-profile/inclusive.txt" | awk 'NR <= 200' || true
+          else
+            echo "No usable profile was produced; no CPU attribution is established."
+          fi
   book:
     runs-on: ubuntu-latest
     steps:

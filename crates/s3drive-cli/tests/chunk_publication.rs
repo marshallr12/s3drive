@@ -1334,6 +1334,9 @@ fn dispatch<'a>(
         #[cfg(any(target_os = "linux", windows))]
         "native_retention_seed" => Box::pin(native_retention::seed(config, root, s)),
         "native_retention_shared" => Box::pin(native_retention::shared(root, s)),
+        "native_retention_profile_warmup" => Box::pin(native_retention::profile_warmup(root, s)),
+        "native_retention_profile_saves" => Box::pin(native_retention::profile_saves(root, s)),
+        "native_retention_final_profile" => Box::pin(native_retention::final_profile(root, s)),
         "native_retention_final_shared" => Box::pin(native_retention::final_shared(root, s)),
         "native_retention_final_diagnostic" => {
             Box::pin(native_retention::final_diagnostic(root, s))
@@ -1430,6 +1433,12 @@ async fn run(mode: &str) {
     let mut creator_open_objects = None;
     let mut retention_completed = 0_u64;
     for stage in match mode {
+        "native_retention_cpu_profile" => vec![
+            "native_retention_seed",
+            "native_retention_profile_warmup",
+            "native_retention_profile_saves",
+            "native_retention_final_profile",
+        ],
         "native_retention_validation_work" => vec![
             "native_retention_seed",
             "native_retention_shared",
@@ -1467,7 +1476,51 @@ async fn run(mode: &str) {
         "source_ack_crash" => vec!["source_ack_crash", "source_recover_known"],
         _ => vec![mode],
     } {
-        let mut command = tokio::process::Command::new(std::env::current_exe().unwrap());
+        // Test-only external profiling of the actual FS child, never the
+        // authority/loopback fixture or cargo process. No production hook.
+        let profiling = stage == "native_retention_profile_saves";
+        let tool = if profiling {
+            std::env::var("S3DRIVE_NATIVE_PROFILE_TOOL").unwrap_or_else(|_| "none".into())
+        } else {
+            "none".into()
+        };
+        let executable = std::env::current_exe().unwrap();
+        let mut command = match tool.as_str() {
+            "none" => tokio::process::Command::new(&executable),
+            "perf" | "callgrind" => {
+                let output =
+                    std::env::var("S3DRIVE_NATIVE_PROFILE_OUTPUT").expect("profile output path");
+                let mut command = if tool == "perf" {
+                    let mut c = tokio::process::Command::new("timeout");
+                    c.args(["--kill-after=5s", "890s", "perf"]);
+                    c.args([
+                        "record",
+                        "--call-graph",
+                        "dwarf,16384",
+                        "-F",
+                        "99",
+                        "--output",
+                        &output,
+                        "--",
+                    ]);
+                    c
+                } else {
+                    let mut c = tokio::process::Command::new("timeout");
+                    c.args(["--kill-after=5s", "890s", "valgrind"]);
+                    c.args([
+                        "--tool=callgrind",
+                        "--trace-children=no",
+                        "--cache-sim=no",
+                        "--branch-sim=no",
+                    ])
+                    .arg(format!("--callgrind-out-file={output}"));
+                    c
+                };
+                command.arg(&executable);
+                command
+            }
+            _ => panic!("unsupported diagnostic profiler"),
+        };
         command
             .args(["--exact", "chunk_child", "--nocapture"])
             .env("S3DRIVE_CHUNK_CASE", stage)
@@ -1488,7 +1541,14 @@ async fn run(mode: &str) {
             stderr.read_to_string(&mut out).await.unwrap();
             out
         });
-        let result = tokio::time::timeout(Duration::from_secs(180), async {
+        // The separate profiler diagnostic has its own overhead budget;
+        // ordinary and acceptance stages retain the original 180-second cap.
+        let child_seconds = if profiling && tool != "none" {
+            900
+        } else {
+            180
+        };
+        let result = tokio::time::timeout(Duration::from_secs(child_seconds), async {
             while let Some(line) = lines.next_line().await.unwrap() {
                 match line.as_str() {
                     "LOSE_PUT" => {
@@ -1698,6 +1758,10 @@ async fn run(mode: &str) {
                 "native_retention_shared" | "native_retention_mounted"
             ) {
                 retention_completed += 10;
+            } else if stage == "native_retention_profile_warmup" {
+                retention_completed += 1;
+            } else if stage == "native_retention_profile_saves" {
+                retention_completed += 2;
             }
             let completed = std::fs::read_to_string(tmp.path().join("retention-cycle"))
                 .unwrap()
@@ -1829,6 +1893,10 @@ async fn run(mode: &str) {
         }
     }
     let expected = match mode {
+        "native_retention_cpu_profile" => {
+            assert_eq!(retention_completed, 3);
+            native_retention::expected_puts(3)
+        }
         "native_retention_validation_work" => {
             assert_eq!(retention_completed, 20);
             native_retention::expected_puts(20)
@@ -2383,4 +2451,12 @@ async fn native_retention_actual_300_saves_close_and_30_remounts() {
 #[tokio::test]
 async fn native_sparse_sdk_controller_interleaving() {
     run("native_sparse_sdk_controller_interleaving").await;
+}
+
+// External-profiler diagnostic only; the 20/300-save acceptance fixtures above
+// are deliberately independent and retain their original bounds.
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn native_retention_cpu_profile_post_anchor_saves() {
+    run("native_retention_cpu_profile").await;
 }
