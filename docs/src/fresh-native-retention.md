@@ -202,3 +202,15 @@ multiple-target order, malformed empty creator role, stale discovery with pins
 or coherent physical corruption, and mode-one fallback. The real controller
 interleaving fixture above is bundled. All native deadlines and capacity limits
 remain unchanged; cross-platform acceptance is pending.
+
+The quiet-recovery candidate passed both OS reader-capacity gates. Exact source
+411fa49 also passed all 24 native retry cases and six SDK cases on Linux. Its
+shared fixture completed all 300 saves and the final cold read in 996.58 seconds,
+within the unchanged 20-minute limit, but failed an incorrect final PUT count.
+Cycles 0 and 251 contain only zeros: sparse preparation represents each as a
+hole, so each needs a manifest page but no data object. The exact expected total
+is one seed page, 300 save pages and 298 data objects, or 599 PUTs. The corrected
+fixture derives that schedule and checks it after every ten-save stage, seed
+and final read, retaining the final unique immutable-key assertion. This is a
+test correction, not accepted mounted evidence; full exact-source and actual
+FUSE/WinFsp gates remain pending.

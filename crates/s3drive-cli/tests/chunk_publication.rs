@@ -1425,6 +1425,7 @@ async fn run(mode: &str) {
     let mut mixed_corrupt_tail = None;
     let mut mixed_batch_window = None;
     let mut creator_open_objects = None;
+    let mut retention_completed = 0_u64;
     for stage in match mode {
         "native_retention_shared_cycles" | "native_retention_mounted_cycles" => {
             let mut stages = vec!["native_retention_seed"];
@@ -1682,6 +1683,24 @@ async fn run(mode: &str) {
                 },
             "case {stage}: {status}: {err}"
         );
+        if stage.starts_with("native_retention_") {
+            if matches!(
+                stage,
+                "native_retention_shared" | "native_retention_mounted"
+            ) {
+                retention_completed += 10;
+            }
+            let completed = std::fs::read_to_string(tmp.path().join("retention-cycle"))
+                .unwrap()
+                .parse::<u64>()
+                .unwrap();
+            assert_eq!(completed, retention_completed, "exact completed save count");
+            assert_eq!(
+                puts(&f),
+                native_retention::expected_puts(retention_completed),
+                "exact sparse PUT schedule after {stage}, {completed} saves"
+            );
+        }
         if matches!(
             stage,
             "empty_crash" | "deferred_client_crash" | "creator_import_crash" | "creator_open_crash"
@@ -1801,7 +1820,10 @@ async fn run(mode: &str) {
         }
     }
     let expected = match mode {
-        "native_retention_shared_cycles" | "native_retention_mounted_cycles" => 601,
+        "native_retention_shared_cycles" | "native_retention_mounted_cycles" => {
+            assert_eq!(retention_completed, 300);
+            native_retention::expected_puts(300)
+        }
         "cold_namespace_crash" | "cold_namespace_known" | "cold_namespace_rejected" => 1,
         "native_sparse_sdk_controller_interleaving"
         | "native_sparse_sdk_controller_linked"

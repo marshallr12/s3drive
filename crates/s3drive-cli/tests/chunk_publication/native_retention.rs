@@ -3,6 +3,22 @@
 use super::*;
 use s3drive_fs::{ROOT, ReadOnlyFs};
 const NAME: &str = "retained 日本語 🦀.bin";
+// The seed publishes one empty manifest page. Each save publishes a new page,
+// but all-zero payloads (cycles 0 and 251) are structural holes, not data PUTs.
+pub fn expected_puts(completed: u64) -> usize {
+    1 + (0..completed)
+        .map(|cycle| 1 + usize::from(cycle % 251 != 0))
+        .sum::<usize>()
+}
+
+#[test]
+fn native_retention_put_schedule_counts_zero_payloads_without_skipping_saves() {
+    assert_eq!(expected_puts(0), 1);
+    assert_eq!(expected_puts(1), 2);
+    assert_eq!(expected_puts(251), 502);
+    assert_eq!(expected_puts(252), 503);
+    assert_eq!(expected_puts(300), 599);
+}
 fn config(root: &Path, s: &Server) -> s3drive_core::Config {
     let path = root.join("native-drive.toml");
     let mut value: toml::Value = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
