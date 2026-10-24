@@ -1502,7 +1502,14 @@ async fn retry_cycle_mode(n: &Native, mut f: Fixture, iteration: u64, collect: b
         .write(n.token.clone(), context, [2; 32], 0, bytes.clone())
         .await
         .unwrap();
-    let close = close_native(n, &n.token, 71).await.unwrap();
+    let callback = hex(&hash(b"retry-cycle-close", &n.token.input().id).unwrap()[..16]);
+    let completion = hex(&hash(b"retry-cycle-completion", &n.token.input().id).unwrap()[..16]);
+    n.token.observe_close();
+    let close = n
+        .client
+        .close(n.token.clone(), callback.clone())
+        .await
+        .unwrap();
     let info = close.plans[0].clone();
     let plan = info.id().unwrap();
     let f =
@@ -1548,7 +1555,7 @@ async fn retry_cycle_mode(n: &Native, mut f: Fixture, iteration: u64, collect: b
             .await
             .unwrap();
     n.client
-        .complete(n.token.clone(), hex(&[71; 16]), hex(&[72; 16]))
+        .complete(n.token.clone(), callback, completion)
         .await
         .unwrap();
     let key = n.key.clone();
@@ -1702,9 +1709,9 @@ async fn native_retry_resealed_terminal_fields_and_missing_independent_witness_f
                         ],
                     )?;
                 }
-                let before = super::super::retry_safety::migration_rows(s);
+                let before = native_snapshot(s);
                 assert!(crate::chunk_mount::require(&s.connection, &key).is_err());
-                assert_eq!(before, super::super::retry_safety::migration_rows(s));
+                assert_eq!(before, native_snapshot(s));
                 Ok(())
             })
             .await
@@ -1745,7 +1752,7 @@ async fn native_retry_retirement_sqlite_full_rolls_back_independent_witness_and_
                     Err(e) => return Err(e.into()),
                 }
             }
-            let before = super::super::retry_safety::migration_rows(s);
+            let before = native_snapshot(s);
             let error = j(s)
                 .retire_checkpoint(&cp, views::Options::default())
                 .unwrap_err();
@@ -1755,7 +1762,7 @@ async fn native_retry_retirement_sqlite_full_rolls_back_independent_witness_and_
                     .and_then(|e| e.sqlite_error_code()),
                 Some(rusqlite::ErrorCode::DiskFull)
             );
-            assert_eq!(super::super::retry_safety::migration_rows(s), before);
+            assert_eq!(native_snapshot(s), before);
             s.connection
                 .pragma_update(None, "max_page_count", pages + 1024)?;
             j(s).retire_checkpoint(&cp, views::Options::default())?;
@@ -1796,7 +1803,7 @@ async fn native_retry_killed_retirement_owners_preserve_old_or_complete_new_stat
                     s.connection
                         .query_row("SELECT plan_id FROM sparse_preparations", [], |r| r.get(0))?;
                 let cp = pj(s).checkpoint(plan.try_into().unwrap())?;
-                Ok((super::super::retry_safety::migration_rows(s), cp))
+                Ok((native_snapshot(s), cp))
             })
             .await
             .unwrap();
@@ -1841,7 +1848,7 @@ async fn native_retry_killed_retirement_owners_preserve_old_or_complete_new_stat
         assert!(!child.wait().unwrap().success());
         let mut state = State::open_managed(&path).unwrap();
         if point != "Committed" {
-            assert_eq!(super::super::retry_safety::migration_rows(&state), before);
+            assert_eq!(native_snapshot(&state), before);
         }
         j(&mut state)
             .retire_checkpoint(&cp, views::Options::default())
@@ -1862,8 +1869,8 @@ async fn native_retry_killed_retirement_owners_preserve_old_or_complete_new_stat
 async fn native_retry_reader_clones_and_concurrent_reads_hold_exact_source_and_physical_history() {
     let tmp = tempfile::tempdir().unwrap();
     let path = tmp.path().join("native readers");
-    let n = setup_mode(&path, 16, true).await;
-    let f = retry_cycle_mode(&n, fixture(), 1, false).await;
+    let mut n = setup_mode(&path, 16, true).await;
+    let mut f = retry_cycle_mode(&n, fixture(), 1, false).await;
     let (view, generation) = n
         .storage
         .cache()
@@ -1889,12 +1896,18 @@ async fn native_retry_reader_clones_and_concurrent_reads_hold_exact_source_and_p
     let physical = reader.clone();
     drop(reader);
     let bytes = physical.read(0, 4096).await.unwrap();
+    assert_eq!(
+        logical.read(0, 17).await.unwrap(),
+        vec![views::Piece::Local(vec![1; 17])]
+    );
+    retry_reopen(&mut n, &f).await;
+    f = retry_cycle_mode(&n, f, 2, false).await;
     let (source, root, collected) = tokio::join!(
         logical.read(0, 17),
         physical.read(0, 4096),
         n.client.retire_linked(f.node.id.clone())
     );
-    assert!(!source.unwrap().is_empty());
+    assert_eq!(source.unwrap(), vec![views::Piece::Local(vec![1; 17])]);
     assert_eq!(root.unwrap(), bytes);
     assert!(!collected.unwrap());
     drop(logical);
@@ -1903,7 +1916,18 @@ async fn native_retry_reader_clones_and_concurrent_reads_hold_exact_source_and_p
     drop(physical);
     assert!(n.client.retire_linked(f.node.id).await.unwrap());
     n.storage.close().await.unwrap();
-    drop(State::open_managed(&path).unwrap());
+    let state = State::open_managed(&path).unwrap();
+    assert!(
+        !state
+            .connection
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM staged_generations WHERE generation_id=?1)",
+                [generation.value()],
+                |r| r.get::<_, bool>(0)
+            )
+            .unwrap(),
+        "old physical root must actually be retired"
+    );
 }
 #[tokio::test]
 async fn native_retry_retained_open_capacity_recovers_after_last_reader_without_identity_reuse() {
@@ -1955,9 +1979,9 @@ async fn native_retry_retained_open_capacity_recovers_after_last_reader_without_
                 crate::chunk_mount::AdmissionDomain::Open,
             )?
             .unwrap();
-            let before = super::super::retry_safety::migration_rows(s);
+            let before = native_snapshot(s);
             assert!(opens(s, &key).prepare(input).is_err());
-            assert_eq!(before, super::super::retry_safety::migration_rows(s));
+            assert_eq!(before, native_snapshot(s));
             Ok(())
         })
         .await
@@ -1984,4 +2008,16 @@ async fn native_retry_retained_open_capacity_recovers_after_last_reader_without_
         .unwrap();
     assert!(n.client.retire_linked(f.node.id).await.unwrap());
     n.storage.close().await.unwrap();
+}
+
+// Include mode contents as well as the full schema and remaining table rows.
+fn native_snapshot(s: &State) -> Vec<String> {
+    let mut rows = super::super::retry_safety::migration_rows(s);
+    for table in ["sparse_scoped_mode", "sparse_retry_mode"] {
+        let mut q = s.connection.prepare(&format!("SELECT quote(singleton)||','||quote(format)||','||quote(state_hash) FROM {table} ORDER BY singleton")).unwrap();
+        for row in q.query_map([], |r| r.get::<_, String>(0)).unwrap() {
+            rows.push(format!("{table}:{}", row.unwrap()));
+        }
+    }
+    rows
 }

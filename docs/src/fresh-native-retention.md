@@ -58,3 +58,12 @@ cycles beyond history limits, DB/WAL/staging bounds, stale identity rejection,
 coherently rehashed forged proofs, reader/clone lifetime, concurrency, process
 kill and actual SQLITE_FULL rollback, plus real FUSE/WinFsp debug and release
 save/Close/remount coverage. Existing whole-sequence deadlines remain unchanged.
+
+The candidate regression fixtures include a private shared-runtime capacity test:
+retain an independent cloned edited-file reader, close 256 native opens, observe
+backpressure, release the last reader and reopen through the ordinary filesystem
+API without an explicit collector call. It also checks exact bytes after a cold
+restart. This test has its own bounded subprocess deadline and does not alter
+any existing native deadline. State tests separately pin an older physical root
+that must actually disappear after release and validate rollback including both
+permanent opt-in mode rows. These describe required checks, not passed results.

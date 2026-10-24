@@ -703,3 +703,6 @@ impl Writes {
             .map_err(|_| Error::Timeout)?
     }
 }
+
+#[cfg(test)]
+mod retention_tests;
