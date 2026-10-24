@@ -3508,7 +3508,7 @@ async fn native_retry_validation_work_current_scope_factory_keeps_modes_and_erro
         n.storage.close().await.unwrap();
     }
     let tmp = tempfile::tempdir().unwrap();
-    let mut s = State::open_managed(tmp.path()).unwrap();
+    let mut s = State::open_managed(&tmp.path().join("absent mount")).unwrap();
     let tx = s.connection.transaction().unwrap();
     assert!(
         crate::chunk_mount::read_scope_current(&tx)
