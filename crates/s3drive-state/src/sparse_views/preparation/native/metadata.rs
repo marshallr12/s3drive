@@ -12,9 +12,19 @@ pub(in crate::sparse_views::preparation) fn epoch_source_visits() -> usize {
 pub(crate) fn validate(db: &Connection) -> Result<()> {
     validate_retirement(db, &[])
 }
+pub(crate) fn validate_scoped(scope: &crate::chunk_mount::ReadScope<'_>) -> Result<()> {
+    validate_in(scope.connection(), &[], Some(scope))
+}
 pub(in crate::sparse_views) fn validate_retirement(
     db: &Connection,
     retired: &[OpenRecord],
+) -> Result<()> {
+    validate_in(db, retired, None)
+}
+fn validate_in(
+    db: &Connection,
+    retired: &[OpenRecord],
+    scope: Option<&crate::chunk_mount::ReadScope<'_>>,
 ) -> Result<()> {
     let mut records = opens::sparse_records(db)?;
     for record in retired {
@@ -43,7 +53,10 @@ pub(in crate::sparse_views) fn validate_retirement(
     if version < 48 {
         return Err(Failure::Corrupt.into());
     }
-    let source = views::inspect_metadata(db)?;
+    let source = match scope {
+        Some(scope) => views::inspect_metadata_scoped(scope)?,
+        None => views::inspect_metadata(db)?,
+    };
     let roots = publication::ledger::inspect(db)?;
     // Index only the fully validated immutable source snapshot from this call.
     // Each epoch used to linearly search every retained view. No validation or
@@ -108,7 +121,16 @@ pub(in crate::sparse_views) fn validate_retirement(
         // The plain BLOB key and domain-separated manifest page digest are
         // intentionally different. Bind both exact original intent identities
         // through the source-epoch event; do not fetch private page bodies.
-        let (operation, generation, retry) = plan_identity(db, proof, binding, view.id)?;
+        let (operation, generation, retry) = match scope {
+            Some(scope) => plan_identity_in(
+                proof,
+                binding,
+                view.id,
+                scope.retry_enabled(),
+                retry::enabled_scoped(scope)?,
+            )?,
+            None => plan_identity(db, proof, binding, view.id)?,
+        };
         if epochs.get(&binding.epoch()?)
             != Some(&(
                 proof.clone(),

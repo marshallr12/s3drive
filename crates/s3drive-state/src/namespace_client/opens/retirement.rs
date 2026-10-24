@@ -297,3 +297,38 @@ impl TerminalSuffix {
         Ok(self.retired.clone())
     }
 }
+
+#[cfg(test)]
+pub(crate) fn rewrite_epoch_for_test(db: &Connection, key: &str) -> Result<()> {
+    let (mut row, mut record) = load(db, key)?.ok_or("missing test open")?;
+    let mut changed = false;
+    for event in &mut record.events {
+        if let Action::OwnSparseEpoch { operation, .. } = &mut event.action {
+            *operation = [222; 32];
+            changed = true;
+            break;
+        }
+    }
+    assert!(changed);
+    let mut previous = None;
+    for (index, event) in record.events.iter().enumerate() {
+        let digest = event_hash(key, index + 1, event, &previous)?;
+        db.execute("UPDATE windows_open_events SET action=?1,previous_hash=?2,state_hash=?3 WHERE open_id=?4 AND event_id=?5", params![serde_json::to_vec(&event.action)?, previous, digest, key, event.id])?;
+        previous = Some(digest);
+    }
+    row.head = previous;
+    let checksum = checksum(&row)?;
+    db.execute(
+        "UPDATE windows_open_journal SET head_hash=?1,state_hash=?2 WHERE open_id=?3",
+        params![row.head, checksum, key],
+    )?;
+    db.execute(
+        "UPDATE retired_windows_opens SET state_hash=?1 WHERE open_id=?2",
+        params![seal(&checksum), key],
+    )?;
+    assert!(
+        load(db, key)?.is_some(),
+        "forgery must pass structural event/row/seal checks"
+    );
+    Ok(())
+}

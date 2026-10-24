@@ -1934,7 +1934,10 @@ async fn native_retry_retained_open_capacity_recovers_after_last_reader_without_
     let tmp = tempfile::tempdir().unwrap();
     let path = tmp.path().join("native reader pressure");
     let mut n = setup_mode(&path, 16, true).await;
-    let f = retry_cycle_mode(&n, fixture(), 1, false).await;
+    // Keep a prior compact anchor while exercising the full retained-open cap.
+    let f = retry_cycle_mode(&n, fixture(), 0, true).await;
+    retry_reopen(&mut n, &f).await;
+    let f = retry_cycle_mode(&n, f, 1, false).await;
     let local = n.storage.sparse_views(views::Options::default()).unwrap();
     let reader = local.guard(n.view.id()).await.unwrap();
     let clone = reader.clone();
@@ -2046,4 +2049,90 @@ fn native_snapshot(s: &State) -> Vec<String> {
         }
     }
     rows
+}
+
+#[tokio::test]
+async fn native_retry_pinned_refusal_rechecks_resealed_unselected_edges_frontier_and_modes() {
+    for case in 0..6 {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("pinned semantic corruption");
+        let mut n = setup_mode(&path, 16, true).await;
+        let original = n.token.input().id.clone();
+        let mut f = retry_cycle_mode(&n, fixture(), 1, false).await;
+        let reader = n
+            .storage
+            .sparse_views(views::Options::default())
+            .unwrap()
+            .guard(n.view.id())
+            .await
+            .unwrap();
+        retry_reopen(&mut n, &f).await;
+        f = retry_cycle_mode(&n, f, 2, false).await;
+        assert!(!n.client.retire_linked(f.node.id.clone()).await.unwrap());
+        let before = n
+            .storage
+            .cache()
+            .owner
+            .call(move |store| {
+                let s = &mut store.state;
+                match case {
+                    0 => crate::namespace_client::opens::rewrite_epoch_for_test(
+                        &s.connection,
+                        &original,
+                    )?,
+                    1 => {
+                        let binding = crate::chunk_mount::load(&s.connection)?.unwrap();
+                        let mut value = serde_json::to_value(&binding)?;
+                        value["frontier"] =
+                            serde_json::json!(value["frontier"].as_u64().unwrap() - 1);
+                        let binding: crate::chunk_mount::Binding = serde_json::from_value(value)?;
+                        s.connection.execute(
+                            "UPDATE chunk_mount_role SET record=?1,state_hash=?2",
+                            params![
+                                serde_json::to_vec(&binding)?,
+                                hash(b"s3drive-chunk-mount-binding-v1\0", &binding)?.as_slice()
+                            ],
+                        )?;
+                    }
+                    2 => {
+                        s.connection
+                            .execute("UPDATE sparse_retry_mode SET state_hash=zeroblob(32)", [])?;
+                    }
+                    3 => {
+                        s.connection.execute(
+                            "UPDATE windows_mount_sessions SET state_hash=zeroblob(32)",
+                            [],
+                        )?;
+                    }
+                    4 => {
+                        s.connection.execute(
+                            "UPDATE retained_client_identity SET state_hash=zeroblob(32)",
+                            [],
+                        )?;
+                    }
+                    _ => {
+                        s.connection
+                            .execute("UPDATE sparse_scoped_mode SET state_hash=zeroblob(32)", [])?;
+                    }
+                }
+                Ok(native_snapshot(s))
+            })
+            .await
+            .unwrap();
+        assert!(
+            n.client.retire_linked(f.node.id).await.is_err(),
+            "corruption case {case} was hidden by the pin"
+        );
+        n.storage
+            .cache()
+            .owner
+            .call(move |store| {
+                assert_eq!(native_snapshot(&store.state), before);
+                Ok(())
+            })
+            .await
+            .unwrap();
+        drop(reader);
+        n.storage.close().await.unwrap();
+    }
 }

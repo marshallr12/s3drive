@@ -282,14 +282,29 @@ fn plan_identity(
     binding: &Binding,
     view: Id,
 ) -> Result<(Id, [u8; 16], Option<retry::Operation>)> {
-    if crate::chunk_mount::retry_enabled(db)? {
-        if !retry::enabled(db)? {
+    plan_identity_in(
+        native,
+        binding,
+        view,
+        crate::chunk_mount::retry_enabled(db)?,
+        retry::enabled(db)?,
+    )
+}
+fn plan_identity_in(
+    native: &Provenance,
+    binding: &Binding,
+    view: Id,
+    mounted_retry: bool,
+    enabled: bool,
+) -> Result<(Id, [u8; 16], Option<retry::Operation>)> {
+    if mounted_retry {
+        if !enabled {
             return Err(Failure::Corrupt.into());
         }
         let token = scoped_plan_identity(native, binding, view)?;
         Ok((token.id()?, token.generation()?, Some(token)))
     } else {
-        if retry::enabled(db)? {
+        if enabled {
             return Err(Failure::Isolated.into());
         }
         let nonce = hash(b"s3drive-native-sparse-plan-v1\0", &(native, view))?;
@@ -454,6 +469,7 @@ mod metadata;
 pub(super) use metadata::epoch_source_visits;
 pub(crate) use metadata::validate as validate_metadata;
 pub(in crate::sparse_views) use metadata::validate_retirement;
+pub(crate) use metadata::validate_scoped as validate_metadata_scoped;
 
 pub(crate) fn reserved_events<'a>(
     db: &Connection,
@@ -603,8 +619,21 @@ pub(in crate::sparse_views) fn verify_terminal_plan(
     mount: &crate::chunk_mount::Binding,
     info: &Info,
 ) -> Result<()> {
+    verify_terminal_plan_in(mount, info, retry::enabled(db)?)
+}
+pub(in crate::sparse_views) fn verify_terminal_plan_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+    info: &Info,
+) -> Result<()> {
+    verify_terminal_plan_in(scope.binding(), info, retry::enabled_scoped(scope)?)
+}
+fn verify_terminal_plan_in(
+    mount: &crate::chunk_mount::Binding,
+    info: &Info,
+    enabled: bool,
+) -> Result<()> {
     crate::chunk_mount::admission::frontier_of(mount)?;
-    if !retry::enabled(db)? {
+    if !enabled {
         return Err(Failure::Corrupt.into());
     }
     let native = info.native_ownership().ok_or(Failure::Corrupt)?;

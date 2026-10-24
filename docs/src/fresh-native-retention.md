@@ -67,3 +67,15 @@ restart. This test has its own bounded subprocess deadline and does not alter
 any existing native deadline. State tests separately pin an older physical root
 that must actually disappear after release and validate rollback including both
 permanent opt-in mode rows. These describe required checks, not passed results.
+
+Development runs have exposed performance blockers, not acceptance: early
+shared-cycle runs exceeded their existing step deadlines, and the retained-open
+pressure check detected six duplicate full-history scans during one pinned
+refusal. The current candidate reuses a privately constructed validation scope
+only inside one immutable read transaction. Frontier, mode, every retained open
+and session, native semantic edges, source/preparation rows and compact terminal
+witnesses remain validated. No proof survives a write or another invocation.
+Late-corruption regressions include a coherently resealed unselected native edge
+and changed frontier, session, identity and both permanent mode rows. The
+256-open pressure check also retains an earlier compact anchor. These fixes
+still require exact-source hosted execution under unchanged limits.

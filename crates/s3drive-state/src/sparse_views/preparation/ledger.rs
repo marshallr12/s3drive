@@ -89,13 +89,25 @@ pub(super) fn inspection_count() -> usize {
     INSPECTIONS.get()
 }
 pub(super) fn inspect(db: &Connection) -> Result<Snapshot> {
+    inspect_in(db, None)
+}
+pub(super) fn inspect_scoped(scope: &crate::chunk_mount::ReadScope<'_>) -> Result<Snapshot> {
+    inspect_in(scope.connection(), Some(scope))
+}
+fn inspect_in(
+    db: &Connection,
+    scope: Option<&crate::chunk_mount::ReadScope<'_>>,
+) -> Result<Snapshot> {
     #[cfg(test)]
     INSPECTIONS.set(INSPECTIONS.get() + 1);
     no_triggers(db)?;
     if !db.pragma_query_value(None, "foreign_keys", |r| r.get::<_, bool>(0))? {
         return Err(Failure::Corrupt.into());
     }
-    let views = super::super::ledger::inspect(db)?;
+    let views = match scope {
+        Some(scope) => super::super::ledger::inspect_scoped(scope)?,
+        None => super::super::ledger::inspect(db)?,
+    };
     let plans = total(db, "SELECT count(*) FROM sparse_preparations")?;
     let objects = total(db, "SELECT count(*) FROM sparse_preparation_objects")?;
     let blobs = total(db, "SELECT count(*) FROM sparse_preparation_blobs")?;
@@ -192,7 +204,10 @@ pub(super) fn inspect(db: &Connection) -> Result<Snapshot> {
     s.validate()?;
     owned::validate_snapshot(db, &s)?;
     native::validate_snapshot(db, &s)?;
-    retry::validate_snapshot(db, &s)?;
+    match scope {
+        Some(scope) => retry::validate_snapshot_scoped(scope, &s)?,
+        None => retry::validate_snapshot(db, &s)?,
+    }
     Ok(s)
 }
 impl Snapshot {

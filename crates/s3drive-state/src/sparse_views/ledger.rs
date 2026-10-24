@@ -118,7 +118,29 @@ pub(in crate::sparse_views) fn inspect_metadata(db: &Connection) -> Result<Metad
         records: data.records,
     })
 }
+pub(in crate::sparse_views) fn inspect_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+) -> Result<Ledger> {
+    load_with_scope(scope.connection(), true, true, Some(scope))
+}
+pub(in crate::sparse_views) fn inspect_metadata_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+) -> Result<Metadata> {
+    let data = load_with_scope(scope.connection(), true, false, Some(scope))?;
+    Ok(Metadata {
+        files: data.files,
+        records: data.records,
+    })
+}
 fn load(db: &Connection, patches: bool, bodies: bool) -> Result<Ledger> {
+    load_with_scope(db, patches, bodies, None)
+}
+fn load_with_scope(
+    db: &Connection,
+    patches: bool,
+    bodies: bool,
+    validated: Option<&crate::chunk_mount::ReadScope<'_>>,
+) -> Result<Ledger> {
     let tables = if patches && bodies {
         &TABLES[..]
     } else {
@@ -128,13 +150,19 @@ fn load(db: &Connection, patches: bool, bodies: bool) -> Result<Ledger> {
     for (i, table) in tables.iter().enumerate() {
         counts[i] = count(db, &format!("SELECT count(*) FROM {table}"))?;
     }
-    let mut scope = IsolationCheck::new(db);
+    let mut scope = match validated {
+        Some(scope) => IsolationCheck::from_mount_scope(scope),
+        None => IsolationCheck::new(db),
+    };
     if patches {
         scoped::enabled_in(&mut scope)?;
     }
     let mut out = Ledger::default();
     if patches {
-        out.anchors = preparation::publication::retention::load(db)?;
+        out.anchors = match validated {
+            Some(scope) => preparation::publication::retention::load_scoped(scope)?,
+            None => preparation::publication::retention::load(db)?,
+        };
         out.read_pins = pins::load_in(&mut scope)?;
     }
     if counts == [0; 5] {

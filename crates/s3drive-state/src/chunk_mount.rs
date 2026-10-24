@@ -353,18 +353,62 @@ pub(crate) fn verify_key(db: &Connection, key: &Key) -> Result<Binding> {
     }
     Ok(b)
 }
-pub(crate) fn require(db: &Connection, key: &Key) -> Result<Binding> {
+/// Private proof for one immutable read transaction only. No writes, await, or
+/// proof reuse after this transaction are permitted. Fields are not forgeable.
+pub(crate) struct ReadScope<'a> {
+    db: &'a Connection,
+    binding: Binding,
+}
+impl ReadScope<'_> {
+    pub(crate) fn connection(&self) -> &Connection {
+        self.db
+    }
+    pub(crate) fn binding(&self) -> &Binding {
+        &self.binding
+    }
+    pub(crate) fn retry_enabled(&self) -> bool {
+        self.binding.format == 2
+    }
+}
+pub(crate) fn read_scope<'a>(
+    tx: &'a rusqlite::Transaction<'_>,
+    key: &Key,
+) -> Result<ReadScope<'a>> {
+    let binding = require_identity(tx, key)?;
+    scopes(tx, &binding)?;
+    crate::sparse_views::isolation_for_validated_mount(tx)?;
+    let scope = ReadScope { db: tx, binding };
+    if scope.binding.format == 2 {
+        if !crate::sparse_views::preparation::retry::enabled_scoped(&scope)? {
+            return Err("native retry mode missing".into());
+        }
+        crate::sparse_views::preparation::publication::retention::validate_native_anchors_scoped(
+            &scope,
+        )?;
+    }
+    crate::sparse_views::preparation::native::validate_metadata_scoped(&scope)?;
+    Ok(scope)
+}
+fn require_identity(db: &Connection, key: &Key) -> Result<Binding> {
     admission::validate(db)?;
     let b = load(db)?.ok_or("chunk mount capability missing")?;
+    if b.volume != key.volume || b.owner != key.owner {
+        return Err("chunk mount capability belongs to another owner".into());
+    }
+    Ok(b)
+}
+fn require_header(db: &Connection, key: &Key) -> Result<Binding> {
+    let b = require_identity(db, key)?;
     if b.format == 2 {
         if !crate::sparse_views::preparation::retry::enabled(db)? {
             return Err("native retry mode missing".into());
         }
         crate::sparse_views::preparation::publication::retention::validate_native_anchors(db)?;
     }
-    if b.volume != key.volume || b.owner != key.owner {
-        return Err("chunk mount capability belongs to another owner".into());
-    }
+    Ok(b)
+}
+pub(crate) fn require(db: &Connection, key: &Key) -> Result<Binding> {
+    let b = require_header(db, key)?;
     scopes(db, &b)?;
     crate::sparse_views::preparation::native::validate_metadata(db)?;
     Ok(b)

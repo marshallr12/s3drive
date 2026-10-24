@@ -1297,3 +1297,6 @@ pub(crate) fn sparse_retired(db: &Connection, id: &str) -> Result<bool> {
     retirement::check(db, &row, &record)?;
     retirement::is_retired(db, id)
 }
+
+#[cfg(test)]
+pub(crate) use retirement::rewrite_epoch_for_test;

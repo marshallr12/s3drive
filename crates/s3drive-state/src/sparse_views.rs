@@ -179,6 +179,12 @@ impl<'a> IsolationCheck<'a> {
     fn new(db: &'a Connection) -> Self {
         Self { db, checked: false }
     }
+    fn from_mount_scope(scope: &'a crate::chunk_mount::ReadScope<'_>) -> Self {
+        Self {
+            db: scope.connection(),
+            checked: true,
+        }
+    }
     fn require(&mut self) -> Result<()> {
         if !self.checked {
             isolation(self.db)?;
@@ -197,6 +203,12 @@ fn isolation(db: &Connection) -> Result<()> {
     #[cfg(test)]
     ISOLATION_CHECKS.set(ISOLATION_CHECKS.get() + 1);
     let combined = crate::chunk_mount::compatible(db)?;
+    isolation_tables(db, combined)
+}
+pub(crate) fn isolation_for_validated_mount(db: &Connection) -> Result<()> {
+    isolation_tables(db, true)
+}
+fn isolation_tables(db: &Connection, combined: bool) -> Result<()> {
     for table in EXCLUDED {
         if combined && crate::chunk_mount::CLIENT_TABLES.contains(table) {
             continue;

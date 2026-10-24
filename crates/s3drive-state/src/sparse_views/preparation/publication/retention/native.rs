@@ -110,8 +110,28 @@ impl Terminal {
         info: &Info,
         view: Id,
     ) -> Result<crate::chunk_mount::Binding> {
+        self.validate_in(db, info, view, None)
+    }
+    pub(super) fn validate_scoped(
+        &self,
+        scope: &crate::chunk_mount::ReadScope<'_>,
+        info: &Info,
+        view: Id,
+    ) -> Result<crate::chunk_mount::Binding> {
+        self.validate_in(scope.connection(), info, view, Some(scope))
+    }
+    fn validate_in(
+        &self,
+        db: &Connection,
+        info: &Info,
+        view: Id,
+        scope: Option<&crate::chunk_mount::ReadScope<'_>>,
+    ) -> Result<crate::chunk_mount::Binding> {
         // This fresh fully validated owner proof is reused only in this invocation.
-        let mount = crate::chunk_mount::load(db)?.ok_or(Failure::Corrupt)?;
+        let mount = match scope {
+            Some(scope) => scope.binding().clone(),
+            None => crate::chunk_mount::load(db)?.ok_or(Failure::Corrupt)?,
+        };
         let valid_id = |id: &str| {
             id.len() == 32
                 && id
@@ -151,7 +171,10 @@ impl Terminal {
             &self.frozen,
             self.final_view,
         )?;
-        publisher::verify_terminal_plan(db, &mount, info)?;
+        match scope {
+            Some(scope) => publisher::verify_terminal_plan_scoped(scope, info)?,
+            None => publisher::verify_terminal_plan(db, &mount, info)?,
+        }
         Ok(mount)
     }
 }

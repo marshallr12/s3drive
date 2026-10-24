@@ -184,6 +184,27 @@ impl Client {
                 if !crate::chunk_mount::retry_enabled(&state.connection)? {
                     return Ok(false);
                 }
+                // Raw existence only chooses an additional read-only proof path.
+                // It never grants collection or substitutes for pin validation.
+                if state.connection.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM source_read_pins)",
+                    [],
+                    |r| r.get::<_, bool>(0),
+                )? {
+                    let tx = state
+                        .connection
+                        .transaction_with_behavior(rusqlite::TransactionBehavior::Deferred)?;
+                    let scope = crate::chunk_mount::read_scope(&tx, &key)?;
+                    let snapshot = ledger::inspect_scoped(&scope)?;
+                    for pin in snapshot.views.read_pins.pins.values() {
+                        let view = snapshot.views.record(pin.view_id())?;
+                        let base = view.request.binding.base()?;
+                        if base.volume() == scope.binding().volume && base.node() == node {
+                            return Ok(false);
+                        }
+                    }
+                    // Scope cannot escape this transaction or cover later writes.
+                }
                 let mount = crate::chunk_mount::require(&state.connection, &key)?;
                 if opens::sparse_records(&state.connection)?
                     .iter()
