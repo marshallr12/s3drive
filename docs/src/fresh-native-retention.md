@@ -89,3 +89,15 @@ only four scan queries and validating the shared owner/session once. Additional
 late-corruption cases cover open owners, event hashes, resealed unknown or
 volume-mismatched sessions, and an unused damaged session. Runtime progress
 reports open and Close cost separately; its deadline remains unchanged.
+
+A separate diagnostic job now measures individual state primitives, not total
+filesystem operations. In run40073081377, at 16 retained opens, ordinary
+session/record/admission reads performed four full scope scans, native Close
+performed twelve, and completion performed ten. The controller invokes several
+of these primitives per filesystem open or Close, so these timings cannot be
+substituted for the mounted gate. The next candidate consolidates each
+format-two mount requirement into one explicitly owned read transaction, or
+one read-only interval of the caller's existing transaction. It returns only
+the validated binding, never the shared scope. Tests require fresh validation
+after a write even within the same outer transaction, preserve the caller's
+transaction ownership, and check that the read-only path changes no rows.

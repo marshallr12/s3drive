@@ -374,10 +374,16 @@ pub(crate) fn read_scope<'a>(
     tx: &'a rusqlite::Transaction<'_>,
     key: &Key,
 ) -> Result<ReadScope<'a>> {
-    let binding = require_identity(tx, key)?;
-    scopes(tx, &binding)?;
-    crate::sparse_views::isolation_for_validated_mount(tx)?;
-    let scope = ReadScope { db: tx, binding };
+    read_scope_in(tx, key)
+}
+fn read_scope_in<'a>(db: &'a Connection, key: &Key) -> Result<ReadScope<'a>> {
+    if db.is_autocommit() {
+        return Err("mount read scope requires an active transaction".into());
+    }
+    let binding = require_identity(db, key)?;
+    scopes(db, &binding)?;
+    crate::sparse_views::isolation_for_validated_mount(db)?;
+    let scope = ReadScope { db, binding };
     if scope.binding.format == 2 {
         if !crate::sparse_views::preparation::retry::enabled_scoped(&scope)? {
             return Err("native retry mode missing".into());
@@ -407,7 +413,31 @@ fn require_header(db: &Connection, key: &Key) -> Result<Binding> {
     }
     Ok(b)
 }
+// Only a Binding leaves this helper. The validated read scope is dropped before
+// the caller can mutate its existing transaction or perform any other command.
+fn require_retry_snapshot(db: &Connection, key: &Key) -> Result<Binding> {
+    let scope = read_scope_in(db, key)?;
+    if !scope.retry_enabled() {
+        return Err("native retry contract changed inside read snapshot".into());
+    }
+    Ok(scope.binding.clone())
+}
 pub(crate) fn require(db: &Connection, key: &Key) -> Result<Binding> {
+    // The outer probe selects a path only; format/key/header are independently
+    // revalidated inside the snapshot. Format-one validation stays unchanged.
+    if retry_enabled(db)? {
+        return if db.is_autocommit() {
+            let tx =
+                rusqlite::Transaction::new_unchecked(db, rusqlite::TransactionBehavior::Deferred)?;
+            let result = require_retry_snapshot(&tx, key);
+            // Surface rollback errors rather than relying on silent Drop cleanup.
+            tx.rollback()?;
+            result
+        } else {
+            // Never commit or roll back a transaction owned by the caller.
+            require_retry_snapshot(db, key)
+        };
+    }
     let b = require_header(db, key)?;
     scopes(db, &b)?;
     crate::sparse_views::preparation::native::validate_metadata(db)?;

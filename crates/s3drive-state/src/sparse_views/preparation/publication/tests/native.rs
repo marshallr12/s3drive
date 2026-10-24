@@ -2356,6 +2356,57 @@ async fn native_retry_validation_work_per_open_close() {
             n.client.retire_linked(f.node.id.clone()).await.unwrap()
         ));
     }
+    let key = n.key.clone();
+    let original = n.token.input().id.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            let before = native_snapshot(s);
+            assert!(s.connection.is_autocommit());
+            let scans = crate::namespace_client::opens::scope_counts().0;
+            crate::chunk_mount::require(&s.connection, &key)?;
+            assert_eq!(crate::namespace_client::opens::scope_counts().0 - scans, 1);
+            assert!(s.connection.is_autocommit());
+            {
+                let tx = s
+                    .connection
+                    .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+                let scans = crate::namespace_client::opens::scope_counts().0;
+                crate::chunk_mount::require(&tx, &key)?;
+                assert_eq!(crate::namespace_client::opens::scope_counts().0 - scans, 1);
+                assert!(!tx.is_autocommit());
+                tx.execute(
+                    "UPDATE windows_open_events SET state_hash=zeroblob(32) WHERE open_id=?",
+                    [&original],
+                )?;
+                assert!(
+                    crate::chunk_mount::require(&tx, &key).is_err(),
+                    "a prior read scope cannot cover a later write in the same transaction"
+                );
+                assert!(!tx.is_autocommit());
+                tx.rollback()?;
+            }
+            let mode_hash: Vec<u8> =
+                s.connection
+                    .query_row("SELECT state_hash FROM sparse_retry_mode", [], |r| r.get(0))?;
+            s.connection
+                .execute("UPDATE sparse_retry_mode SET state_hash=zeroblob(32)", [])?;
+            assert!(crate::chunk_mount::require(&s.connection, &key).is_err());
+            assert!(
+                s.connection.is_autocommit(),
+                "failed owned read must also finish its transaction"
+            );
+            s.connection
+                .execute("UPDATE sparse_retry_mode SET state_hash=?", [mode_hash])?;
+            crate::chunk_mount::require(&s.connection, &key)?;
+            assert!(s.connection.is_autocommit());
+            assert_eq!(native_snapshot(s), before);
+            Ok(())
+        })
+        .await
+        .unwrap();
     drop(reader);
     assert!(n.client.retire_linked(f.node.id).await.unwrap());
     n.storage.close().await.unwrap();
