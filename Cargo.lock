@@ -2423,11 +2423,13 @@ dependencies = [
 name = "s3drive-cli"
 version = "0.1.0"
 dependencies = [
+ "aws-lc-rs",
  "axum",
  "clap",
  "getrandom 0.4.3",
  "percent-encoding",
  "rcgen",
+ "ring",
  "rusqlite",
  "s3drive-authority",
  "s3drive-core",

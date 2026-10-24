@@ -342,3 +342,26 @@ including cloned readers, changed/missing pins, late source/anchor damage,
 rotating-session pin fault rollback and exact publication retries. Hosted
 measurements and all original gates remain pending for this package; no speedup
 or cross-platform acceptance is claimed from static count reductions.
+
+### SHA256 backend investigation (2026-10-24, diagnostic only)
+
+The latest profiled two-save shared fixture spends 21.33% of Callgrind
+instruction events inside SHA256 compression (inclusive), not 21.33% of native
+Windows wall time. Resolved `sha2` 0.11.1 already selects SHA-NI plus SSE4.1 at
+runtime where available. Profiler CPU emulation may change that selection;
+ordinary-runner capability reporting is required before inferring the real path.
+The old RustCrypto assembly feature is not a Windows MSVC solution:
+[the upstream assembly project](https://github.com/RustCrypto/asm-hashes)
+only supports Windows GNU and reports MSVC builds broken.
+
+A separate ignored test compares the already locked `ring` 0.17.14 and
+`aws-lc-rs` 1.18.2 against the unchanged production `sha2` implementation.
+These are direct test-only dependencies; no version, production hash, encoding,
+compiler optimization, deadline or acceptance gate changes. The ordinary debug
+runner test verifies fixed vectors, one-shot and fragmented domain/body digests,
+then reports bounded repeated warm-cache synthetic timings with rotated order.
+Context construction is included. CPU feature flags describe capability, not a
+measured backend trace. AWS-LC and ring support Windows MSVC through their
+[documented build requirements](https://aws.github.io/aws-lc-rs/requirements/windows)
+and [packaged assembly handling](https://github.com/briansmith/ring/blob/main/BUILDING.md).
+No backend replacement or full-filesystem speedup is established by this test.

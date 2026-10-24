@@ -333,6 +333,9 @@ jobs:
       - name: Build ordinary debug native fixture
         timeout-minutes: 10
         run: cargo test -p s3drive-cli --test chunk_publication --no-run --locked
+      - name: Compare exact SHA256 digests and ordinary debug backend cost
+        timeout-minutes: 5
+        run: cargo test -p s3drive-cli --test sha256_backends sha256_backend_equivalence_and_debug_cost --locked -- --exact --ignored --nocapture --test-threads=1
       - name: Measure actual native syscall phases and owned daemon CPU
         timeout-minutes: 5
         run: cargo test -p s3drive-cli --test chunk_publication native_retention_validation_work_native_phases --locked -- --exact --ignored --nocapture --test-threads=1
