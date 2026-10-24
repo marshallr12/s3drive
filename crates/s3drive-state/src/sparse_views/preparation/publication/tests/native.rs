@@ -1491,7 +1491,10 @@ async fn native_retry_fresh_contract_closes_ids_before_transactional_retirement(
     drop(State::open_managed(&path).unwrap());
 }
 
-async fn retry_cycle(n: &Native, mut f: Fixture, iteration: u64) -> Fixture {
+async fn retry_cycle(n: &Native, f: Fixture, iteration: u64) -> Fixture {
+    retry_cycle_mode(n, f, iteration, true).await
+}
+async fn retry_cycle_mode(n: &Native, mut f: Fixture, iteration: u64, collect: bool) -> Fixture {
     let bytes = vec![(iteration % 251) as u8; 17];
     let context =
         Context::new(&n.view, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
@@ -1559,7 +1562,9 @@ async fn retry_cycle(n: &Native, mut f: Fixture, iteration: u64) -> Fixture {
         })
         .await
         .unwrap();
-    assert!(n.client.retire_linked(f.node.id.clone()).await.unwrap());
+    if collect {
+        assert!(n.client.retire_linked(f.node.id.clone()).await.unwrap());
+    }
     f
 }
 async fn retry_reopen(n: &mut Native, f: &Fixture) {
@@ -1707,4 +1712,276 @@ async fn native_retry_resealed_terminal_fields_and_missing_independent_witness_f
         n.storage.close().await.unwrap();
         assert!(State::open_managed(&path).is_err());
     }
+}
+
+#[tokio::test]
+async fn native_retry_retirement_sqlite_full_rolls_back_independent_witness_and_history() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("native full");
+    let n = setup_mode(&path, 16, true).await;
+    retry_cycle_mode(&n, fixture(), 1, false).await;
+    n.storage
+        .cache()
+        .owner
+        .call(|store| {
+            let s = &mut store.state;
+            let plan: Vec<u8> =
+                s.connection
+                    .query_row("SELECT plan_id FROM sparse_preparations", [], |r| r.get(0))?;
+            let cp = pj(s).checkpoint(plan.try_into().unwrap())?;
+            s.connection
+                .execute_batch("CREATE TABLE retention_pressure(data BLOB)")?;
+            let pages: i64 = s
+                .connection
+                .pragma_query_value(None, "page_count", |r| r.get(0))?;
+            s.connection.pragma_update(None, "max_page_count", pages)?;
+            loop {
+                match s
+                    .connection
+                    .execute("INSERT INTO retention_pressure VALUES(zeroblob(3500))", [])
+                {
+                    Ok(_) => (),
+                    Err(e) if e.sqlite_error_code() == Some(rusqlite::ErrorCode::DiskFull) => break,
+                    Err(e) => return Err(e.into()),
+                }
+            }
+            let before = super::super::retry_safety::migration_rows(s);
+            let error = j(s)
+                .retire_checkpoint(&cp, views::Options::default())
+                .unwrap_err();
+            assert_eq!(
+                error
+                    .downcast_ref::<rusqlite::Error>()
+                    .and_then(|e| e.sqlite_error_code()),
+                Some(rusqlite::ErrorCode::DiskFull)
+            );
+            assert_eq!(super::super::retry_safety::migration_rows(s), before);
+            s.connection
+                .pragma_update(None, "max_page_count", pages + 1024)?;
+            j(s).retire_checkpoint(&cp, views::Options::default())?;
+            crate::chunk_mount::validate_all(&s.connection)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    n.storage.close().await.unwrap();
+    drop(State::open_managed(&path).unwrap());
+}
+#[tokio::test]
+async fn native_retry_killed_retirement_owners_preserve_old_or_complete_new_state() {
+    use std::process::{Command, Stdio};
+    use std::time::{Duration, Instant};
+    for point in [
+        "NativeWitnessStored",
+        "Eligible",
+        "AnchorStored",
+        "SourceStored",
+        "PhysicalStored",
+        "NativeStored",
+        "Validated",
+        "Committed",
+    ] {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("native killed owner");
+        let ready = tmp.path().join("ready");
+        let n = setup_mode(&path, 16, true).await;
+        retry_cycle_mode(&n, fixture(), 1, false).await;
+        let (before, cp) = n
+            .storage
+            .cache()
+            .owner
+            .call(|store| {
+                let s = &mut store.state;
+                let plan: Vec<u8> =
+                    s.connection
+                        .query_row("SELECT plan_id FROM sparse_preparations", [], |r| r.get(0))?;
+                let cp = pj(s).checkpoint(plan.try_into().unwrap())?;
+                Ok((super::super::retry_safety::migration_rows(s), cp))
+            })
+            .await
+            .unwrap();
+        n.storage.close().await.unwrap();
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "sparse_views::preparation::publication::tests::retention::retention_crash_child",
+                "--nocapture",
+            ])
+            .env("S3DRIVE_RETENTION_CRASH_DIR", &path)
+            .env("S3DRIVE_MIXED_CRASH_KIND", "retire")
+            .env("S3DRIVE_MIXED_CRASH_POINT", point)
+            .env("S3DRIVE_MIXED_CRASH_READY", &ready)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let start = Instant::now();
+        while !ready.exists() {
+            if let Some(status) = child.try_wait().unwrap() {
+                use std::io::Read;
+                let mut err = String::new();
+                child
+                    .stderr
+                    .take()
+                    .unwrap()
+                    .read_to_string(&mut err)
+                    .unwrap();
+                panic!("{point}: {status}: {err}");
+            }
+            if start.elapsed() > Duration::from_secs(30) {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("native retirement checkpoint timeout: {point}");
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert!(State::open_managed(&path).is_err());
+        child.kill().unwrap();
+        assert!(!child.wait().unwrap().success());
+        let mut state = State::open_managed(&path).unwrap();
+        if point != "Committed" {
+            assert_eq!(super::super::retry_safety::migration_rows(&state), before);
+        }
+        j(&mut state)
+            .retire_checkpoint(&cp, views::Options::default())
+            .unwrap();
+        crate::chunk_mount::validate_all(&state.connection).unwrap();
+        assert_eq!(
+            state
+                .connection
+                .query_row("SELECT count(*) FROM windows_open_journal", [], |r| r
+                    .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+    }
+}
+
+#[tokio::test]
+async fn native_retry_reader_clones_and_concurrent_reads_hold_exact_source_and_physical_history() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("native readers");
+    let n = setup_mode(&path, 16, true).await;
+    let f = retry_cycle_mode(&n, fixture(), 1, false).await;
+    let (view, generation) = n
+        .storage
+        .cache()
+        .owner
+        .call(|store| {
+            let plan: Vec<u8> = store.state.connection.query_row(
+                "SELECT plan_id FROM sparse_preparations",
+                [],
+                |r| r.get(0),
+            )?;
+            let plan = plan.try_into().unwrap();
+            let view = pj(&mut store.state).info(plan)?.view().id();
+            let root = j(&mut store.state).get(plan)?;
+            Ok((view, root.physical.generation))
+        })
+        .await
+        .unwrap();
+    let local = n.storage.sparse_views(views::Options::default()).unwrap();
+    let reader = local.guard(view).await.unwrap();
+    let logical = reader.clone();
+    drop(reader);
+    let reader = n.storage.staging().snapshot(generation).await.unwrap();
+    let physical = reader.clone();
+    drop(reader);
+    let bytes = physical.read(0, 4096).await.unwrap();
+    let (source, root, collected) = tokio::join!(
+        logical.read(0, 17),
+        physical.read(0, 4096),
+        n.client.retire_linked(f.node.id.clone())
+    );
+    assert!(!source.unwrap().is_empty());
+    assert_eq!(root.unwrap(), bytes);
+    assert!(!collected.unwrap());
+    drop(logical);
+    assert!(!n.client.retire_linked(f.node.id.clone()).await.unwrap());
+    assert_eq!(physical.read(0, 4096).await.unwrap(), bytes);
+    drop(physical);
+    assert!(n.client.retire_linked(f.node.id).await.unwrap());
+    n.storage.close().await.unwrap();
+    drop(State::open_managed(&path).unwrap());
+}
+#[tokio::test]
+async fn native_retry_retained_open_capacity_recovers_after_last_reader_without_identity_reuse() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("native reader pressure");
+    let mut n = setup_mode(&path, 16, true).await;
+    let f = retry_cycle_mode(&n, fixture(), 1, false).await;
+    let local = n.storage.sparse_views(views::Options::default()).unwrap();
+    let reader = local.guard(n.view.id()).await.unwrap();
+    let clone = reader.clone();
+    drop(reader);
+    for _ in 0..255 {
+        retry_reopen(&mut n, &f).await;
+        let callback = hex(&hash(b"pressure-close", &n.token.input().id).unwrap()[..16]);
+        let completion = hex(&hash(b"pressure-completion", &n.token.input().id).unwrap()[..16]);
+        n.token.observe_close();
+        let close = n
+            .client
+            .close(n.token.clone(), callback.clone())
+            .await
+            .unwrap();
+        assert!(close.plans.is_empty());
+        n.client
+            .complete(n.token.clone(), callback, completion)
+            .await
+            .unwrap();
+        let key = n.key.clone();
+        let id = n.token.input().id.clone();
+        n.storage
+            .cache()
+            .owner
+            .call(move |store| {
+                opens(&mut store.state, &key).retire(&id)?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
+    assert!(!n.client.retire_linked(f.node.id.clone()).await.unwrap());
+    let key = n.key.clone();
+    let mut input = n.token.input().clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            input.id = crate::chunk_mount::admission::next(
+                &s.connection,
+                crate::chunk_mount::AdmissionDomain::Open,
+            )?
+            .unwrap();
+            let before = super::super::retry_safety::migration_rows(s);
+            assert!(opens(s, &key).prepare(input).is_err());
+            assert_eq!(before, super::super::retry_safety::migration_rows(s));
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(!clone.read(0, 17).await.unwrap().is_empty());
+    drop(clone);
+    assert!(n.client.retire_linked(f.node.id.clone()).await.unwrap());
+    retry_reopen(&mut n, &f).await;
+    close_native(&n, &n.token, 71).await.unwrap();
+    n.client
+        .complete(n.token.clone(), hex(&[71; 16]), hex(&[72; 16]))
+        .await
+        .unwrap();
+    let key = n.key.clone();
+    let id = n.token.input().id.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            opens(&mut store.state, &key).retire(&id)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(n.client.retire_linked(f.node.id).await.unwrap());
+    n.storage.close().await.unwrap();
 }

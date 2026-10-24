@@ -98,6 +98,13 @@ pub async fn shared(root: &Path, s: &Server) {
     for n in start..start + 10 {
         let node = fs.lookup(ROOT, NAME).await.unwrap();
         let file = fs.open_write(node.id).await.unwrap();
+        if n > 0 {
+            assert_eq!(
+                file.read(0, 17).await.unwrap(),
+                vec![((n - 1) % 251) as u8; 17],
+                "persisted bytes before overwrite"
+            );
+        }
         let bytes = vec![(n % 251) as u8; 17];
         file.write(0, Arc::from(bytes.clone()), false, false)
             .await
@@ -131,6 +138,16 @@ pub async fn mounted(root: &Path, s: &Server) {
                 .write(true)
                 .open(&file)
                 .unwrap();
+            if n > 0 {
+                let mut previous = vec![0; 17];
+                handle.read_exact(&mut previous).unwrap();
+                assert_eq!(
+                    previous,
+                    vec![((n - 1) % 251) as u8; 17],
+                    "persisted bytes before overwrite"
+                );
+                handle.seek(SeekFrom::Start(0)).unwrap();
+            }
             let bytes = vec![(n % 251) as u8; 17];
             handle.write_all(&bytes).unwrap();
             handle.sync_all().unwrap();
@@ -148,4 +165,28 @@ pub async fn mounted(root: &Path, s: &Server) {
     .await;
     mount.stop().await;
     inspect(root, start + 10, peak);
+}
+
+pub async fn final_shared(root: &Path, s: &Server) {
+    let c = config(root, s);
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    let node = fs.lookup(ROOT, NAME).await.unwrap();
+    let file = fs.open(node.id).await.unwrap();
+    assert_eq!(file.read(0, 17).await.unwrap(), vec![(299 % 251) as u8; 17]);
+    file.native_object().unwrap().close().await.unwrap();
+    drop(file);
+    native_writer::stop(fs).await;
+    inspect(root, 300, sizes(&root.join("native-retention-state")));
+}
+#[cfg(any(target_os = "linux", windows))]
+pub async fn final_mounted(root: &Path, s: &Server) {
+    config(root, s);
+    let mut mount = native_mount::Mount::start(root).await;
+    let path = mount.path.join(NAME);
+    native_mount::blocking(&mut mount, move || {
+        assert_eq!(std::fs::read(path).unwrap(), vec![(299 % 251) as u8; 17])
+    })
+    .await;
+    mount.stop().await;
+    inspect(root, 300, sizes(&root.join("native-retention-state")));
 }

@@ -1331,6 +1331,9 @@ fn dispatch<'a>(
         #[cfg(any(target_os = "linux", windows))]
         "native_retention_seed" => Box::pin(native_retention::seed(config, root, s)),
         "native_retention_shared" => Box::pin(native_retention::shared(root, s)),
+        "native_retention_final_shared" => Box::pin(native_retention::final_shared(root, s)),
+        #[cfg(any(target_os = "linux", windows))]
+        "native_retention_final_mounted" => Box::pin(native_retention::final_mounted(root, s)),
         #[cfg(any(target_os = "linux", windows))]
         "native_retention_mounted" => Box::pin(native_retention::mounted(root, s)),
         "native_lifecycle_mounted" => Box::pin(native_lifecycle::mounted(config, root, s)),
@@ -1430,6 +1433,11 @@ async fn run(mode: &str) {
                 },
                 30,
             ));
+            stages.push(if mode == "native_retention_shared_cycles" {
+                "native_retention_final_shared"
+            } else {
+                "native_retention_final_mounted"
+            });
             stages
         }
         "cold_namespace_crash" | "cold_namespace_known" | "cold_namespace_rejected" => {
