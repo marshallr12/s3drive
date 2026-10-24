@@ -1,18 +1,29 @@
 # S3Drive handoff
 
-Updated 2026-10-23. Event-bound manifest authority is accepted at schema46;
+Updated 2026-10-24. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
-## Fresh linked-native cleanup in progress (2026-10-24)
+## Fresh linked-native cleanup candidate accepted (2026-10-24)
 
-The user clarified that alpha databases are disposable: do not add old-format
-migration or backward-compatibility work. Main 5a46fc0 and its original CI
-40037713683 were accepted before this work. A fresh-only linked-native retention
-candidate is under development; see [scope and pending gates](docs/src/fresh-native-retention.md).
-It is not accepted and does not replace the accepted owned/unlinked lifecycle.
-Namespace/creation/removal/recovery retention remains unsupported. Do not claim
-whole mounted cleanup or real-provider acceptance from this candidate.
+Exact candidate `3a7b95d4aa74deb15ea12f0820882893c5919f85`, tree
+`ac8d23d199151beeb90b5dfd43f7494d16f65003`, passed independent review of
+[run40130958279](https://github.com/marshallr12/s3drive/actions/runs/40130958279):
+all seven jobs, Linux1099/Windows1094 parent-harness workspace passes,
+801 exact source blobs, six artifact digests and 35 typed Windows
+reference records. Both OS passed shared300 and actual mounted debug/release300,
+including every remount segment and final cold read, plus full workspace,
+original native lifecycle, compatibility, reader-capacity, crash and full-disk
+rollback gates. Main verification remains pending at this documentation revision.
+
+See [accepted scope and development history](docs/src/fresh-native-retention.md).
+This is opt-in cleanup for existing linked manifest files, not whole mounted
+cleanup. Creation, namespace rename/removal/replacement, owned/deferred work and
+retained recovery cleanup remain unsupported/protected. Defaults are unchanged;
+no real store or provider object was deleted. Alpha databases are disposable:
+do not add old-format migration or backward-compatibility work. Unsupported
+formats still fail closed. Previous main `5a46fc0` remains the accepted baseline
+until the merged main's independent full verification completes.
 
 ## Accepted ordinary-store cleanup and migration candidate (2026-10-23)
 

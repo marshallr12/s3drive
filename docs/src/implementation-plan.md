@@ -1,5 +1,16 @@
 # Phased implementation plan
 
+Fresh linked-native retention has exact candidate acceptance on 2026-10-24:
+`3a7b95d4aa74deb15ea12f0820882893c5919f85` passed
+[run40130958279](https://github.com/marshallr12/s3drive/actions/runs/40130958279)
+on Linux and Windows, including shared300, actual debug/release mounted300,
+reader-capacity release/reopen, full workspace, crash/full-disk rollback and
+compatibility gates. Main verification is pending at this revision. See the
+[bounded linked-file contract and evidence](fresh-native-retention.md); this does
+not enable defaults or complete creation, namespace, owned/deferred or retained
+recovery cleanup. Alpha databases are disposable; no old-format migration is
+required, and unsupported formats still fail closed.
+
 Each phase must leave a buildable tree, explicit behavior contract and durable
 verification evidence. P0 is complete; P1 has a read-only transport and local
 wire tests plus scoped live Wasabi read evidence. P2 implements a shared

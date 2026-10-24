@@ -1,8 +1,35 @@
-# Fresh linked-native retention (work in progress)
+# Fresh linked-native retention
 
-Status: implementation candidate, not accepted. No hosted or actual mounted
-acceptance is claimed by this document. The previously accepted default and
-`owned-unlinked-v1` profile remain unchanged.
+Status: exact candidate `3a7b95d4aa74deb15ea12f0820882893c5919f85`, tree
+`ac8d23d199151beeb90b5dfd43f7494d16f65003`, passed independent source, full-log
+and artifact review of [run40130958279](https://github.com/marshallr12/s3drive/actions/runs/40130958279),
+attempt 1, on 2026-10-24. All seven jobs passed. Merge/main verification remains
+pending at this documentation revision; candidate acceptance is not a claim
+about a later main commit. The default and `owned-unlinked-v1` profile remain
+unchanged.
+
+Both Linux FUSE and Windows WinFsp completed all 300 saves, actual Close calls,
+30 owner/remount segments and the final cold read in debug and release. Shared
+300-save restart coverage also passed on both OS. Debug mounted300 took 1072.49s
+on Linux and 1064.62s on Windows under the unchanged 1200s step bound; release
+took 257.06s and 349.51s respectively. These are measured runs, not a guarantee
+of fixed timing on other hardware. The original per-sequence native deadlines,
+reader-capacity bound and integrity gates were not raised or reduced.
+
+Workspace parent-harness totals were Linux 1099 passed and Windows 1094 passed,
+with zero failures (21/37 ignored respectively). Nested child summaries are not
+double-counted. Each OS passed 38 fresh-native retry cases; the focused Linux diagnostic
+job passed 31 tests. Across all six 300-save fixtures, database peak was 692224 bytes
+and staged payload peak 145 bytes. Shared WAL peaked at 4350752 bytes; mounted
+debug/release WAL peaked at 4379592 on Linux and 4136512 on Windows, returning
+to zero at the final cold read. Measured storage stayed within fixed bounds over 300 saves.
+
+Independent review matched all 801 source blobs, all six artifact digests, and
+21 replacement plus 14 disposition reference records. The full workspace,
+original native lifecycle, current/historical executable compatibility, crash,
+SQLITE_FULL rollback, stale/forged proof and reader/clone tests passed. Only the
+explicit existing-linked-file scope below is accepted, not general mounted
+namespace cleanup or real-provider deployment.
 
 Alpha databases are disposable. This work does not convert old mounted stores
 or promise backward compatibility. An explicitly selected
@@ -12,7 +39,7 @@ before its first operation. Existing format-one stores are refused, not deleted.
 
 ## Bounded scope
 
-The candidate targets repeated edits, flushes, actual Close and remount of
+The opt-in profile supports repeated edits, flushes, actual Close and remount of
 existing linked manifest files. Creation, rename, removal/unlink, replacement,
 owned/deferred publication and retained session recovery are not supported by
 this profile. Their original journals remain protective; this is not completion
@@ -49,11 +76,11 @@ A no-effect closed linked open with no source epoch or preparation can expire
 without retaining a historical result, because it has no surviving dependency
 and its ordinal cannot be reused. A failed or unknown Close is not eligible.
 
-## Pending acceptance
+## Accepted candidate checks
 
 The local workstation uses overlayfs/tmpfs; its durable-state test guard remains
 unchanged and refuses those filesystems. Local compilation is not durable or
-native acceptance. Required hosted evidence includes Linux and Windows repeated
+native acceptance. The accepted hosted evidence includes Linux and Windows repeated
 cycles beyond history limits, DB/WAL/staging bounds, stale identity rejection,
 coherently rehashed forged proofs, reader/clone lifetime, concurrency, process
 kill and actual SQLITE_FULL rollback, plus real FUSE/WinFsp debug and release
@@ -66,9 +93,11 @@ API without an explicit collector call. It also checks exact bytes after a cold
 restart. This test has its own bounded subprocess deadline and does not alter
 any existing native deadline. State tests separately pin an older physical root
 that must actually disappear after release and validate rollback including both
-permanent opt-in mode rows. These describe required checks, not passed results.
+permanent opt-in mode rows. These checks passed on the exact accepted candidate.
 
-Development runs have exposed performance blockers, not acceptance: early
+The following notes preserve historical development results and rejected
+candidates; the exact acceptance statement above supersedes their pending
+status. Development runs exposed performance blockers: early
 shared-cycle runs exceeded their existing step deadlines, and the retained-open
 pressure check detected six duplicate full-history scans during one pinned
 refusal. The current candidate reuses a privately constructed validation scope
