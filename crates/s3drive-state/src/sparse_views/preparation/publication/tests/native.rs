@@ -2228,25 +2228,25 @@ async fn native_retry_validation_work_pinned_refusal_rechecks_resealed_unselecte
 }
 
 // Diagnostic protocol fixture only, not a substitute for the filesystem gate.
+fn native_work_here() -> [usize; 9] {
+    let (scopes, sessions, events, queries) = crate::namespace_client::opens::scope_counts();
+    [
+        scopes,
+        sessions,
+        events,
+        queries,
+        crate::namespace_client::opens::load_count(),
+        crate::chunk_mount::load_count(),
+        views::ledger::inspection_count(),
+        crate::sparse_views::preparation::ledger::inspection_count(),
+        crate::sparse_views::preparation::native::epoch_source_visits(),
+    ]
+}
 async fn native_work(n: &Native) -> [usize; 9] {
     n.storage
         .cache()
         .owner
-        .call(|_| {
-            let (scopes, sessions, events, queries) =
-                crate::namespace_client::opens::scope_counts();
-            Ok([
-                scopes,
-                sessions,
-                events,
-                queries,
-                crate::namespace_client::opens::load_count(),
-                crate::chunk_mount::load_count(),
-                views::ledger::inspection_count(),
-                crate::sparse_views::preparation::ledger::inspection_count(),
-                crate::sparse_views::preparation::native::epoch_source_visits(),
-            ])
-        })
+        .call(|_| Ok(native_work_here()))
         .await
         .unwrap()
 }
@@ -3340,5 +3340,115 @@ async fn native_retry_validation_work_quiet_recovery_requires_mode_and_empty_rol
         })
         .await
         .unwrap();
+    n.storage.close().await.unwrap();
+}
+
+// Dirty-save primitive costs, including a compact anchor and a zero payload.
+// Modeled physical receipts and owner commands do not reproduce SDK/FS timing.
+#[tokio::test]
+async fn native_retry_validation_work_dirty_save_phases() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut n = setup_mode(&tmp.path().join("dirty phase cost"), 16, true).await;
+    let mut f = fixture();
+    for cycle in 0..3_u64 {
+        macro_rules! measured {
+            ($name:literal, $work:expr) => {{
+                let before = native_work(&n).await;
+                let start = std::time::Instant::now();
+                let result = $work;
+                let elapsed = start.elapsed();
+                let after = native_work(&n).await;
+                let delta = std::array::from_fn::<_, 9, _>(|j| after[j] - before[j]);
+                eprintln!("NATIVE_DIRTY_WORK cycle={cycle} phase={} ms={} scopes_sessions_events_queries_opens_mounts_sources_preps_epoch_sources={delta:?}", $name, elapsed.as_millis());
+                result
+            }};
+        }
+        let bytes = vec![(cycle % 251) as u8; 17];
+        let context =
+            Context::new(&n.view, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
+        n.view = measured!(
+            "write",
+            n.client
+                .write(n.token.clone(), context, [2; 32], 0, bytes.clone())
+                .await
+                .unwrap()
+        );
+        let context =
+            Context::new(&n.view, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
+        let info = measured!(
+            "prepare",
+            n.client.prepare(n.token.clone(), context).await.unwrap()
+        );
+        let plan = info.id().unwrap();
+        f = n.storage.cache().owner.call(move |store| {
+            let s = &mut store.state;
+            macro_rules! phase {
+                ($name:literal, $work:expr) => {{
+                    let before = native_work_here();
+                    let start = std::time::Instant::now();
+                    let result = $work;
+                    let elapsed = start.elapsed();
+                    let after = native_work_here();
+                    let delta = std::array::from_fn::<_, 9, _>(|j| after[j] - before[j]);
+                    eprintln!("NATIVE_DIRTY_WORK cycle={cycle} phase={} ms={} scopes_sessions_events_queries_opens_mounts_sources_preps_epoch_sources={delta:?}", $name, elapsed.as_millis());
+                    result
+                }};
+            }
+            let retry = info.retry_operation().unwrap();
+            let info = phase!("append data", pj(s).append(plan, info.cursor(), Candidate::Bytes(bytes.clone()))?);
+            let info = phase!("finish pages", crate::sparse_views::preparation::tests::fixture::finish(s, info));
+            phase!("physical staging", physical(s, plan));
+            phase!("semantic check", j(s).check(plan, 0, None)?);
+            phase!("check base", j(s).check_base(plan, &f.node)?);
+            let r = phase!("publication begin", j(s).begin(plan, f.node.clone(), f.store.clone(), f.node.revision, retry.publish_operation()?)?);
+            let r = phase!("publication commit", lineage::commit(s, r));
+            phase!("acknowledge", j(s).acknowledge_scoped(views::ScopedOperation::new(info.view().binding(), [11; 32])?, plan, views::Options::default())?);
+            let page = crate::journal::Journal::new(s, crate::journal::Options::default())?.read(r.physical.generation, 0, r.physical.size as usize)?;
+            let page = s3drive_core::manifest::Page::decode(&page)?;
+            f.base = Base { root: info.root()?.unwrap(), page: page.clone(), pages: BTreeMap::from([((0, 0), page)]) };
+            f.node = r.receipt().unwrap().node.clone();
+            f.binding = views::Journal::new(s, views::Options::default())?.current_head(&f.binding)?.binding().clone();
+            f.bytes = bytes;
+            Ok(f)
+        }).await.unwrap();
+        let callback = hex(&hash(b"dirty-cost-close", &n.token.input().id).unwrap()[..16]);
+        let completion = hex(&hash(b"dirty-cost-complete", &n.token.input().id).unwrap()[..16]);
+        n.token.observe_close();
+        measured!(
+            "Close",
+            n.client
+                .close(n.token.clone(), callback.clone())
+                .await
+                .unwrap()
+        );
+        measured!(
+            "complete",
+            n.client
+                .complete(n.token.clone(), callback, completion)
+                .await
+                .unwrap()
+        );
+        let key = n.key.clone();
+        let open = n.token.input().id.clone();
+        measured!(
+            "retire open",
+            n.storage
+                .cache()
+                .owner
+                .call(move |store| {
+                    opens(&mut store.state, &key).retire(&open)?;
+                    Ok(())
+                })
+                .await
+                .unwrap()
+        );
+        assert!(measured!(
+            "collect",
+            n.client.retire_linked(f.node.id.clone()).await.unwrap()
+        ));
+        if cycle < 2 {
+            measured!("reopen", retry_reopen(&mut n, &f).await);
+        }
+    }
     n.storage.close().await.unwrap();
 }
