@@ -94,13 +94,24 @@ impl Terminal {
     pub(super) fn digest(&self) -> Result<Id> {
         hash(b"s3drive-native-terminal-witness-v1\0", self)
     }
-    pub(super) fn verify_witness(&self, db: &Connection, target: &Id) -> Result<()> {
-        if crate::chunk_mount::admission::witness(db, target)? != Some(self.digest()?) {
+    pub(super) fn verify_witness(
+        &self,
+        mount: &crate::chunk_mount::Binding,
+        target: &Id,
+    ) -> Result<()> {
+        if crate::chunk_mount::admission::witness_of(mount, target) != Some(self.digest()?) {
             return Err(Failure::Corrupt.into());
         }
         Ok(())
     }
-    pub(super) fn validate(&self, db: &Connection, info: &Info, view: Id) -> Result<()> {
+    pub(super) fn validate(
+        &self,
+        db: &Connection,
+        info: &Info,
+        view: Id,
+    ) -> Result<crate::chunk_mount::Binding> {
+        // This fresh fully validated owner proof is reused only in this invocation.
+        let mount = crate::chunk_mount::load(db)?.ok_or(Failure::Corrupt)?;
         let valid_id = |id: &str| {
             id.len() == 32
                 && id
@@ -115,7 +126,7 @@ impl Terminal {
             || !valid_id(&self.completion)
             || self.close == self.completion
             || self.final_view != view
-            || self.frontier > crate::chunk_mount::admission::frontier(db)?
+            || self.frontier > crate::chunk_mount::admission::frontier_of(&mount)?
             || self.frozen.is_empty()
             || self.frozen.len() > 256
             || self.frozen.windows(2).any(|pair| pair[0] >= pair[1])
@@ -126,7 +137,7 @@ impl Terminal {
         info.native_ownership()
             .ok_or(Failure::Corrupt)?
             .validate_terminal(
-                db,
+                &mount,
                 &self.original,
                 &self.owner,
                 info.view().binding(),
@@ -140,6 +151,7 @@ impl Terminal {
             &self.frozen,
             self.final_view,
         )?;
-        publisher::verify_terminal_plan(db, info)
+        publisher::verify_terminal_plan(db, &mount, info)?;
+        Ok(mount)
     }
 }

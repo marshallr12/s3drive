@@ -268,23 +268,31 @@ pub(super) fn fresh(
 
 /// One derivation for admission and independent metadata verification. Scoped
 /// retry identity includes the exact original open witness and source view.
+fn scoped_plan_identity(
+    native: &Provenance,
+    binding: &Binding,
+    view: Id,
+) -> Result<retry::Operation> {
+    let nonce = hash(b"s3drive-native-sparse-plan-v1\0", &(native, view))?;
+    retry::Operation::new(binding, nonce)
+}
 fn plan_identity(
     db: &Connection,
     native: &Provenance,
     binding: &Binding,
     view: Id,
 ) -> Result<(Id, [u8; 16], Option<retry::Operation>)> {
-    let nonce = hash(b"s3drive-native-sparse-plan-v1\0", &(native, view))?;
     if crate::chunk_mount::retry_enabled(db)? {
         if !retry::enabled(db)? {
             return Err(Failure::Corrupt.into());
         }
-        let token = retry::Operation::new(binding, nonce)?;
+        let token = scoped_plan_identity(native, binding, view)?;
         Ok((token.id()?, token.generation()?, Some(token)))
     } else {
         if retry::enabled(db)? {
             return Err(Failure::Isolated.into());
         }
+        let nonce = hash(b"s3drive-native-sparse-plan-v1\0", &(native, view))?;
         Ok((
             nonce,
             hash(b"s3drive-native-sparse-generation-v1\0", &nonce)?[..16]
@@ -545,13 +553,12 @@ pub(crate) fn recovery_ready(db: &Connection, record: &OpenRecord) -> Result<boo
 impl Provenance {
     pub(in crate::sparse_views) fn validate_terminal(
         &self,
-        db: &Connection,
+        mount: &crate::chunk_mount::Binding,
         original: &opens::OpenInput,
         owner: &str,
         binding: &Binding,
         first_operation: Id,
     ) -> Result<()> {
-        let mount = crate::chunk_mount::load(db)?.ok_or(Failure::Corrupt)?;
         mount.open(original)?;
         let base = binding.base()?;
         if original.volume != base.volume()
@@ -579,22 +586,30 @@ impl Provenance {
             return Err(Failure::Corrupt.into());
         }
         crate::chunk_mount::admission::retained(
-            &mount,
+            mount,
             crate::chunk_mount::AdmissionDomain::Open,
             &original.id,
         )?;
         crate::chunk_mount::admission::retained(
-            &mount,
+            mount,
             crate::chunk_mount::AdmissionDomain::Session,
             &original.session,
         )?;
         Ok(())
     }
 }
-pub(in crate::sparse_views) fn verify_terminal_plan(db: &Connection, info: &Info) -> Result<()> {
+pub(in crate::sparse_views) fn verify_terminal_plan(
+    db: &Connection,
+    mount: &crate::chunk_mount::Binding,
+    info: &Info,
+) -> Result<()> {
+    crate::chunk_mount::admission::frontier_of(mount)?;
+    if !retry::enabled(db)? {
+        return Err(Failure::Corrupt.into());
+    }
     let native = info.native_ownership().ok_or(Failure::Corrupt)?;
-    let (operation, generation, retry) =
-        plan_identity(db, native, info.view().binding(), info.view().id())?;
+    let token = scoped_plan_identity(native, info.view().binding(), info.view().id())?;
+    let (operation, generation, retry) = (token.id()?, token.generation()?, Some(token));
     if info.operation() != operation
         || info.input.generation != generation
         || info.input.retry != retry

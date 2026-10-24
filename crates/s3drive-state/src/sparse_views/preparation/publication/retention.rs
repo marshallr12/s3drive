@@ -117,8 +117,8 @@ impl Anchor {
             progress: self.progress.clone(),
         };
         if let Some(proof) = &self.native {
-            proof.validate(db, &info, self.view.id)?;
-            proof.verify_witness(db, &self.target()?)?;
+            let mount = proof.validate(db, &info, self.view.id)?;
+            proof.verify_witness(&mount, &self.target()?)?;
         }
         self.input.validate(
             info.view(),

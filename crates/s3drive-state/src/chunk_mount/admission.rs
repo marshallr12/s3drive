@@ -84,8 +84,11 @@ impl Client {
 }
 
 pub(crate) fn frontier(db: &Connection) -> Result<u64> {
-    load(db)?
-        .and_then(|b| b.frontier)
+    frontier_of(&load(db)?.ok_or("native binding missing")?)
+}
+pub(crate) fn frontier_of(binding: &Binding) -> Result<u64> {
+    binding
+        .frontier
         .ok_or_else(|| "native frontier missing".into())
 }
 pub(crate) fn retained(binding: &Binding, domain: Domain, id: &str) -> Result<()> {
@@ -102,12 +105,8 @@ pub(crate) fn retained(binding: &Binding, domain: Domain, id: &str) -> Result<()
 fn target_key(target: &[u8; 32]) -> String {
     target.iter().map(|b| format!("{b:02x}")).collect()
 }
-pub(crate) fn witness(db: &Connection, target: &[u8; 32]) -> Result<Option<[u8; 32]>> {
-    Ok(load(db)?
-        .ok_or("native binding missing")?
-        .terminals
-        .get(&target_key(target))
-        .copied())
+pub(crate) fn witness_of(binding: &Binding, target: &[u8; 32]) -> Option<[u8; 32]> {
+    binding.terminals.get(&target_key(target)).copied()
 }
 pub(crate) fn seal_terminal(db: &Connection, target: &[u8; 32], proof: [u8; 32]) -> Result<()> {
     let mut binding = load(db)?.ok_or("native binding missing")?;
