@@ -2165,3 +2165,198 @@ async fn native_retry_pinned_refusal_rechecks_resealed_unselected_edges_frontier
         n.storage.close().await.unwrap();
     }
 }
+
+// Diagnostic protocol fixture only, not a substitute for the filesystem gate.
+async fn native_work(n: &Native) -> [usize; 9] {
+    n.storage
+        .cache()
+        .owner
+        .call(|_| {
+            let (scopes, sessions, events, queries) =
+                crate::namespace_client::opens::scope_counts();
+            Ok([
+                scopes,
+                sessions,
+                events,
+                queries,
+                crate::namespace_client::opens::load_count(),
+                crate::chunk_mount::load_count(),
+                views::ledger::inspection_count(),
+                crate::sparse_views::preparation::ledger::inspection_count(),
+                crate::sparse_views::preparation::native::epoch_source_visits(),
+            ])
+        })
+        .await
+        .unwrap()
+}
+#[tokio::test]
+async fn native_retry_validation_work_per_open_close() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut n = setup_mode(&tmp.path().join("native scan cost"), 16, true).await;
+    let f = retry_cycle_mode(&n, fixture(), 1, false).await;
+    let local = n.storage.sparse_views(views::Options::default()).unwrap();
+    let reader = local.guard(n.view.id()).await.unwrap();
+    let capability = crate::chunk_mount::Client::new(
+        n.storage.cache().owner,
+        crate::journal::Options::default(),
+        n.key.clone(),
+    );
+    for i in 0..16 {
+        macro_rules! measured {
+            ($name:literal, $work:expr) => {{
+                let before = native_work(&n).await;
+                let start = std::time::Instant::now();
+                let result = $work;
+                let elapsed = start.elapsed();
+                let after = native_work(&n).await;
+                if [0, 3, 15].contains(&i) {
+                    let delta = std::array::from_fn::<_, 9, _>(|j| after[j] - before[j]);
+                    eprintln!("NATIVE_VALIDATION_WORK retained={} phase={} ms={} scopes_sessions_events_queries_opens_mounts_sources_preps_epoch_sources={delta:?}", i+1, $name, elapsed.as_millis());
+                }
+                result
+            }};
+        }
+        assert!(!measured!(
+            "pre-open sweep",
+            n.client.retire_linked(f.node.id.clone()).await.unwrap()
+        ));
+        measured!("heads", local.heads().await.unwrap());
+        measured!(
+            "namespace pending",
+            capability.namespace().pending(None, 256).await.unwrap()
+        );
+        measured!(
+            "creator records",
+            capability
+                .creations(crate::manifest_creation::Limits::default())
+                .unwrap()
+                .records()
+                .await
+                .unwrap()
+        );
+        measured!(
+            "root records",
+            local
+                .preparations(crate::sparse_views::preparation::Options::default())
+                .unwrap()
+                .publications(Limits::default())
+                .unwrap()
+                .records()
+                .await
+                .unwrap()
+        );
+        measured!(
+            "pending recovery",
+            capability
+                .opens()
+                .pending_recovery(n.token.input().volume.clone(), n.token.input().node.clone())
+                .await
+                .unwrap()
+        );
+
+        measured!(
+            "current session",
+            capability
+                .opens()
+                .current_session(
+                    n.token.input().session.clone(),
+                    n.token.input().volume.clone()
+                )
+                .await
+                .unwrap()
+        );
+        measured!("records", capability.opens().records().await.unwrap());
+        measured!(
+            "get",
+            capability
+                .opens()
+                .get(n.token.input().id.clone())
+                .await
+                .unwrap()
+        );
+        measured!(
+            "owned removal",
+            capability
+                .namespace()
+                .owned_removal(n.token.input().volume.clone(), n.token.input().node.clone())
+                .await
+                .unwrap()
+        );
+        let guard = measured!("guard acquire", local.guard(n.view.id()).await.unwrap());
+        measured!("guard release", {
+            drop(guard);
+            n.storage.cache().owner.call(|_| Ok(())).await.unwrap();
+        });
+        let next = measured!(
+            "next admission",
+            capability
+                .next_admission(crate::chunk_mount::AdmissionDomain::Open)
+                .await
+                .unwrap()
+                .unwrap()
+        );
+        let mut input = n.token.input().clone();
+        let key = n.key.clone();
+        let binding = f.binding.clone();
+        let (id, view) = measured!(
+            "admission activation head",
+            n.storage
+                .cache()
+                .owner
+                .call(move |store| {
+                    let s = &mut store.state;
+                    input.id = next;
+                    let activation = hex(&hash(b"test-native-activation", &input.id)?[..16]);
+                    opens(s, &key).prepare(input.clone())?;
+                    opens(s, &key).activate(&input.id, &activation)?;
+                    let view = views::Journal::new(s, views::Options::default())?
+                        .current_head(&binding)?;
+                    Ok((input.id, view))
+                })
+                .await
+                .unwrap()
+        );
+        n.token = measured!("bind", n.client.bind(id).await.unwrap());
+        n.view = view;
+        measured!("plans", n.client.plans(f.node.id.clone()).await.unwrap());
+        let callback = hex(&hash(b"diagnostic-close", &n.token.input().id).unwrap()[..16]);
+        let completion = hex(&hash(b"diagnostic-completion", &n.token.input().id).unwrap()[..16]);
+        n.token.observe_close();
+        let close = measured!(
+            "Close",
+            n.client
+                .close(n.token.clone(), callback.clone())
+                .await
+                .unwrap()
+        );
+        assert!(close.plans.is_empty());
+        measured!(
+            "completion",
+            n.client
+                .complete(n.token.clone(), callback, completion)
+                .await
+                .unwrap()
+        );
+        let key = n.key.clone();
+        let id = n.token.input().id.clone();
+        measured!(
+            "retire",
+            n.storage
+                .cache()
+                .owner
+                .call(move |store| {
+                    opens(&mut store.state, &key).retire(&id)?;
+                    Ok(())
+                })
+                .await
+                .unwrap()
+        );
+        assert!(!measured!(
+            "post-Close sweep",
+            n.client.retire_linked(f.node.id.clone()).await.unwrap()
+        ));
+    }
+    drop(reader);
+    assert!(n.client.retire_linked(f.node.id).await.unwrap());
+    n.storage.close().await.unwrap();
+}

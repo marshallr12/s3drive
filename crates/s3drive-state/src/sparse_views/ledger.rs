@@ -135,12 +135,20 @@ pub(in crate::sparse_views) fn inspect_metadata_scoped(
 fn load(db: &Connection, patches: bool, bodies: bool) -> Result<Ledger> {
     load_with_scope(db, patches, bodies, None)
 }
+#[cfg(test)]
+thread_local! { static INSPECTIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
+#[cfg(test)]
+pub(in crate::sparse_views) fn inspection_count() -> usize {
+    INSPECTIONS.get()
+}
 fn load_with_scope(
     db: &Connection,
     patches: bool,
     bodies: bool,
     validated: Option<&crate::chunk_mount::ReadScope<'_>>,
 ) -> Result<Ledger> {
+    #[cfg(test)]
+    INSPECTIONS.set(INSPECTIONS.get() + 1);
     let tables = if patches && bodies {
         &TABLES[..]
     } else {
