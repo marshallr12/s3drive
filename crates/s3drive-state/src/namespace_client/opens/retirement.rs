@@ -1,7 +1,7 @@
 //! Lossless retirement, not evidence deletion or abandoned-session cleanup.
 use super::*;
 fn seal(state_hash: &[u8]) -> Vec<u8> {
-    let mut h = Sha256::new();
+    let mut h = ProofSha256::new();
     h.update(b"s3drive-open-retirement-v1\0");
     h.update(state_hash);
     h.finalize().to_vec()

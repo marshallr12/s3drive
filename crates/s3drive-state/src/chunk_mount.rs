@@ -1,4 +1,5 @@
 //! Explicit local composition. No S3 permission, native activation or body repair.
+use crate::proof_hash::ProofSha256;
 use crate::{
     Result, State, journal, namespace as ns,
     namespace_client::{self as names, Control},
@@ -6,7 +7,6 @@ use crate::{
 };
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::fmt;
 pub(crate) mod admission;
 pub use admission::Domain as AdmissionDomain;
@@ -76,10 +76,10 @@ fn id(s: &str) -> bool {
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 fn hash<T: Serialize>(label: &[u8], value: &T) -> Result<[u8; 32]> {
-    let mut h = Sha256::new();
+    let mut h = ProofSha256::new();
     h.update(label);
     h.update(serde_json::to_vec(value)?);
-    Ok(h.finalize().into())
+    Ok(h.finalize())
 }
 fn sorted(mut controls: Vec<Control>) -> Result<Vec<Control>> {
     if controls.is_empty() || controls.len() > MAX_CONTROLS {
@@ -183,7 +183,7 @@ impl Binding {
     }
 }
 pub(crate) fn identity_hash(owner: &str) -> Vec<u8> {
-    let mut h = Sha256::new();
+    let mut h = ProofSha256::new();
     h.update(b"s3drive-chunk-client-identity-v1\0");
     h.update(owner.as_bytes());
     h.finalize().to_vec()

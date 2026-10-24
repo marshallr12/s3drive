@@ -5,6 +5,7 @@ pub(crate) mod identity;
 pub mod opens;
 pub mod recovery;
 pub(crate) mod removals;
+use crate::proof_hash::ProofSha256;
 use crate::{
     Result, State,
     namespace::{self, Apply, Mutation, Receipt, Store},
@@ -13,7 +14,6 @@ pub use changes::Entry;
 pub use removals::{OwnedRemoval, TransitionCancellation};
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 const LIMIT: i64 = 4096;
 pub(crate) fn check_creation_capacity(db: &Connection) -> Result<()> {
     removals::check_capacity(db, &removals::records(db)?)
@@ -103,7 +103,7 @@ pub struct Record {
     pub outcome: Option<namespace::Result<Receipt>>,
 }
 fn hash(r: &Record) -> Result<Vec<u8>> {
-    let mut h = Sha256::new();
+    let mut h = ProofSha256::new();
     h.update(b"s3drive-namespace-intent-v1\0");
     h.update(serde_json::to_vec(&(&r.input, &r.outcome))?);
     Ok(h.finalize().to_vec())

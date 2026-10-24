@@ -365,3 +365,31 @@ measured backend trace. AWS-LC and ring support Windows MSVC through their
 [documented build requirements](https://aws.github.io/aws-lc-rs/requirements/windows)
 and [packaged assembly handling](https://github.com/briansmith/ring/blob/main/BUILDING.md).
 No backend replacement or full-filesystem speedup is established by this test.
+
+### Bounded proof-hash backend candidate (2026-10-24)
+
+Ordinary Linux and Windows diagnostic runners both reported SHA-NI/SSE4.1
+capability and exact digest agreement. On Windows, 128 whole-wrapper hashes of
+256-byte bodies took median 1536/316/97 microseconds for sha2/ring/AWS-LC;
+4096-byte bodies took 16264/659/403. These are warm-cache synthetic measurements,
+not filesystem improvements. The unchanged native20 fixture still took 126.16s.
+
+The next candidate uses the already locked ring 0.17.14 only for private bounded
+proof accumulators in sparse views/preparation/publication, mount bindings and
+namespace/open journals. Domains, canonical serialization, field order, SQL,
+validation cadence and stored 32-byte SHA256 identities are unchanged. Contexts
+contain inline state rather than AWS-LC's EVP allocation, so that alternative's
+initialization/allocation panic path is not introduced. No hash is cached.
+
+Payload one-shot digests, journal/remote metadata, core/provider hashing,
+multipart and authority snapshot whole-file streaming remain on sha2. In
+particular, ring's finalization rejects messages exceeding 2^64−1 bits, whereas
+multipart admits larger logical sizes; this candidate does not change that
+boundary. Migrated accumulators consume bounded metadata (sparse/preparation
+metadata 32MiB, retained anchor 2MiB each/32MiB aggregate, bounded open events and
+names), not whole logical file streams. Fixed vectors and an independent sha2
+oracle cover 1MiB fragmented streams, reset, exact domain encodings and
+current-format persisted anchor/role hashes. Standalone state tests on both OS
+check the new direct dependency without relying on workspace feature unification.
+Actual native20 and all original full 300/fault/compatibility gates remain pending
+for this candidate. No production activation or performance acceptance is claimed.

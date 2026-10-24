@@ -1,7 +1,7 @@
 use super::*;
 
 fn hash(owner: &str) -> Vec<u8> {
-    let mut h = Sha256::new();
+    let mut h = ProofSha256::new();
     h.update(b"s3drive-client-identity-v1\0");
     h.update(owner.as_bytes());
     h.finalize().to_vec()

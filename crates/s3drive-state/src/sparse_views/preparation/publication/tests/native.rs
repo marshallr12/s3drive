@@ -4115,3 +4115,75 @@ async fn native_retry_validation_work_source_commands_keep_pins_and_fresh_anchor
         n.storage.close().await.unwrap();
     }
 }
+
+#[tokio::test]
+async fn native_retry_validation_work_proof_hash_reads_independent_persisted_digests() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("independent SHA256 current format");
+    let n = setup_mode(&path, 16, true).await;
+    retry_cycle(&n, fixture(), 1).await;
+    n.storage
+        .cache()
+        .owner
+        .call(|store| {
+            let s = &mut store.state;
+            let before = native_snapshot(s);
+            let tx = s.connection.transaction()?;
+            let anchors = crate::sparse_views::preparation::publication::retention::load(&tx)?;
+            assert_eq!(anchors.len(), 1);
+            for (target, anchor) in &anchors {
+                let expected =
+                    crate::proof_hash::reference_json(b"s3drive-retention-anchor-v1\0", anchor);
+                let actual: Vec<u8> = tx.query_row(
+                    "SELECT state_hash FROM sparse_retention_anchors WHERE target=?1",
+                    [target.as_slice()],
+                    |r| r.get(0),
+                )?;
+                assert_eq!(actual, expected);
+                assert_eq!(
+                    tx.execute(
+                        "UPDATE sparse_retention_anchors SET state_hash=?1 WHERE target=?2",
+                        params![expected.as_slice(), target.as_slice()]
+                    )?,
+                    1
+                );
+            }
+            let owner: Vec<u8> =
+                tx.query_row("SELECT owner FROM sparse_retention_role", [], |r| r.get(0))?;
+            let owner: Id = owner.try_into().unwrap();
+            let expected = crate::proof_hash::reference_json(
+                b"s3drive-retention-role-v1\0",
+                &(owner, anchors.iter().collect::<Vec<_>>()),
+            );
+            let actual: Vec<u8> =
+                tx.query_row("SELECT state_hash FROM sparse_retention_role", [], |r| {
+                    r.get(0)
+                })?;
+            assert_eq!(actual, expected);
+            assert_eq!(
+                tx.execute(
+                    "UPDATE sparse_retention_role SET state_hash=?1",
+                    [expected.as_slice()]
+                )?,
+                1
+            );
+            tx.commit()?;
+            assert_eq!(native_snapshot(s), before);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    n.storage.close().await.unwrap();
+    // Current format, not an old-format conversion: reopen exact oracle-written
+    // persisted bytes through the ordinary full cold integrity validation.
+    let mut state = State::open_managed(&path).unwrap();
+    let anchors =
+        crate::sparse_views::preparation::publication::retention::load(&state.connection).unwrap();
+    assert_eq!(anchors.len(), 1);
+    let heads = views::Journal::new(&mut state, views::Options::default())
+        .unwrap()
+        .heads()
+        .unwrap();
+    assert_eq!(heads.len(), 1);
+    assert_eq!(heads[0].size(), 17);
+}

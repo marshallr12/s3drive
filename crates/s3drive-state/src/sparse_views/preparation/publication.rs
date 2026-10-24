@@ -1,9 +1,11 @@
 //! Durable mixed-root requests and historical semantic coverage. No S3 rights,
 //! source authentication, payload reclamation or mounted-file flush capability.
 use super::{Binding, Id, Info, OriginalChunk, RootDescriptor, digest};
+use crate::proof_hash::ProofSha256;
 use crate::{Result, State, journal::GenerationId, namespace as ns};
 use rusqlite::{Connection, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
+#[cfg(test)]
 use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -79,10 +81,10 @@ impl Limits {
     }
 }
 fn hash<T: Serialize>(domain: &[u8], value: &T) -> Result<Id> {
-    let mut h = Sha256::new();
+    let mut h = ProofSha256::new();
     h.update(domain);
     h.update(serde_json::to_vec(value)?);
-    Ok(h.finalize().into())
+    Ok(h.finalize())
 }
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()

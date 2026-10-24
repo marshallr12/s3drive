@@ -251,21 +251,21 @@ pub(crate) fn check_anchors_scoped(
     })
 }
 fn canonical_anchor_hash(bytes: &[u8]) -> Id {
-    let mut hash = Sha256::new();
+    let mut hash = ProofSha256::new();
     hash.update(b"s3drive-retention-anchor-v1\0");
     hash.update(bytes);
-    hash.finalize().into()
+    hash.finalize()
 }
 // Exact streaming encoding of the existing role_hash tuple, not a new format.
 // Anchor bytes may enter only after the caller proves canonical equality. Keep
 // role_hash's independent serde implementation for writes and differential tests.
 struct CanonicalRoleHash {
-    hash: Sha256,
+    hash: ProofSha256,
     previous: Option<Id>,
 }
 impl CanonicalRoleHash {
     fn new(owner: Id) -> Result<Self> {
-        let mut hash = Sha256::new();
+        let mut hash = ProofSha256::new();
         hash.update(b"s3drive-retention-role-v1\0");
         hash.update(b"[");
         hash.update(serde_json::to_vec(&owner)?);
@@ -292,7 +292,7 @@ impl CanonicalRoleHash {
     }
     fn finish(mut self) -> Id {
         self.hash.update(b"]]");
-        self.hash.finalize().into()
+        self.hash.finalize()
     }
 }
 #[cfg(test)]
@@ -475,17 +475,16 @@ mod canonical_encoding_tests {
                 let canonical = serde_json::to_vec(value).unwrap();
                 assert_eq!(
                     canonical_anchor_hash(&canonical),
-                    hash(b"s3drive-retention-anchor-v1\0", value).unwrap()
+                    crate::proof_hash::reference_json(b"s3drive-retention-anchor-v1\0", value)
                 );
                 encoded.push(*target, &canonical).unwrap();
             }
             assert_eq!(
                 encoded.finish(),
-                hash(
+                crate::proof_hash::reference_json(
                     b"s3drive-retention-role-v1\0",
                     &(owner, rows.iter().collect::<Vec<_>>())
                 )
-                .unwrap()
             );
         }
         for invalid in [[1; 32], [0; 32]] {

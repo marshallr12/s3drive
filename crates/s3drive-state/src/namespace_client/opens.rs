@@ -172,7 +172,7 @@ struct Row {
     head: Option<Vec<u8>>,
 }
 fn digest<T: Serialize>(tag: &[u8], value: &T) -> Result<Vec<u8>> {
-    let mut h = Sha256::new();
+    let mut h = ProofSha256::new();
     h.update(tag);
     h.update(serde_json::to_vec(value)?);
     Ok(h.finalize().to_vec())

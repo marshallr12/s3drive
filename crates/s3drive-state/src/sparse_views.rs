@@ -1,5 +1,6 @@
 //! Private immutable base/patch views and exact local-operation replay.
 //! Exact acknowledgments live in preparation::publication. No network or native activation.
+use crate::proof_hash::ProofSha256;
 use crate::{Result, State, worker::Owner};
 use rusqlite::{Connection, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
@@ -161,10 +162,10 @@ fn decode<T: serde::de::DeserializeOwned>(raw: &[u8]) -> Result<T> {
     serde_json::from_slice(raw).map_err(|_| Failure::Corrupt.into())
 }
 fn hash<T: Serialize>(domain: &[u8], v: &T) -> Result<Id> {
-    let mut h = Sha256::new();
+    let mut h = ProofSha256::new();
     h.update(domain);
     h.update(encode(v)?);
-    Ok(h.finalize().into())
+    Ok(h.finalize())
 }
 fn role_hash() -> Result<Id> {
     hash(b"s3drive-sparse-role-v1\0", &1u8)
