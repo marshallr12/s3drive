@@ -2169,6 +2169,13 @@ async fn native_retry_validation_work_pinned_refusal_rechecks_resealed_unselecte
             "empty-node preflight must recheck unselected corruption case {case}"
         );
         assert!(
+            n.client
+                .flush_selection(n.view.binding().clone(), Limits::default())
+                .await
+                .is_err(),
+            "flush selection must recheck unselected corruption case {case}"
+        );
+        assert!(
             n.client.plans(f.node.id).await.is_err(),
             "plans must recheck late corruption case {case}"
         );
@@ -2235,7 +2242,7 @@ async fn native_retry_validation_work_per_open_close() {
                     "heads" => assert_eq!(delta[0], 2),
                     "guard acquire" => assert_eq!(delta[0], 4),
                     "guard release" => assert_eq!(delta[0], 3),
-                    "plans" | "uncontended open" => assert_eq!(delta[0], 1),
+                    "plans" | "uncontended open" | "flush selection" => assert_eq!(delta[0], 1),
                     "Close" => assert_eq!(delta[0], 4),
                     "completion" => assert_eq!(delta[0], 5),
                     _ => {}
@@ -2257,6 +2264,13 @@ async fn native_retry_validation_work_per_open_close() {
                 .await
                 .unwrap()
         ));
+        measured!(
+            "flush selection",
+            n.client
+                .flush_selection(n.view.binding().clone(), Limits::default())
+                .await
+                .unwrap()
+        );
         measured!("heads", local.heads().await.unwrap());
         measured!(
             "namespace pending",
@@ -2677,4 +2691,177 @@ async fn native_retry_validation_work_open_preflight_keeps_obsolete_and_pending_
     }
     assert!(capability.uncontended_open(input).await.unwrap());
     storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_flush_selection_rechecks_preparation_and_scope() {
+    for retry in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let n = setup_mode(&tmp.path().join("flush selection modes"), 16, retry).await;
+        let initial = n
+            .client
+            .flush_selection(n.view.binding().clone(), Limits::default())
+            .await
+            .unwrap();
+        assert_eq!(initial.head.id(), n.view.id());
+        assert!(initial.plans.is_empty());
+        assert!(initial.acknowledged.is_empty());
+        let dirty = dirty(&n, &n.view, 2, 5).await;
+        let before = n
+            .client
+            .flush_selection(n.view.binding().clone(), Limits::default())
+            .await
+            .unwrap();
+        assert_eq!(before.head.id(), dirty.id());
+        assert!(before.plans.is_empty());
+        drop(before);
+        let prepared = n
+            .client
+            .prepare(n.token.clone(), context(&dirty))
+            .await
+            .unwrap();
+        let selected = n
+            .client
+            .flush_selection(n.view.binding().clone(), Limits::default())
+            .await
+            .unwrap();
+        assert_eq!(selected.head.id(), dirty.id());
+        assert_eq!(selected.plans.len(), 1);
+        assert_eq!(selected.plans[0].id().unwrap(), prepared.id().unwrap());
+        assert!(selected.acknowledged.is_empty());
+        for case in 0..3 {
+            let mut bad = n.view.binding().clone();
+            match case {
+                0 => bad.source = [199; 32],
+                1 => bad.store = [199; 16],
+                _ => {
+                    let base = bad.base().unwrap();
+                    bad.base = s3drive_core::manifest::base::Descriptor::from_hex(
+                        base.volume(),
+                        &hex(&[199; 16]),
+                        base.reservation(),
+                        base.payload_reference(),
+                    )
+                    .unwrap()
+                    .encode()
+                    .to_vec();
+                }
+            }
+            assert!(
+                n.client
+                    .flush_selection(bad, Limits::default())
+                    .await
+                    .is_err()
+            );
+        }
+        assert!(
+            n.client
+                .flush_selection(
+                    n.view.binding().clone(),
+                    Limits {
+                        plans: 0,
+                        ..Limits::default()
+                    }
+                )
+                .await
+                .is_err()
+        );
+        n.storage.close().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_flush_selection_checks_unselected_acknowledged_physical_proof()
+ {
+    let tmp = tempfile::tempdir().unwrap();
+    let n = setup_mode(&tmp.path().join("flush physical proof"), 16, true).await;
+    let old_binding = n.view.binding().clone();
+    let f = retry_cycle_mode(&n, fixture(), 1, false).await;
+    let selected = n
+        .client
+        .flush_selection(old_binding.clone(), Limits::default())
+        .await
+        .unwrap();
+    assert!(selected.head.is_clean());
+    assert_ne!(selected.head.binding(), &old_binding);
+    assert_eq!(selected.head.binding(), &f.binding);
+    assert_eq!(selected.plans.len(), 1);
+    let plan = selected.plans[0].id().unwrap();
+    assert!(selected.acknowledged.contains(&plan));
+    drop(selected);
+    let mut unrelated = old_binding.clone();
+    let base = unrelated.base().unwrap();
+    unrelated.base = s3drive_core::manifest::base::Descriptor::from_hex(
+        base.volume(),
+        &hex(&[199; 16]),
+        base.reservation(),
+        base.payload_reference(),
+    )
+    .unwrap()
+    .encode()
+    .to_vec();
+    let binding = unrelated.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            views::Journal::new(&mut store.state, views::Options::default())?.begin_scoped(
+                views::ScopedOperation::new(&binding, [199; 32])?,
+                binding,
+                17,
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let selected = n
+        .client
+        .flush_selection(unrelated.clone(), Limits::default())
+        .await
+        .unwrap();
+    assert!(selected.plans.is_empty());
+    assert!(selected.acknowledged.contains(&plan));
+    drop(selected);
+    let before = n
+        .storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            let mut root = j(s).get(plan)?;
+            root.physical.checksum[0] ^= 1;
+            root.validate()?;
+            s.connection.execute(
+                "UPDATE sparse_publications SET record=?1,state_hash=?2 WHERE plan_id=?3",
+                params![
+                    serde_json::to_vec(&root)?,
+                    hash(b"s3drive-mixed-root-record-v1\0", &root)?.as_slice(),
+                    plan.as_slice()
+                ],
+            )?;
+            // Local row and root graph seals remain coherent; only the independent
+            // original physical receipt proves the changed field is invalid.
+            super::super::ledger::inspect(&s.connection)?;
+            Ok(native_snapshot(s))
+        })
+        .await
+        .unwrap();
+    assert!(
+        n.client
+            .flush_selection(unrelated, Limits::default())
+            .await
+            .is_err()
+    );
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            assert!(j(&mut store.state).check_base(plan, &f.node).is_err());
+            assert!(store.state.connection.is_autocommit());
+            assert_eq!(native_snapshot(&store.state), before);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    n.storage.close().await.unwrap();
 }

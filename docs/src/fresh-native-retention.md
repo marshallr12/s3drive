@@ -147,3 +147,16 @@ all prepare/activate/bind checks still run freshly. Tests cover fallback cases,
 corrupt unrelated retired history, and a mutation after preflight that must
 still fail admission without changing rows. The measured preflight itself must
 use one full scope; this is not yet proof that the runtime deadline is met.
+
+The empty-node preflight passed its focused checks, but both runtime gates still
+stopped at 210 retained opens. Measured open time improved while Close remained
+the larger cost. The next change combines current-head, native-plan and root
+acknowledgment selection into one read transaction per flush. It retains full
+preparation bodies and all root/source/lineage/physical receipt checks, including
+unselected roots. A preparation write discards the old selection and requires a
+new one. Returned data never authorizes effects: the original SDK reopen,
+semantic check, upload, publish and acknowledgment paths remain unchanged, as do
+native locks and Close ordering. Diagnostics require one scope per selection;
+both modes, changed head epochs, wrong bindings, and a coherently resealed
+unselected acknowledged physical proof have focused tests. This reduces repeated
+whole-history scans, but runtime acceptance is still pending.

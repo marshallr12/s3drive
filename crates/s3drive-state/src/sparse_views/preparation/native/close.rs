@@ -6,7 +6,80 @@ pub struct Close {
     pub open: OpenRecord,
     pub plans: Vec<Info>,
 }
+/// Immutable work-selection data, never permission for a later provider effect.
+#[derive(Clone, Debug)]
+pub struct FlushSelection {
+    pub head: View,
+    pub plans: Vec<Info>,
+    pub acknowledged: std::collections::BTreeSet<Id>,
+}
+fn plans_for(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+    saved: &ledger::Snapshot,
+    node: &str,
+) -> Result<Vec<Info>> {
+    let mut plans = Vec::new();
+    for plan in saved.plans.values() {
+        let info = plan.info(&saved.views)?;
+        let base = info.view().binding().base()?;
+        if info.native_ownership().is_some() && base.node() == node {
+            scope.binding().volume(base.volume())?;
+            plans.push(info);
+        }
+    }
+    sort(saved, &mut plans)?;
+    Ok(plans)
+}
 impl Client {
+    /// One coherent head/plan/publication read. All effect paths must reopen
+    /// their original identities and validate again after this command returns.
+    pub async fn flush_selection(
+        &self,
+        binding: Binding,
+        limits: publication::Limits,
+    ) -> Result<FlushSelection> {
+        let key = self.key.clone();
+        self.owner
+            .call(move |worker| {
+                let state = &mut worker.state;
+                state.verify_staging_storage()?;
+                limits.validate()?;
+                binding.validate()?;
+                let tx = state
+                    .connection
+                    .transaction_with_behavior(rusqlite::TransactionBehavior::Deferred)?;
+                let result = (|| {
+                    let scope = crate::chunk_mount::read_scope(&tx, &key)?;
+                    let saved = ledger::inspect_scoped(&scope)?;
+                    let roots = publication::ledger::inspect(&tx)?;
+                    publication::ledger::validate_source_snapshot(&tx, &roots, &saved)?;
+                    let file = saved
+                        .views
+                        .files
+                        .get(&binding.target()?)
+                        .ok_or(super::super::Failure::NotFound)?;
+                    if !binding.same_scope(&file.binding)? {
+                        return Err(super::super::Failure::Conflict.into());
+                    }
+                    let head = View(saved.views.record(file.head)?.clone());
+                    let node = binding.base()?.node().to_owned();
+                    let plans = plans_for(&scope, &saved, &node)?;
+                    let acknowledged = roots
+                        .records
+                        .into_iter()
+                        .filter_map(|(id, record)| record.acknowledgment().is_some().then_some(id))
+                        .collect();
+                    Ok(FlushSelection {
+                        head,
+                        plans,
+                        acknowledged,
+                    })
+                })();
+                tx.rollback()?;
+                result
+            })
+            .await
+    }
     pub async fn prepare(&self, token: Token, context: Context) -> Result<Info> {
         if token.key != self.key {
             return Err(Failure::Conflict.into());
@@ -91,17 +164,7 @@ impl Client {
                 let result: Result<Vec<Info>> = (|| {
                     let scope = crate::chunk_mount::read_scope(&tx, &key)?;
                     let saved = ledger::inspect_scoped(&scope)?;
-                    let mut plans = Vec::new();
-                    for plan in saved.plans.values() {
-                        let info = plan.info(&saved.views)?;
-                        let base = info.view().binding().base()?;
-                        if info.native_ownership().is_some() && base.node() == node {
-                            scope.binding().volume(base.volume())?;
-                            plans.push(info);
-                        }
-                    }
-                    sort(&saved, &mut plans)?;
-                    Ok(plans)
+                    plans_for(&scope, &saved, &node)
                 })();
                 tx.rollback()?;
                 result

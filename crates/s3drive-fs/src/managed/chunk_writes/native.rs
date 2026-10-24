@@ -262,27 +262,43 @@ impl Writes {
                 Ok(())
             };
         };
-        let head = first.file.head().await?;
-        let mut plans = first.entry_plans().await?;
-        if !head.is_clean() && !plans.iter().any(|p| p.view().id() == head.id()) {
-            let edited = first.edited(&head).await?;
-            first.native.prepare(&edited).await.map_err(error)?;
-            plans = first.entry_plans().await?;
-        }
-        // This is only a work-selection snapshot under the native publication
-        // barrier. ACK identities are immutable; no saved record/proof crosses
-        // an await. Each selected original plan still reopens and freshly checks
-        // all state through the ordinary SDK before every effect/acknowledgment.
-        // Re-reading the whole root history per already-ACKed plan is quadratic.
-        let acknowledged: HashSet<_> = self
-            .roots
-            .records()
+        let mut selected = first
+            .native
+            .flush_selection(first.file.binding.clone())
             .await
-            .map_err(error)?
-            .into_iter()
-            .filter(|r| r.acknowledgment().is_some())
-            .map(|r| r.input().plan())
-            .collect();
+            .map_err(error)?;
+        first
+            .file
+            .metadata
+            .lock()
+            .map_err(|_| Error::Internal)?
+            .size = selected.head.size();
+        if !selected.head.is_clean()
+            && !selected
+                .plans
+                .iter()
+                .any(|p| p.view().id() == selected.head.id())
+        {
+            let edited = first.edited(&selected.head).await?;
+            // No earlier selection authorizes preparation or survives its writes.
+            drop(selected);
+            first.native.prepare(&edited).await.map_err(error)?;
+            selected = first
+                .native
+                .flush_selection(first.file.binding.clone())
+                .await
+                .map_err(error)?;
+            first
+                .file
+                .metadata
+                .lock()
+                .map_err(|_| Error::Internal)?
+                .size = selected.head.size();
+        }
+        // ACK identities select work only. Each original plan still reopens and
+        // validates all state before every provider effect or acknowledgment.
+        let plans = selected.plans;
+        let acknowledged = selected.acknowledged;
         for info in plans {
             let plan = info.id().map_err(error)?;
             if acknowledged.contains(&plan) {
@@ -338,9 +354,6 @@ impl Writes {
     }
 }
 impl Entry {
-    async fn entry_plans(&self) -> Result<Vec<plans::Info>> {
-        self.native.plans().await.map_err(error)
-    }
     async fn edited(&self, head: &View) -> Result<EditedFile> {
         let saved = self
             .file

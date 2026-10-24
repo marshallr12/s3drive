@@ -65,7 +65,7 @@ impl Default for Limits {
     }
 }
 impl Limits {
-    fn validate(self) -> Result<Self> {
+    pub(super) fn validate(self) -> Result<Self> {
         if self.plans == 0
             || self.plans > MAX_RECORDS
             || self.checks == 0

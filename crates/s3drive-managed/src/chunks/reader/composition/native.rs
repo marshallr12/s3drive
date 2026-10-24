@@ -47,6 +47,15 @@ impl NativeSparseFile {
     pub async fn plans(&self) -> Result<Vec<plans::Info>> {
         deadline(self.client.plans(self.token.input().node.clone())).await
     }
+    /// Work selection only; original plan reopening remains mandatory.
+    pub async fn flush_selection(&self, binding: Binding) -> Result<native::FlushSelection> {
+        self.binding_scope(&binding)?;
+        deadline(
+            self.client
+                .flush_selection(binding, plans::publication::Limits::default()),
+        )
+        .await
+    }
     pub fn open(&self) -> &str {
         &self.token.input().id
     }
