@@ -2828,6 +2828,7 @@ async fn native_retry_validation_work_flush_selection_checks_unselected_acknowle
         .owner
         .call(move |store| {
             let s = &mut store.state;
+            let mut meta = super::super::ledger::inspect(&s.connection)?;
             let mut root = j(s).get(plan)?;
             root.physical.checksum[0] ^= 1;
             root.validate()?;
@@ -2839,9 +2840,17 @@ async fn native_retry_validation_work_flush_selection_checks_unselected_acknowle
                     plan.as_slice()
                 ],
             )?;
-            // Local row and root graph seals remain coherent; only the independent
-            // original physical receipt proves the changed field is invalid.
-            super::super::ledger::inspect(&s.connection)?;
+            meta.records.insert(plan, root);
+            assert_eq!(
+                s.connection.execute(
+                    "UPDATE sparse_publication_role SET state_hash=?1",
+                    [meta.role()?.as_slice()],
+                )?,
+                1
+            );
+            // Both row and aggregate graph seals are deliberately recomputed;
+            // the independent original physical receipt must still reject it.
+            assert!(super::super::ledger::inspect(&s.connection)? == meta);
             Ok(native_snapshot(s))
         })
         .await
