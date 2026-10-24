@@ -412,7 +412,7 @@ fn retention_killed_owners_preserve_exact_history_or_complete_anchor_without_par
             .unwrap();
     }
 }
-fn rewrite_anchor(s: &mut State, mut value: serde_json::Value) {
+pub(super) fn rewrite_anchor(s: &mut State, mut value: serde_json::Value) {
     // Canonical reserialization and both public hashes are updated. This is a
     // self-consistent forged row, not merely a stale checksum negative control.
     let owner: Vec<u8> = s

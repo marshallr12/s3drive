@@ -4,6 +4,16 @@ Updated 2026-10-23. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
+## Fresh linked-native cleanup in progress (2026-10-24)
+
+The user clarified that alpha databases are disposable: do not add old-format
+migration or backward-compatibility work. Main 5a46fc0 and its original CI
+40037713683 were accepted before this work. A fresh-only linked-native retention
+candidate is under development; see [scope and pending gates](docs/src/fresh-native-retention.md).
+It is not accepted and does not replace the accepted owned/unlinked lifecycle.
+Namespace/creation/removal/recovery retention remains unsupported. Do not claim
+whole mounted cleanup or real-provider acceptance from this candidate.
+
 ## Accepted ordinary-store cleanup and migration candidate (2026-10-23)
 
 Exact candidate `f77f75684436c0afbed0fba15797d9819ffa61b0` passed independent

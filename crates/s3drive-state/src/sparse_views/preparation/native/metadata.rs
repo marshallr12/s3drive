@@ -10,7 +10,18 @@ pub(in crate::sparse_views::preparation) fn epoch_source_visits() -> usize {
 }
 
 pub(crate) fn validate(db: &Connection) -> Result<()> {
+    validate_retirement(db, &[])
+}
+pub(in crate::sparse_views) fn validate_retirement(
+    db: &Connection,
+    retired: &[OpenRecord],
+) -> Result<()> {
     let mut records = opens::sparse_records(db)?;
+    for record in retired {
+        if !records.iter().any(|r| r.input.id == record.input.id) {
+            records.push(record.clone());
+        }
+    }
     let live = records
         .iter()
         .map(|r| r.input.id.clone())
@@ -97,6 +108,7 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
         // The plain BLOB key and domain-separated manifest page digest are
         // intentionally different. Bind both exact original intent identities
         // through the source-epoch event; do not fetch private page bodies.
+        let (operation, generation, retry) = plan_identity(db, proof, binding, view.id)?;
         if epochs.get(&binding.epoch()?)
             != Some(&(
                 proof.clone(),
@@ -104,16 +116,12 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
                 plan.input.base_page,
             ))
             || plan.input.id()? != *id
-            || plan.input.operation != hash(b"s3drive-native-sparse-plan-v1\0", &(proof, view.id))?
+            || plan.input.operation != operation
+            || plan.input.retry != retry
         {
             return Err(Failure::Corrupt.into());
         }
-        if plan.input.generation.as_slice()
-            != &hash(
-                b"s3drive-native-sparse-generation-v1\0",
-                &plan.input.operation,
-            )?[..16]
-        {
+        if plan.input.generation != generation {
             return Err(Failure::Corrupt.into());
         }
         let descriptor = RootDescriptor::decode(&plan.input.base_root)?;

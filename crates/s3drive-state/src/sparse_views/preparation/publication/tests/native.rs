@@ -10,6 +10,9 @@ struct Native {
     view: View,
 }
 async fn setup(path: &std::path::Path, plans: usize) -> Native {
+    setup_mode(path, plans, false).await
+}
+async fn setup_mode(path: &std::path::Path, plans: usize, retry: bool) -> Native {
     let storage = Storage::open(
         path,
         crate::cache::Options::default(),
@@ -19,10 +22,24 @@ async fn setup(path: &std::path::Path, plans: usize) -> Native {
     .unwrap();
     let owner = storage.cache().owner;
     let (key, input, view) = owner
-        .call(|store| {
+        .call(move |store| {
             let s = &mut store.state;
             let f = fixture();
-            let key = chunk(s, &f);
+            let key = if retry {
+                crate::chunk_mount::admit_retry(
+                    s,
+                    crate::chunk_mount::Input {
+                        volume: f.binding.base()?.volume().into(),
+                        controls: vec![names::Control {
+                            store: f.store.clone(),
+                            source: *f.binding.source(),
+                            fingerprint: f.binding.fingerprint().into(),
+                        }],
+                    },
+                )?
+            } else {
+                chunk(s, &f)
+            };
             let input = open_with_posix(s, &f, &key, true);
             views::scoped::enable(s)?;
             let view = views::Journal::new(s, views::Options::default())?.begin_scoped(
@@ -1387,3 +1404,307 @@ async fn native_sparse_source_isolation_rechecks_late_trigger_without_repair() {
 }
 
 mod history;
+
+#[tokio::test]
+async fn native_retry_fresh_contract_closes_ids_before_transactional_retirement() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("fresh native retention");
+    let n = setup_mode(&path, 16, true).await;
+    dirty(&n, &n.view, 2, 5).await;
+    let closed = close_native(&n, &n.token, 71).await.unwrap();
+    let info = closed.plans[0].clone();
+    let plan = info.id().unwrap();
+    let retry = info.retry_operation().unwrap();
+    assert_eq!(info.operation(), retry.id().unwrap());
+    assert_eq!(*info.generation(), retry.generation().unwrap());
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            let f = fixture();
+            let mut bytes = f.bytes.clone();
+            bytes[5] = 255;
+            let info = pj(s).append(plan, info.cursor(), Candidate::Bytes(bytes))?;
+            crate::sparse_views::preparation::tests::fixture::finish(s, info);
+            j(s).check(plan, 0, Some(&proof(&f)))?;
+            physical(s, plan);
+            assert!(
+                j(s).begin(plan, f.node.clone(), f.store.clone(), 5, hex(&[10; 16]))
+                    .is_err()
+            );
+            let r = j(s).begin(plan, f.node, f.store, 5, retry.publish_operation()?)?;
+            let r = j(s).reserved(plan, reserved(&r))?;
+            let r = j(s).prepare_publish(plan, r.reservation().unwrap().sequence)?;
+            j(s).published(plan, published(&r))?;
+            j(s).acknowledge_scoped(
+                views::ScopedOperation::new(&fixture().binding, [11; 32])?,
+                plan,
+                views::Options::default(),
+            )?;
+            assert!(!pj(s).checkpoint(plan)?.unblocked());
+            Ok(())
+        })
+        .await
+        .unwrap();
+    n.client
+        .complete(n.token.clone(), hex(&[71; 16]), hex(&[72; 16]))
+        .await
+        .unwrap();
+    let key = n.key.clone();
+    let original = n.token.input().clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            opens(s, &key).retire(&original.id)?;
+            let cp = pj(s).checkpoint(plan)?;
+            assert!(cp.unblocked());
+            j(s).retire_checkpoint(&cp, views::Options::default())?;
+            assert!(opens(s, &key).prepare(original).is_err());
+            assert!(pj(s).info(plan).is_err());
+            crate::chunk_mount::require(&s.connection, &key)?;
+            assert_eq!(
+                s.connection
+                    .query_row("SELECT count(*) FROM windows_open_journal", [], |r| r
+                        .get::<_, i64>(0))?,
+                0
+            );
+            assert_eq!(
+                s.connection
+                    .query_row("SELECT count(*) FROM sparse_preparations", [], |r| r
+                        .get::<_, i64>(0))?,
+                0
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(
+        n.client
+            .close(n.token.clone(), hex(&[71; 16]))
+            .await
+            .is_err()
+    );
+    n.storage.close().await.unwrap();
+    drop(State::open_managed(&path).unwrap());
+}
+
+async fn retry_cycle(n: &Native, mut f: Fixture, iteration: u64) -> Fixture {
+    let bytes = vec![(iteration % 251) as u8; 17];
+    let context =
+        Context::new(&n.view, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
+    n.client
+        .write(n.token.clone(), context, [2; 32], 0, bytes.clone())
+        .await
+        .unwrap();
+    let close = close_native(n, &n.token, 71).await.unwrap();
+    let info = close.plans[0].clone();
+    let plan = info.id().unwrap();
+    let f =
+        n.storage
+            .cache()
+            .owner
+            .call(move |store| {
+                let s = &mut store.state;
+                let retry = info.retry_operation().unwrap();
+                let info = pj(s).append(plan, info.cursor(), Candidate::Bytes(bytes.clone()))?;
+                let info = crate::sparse_views::preparation::tests::fixture::finish(s, info);
+                j(s).check(plan, 0, None)?;
+                physical(s, plan);
+                let r = j(s).begin(
+                    plan,
+                    f.node.clone(),
+                    f.store.clone(),
+                    f.node.revision,
+                    retry.publish_operation()?,
+                )?;
+                let r = lineage::commit(s, r);
+                j(s).acknowledge_scoped(
+                    views::ScopedOperation::new(info.view().binding(), [11; 32])?,
+                    plan,
+                    views::Options::default(),
+                )?;
+                let page = crate::journal::Journal::new(s, crate::journal::Options::default())?
+                    .read(r.physical.generation, 0, r.physical.size as usize)?;
+                let page = s3drive_core::manifest::Page::decode(&page)?;
+                f.base = Base {
+                    root: info.root()?.unwrap(),
+                    page: page.clone(),
+                    pages: BTreeMap::from([((0, 0), page)]),
+                };
+                f.node = r.receipt().unwrap().node.clone();
+                f.binding = views::Journal::new(s, views::Options::default())?
+                    .current_head(&f.binding)?
+                    .binding()
+                    .clone();
+                f.bytes = bytes;
+                Ok(f)
+            })
+            .await
+            .unwrap();
+    n.client
+        .complete(n.token.clone(), hex(&[71; 16]), hex(&[72; 16]))
+        .await
+        .unwrap();
+    let key = n.key.clone();
+    let open = n.token.input().id.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            opens(&mut store.state, &key).retire(&open)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(n.client.retire_linked(f.node.id.clone()).await.unwrap());
+    f
+}
+async fn retry_reopen(n: &mut Native, f: &Fixture) {
+    let mut input = n.token.input().clone();
+    let key = n.key.clone();
+    let binding = f.binding.clone();
+    let (id, view) = n
+        .storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            input.id = crate::chunk_mount::admission::next(
+                &s.connection,
+                crate::chunk_mount::AdmissionDomain::Open,
+            )?
+            .unwrap();
+            let activation = hex(&hash(b"test-native-activation", &input.id)?[..16]);
+            opens(s, &key).prepare(input.clone())?;
+            opens(s, &key).activate(&input.id, &activation)?;
+            let view = views::Journal::new(s, views::Options::default())?.current_head(&binding)?;
+            Ok((input.id, view))
+        })
+        .await
+        .unwrap();
+    n.token = n.client.bind(id).await.unwrap();
+    n.view = view;
+}
+#[tokio::test]
+async fn native_retry_retention_300_linked_cycles_bound_all_local_history() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("native cycles");
+    let mut n = setup_mode(&path, 16, true).await;
+    let mut f = fixture();
+    let mut peak = (0, 0);
+    let mut late = (0, 0);
+    for cycle in 0..300 {
+        f = retry_cycle(&n, f, cycle).await;
+        n.storage
+            .cache()
+            .owner
+            .call(|store| {
+                for (table, count) in [
+                    ("windows_open_journal", 0),
+                    ("windows_open_events", 0),
+                    ("retired_windows_opens", 0),
+                    ("retained_windows_opens", 0),
+                    ("sparse_preparations", 0),
+                    ("sparse_publications", 0),
+                    ("sparse_retention_anchors", 1),
+                    ("sparse_views", 1),
+                    ("windows_mount_sessions", 1),
+                ] {
+                    assert_eq!(
+                        store.state.connection.query_row(
+                            &format!("SELECT count(*) FROM {table}"),
+                            [],
+                            |r| r.get::<_, i64>(0)
+                        )?,
+                        count,
+                        "{table}"
+                    );
+                }
+                crate::chunk_mount::validate_all(&store.state.connection)?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let db = std::fs::metadata(path.join("metadata.sqlite3"))
+            .unwrap()
+            .len();
+        let wal = std::fs::metadata(path.join("metadata.sqlite3-wal"))
+            .map(|m| m.len())
+            .unwrap_or(0);
+        peak = (peak.0.max(db), peak.1.max(wal));
+        if cycle >= 150 {
+            late = (late.0.max(db), late.1.max(wal));
+        }
+        if cycle < 299 {
+            retry_reopen(&mut n, &f).await;
+        }
+    }
+    eprintln!(
+        "NATIVE_RETENTION_300 peak_db={} peak_wal={} late_db={} late_wal={}",
+        peak.0, peak.1, late.0, late.1
+    );
+    assert!(peak.0 < 4 * 1024 * 1024 && peak.1 < 8 * 1024 * 1024);
+    n.storage.close().await.unwrap();
+    drop(State::open_managed(&path).unwrap());
+}
+
+#[tokio::test]
+async fn native_retry_resealed_terminal_fields_and_missing_independent_witness_fail_closed() {
+    for case in 0..8 {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("forged terminal");
+        let n = setup_mode(&path, 16, true).await;
+        retry_cycle(&n, fixture(), 1).await;
+        let key = n.key.clone();
+        n.storage
+            .cache()
+            .owner
+            .call(move |store| {
+                let s = &mut store.state;
+                let raw: Vec<u8> = s.connection.query_row(
+                    "SELECT record FROM sparse_retention_anchors",
+                    [],
+                    |r| r.get(0),
+                )?;
+                let mut v: serde_json::Value = serde_json::from_slice(&raw)?;
+                match case {
+                    0 => v["native"]["close"] = serde_json::json!(hex(&[201; 16])),
+                    1 => v["native"]["completion"] = serde_json::json!(hex(&[202; 16])),
+                    2 => v["native"]["frozen"] = serde_json::to_value([[99u8; 32]])?,
+                    3 => v["native"]["frontier"] = serde_json::json!(0),
+                    4 => v["native"]["first_operation"] = serde_json::to_value([203u8; 32])?,
+                    5 => v["native"]["suffix"]["previous"] = serde_json::to_value([204u8; 32])?,
+                    6 => v["native"]["suffix"]["ordinal"] = serde_json::json!(usize::MAX),
+                    _ => (),
+                }
+                if case < 7 {
+                    super::super::retention::rewrite_anchor(s, v);
+                } else {
+                    let raw: Vec<u8> =
+                        s.connection
+                            .query_row("SELECT record FROM chunk_mount_role", [], |r| r.get(0))?;
+                    let mut b: serde_json::Value = serde_json::from_slice(&raw)?;
+                    b["terminals"] = serde_json::json!({});
+                    let typed: crate::chunk_mount::Binding = serde_json::from_value(b)?;
+                    s.connection.execute(
+                        "UPDATE chunk_mount_role SET record=?1,state_hash=?2",
+                        params![
+                            serde_json::to_vec(&typed)?,
+                            hash(b"s3drive-chunk-mount-binding-v1\0", &typed)?.as_slice()
+                        ],
+                    )?;
+                }
+                let before = super::super::retry_safety::migration_rows(s);
+                assert!(crate::chunk_mount::require(&s.connection, &key).is_err());
+                assert_eq!(before, super::super::retry_safety::migration_rows(s));
+                Ok(())
+            })
+            .await
+            .unwrap();
+        n.storage.close().await.unwrap();
+        assert!(State::open_managed(&path).is_err());
+    }
+}

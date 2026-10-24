@@ -29,6 +29,8 @@ mod native_lifecycle;
 #[cfg(any(target_os = "linux", windows))]
 #[path = "chunk_publication/native_mount.rs"]
 mod native_mount;
+#[path = "chunk_publication/native_retention.rs"]
+mod native_retention;
 #[path = "chunk_publication/native_sparse_sdk.rs"]
 mod native_sparse_sdk;
 #[path = "chunk_publication/native_writer.rs"]
@@ -1327,6 +1329,10 @@ fn dispatch<'a>(
         }
         "native_lifecycle_unlink" => Box::pin(native_lifecycle::unlink(config, root, s)),
         #[cfg(any(target_os = "linux", windows))]
+        "native_retention_seed" => Box::pin(native_retention::seed(config, root, s)),
+        "native_retention_shared" => Box::pin(native_retention::shared(root, s)),
+        #[cfg(any(target_os = "linux", windows))]
+        "native_retention_mounted" => Box::pin(native_retention::mounted(root, s)),
         "native_lifecycle_mounted" => Box::pin(native_lifecycle::mounted(config, root, s)),
         #[cfg(any(target_os = "linux", windows))]
         "native_lifecycle_mounted_known" => {
@@ -1414,6 +1420,18 @@ async fn run(mode: &str) {
     let mut mixed_batch_window = None;
     let mut creator_open_objects = None;
     for stage in match mode {
+        "native_retention_shared_cycles" | "native_retention_mounted_cycles" => {
+            let mut stages = vec!["native_retention_seed"];
+            stages.extend(std::iter::repeat_n(
+                if mode == "native_retention_shared_cycles" {
+                    "native_retention_shared"
+                } else {
+                    "native_retention_mounted"
+                },
+                30,
+            ));
+            stages
+        }
         "cold_namespace_crash" | "cold_namespace_known" | "cold_namespace_rejected" => {
             vec![mode, "cold_namespace_recover"]
         }
@@ -1627,7 +1645,7 @@ async fn run(mode: &str) {
             .unwrap()
             .unwrap();
         let err = errors.await.unwrap();
-        if stage.starts_with("native_lifecycle_mounted") {
+        if stage.starts_with("native_lifecycle_mounted") || stage.starts_with("native_retention_") {
             eprintln!("{err}");
         }
         assert!(
@@ -1772,6 +1790,7 @@ async fn run(mode: &str) {
         }
     }
     let expected = match mode {
+        "native_retention_shared_cycles" | "native_retention_mounted_cycles" => 601,
         "cold_namespace_crash" | "cold_namespace_known" | "cold_namespace_rejected" => 1,
         "native_sparse_sdk_controller_linked"
         | "native_sparse_sdk_controller_unlinked"
@@ -2296,4 +2315,15 @@ async fn native_lifecycle_shared_acknowledged_history_never_reuploads() {
 #[tokio::test]
 async fn local_retention_sdk_migrates_legacy_and_preserves_cloned_reads_across_scoped_cycles() {
     run("local_retention").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_retention_shared_300_saves_close_and_30_restarts() {
+    run("native_retention_shared_cycles").await;
+}
+#[cfg(any(target_os = "linux", windows))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "fresh linked profile; real FUSE/WinFsp required"]
+async fn native_retention_actual_300_saves_close_and_30_remounts() {
+    run("native_retention_mounted_cycles").await;
 }

@@ -54,6 +54,8 @@ pub enum WindowsDisposition {
 #[serde(rename_all = "kebab-case")]
 pub enum SparseLifecycle {
     OwnedUnlinkedV1,
+    /// Fresh linked files only; namespace/creator/removal work is refused.
+    LinkedRetentionV1,
 }
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]

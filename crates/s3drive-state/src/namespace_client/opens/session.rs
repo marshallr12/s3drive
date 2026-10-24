@@ -229,6 +229,29 @@ impl Journal<'_> {
         if exists {
             return current(&tx, &runtime, session, volume);
         }
+        if crate::chunk_mount::retry_enabled(&tx)? {
+            if tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM windows_mount_sessions WHERE runtime_id=?1)",
+                [&runtime],
+                |r| r.get::<_, bool>(0),
+            )? {
+                return Err(
+                    "fresh native runtime already has a session; reuse its exact identity".into(),
+                );
+            }
+            tx.execute("DELETE FROM windows_mount_sessions WHERE runtime_id<>?1 AND session_id NOT IN (SELECT json_extract(input,'$.session') FROM windows_open_journal)",[&runtime])?;
+            if tx.query_row("SELECT count(*) FROM windows_mount_sessions", [], |r| {
+                r.get::<_, i64>(0)
+            })? >= 256
+            {
+                return Err("native session recovery capacity retained".into());
+            }
+        }
+        crate::chunk_mount::admission::consume(
+            &tx,
+            crate::chunk_mount::AdmissionDomain::Session,
+            session,
+        )?;
         let hash = digest(
             b"s3drive-mount-session-v1\0",
             &(session, volume, &runtime, &owner),

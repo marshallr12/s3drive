@@ -10,6 +10,7 @@ use crate::sparse_views::{
 };
 use rusqlite::OptionalExtension;
 mod collect;
+mod native;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -71,6 +72,8 @@ pub(in crate::sparse_views) struct Anchor {
     progress: Progress,
     original_page: Vec<u8>,
     publication: Record,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    native: Option<native::Terminal>,
 }
 impl Anchor {
     pub(in crate::sparse_views) fn view(&self) -> &Source {
@@ -90,11 +93,12 @@ impl Anchor {
         let parent = self.published.source()?;
         let ack = self.publication.acknowledgment().ok_or(Failure::Corrupt)?;
         let request = settlement::request(&self.publication)?;
-        if self.format != 1
+        if !matches!(self.format, 1 | 2)
+            || (self.format == 2) != self.native.is_some()
             || self.owner != owner
             || owner == [0; 32]
             || self.input.owned.is_some()
-            || self.input.native.is_some()
+            || self.input.native.is_some() != self.native.is_some()
             || self.progress.settlement.is_some()
             || self.publication.input.owned.is_some()
             || self.publication.receipt.is_none()
@@ -112,6 +116,10 @@ impl Anchor {
             view: views::View(parent),
             progress: self.progress.clone(),
         };
+        if let Some(proof) = &self.native {
+            proof.validate(db, &info, self.view.id)?;
+            proof.verify_witness(db, &self.target()?)?;
+        }
         self.input.validate(
             info.view(),
             &BTreeMap::from([(digest(&self.original_page), self.original_page.clone())]),
@@ -204,7 +212,7 @@ pub(in crate::sparse_views) fn load(db: &Connection) -> Result<BTreeMap<Id, Anch
             [],
             |r| r.get(0),
         )?;
-        return if any {
+        return if any || !crate::chunk_mount::admission::witnesses(db)?.is_empty() {
             Err(Failure::Corrupt.into())
         } else {
             Ok(BTreeMap::new())
@@ -255,6 +263,22 @@ pub(in crate::sparse_views) fn load(db: &Connection) -> Result<BTreeMap<Id, Anch
             return Err(Failure::Corrupt.into());
         }
     }
+    let witnesses = anchors
+        .iter()
+        .filter_map(|(target, anchor)| anchor.native.as_ref().map(|proof| (target, proof)))
+        .map(|(target, proof)| {
+            Ok((
+                target
+                    .iter()
+                    .map(|b| format!("{b:02x}"))
+                    .collect::<String>(),
+                proof.digest()?,
+            ))
+        })
+        .collect::<Result<BTreeMap<_, _>>>()?;
+    if witnesses != crate::chunk_mount::admission::witnesses(db)? {
+        return Err(Failure::Corrupt.into());
+    }
     if anchors.len() != entries as usize || sha != role_hash(owner, &anchors)? {
         return Err(Failure::Corrupt.into());
     }
@@ -278,4 +302,8 @@ fn save(db: &Connection, anchors: &BTreeMap<Id, Anchor>, owner: Id, target: Id) 
     )?;
     db.execute("INSERT INTO sparse_retention_role VALUES(1,?1,?2,?3) ON CONFLICT(singleton) DO UPDATE SET owner=excluded.owner,entries=excluded.entries,state_hash=excluded.state_hash",params![owner.as_slice(),anchors.len() as i64,role_hash(owner,anchors)?.as_slice()])?;
     Ok(())
+}
+
+pub(crate) fn validate_native_anchors(db: &Connection) -> Result<()> {
+    load(db).map(|_| ())
 }

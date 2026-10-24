@@ -111,3 +111,5 @@
 - [Atomic empty-manifest creation candidate](atomic-empty-manifest-create.md)
 
 - [Empty-manifest client integration proposal](empty-manifest-publisher.md)
+
+- [Fresh linked-native retention (pending)](fresh-native-retention.md)

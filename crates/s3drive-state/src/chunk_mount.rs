@@ -8,6 +8,8 @@ use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fmt;
+pub(crate) mod admission;
+pub use admission::Domain as AdmissionDomain;
 const MAX_CONTROLS: usize = 64;
 const MAX_RECORD: usize = 65536;
 pub(crate) const CLIENT_TABLES: &[&str] = &[
@@ -39,6 +41,10 @@ pub(crate) struct Binding {
     pub(crate) volume: String,
     pub(crate) owner: String,
     controls: Vec<Control>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    frontier: Option<u64>,
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    terminals: std::collections::BTreeMap<String, [u8; 32]>,
 }
 impl fmt::Debug for Binding {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -105,7 +111,10 @@ impl Binding {
         }
     }
     fn validate(&self) -> Result<()> {
-        if self.format != 1
+        if !matches!(self.format, 1 | 2)
+            || (self.format == 2) != self.frontier.is_some()
+            || (self.format == 1 && !self.terminals.is_empty())
+            || self.terminals.len() > 256
             || !id(&self.volume)
             || !id(&self.owner)
             || sorted(self.controls.clone())? != self.controls
@@ -311,7 +320,11 @@ fn scopes(db: &Connection, b: &Binding) -> Result<()> {
     Ok(())
 }
 pub(crate) fn validate_all(db: &Connection) -> Result<()> {
+    admission::validate(db)?;
     if let Some(b) = load(db)? {
+        if b.format == 2 && !crate::sparse_views::preparation::retry::enabled(db)? {
+            return Err("native retry contract lost its permanent mode".into());
+        }
         scopes(db, &b)?;
         crate::sparse_views::preparation::native::validate_metadata(db)?;
     }
@@ -333,7 +346,14 @@ pub(crate) fn verify_key(db: &Connection, key: &Key) -> Result<Binding> {
     Ok(b)
 }
 pub(crate) fn require(db: &Connection, key: &Key) -> Result<Binding> {
+    admission::validate(db)?;
     let b = load(db)?.ok_or("chunk mount capability missing")?;
+    if b.format == 2 {
+        if !crate::sparse_views::preparation::retry::enabled(db)? {
+            return Err("native retry mode missing".into());
+        }
+        crate::sparse_views::preparation::publication::retention::validate_native_anchors(db)?;
+    }
     if b.volume != key.volume || b.owner != key.owner {
         return Err("chunk mount capability belongs to another owner".into());
     }
@@ -350,8 +370,19 @@ pub(crate) fn require_legacy(db: &Connection) -> Result<()> {
 }
 /// Durable admission; no migration, network, file-body reads or namespace effects.
 pub fn admit(state: &mut State, input: Input) -> Result<Key> {
+    admit_mode(state, input, false)
+}
+/// Establish the current retry contract before the first mounted operation.
+/// Existing format-one owners are deliberately not converted during alpha.
+pub fn admit_retry(state: &mut State, input: Input) -> Result<Key> {
+    admit_mode(state, input, true)
+}
+pub(crate) fn retry_enabled(db: &Connection) -> Result<bool> {
+    Ok(load(db)?.is_some_and(|binding| binding.format == 2))
+}
+fn admit_mode(state: &mut State, input: Input, retry: bool) -> Result<Key> {
     state.verify_staging_storage()?;
-    if crate::sparse_views::preparation::retry::enabled(&state.connection)? {
+    if !retry && crate::sparse_views::preparation::retry::enabled(&state.connection)? {
         return Err("retry-safety owner cannot activate native composition".into());
     }
     preflight(&state.connection)?;
@@ -367,8 +398,30 @@ pub fn admit(state: &mut State, input: Input) -> Result<Key> {
     let old = load(&tx)?;
     let before = old.clone();
     let mut b = if let Some(old) = old {
+        if (old.format == 2) != retry {
+            return Err("chunk mount retry format differs; alpha stores are not converted".into());
+        }
         old
     } else {
+        if retry {
+            for table in [
+                "sparse_views",
+                "sparse_preparations",
+                "staged_generations",
+                "remote_intents",
+                "sparse_publications",
+                "sparse_retention_anchors",
+                "sparse_retry_mode",
+                "sparse_scoped_mode",
+                "manifest_creations",
+            ] {
+                if tx.query_row(&format!("SELECT EXISTS(SELECT 1 FROM {table})"), [], |r| {
+                    r.get::<_, bool>(0)
+                })? {
+                    return Err("native retry contract requires a fresh owner".into());
+                }
+            }
+        }
         for table in CLIENT_TABLES {
             if tx.query_row(&format!("SELECT EXISTS(SELECT 1 FROM {table})"), [], |r| {
                 r.get::<_, bool>(0)
@@ -385,7 +438,9 @@ pub fn admit(state: &mut State, input: Input) -> Result<Key> {
         names::install_chunk_identity(&tx, &owner)?;
         checkpoint("IdentityStored")?;
         Binding {
-            format: 1,
+            format: if retry { 2 } else { 1 },
+            frontier: retry.then_some(0),
+            terminals: std::collections::BTreeMap::new(),
             volume: input.volume.clone(),
             owner,
             controls: Vec::new(),
@@ -415,6 +470,9 @@ pub fn admit(state: &mut State, input: Input) -> Result<Key> {
     }
     checkpoint("SourcesStored")?;
     tx.execute("INSERT INTO chunk_mount_role(singleton,record,state_hash) VALUES(1,?1,?2) ON CONFLICT(singleton) DO UPDATE SET record=excluded.record,state_hash=excluded.state_hash",params![serde_json::to_vec(&b)?,hash(b"s3drive-chunk-mount-binding-v1\0",&b)?.as_slice()])?;
+    if retry && before.is_none() {
+        crate::sparse_views::preparation::retry::install_fresh(&tx)?;
+    }
     let key = Key {
         volume: b.volume.clone(),
         owner: b.owner.clone(),

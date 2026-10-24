@@ -56,6 +56,22 @@ impl Operation {
 fn mode_hash() -> Result<Id> {
     hash(b"s3drive-retry-mode-v1\0", &1u8)
 }
+/// Called only inside atomic fresh mounted-owner admission, after its role is
+/// installed. There is no existing-owner conversion or data rewrite here.
+pub(crate) fn install_fresh(db: &Connection) -> Result<()> {
+    db.execute(
+        "INSERT INTO sparse_scoped_mode VALUES(1,1,?1)",
+        [super::super::scoped::mode_hash()?.as_slice()],
+    )?;
+    db.execute(
+        "INSERT INTO sparse_retry_mode VALUES(1,1,?1)",
+        [mode_hash()?.as_slice()],
+    )?;
+    if !enabled(db)? {
+        return Err(Failure::Corrupt.into());
+    }
+    Ok(())
+}
 pub(crate) fn enabled(db: &Connection) -> Result<bool> {
     let exists: bool = db.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='table' AND name='sparse_retry_mode')", [], |r| r.get(0))?;
     if !exists {
@@ -387,6 +403,12 @@ pub(in crate::sparse_views::preparation) fn checkpoint(
     {
         return Err(Failure::Conflict.into());
     }
+    let native_terminal = if crate::chunk_mount::retry_enabled(db)? {
+        let base = info.view.binding().base()?;
+        crate::namespace_client::opens::native_candidates(db, base.volume(), base.node()).is_ok()
+    } else {
+        false
+    };
     let mut terminal_plans = Vec::new();
     let mut blocked_plans = Vec::new();
     for (id, saved) in &s.plans {
@@ -400,7 +422,7 @@ pub(in crate::sparse_views::preparation) fn checkpoint(
         // edges. Do not certify their retirement with a source-only proof.
         let terminal = i.input.retry.is_some()
             && i.ownership().is_none()
-            && i.native_ownership().is_none()
+            && (i.native_ownership().is_none() || native_terminal)
             && meta
                 .records
                 .get(id)

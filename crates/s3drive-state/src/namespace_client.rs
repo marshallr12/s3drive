@@ -298,6 +298,9 @@ impl<'a> Journal<'a> {
             }
             return Ok(r);
         }
+        if crate::chunk_mount::retry_enabled(&self.state.connection)? {
+            return Err("fresh native namespace retry admission is not implemented".into());
+        }
         removals::check_begin(&self.state.connection, &input)?;
         for entry in &input.entries {
             if removals::blocks_for_node(

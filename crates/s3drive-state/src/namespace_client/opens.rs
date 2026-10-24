@@ -3,6 +3,7 @@
 use super::*;
 pub(crate) mod creation;
 mod retirement;
+pub(crate) use retirement::{TerminalSuffix, erase_native, native_candidates};
 pub mod session;
 use namespace::{ROOT, RemovalMode};
 const OPEN_LIMIT: usize = 256;
@@ -103,7 +104,8 @@ pub struct ActivationProof {
     pub input: Box<Input>,
     pub outcome_hash: Vec<u8>,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Event {
     pub id: String,
     pub action: Action,
@@ -693,6 +695,21 @@ fn controlled_slots(r: &OpenRecord) -> usize {
 }
 
 fn insert_row(db: &Connection, row: &Row, record: &OpenRecord) -> Result<()> {
+    if crate::chunk_mount::retry_enabled(db)?
+        && db.query_row("SELECT count(*) FROM windows_open_journal", [], |r| {
+            r.get::<_, i64>(0)
+        })? >= OPEN_LIMIT as i64
+    {
+        return Err(
+            "native retained open capacity is pinned; release readers and collect before opening"
+                .into(),
+        );
+    }
+    crate::chunk_mount::admission::consume(
+        db,
+        crate::chunk_mount::AdmissionDomain::Open,
+        &row.input.id,
+    )?;
     let mut records = all(db)?;
     if records.len() >= OPEN_LIMIT {
         return Err("per-open limit reached; history retained".into());

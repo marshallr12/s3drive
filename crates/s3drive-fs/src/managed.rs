@@ -245,7 +245,7 @@ pub(super) async fn filesystem(config: &Config) -> Result<ReadOnlyFs> {
                 chunks.clone().ok_or(Error::Configuration)?,
                 chunk_executors,
                 settings.default_store.clone().ok_or(Error::Configuration)?,
-                native_lifecycle,
+                settings.sparse_lifecycle.clone(),
             ))
             .await?,
         ))

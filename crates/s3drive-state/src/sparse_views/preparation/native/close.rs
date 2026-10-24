@@ -117,7 +117,8 @@ fn prepare(
     {
         return Err(Failure::Conflict.into());
     }
-    let operation = hash(b"s3drive-native-sparse-plan-v1\0", &(&native, context.view))?;
+    let (operation, generation, retry) =
+        plan_identity(tx, &native, &context.binding, context.view)?;
     let saved = ledger::inspect(tx)?;
     if let Some(plan) = saved
         .plans
@@ -151,9 +152,6 @@ fn prepare(
     let ownership =
         crate::namespace_client::removals::sparse_claim(tx, base.volume(), base.node())?
             .map(|claim| (key.clone(), original.input.id.clone(), claim));
-    let generation = hash(b"s3drive-native-sparse-generation-v1\0", &operation)?[..16]
-        .try_into()
-        .unwrap();
     journal::begin_in_transaction(
         tx,
         options,
@@ -170,7 +168,7 @@ fn prepare(
             ownership,
             native: Some(native),
             finalizing,
-            retry: None,
+            retry,
         },
     )
 }
@@ -304,6 +302,14 @@ fn sort(saved: &ledger::Snapshot, plans: &mut [Info]) -> Result<()> {
         let mut at = saved.views.record(plan.view().id())?;
         let mut depth = 0usize;
         while let Some(edit) = &at.request.edit {
+            if saved
+                .views
+                .anchors
+                .values()
+                .any(|anchor| anchor.view().id == at.id)
+            {
+                break;
+            }
             depth += 1;
             if depth > saved.views.records.len() {
                 return Err(Failure::Corrupt.into());

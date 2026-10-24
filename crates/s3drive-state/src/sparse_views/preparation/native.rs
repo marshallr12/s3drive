@@ -266,6 +266,35 @@ pub(super) fn fresh(
     Ok(())
 }
 
+/// One derivation for admission and independent metadata verification. Scoped
+/// retry identity includes the exact original open witness and source view.
+fn plan_identity(
+    db: &Connection,
+    native: &Provenance,
+    binding: &Binding,
+    view: Id,
+) -> Result<(Id, [u8; 16], Option<retry::Operation>)> {
+    let nonce = hash(b"s3drive-native-sparse-plan-v1\0", &(native, view))?;
+    if crate::chunk_mount::retry_enabled(db)? {
+        if !retry::enabled(db)? {
+            return Err(Failure::Corrupt.into());
+        }
+        let token = retry::Operation::new(binding, nonce)?;
+        Ok((token.id()?, token.generation()?, Some(token)))
+    } else {
+        if retry::enabled(db)? {
+            return Err(Failure::Isolated.into());
+        }
+        Ok((
+            nonce,
+            hash(b"s3drive-native-sparse-generation-v1\0", &nonce)?[..16]
+                .try_into()
+                .map_err(|_| Failure::Corrupt)?,
+            None,
+        ))
+    }
+}
+
 fn epoch_owner(db: &Connection, binding: &Binding) -> Result<Option<(Provenance, OpenRecord)>> {
     let epoch = binding.epoch()?;
     let mut result = None;
@@ -416,6 +445,7 @@ mod metadata;
 #[cfg(test)]
 pub(super) use metadata::epoch_source_visits;
 pub(crate) use metadata::validate as validate_metadata;
+pub(in crate::sparse_views) use metadata::validate_retirement;
 
 pub(crate) fn reserved_events<'a>(
     db: &Connection,
@@ -510,4 +540,73 @@ pub(crate) fn recovery_ready(db: &Connection, record: &OpenRecord) -> Result<boo
         return Err(Failure::Corrupt.into());
     }
     Ok(true)
+}
+
+impl Provenance {
+    pub(in crate::sparse_views) fn validate_terminal(
+        &self,
+        db: &Connection,
+        original: &opens::OpenInput,
+        owner: &str,
+        binding: &Binding,
+        first_operation: Id,
+    ) -> Result<()> {
+        let mount = crate::chunk_mount::load(db)?.ok_or(Failure::Corrupt)?;
+        mount.open(original)?;
+        let base = binding.base()?;
+        if original.volume != base.volume()
+            || original.node != base.node()
+            || original.source != *binding.source()
+            || original.fingerprint != binding.fingerprint()
+            || original.store.id != hex(binding.store())
+            || original.store.root != binding.root()
+        {
+            return Err(Failure::Corrupt.into());
+        }
+        if self.open != original.id
+            || self.session != original.session
+            || self.owner != owner
+            || owner != mount.owner
+            || !original.controlled
+            || !original.session_bound
+            || original.admission.is_some()
+            || original.creation.is_some()
+            || original.delete_on_close
+            || self.input_hash != hash(b"s3drive-native-sparse-open-v1\0", original)?
+            || self.epoch != binding.epoch()?
+            || self.operation != first_operation
+        {
+            return Err(Failure::Corrupt.into());
+        }
+        crate::chunk_mount::admission::retained(
+            db,
+            crate::chunk_mount::AdmissionDomain::Open,
+            &original.id,
+        )?;
+        crate::chunk_mount::admission::retained(
+            db,
+            crate::chunk_mount::AdmissionDomain::Session,
+            &original.session,
+        )?;
+        Ok(())
+    }
+}
+pub(in crate::sparse_views) fn verify_terminal_plan(db: &Connection, info: &Info) -> Result<()> {
+    let native = info.native_ownership().ok_or(Failure::Corrupt)?;
+    let (operation, generation, retry) =
+        plan_identity(db, native, info.view().binding(), info.view().id())?;
+    if info.operation() != operation
+        || info.input.generation != generation
+        || info.input.retry != retry
+    {
+        return Err(Failure::Corrupt.into());
+    }
+    Ok(())
+}
+impl Runtime {
+    pub(in crate::sparse_views) fn forget_retired(&mut self, records: &[opens::OpenRecord]) {
+        for record in records {
+            self.tokens.remove(&record.input.id);
+        }
+    }
 }

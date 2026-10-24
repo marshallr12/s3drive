@@ -170,3 +170,97 @@ fn scoped_operation(token: &Token, context: &Context, nonce: Id) -> Result<Scope
         )?,
     )
 }
+
+impl Client {
+    /// Attempt local linked-native retirement after actual Close completion.
+    /// Live opens and readers defer collection; unknown/corrupt evidence errors.
+    pub async fn retire_linked(&self, node: String) -> Result<bool> {
+        let key = self.key.clone();
+        let views = self.views;
+        let plans = self.plans;
+        self.owner
+            .call(move |worker| {
+                let state = &mut worker.state;
+                if !crate::chunk_mount::retry_enabled(&state.connection)? {
+                    return Ok(false);
+                }
+                let mount = crate::chunk_mount::require(&state.connection, &key)?;
+                if opens::sparse_records(&state.connection)?
+                    .iter()
+                    .any(|r| r.input.volume == mount.volume && r.input.node == node)
+                {
+                    return Ok(false);
+                }
+                let snapshot = ledger::inspect(&state.connection)?;
+                let roots = publication::ledger::inspect(&state.connection)?;
+                let mut selected = None;
+                let mut any = false;
+                for (id, saved) in &snapshot.plans {
+                    let info = saved.info(&snapshot.views)?;
+                    let base = info.view().binding().base()?;
+                    if base.volume() != mount.volume || base.node() != node {
+                        continue;
+                    }
+                    any = true;
+                    let file = snapshot
+                        .views
+                        .files
+                        .get(&info.view().binding().target()?)
+                        .ok_or(Failure::Corrupt)?;
+                    if roots
+                        .records
+                        .get(id)
+                        .and_then(|r| r.acknowledgment())
+                        .and_then(|a| a.clean_view())
+                        == Some(file.head)
+                        && selected.replace(*id).is_some()
+                    {
+                        return Err(Failure::Corrupt.into());
+                    }
+                }
+                if let Some(plan) = selected {
+                    let proof = Journal::new(state, plans)?.checkpoint(plan)?;
+                    if !proof.unblocked() {
+                        return Ok(false);
+                    }
+                    publication::Journal::new(state, publication::Limits::default())?
+                        .retire_checkpoint(&proof, views)?;
+                    return Ok(true);
+                }
+                if any {
+                    return Ok(false);
+                }
+                // No surviving source/plan uses these opens. No-effect closed opens
+                // need no historical output after expiry: their admission ordinals
+                // remain permanently below the owner frontier.
+                let tx = state
+                    .connection
+                    .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+                let records = opens::native_candidates(&tx, &mount.volume, &node)?;
+                if records.is_empty() {
+                    return Ok(false);
+                }
+                metadata::validate_retirement(&tx, &records)?;
+                if records.iter().any(|r| {
+                    r.events.iter().any(|e| {
+                        matches!(
+                            e.action,
+                            Action::OwnSparseEpoch { .. } | Action::FreezeSparse { .. }
+                        )
+                    })
+                }) {
+                    return Err(Failure::Conflict.into());
+                }
+                opens::erase_native(
+                    &tx,
+                    &records,
+                    state.incarnation.as_deref().ok_or(Failure::Conflict)?,
+                )?;
+                metadata::validate(&tx)?;
+                tx.commit()?;
+                state.native_sparse.forget_retired(&records);
+                Ok(true)
+            })
+            .await
+    }
+}
