@@ -101,8 +101,7 @@ impl<'a> Journal<'a> {
         let tx = state
             .connection
             .transaction_with_behavior(TransactionBehavior::Deferred)?;
-        isolation(&tx)?;
-        inspect(&tx)?;
+        ledger::inspect_isolated(&tx)?;
         tx.commit()?;
         Ok(Self { state, options })
     }
@@ -157,8 +156,7 @@ impl<'a> Journal<'a> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        isolation(&tx)?;
-        let before = inspect(&tx)?;
+        let before = ledger::inspect_isolated(&tx)?;
         if let Some(old) = before.operation(operation) {
             scoped::known(&tx, scope, operation, &old.request.binding)?;
             if old.request != record.request {
@@ -307,8 +305,7 @@ impl<'a> Journal<'a> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        isolation(&tx)?;
-        let before = inspect(&tx)?;
+        let before = ledger::inspect_isolated(&tx)?;
         // Known operations are compared before head admission or new quotas.
         if let Some(old) = before.operation(operation) {
             scoped::known(&tx, scope, operation, &old.request.binding)?;
@@ -430,8 +427,7 @@ impl<'a> Journal<'a> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Deferred)?;
-        isolation(&tx)?;
-        let data = inspect(&tx)?;
+        let data = ledger::inspect_isolated(&tx)?;
         let heads = data
             .files
             .values()
@@ -463,8 +459,7 @@ impl<'a> Journal<'a> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Deferred)?;
-        isolation(&tx)?;
-        let ledger = inspect(&tx)?;
+        let ledger = ledger::inspect_isolated(&tx)?;
         let result = View(ledger.record(id)?.clone());
         tx.commit()?;
         Ok(result)
@@ -477,8 +472,7 @@ impl<'a> Journal<'a> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Deferred)?;
-        isolation(&tx)?;
-        let ledger = inspect(&tx)?;
+        let ledger = ledger::inspect_isolated(&tx)?;
         let file = ledger.files.get(&target).ok_or(Failure::NotFound)?;
         if &file.binding != binding {
             return Err(Failure::Conflict.into());
@@ -497,8 +491,7 @@ impl<'a> Journal<'a> {
             .state
             .connection
             .transaction_with_behavior(TransactionBehavior::Deferred)?;
-        isolation(&tx)?;
-        let ledger = inspect(&tx)?;
+        let ledger = ledger::inspect_isolated(&tx)?;
         let mut out = Vec::new();
         for range in View(ledger.record(id)?.clone()).range(offset, length)? {
             out.push(match range {

@@ -101,3 +101,13 @@ one read-only interval of the caller's existing transaction. It returns only
 the validated binding, never the shared scope. Tests require fresh validation
 after a write even within the same outer transaction, preserve the caller's
 transaction ownership, and check that the read-only path changes no rows.
+
+The explicit-snapshot change reduced diagnostic work but did not pass runtime
+pressure: Linux reached 162 retained opens before the unchanged 900-second
+limit. The next change shares only the adjacent eager isolation check and
+source inspection inside one transaction. It keeps eager rejection for empty
+foreign stores, every inspection after a mutation, and all reader pin checks.
+Deterministic diagnostics require heads to use two scopes, guard acquisition
+four, and guard release three; a pin corrupted after the initial read must
+still fail fresh validation and roll back exactly. Runtime acceptance remains
+pending.

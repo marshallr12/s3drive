@@ -141,11 +141,31 @@ thread_local! { static INSPECTIONS: std::cell::Cell<usize> = const { std::cell::
 pub(in crate::sparse_views) fn inspection_count() -> usize {
     INSPECTIONS.get()
 }
+// A single eager isolation check for an adjacent isolation+inspection pair.
+// This helper cannot return its proof or carry it across a later mutation.
+pub(super) fn inspect_isolated(tx: &rusqlite::Transaction<'_>) -> Result<Ledger> {
+    let mut scope = IsolationCheck::new(tx);
+    scope.require()?;
+    load_in(tx, true, true, None, scope)
+}
 fn load_with_scope(
     db: &Connection,
     patches: bool,
     bodies: bool,
     validated: Option<&crate::chunk_mount::ReadScope<'_>>,
+) -> Result<Ledger> {
+    let scope = match validated {
+        Some(scope) => IsolationCheck::from_mount_scope(scope),
+        None => IsolationCheck::new(db),
+    };
+    load_in(db, patches, bodies, validated, scope)
+}
+fn load_in(
+    db: &Connection,
+    patches: bool,
+    bodies: bool,
+    validated: Option<&crate::chunk_mount::ReadScope<'_>>,
+    mut scope: IsolationCheck<'_>,
 ) -> Result<Ledger> {
     #[cfg(test)]
     INSPECTIONS.set(INSPECTIONS.get() + 1);
@@ -158,10 +178,6 @@ fn load_with_scope(
     for (i, table) in tables.iter().enumerate() {
         counts[i] = count(db, &format!("SELECT count(*) FROM {table}"))?;
     }
-    let mut scope = match validated {
-        Some(scope) => IsolationCheck::from_mount_scope(scope),
-        None => IsolationCheck::new(db),
-    };
     if patches {
         scoped::enabled_in(&mut scope)?;
     }

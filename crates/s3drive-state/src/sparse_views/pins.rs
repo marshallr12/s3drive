@@ -272,8 +272,7 @@ pub(super) fn acquire_inner(
     let tx = state
         .connection
         .transaction_with_behavior(TransactionBehavior::Immediate)?;
-    isolation(&tx)?;
-    let before = inspect(&tx)?;
+    let before = ledger::inspect_isolated(&tx)?;
     before.record(view)?;
     no_triggers(&tx)?;
     let mut expected = before.clone();
@@ -350,8 +349,7 @@ pub(super) fn release_inner(
     let tx = state
         .connection
         .transaction_with_behavior(TransactionBehavior::Immediate)?;
-    isolation(&tx)?;
-    let before = inspect(&tx)?;
+    let before = ledger::inspect_isolated(&tx)?;
     let old = before.read_pins.role.as_ref().ok_or(Failure::Stale)?;
     if old.owner != pin.owner
         || pin.sequence > old.issued

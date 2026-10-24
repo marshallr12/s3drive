@@ -232,3 +232,48 @@ mod patches;
 mod recovery;
 
 mod scoped;
+
+#[test]
+fn native_retry_validation_work_empty_sources_still_require_isolation() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut state = State::open_managed(&temp.path().join("empty isolated source")).unwrap();
+    state
+        .namespace_initialize_with_policy(s3drive_core::names::PORTABLE)
+        .unwrap();
+    assert_eq!(
+        state
+            .connection
+            .query_row("SELECT count(*) FROM sparse_views", [], |r| r
+                .get::<_, i64>(0))
+            .unwrap(),
+        0
+    );
+    {
+        let tx = state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred)
+            .unwrap();
+        assert!(
+            ledger::inspect_isolated(&tx).is_err(),
+            "empty source tables cannot hide a foreign authority role"
+        );
+        tx.rollback().unwrap();
+    }
+    assert!(Journal::new(&mut state, Options::default()).is_err());
+    assert_eq!(
+        state
+            .connection
+            .query_row("SELECT count(*) FROM namespace_volume", [], |r| r
+                .get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        state
+            .connection
+            .query_row("SELECT count(*) FROM sparse_views", [], |r| r
+                .get::<_, i64>(0))
+            .unwrap(),
+        0
+    );
+}

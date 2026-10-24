@@ -2209,8 +2209,14 @@ async fn native_retry_validation_work_per_open_close() {
                 let result = $work;
                 let elapsed = start.elapsed();
                 let after = native_work(&n).await;
+                let delta = std::array::from_fn::<_, 9, _>(|j| after[j] - before[j]);
+                match $name {
+                    "heads" => assert_eq!(delta[0], 2),
+                    "guard acquire" => assert_eq!(delta[0], 4),
+                    "guard release" => assert_eq!(delta[0], 3),
+                    _ => {}
+                }
                 if [0, 3, 15].contains(&i) {
-                    let delta = std::array::from_fn::<_, 9, _>(|j| after[j] - before[j]);
                     eprintln!("NATIVE_VALIDATION_WORK retained={} phase={} ms={} scopes_sessions_events_queries_opens_mounts_sources_preps_epoch_sources={delta:?}", i+1, $name, elapsed.as_millis());
                 }
                 result

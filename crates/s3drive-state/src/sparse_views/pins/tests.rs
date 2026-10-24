@@ -295,3 +295,35 @@ fn real_sqlite_full_pin_allocation_preserves_counter_projection_and_source_bytes
     assert_eq!(rows(&s), source);
 }
 mod crash;
+
+#[test]
+fn native_retry_validation_work_isolation_never_covers_later_pin_corruption() {
+    let temp = tempfile::tempdir().unwrap();
+    let (mut state, view) = open(&temp.path().join("isolated pin validation"));
+    let pin = acquire(&mut state, view.id()).unwrap();
+    let before = inspect(&state.connection).unwrap();
+    {
+        let tx = state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .unwrap();
+        let checks = isolation_count();
+        let snapshot = ledger::inspect_isolated(&tx).unwrap();
+        assert_eq!(isolation_count() - checks, 1);
+        assert!(snapshot == before);
+        tx.execute(
+            "UPDATE source_read_pins SET state_hash=zeroblob(32) WHERE pin_id=?",
+            [pin.id().as_slice()],
+        )
+        .unwrap();
+        let checks = isolation_count();
+        assert!(
+            inspect(&tx).is_err(),
+            "pre-write isolation cannot cover a changed pin"
+        );
+        assert_eq!(isolation_count() - checks, 1);
+        tx.rollback().unwrap();
+    }
+    assert!(inspect(&state.connection).unwrap() == before);
+    assert!(release(&mut state, &pin).unwrap());
+}
