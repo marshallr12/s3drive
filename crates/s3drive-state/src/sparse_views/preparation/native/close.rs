@@ -84,20 +84,27 @@ impl Client {
         let key = self.key.clone();
         self.owner
             .call(move |worker| {
-                let db = &worker.state.connection;
-                let binding = crate::chunk_mount::require(db, &key)?;
-                let saved = ledger::inspect(db)?;
-                let mut plans = Vec::new();
-                for plan in saved.plans.values() {
-                    let info = plan.info(&saved.views)?;
-                    let base = info.view().binding().base()?;
-                    if info.native_ownership().is_some() && base.node() == node {
-                        binding.volume(base.volume())?;
-                        plans.push(info);
+                let tx = worker
+                    .state
+                    .connection
+                    .transaction_with_behavior(rusqlite::TransactionBehavior::Deferred)?;
+                let result: Result<Vec<Info>> = (|| {
+                    let scope = crate::chunk_mount::read_scope(&tx, &key)?;
+                    let saved = ledger::inspect_scoped(&scope)?;
+                    let mut plans = Vec::new();
+                    for plan in saved.plans.values() {
+                        let info = plan.info(&saved.views)?;
+                        let base = info.view().binding().base()?;
+                        if info.native_ownership().is_some() && base.node() == node {
+                            scope.binding().volume(base.volume())?;
+                            plans.push(info);
+                        }
                     }
-                }
-                sort(&saved, &mut plans)?;
-                Ok(plans)
+                    sort(&saved, &mut plans)?;
+                    Ok(plans)
+                })();
+                tx.rollback()?;
+                result
             })
             .await
     }
@@ -356,8 +363,11 @@ impl Client {
                     state.incarnation.as_deref().ok_or(Failure::Conflict)?,
                     &original,
                 )?;
-                publication::namespace_pending(&tx, &original.input.volume, &original.input.node)?;
-                let saved = ledger::inspect(&tx)?;
+                let saved = publication::namespace_pending_snapshot(
+                    &tx,
+                    &original.input.volume,
+                    &original.input.node,
+                )?;
                 let mut view = None;
                 for file in saved.views.files.values() {
                     let base = file.binding.base()?;
@@ -370,6 +380,8 @@ impl Client {
                     }
                 }
                 let frozen = frozen_hash(&original)?;
+                // No read proof is carried across the first completion write.
+                drop(saved);
                 opens::append_in_transaction(
                     &tx,
                     Some(&token.key),

@@ -111,3 +111,14 @@ Deterministic diagnostics require heads to use two scopes, guard acquisition
 four, and guard release three; a pin corrupted after the initial read must
 still fail fresh validation and roll back exactly. Runtime acceptance remains
 pending.
+
+Run40074965175 passed the Windows shared-runtime pressure gate, but Linux still
+hit its unchanged limit, so that candidate is not accepted. The following
+measured refactor makes plan listing use one explicit read snapshot and lets
+completion consume the exact preparation snapshot already checked by its
+namespace barrier. Root/source/dependency validation remains mandatory, the
+snapshot is dropped before completion writes, and final semantic checks remain
+after both completion events. Diagnostics require plans to use one scope and
+completion five, and test that an unsettled preparation still blocks completion
+without changing any persisted row. Other workflows and actual native gates
+remain pending.

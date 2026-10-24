@@ -2149,13 +2149,18 @@ async fn native_retry_pinned_refusal_rechecks_resealed_unselected_edges_frontier
             .await
             .unwrap();
         assert!(
-            n.client.retire_linked(f.node.id).await.is_err(),
+            n.client.retire_linked(f.node.id.clone()).await.is_err(),
             "corruption case {case} was hidden by the pin"
+        );
+        assert!(
+            n.client.plans(f.node.id).await.is_err(),
+            "plans must recheck late corruption case {case}"
         );
         n.storage
             .cache()
             .owner
             .call(move |store| {
+                assert!(store.state.connection.is_autocommit());
                 assert_eq!(native_snapshot(&store.state), before);
                 Ok(())
             })
@@ -2214,6 +2219,8 @@ async fn native_retry_validation_work_per_open_close() {
                     "heads" => assert_eq!(delta[0], 2),
                     "guard acquire" => assert_eq!(delta[0], 4),
                     "guard release" => assert_eq!(delta[0], 3),
+                    "plans" => assert_eq!(delta[0], 1),
+                    "completion" => assert_eq!(delta[0], 5),
                     _ => {}
                 }
                 if [0, 3, 15].contains(&i) {
@@ -2415,5 +2422,52 @@ async fn native_retry_validation_work_per_open_close() {
         .unwrap();
     drop(reader);
     assert!(n.client.retire_linked(f.node.id).await.unwrap());
+    n.storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_completion_keeps_unsettled_barrier() {
+    let temp = tempfile::tempdir().unwrap();
+    let n = setup_mode(&temp.path().join("unsettled completion snapshot"), 16, true).await;
+    dirty(&n, &n.view, 2, 5).await;
+    let closed = close_native(&n, &n.token, 71).await.unwrap();
+    assert_eq!(closed.plans.len(), 1);
+    let before = n
+        .storage
+        .cache()
+        .owner
+        .call(|store| Ok(native_snapshot(&store.state)))
+        .await
+        .unwrap();
+    match n
+        .client
+        .complete(n.token.clone(), hex(&[71; 16]), hex(&[72; 16]))
+        .await
+    {
+        Err(error) => assert_eq!(
+            error.to_string(),
+            "settle every sparse preparation before closing this node",
+            "the full barrier must reject before the later dirty-head guard"
+        ),
+        Ok(_) => panic!("unsettled preparation was completed"),
+    }
+    assert_eq!(
+        n.client
+            .plans(n.token.input().node.clone())
+            .await
+            .unwrap()
+            .len(),
+        1
+    );
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            assert!(store.state.connection.is_autocommit());
+            assert_eq!(native_snapshot(&store.state), before);
+            Ok(())
+        })
+        .await
+        .unwrap();
     n.storage.close().await.unwrap();
 }

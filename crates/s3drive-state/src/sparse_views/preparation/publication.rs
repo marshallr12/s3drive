@@ -186,6 +186,22 @@ pub(super) fn adoption_fence(
 }
 
 pub(crate) fn namespace_pending(db: &Connection, volume: &str, node: &str) -> Result<()> {
+    checked_namespace_snapshot(db, volume, node).map(|_| ())
+}
+// Complete may use this exact checked snapshot only before its first append.
+// The existing wrapper keeps all other call sites and their proof boundaries.
+pub(super) fn namespace_pending_snapshot(
+    tx: &rusqlite::Transaction<'_>,
+    volume: &str,
+    node: &str,
+) -> Result<super::ledger::Snapshot> {
+    checked_namespace_snapshot(tx, volume, node)
+}
+fn checked_namespace_snapshot(
+    db: &Connection,
+    volume: &str,
+    node: &str,
+) -> Result<super::ledger::Snapshot> {
     // An admitted preparation may already have staged or claimed physical
     // effects before a root publication record exists. Inspect the complete
     // plan/source graph, not just roots or the current (possibly clean) head.
@@ -207,5 +223,5 @@ pub(crate) fn namespace_pending(db: &Connection, volume: &str, node: &str) -> Re
             return Err("settle every sparse preparation before closing this node".into());
         }
     }
-    Ok(())
+    Ok(source)
 }
