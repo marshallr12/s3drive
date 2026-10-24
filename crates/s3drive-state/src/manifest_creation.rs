@@ -178,7 +178,13 @@ fn preflight(db: &Connection) -> Result<()> {
     Ok(())
 }
 fn isolation(db: &Connection) -> Result<()> {
-    let combined = crate::chunk_mount::compatible(db)?;
+    isolation_in(db, None)
+}
+fn isolation_in(db: &Connection, scope: Option<&crate::chunk_mount::ReadScope<'_>>) -> Result<()> {
+    let combined = match scope {
+        Some(_) => true,
+        None => crate::chunk_mount::compatible(db)?,
+    };
     for table in [
         "namespace_volume",
         "namespace_nodes",
@@ -413,4 +419,13 @@ pub(crate) fn chunk_scope(db: &Connection, b: &crate::chunk_mount::Binding) -> R
         })?;
     }
     Ok(())
+}
+
+// Only the already established combined-owner proof is reused. Empty stores
+// still require every creator preflight, exclusion and membership check.
+pub(crate) fn empty_for_mount(scope: &crate::chunk_mount::ReadScope<'_>) -> Result<bool> {
+    Limits::default().validate()?;
+    preflight(scope.connection())?;
+    isolation_in(scope.connection(), Some(scope))?;
+    Ok(inspect(scope.connection())?.is_empty())
 }

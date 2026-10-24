@@ -22,6 +22,61 @@ impl Client {
             plans: plans.validate()?,
         })
     }
+    /// Work discovery only for the three mount-recovery lists. Dirty source
+    /// intent may still exist; this never authorizes completion or collection.
+    /// Each returned head target must be independently revalidated by its user.
+    pub async fn quiet_recovery_targets(&self) -> Result<Option<Vec<String>>> {
+        let key = self.key.clone();
+        self.owner
+            .call(move |worker| {
+                let state = &mut worker.state;
+                state.verify_staging_storage()?;
+                publication::Limits::default().validate()?;
+                let tx = state
+                    .connection
+                    .transaction_with_behavior(rusqlite::TransactionBehavior::Deferred)?;
+                let result = (|| {
+                    let scope = crate::chunk_mount::read_scope(&tx, &key)?;
+                    if !scope.retry_enabled() {
+                        return Ok(None);
+                    }
+                    let saved = ledger::inspect_scoped(&scope)?;
+                    let roots = publication::ledger::inspect(&tx)?;
+                    publication::ledger::validate_source_snapshot(&tx, &roots, &saved)?;
+                    let creators_empty = crate::manifest_creation::empty_for_mount(&scope)?;
+                    let names_present: bool =
+                        tx.query_row("SELECT EXISTS(SELECT 1 FROM namespace_intents)", [], |r| {
+                            r.get(0)
+                        })?;
+                    if !creators_empty
+                        || names_present
+                        || roots.records.values().any(|r| r.acknowledgment().is_none())
+                    {
+                        return Ok(None);
+                    }
+                    // Exact heads() order and actual head records, not a new proof.
+                    let targets = saved
+                        .views
+                        .files
+                        .values()
+                        .map(|file| {
+                            Ok(saved
+                                .views
+                                .record(file.head)?
+                                .request
+                                .binding
+                                .base()?
+                                .node()
+                                .to_owned())
+                        })
+                        .collect::<Result<Vec<_>>>()?;
+                    Ok(Some(targets))
+                })();
+                tx.rollback()?;
+                result
+            })
+            .await
+    }
     pub async fn bind(&self, open: String) -> Result<Token> {
         let key = self.key.clone();
         self.owner

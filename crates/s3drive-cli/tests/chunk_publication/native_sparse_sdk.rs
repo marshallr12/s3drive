@@ -104,6 +104,8 @@ pub async fn flow(config: &s3drive_core::Config, root: &Path, s: &Server, mode: 
             native: native.clone(),
             reader: reader.clone(),
             executor: e.clone(),
+            inject_open: (mode == 6).then(|| chunks.opens()),
+            flushes: std::sync::atomic::AtomicUsize::new(0),
         });
         let controller = s3drive_managed::disposition::Controller::attach_native(
             chunks.clone(),
@@ -111,12 +113,34 @@ pub async fn flow(config: &s3drive_core::Config, root: &Path, s: &Server, mode: 
             s.wire.clone(),
             empty_creation::store(s).await,
             id(80),
-            content,
+            content.clone(),
             Arc::new(tokio::sync::Mutex::new(())),
         )
         .await
         .unwrap();
+        if mode == 6 {
+            assert!(
+                chunks
+                    .uncontended_close(id(80), id(71), id(90))
+                    .await
+                    .unwrap()
+                    .is_some()
+            );
+        }
         controller.close(&id(71), &id(90)).await.unwrap();
+        if mode == 6 {
+            assert_eq!(content.flushes.load(std::sync::atomic::Ordering::SeqCst), 1);
+            let other = opens.get(id(95)).await.unwrap();
+            assert!(other.active());
+            assert!(other.close().is_none());
+            assert!(other.pending().is_empty());
+            let remaining = opens.records().await.unwrap();
+            assert!(remaining.iter().any(|r| r.input.id == id(95)));
+            assert!(!remaining.iter().any(|r| r.input.id == id(71)));
+            eprintln!(
+                "NATIVE_CONTROLLER_INTERLEAVING flushes=1 original_retired=true second_active=true"
+            );
+        }
         let saved = opens.get(id(71)).await.unwrap();
         assert!(saved.completed(&id(90)));
         assert!(saved.cleanup().is_none());
@@ -253,10 +277,15 @@ struct Content {
     native: NativeSparseFile,
     reader: Reader,
     executor: Executor,
+    inject_open: Option<s3drive_state::worker::Opens>,
+    flushes: std::sync::atomic::AtomicUsize,
 }
 impl s3drive_managed::disposition::NativeContent for Content {
     fn flush<'a>(&'a self, _node: &'a str) -> s3drive_managed::disposition::Task<'a, ()> {
         Box::pin(async {
+            let flush = self
+                .flushes
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             for info in self.native.plans().await? {
                 let prep = self.native.reopen(&self.reader, info.id()?).await?;
                 prep.prepare().await?;
@@ -275,6 +304,16 @@ impl s3drive_managed::disposition::NativeContent for Content {
                         views::Options::default(),
                     )
                     .await?;
+            }
+            if flush == 0
+                && let Some(opens) = &self.inject_open
+            {
+                // A separate valid owner command changes live-handle state
+                // during the real controller flush, after its prefix selection.
+                let mut input = opens.get(self.native.open().into()).await?.input;
+                input.id = id(95);
+                opens.prepare(input).await?;
+                opens.activate(id(95), id(96)).await?;
             }
             Ok(())
         })

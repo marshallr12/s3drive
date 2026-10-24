@@ -177,3 +177,28 @@ exact completion retries and barriers in both modes, prefix exclusions and
 fresh later records, plus late corruption against the actual final completion
 validator. Fresh-record testing is command-level, not an injected controller
 flush interleaving. Full runtime and native acceptance remain pending.
+
+An additional SDK fixture now exercises a real controller interleaving rather
+than only sequential state commands. Its test Content implementation opens a
+second valid handle during the first flush after a successful sole-Close
+selection. It requires exactly one flush, completed/retired original Close,
+and a still-active second handle, proving the later records lookup is used.
+It adds no production hook and retains the existing five-PUT fixture bound.
+This is shared-controller SDK coverage, not native-driver acceptance, and is
+pending hosted execution.
+
+Run40083665977 passed Linux's full reader-capacity gate, but Windows still hit
+900 seconds after 242 retained opens, so it is not accepted. The next mode-two
+optimization combines only no-effect outer recovery and GC target discovery:
+full mount/native/source/root/physical proofs plus exact creator preflight,
+isolation exclusions and membership must pass; namespace/creator history must
+be absent and every root acknowledged. Otherwise the original recovery loops
+and fresh heads read remain. A successful read returns head node IDs in the
+same order as heads(), not permission to delete; each collector invocation still
+validates current state and pins independently. Dirty or prepared source work
+without a root may legitimately return a list and still requires later flush.
+This targets seven scans to one. Tests cover newly unacknowledged root work,
+multiple-target order, malformed empty creator role, stale discovery with pins
+or coherent physical corruption, and mode-one fallback. The real controller
+interleaving fixture above is bundled. All native deadlines and capacity limits
+remain unchanged; cross-platform acceptance is pending.

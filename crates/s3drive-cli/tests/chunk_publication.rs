@@ -1297,6 +1297,9 @@ fn dispatch<'a>(
             s,
             "cold_namespace_rejected",
         )),
+        "native_sparse_sdk_controller_interleaving" => {
+            Box::pin(native_sparse_sdk::flow(config, root, s, 6))
+        }
         "native_sparse_sdk_controller_linked" => {
             Box::pin(native_sparse_sdk::flow(config, root, s, 3))
         }
@@ -1800,7 +1803,8 @@ async fn run(mode: &str) {
     let expected = match mode {
         "native_retention_shared_cycles" | "native_retention_mounted_cycles" => 601,
         "cold_namespace_crash" | "cold_namespace_known" | "cold_namespace_rejected" => 1,
-        "native_sparse_sdk_controller_linked"
+        "native_sparse_sdk_controller_interleaving"
+        | "native_sparse_sdk_controller_linked"
         | "native_sparse_sdk_controller_unlinked"
         | "native_sparse_sdk_linked"
         | "native_sparse_sdk_pending"
@@ -2334,4 +2338,9 @@ async fn native_retention_shared_300_saves_close_and_30_restarts() {
 #[ignore = "fresh linked profile; real FUSE/WinFsp required"]
 async fn native_retention_actual_300_saves_close_and_30_remounts() {
     run("native_retention_mounted_cycles").await;
+}
+
+#[tokio::test]
+async fn native_sparse_sdk_controller_interleaving() {
+    run("native_sparse_sdk_controller_interleaving").await;
 }

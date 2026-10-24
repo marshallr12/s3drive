@@ -2205,6 +2205,10 @@ async fn native_retry_validation_work_pinned_refusal_rechecks_resealed_unselecte
                 .is_err()
         );
         assert!(
+            n.client.quiet_recovery_targets().await.is_err(),
+            "quiet recovery must reject unselected corruption {case}"
+        );
+        assert!(
             n.client.plans(f.node.id).await.is_err(),
             "plans must recheck late corruption case {case}"
         );
@@ -2271,7 +2275,7 @@ async fn native_retry_validation_work_per_open_close() {
                     "heads" => assert_eq!(delta[0], 2),
                     "guard acquire" => assert_eq!(delta[0], 4),
                     "guard release" => assert_eq!(delta[0], 3),
-                    "plans" | "uncontended open" | "flush selection" => assert_eq!(delta[0], 1),
+                    "plans" | "uncontended open" | "flush selection" | "quiet recovery" => assert_eq!(delta[0], 1),
                     "Close" => assert_eq!(delta[0], 4),
                     "completion" => assert_eq!(delta[0], 2),
                     "bind" | "uncontended close" => assert_eq!(delta[0], 1),
@@ -2301,7 +2305,19 @@ async fn native_retry_validation_work_per_open_close() {
                 .await
                 .unwrap()
         );
-        measured!("heads", local.heads().await.unwrap());
+        let targets = measured!(
+            "quiet recovery",
+            n.client.quiet_recovery_targets().await.unwrap()
+        )
+        .unwrap();
+        let heads = measured!("heads", local.heads().await.unwrap());
+        assert_eq!(
+            targets,
+            heads
+                .iter()
+                .map(|h| h.binding().base().unwrap().node().to_owned())
+                .collect::<Vec<_>>()
+        );
         measured!(
             "namespace pending",
             capability.namespace().pending(None, 256).await.unwrap()
@@ -2896,6 +2912,22 @@ async fn native_retry_validation_work_flush_selection_checks_unselected_acknowle
     assert!(selected.plans.is_empty());
     assert!(selected.acknowledged.contains(&plan));
     drop(selected);
+    let targets = n.client.quiet_recovery_targets().await.unwrap().unwrap();
+    let heads = n
+        .storage
+        .sparse_views(views::Options::default())
+        .unwrap()
+        .heads()
+        .await
+        .unwrap();
+    assert_eq!(
+        targets,
+        heads
+            .iter()
+            .map(|h| h.binding().base().unwrap().node().to_owned())
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(targets.len(), 2);
     let before = n
         .storage
         .cache()
@@ -2935,6 +2967,10 @@ async fn native_retry_validation_work_flush_selection_checks_unselected_acknowle
             .await
             .is_err()
     );
+    assert!(n.client.quiet_recovery_targets().await.is_err());
+    for target in targets {
+        assert!(!matches!(n.client.retire_linked(target).await, Ok(true)));
+    }
     n.storage
         .cache()
         .owner
@@ -3164,4 +3200,130 @@ async fn native_retry_validation_work_close_prefix_does_not_change_nonposix_poli
         );
         n.storage.close().await.unwrap();
     }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_quiet_recovery_preserves_root_work_and_pins() {
+    let tmp = tempfile::tempdir().unwrap();
+    let n = setup_mode(&tmp.path().join("quiet recovery work"), 16, true).await;
+    let f = fixture();
+    assert!(n.client.quiet_recovery_targets().await.unwrap().is_some());
+    let dirty = n
+        .client
+        .write(n.token.clone(), context(&n.view), [2; 32], 0, vec![4; 17])
+        .await
+        .unwrap();
+    // Dirty source without an admitted publication was not recovery-list work.
+    assert!(n.client.quiet_recovery_targets().await.unwrap().is_some());
+    let prepared = n
+        .client
+        .prepare(n.token.clone(), context(&dirty))
+        .await
+        .unwrap();
+    assert!(n.client.quiet_recovery_targets().await.unwrap().is_some());
+    let plan = prepared.id().unwrap();
+    let binding = dirty.binding().clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            let retry = prepared.retry_operation().unwrap();
+            let info = pj(s).append(plan, prepared.cursor(), Candidate::Bytes(vec![4; 17]))?;
+            crate::sparse_views::preparation::tests::fixture::finish(s, info);
+            j(s).check(plan, 0, None)?;
+            physical(s, plan);
+            j(s).begin(
+                plan,
+                f.node.clone(),
+                f.store,
+                f.node.revision,
+                retry.publish_operation()?,
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    // A newly admitted root after the earlier selection is now recoverable work.
+    assert!(n.client.quiet_recovery_targets().await.unwrap().is_none());
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            let root = j(s).get(plan)?;
+            lineage::commit(s, root);
+            j(s).acknowledge_scoped(
+                views::ScopedOperation::new(&binding, [11; 32])?,
+                plan,
+                views::Options::default(),
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    close_native(&n, &n.token, 71).await.unwrap();
+    n.client
+        .complete(n.token.clone(), hex(&[71; 16]), hex(&[72; 16]))
+        .await
+        .unwrap();
+    let capability = crate::chunk_mount::Client::new(
+        n.storage.cache().owner,
+        crate::journal::Options::default(),
+        n.key.clone(),
+    );
+    capability
+        .opens()
+        .retire(n.token.input().id.clone())
+        .await
+        .unwrap();
+    let targets = n.client.quiet_recovery_targets().await.unwrap().unwrap();
+    let reader = n
+        .storage
+        .sparse_views(views::Options::default())
+        .unwrap()
+        .guard(n.view.id())
+        .await
+        .unwrap();
+    assert!(!n.client.retire_linked(targets[0].clone()).await.unwrap());
+    drop(reader);
+    assert!(n.client.retire_linked(targets[0].clone()).await.unwrap());
+    n.storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_quiet_recovery_requires_mode_and_empty_role_integrity() {
+    let tmp = tempfile::tempdir().unwrap();
+    let old = setup(&tmp.path().join("ordinary native fallback"), 16).await;
+    assert!(old.client.quiet_recovery_targets().await.unwrap().is_none());
+    old.storage.close().await.unwrap();
+    let n = setup_mode(&tmp.path().join("empty creator role"), 16, true).await;
+    let before = n
+        .storage
+        .cache()
+        .owner
+        .call(|store| {
+            assert_eq!(
+                store.state.connection.execute(
+                    "INSERT INTO manifest_creation_role VALUES(1,0,zeroblob(32))",
+                    []
+                )?,
+                1
+            );
+            Ok(native_snapshot(&store.state))
+        })
+        .await
+        .unwrap();
+    assert!(n.client.quiet_recovery_targets().await.is_err());
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            assert!(store.state.connection.is_autocommit());
+            assert_eq!(native_snapshot(&store.state), before);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    n.storage.close().await.unwrap();
 }

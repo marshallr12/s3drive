@@ -275,8 +275,17 @@ impl Writes {
             .get(&self.default_store)
             .is_some_and(|(s, e, _)| e.check_create(&format!("{}binding", s.root), 0).is_ok())
     }
-    async fn recover(&self) -> Result<()> {
+    async fn recover(&self) -> Result<Option<Vec<String>>> {
         let _serial = self.recovery_serial.lock().await;
+        if self.native_retention {
+            let native = self
+                ._capability
+                .native_sparse(views::Options::default(), plans::Options::default())
+                .map_err(error)?;
+            if let Some(targets) = native.quiet_recovery_targets().await.map_err(error)? {
+                return Ok(Some(targets));
+            }
+        }
         self.recover_directories().await?;
         if let Some((_, _, creator)) = self.stores.values().next() {
             for record in creator.recovery().records().await.map_err(error)? {
@@ -331,7 +340,7 @@ impl Writes {
                     .map_err(error)?;
             }
         }
-        Ok(())
+        Ok(None)
     }
     async fn create_inner(&self, parent: &str, name: &str) -> Result<RemoteNode> {
         let _serial = self.open_serial.lock().await;
@@ -402,7 +411,7 @@ impl Writes {
     }
     async fn open_inner(&self, node: &str) -> Result<Arc<File>> {
         let _serial = self.open_serial.lock().await;
-        self.recover().await?;
+        let recovered_targets = self.recover().await?;
         if self.native_retention {
             // A last reader may have released after Close deferred collection.
             // Retry before creating our own reader or consuming open capacity.
@@ -410,11 +419,21 @@ impl Writes {
                 ._capability
                 .native_sparse(views::Options::default(), plans::Options::default())
                 .map_err(error)?;
-            for head in self.local.heads().await.map_err(error)? {
-                collector
-                    .retire_linked(head.binding().base().map_err(error)?.node().into())
+            let targets = match recovered_targets {
+                Some(targets) => targets,
+                None => self
+                    .local
+                    .heads()
                     .await
-                    .map_err(error)?;
+                    .map_err(error)?
+                    .into_iter()
+                    .map(|head| Ok(head.binding().base().map_err(error)?.node().to_owned()))
+                    .collect::<Result<Vec<_>>>()?,
+            };
+            for node in targets {
+                // Discovery is not deletion permission: every target gets its
+                // own fresh safety checks and independent transaction here.
+                collector.retire_linked(node).await.map_err(error)?;
             }
         }
         let remote = self.reader.open_file(node).await.map_err(error)?;
@@ -685,6 +704,7 @@ impl Writes {
         tokio::time::timeout(DEADLINE, self.recover())
             .await
             .map_err(|_| Error::Timeout)?
+            .map(|_| ())
     }
     async fn flush_all_inner(&self) -> Result<()> {
         tokio::time::timeout(DEADLINE, self.flush_heads())
