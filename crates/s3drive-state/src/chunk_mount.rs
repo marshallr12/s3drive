@@ -609,6 +609,28 @@ impl Client {
             })
             .await
     }
+    /// Select an empty-node open path without granting admission or retaining a
+    /// proof across commands. Recovery, provider effects and writes still use
+    /// their ordinary fresh validation. False requires the normal recovery path.
+    pub async fn uncontended_open(&self, input: names::opens::OpenInput) -> Result<bool> {
+        let key = self.key.clone();
+        self.owner
+            .call(move |worker| {
+                let state = &mut worker.state;
+                state.verify_staging_storage()?;
+                let runtime = state.incarnation.clone().ok_or("missing native runtime")?;
+                let tx = state
+                    .connection
+                    .transaction_with_behavior(TransactionBehavior::Deferred)?;
+                let result = (|| {
+                    let scope = read_scope(&tx, &key)?;
+                    names::opens::uncontended_native_open(&scope, &runtime, &input)
+                })();
+                tx.rollback()?;
+                result
+            })
+            .await
+    }
     pub fn namespace(&self) -> crate::worker::Namespace {
         crate::worker::Namespace::chunk(self.owner.clone(), self.options, self.key.clone())
     }

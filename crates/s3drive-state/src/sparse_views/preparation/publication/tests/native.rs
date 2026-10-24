@@ -2157,6 +2157,17 @@ async fn native_retry_validation_work_pinned_refusal_rechecks_resealed_unselecte
             n.client.retire_linked(f.node.id.clone()).await.is_err(),
             "corruption case {case} was hidden by the pin"
         );
+        let capability = crate::chunk_mount::Client::new(
+            n.storage.cache().owner,
+            crate::journal::Options::default(),
+            n.key.clone(),
+        );
+        let mut unrelated = n.token.input().clone();
+        unrelated.node = hex(&[200; 16]);
+        assert!(
+            capability.uncontended_open(unrelated).await.is_err(),
+            "empty-node preflight must recheck unselected corruption case {case}"
+        );
         assert!(
             n.client.plans(f.node.id).await.is_err(),
             "plans must recheck late corruption case {case}"
@@ -2224,7 +2235,7 @@ async fn native_retry_validation_work_per_open_close() {
                     "heads" => assert_eq!(delta[0], 2),
                     "guard acquire" => assert_eq!(delta[0], 4),
                     "guard release" => assert_eq!(delta[0], 3),
-                    "plans" => assert_eq!(delta[0], 1),
+                    "plans" | "uncontended open" => assert_eq!(delta[0], 1),
                     "Close" => assert_eq!(delta[0], 4),
                     "completion" => assert_eq!(delta[0], 5),
                     _ => {}
@@ -2238,6 +2249,13 @@ async fn native_retry_validation_work_per_open_close() {
         assert!(!measured!(
             "pre-open sweep",
             n.client.retire_linked(f.node.id.clone()).await.unwrap()
+        ));
+        assert!(measured!(
+            "uncontended open",
+            capability
+                .uncontended_open(n.token.input().clone())
+                .await
+                .unwrap()
         ));
         measured!("heads", local.heads().await.unwrap());
         measured!(
@@ -2554,4 +2572,109 @@ async fn native_retry_validation_work_final_close_snapshot_rechecks_after_initia
         }).await.unwrap();
         n.storage.close().await.unwrap();
     }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_open_preflight_is_selection_not_admission() {
+    let tmp = tempfile::tempdir().unwrap();
+    let n = setup_mode(&tmp.path().join("preflight freshness"), 16, true).await;
+    let capability = crate::chunk_mount::Client::new(
+        n.storage.cache().owner,
+        crate::journal::Options::default(),
+        n.key.clone(),
+    );
+    let mut input = n.token.input().clone();
+    assert!(!capability.uncontended_open(input.clone()).await.unwrap());
+    input.node = hex(&[199; 16]);
+    // Global collision still falls back even when this target has no live open.
+    assert!(!capability.uncontended_open(input).await.unwrap());
+    let mut input = n.token.input().clone();
+    input.session = hex(&[198; 16]);
+    assert!(capability.uncontended_open(input).await.is_err());
+    retry_cycle_mode(&n, fixture(), 1, false).await;
+    let mut input = n.token.input().clone();
+    input.id = capability
+        .next_admission(crate::chunk_mount::AdmissionDomain::Open)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(capability.uncontended_open(input.clone()).await.unwrap());
+    let original = n.token.input().id.clone();
+    let before = n
+        .storage
+        .cache()
+        .owner
+        .call(move |store| {
+            crate::namespace_client::opens::rewrite_epoch_for_test(
+                &store.state.connection,
+                &original,
+            )?;
+            Ok(native_snapshot(&store.state))
+        })
+        .await
+        .unwrap();
+    // No preflight result authorizes the later admission after another command.
+    assert!(capability.opens().prepare(input).await.is_err());
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            assert_eq!(native_snapshot(&store.state), before);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    n.storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_open_preflight_keeps_obsolete_and_pending_recovery() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("preflight recovery fallback");
+    let old = setup(&path, 16).await;
+    close_native(&old, &old.token, 71).await.unwrap();
+    old.storage.close().await.unwrap();
+    let storage = Storage::open(
+        &path,
+        crate::cache::Options::default(),
+        crate::journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    let capability = crate::chunk_mount::Client::new(
+        storage.cache().owner,
+        crate::journal::Options::default(),
+        old.key.clone(),
+    );
+    let mut input = old.token.input().clone();
+    input.id = hex(&[76; 16]);
+    input.session = hex(&[75; 16]);
+    let journal = capability.opens();
+    journal
+        .start_session(input.session.clone(), input.volume.clone())
+        .await
+        .unwrap();
+    assert!(!capability.uncontended_open(input.clone()).await.unwrap());
+    let pending = journal
+        .prepare_recovery(
+            input.session.clone(),
+            input.volume.clone(),
+            input.node.clone(),
+            None,
+        )
+        .await
+        .unwrap();
+    assert!(!capability.uncontended_open(input.clone()).await.unwrap());
+    assert!(
+        journal
+            .finish_recovery(input.session.clone(), pending.input.id)
+            .await
+            .unwrap()
+            .finished
+    );
+    for old in pending.input.opens {
+        journal.retire(old.id).await.unwrap();
+    }
+    assert!(capability.uncontended_open(input).await.unwrap());
+    storage.close().await.unwrap();
 }

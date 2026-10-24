@@ -134,3 +134,16 @@ resealed unselected semantic corruption, frontier changes and an unused damaged
 session after the initial read. The latter exercises the actual final read
 helper with exact rollback, not an injected end-to-end mid-Close fault. All
 runtime and native acceptance limits remain unchanged and pending.
+
+The Close reduction passed its diagnostics but both runtime attempts stopped at
+194 retained opens. The next optimization targets controller call multiplicity:
+one explicit read-only native open preflight checks the full mount/native graph,
+current runtime session, all live open records and exact pending recovery. Only
+an empty target with no global requested-ID collision and no pending recovery
+may skip eight otherwise repeated no-effect session/record/recovery reads.
+Nonempty, obsolete, existing-ID and pending-recovery paths retain their original
+logic. Only a selection boolean leaves the transaction; remote inspection and
+all prepare/activate/bind checks still run freshly. Tests cover fallback cases,
+corrupt unrelated retired history, and a mutation after preflight that must
+still fail admission without changing rows. The measured preflight itself must
+use one full scope; this is not yet proof that the runtime deadline is met.

@@ -1417,3 +1417,20 @@ pub(crate) fn sparse_retired(db: &Connection, id: &str) -> Result<bool> {
 
 #[cfg(test)]
 pub(crate) use retirement::{rewrite_epoch_for_test, rewrite_session_for_test};
+
+// Work selection only. Full mount proof is established before these reads;
+// no selected record or proof leaves the caller's read transaction.
+pub(crate) fn uncontended_native_open(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+    runtime: &str,
+    input: &OpenInput,
+) -> Result<bool> {
+    scope.binding().open(input)?;
+    session::current(scope.connection(), runtime, &input.session, &input.volume)?;
+    let records = all(scope.connection())?;
+    let pending = session::pending(scope.connection(), &input.volume, &input.node)?;
+    Ok(pending.is_none()
+        && !records.iter().any(|(_, r)| {
+            r.input.id == input.id || (r.input.volume == input.volume && r.input.node == input.node)
+        }))
+}

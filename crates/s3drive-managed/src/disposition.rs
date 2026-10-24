@@ -423,30 +423,42 @@ impl Controller {
     async fn open_impl(&self, input: OpenInput) -> Result<OpenRecord> {
         let _serial = self.backend.serial().lock().await;
         self.scope(&input)?;
-        self.live(&input).await?;
-        if self.session.is_some() {
-            Box::pin(self.recover_previous_inner(&input.node)).await?;
-        }
-        if let Some(existing) = self
-            .backend
-            .opens()
-            .records()
-            .await?
-            .into_iter()
-            .find(|r| r.input.id == input.id)
+        if self
+            .session
+            .as_ref()
+            .is_some_and(|session| session != &input.session)
         {
-            if existing.input != input {
-                return Err(Failure::Binding.into());
-            }
-            if existing.close().is_some() {
-                return Err(Failure::NotFound.into());
-            }
-            if existing.active() {
-                return Ok(existing);
-            }
+            return Err(Failure::Binding.into());
         }
-        self.recover_node(&input.node, None).await?;
-        Box::pin(self.recover_void(&input.node, None)).await?;
+        // A fresh read-only owner command may prove there is no local work to
+        // recover. It returns no authority or reusable records. In particular,
+        // prepare below still rechecks admission after the remote inspection.
+        if !self.backend.uncontended_open(&input).await? {
+            self.live(&input).await?;
+            if self.session.is_some() {
+                Box::pin(self.recover_previous_inner(&input.node)).await?;
+            }
+            if let Some(existing) = self
+                .backend
+                .opens()
+                .records()
+                .await?
+                .into_iter()
+                .find(|r| r.input.id == input.id)
+            {
+                if existing.input != input {
+                    return Err(Failure::Binding.into());
+                }
+                if existing.close().is_some() {
+                    return Err(Failure::NotFound.into());
+                }
+                if existing.active() {
+                    return Ok(existing);
+                }
+            }
+            self.recover_node(&input.node, None).await?;
+            Box::pin(self.recover_void(&input.node, None)).await?;
+        }
         if input.admission.is_none() {
             let (node, pending) = self.inspect(&input.node).await?;
             if node.deleted {

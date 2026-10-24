@@ -309,15 +309,7 @@ impl Journal<'_> {
         if let Some(key) = &self.chunk {
             crate::chunk_mount::verify_key(&self.state.connection, key)?.volume(volume)?;
         }
-        let key:Option<String>=self.state.connection.query_row("SELECT recovery_id FROM windows_session_recoveries WHERE volume_id=?1 AND node_id=?2 AND proof IS NULL",params![volume,node],|r|r.get(0)).optional()?;
-        key.map(|k| {
-            let (input, proof) = recovery(&self.state.connection, &k)?;
-            Ok(RecoveryRecord {
-                input,
-                finished: proof.is_some(),
-            })
-        })
-        .transpose()
+        pending(&self.state.connection, volume, node)
     }
     pub fn recovered(&self, key: &str) -> Result<bool> {
         self.chunk_check()?;
@@ -551,4 +543,16 @@ pub(super) fn chunk_scope(db: &Connection, b: &crate::chunk_mount::Binding) -> R
         }
     }
     Ok(())
+}
+
+pub(super) fn pending(db: &Connection, volume: &str, node: &str) -> Result<Option<RecoveryRecord>> {
+    let key: Option<String> = db.query_row("SELECT recovery_id FROM windows_session_recoveries WHERE volume_id=?1 AND node_id=?2 AND proof IS NULL", params![volume,node], |r| r.get(0)).optional()?;
+    key.map(|k| {
+        let (input, proof) = recovery(db, &k)?;
+        Ok(RecoveryRecord {
+            input,
+            finished: proof.is_some(),
+        })
+    })
+    .transpose()
 }
