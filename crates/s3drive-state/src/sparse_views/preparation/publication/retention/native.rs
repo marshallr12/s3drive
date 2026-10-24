@@ -110,7 +110,11 @@ impl Terminal {
         info: &Info,
         view: Id,
     ) -> Result<crate::chunk_mount::Binding> {
-        self.validate_in(db, info, view, None)
+        self.validate_with_isolation(
+            &mut crate::sparse_views::IsolationCheck::new(db),
+            info,
+            view,
+        )
     }
     pub(super) fn validate_scoped(
         &self,
@@ -118,15 +122,29 @@ impl Terminal {
         info: &Info,
         view: Id,
     ) -> Result<crate::chunk_mount::Binding> {
-        self.validate_in(scope.connection(), info, view, Some(scope))
+        self.validate_in(
+            &mut crate::sparse_views::IsolationCheck::from_mount_scope(scope),
+            info,
+            view,
+            Some(scope),
+        )
+    }
+    pub(super) fn validate_with_isolation(
+        &self,
+        isolation: &mut crate::sparse_views::IsolationCheck<'_>,
+        info: &Info,
+        view: Id,
+    ) -> Result<crate::chunk_mount::Binding> {
+        self.validate_in(isolation, info, view, None)
     }
     fn validate_in(
         &self,
-        db: &Connection,
+        isolation: &mut crate::sparse_views::IsolationCheck<'_>,
         info: &Info,
         view: Id,
         scope: Option<&crate::chunk_mount::ReadScope<'_>>,
     ) -> Result<crate::chunk_mount::Binding> {
+        let db = isolation.db;
         // This fresh fully validated owner proof is reused only in this invocation.
         let mount = match scope {
             Some(scope) => scope.binding().clone(),
@@ -173,7 +191,7 @@ impl Terminal {
         )?;
         match scope {
             Some(scope) => publisher::verify_terminal_plan_scoped(scope, info)?,
-            None => publisher::verify_terminal_plan(db, &mount, info)?,
+            None => publisher::verify_terminal_plan_with_isolation(isolation, &mount, info)?,
         }
         Ok(mount)
     }

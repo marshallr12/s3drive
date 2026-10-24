@@ -42,9 +42,6 @@ pub(crate) fn check_schema(db: &Connection) -> Result<()> {
 pub(crate) fn enabled(db: &Connection) -> Result<bool> {
     enabled_in(&mut IsolationCheck::new(db))
 }
-pub(crate) fn enabled_scoped(scope: &crate::chunk_mount::ReadScope<'_>) -> Result<bool> {
-    enabled_in(&mut IsolationCheck::from_mount_scope(scope))
-}
 pub(super) fn enabled_in(scope: &mut IsolationCheck<'_>) -> Result<bool> {
     let db = scope.db;
     // Disabled mode is the common legacy path. One bounded typed query avoids

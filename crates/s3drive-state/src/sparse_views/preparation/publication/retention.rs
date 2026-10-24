@@ -89,14 +89,15 @@ impl Anchor {
         self.view.request.binding.target()
     }
     fn validate(&self, db: &Connection, owner: Id) -> Result<()> {
-        self.validate_in(db, owner, None)
+        self.validate_in(&mut views::IsolationCheck::new(db), owner, None)
     }
     fn validate_in(
         &self,
-        db: &Connection,
+        isolation: &mut views::IsolationCheck<'_>,
         owner: Id,
         scope: Option<&crate::chunk_mount::ReadScope<'_>>,
     ) -> Result<()> {
+        let db = isolation.db;
         self.publication.validate()?;
         let parent = self.published.source()?;
         let ack = self.publication.acknowledgment().ok_or(Failure::Corrupt)?;
@@ -127,7 +128,7 @@ impl Anchor {
         if let Some(proof) = &self.native {
             let mount = match scope {
                 Some(scope) => proof.validate_scoped(scope, &info, self.view.id)?,
-                None => proof.validate(db, &info, self.view.id)?,
+                None => proof.validate_with_isolation(isolation, &info, self.view.id)?,
             };
             proof.verify_witness(&mount, &self.target()?)?;
         }
@@ -203,17 +204,26 @@ fn role_hash(owner: Id, anchors: &BTreeMap<Id, Anchor>) -> Result<Id> {
     )
 }
 pub(in crate::sparse_views) fn load(db: &Connection) -> Result<BTreeMap<Id, Anchor>> {
-    load_in(db, None)
+    load_with_isolation(&mut views::IsolationCheck::new(db))
 }
 pub(in crate::sparse_views) fn load_scoped(
     scope: &crate::chunk_mount::ReadScope<'_>,
 ) -> Result<BTreeMap<Id, Anchor>> {
-    load_in(scope.connection(), Some(scope))
+    load_in(
+        &mut views::IsolationCheck::from_mount_scope(scope),
+        Some(scope),
+    )
+}
+pub(in crate::sparse_views) fn load_with_isolation(
+    isolation: &mut views::IsolationCheck<'_>,
+) -> Result<BTreeMap<Id, Anchor>> {
+    load_in(isolation, None)
 }
 fn load_in(
-    db: &Connection,
+    isolation: &mut views::IsolationCheck<'_>,
     scope: Option<&crate::chunk_mount::ReadScope<'_>>,
 ) -> Result<BTreeMap<Id, Anchor>> {
+    let db = isolation.db;
     let mut q = match db
         .prepare("SELECT singleton,owner,entries,state_hash FROM sparse_retention_role LIMIT 2")
     {
@@ -249,10 +259,7 @@ fn load_in(
         || owner == [0; 32]
         || !(1..=i64::from(views::HARD_FILES)).contains(&entries)
         || version < 50
-        || !match scope {
-            Some(scope) => retry::enabled_scoped(scope)?,
-            None => retry::enabled(db)?,
-        }
+        || !retry::enabled_with_isolation(isolation)?
     {
         return Err(Failure::Corrupt.into());
     }
@@ -283,7 +290,7 @@ fn load_in(
         {
             return Err(Failure::Corrupt.into());
         }
-        a.validate_in(db, owner, scope)?;
+        a.validate_in(isolation, owner, scope)?;
         if anchors.insert(a.target()?, a).is_some() {
             return Err(Failure::Corrupt.into());
         }

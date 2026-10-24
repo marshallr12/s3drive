@@ -234,3 +234,26 @@ tests cover dependency receipts, current-format errors, late semantic/body and
 generation damage, exact checkpoint equality and newly acquired readers. The
 expected physical scope reduction is 82 to 46, subject to hosted confirmation;
 all 300-save, capacity, kill/full-disk and actual mounted gates remain required.
+
+Hosted diagnostics confirmed physical staging at 46 scans and collection at 10,
+but run40095067571 still exceeded the shared 20-minute limit on Linux after 210
+saves. Actual shared-FS instrumentation in run40099932644 completed 20 saves in
+89.13 seconds. Each ten-save owner spent about 26 seconds in flush and nine in
+Close, with nearly matching process CPU time. This is a short Linux diagnostic,
+not 300-save or native-driver acceptance; it identifies local validation work,
+not authority/network waiting, as the dominant measured cost.
+
+The next change shares only the existing isolation check within a synchronous
+source/preparation inspection, including its anchor and retry-mode readers.
+This private context contains a connection and one isolation flag, not a native,
+source, terminal or physical proof. Every mode singleton/hash, every anchor and
+independent witness, every source body and retained event is still checked.
+Each later inspection creates a fresh context even in the same transaction;
+no context crosses a mutation or await. Full native ReadScope remains distinct.
+Tests construct two independently collected native target anchors and retained
+events, then damage either coherently resealed anchor, modes, frontier, witness,
+source bytes and sessions between calls in one transaction. Both native modes
+also cover valid dirty intermediate states and late damage with exact rollback.
+Predicted anchored source/preparation isolation scans fall to one and modeled
+physical staging from 46 to 22; these predictions and actual FS timing still
+require hosted execution. All original acceptance gates remain unchanged.

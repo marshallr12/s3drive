@@ -2288,7 +2288,7 @@ async fn native_retry_validation_work_per_open_close() {
                     "guard acquire" => assert_eq!(delta[0], 4),
                     "guard release" => assert_eq!(delta[0], 3),
                     "plans" | "uncontended open" | "flush selection" | "quiet recovery" => assert_eq!(delta[0], 1),
-                    "Close" => assert_eq!(delta[0], 4),
+                    "Close" => assert_eq!(delta[0], 3),
                     "completion" => assert_eq!(delta[0], 2),
                     "bind" | "uncontended close" => assert_eq!(delta[0], 1),
                     _ => {}
@@ -3373,7 +3373,7 @@ async fn native_retry_validation_work_dirty_save_phases() {
                 let delta = std::array::from_fn::<_, 9, _>(|j| after[j] - before[j]);
                 if cycle > 0 {
                     match $name {
-                        "prepare" => assert_eq!(delta[0], 11),
+                        "prepare" => assert_eq!(delta[0], 5),
                         "collect" => assert!(delta[0] <= 15, "collection repeats pre-cut snapshots: {delta:?}"),
                         _ => {}
                     }
@@ -3411,10 +3411,10 @@ async fn native_retry_validation_work_dirty_save_phases() {
                     let delta = std::array::from_fn::<_, 9, _>(|j| after[j] - before[j]);
                     if cycle > 0 {
                         match $name {
-                            "physical staging" => assert_eq!(delta[0], 46),
-                            "check base" => assert_eq!(delta[0], 4),
-                            "publication begin" => assert_eq!(delta[0], 13),
-                            "acknowledge" => assert_eq!(delta[0], 12),
+                            "physical staging" => assert_eq!(delta[0], 22),
+                            "check base" => assert_eq!(delta[0], 1),
+                            "publication begin" => assert_eq!(delta[0], 5),
+                            "acknowledge" => assert_eq!(delta[0], 4),
                             _ => {}
                         }
                     }
@@ -3735,4 +3735,167 @@ async fn native_retry_validation_work_checkpoint_reuse_rechecks_new_readers() {
         .await
         .unwrap();
     n.storage.close().await.unwrap();
+}
+
+// Isolation is shared only inside one synchronous inspection. It is not a
+// source/native proof, and every subsequent call must re-read changed evidence.
+#[tokio::test]
+async fn native_retry_validation_work_isolation_context_rechecks_two_anchors_and_late_writes() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut n = setup_mode(&tmp.path().join("two anchor isolation"), 16, true).await;
+    retry_cycle(&n, fixture(), 1).await;
+    let f = fixture_node([3; 16]);
+    let mut input = n.token.input().clone();
+    input.node = f.node.id.clone();
+    let binding = f.binding.clone();
+    let key = n.key.clone();
+    let (id, view) = n
+        .storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            input.id = crate::chunk_mount::admission::next(
+                &s.connection,
+                crate::chunk_mount::AdmissionDomain::Open,
+            )?
+            .unwrap();
+            let activation = hex(&hash(b"second-target-activation", &input.id)?[..16]);
+            opens(s, &key).prepare(input.clone())?;
+            opens(s, &key).activate(&input.id, &activation)?;
+            let view = views::Journal::new(s, views::Options::default())?.begin_scoped(
+                views::ScopedOperation::new(&binding, [1; 32])?,
+                binding,
+                17,
+            )?;
+            Ok((input.id, view))
+        })
+        .await
+        .unwrap();
+    n.token = n.client.bind(id).await.unwrap();
+    n.view = view;
+    let f = retry_cycle(&n, f, 2).await;
+    retry_reopen(&mut n, &f).await;
+    retry_cycle_mode(&n, f, 3, false).await;
+    n.storage.cache().owner.call(move |store| {
+        let s = &mut store.state;
+        let anchors = crate::sparse_views::preparation::publication::retention::load(&s.connection)?;
+        assert_eq!(anchors.len(), 2);
+        let retained: i64 = s.connection.query_row("SELECT count(*) FROM windows_open_journal", [], |r|r.get(0))?;
+        let events: i64 = s.connection.query_row("SELECT count(*) FROM windows_open_events", [], |r|r.get(0))?;
+        assert!(retained > 0 && events > 0);
+        for prep in [false, true] {
+            let before = native_work_here();
+            if prep { crate::sparse_views::preparation::ledger::inspect(&s.connection)?; }
+            else { views::ledger::inspect(&s.connection)?; }
+            let after = native_work_here();
+            assert_eq!(after[0] - before[0], 1, "one isolation scan, prep={prep}");
+            assert_eq!(after[4] - before[4], retained as usize * if prep { 2 } else { 1 }, "every retained open, prep={prep}");
+            assert_eq!(after[2] - before[2], events as usize * if prep { 2 } else { 1 }, "every event, prep={prep}");
+        }
+        let original = native_snapshot(s);
+        // Every damage is introduced AFTER successful inspections in this same
+        // transaction. No context may be reused by the later invocations.
+        for case in 0..12 {
+            let tx = s.connection.transaction()?;
+            views::ledger::inspect(&tx)?;
+            crate::sparse_views::preparation::ledger::inspect(&tx)?;
+            match case {
+                0 => { assert_eq!(tx.execute("UPDATE sparse_retry_mode SET state_hash=zeroblob(32)", [])?, 1); }
+                1 => { assert_eq!(tx.execute("UPDATE sparse_scoped_mode SET state_hash=zeroblob(32)", [])?, 1); }
+                2 => { assert!(tx.execute("UPDATE windows_mount_sessions SET state_hash=zeroblob(32)", [])? > 0); }
+                3 => { assert!(tx.execute("UPDATE windows_open_events SET state_hash=zeroblob(32)", [])? > 0); }
+                4 => { assert!(tx.execute("UPDATE sparse_view_blocks SET data=zeroblob(length(data))", [])? > 0); }
+                5 | 6 | 10 | 11 => {
+                    // Coherently reseal either target's local anchor and role.
+                    // The independent original Close witness must still reject.
+                    let target = *anchors.keys().nth(if case < 7 { case - 5 } else { case - 10 }).unwrap();
+                    let mut changed = anchors.clone();
+                    let mut raw = serde_json::to_value(changed.get(&target).unwrap())?;
+                    if case < 7 { raw["native"]["close"] = serde_json::json!(hex(&[231; 16])); }
+                    else { raw["publication"]["physical"]["checksum"] = serde_json::to_value([232u8;32])?; }
+                    let anchor: crate::sparse_views::preparation::publication::retention::Anchor = serde_json::from_value(raw)?;
+                    tx.execute("UPDATE sparse_retention_anchors SET record=?1,state_hash=?2 WHERE target=?3", params![serde_json::to_vec(&anchor)?, hash(b"s3drive-retention-anchor-v1\0", &anchor)?.as_slice(), target.as_slice()])?;
+                    changed.insert(target, anchor);
+                    let owner: Vec<u8> = tx.query_row("SELECT owner FROM sparse_retention_role", [], |r|r.get(0))?;
+                    let owner: Id = owner.try_into().unwrap();
+                    let sha = hash(b"s3drive-retention-role-v1\0", &(owner, changed.iter().collect::<Vec<_>>()))?;
+                    tx.execute("UPDATE sparse_retention_role SET state_hash=?1", [sha.as_slice()])?;
+                }
+                7 | 8 => {
+                    let mount = crate::chunk_mount::load(&tx)?.unwrap();
+                    let mut raw = serde_json::to_value(mount)?;
+                    if case == 7 { raw["terminals"] = serde_json::json!({}); }
+                    else { raw["frontier"] = serde_json::json!(0); }
+                    let mount: crate::chunk_mount::Binding = serde_json::from_value(raw)?;
+                    tx.execute("UPDATE chunk_mount_role SET record=?1,state_hash=?2", params![serde_json::to_vec(&mount)?, hash(b"s3drive-chunk-mount-binding-v1\0", &mount)?.as_slice()])?;
+                }
+                _ => {
+                    assert_eq!(tx.execute("INSERT INTO windows_mount_sessions SELECT ?1,volume_id,?2,owner_id,zeroblob(32) FROM windows_mount_sessions LIMIT 1", params![hex(&[77;16]),hex(&[78;16])])?, 1);
+                }
+            }
+            assert!(views::ledger::inspect(&tx).is_err(), "source case {case}");
+            assert!(crate::sparse_views::preparation::ledger::inspect(&tx).is_err(), "prep case {case}");
+            tx.rollback()?;
+            assert_eq!(native_snapshot(s), original);
+            views::ledger::inspect(&s.connection)?;
+            crate::sparse_views::preparation::ledger::inspect(&s.connection)?;
+        }
+        Ok(())
+    }).await.unwrap();
+    n.storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_isolation_context_is_fresh_in_both_native_modes() {
+    for retry in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let n = setup_mode(&tmp.path().join("mode inspection freshness"), 16, retry).await;
+        n.client
+            .write(n.token.clone(), context(&n.view), [91; 32], 0, vec![9; 17])
+            .await
+            .unwrap();
+        n.storage
+            .cache()
+            .owner
+            .call(move |store| {
+                let s = &mut store.state;
+                let original = native_snapshot(s);
+                for case in 0..3 {
+                    let tx = s.connection.transaction()?;
+                    // This is a legitimate dirty, not-yet-prepared intermediate
+                    // state. Isolation reuse must not add a completion requirement.
+                    views::ledger::inspect(&tx)?;
+                    crate::sparse_views::preparation::ledger::inspect(&tx)?;
+                    let changed = match case {
+                        0 => {
+                            tx.execute("UPDATE sparse_scoped_mode SET state_hash=zeroblob(32)", [])?
+                        }
+                        1 => tx.execute(
+                            "UPDATE windows_mount_sessions SET state_hash=zeroblob(32)",
+                            [],
+                        )?,
+                        _ => tx.execute(
+                            "UPDATE sparse_view_blocks SET data=zeroblob(length(data))",
+                            [],
+                        )?,
+                    };
+                    assert!(changed > 0);
+                    assert!(
+                        views::ledger::inspect(&tx).is_err(),
+                        "mode={retry}, source case={case}"
+                    );
+                    assert!(
+                        crate::sparse_views::preparation::ledger::inspect(&tx).is_err(),
+                        "mode={retry}, prep case={case}"
+                    );
+                    tx.rollback()?;
+                    assert_eq!(native_snapshot(s), original);
+                }
+                Ok(())
+            })
+            .await
+            .unwrap();
+        n.storage.close().await.unwrap();
+    }
 }

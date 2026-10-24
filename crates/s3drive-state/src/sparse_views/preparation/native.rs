@@ -645,12 +645,12 @@ impl Provenance {
         Ok(())
     }
 }
-pub(in crate::sparse_views) fn verify_terminal_plan(
-    db: &Connection,
+pub(in crate::sparse_views) fn verify_terminal_plan_with_isolation(
+    isolation: &mut crate::sparse_views::IsolationCheck<'_>,
     mount: &crate::chunk_mount::Binding,
     info: &Info,
 ) -> Result<()> {
-    verify_terminal_plan_in(mount, info, retry::enabled(db)?)
+    verify_terminal_plan_in(mount, info, retry::enabled_with_isolation(isolation)?)
 }
 pub(in crate::sparse_views) fn verify_terminal_plan_scoped(
     scope: &crate::chunk_mount::ReadScope<'_>,

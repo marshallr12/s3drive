@@ -104,9 +104,12 @@ fn inspect_in(
     if !db.pragma_query_value(None, "foreign_keys", |r| r.get::<_, bool>(0))? {
         return Err(Failure::Corrupt.into());
     }
+    // Reuse only isolation within this synchronous inspection, never source,
+    // mode-row, terminal, physical or native graph validation results.
+    let mut isolation = super::super::IsolationCheck::new(db);
     let views = match scope {
         Some(scope) => super::super::ledger::inspect_scoped(scope)?,
-        None => super::super::ledger::inspect(db)?,
+        None => super::super::ledger::inspect_with_isolation(&mut isolation)?,
     };
     let plans = total(db, "SELECT count(*) FROM sparse_preparations")?;
     let objects = total(db, "SELECT count(*) FROM sparse_preparation_objects")?;
@@ -206,7 +209,7 @@ fn inspect_in(
     native::validate_snapshot(db, &s)?;
     match scope {
         Some(scope) => retry::validate_snapshot_scoped(scope, &s)?,
-        None => retry::validate_snapshot(db, &s)?,
+        None => retry::validate_snapshot_with_isolation(&mut isolation, &s)?,
     }
     Ok(s)
 }

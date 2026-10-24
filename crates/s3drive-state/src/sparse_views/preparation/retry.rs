@@ -73,12 +73,15 @@ pub(crate) fn install_fresh(db: &Connection) -> Result<()> {
     Ok(())
 }
 pub(crate) fn enabled(db: &Connection) -> Result<bool> {
-    enabled_in(db, None)
+    enabled_with_isolation(&mut super::super::IsolationCheck::new(db))
 }
 pub(crate) fn enabled_scoped(scope: &crate::chunk_mount::ReadScope<'_>) -> Result<bool> {
-    enabled_in(scope.connection(), Some(scope))
+    enabled_with_isolation(&mut super::super::IsolationCheck::from_mount_scope(scope))
 }
-fn enabled_in(db: &Connection, scope: Option<&crate::chunk_mount::ReadScope<'_>>) -> Result<bool> {
+pub(in crate::sparse_views) fn enabled_with_isolation(
+    isolation: &mut super::super::IsolationCheck<'_>,
+) -> Result<bool> {
+    let db = isolation.db;
     let exists: bool = db.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='table' AND name='sparse_retry_mode')", [], |r| r.get(0))?;
     if !exists {
         let v: i32 = db.pragma_query_value(None, "user_version", |r| r.get(0))?;
@@ -100,17 +103,17 @@ fn enabled_in(db: &Connection, scope: Option<&crate::chunk_mount::ReadScope<'_>>
         || sha != mode_hash()?
         || rows.next()?.is_some()
         || v < 49
-        || !match scope {
-            Some(scope) => super::super::scoped::enabled_scoped(scope)?,
-            None => super::super::scoped::enabled(db)?,
-        }
+        || !super::super::scoped::enabled_in(isolation)?
     {
         return Err(Failure::Corrupt.into());
     }
     Ok(true)
 }
-pub(super) fn validate_snapshot(db: &Connection, s: &ledger::Snapshot) -> Result<()> {
-    validate_snapshot_in(s, enabled(db)?)
+pub(super) fn validate_snapshot_with_isolation(
+    isolation: &mut super::super::IsolationCheck<'_>,
+    s: &ledger::Snapshot,
+) -> Result<()> {
+    validate_snapshot_in(s, enabled_with_isolation(isolation)?)
 }
 pub(super) fn validate_snapshot_scoped(
     scope: &crate::chunk_mount::ReadScope<'_>,

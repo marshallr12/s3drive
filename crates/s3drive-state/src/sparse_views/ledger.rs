@@ -146,7 +146,7 @@ pub(in crate::sparse_views) fn inspection_count() -> usize {
 pub(super) fn inspect_isolated(tx: &rusqlite::Transaction<'_>) -> Result<Ledger> {
     let mut scope = IsolationCheck::new(tx);
     scope.require()?;
-    load_in(tx, true, true, None, scope)
+    load_in(true, true, None, &mut scope)
 }
 fn load_with_scope(
     db: &Connection,
@@ -154,19 +154,24 @@ fn load_with_scope(
     bodies: bool,
     validated: Option<&crate::chunk_mount::ReadScope<'_>>,
 ) -> Result<Ledger> {
-    let scope = match validated {
+    let mut scope = match validated {
         Some(scope) => IsolationCheck::from_mount_scope(scope),
         None => IsolationCheck::new(db),
     };
-    load_in(db, patches, bodies, validated, scope)
+    load_in(patches, bodies, validated, &mut scope)
+}
+pub(in crate::sparse_views) fn inspect_with_isolation(
+    scope: &mut IsolationCheck<'_>,
+) -> Result<Ledger> {
+    load_in(true, true, None, scope)
 }
 fn load_in(
-    db: &Connection,
     patches: bool,
     bodies: bool,
     validated: Option<&crate::chunk_mount::ReadScope<'_>>,
-    mut scope: IsolationCheck<'_>,
+    scope: &mut IsolationCheck<'_>,
 ) -> Result<Ledger> {
+    let db = scope.db;
     #[cfg(test)]
     INSPECTIONS.set(INSPECTIONS.get() + 1);
     let tables = if patches && bodies {
@@ -179,15 +184,15 @@ fn load_in(
         counts[i] = count(db, &format!("SELECT count(*) FROM {table}"))?;
     }
     if patches {
-        scoped::enabled_in(&mut scope)?;
+        scoped::enabled_in(scope)?;
     }
     let mut out = Ledger::default();
     if patches {
         out.anchors = match validated {
             Some(scope) => preparation::publication::retention::load_scoped(scope)?,
-            None => preparation::publication::retention::load(db)?,
+            None => preparation::publication::retention::load_with_isolation(scope)?,
         };
-        out.read_pins = pins::load_in(&mut scope)?;
+        out.read_pins = pins::load_in(scope)?;
     }
     if counts == [0; 5] {
         if !out.anchors.is_empty() {
