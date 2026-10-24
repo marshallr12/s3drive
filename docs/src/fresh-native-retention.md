@@ -325,3 +325,20 @@ wall overhead reported; daemon background work during sampling may contribute
 to the CPU delta. Handle-drop return is not a server Close completion timestamp.
 The original 120-second syscall sequence and all 300-save gates are unchanged;
 this small diagnostic cannot substitute for their acceptance.
+
+The actual native 20-save measurement passed on both systems, taking 55.70
+seconds on Linux and 137.14 seconds on Windows. Windows' second owner spent
+65.36 seconds in syscalls and 61.16 seconds of daemon CPU: sync_all was 25.94
+seconds and reopen/read/drop 19.56 seconds. This is not adequate 300-save margin.
+The next package batches only repeated reads within individual owner commands:
+source guard acquisition keeps its validated View and pin prestate together
+(two full inspections rather than four), pinned reads and head/view discovery
+use one fresh snapshot, and release retains separate pre/post inspections.
+Public Journal construction remains unchanged; no reusable Journal caches proof.
+Fresh linked prepare_publish similarly combines its pre-write source, root and
+native ownership checks, drops the scope before saving, and retains independent
+post-write validation. Proposed anchor-load counts are checked in focused tests,
+including cloned readers, changed/missing pins, late source/anchor damage,
+rotating-session pin fault rollback and exact publication retries. Hosted
+measurements and all original gates remain pending for this package; no speedup
+or cross-platform acceptance is claimed from static count reductions.

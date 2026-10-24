@@ -264,6 +264,9 @@ impl<'a> Journal<'a> {
         })
     }
     pub fn prepare_publish(&mut self, plan: Id, sequence: u64) -> Result<Record> {
+        if let Some(record) = self.prepare_publish_scoped(plan, sequence)? {
+            return Ok(record);
+        }
         let record = self.get(plan)?;
         if record.publication.is_none() {
             let source = super::super::ledger::inspect(&self.state.connection)?;
@@ -277,6 +280,42 @@ impl<'a> Journal<'a> {
         update(&mut self.state.connection, plan, true, |r| {
             r.prepare(sequence)
         })
+    }
+    // Current linked mode only. No proof crosses the first write, and save
+    // still performs its independent complete post-write source validation.
+    fn prepare_publish_scoped(&mut self, plan: Id, sequence: u64) -> Result<Option<Record>> {
+        let tx = self
+            .state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let Some(scope) = crate::chunk_mount::read_scope_current(&tx)? else {
+            tx.rollback()?;
+            return Ok(None);
+        };
+        let before = ledger::inspect(&tx)?;
+        let source = super::super::ledger::inspect_scoped(&scope)?;
+        ledger::validate_source_snapshot(&tx, &before, &source)?;
+        let record = before.records.get(&plan).ok_or(Failure::Missing)?;
+        if record.publication.is_none() {
+            super::super::owned::fresh_scoped(
+                &scope,
+                self.state.incarnation.as_deref(),
+                &self.state.native_sparse,
+                &source.info(plan)?,
+            )?;
+        }
+        let mut after = before.clone();
+        let record = after.records.get_mut(&plan).ok_or(Failure::Missing)?;
+        record.prepare(sequence)?;
+        record.validate()?;
+        let result = record.clone();
+        let kind = ledger::kind(&before, &after);
+        drop(source);
+        drop(scope);
+        ledger::save(&tx, &before, &after, true)?;
+        tx.commit()?;
+        checkpoint(kind, "Committed");
+        Ok(Some(result))
     }
     pub fn published(&mut self, plan: Id, receipt: ns::Receipt) -> Result<Record> {
         update(&mut self.state.connection, plan, true, |r| {

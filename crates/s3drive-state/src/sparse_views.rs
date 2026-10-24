@@ -21,6 +21,7 @@ pub(crate) use composition::{chunk_scope, namespace_guard};
 pub use scoped::Operation as ScopedOperation;
 mod mutations;
 pub mod preparation;
+pub(crate) use mutations::release_pin_command;
 pub use mutations::{Client, Journal, Piece};
 pub type Id = [u8; 32];
 const HARD_FILES: u32 = 256;

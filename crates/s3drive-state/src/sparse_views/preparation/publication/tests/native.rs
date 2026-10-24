@@ -2284,9 +2284,9 @@ async fn native_retry_validation_work_per_open_close() {
                 let after = native_work(&n).await;
                 let delta = std::array::from_fn::<_, 9, _>(|j| after[j] - before[j]);
                 match $name {
-                    "heads" => assert_eq!(delta[0], 2),
-                    "guard acquire" => assert_eq!(delta[0], 4),
-                    "guard release" => assert_eq!(delta[0], 3),
+                    "heads" => assert_eq!(delta[0], 1),
+                    "guard acquire" => assert_eq!(delta[0], 2),
+                    "guard release" => assert_eq!(delta[0], 2),
                     "plans" | "uncontended open" | "flush selection" | "quiet recovery" => assert_eq!(delta[0], 1),
                     "Close" => assert_eq!(delta[0], 3),
                     "completion" => assert_eq!(delta[0], 2),
@@ -3429,7 +3429,27 @@ async fn native_retry_validation_work_dirty_save_phases() {
             phase!("semantic check", j(s).check(plan, 0, None)?);
             phase!("check base", j(s).check_base(plan, &f.node)?);
             let r = phase!("publication begin", j(s).begin(plan, f.node.clone(), f.store.clone(), f.node.revision, retry.publish_operation()?)?);
-            let r = phase!("publication commit", lineage::commit(s, r));
+            let r = phase!("publication commit", {
+                let sequence = r.input.reserve.expected_sequence + 1;
+                let reserve = ns::Receipt { sequence, node: r.input.base.clone(), artifact: Some(ns::Artifact::Reservation(r.input.reservation()?)) };
+                j(s).reserved(plan, reserve)?;
+                let loads = crate::sparse_views::preparation::publication::retention::inspection_counts();
+                let r = j(s).prepare_publish(plan, sequence)?;
+                let after = crate::sparse_views::preparation::publication::retention::inspection_counts();
+                assert_eq!(after.0 - loads.0, 2, "fresh prepare_publish pre/post anchors");
+                if cycle > 0 { assert_eq!(after.1 - loads.1, 2); }
+                let mut receipt = published(&r);
+                receipt.sequence = sequence + 1;
+                receipt.node.revision = sequence + 1;
+                j(s).published(plan, receipt)?
+            });
+            let sequence = r.input.reserve.expected_sequence + 1;
+            let snapshot = native_snapshot(s);
+            let loads = crate::sparse_views::preparation::publication::retention::inspection_counts();
+            assert_eq!(j(s).prepare_publish(plan, sequence)?, r);
+            assert_eq!(crate::sparse_views::preparation::publication::retention::inspection_counts().0 - loads.0, 2);
+            assert!(j(s).prepare_publish(plan, sequence + 1).is_err());
+            assert_eq!(native_snapshot(s), snapshot);
             phase!("acknowledge", j(s).acknowledge_scoped(views::ScopedOperation::new(info.view().binding(), [11; 32])?, plan, views::Options::default())?);
             let page = crate::journal::Journal::new(s, crate::journal::Options::default())?.read(r.physical.generation, 0, r.physical.size as usize)?;
             let page = s3drive_core::manifest::Page::decode(&page)?;
@@ -3971,6 +3991,119 @@ async fn native_retry_validation_work_isolation_context_is_fresh_in_both_native_
             })
             .await
             .unwrap();
+        n.storage.close().await.unwrap();
+    }
+}
+
+async fn anchor_work(n: &Native) -> (usize, usize) {
+    n.storage
+        .cache()
+        .owner
+        .call(|_| Ok(crate::sparse_views::preparation::publication::retention::inspection_counts()))
+        .await
+        .unwrap()
+}
+#[tokio::test]
+async fn native_retry_validation_work_source_commands_keep_pins_and_fresh_anchors() {
+    for linked in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let n = setup_mode(&tmp.path().join("source commands"), 16, linked).await;
+        let f = retry_cycle_mode(&n, fixture(), 1, linked).await;
+        let local = n.storage.sparse_views(views::Options::default()).unwrap();
+        let current = local.current_head(f.binding.clone()).await.unwrap();
+        macro_rules! counted {
+            ($loads:expr, $work:expr) => {{
+                let before = anchor_work(&n).await;
+                let value = $work;
+                let after = anchor_work(&n).await;
+                assert_eq!(after.0 - before.0, $loads);
+                assert_eq!(after.1 - before.1, if linked { $loads } else { 0 });
+                value
+            }};
+        }
+        assert_eq!(
+            counted!(1, local.view(current.id()).await.unwrap()),
+            current
+        );
+        assert_eq!(
+            counted!(1, local.head(f.binding.clone()).await.unwrap()),
+            current
+        );
+        assert_eq!(
+            counted!(1, local.current_head(f.binding.clone()).await.unwrap()),
+            current
+        );
+        assert_eq!(
+            counted!(1, local.heads().await.unwrap()),
+            vec![current.clone()]
+        );
+        let expected = counted!(1, local.read(current.id(), 0, 17).await.unwrap());
+        let guard = counted!(2, local.guard(current.id()).await.unwrap());
+        assert_eq!(guard.view(), &current);
+        let clone = guard.clone();
+        drop(guard);
+        assert_eq!(counted!(1, clone.read(0, 17).await.unwrap()), expected);
+        let before = anchor_work(&n).await;
+        drop(clone);
+        // An owner barrier drains the final-drop release before reading counts.
+        let after = anchor_work(&n).await;
+        assert_eq!(after.0 - before.0, 2);
+        let pin = counted!(2, local.pin(current.id()).await.unwrap());
+        assert_eq!(
+            counted!(1, local.read_pinned(pin.clone(), 0, 17).await.unwrap()),
+            expected
+        );
+        if linked {
+            let saved = n
+                .storage
+                .cache()
+                .owner
+                .call(|store| {
+                    let before = native_snapshot(&store.state);
+                    let hash: Vec<u8> = store.state.connection.query_row(
+                        "SELECT state_hash FROM sparse_retention_anchors",
+                        [],
+                        |r| r.get(0),
+                    )?;
+                    assert_eq!(
+                        store.state.connection.execute(
+                            "UPDATE sparse_retention_anchors SET state_hash=zeroblob(32)",
+                            []
+                        )?,
+                        1
+                    );
+                    Ok((before, hash))
+                })
+                .await
+                .unwrap();
+            assert!(local.read_pinned(pin.clone(), 0, 17).await.is_err());
+            assert!(local.guard(current.id()).await.is_err());
+            assert!(local.heads().await.is_err());
+            assert!(local.view(current.id()).await.is_err());
+            n.storage
+                .cache()
+                .owner
+                .call(move |store| {
+                    assert_eq!(
+                        store.state.connection.execute(
+                            "UPDATE sparse_retention_anchors SET state_hash=?1",
+                            [saved.1]
+                        )?,
+                        1
+                    );
+                    assert_eq!(native_snapshot(&store.state), saved.0);
+                    Ok(())
+                })
+                .await
+                .unwrap();
+            assert_eq!(
+                counted!(1, local.read_pinned(pin.clone(), 0, 17).await.unwrap()),
+                expected
+            );
+        }
+        assert!(counted!(2, local.release_pin(pin.clone()).await.unwrap()));
+        assert!(local.read_pinned(pin.clone(), 0, 17).await.is_err());
+        assert!(!local.release_pin(pin).await.unwrap());
         n.storage.close().await.unwrap();
     }
 }

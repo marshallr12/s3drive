@@ -492,28 +492,59 @@ impl<'a> Journal<'a> {
             .connection
             .transaction_with_behavior(TransactionBehavior::Deferred)?;
         let ledger = ledger::inspect_isolated(&tx)?;
-        let mut out = Vec::new();
-        for range in View(ledger.record(id)?.clone()).range(offset, length)? {
-            out.push(match range {
-                Range::Base { offset, length } => Piece::Base { offset, length },
-                Range::Zero { length } => Piece::Zero { length },
-                Range::Patch {
-                    block,
-                    offset,
-                    length,
-                } => {
-                    let bytes = ledger.blocks.get(&block).ok_or(Failure::Corrupt)?;
-                    let end = offset.checked_add(length).ok_or(Failure::Corrupt)?;
-                    let piece = bytes
-                        .get(offset as usize..end as usize)
-                        .ok_or(Failure::Corrupt)?;
-                    Piece::Local(piece.to_vec())
-                }
-            });
-        }
+        let out = pieces(&ledger, id, offset, length)?;
         tx.commit()?;
         Ok(out)
     }
+}
+// One synchronous owner command, never a reusable Journal or cached proof.
+fn read_once<T>(
+    state: &mut State,
+    options: Options,
+    project: impl FnOnce(&ledger::Ledger) -> Result<T>,
+) -> Result<T> {
+    options.validate()?;
+    state.verify_staging_storage()?;
+    let tx = state
+        .connection
+        .transaction_with_behavior(TransactionBehavior::Deferred)?;
+    let data = ledger::inspect_isolated(&tx)?;
+    let result = project(&data)?;
+    tx.commit()?;
+    Ok(result)
+}
+fn pieces(ledger: &ledger::Ledger, id: Id, offset: u64, length: usize) -> Result<Vec<Piece>> {
+    if length > MAX_RANGE_BYTES {
+        return Err(Failure::Bounds.into());
+    }
+    let mut out = Vec::new();
+    for range in View(ledger.record(id)?.clone()).range(offset, length)? {
+        out.push(match range {
+            Range::Base { offset, length } => Piece::Base { offset, length },
+            Range::Zero { length } => Piece::Zero { length },
+            Range::Patch {
+                block,
+                offset,
+                length,
+            } => {
+                let bytes = ledger.blocks.get(&block).ok_or(Failure::Corrupt)?;
+                let end = offset.checked_add(length).ok_or(Failure::Corrupt)?;
+                let piece = bytes
+                    .get(offset as usize..end as usize)
+                    .ok_or(Failure::Corrupt)?;
+                Piece::Local(piece.to_vec())
+            }
+        });
+    }
+    Ok(out)
+}
+pub(crate) fn release_pin_command(
+    state: &mut State,
+    options: Options,
+    pin: &pins::Pin,
+) -> Result<bool> {
+    options.validate()?;
+    pins::release(state, pin)
 }
 #[derive(Clone)]
 pub struct Client {
@@ -530,9 +561,8 @@ impl Client {
         let options = self.options;
         self.owner
             .call(move |s| {
-                let mut journal = Journal::new(&mut s.state, options)?;
-                let view = journal.view(id)?;
-                let pin = journal.pin(id)?;
+                options.validate()?;
+                let (view, pin) = pins::acquire_view_inner(&mut s.state, id, |_| Ok(()))?;
                 Ok(super::guards::ReadGuard::new(client, view, pin))
             })
             .await
@@ -555,13 +585,29 @@ impl Client {
     pub async fn view(&self, id: Id) -> Result<View> {
         let options = self.options;
         self.owner
-            .call(move |s| Journal::new(&mut s.state, options)?.view(id))
+            .call(move |s| {
+                read_once(&mut s.state, options, |data| {
+                    Ok(View(data.record(id)?.clone()))
+                })
+            })
             .await
     }
     pub async fn head(&self, binding: Binding) -> Result<View> {
         let options = self.options;
         self.owner
-            .call(move |s| Journal::new(&mut s.state, options)?.head(&binding))
+            .call(move |s| {
+                read_once(&mut s.state, options, |data| {
+                    binding.validate()?;
+                    let file = data
+                        .files
+                        .get(&binding.target()?)
+                        .ok_or(Failure::NotFound)?;
+                    if file.binding != binding {
+                        return Err(Failure::Conflict.into());
+                    }
+                    Ok(View(data.record(file.head)?.clone()))
+                })
+            })
             .await
     }
     /// An unknown reply preserves any admitted pin; this manual API does not
@@ -569,13 +615,16 @@ impl Client {
     pub async fn pin(&self, view: Id) -> Result<pins::Pin> {
         let options = self.options;
         self.owner
-            .call(move |s| Journal::new(&mut s.state, options)?.pin(view))
+            .call(move |s| {
+                options.validate()?;
+                pins::acquire(&mut s.state, view)
+            })
             .await
     }
     pub async fn release_pin(&self, pin: pins::Pin) -> Result<bool> {
         let options = self.options;
         self.owner
-            .call(move |s| Journal::new(&mut s.state, options)?.release_pin(&pin))
+            .call(move |s| release_pin_command(&mut s.state, options, &pin))
             .await
     }
     pub async fn read_pinned(
@@ -589,7 +638,13 @@ impl Client {
         }
         let options = self.options;
         self.owner
-            .call(move |s| Journal::new(&mut s.state, options)?.read_pinned(&pin, offset, length))
+            .call(move |s| {
+                let owner = pins::current_owner(&s.state)?;
+                read_once(&mut s.state, options, |data| {
+                    pins::check_snapshot(&owner, data, &pin)?;
+                    pieces(data, pin.view_id(), offset, length)
+                })
+            })
             .await
     }
     pub async fn enable_scoped(&self) -> Result<()> {
@@ -643,14 +698,32 @@ impl Client {
     pub async fn heads(&self) -> Result<Vec<View>> {
         let options = self.options;
         self.owner
-            .call(move |s| Journal::new(&mut s.state, options)?.heads())
+            .call(move |s| {
+                read_once(&mut s.state, options, |data| {
+                    data.files
+                        .values()
+                        .map(|f| data.record(f.head).cloned().map(View))
+                        .collect()
+                })
+            })
             .await
     }
     pub async fn current_head(&self, binding: Binding) -> Result<View> {
         binding.validate()?;
         let options = self.options;
         self.owner
-            .call(move |s| Journal::new(&mut s.state, options)?.current_head(&binding))
+            .call(move |s| {
+                read_once(&mut s.state, options, |data| {
+                    let file = data
+                        .files
+                        .get(&binding.target()?)
+                        .ok_or(Failure::NotFound)?;
+                    if !binding.same_scope(&file.binding)? {
+                        return Err(Failure::Conflict.into());
+                    }
+                    Ok(View(data.record(file.head)?.clone()))
+                })
+            })
             .await
     }
     pub async fn write(
@@ -681,7 +754,11 @@ impl Client {
         }
         let options = self.options;
         self.owner
-            .call(move |s| Journal::new(&mut s.state, options)?.read(id, offset, length))
+            .call(move |s| {
+                read_once(&mut s.state, options, |data| {
+                    pieces(data, id, offset, length)
+                })
+            })
             .await
     }
 }

@@ -327,3 +327,119 @@ fn native_retry_validation_work_isolation_never_covers_later_pin_corruption() {
     assert!(inspect(&state.connection).unwrap() == before);
     assert!(release(&mut state, &pin).unwrap());
 }
+
+#[test]
+fn native_retry_validation_work_guard_prestate_and_pin_faults_roll_back_together() {
+    for point in [
+        Boundary::SessionCleared,
+        Boundary::PinStored,
+        Boundary::RoleStored,
+        Boundary::Validated,
+    ] {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("guard rollback");
+        let (mut state, view) = open(&path);
+        acquire(&mut state, view.id()).unwrap();
+        drop(state);
+        let mut state = State::open_managed(&path).unwrap();
+        let before = super::super::ledger::inspect(&state.connection).unwrap();
+        let witness = state.source_pin_witness;
+        let mut reached = false;
+        assert!(
+            acquire_view_inner(&mut state, view.id(), |at| {
+                if at == point {
+                    reached = true;
+                    return Err("guard cut".into());
+                }
+                Ok(())
+            })
+            .is_err()
+        );
+        assert!(reached);
+        assert!(state.connection.is_autocommit());
+        assert!(super::super::ledger::inspect(&state.connection).unwrap() == before);
+        assert_eq!(state.source_pin_witness, witness);
+        let (selected, pin) = acquire_view_inner(&mut state, view.id(), |_| Ok(())).unwrap();
+        assert_eq!(selected, view);
+        assert!(release(&mut state, &pin).unwrap());
+    }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_fused_reads_reject_changed_pins_and_late_bytes() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("fused reads");
+    let (state, view) = open(&path);
+    drop(state);
+    let storage = crate::worker::Storage::open(
+        &path,
+        crate::cache::Options::default(),
+        crate::journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    let client = storage.sparse_views(Options::default()).unwrap();
+    let pin = client.pin(view.id()).await.unwrap();
+    let expected = vec![Piece::Local("café 🦀".as_bytes().to_vec())];
+    assert_eq!(
+        client.read_pinned(pin.clone(), 0, 32).await.unwrap(),
+        expected
+    );
+    for field in 0..3 {
+        let mut forged = pin.clone();
+        match field {
+            0 => forged.id = [231; 32],
+            1 => forged.owner = "e".repeat(32),
+            _ => forged.view = [232; 32],
+        }
+        assert!(client.read_pinned(forged, 0, 32).await.is_err());
+    }
+    let guard = client.guard(view.id()).await.unwrap();
+    let cloned = guard.clone();
+    let (a, b) = tokio::join!(guard.read(0, 32), cloned.read(0, 32));
+    assert_eq!(a.unwrap(), expected);
+    assert_eq!(b.unwrap(), expected);
+    let saved = storage
+        .cache()
+        .owner
+        .call(|store| {
+            let data: Vec<u8> = store.state.connection.query_row(
+                "SELECT data FROM sparse_view_blocks",
+                [],
+                |r| r.get(0),
+            )?;
+            assert_eq!(
+                store.state.connection.execute(
+                    "UPDATE sparse_view_blocks SET data=zeroblob(length(data))",
+                    []
+                )?,
+                1
+            );
+            Ok(data)
+        })
+        .await
+        .unwrap();
+    assert!(client.read_pinned(pin.clone(), 0, 32).await.is_err());
+    assert!(guard.read(0, 32).await.is_err());
+    storage
+        .cache()
+        .owner
+        .call(move |store| {
+            assert_eq!(
+                store
+                    .state
+                    .connection
+                    .execute("UPDATE sparse_view_blocks SET data=?1", [saved])?,
+                1
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(guard.read(0, 32).await.unwrap(), expected);
+    drop(guard);
+    drop(cloned);
+    assert!(client.release_pin(pin.clone()).await.unwrap());
+    assert!(client.read_pinned(pin, 0, 32).await.is_err());
+    storage.close().await.unwrap();
+}

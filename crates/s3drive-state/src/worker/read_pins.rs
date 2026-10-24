@@ -29,8 +29,7 @@ impl Pending {
         // entries remain conservative retention, retried only on later work.
         let entries: Vec<_> = self.lock().values().cloned().collect();
         for (pin, options) in entries {
-            let released = sparse_views::Journal::new(&mut store.state, options)
-                .and_then(|mut journal| journal.release_pin(&pin));
+            let released = sparse_views::release_pin_command(&mut store.state, options, &pin);
             if released.is_ok() {
                 self.lock().remove(&pin.id());
             }
