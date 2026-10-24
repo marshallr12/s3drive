@@ -1,9 +1,11 @@
 //! Durable mixed-root requests and historical semantic coverage. No S3 rights,
 //! source authentication, payload reclamation or mounted-file flush capability.
 use super::{Binding, Id, Info, OriginalChunk, RootDescriptor, digest};
+use crate::proof_hash::ProofSha256;
 use crate::{Result, State, journal::GenerationId, namespace as ns};
 use rusqlite::{Connection, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
+#[cfg(test)]
 use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -13,7 +15,7 @@ mod model;
 use model::Check;
 pub use model::{Input, Physical, Record, Rejection};
 mod journal;
-pub(super) mod ledger;
+pub(in crate::sparse_views) mod ledger;
 mod lineage;
 pub use journal::{Client, DataNeed, Journal};
 pub(in crate::sparse_views) mod settlement;
@@ -65,7 +67,7 @@ impl Default for Limits {
     }
 }
 impl Limits {
-    fn validate(self) -> Result<Self> {
+    pub(super) fn validate(self) -> Result<Self> {
         if self.plans == 0
             || self.plans > MAX_RECORDS
             || self.checks == 0
@@ -79,10 +81,10 @@ impl Limits {
     }
 }
 fn hash<T: Serialize>(domain: &[u8], value: &T) -> Result<Id> {
-    let mut h = Sha256::new();
+    let mut h = ProofSha256::new();
     h.update(domain);
     h.update(serde_json::to_vec(value)?);
-    Ok(h.finalize().into())
+    Ok(h.finalize())
 }
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
@@ -186,10 +188,34 @@ pub(super) fn adoption_fence(
 }
 
 pub(crate) fn namespace_pending(db: &Connection, volume: &str, node: &str) -> Result<()> {
+    checked_namespace_snapshot(db, volume, node).map(|_| ())
+}
+// Complete consumes the scoped body only inside its pre-append read interval.
+pub(super) fn namespace_pending_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+    volume: &str,
+    node: &str,
+) -> Result<super::ledger::Snapshot> {
+    let source = super::ledger::inspect_scoped(scope)?;
+    check_namespace_source(scope.connection(), volume, node, source)
+}
+fn checked_namespace_snapshot(
+    db: &Connection,
+    volume: &str,
+    node: &str,
+) -> Result<super::ledger::Snapshot> {
     // An admitted preparation may already have staged or claimed physical
     // effects before a root publication record exists. Inspect the complete
     // plan/source graph, not just roots or the current (possibly clean) head.
     let source = super::ledger::inspect(db)?;
+    check_namespace_source(db, volume, node, source)
+}
+fn check_namespace_source(
+    db: &Connection,
+    volume: &str,
+    node: &str,
+    source: super::ledger::Snapshot,
+) -> Result<super::ledger::Snapshot> {
     let meta = ledger::inspect(db)?;
     ledger::validate_source_snapshot(db, &meta, &source)?;
     for (plan, saved) in &source.plans {
@@ -207,5 +233,5 @@ pub(crate) fn namespace_pending(db: &Connection, volume: &str, node: &str) -> Re
             return Err("settle every sparse preparation before closing this node".into());
         }
     }
-    Ok(())
+    Ok(source)
 }

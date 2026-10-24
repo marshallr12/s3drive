@@ -76,9 +76,21 @@ fn open_with_posix(
     key: &crate::chunk_mount::Key,
     posix: bool,
 ) -> opens::OpenInput {
+    let session = crate::chunk_mount::admission::next(
+        &s.connection,
+        crate::chunk_mount::AdmissionDomain::Session,
+    )
+    .unwrap()
+    .unwrap_or_else(|| hex(&[61; 16]));
+    opens(s, key).start_session(&session, key.volume()).unwrap();
     let input = opens::OpenInput {
-        id: hex(&[60; 16]),
-        session: hex(&[61; 16]),
+        id: crate::chunk_mount::admission::next(
+            &s.connection,
+            crate::chunk_mount::AdmissionDomain::Open,
+        )
+        .unwrap()
+        .unwrap_or_else(|| hex(&[60; 16])),
+        session,
         volume: key.volume().into(),
         node: f.node.id.clone(),
         store: f.store.clone(),

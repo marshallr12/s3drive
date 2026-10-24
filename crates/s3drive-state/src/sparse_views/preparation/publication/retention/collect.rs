@@ -17,14 +17,20 @@ impl Journal<'_> {
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         ledger::no_triggers(&tx)?;
-        if !retry::enabled(&tx)?
-            || tx.query_row("SELECT EXISTS(SELECT 1 FROM chunk_mount_role)", [], |r| {
-                r.get::<_, bool>(0)
-            })?
-        {
+        let scope = crate::chunk_mount::read_scope_current(&tx)?;
+        let mounted = crate::chunk_mount::load(&tx)?.is_some();
+        let native_mode = crate::chunk_mount::retry_enabled(&tx)?;
+        let enabled = match &scope {
+            Some(scope) => retry::enabled_scoped(scope)?,
+            None => retry::enabled(&tx)?,
+        };
+        if !enabled || (mounted && !native_mode) {
             return Err(Failure::Conflict.into());
         }
-        let before = prep::ledger::inspect(&tx)?;
+        let before = match &scope {
+            Some(scope) => prep::ledger::inspect_scoped(scope)?,
+            None => prep::ledger::inspect(&tx)?,
+        };
         let mut anchors = before.views.anchors.clone();
         // Lost post-commit reply: return only the exact retained anchor result.
         if let Some(a) = anchors
@@ -33,13 +39,24 @@ impl Journal<'_> {
         {
             return Ok(a.view.id);
         }
-        if retry::checkpoint(&tx, proof.plan(), &readers)? != *proof || !proof.unblocked() {
+        let meta = ledger::inspect(&tx)?;
+        if retry::checkpoint_snapshot(&tx, proof.plan(), &readers, &before, &meta)? != *proof
+            || !proof.unblocked()
+        {
             return Err(Failure::Conflict.into());
         }
-        let meta = ledger::inspect(&tx)?;
-        ledger::validate_source_snapshot(&tx, &meta, &before)?;
         let info = before.info(proof.plan())?;
         let target = info.view().binding().target()?;
+        let native_records = if native_mode {
+            let base = info.view().binding().base()?;
+            crate::namespace_client::opens::native_candidates(&tx, base.volume(), base.node())?
+        } else {
+            Vec::new()
+        };
+        match &scope {
+            Some(scope) => prep::native::validate_retirement_scoped(scope, &native_records)?,
+            None => prep::native::validate_retirement(&tx, &native_records)?,
+        }
         let mut plans = BTreeSet::new();
         let mut generations = BTreeSet::new();
         for (plan, saved) in &before.plans {
@@ -49,7 +66,7 @@ impl Journal<'_> {
             }
             let r = meta.records.get(plan).ok_or(Failure::Incomplete)?;
             if i.ownership().is_some()
-                || i.native_ownership().is_some()
+                || (i.native_ownership().is_some() && !native_mode)
                 || r.receipt().is_none()
                 || r.acknowledgment().is_none()
             {
@@ -86,8 +103,20 @@ impl Journal<'_> {
             }
             id
         };
-        let anchor = Anchor {
-            format: 1,
+        let (anchor, _) = Anchor {
+            canonical_len: 0,
+            format: if native_mode { 2 } else { 1 },
+            native: if native_mode {
+                Some(native::Terminal::capture(
+                    &tx,
+                    &info,
+                    proof.anchor(),
+                    &before,
+                    &native_records,
+                )?)
+            } else {
+                None
+            },
             owner,
             view: before.views.record(proof.anchor())?.clone(),
             published: Identity::capture(&info.view().0),
@@ -103,7 +132,14 @@ impl Journal<'_> {
                 .get(&proof.plan())
                 .ok_or(Failure::Missing)?
                 .clone(),
-        };
+        }
+        .canonical()?;
+        // No read proof may cross the first witness or source mutation.
+        drop(scope);
+        if let Some(terminal) = &anchor.native {
+            crate::chunk_mount::admission::seal_terminal(&tx, &target, terminal.digest()?)?;
+            prep::journal::checkpoint("retire", "NativeWitnessStored");
+        }
         anchor.validate(&tx, owner)?;
         let keep_root = anchor.generation();
         generations.remove(&keep_root.value());
@@ -249,10 +285,29 @@ impl Journal<'_> {
             }
         }
         prep::journal::checkpoint("retire", "PhysicalStored");
-        if prep::ledger::inspect(&tx)? != expected || ledger::inspect(&tx)? != remaining {
-            return Err(Failure::Corrupt.into());
+        if native_mode {
+            crate::namespace_client::opens::erase_native(
+                &tx,
+                &native_records,
+                self.state.incarnation.as_deref().ok_or(Failure::Conflict)?,
+            )?;
+            prep::journal::checkpoint("retire", "NativeStored");
         }
-        ledger::validate_source_snapshot(&tx, &remaining, &expected)?;
+        // Fresh proof only after every deletion; never reuse the pre-cut scope.
+        {
+            let scope = crate::chunk_mount::read_scope_current(&tx)?;
+            let actual = match &scope {
+                Some(scope) => prep::ledger::inspect_scoped(scope)?,
+                None => prep::ledger::inspect(&tx)?,
+            };
+            if actual != expected || ledger::inspect(&tx)? != remaining {
+                return Err(Failure::Corrupt.into());
+            }
+            ledger::validate_source_snapshot(&tx, &remaining, &expected)?;
+            if scope.is_none() {
+                prep::native::validate_metadata(&tx)?;
+            }
+        }
         if tx.query_row(
             "SELECT EXISTS(SELECT 1 FROM pragma_foreign_key_check)",
             [],
@@ -262,6 +317,7 @@ impl Journal<'_> {
         }
         prep::journal::checkpoint("retire", "Validated");
         tx.commit()?;
+        self.state.native_sparse.forget_retired(&native_records);
         prep::journal::checkpoint("retire", "Committed");
         Ok(proof.anchor())
     }

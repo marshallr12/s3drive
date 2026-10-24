@@ -560,6 +560,27 @@ pub(super) fn begin_in_transaction(
     admission: Admission,
 ) -> Result<(Info, bool)> {
     let before = ledger::inspect(tx)?;
+    begin_with_snapshot(
+        tx,
+        options,
+        incarnation,
+        native_runtime,
+        request,
+        admission,
+        &before,
+    )
+}
+// Same transaction, no intervening mutation: native preparation already loaded
+// this exact full snapshot to check original-open operation identity.
+pub(super) fn begin_with_snapshot(
+    tx: &rusqlite::Transaction<'_>,
+    options: Options,
+    incarnation: Option<&str>,
+    native_runtime: &native::Runtime,
+    request: Request,
+    admission: Admission,
+    before: &Snapshot,
+) -> Result<(Info, bool)> {
     let owned = admission
         .ownership
         .as_ref()
@@ -586,7 +607,7 @@ pub(super) fn begin_in_transaction(
         return Ok((old.info(&before.views)?, false));
     }
     let view = View(before.views.record(input.view)?.clone());
-    retry::admit(tx, &before, &input, &view)?;
+    retry::admit(tx, before, &input, &view)?;
     let base = view.binding().base()?;
     native::admit(
         tx,
@@ -643,7 +664,7 @@ pub(super) fn begin_in_transaction(
     }
     after.validate()?;
     after.admit(options)?;
-    write_delta(tx, &before, &after, "begin")?;
+    write_delta(tx, before, &after, "begin")?;
     if after
         .plans
         .get(&plan)

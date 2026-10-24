@@ -214,7 +214,7 @@ pub(crate) fn verify_owner(state: &State) -> Result<()> {
     }
     Ok(())
 }
-fn current_owner(state: &State) -> Result<String> {
+pub(super) fn current_owner(state: &State) -> Result<String> {
     let owner = state.incarnation.as_ref().ok_or(Failure::Stale)?;
     if !owner_valid(owner) {
         return Err(Failure::Corrupt.into());
@@ -265,16 +265,22 @@ pub(super) fn acquire(state: &mut State, view: Id) -> Result<Pin> {
 pub(super) fn acquire_inner(
     state: &mut State,
     view: Id,
-    mut hook: impl FnMut(Boundary) -> Result<()>,
+    hook: impl FnMut(Boundary) -> Result<()>,
 ) -> Result<Pin> {
+    acquire_view_inner(state, view, hook).map(|(_, pin)| pin)
+}
+pub(super) fn acquire_view_inner(
+    state: &mut State,
+    view: Id,
+    mut hook: impl FnMut(Boundary) -> Result<()>,
+) -> Result<(View, Pin)> {
     state.verify_staging_storage()?;
     let owner = current_owner(state)?;
     let tx = state
         .connection
         .transaction_with_behavior(TransactionBehavior::Immediate)?;
-    isolation(&tx)?;
-    let before = inspect(&tx)?;
-    before.record(view)?;
+    let before = ledger::inspect_isolated(&tx)?;
+    let selected = View(before.record(view)?.clone());
     no_triggers(&tx)?;
     let mut expected = before.clone();
     let pins = &mut expected.read_pins;
@@ -333,7 +339,7 @@ pub(super) fn acquire_inner(
     tx.commit()?;
     state.source_pin_witness = Some(witness);
     hook(Boundary::Committed)?;
-    Ok(pin)
+    Ok((selected, pin))
 }
 pub(super) fn release(state: &mut State, pin: &Pin) -> Result<bool> {
     release_inner(state, pin, |_| Ok(()))
@@ -350,8 +356,7 @@ pub(super) fn release_inner(
     let tx = state
         .connection
         .transaction_with_behavior(TransactionBehavior::Immediate)?;
-    isolation(&tx)?;
-    let before = inspect(&tx)?;
+    let before = ledger::inspect_isolated(&tx)?;
     let old = before.read_pins.role.as_ref().ok_or(Failure::Stale)?;
     if old.owner != pin.owner
         || pin.sequence > old.issued
@@ -408,3 +413,10 @@ pub(super) fn check(state: &State, pin: &Pin) -> Result<()> {
 
 #[cfg(test)]
 mod tests;
+
+pub(super) fn check_snapshot(owner: &str, ledger: &ledger::Ledger, pin: &Pin) -> Result<()> {
+    if owner != pin.owner || ledger.read_pins.pins.get(&pin.id) != Some(pin) {
+        return Err(Failure::Stale.into());
+    }
+    Ok(())
+}

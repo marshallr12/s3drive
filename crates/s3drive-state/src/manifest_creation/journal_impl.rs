@@ -49,6 +49,9 @@ impl<'a> Journal<'a> {
         mut hook: impl FnMut(&str) -> Result<()>,
     ) -> Result<Record> {
         input.validate()?;
+        if crate::chunk_mount::retry_enabled(&self.state.connection)? {
+            return Err("fresh linked-native retention does not admit creation".into());
+        }
         let runtime = if input.open.is_some() {
             if self.chunk.is_none() {
                 return Err(Failure::Isolated.into());

@@ -146,6 +146,21 @@ impl Storage {
             key,
         ))
     }
+    /// Explicit fresh current-format native retry admission. No conversion.
+    pub async fn chunk_mount_retry(
+        &self,
+        input: crate::chunk_mount::Input,
+    ) -> Result<crate::chunk_mount::Client> {
+        let key = self
+            .owner
+            .call(move |store| crate::chunk_mount::admit_retry(&mut store.state, input))
+            .await?;
+        Ok(crate::chunk_mount::Client::new(
+            self.owner.clone(),
+            self.staging_options,
+            key,
+        ))
+    }
     pub fn logical(&self) -> Logical {
         Logical {
             owner: self.owner.clone(),

@@ -244,6 +244,22 @@ pub(super) fn fresh(
     info: &Info,
 ) -> Result<()> {
     metadata::validate(db)?;
+    fresh_after_metadata(db, incarnation, runtime, info)
+}
+pub(super) fn fresh_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+    incarnation: Option<&str>,
+    runtime: &Runtime,
+    info: &Info,
+) -> Result<()> {
+    fresh_after_metadata(scope.connection(), incarnation, runtime, info)
+}
+fn fresh_after_metadata(
+    db: &Connection,
+    incarnation: Option<&str>,
+    runtime: &Runtime,
+    info: &Info,
+) -> Result<()> {
     let Some(p) = info.native_ownership() else {
         if epoch_owner(db, info.view().binding())?.is_some()
             || bound_node(db, info.view().binding())?
@@ -264,6 +280,58 @@ pub(super) fn fresh(
         return Err(Failure::Conflict.into());
     }
     Ok(())
+}
+
+/// One derivation for admission and independent metadata verification. Scoped
+/// retry identity includes the exact original open witness and source view.
+fn scoped_plan_identity(
+    native: &Provenance,
+    binding: &Binding,
+    view: Id,
+) -> Result<retry::Operation> {
+    let nonce = hash(b"s3drive-native-sparse-plan-v1\0", &(native, view))?;
+    retry::Operation::new(binding, nonce)
+}
+fn plan_identity(
+    db: &Connection,
+    native: &Provenance,
+    binding: &Binding,
+    view: Id,
+) -> Result<(Id, [u8; 16], Option<retry::Operation>)> {
+    plan_identity_in(
+        native,
+        binding,
+        view,
+        crate::chunk_mount::retry_enabled(db)?,
+        retry::enabled(db)?,
+    )
+}
+fn plan_identity_in(
+    native: &Provenance,
+    binding: &Binding,
+    view: Id,
+    mounted_retry: bool,
+    enabled: bool,
+) -> Result<(Id, [u8; 16], Option<retry::Operation>)> {
+    if mounted_retry {
+        if !enabled {
+            return Err(Failure::Corrupt.into());
+        }
+        let token = scoped_plan_identity(native, binding, view)?;
+        Ok((token.id()?, token.generation()?, Some(token)))
+    } else {
+        if enabled {
+            return Err(Failure::Isolated.into());
+        }
+        let nonce = hash(b"s3drive-native-sparse-plan-v1\0", &(native, view))?;
+        Ok((
+            nonce,
+            hash(b"s3drive-native-sparse-generation-v1\0", &nonce)?[..16]
+                .try_into()
+                .map_err(|_| Failure::Corrupt)?,
+            None,
+        ))
+    }
 }
 
 fn epoch_owner(db: &Connection, binding: &Binding) -> Result<Option<(Provenance, OpenRecord)>> {
@@ -380,6 +448,20 @@ impl Token {
         Ok(())
     }
     fn validate(&self, db: &Connection, runtime: &Runtime) -> Result<OpenRecord> {
+        let record = self.validate_runtime(db, runtime)?;
+        crate::chunk_mount::require(db, &self.key)?.open(&record.input)?;
+        Ok(record)
+    }
+    fn validate_scoped(
+        &self,
+        scope: &crate::chunk_mount::ReadScope<'_>,
+        runtime: &Runtime,
+    ) -> Result<OpenRecord> {
+        let record = self.validate_runtime(scope.connection(), runtime)?;
+        scope.binding().open(&record.input)?;
+        Ok(record)
+    }
+    fn validate_runtime(&self, db: &Connection, runtime: &Runtime) -> Result<OpenRecord> {
         let record = opens::sparse_open(db, &self.input.id)?;
         if record.input != self.input
             || !runtime
@@ -389,7 +471,6 @@ impl Token {
         {
             return Err(Failure::Conflict.into());
         }
-        crate::chunk_mount::require(db, &self.key)?.open(&record.input)?;
         Ok(record)
     }
 }
@@ -404,7 +485,9 @@ fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 mod close;
-pub use close::Close;
+pub use close::{Close, FlushSelection};
+#[cfg(test)]
+pub(super) use close::{validate_completed, validated_result};
 
 fn is_bound(record: &OpenRecord) -> bool {
     record
@@ -416,6 +499,8 @@ mod metadata;
 #[cfg(test)]
 pub(super) use metadata::epoch_source_visits;
 pub(crate) use metadata::validate as validate_metadata;
+pub(crate) use metadata::validate_scoped as validate_metadata_scoped;
+pub(in crate::sparse_views) use metadata::{validate_retirement, validate_retirement_scoped};
 
 pub(crate) fn reserved_events<'a>(
     db: &Connection,
@@ -510,4 +595,93 @@ pub(crate) fn recovery_ready(db: &Connection, record: &OpenRecord) -> Result<boo
         return Err(Failure::Corrupt.into());
     }
     Ok(true)
+}
+
+impl Provenance {
+    pub(in crate::sparse_views) fn validate_terminal(
+        &self,
+        mount: &crate::chunk_mount::Binding,
+        original: &opens::OpenInput,
+        owner: &str,
+        binding: &Binding,
+        first_operation: Id,
+    ) -> Result<()> {
+        mount.open(original)?;
+        let base = binding.base()?;
+        if original.volume != base.volume()
+            || original.node != base.node()
+            || original.source != *binding.source()
+            || original.fingerprint != binding.fingerprint()
+            || original.store.id != hex(binding.store())
+            || original.store.root != binding.root()
+        {
+            return Err(Failure::Corrupt.into());
+        }
+        if self.open != original.id
+            || self.session != original.session
+            || self.owner != owner
+            || owner != mount.owner
+            || !original.controlled
+            || !original.session_bound
+            || original.admission.is_some()
+            || original.creation.is_some()
+            || original.delete_on_close
+            || self.input_hash != hash(b"s3drive-native-sparse-open-v1\0", original)?
+            || self.epoch != binding.epoch()?
+            || self.operation != first_operation
+        {
+            return Err(Failure::Corrupt.into());
+        }
+        crate::chunk_mount::admission::retained(
+            mount,
+            crate::chunk_mount::AdmissionDomain::Open,
+            &original.id,
+        )?;
+        crate::chunk_mount::admission::retained(
+            mount,
+            crate::chunk_mount::AdmissionDomain::Session,
+            &original.session,
+        )?;
+        Ok(())
+    }
+}
+pub(in crate::sparse_views) fn verify_terminal_plan_with_isolation(
+    isolation: &mut crate::sparse_views::IsolationCheck<'_>,
+    mount: &crate::chunk_mount::Binding,
+    info: &Info,
+) -> Result<()> {
+    verify_terminal_plan_in(mount, info, retry::enabled_with_isolation(isolation)?)
+}
+pub(in crate::sparse_views) fn verify_terminal_plan_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+    info: &Info,
+) -> Result<()> {
+    verify_terminal_plan_in(scope.binding(), info, retry::enabled_scoped(scope)?)
+}
+fn verify_terminal_plan_in(
+    mount: &crate::chunk_mount::Binding,
+    info: &Info,
+    enabled: bool,
+) -> Result<()> {
+    crate::chunk_mount::admission::frontier_of(mount)?;
+    if !enabled {
+        return Err(Failure::Corrupt.into());
+    }
+    let native = info.native_ownership().ok_or(Failure::Corrupt)?;
+    let token = scoped_plan_identity(native, info.view().binding(), info.view().id())?;
+    let (operation, generation, retry) = (token.id()?, token.generation()?, Some(token));
+    if info.operation() != operation
+        || info.input.generation != generation
+        || info.input.retry != retry
+    {
+        return Err(Failure::Corrupt.into());
+    }
+    Ok(())
+}
+impl Runtime {
+    pub(in crate::sparse_views) fn forget_retired(&mut self, records: &[opens::OpenRecord]) {
+        for record in records {
+            self.tokens.remove(&record.input.id);
+        }
+    }
 }

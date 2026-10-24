@@ -101,10 +101,10 @@ impl Witness {
             return Err(Failure::Corrupt.into());
         }
         let base = view.binding().base()?;
-        let mut hash = Sha256::new();
+        let mut hash = ProofSha256::new();
         hash.update(b"s3drive-authenticated-chunk-reference-v1\0");
         hash.update(base.payload_reference().as_bytes());
-        if self.header[8..40] != <[u8; 32]>::from(hash.finalize()) {
+        if self.header[8..40] != hash.finalize() {
             return Err(Failure::Corrupt.into());
         }
         let position = u64::from_le_bytes(

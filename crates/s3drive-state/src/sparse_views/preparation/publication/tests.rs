@@ -16,8 +16,34 @@ struct Fixture {
     bytes: Vec<u8>,
 }
 fn fixture() -> Fixture {
+    fixture_node([2; 16])
+}
+fn fixture_node(node_id: [u8; 16]) -> Fixture {
     let bytes = pattern(0, 17);
-    let b = base(17, BTreeMap::from([(0, bytes.clone())]));
+    let mut b = base(17, BTreeMap::from([(0, bytes.clone())]));
+    if node_id != [2; 16] {
+        let page =
+            s3drive_core::manifest::Page::new([1; 16], node_id, 0, 0, b.page.entries().to_vec())
+                .unwrap();
+        let root = RootDescriptor::new(
+            [1; 16],
+            node_id,
+            17,
+            s3drive_core::manifest::Reference::new(
+                [5; 16],
+                [7; 16],
+                super::super::model::ordinal(0, 0),
+                page.digest(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        b = Base {
+            root,
+            page: page.clone(),
+            pages: BTreeMap::from([((0, 0), page)]),
+        };
+    }
     let store = ns::Store {
         id: hex(&[5; 16]),
         route: "b".repeat(64),
@@ -26,10 +52,10 @@ fn fixture() -> Fixture {
     let r = ns::Reservation {
         id: hex(&[7; 16]),
         volume: hex(&[1; 16]),
-        node: hex(&[2; 16]),
+        node: hex(&node_id),
         expected_revision: 3,
         store: store.clone(),
-        key: Namespace::new(store.root.clone(), [1; 16], [2; 16], [5; 16])
+        key: Namespace::new(store.root.clone(), [1; 16], node_id, [5; 16])
             .unwrap()
             .root_key(&b.root)
             .unwrap()
@@ -53,7 +79,7 @@ fn fixture() -> Fixture {
     };
     assert!(payload.valid());
     let node = ns::Node {
-        id: hex(&[2; 16]),
+        id: hex(&node_id),
         parent: Some(ns::ROOT.into()),
         name: "café 🦀.bin".into(),
         kind: ns::Kind::File,
@@ -64,7 +90,7 @@ fn fixture() -> Fixture {
     };
     let reference = ns::payload_reference(&node.payload).unwrap();
     let binding = Binding::new(
-        Descriptor::from_hex(&hex(&[1; 16]), &hex(&[2; 16]), &hex(&[7; 16]), &reference).unwrap(),
+        Descriptor::from_hex(&hex(&[1; 16]), &hex(&node_id), &hex(&[7; 16]), &reference).unwrap(),
         [5; 16],
         [6; 32],
         "a".repeat(64),

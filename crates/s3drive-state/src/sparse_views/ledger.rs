@@ -118,7 +118,103 @@ pub(in crate::sparse_views) fn inspect_metadata(db: &Connection) -> Result<Metad
         records: data.records,
     })
 }
+pub(in crate::sparse_views) fn inspect_metadata_uncached_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+) -> Result<Metadata> {
+    let data = load_with_scope(scope.connection(), true, false, Some(scope))?;
+    Ok(Metadata {
+        files: data.files,
+        records: data.records,
+    })
+}
+// Header/history evidence only. Blocks are deliberately absent and must be
+// freshly read and validated by every full source inspection in this scope.
+pub(crate) struct CheckedMetadata {
+    headers: Ledger,
+    roots: preparation::publication::ledger::Meta,
+}
+impl CheckedMetadata {
+    pub(in crate::sparse_views) fn metadata(&self) -> Metadata {
+        Metadata {
+            files: self.headers.files.clone(),
+            records: self.headers.records.clone(),
+        }
+    }
+    pub(in crate::sparse_views) fn roots(&self) -> &preparation::publication::ledger::Meta {
+        &self.roots
+    }
+}
+pub(in crate::sparse_views) fn inspect_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+) -> Result<Ledger> {
+    if let Some(checked) = scope.source_metadata()? {
+        scoped::enabled_in(&mut IsolationCheck::from_mount_scope(scope))?;
+        let mut out = checked.headers.clone();
+        load_bodies(scope.connection(), &mut out)?;
+        return Ok(out);
+    }
+    load_with_scope(scope.connection(), true, true, Some(scope))
+}
+pub(in crate::sparse_views) fn inspect_metadata_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+) -> Result<CheckedMetadata> {
+    // Constructor-only: all roots and source headers are checked before native
+    // graph validation; installation happens only after that validation returns.
+    let roots = preparation::publication::ledger::inspect(scope.connection())?;
+    let mut isolation = IsolationCheck::from_mount_scope(scope);
+    let headers = load_in(true, false, Some(scope), &mut isolation, Some(&roots))?;
+    Ok(CheckedMetadata { headers, roots })
+}
 fn load(db: &Connection, patches: bool, bodies: bool) -> Result<Ledger> {
+    load_with_scope(db, patches, bodies, None)
+}
+#[cfg(test)]
+thread_local! {
+ static INSPECTIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+ static BODY_READS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+#[cfg(test)]
+pub(in crate::sparse_views) fn body_read_count() -> usize {
+    BODY_READS.get()
+}
+#[cfg(test)]
+pub(in crate::sparse_views) fn inspection_count() -> usize {
+    INSPECTIONS.get()
+}
+// A single eager isolation check for an adjacent isolation+inspection pair.
+// This helper cannot return its proof or carry it across a later mutation.
+pub(super) fn inspect_isolated(tx: &rusqlite::Transaction<'_>) -> Result<Ledger> {
+    let mut scope = IsolationCheck::new(tx);
+    scope.require()?;
+    load_in(true, true, None, &mut scope, None)
+}
+fn load_with_scope(
+    db: &Connection,
+    patches: bool,
+    bodies: bool,
+    validated: Option<&crate::chunk_mount::ReadScope<'_>>,
+) -> Result<Ledger> {
+    let mut scope = match validated {
+        Some(scope) => IsolationCheck::from_mount_scope(scope),
+        None => IsolationCheck::new(db),
+    };
+    load_in(patches, bodies, validated, &mut scope, None)
+}
+pub(in crate::sparse_views) fn inspect_with_isolation(
+    scope: &mut IsolationCheck<'_>,
+) -> Result<Ledger> {
+    load_in(true, true, None, scope, None)
+}
+fn load_in(
+    patches: bool,
+    bodies: bool,
+    validated: Option<&crate::chunk_mount::ReadScope<'_>>,
+    scope: &mut IsolationCheck<'_>,
+    roots: Option<&preparation::publication::ledger::Meta>,
+) -> Result<Ledger> {
+    let db = scope.db;
+    #[cfg(test)]
+    INSPECTIONS.set(INSPECTIONS.get() + 1);
     let tables = if patches && bodies {
         &TABLES[..]
     } else {
@@ -128,14 +224,16 @@ fn load(db: &Connection, patches: bool, bodies: bool) -> Result<Ledger> {
     for (i, table) in tables.iter().enumerate() {
         counts[i] = count(db, &format!("SELECT count(*) FROM {table}"))?;
     }
-    let mut scope = IsolationCheck::new(db);
     if patches {
-        scoped::enabled_in(&mut scope)?;
+        scoped::enabled_in(scope)?;
     }
     let mut out = Ledger::default();
     if patches {
-        out.anchors = preparation::publication::retention::load(db)?;
-        out.read_pins = pins::load_in(&mut scope)?;
+        out.anchors = match validated {
+            Some(scope) => preparation::publication::retention::load_scoped(scope)?,
+            None => preparation::publication::retention::load_with_isolation(scope)?,
+        };
+        out.read_pins = pins::load_in(scope)?;
     }
     if counts == [0; 5] {
         if !out.anchors.is_empty() {
@@ -181,25 +279,7 @@ fn load(db: &Connection, patches: bool, bodies: bool) -> Result<Ledger> {
         return Err(Failure::Corrupt.into());
     }
     if bodies {
-        let bad:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM sparse_view_blocks WHERE typeof(block)!='blob' OR length(block)!=32 OR typeof(data)!='blob' OR length(data) NOT BETWEEN 1 AND 1048576)",[],|r|r.get(0))?;
-        let bytes = count(
-            db,
-            "SELECT coalesce(sum(length(data)),0) FROM sparse_view_blocks",
-        )?;
-        if bad || bytes > HARD_DIRTY {
-            return Err(Failure::Corrupt.into());
-        }
-        let mut q = db.prepare("SELECT block,data FROM sparse_view_blocks ORDER BY block")?;
-        let rows = q.query_map([], |r| {
-            Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, Vec<u8>>(1)?))
-        })?;
-        for row in rows {
-            let (key, data) = row?;
-            let key = id(key)?;
-            if digest(&data) != key || out.blocks.insert(key, data).is_some() {
-                return Err(Failure::Corrupt.into());
-            }
-        }
+        read_blocks(db, &mut out)?;
     }
     let role: Vec<u8> = db.query_row(
         "SELECT state_hash FROM sparse_view_role WHERE singleton=1",
@@ -383,7 +463,62 @@ fn load(db: &Connection, patches: bool, bodies: bool) -> Result<Ledger> {
         return Err(Failure::Corrupt.into());
     }
     if patches {
-        preparation::publication::settlement::validate_views(db, &out)?;
+        match roots {
+            Some(roots) => {
+                preparation::publication::settlement::validate_views_with_meta(&out, roots)?
+            }
+            None => preparation::publication::settlement::validate_views(db, &out)?,
+        }
     }
     Ok(out)
+}
+
+fn read_blocks(db: &Connection, out: &mut Ledger) -> Result<()> {
+    #[cfg(test)]
+    BODY_READS.set(BODY_READS.get() + 1);
+    if count(db, "SELECT count(*) FROM sparse_view_blocks")? > HARD_BLOCKS as u64 {
+        return Err(Failure::Corrupt.into());
+    }
+    let bad:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM sparse_view_blocks WHERE typeof(block)!='blob' OR length(block)!=32 OR typeof(data)!='blob' OR length(data) NOT BETWEEN 1 AND 1048576)",[],|r|r.get(0))?;
+    let bytes = count(
+        db,
+        "SELECT coalesce(sum(length(data)),0) FROM sparse_view_blocks",
+    )?;
+    if bad || bytes > HARD_DIRTY {
+        return Err(Failure::Corrupt.into());
+    }
+    let mut q = db.prepare("SELECT block,data FROM sparse_view_blocks ORDER BY block")?;
+    let rows = q.query_map([], |r| {
+        Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, Vec<u8>>(1)?))
+    })?;
+    for row in rows {
+        let (key, data) = row?;
+        let key = id(key)?;
+        if digest(&data) != key || out.blocks.insert(key, data).is_some() {
+            return Err(Failure::Corrupt.into());
+        }
+    }
+    Ok(())
+}
+fn load_bodies(db: &Connection, out: &mut Ledger) -> Result<()> {
+    read_blocks(db, out)?;
+    let mut used = BTreeSet::new();
+    for row in out.records.values() {
+        if let Some(Change::Write { blocks, .. }) = &row.record.request.edit {
+            for b in blocks {
+                if out
+                    .blocks
+                    .get(&b.block)
+                    .is_none_or(|data| data.len() as u64 != b.length)
+                {
+                    return Err(Failure::Corrupt.into());
+                }
+                used.insert(b.block);
+            }
+        }
+    }
+    if used.len() != out.blocks.len() {
+        return Err(Failure::Corrupt.into());
+    }
+    Ok(())
 }

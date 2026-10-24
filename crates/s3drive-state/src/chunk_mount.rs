@@ -1,4 +1,5 @@
 //! Explicit local composition. No S3 permission, native activation or body repair.
+use crate::proof_hash::ProofSha256;
 use crate::{
     Result, State, journal, namespace as ns,
     namespace_client::{self as names, Control},
@@ -6,8 +7,9 @@ use crate::{
 };
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::fmt;
+pub(crate) mod admission;
+pub use admission::Domain as AdmissionDomain;
 const MAX_CONTROLS: usize = 64;
 const MAX_RECORD: usize = 65536;
 pub(crate) const CLIENT_TABLES: &[&str] = &[
@@ -39,6 +41,10 @@ pub(crate) struct Binding {
     pub(crate) volume: String,
     pub(crate) owner: String,
     controls: Vec<Control>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    frontier: Option<u64>,
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    terminals: std::collections::BTreeMap<String, [u8; 32]>,
 }
 impl fmt::Debug for Binding {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -70,10 +76,10 @@ fn id(s: &str) -> bool {
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 fn hash<T: Serialize>(label: &[u8], value: &T) -> Result<[u8; 32]> {
-    let mut h = Sha256::new();
+    let mut h = ProofSha256::new();
     h.update(label);
     h.update(serde_json::to_vec(value)?);
-    Ok(h.finalize().into())
+    Ok(h.finalize())
 }
 fn sorted(mut controls: Vec<Control>) -> Result<Vec<Control>> {
     if controls.is_empty() || controls.len() > MAX_CONTROLS {
@@ -105,7 +111,10 @@ impl Binding {
         }
     }
     fn validate(&self) -> Result<()> {
-        if self.format != 1
+        if !matches!(self.format, 1 | 2)
+            || (self.format == 2) != self.frontier.is_some()
+            || (self.format == 1 && !self.terminals.is_empty())
+            || self.terminals.len() > 256
             || !id(&self.volume)
             || !id(&self.owner)
             || sorted(self.controls.clone())? != self.controls
@@ -174,7 +183,7 @@ impl Binding {
     }
 }
 pub(crate) fn identity_hash(owner: &str) -> Vec<u8> {
-    let mut h = Sha256::new();
+    let mut h = ProofSha256::new();
     h.update(b"s3drive-chunk-client-identity-v1\0");
     h.update(owner.as_bytes());
     h.finalize().to_vec()
@@ -255,7 +264,15 @@ fn foreign(db: &Connection) -> Result<()> {
     }
     Ok(())
 }
+#[cfg(test)]
+thread_local! { static LOADS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
+#[cfg(test)]
+pub(crate) fn load_count() -> usize {
+    LOADS.get()
+}
 pub(crate) fn load(db: &Connection) -> Result<Option<Binding>> {
+    #[cfg(test)]
+    LOADS.set(LOADS.get() + 1);
     if !exists(db)? {
         if names::identity::has_chunk_witness(db)? {
             return Err("chunk mount marker missing beside retained identity".into());
@@ -311,7 +328,11 @@ fn scopes(db: &Connection, b: &Binding) -> Result<()> {
     Ok(())
 }
 pub(crate) fn validate_all(db: &Connection) -> Result<()> {
+    admission::validate(db)?;
     if let Some(b) = load(db)? {
+        if b.format == 2 && !crate::sparse_views::preparation::retry::enabled(db)? {
+            return Err("native retry contract lost its permanent mode".into());
+        }
         scopes(db, &b)?;
         crate::sparse_views::preparation::native::validate_metadata(db)?;
     }
@@ -332,11 +353,135 @@ pub(crate) fn verify_key(db: &Connection, key: &Key) -> Result<Binding> {
     }
     Ok(b)
 }
-pub(crate) fn require(db: &Connection, key: &Key) -> Result<Binding> {
+/// Private proof for one immutable read transaction only. No writes, await, or
+/// proof reuse after this transaction are permitted. Fields are not forgeable.
+pub(crate) struct ReadScope<'a> {
+    db: &'a Connection,
+    binding: Binding,
+    anchors: Option<crate::sparse_views::preparation::publication::retention::CheckedAnchors>,
+    source_metadata: Option<crate::sparse_views::CheckedMetadata>,
+}
+impl ReadScope<'_> {
+    pub(crate) fn source_metadata(&self) -> Result<Option<&crate::sparse_views::CheckedMetadata>> {
+        if let Some(metadata) = &self.source_metadata {
+            self.anchors
+                .as_ref()
+                .ok_or("missing anchor read proof")?
+                .unchanged(self.db)?;
+            return Ok(Some(metadata));
+        }
+        Ok(None)
+    }
+    pub(crate) fn connection(&self) -> &Connection {
+        self.db
+    }
+    pub(crate) fn binding(&self) -> &Binding {
+        &self.binding
+    }
+    pub(crate) fn retry_enabled(&self) -> bool {
+        self.binding.format == 2
+    }
+    pub(crate) fn anchors(
+        &self,
+    ) -> Option<&crate::sparse_views::preparation::publication::retention::CheckedAnchors> {
+        self.anchors.as_ref()
+    }
+}
+pub(crate) fn read_scope<'a>(
+    tx: &'a rusqlite::Transaction<'_>,
+    key: &Key,
+) -> Result<ReadScope<'a>> {
+    read_scope_in(tx, key)
+}
+// Only keyless internal storage inspections may use this factory. It proves
+// the current owner snapshot, never produces a caller capability or send permit.
+// Existing APIs accepting a Key must continue checking that caller's exact Key.
+pub(crate) fn read_scope_current<'a>(
+    tx: &'a rusqlite::Transaction<'_>,
+) -> Result<Option<ReadScope<'a>>> {
+    let Some(binding) = load(tx)? else {
+        return Ok(None);
+    };
+    if binding.format != 2 {
+        return Ok(None);
+    }
+    let key = Key {
+        volume: binding.volume,
+        owner: binding.owner,
+    };
+    Ok(Some(read_scope(tx, &key)?))
+}
+fn read_scope_in<'a>(db: &'a Connection, key: &Key) -> Result<ReadScope<'a>> {
+    if db.is_autocommit() {
+        return Err("mount read scope requires an active transaction".into());
+    }
+    let binding = require_identity(db, key)?;
+    scopes(db, &binding)?;
+    crate::sparse_views::isolation_for_validated_mount(db)?;
+    let mut scope = ReadScope {
+        db,
+        binding,
+        anchors: None,
+        source_metadata: None,
+    };
+    if scope.binding.format == 2 {
+        if !crate::sparse_views::preparation::retry::enabled_scoped(&scope)? {
+            return Err("native retry mode missing".into());
+        }
+        // Install only after every anchor and independent witness has passed.
+        // This partially constructed scope cannot escape to any caller.
+        scope.anchors = Some(
+            crate::sparse_views::preparation::publication::retention::check_anchors_scoped(&scope)?,
+        );
+    }
+    scope.source_metadata =
+        crate::sparse_views::preparation::native::validate_metadata_scoped(&scope)?;
+    Ok(scope)
+}
+fn require_identity(db: &Connection, key: &Key) -> Result<Binding> {
+    admission::validate(db)?;
     let b = load(db)?.ok_or("chunk mount capability missing")?;
     if b.volume != key.volume || b.owner != key.owner {
         return Err("chunk mount capability belongs to another owner".into());
     }
+    Ok(b)
+}
+fn require_header(db: &Connection, key: &Key) -> Result<Binding> {
+    let b = require_identity(db, key)?;
+    if b.format == 2 {
+        if !crate::sparse_views::preparation::retry::enabled(db)? {
+            return Err("native retry mode missing".into());
+        }
+        crate::sparse_views::preparation::publication::retention::validate_native_anchors(db)?;
+    }
+    Ok(b)
+}
+// Only a Binding leaves this helper. The validated read scope is dropped before
+// the caller can mutate its existing transaction or perform any other command.
+fn require_retry_snapshot(db: &Connection, key: &Key) -> Result<Binding> {
+    let scope = read_scope_in(db, key)?;
+    if !scope.retry_enabled() {
+        return Err("native retry contract changed inside read snapshot".into());
+    }
+    Ok(scope.binding.clone())
+}
+pub(crate) fn require(db: &Connection, key: &Key) -> Result<Binding> {
+    // The outer probe selects a path only; format/key/header are independently
+    // revalidated inside the snapshot. Format-one validation stays unchanged.
+    if retry_enabled(db)? {
+        return if db.is_autocommit() {
+            let tx =
+                rusqlite::Transaction::new_unchecked(db, rusqlite::TransactionBehavior::Deferred)?;
+            let result = require_retry_snapshot(&tx, key);
+            // Surface rollback errors rather than relying on silent Drop cleanup.
+            tx.rollback()?;
+            result
+        } else {
+            // Never commit or roll back a transaction owned by the caller.
+            require_retry_snapshot(db, key)
+        };
+    }
+    let b = require_header(db, key)?;
     scopes(db, &b)?;
     crate::sparse_views::preparation::native::validate_metadata(db)?;
     Ok(b)
@@ -350,8 +495,19 @@ pub(crate) fn require_legacy(db: &Connection) -> Result<()> {
 }
 /// Durable admission; no migration, network, file-body reads or namespace effects.
 pub fn admit(state: &mut State, input: Input) -> Result<Key> {
+    admit_mode(state, input, false)
+}
+/// Establish the current retry contract before the first mounted operation.
+/// Existing format-one owners are deliberately not converted during alpha.
+pub fn admit_retry(state: &mut State, input: Input) -> Result<Key> {
+    admit_mode(state, input, true)
+}
+pub(crate) fn retry_enabled(db: &Connection) -> Result<bool> {
+    Ok(load(db)?.is_some_and(|binding| binding.format == 2))
+}
+fn admit_mode(state: &mut State, input: Input, retry: bool) -> Result<Key> {
     state.verify_staging_storage()?;
-    if crate::sparse_views::preparation::retry::enabled(&state.connection)? {
+    if !retry && crate::sparse_views::preparation::retry::enabled(&state.connection)? {
         return Err("retry-safety owner cannot activate native composition".into());
     }
     preflight(&state.connection)?;
@@ -367,8 +523,30 @@ pub fn admit(state: &mut State, input: Input) -> Result<Key> {
     let old = load(&tx)?;
     let before = old.clone();
     let mut b = if let Some(old) = old {
+        if (old.format == 2) != retry {
+            return Err("chunk mount retry format differs; alpha stores are not converted".into());
+        }
         old
     } else {
+        if retry {
+            for table in [
+                "sparse_views",
+                "sparse_preparations",
+                "staged_generations",
+                "remote_intents",
+                "sparse_publications",
+                "sparse_retention_anchors",
+                "sparse_retry_mode",
+                "sparse_scoped_mode",
+                "manifest_creations",
+            ] {
+                if tx.query_row(&format!("SELECT EXISTS(SELECT 1 FROM {table})"), [], |r| {
+                    r.get::<_, bool>(0)
+                })? {
+                    return Err("native retry contract requires a fresh owner".into());
+                }
+            }
+        }
         for table in CLIENT_TABLES {
             if tx.query_row(&format!("SELECT EXISTS(SELECT 1 FROM {table})"), [], |r| {
                 r.get::<_, bool>(0)
@@ -385,7 +563,9 @@ pub fn admit(state: &mut State, input: Input) -> Result<Key> {
         names::install_chunk_identity(&tx, &owner)?;
         checkpoint("IdentityStored")?;
         Binding {
-            format: 1,
+            format: if retry { 2 } else { 1 },
+            frontier: retry.then_some(0),
+            terminals: std::collections::BTreeMap::new(),
             volume: input.volume.clone(),
             owner,
             controls: Vec::new(),
@@ -415,6 +595,9 @@ pub fn admit(state: &mut State, input: Input) -> Result<Key> {
     }
     checkpoint("SourcesStored")?;
     tx.execute("INSERT INTO chunk_mount_role(singleton,record,state_hash) VALUES(1,?1,?2) ON CONFLICT(singleton) DO UPDATE SET record=excluded.record,state_hash=excluded.state_hash",params![serde_json::to_vec(&b)?,hash(b"s3drive-chunk-mount-binding-v1\0",&b)?.as_slice()])?;
+    if retry && before.is_none() {
+        crate::sparse_views::preparation::retry::install_fresh(&tx)?;
+    }
     let key = Key {
         volume: b.volume.clone(),
         owner: b.owner.clone(),
@@ -466,6 +649,56 @@ impl Client {
                     return Err("store is outside the retained chunk capability".into());
                 }
                 Ok(())
+            })
+            .await
+    }
+    /// Select an empty-node open path without granting admission or retaining a
+    /// proof across commands. Recovery, provider effects and writes still use
+    /// their ordinary fresh validation. False requires the normal recovery path.
+    pub async fn uncontended_open(&self, input: names::opens::OpenInput) -> Result<bool> {
+        let key = self.key.clone();
+        self.owner
+            .call(move |worker| {
+                let state = &mut worker.state;
+                state.verify_staging_storage()?;
+                let runtime = state.incarnation.clone().ok_or("missing native runtime")?;
+                let tx = state
+                    .connection
+                    .transaction_with_behavior(TransactionBehavior::Deferred)?;
+                let result = (|| {
+                    let scope = read_scope(&tx, &key)?;
+                    names::opens::uncontended_native_open(&scope, &runtime, &input)
+                })();
+                tx.rollback()?;
+                result
+            })
+            .await
+    }
+    /// Select a sole ordinary native Close prefix. This does not complete or
+    /// retire it, and must never replace fresh checks after content flushing.
+    pub async fn uncontended_close(
+        &self,
+        session: String,
+        open: String,
+        callback: String,
+    ) -> Result<Option<names::opens::OpenRecord>> {
+        let key = self.key.clone();
+        self.owner
+            .call(move |worker| {
+                let state = &mut worker.state;
+                state.verify_staging_storage()?;
+                let runtime = state.incarnation.clone().ok_or("missing native runtime")?;
+                let tx = state
+                    .connection
+                    .transaction_with_behavior(TransactionBehavior::Deferred)?;
+                let result = (|| {
+                    let scope = read_scope(&tx, &key)?;
+                    names::opens::uncontended_native_close(
+                        &scope, &runtime, &session, &open, &callback,
+                    )
+                })();
+                tx.rollback()?;
+                result
             })
             .await
     }

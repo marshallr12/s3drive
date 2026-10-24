@@ -45,6 +45,21 @@ pub(super) fn check_schema(db: &Connection) -> Result<()> {
     Ok(())
 }
 pub(super) fn binding(db: &Connection, session: &str, volume: &str) -> Result<String> {
+    binding_in(db, session, volume, None)
+}
+pub(super) fn binding_with_context(
+    context: &ReadContext<'_>,
+    session: &str,
+    volume: &str,
+) -> Result<String> {
+    binding_in(context.db, session, volume, Some(context))
+}
+fn binding_in(
+    db: &Connection,
+    session: &str,
+    volume: &str,
+    context: Option<&ReadContext<'_>>,
+) -> Result<String> {
     if !id(session) || !id(volume) {
         return Err("invalid mount session binding".into());
     }
@@ -59,7 +74,10 @@ pub(super) fn binding(db: &Connection, session: &str, volume: &str) -> Result<St
         || !id(&owner)
         || !id(&v)
         || v != volume
-        || identity::read(db)?.as_ref() != Some(&owner)
+        || match context {
+            Some(context) => context.owner.as_ref() != Some(&owner),
+            None => identity::read(db)?.as_ref() != Some(&owner),
+        }
         || hash != digest(b"s3drive-mount-session-v1\0", &(session, &v, &r, &owner))?
     {
         return Err("mount session binding changed".into());
@@ -229,6 +247,29 @@ impl Journal<'_> {
         if exists {
             return current(&tx, &runtime, session, volume);
         }
+        if crate::chunk_mount::retry_enabled(&tx)? {
+            if tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM windows_mount_sessions WHERE runtime_id=?1)",
+                [&runtime],
+                |r| r.get::<_, bool>(0),
+            )? {
+                return Err(
+                    "fresh native runtime already has a session; reuse its exact identity".into(),
+                );
+            }
+            tx.execute("DELETE FROM windows_mount_sessions WHERE runtime_id<>?1 AND session_id NOT IN (SELECT json_extract(input,'$.session') FROM windows_open_journal)",[&runtime])?;
+            if tx.query_row("SELECT count(*) FROM windows_mount_sessions", [], |r| {
+                r.get::<_, i64>(0)
+            })? >= 256
+            {
+                return Err("native session recovery capacity retained".into());
+            }
+        }
+        crate::chunk_mount::admission::consume(
+            &tx,
+            crate::chunk_mount::AdmissionDomain::Session,
+            session,
+        )?;
         let hash = digest(
             b"s3drive-mount-session-v1\0",
             &(session, volume, &runtime, &owner),
@@ -268,15 +309,7 @@ impl Journal<'_> {
         if let Some(key) = &self.chunk {
             crate::chunk_mount::verify_key(&self.state.connection, key)?.volume(volume)?;
         }
-        let key:Option<String>=self.state.connection.query_row("SELECT recovery_id FROM windows_session_recoveries WHERE volume_id=?1 AND node_id=?2 AND proof IS NULL",params![volume,node],|r|r.get(0)).optional()?;
-        key.map(|k| {
-            let (input, proof) = recovery(&self.state.connection, &k)?;
-            Ok(RecoveryRecord {
-                input,
-                finished: proof.is_some(),
-            })
-        })
-        .transpose()
+        pending(&self.state.connection, volume, node)
     }
     pub fn recovered(&self, key: &str) -> Result<bool> {
         self.chunk_check()?;
@@ -510,4 +543,16 @@ pub(super) fn chunk_scope(db: &Connection, b: &crate::chunk_mount::Binding) -> R
         }
     }
     Ok(())
+}
+
+pub(super) fn pending(db: &Connection, volume: &str, node: &str) -> Result<Option<RecoveryRecord>> {
+    let key: Option<String> = db.query_row("SELECT recovery_id FROM windows_session_recoveries WHERE volume_id=?1 AND node_id=?2 AND proof IS NULL", params![volume,node], |r| r.get(0)).optional()?;
+    key.map(|k| {
+        let (input, proof) = recovery(db, &k)?;
+        Ok(RecoveryRecord {
+            input,
+            finished: proof.is_some(),
+        })
+    })
+    .transpose()
 }

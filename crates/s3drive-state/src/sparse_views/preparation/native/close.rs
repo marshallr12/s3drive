@@ -6,7 +6,80 @@ pub struct Close {
     pub open: OpenRecord,
     pub plans: Vec<Info>,
 }
+/// Immutable work-selection data, never permission for a later provider effect.
+#[derive(Clone, Debug)]
+pub struct FlushSelection {
+    pub head: View,
+    pub plans: Vec<Info>,
+    pub acknowledged: std::collections::BTreeSet<Id>,
+}
+fn plans_for(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+    saved: &ledger::Snapshot,
+    node: &str,
+) -> Result<Vec<Info>> {
+    let mut plans = Vec::new();
+    for plan in saved.plans.values() {
+        let info = plan.info(&saved.views)?;
+        let base = info.view().binding().base()?;
+        if info.native_ownership().is_some() && base.node() == node {
+            scope.binding().volume(base.volume())?;
+            plans.push(info);
+        }
+    }
+    sort(saved, &mut plans)?;
+    Ok(plans)
+}
 impl Client {
+    /// One coherent head/plan/publication read. All effect paths must reopen
+    /// their original identities and validate again after this command returns.
+    pub async fn flush_selection(
+        &self,
+        binding: Binding,
+        limits: publication::Limits,
+    ) -> Result<FlushSelection> {
+        let key = self.key.clone();
+        self.owner
+            .call(move |worker| {
+                let state = &mut worker.state;
+                state.verify_staging_storage()?;
+                limits.validate()?;
+                binding.validate()?;
+                let tx = state
+                    .connection
+                    .transaction_with_behavior(rusqlite::TransactionBehavior::Deferred)?;
+                let result = (|| {
+                    let scope = crate::chunk_mount::read_scope(&tx, &key)?;
+                    let saved = ledger::inspect_scoped(&scope)?;
+                    let roots = publication::ledger::inspect(&tx)?;
+                    publication::ledger::validate_source_snapshot(&tx, &roots, &saved)?;
+                    let file = saved
+                        .views
+                        .files
+                        .get(&binding.target()?)
+                        .ok_or(super::super::Failure::NotFound)?;
+                    if !binding.same_scope(&file.binding)? {
+                        return Err(super::super::Failure::Conflict.into());
+                    }
+                    let head = View(saved.views.record(file.head)?.clone());
+                    let node = binding.base()?.node().to_owned();
+                    let plans = plans_for(&scope, &saved, &node)?;
+                    let acknowledged = roots
+                        .records
+                        .into_iter()
+                        .filter_map(|(id, record)| record.acknowledgment().is_some().then_some(id))
+                        .collect();
+                    Ok(FlushSelection {
+                        head,
+                        plans,
+                        acknowledged,
+                    })
+                })();
+                tx.rollback()?;
+                result
+            })
+            .await
+    }
     pub async fn prepare(&self, token: Token, context: Context) -> Result<Info> {
         if token.key != self.key {
             return Err(Failure::Conflict.into());
@@ -84,20 +157,17 @@ impl Client {
         let key = self.key.clone();
         self.owner
             .call(move |worker| {
-                let db = &worker.state.connection;
-                let binding = crate::chunk_mount::require(db, &key)?;
-                let saved = ledger::inspect(db)?;
-                let mut plans = Vec::new();
-                for plan in saved.plans.values() {
-                    let info = plan.info(&saved.views)?;
-                    let base = info.view().binding().base()?;
-                    if info.native_ownership().is_some() && base.node() == node {
-                        binding.volume(base.volume())?;
-                        plans.push(info);
-                    }
-                }
-                sort(&saved, &mut plans)?;
-                Ok(plans)
+                let tx = worker
+                    .state
+                    .connection
+                    .transaction_with_behavior(rusqlite::TransactionBehavior::Deferred)?;
+                let result: Result<Vec<Info>> = (|| {
+                    let scope = crate::chunk_mount::read_scope(&tx, &key)?;
+                    let saved = ledger::inspect_scoped(&scope)?;
+                    plans_for(&scope, &saved, &node)
+                })();
+                tx.rollback()?;
+                result
             })
             .await
     }
@@ -117,7 +187,8 @@ fn prepare(
     {
         return Err(Failure::Conflict.into());
     }
-    let operation = hash(b"s3drive-native-sparse-plan-v1\0", &(&native, context.view))?;
+    let (operation, generation, retry) =
+        plan_identity(tx, &native, &context.binding, context.view)?;
     let saved = ledger::inspect(tx)?;
     if let Some(plan) = saved
         .plans
@@ -151,10 +222,7 @@ fn prepare(
     let ownership =
         crate::namespace_client::removals::sparse_claim(tx, base.volume(), base.node())?
             .map(|claim| (key.clone(), original.input.id.clone(), claim));
-    let generation = hash(b"s3drive-native-sparse-generation-v1\0", &operation)?[..16]
-        .try_into()
-        .unwrap();
-    journal::begin_in_transaction(
+    journal::begin_with_snapshot(
         tx,
         options,
         incarnation,
@@ -170,20 +238,27 @@ fn prepare(
             ownership,
             native: Some(native),
             finalizing,
-            retry: None,
+            retry,
         },
+        &saved,
     )
 }
 fn close(state: &mut State, options: Options, token: &Token, callback: &str) -> Result<Close> {
     let tx = state
         .connection
         .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
-    let original = token.validate(&tx, &state.native_sparse)?;
+    // One immutable interval only; the scope ends before prepare can write.
+    let (original, before) = {
+        let scope = crate::chunk_mount::read_scope(&tx, &token.key)?;
+        let original = token.validate_scoped(&scope, &state.native_sparse)?;
+        let before = ledger::inspect_scoped(&scope)?;
+        (original, before)
+    };
     if let Some(old) = original.close() {
         if old.id != callback {
             return Err(Failure::Conflict.into());
         }
-        return result(&tx, original);
+        return result_from_snapshot(&before, original);
     }
     opens::sparse_current(
         &tx,
@@ -193,7 +268,6 @@ fn close(state: &mut State, options: Options, token: &Token, callback: &str) -> 
     if !state.native_sparse.closing(&original.input.id)? {
         return Err(Failure::Conflict.into());
     }
-    let before = ledger::inspect(&tx)?;
     for file in before.views.files.values() {
         let base = file.binding.base()?;
         if base.volume() != original.input.volume || base.node() != original.input.node {
@@ -259,8 +333,9 @@ fn close(state: &mut State, options: Options, token: &Token, callback: &str) -> 
             checkpoint("native-close", "FreezeStored");
         }
     }
-    let result = result(&tx, record)?;
-    metadata::validate(&tx)?;
+    // All freezes are persisted in this transaction before acquiring a fresh
+    // full graph proof. Nothing from the initial read authorizes this result.
+    let result = validated_result(&tx, &token.key, record)?;
     checkpoint("native-close", "Validated");
     tx.commit()?;
     checkpoint("native-close", "Committed");
@@ -287,15 +362,23 @@ fn close_fact(state: &mut State, token: &Token, callback: &str) -> Result<()> {
     }
     Ok(())
 }
-fn result(db: &Connection, open: OpenRecord) -> Result<Close> {
-    let saved = ledger::inspect(db)?;
+pub(in crate::sparse_views::preparation) fn validated_result(
+    tx: &rusqlite::Transaction<'_>,
+    key: &crate::chunk_mount::Key,
+    open: OpenRecord,
+) -> Result<Close> {
+    let scope = crate::chunk_mount::read_scope(tx, key)?;
+    let saved = ledger::inspect_scoped(&scope)?;
+    result_from_snapshot(&saved, open)
+}
+fn result_from_snapshot(saved: &ledger::Snapshot, open: OpenRecord) -> Result<Close> {
     let mut plans = Vec::new();
     for event in &open.events {
         if let Action::FreezeSparse { plan, .. } = event.action {
             plans.push(saved.info(plan)?);
         }
     }
-    sort(&saved, &mut plans)?;
+    sort(saved, &mut plans)?;
     Ok(Close { open, plans })
 }
 fn sort(saved: &ledger::Snapshot, plans: &mut [Info]) -> Result<()> {
@@ -304,6 +387,14 @@ fn sort(saved: &ledger::Snapshot, plans: &mut [Info]) -> Result<()> {
         let mut at = saved.views.record(plan.view().id())?;
         let mut depth = 0usize;
         while let Some(edit) = &at.request.edit {
+            if saved
+                .views
+                .anchors
+                .values()
+                .any(|anchor| anchor.view().id == at.id)
+            {
+                break;
+            }
             depth += 1;
             if depth > saved.views.records.len() {
                 return Err(Failure::Corrupt.into());
@@ -334,36 +425,45 @@ impl Client {
                 let tx = state
                     .connection
                     .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
-                let original = token.validate(&tx, &state.native_sparse)?;
-                if original.close().map(|e| &e.id) != Some(&callback) {
-                    return Err(Failure::Conflict.into());
-                }
-                if original.completed(&callback) {
-                    if original.events.iter().any(|e| e.id == completion
+                let (original, view, frozen) = {
+                    let scope = crate::chunk_mount::read_scope(&tx, &token.key)?;
+                    let original = token.validate_scoped(&scope, &state.native_sparse)?;
+                    if original.close().map(|e| &e.id) != Some(&callback) {
+                        return Err(Failure::Conflict.into());
+                    }
+                    if original.completed(&callback) {
+                        if original.events.iter().any(|e| e.id == completion
                     && matches!(&e.action, Action::Completed { callback: c } if c == &callback)) {
                     return Ok(original);
                 }
-                    return Err(Failure::Conflict.into());
-                }
-                opens::sparse_original_session(
-                    &tx,
-                    state.incarnation.as_deref().ok_or(Failure::Conflict)?,
-                    &original,
-                )?;
-                publication::namespace_pending(&tx, &original.input.volume, &original.input.node)?;
-                let saved = ledger::inspect(&tx)?;
-                let mut view = None;
-                for file in saved.views.files.values() {
-                    let base = file.binding.base()?;
-                    if base.volume() == original.input.volume && base.node() == original.input.node
-                    {
-                        let head = saved.views.record(file.head)?;
-                        if !head.clean() || view.replace(head.id).is_some() {
-                            return Err(Failure::Conflict.into());
+                        return Err(Failure::Conflict.into());
+                    }
+                    opens::sparse_original_session(
+                        &tx,
+                        state.incarnation.as_deref().ok_or(Failure::Conflict)?,
+                        &original,
+                    )?;
+                    let saved = publication::namespace_pending_scoped(
+                        &scope,
+                        &original.input.volume,
+                        &original.input.node,
+                    )?;
+                    let mut view = None;
+                    for file in saved.views.files.values() {
+                        let base = file.binding.base()?;
+                        if base.volume() == original.input.volume
+                            && base.node() == original.input.node
+                        {
+                            let head = saved.views.record(file.head)?;
+                            if !head.clean() || view.replace(head.id).is_some() {
+                                return Err(Failure::Conflict.into());
+                            }
                         }
                     }
-                }
-                let frozen = frozen_hash(&original)?;
+                    let frozen = frozen_hash(&original)?;
+                    (original, view, frozen)
+                };
+                // No snapshot crosses CompleteSparse or the paired Completed write.
                 opens::append_in_transaction(
                     &tx,
                     Some(&token.key),
@@ -393,7 +493,7 @@ impl Client {
                     false,
                 )?
                 .record;
-                metadata::validate(&tx)?;
+                validate_completed(&tx, &token.key)?;
                 checkpoint("native-complete", "Validated");
                 tx.commit()?;
                 checkpoint("native-complete", "Committed");
@@ -401,4 +501,13 @@ impl Client {
             })
             .await
     }
+}
+
+// The semantic completion pair must be fully appended before this fresh proof.
+pub(in crate::sparse_views::preparation) fn validate_completed(
+    tx: &rusqlite::Transaction<'_>,
+    key: &crate::chunk_mount::Key,
+) -> Result<()> {
+    crate::chunk_mount::read_scope(tx, key)?;
+    Ok(())
 }

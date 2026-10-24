@@ -56,7 +56,32 @@ impl Operation {
 fn mode_hash() -> Result<Id> {
     hash(b"s3drive-retry-mode-v1\0", &1u8)
 }
+/// Called only inside atomic fresh mounted-owner admission, after its role is
+/// installed. There is no existing-owner conversion or data rewrite here.
+pub(crate) fn install_fresh(db: &Connection) -> Result<()> {
+    db.execute(
+        "INSERT INTO sparse_scoped_mode VALUES(1,1,?1)",
+        [super::super::scoped::mode_hash()?.as_slice()],
+    )?;
+    db.execute(
+        "INSERT INTO sparse_retry_mode VALUES(1,1,?1)",
+        [mode_hash()?.as_slice()],
+    )?;
+    if !enabled(db)? {
+        return Err(Failure::Corrupt.into());
+    }
+    Ok(())
+}
 pub(crate) fn enabled(db: &Connection) -> Result<bool> {
+    enabled_with_isolation(&mut super::super::IsolationCheck::new(db))
+}
+pub(crate) fn enabled_scoped(scope: &crate::chunk_mount::ReadScope<'_>) -> Result<bool> {
+    enabled_with_isolation(&mut super::super::IsolationCheck::from_mount_scope(scope))
+}
+pub(in crate::sparse_views) fn enabled_with_isolation(
+    isolation: &mut super::super::IsolationCheck<'_>,
+) -> Result<bool> {
+    let db = isolation.db;
     let exists: bool = db.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='table' AND name='sparse_retry_mode')", [], |r| r.get(0))?;
     if !exists {
         let v: i32 = db.pragma_query_value(None, "user_version", |r| r.get(0))?;
@@ -78,14 +103,25 @@ pub(crate) fn enabled(db: &Connection) -> Result<bool> {
         || sha != mode_hash()?
         || rows.next()?.is_some()
         || v < 49
-        || !super::super::scoped::enabled(db)?
+        || !super::super::scoped::enabled_in(isolation)?
     {
         return Err(Failure::Corrupt.into());
     }
     Ok(true)
 }
-pub(super) fn validate_snapshot(db: &Connection, s: &ledger::Snapshot) -> Result<()> {
-    let on = enabled(db)?;
+pub(super) fn validate_snapshot_with_isolation(
+    isolation: &mut super::super::IsolationCheck<'_>,
+    s: &ledger::Snapshot,
+) -> Result<()> {
+    validate_snapshot_in(s, enabled_with_isolation(isolation)?)
+}
+pub(super) fn validate_snapshot_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+    s: &ledger::Snapshot,
+) -> Result<()> {
+    validate_snapshot_in(s, enabled_scoped(scope)?)
+}
+fn validate_snapshot_in(s: &ledger::Snapshot, on: bool) -> Result<()> {
     if s.plans.values().any(|p| p.input.retry.is_some()) && !on {
         return Err(Failure::Corrupt.into());
     }
@@ -358,7 +394,7 @@ impl Checkpoint {
     }
 }
 pub(in crate::sparse_views::preparation) fn checkpoint(
-    db: &Connection,
+    db: &rusqlite::Transaction<'_>,
     plan: Id,
     physical_readers: &[GenerationId],
 ) -> Result<Checkpoint> {
@@ -367,7 +403,18 @@ pub(in crate::sparse_views::preparation) fn checkpoint(
     }
     let s = ledger::inspect(db)?;
     let meta = publication::ledger::inspect(db)?;
-    publication::ledger::validate_source_snapshot(db, &meta, &s)?;
+    checkpoint_snapshot(db, plan, physical_readers, &s, &meta)
+}
+// Only an unchanged transaction that already checked enabled() may reuse its
+// complete preparation/root snapshots. No physical proof leaves this call.
+pub(super) fn checkpoint_snapshot(
+    db: &rusqlite::Transaction<'_>,
+    plan: Id,
+    physical_readers: &[GenerationId],
+    s: &ledger::Snapshot,
+    meta: &publication::ledger::Meta,
+) -> Result<Checkpoint> {
+    publication::ledger::validate_source_snapshot(db, meta, s)?;
     let info = s.info(plan)?;
     let token = info.input.retry.ok_or(Failure::ScopedRequired)?;
     let record = meta.records.get(&plan).ok_or(Failure::NotFound)?;
@@ -387,6 +434,12 @@ pub(in crate::sparse_views::preparation) fn checkpoint(
     {
         return Err(Failure::Conflict.into());
     }
+    let native_terminal = if crate::chunk_mount::retry_enabled(db)? {
+        let base = info.view.binding().base()?;
+        crate::namespace_client::opens::native_candidates(db, base.volume(), base.node()).is_ok()
+    } else {
+        false
+    };
     let mut terminal_plans = Vec::new();
     let mut blocked_plans = Vec::new();
     for (id, saved) in &s.plans {
@@ -400,7 +453,7 @@ pub(in crate::sparse_views::preparation) fn checkpoint(
         // edges. Do not certify their retirement with a source-only proof.
         let terminal = i.input.retry.is_some()
             && i.ownership().is_none()
-            && i.native_ownership().is_none()
+            && (i.native_ownership().is_none() || native_terminal)
             && meta
                 .records
                 .get(id)
@@ -408,7 +461,7 @@ pub(in crate::sparse_views::preparation) fn checkpoint(
         if terminal {
             // Whole-tree proof includes every dependency and verified physical
             // receipt. A prepared/claimed/unknown upload never counts as terminal.
-            transfers::inspect_tree(db, *id)?;
+            transfers::checked_trees(db, s)?.tree(*id)?;
             terminal_plans.push(*id);
         } else {
             blocked_plans.push(*id);
@@ -439,7 +492,7 @@ pub(in crate::sparse_views::preparation) fn checkpoint(
         for (_, level, slot) in s.objects.keys().filter(|(p, _, _)| p == id) {
             if let Some(t) = transfers::transfer(
                 db,
-                &s,
+                s,
                 &i,
                 Position {
                     level: *level,

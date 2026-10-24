@@ -10,7 +10,36 @@ pub(in crate::sparse_views::preparation) fn epoch_source_visits() -> usize {
 }
 
 pub(crate) fn validate(db: &Connection) -> Result<()> {
+    validate_retirement(db, &[])
+}
+pub(crate) fn validate_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+) -> Result<Option<views::CheckedMetadata>> {
+    validate_in(scope.connection(), &[], Some(scope))
+}
+pub(in crate::sparse_views) fn validate_retirement(
+    db: &Connection,
+    retired: &[OpenRecord],
+) -> Result<()> {
+    validate_in(db, retired, None).map(|_| ())
+}
+pub(in crate::sparse_views) fn validate_retirement_scoped(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+    retired: &[OpenRecord],
+) -> Result<()> {
+    validate_in(scope.connection(), retired, Some(scope)).map(|_| ())
+}
+fn validate_in(
+    db: &Connection,
+    retired: &[OpenRecord],
+    scope: Option<&crate::chunk_mount::ReadScope<'_>>,
+) -> Result<Option<views::CheckedMetadata>> {
     let mut records = opens::sparse_records(db)?;
+    for record in retired {
+        if !records.iter().any(|r| r.input.id == record.input.id) {
+            records.push(record.clone());
+        }
+    }
     let live = records
         .iter()
         .map(|r| r.input.id.clone())
@@ -26,14 +55,31 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
         }
     }
     if !records.iter().any(is_bound) && !plans.values().any(|p| p.input.native.is_some()) {
-        return Ok(());
+        return Ok(None);
     }
     let version: i32 = db.pragma_query_value(None, "user_version", |r| r.get(0))?;
     if version < 48 {
         return Err(Failure::Corrupt.into());
     }
-    let source = views::inspect_metadata(db)?;
-    let roots = publication::ledger::inspect(db)?;
+    let checked = match scope {
+        Some(scope) if scope.retry_enabled() => Some(views::inspect_metadata_scoped(scope)?),
+        _ => None,
+    };
+    let source = match &checked {
+        Some(checked) => checked.metadata(),
+        None => match scope {
+            Some(scope) => views::inspect_metadata_uncached_scoped(scope)?,
+            None => views::inspect_metadata(db)?,
+        },
+    };
+    let uncached_roots;
+    let roots = match &checked {
+        Some(checked) => checked.roots(),
+        None => {
+            uncached_roots = publication::ledger::inspect(db)?;
+            &uncached_roots
+        }
+    };
     // Index only the fully validated immutable source snapshot from this call.
     // Each epoch used to linearly search every retained view. No validation or
     // proof is cached across another inspection, mutation or transaction.
@@ -97,6 +143,16 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
         // The plain BLOB key and domain-separated manifest page digest are
         // intentionally different. Bind both exact original intent identities
         // through the source-epoch event; do not fetch private page bodies.
+        let (operation, generation, retry) = match scope {
+            Some(scope) => plan_identity_in(
+                proof,
+                binding,
+                view.id,
+                scope.retry_enabled(),
+                retry::enabled_scoped(scope)?,
+            )?,
+            None => plan_identity(db, proof, binding, view.id)?,
+        };
         if epochs.get(&binding.epoch()?)
             != Some(&(
                 proof.clone(),
@@ -104,16 +160,12 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
                 plan.input.base_page,
             ))
             || plan.input.id()? != *id
-            || plan.input.operation != hash(b"s3drive-native-sparse-plan-v1\0", &(proof, view.id))?
+            || plan.input.operation != operation
+            || plan.input.retry != retry
         {
             return Err(Failure::Corrupt.into());
         }
-        if plan.input.generation.as_slice()
-            != &hash(
-                b"s3drive-native-sparse-generation-v1\0",
-                &plan.input.operation,
-            )?[..16]
-        {
+        if plan.input.generation != generation {
             return Err(Failure::Corrupt.into());
         }
         let descriptor = RootDescriptor::decode(&plan.input.base_root)?;
@@ -126,7 +178,7 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
         {
             return Err(Failure::Corrupt.into());
         }
-        progress(db, *id, plan, view.request.size, &roots)?;
+        progress(db, *id, plan, view.request.size, roots)?;
         if let Some(owned) = &plan.input.owned {
             owned.historical(db, binding)?;
             if owned.original_open().id != proof.open {
@@ -236,7 +288,7 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
             }
         }
     }
-    Ok(())
+    Ok(checked)
 }
 pub(super) fn headers(db: &Connection) -> Result<BTreeMap<Id, ledger::Saved>> {
     let mut query = db.prepare("SELECT CASE WHEN typeof(plan_id)='blob' AND length(plan_id)=32 THEN plan_id END,CASE WHEN typeof(operation)='blob' AND length(operation)=32 THEN operation END,CASE WHEN typeof(view_id)='blob' AND length(view_id)=32 THEN view_id END,CASE WHEN typeof(input)='blob' AND length(input) BETWEEN 1 AND 65536 THEN input END,CASE WHEN typeof(state)='blob' AND length(state) BETWEEN 1 AND 4096 THEN state END,CASE WHEN typeof(state_hash)='blob' AND length(state_hash)=32 THEN state_hash END FROM sparse_preparations ORDER BY plan_id LIMIT 257")?;

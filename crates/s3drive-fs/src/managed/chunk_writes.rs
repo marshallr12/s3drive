@@ -58,6 +58,7 @@ pub(crate) struct Writes {
     closing: AtomicBool,
     native: std::sync::OnceLock<native::Mount>,
     native_lifecycle: bool,
+    native_retention: bool,
     native_serial: Arc<AsyncMutex<()>>,
 }
 pub(crate) enum Opened {
@@ -122,8 +123,10 @@ impl Writes {
         reader: Reader,
         executors: HashMap<String, Executor>,
         default_store: String,
-        native_lifecycle: bool,
+        lifecycle: Option<s3drive_core::SparseLifecycle>,
     ) -> Result<Self> {
+        let native_lifecycle = lifecycle.is_some();
+        let native_retention = lifecycle == Some(s3drive_core::SparseLifecycle::LinkedRetentionV1);
         let mut stores = HashMap::new();
         let mut controls = Vec::new();
         for (id, e) in executors {
@@ -162,13 +165,16 @@ impl Writes {
         if !stores.contains_key(&default_store) {
             return Err(Error::Configuration);
         }
-        let capability = storage
-            .chunk_mount(chunk_mount::Input {
-                volume: volume.clone(),
-                controls,
-            })
-            .await
-            .map_err(error)?;
+        let input = chunk_mount::Input {
+            volume: volume.clone(),
+            controls,
+        };
+        let capability = if native_retention {
+            storage.chunk_mount_retry(input).await
+        } else {
+            storage.chunk_mount(input).await
+        }
+        .map_err(error)?;
         if !capability.same_storage(&storage) {
             return Err(Error::Configuration);
         }
@@ -200,6 +206,7 @@ impl Writes {
             closing: AtomicBool::new(false),
             native: std::sync::OnceLock::new(),
             native_lifecycle,
+            native_retention,
             native_serial: Arc::new(AsyncMutex::new(())),
         };
         tokio::time::timeout(DEADLINE, writer.recover())
@@ -268,8 +275,17 @@ impl Writes {
             .get(&self.default_store)
             .is_some_and(|(s, e, _)| e.check_create(&format!("{}binding", s.root), 0).is_ok())
     }
-    async fn recover(&self) -> Result<()> {
+    async fn recover(&self) -> Result<Option<Vec<String>>> {
         let _serial = self.recovery_serial.lock().await;
+        if self.native_retention {
+            let native = self
+                ._capability
+                .native_sparse(views::Options::default(), plans::Options::default())
+                .map_err(error)?;
+            if let Some(targets) = native.quiet_recovery_targets().await.map_err(error)? {
+                return Ok(Some(targets));
+            }
+        }
         self.recover_directories().await?;
         if let Some((_, _, creator)) = self.stores.values().next() {
             for record in creator.recovery().records().await.map_err(error)? {
@@ -324,7 +340,7 @@ impl Writes {
                     .map_err(error)?;
             }
         }
-        Ok(())
+        Ok(None)
     }
     async fn create_inner(&self, parent: &str, name: &str) -> Result<RemoteNode> {
         let _serial = self.open_serial.lock().await;
@@ -395,7 +411,31 @@ impl Writes {
     }
     async fn open_inner(&self, node: &str) -> Result<Arc<File>> {
         let _serial = self.open_serial.lock().await;
-        self.recover().await?;
+        let recovered_targets = self.recover().await?;
+        if self.native_retention {
+            // A last reader may have released after Close deferred collection.
+            // Retry before creating our own reader or consuming open capacity.
+            let collector = self
+                ._capability
+                .native_sparse(views::Options::default(), plans::Options::default())
+                .map_err(error)?;
+            let targets = match recovered_targets {
+                Some(targets) => targets,
+                None => self
+                    .local
+                    .heads()
+                    .await
+                    .map_err(error)?
+                    .into_iter()
+                    .map(|head| Ok(head.binding().base().map_err(error)?.node().to_owned()))
+                    .collect::<Result<Vec<_>>>()?,
+            };
+            for node in targets {
+                // Discovery is not deletion permission: every target gets its
+                // own fresh safety checks and independent transaction here.
+                collector.retire_linked(node).await.map_err(error)?;
+            }
+        }
         let remote = self.reader.open_file(node).await.map_err(error)?;
         self.remember(remote.metadata())?;
         if remote
@@ -664,6 +704,7 @@ impl Writes {
         tokio::time::timeout(DEADLINE, self.recover())
             .await
             .map_err(|_| Error::Timeout)?
+            .map(|_| ())
     }
     async fn flush_all_inner(&self) -> Result<()> {
         tokio::time::timeout(DEADLINE, self.flush_heads())
@@ -682,3 +723,6 @@ impl Writes {
             .map_err(|_| Error::Timeout)?
     }
 }
+
+#[cfg(test)]
+mod retention_tests;

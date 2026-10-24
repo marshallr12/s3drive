@@ -1,5 +1,6 @@
 //! Private immutable base/patch views and exact local-operation replay.
 //! Exact acknowledgments live in preparation::publication. No network or native activation.
+use crate::proof_hash::ProofSha256;
 use crate::{Result, State, worker::Owner};
 use rusqlite::{Connection, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
@@ -9,6 +10,7 @@ mod model;
 pub use model::{Binding, MAX_FILE_BYTES, MAX_RANGE_BYTES, Range, View};
 use model::{BlockRef, Change, Record, Request};
 mod ledger;
+pub(crate) use ledger::CheckedMetadata;
 use ledger::{File, Saved, inspect};
 mod adoption;
 pub use adoption::{Adoption, ObservationStart};
@@ -21,6 +23,7 @@ pub(crate) use composition::{chunk_scope, namespace_guard};
 pub use scoped::Operation as ScopedOperation;
 mod mutations;
 pub mod preparation;
+pub(crate) use mutations::release_pin_command;
 pub use mutations::{Client, Journal, Piece};
 pub type Id = [u8; 32];
 const HARD_FILES: u32 = 256;
@@ -160,10 +163,10 @@ fn decode<T: serde::de::DeserializeOwned>(raw: &[u8]) -> Result<T> {
     serde_json::from_slice(raw).map_err(|_| Failure::Corrupt.into())
 }
 fn hash<T: Serialize>(domain: &[u8], v: &T) -> Result<Id> {
-    let mut h = Sha256::new();
+    let mut h = ProofSha256::new();
     h.update(domain);
     h.update(encode(v)?);
-    Ok(h.finalize().into())
+    Ok(h.finalize())
 }
 fn role_hash() -> Result<Id> {
     hash(b"s3drive-sparse-role-v1\0", &1u8)
@@ -178,6 +181,12 @@ struct IsolationCheck<'a> {
 impl<'a> IsolationCheck<'a> {
     fn new(db: &'a Connection) -> Self {
         Self { db, checked: false }
+    }
+    fn from_mount_scope(scope: &'a crate::chunk_mount::ReadScope<'_>) -> Self {
+        Self {
+            db: scope.connection(),
+            checked: true,
+        }
     }
     fn require(&mut self) -> Result<()> {
         if !self.checked {
@@ -197,6 +206,12 @@ fn isolation(db: &Connection) -> Result<()> {
     #[cfg(test)]
     ISOLATION_CHECKS.set(ISOLATION_CHECKS.get() + 1);
     let combined = crate::chunk_mount::compatible(db)?;
+    isolation_tables(db, combined)
+}
+pub(crate) fn isolation_for_validated_mount(db: &Connection) -> Result<()> {
+    isolation_tables(db, true)
+}
+fn isolation_tables(db: &Connection, combined: bool) -> Result<()> {
     for table in EXCLUDED {
         if combined && crate::chunk_mount::CLIENT_TABLES.contains(table) {
             continue;

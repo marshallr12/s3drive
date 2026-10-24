@@ -83,6 +83,26 @@ impl Backend {
             Self::Native(n) => n.chunks.opens(),
         }
     }
+    pub async fn uncontended_open(&self, input: &OpenInput) -> Result<bool> {
+        match self {
+            Self::Whole(_) => Ok(false),
+            Self::Native(n) => Ok(n.chunks.uncontended_open(input.clone()).await?),
+        }
+    }
+    pub async fn uncontended_close(
+        &self,
+        session: &str,
+        open: &str,
+        callback: &str,
+    ) -> Result<Option<OpenRecord>> {
+        match self {
+            Self::Whole(_) => Ok(None),
+            Self::Native(n) => Ok(n
+                .chunks
+                .uncontended_close(session.into(), open.into(), callback.into())
+                .await?),
+        }
+    }
     pub fn namespace(&self) -> worker::Namespace {
         match self {
             Self::Whole(p) => p.storage().namespace(),

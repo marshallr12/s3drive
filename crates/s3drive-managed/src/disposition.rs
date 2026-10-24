@@ -423,30 +423,42 @@ impl Controller {
     async fn open_impl(&self, input: OpenInput) -> Result<OpenRecord> {
         let _serial = self.backend.serial().lock().await;
         self.scope(&input)?;
-        self.live(&input).await?;
-        if self.session.is_some() {
-            Box::pin(self.recover_previous_inner(&input.node)).await?;
-        }
-        if let Some(existing) = self
-            .backend
-            .opens()
-            .records()
-            .await?
-            .into_iter()
-            .find(|r| r.input.id == input.id)
+        if self
+            .session
+            .as_ref()
+            .is_some_and(|session| session != &input.session)
         {
-            if existing.input != input {
-                return Err(Failure::Binding.into());
-            }
-            if existing.close().is_some() {
-                return Err(Failure::NotFound.into());
-            }
-            if existing.active() {
-                return Ok(existing);
-            }
+            return Err(Failure::Binding.into());
         }
-        self.recover_node(&input.node, None).await?;
-        Box::pin(self.recover_void(&input.node, None)).await?;
+        // A fresh read-only owner command may prove there is no local work to
+        // recover. It returns no authority or reusable records. In particular,
+        // prepare below still rechecks admission after the remote inspection.
+        if !self.backend.uncontended_open(&input).await? {
+            self.live(&input).await?;
+            if self.session.is_some() {
+                Box::pin(self.recover_previous_inner(&input.node)).await?;
+            }
+            if let Some(existing) = self
+                .backend
+                .opens()
+                .records()
+                .await?
+                .into_iter()
+                .find(|r| r.input.id == input.id)
+            {
+                if existing.input != input {
+                    return Err(Failure::Binding.into());
+                }
+                if existing.close().is_some() {
+                    return Err(Failure::NotFound.into());
+                }
+                if existing.active() {
+                    return Ok(existing);
+                }
+            }
+            self.recover_node(&input.node, None).await?;
+            Box::pin(self.recover_void(&input.node, None)).await?;
+        }
         if input.admission.is_none() {
             let (node, pending) = self.inspect(&input.node).await?;
             if node.deleted {
@@ -705,6 +717,16 @@ impl Controller {
     }
     async fn close_impl(&self, open: &str, cb: &str) -> Result<()> {
         let _serial = self.backend.serial().lock().await;
+        if let Some(session) = &self.session
+            && let Some(record) = self.backend.uncontended_close(session, open, cb).await?
+        {
+            self.scope(&record.input)?;
+            if &record.input.session != session {
+                return Err(Failure::Binding.into());
+            }
+            Box::pin(self.close_after_session(record, open, cb)).await?;
+            return self.backend.opens().retire(open.into()).await;
+        }
         let record = self.record(open).await?;
         self.live(&record.input).await?;
         if self.backend.native_record(&record) {
@@ -736,9 +758,14 @@ impl Controller {
             return Err(Failure::RetainedConflict.into());
         }
         if native {
+            self.live(&record.input).await?;
+        }
+        Box::pin(self.close_after_session(record, open, cb)).await
+    }
+    async fn close_after_session(&self, record: OpenRecord, open: &str, cb: &str) -> Result<()> {
+        if self.backend.native_record(&record) {
             // Even non-last Close must settle its source barriers. The final
             // close cannot adopt an earlier publisher's unfinished work.
-            self.live(&record.input).await?;
             Box::pin(self.flush_retained(&record.input.node)).await?;
         }
         for other in self.records(&record.input.node).await? {

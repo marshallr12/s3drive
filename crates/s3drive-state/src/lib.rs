@@ -19,6 +19,7 @@ pub mod manifest_creation;
 pub mod multipart;
 pub mod namespace;
 pub mod namespace_client;
+mod proof_hash;
 pub mod remote;
 pub mod sparse_views;
 mod staging_readers;

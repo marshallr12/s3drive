@@ -85,7 +85,12 @@ impl Writes {
                 return Err(Error::Conflict);
             }
         }
-        let session = hex(&fresh()?[..16]);
+        let session = self
+            ._capability
+            .next_admission(chunk_mount::AdmissionDomain::Session)
+            .await
+            .map_err(error)?
+            .unwrap_or(hex(&fresh()?[..16]));
         let mut controllers = HashMap::new();
         for (id, (store, executor, _)) in &self.stores {
             controllers.insert(
@@ -181,7 +186,12 @@ impl Writes {
         let target = executor
             .recovery_target(&format!("{}binding", store.root))
             .map_err(error)?;
-        let open = hex(&fresh()?[..16]);
+        let open = self
+            ._capability
+            .next_admission(chunk_mount::AdmissionDomain::Open)
+            .await
+            .map_err(error)?
+            .unwrap_or(hex(&fresh()?[..16]));
         controller
             .open(OpenInput {
                 id: open.clone(),
@@ -252,27 +262,43 @@ impl Writes {
                 Ok(())
             };
         };
-        let head = first.file.head().await?;
-        let mut plans = first.entry_plans().await?;
-        if !head.is_clean() && !plans.iter().any(|p| p.view().id() == head.id()) {
-            let edited = first.edited(&head).await?;
-            first.native.prepare(&edited).await.map_err(error)?;
-            plans = first.entry_plans().await?;
-        }
-        // This is only a work-selection snapshot under the native publication
-        // barrier. ACK identities are immutable; no saved record/proof crosses
-        // an await. Each selected original plan still reopens and freshly checks
-        // all state through the ordinary SDK before every effect/acknowledgment.
-        // Re-reading the whole root history per already-ACKed plan is quadratic.
-        let acknowledged: HashSet<_> = self
-            .roots
-            .records()
+        let mut selected = first
+            .native
+            .flush_selection(first.file.binding.clone())
             .await
-            .map_err(error)?
-            .into_iter()
-            .filter(|r| r.acknowledgment().is_some())
-            .map(|r| r.input().plan())
-            .collect();
+            .map_err(error)?;
+        first
+            .file
+            .metadata
+            .lock()
+            .map_err(|_| Error::Internal)?
+            .size = selected.head.size();
+        if !selected.head.is_clean()
+            && !selected
+                .plans
+                .iter()
+                .any(|p| p.view().id() == selected.head.id())
+        {
+            let edited = first.edited(&selected.head).await?;
+            // No earlier selection authorizes preparation or survives its writes.
+            drop(selected);
+            first.native.prepare(&edited).await.map_err(error)?;
+            selected = first
+                .native
+                .flush_selection(first.file.binding.clone())
+                .await
+                .map_err(error)?;
+            first
+                .file
+                .metadata
+                .lock()
+                .map_err(|_| Error::Internal)?
+                .size = selected.head.size();
+        }
+        // ACK identities select work only. Each original plan still reopens and
+        // validates all state before every provider effect or acknowledgment.
+        let plans = selected.plans;
+        let acknowledged = selected.acknowledged;
         for info in plans {
             let plan = info.id().map_err(error)?;
             if acknowledged.contains(&plan) {
@@ -306,9 +332,10 @@ impl Writes {
                 .map_err(error)?;
             publisher.check_semantics().await.map_err(error)?;
             publisher
-                .begin(hex(
-                    &derived(b"s3drive-native-sparse-publish-v1\0", &plan)[..16]
-                ))
+                .begin(match info.retry_operation() {
+                    Some(token) => token.publish_operation().map_err(error)?,
+                    None => hex(&derived(b"s3drive-native-sparse-publish-v1\0", &plan)[..16]),
+                })
                 .await
                 .map_err(error)?;
             publisher.resume().await.map_err(error)?;
@@ -327,9 +354,6 @@ impl Writes {
     }
 }
 impl Entry {
-    async fn entry_plans(&self) -> Result<Vec<plans::Info>> {
-        self.native.plans().await.map_err(error)
-    }
     async fn edited(&self, head: &View) -> Result<EditedFile> {
         let saved = self
             .file
@@ -590,6 +614,45 @@ impl Object {
                         .lock()
                         .map_err(|_| Error::Internal)?
                         .remove(object.entry.native.open());
+                    if object.writer.native_retention {
+                        let node = object
+                            .entry
+                            .file
+                            .binding
+                            .base()
+                            .map_err(error)?
+                            .node()
+                            .to_owned();
+                        let remaining = object
+                            .writer
+                            .native
+                            .get()
+                            .ok_or(Error::Internal)?
+                            .opens
+                            .lock()
+                            .map_err(|_| Error::Internal)?
+                            .values()
+                            .any(|e| e.file.binding.base().is_ok_and(|b| b.node() == node));
+                        if !remaining {
+                            // Drop only our cached reader; independently held
+                            // readers/clones keep their own protection.
+                            object
+                                .entry
+                                .file
+                                .edited
+                                .lock()
+                                .map_err(|_| Error::Internal)?
+                                .take();
+                            object
+                                .writer
+                                ._capability
+                                .native_sparse(views::Options::default(), plans::Options::default())
+                                .map_err(error)?
+                                .retire_linked(node)
+                                .await
+                                .map_err(error)?;
+                        }
+                    }
                     Ok(())
                 })
                 .await

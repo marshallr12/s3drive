@@ -3,6 +3,7 @@
 use super::*;
 pub(crate) mod creation;
 mod retirement;
+pub(crate) use retirement::{TerminalSuffix, erase_native, native_candidates};
 pub mod session;
 use namespace::{ROOT, RemovalMode};
 const OPEN_LIMIT: usize = 256;
@@ -103,7 +104,8 @@ pub struct ActivationProof {
     pub input: Box<Input>,
     pub outcome_hash: Vec<u8>,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Event {
     pub id: String,
     pub action: Action,
@@ -170,7 +172,7 @@ struct Row {
     head: Option<Vec<u8>>,
 }
 fn digest<T: Serialize>(tag: &[u8], value: &T) -> Result<Vec<u8>> {
-    let mut h = Sha256::new();
+    let mut h = ProofSha256::new();
     h.update(tag);
     h.update(serde_json::to_vec(value)?);
     Ok(h.finalize().to_vec())
@@ -537,21 +539,111 @@ thread_local! { static LOADS: std::cell::Cell<usize> = const { std::cell::Cell::
 pub(crate) fn load_count() -> usize {
     LOADS.get()
 }
+// Exists only for one read-only chunk_scope call; never crosses a mutation.
+struct ReadContext<'a> {
+    db: &'a Connection,
+    owner: Option<String>,
+    sessions: std::collections::BTreeSet<(String, String)>,
+    statements: std::collections::BTreeMap<&'static str, rusqlite::Statement<'a>>,
+}
+impl<'a> ReadContext<'a> {
+    fn new(db: &'a Connection) -> Result<Self> {
+        let owner = identity::read(db)?;
+        #[cfg(test)]
+        SCOPE_IDENTITIES.set(SCOPE_IDENTITIES.get() + 1);
+        Ok(Self {
+            db,
+            owner,
+            sessions: Default::default(),
+            statements: Default::default(),
+        })
+    }
+    fn session(&mut self, session: &str, volume: &str) -> Result<()> {
+        let key = (session.to_owned(), volume.to_owned());
+        if !self.sessions.contains(&key) {
+            session::binding_with_context(self, session, volume)?;
+            #[cfg(test)]
+            SCOPE_SESSIONS.set(SCOPE_SESSIONS.get() + 1);
+            self.sessions.insert(key);
+        }
+        Ok(())
+    }
+}
+fn query_in<T>(
+    db: &Connection,
+    context: Option<&mut ReadContext<'_>>,
+    sql: &'static str,
+    read: impl FnOnce(&mut rusqlite::Statement<'_>) -> Result<T>,
+) -> Result<T> {
+    match context {
+        Some(context) => {
+            if !context.statements.contains_key(sql) {
+                context.statements.insert(sql, context.db.prepare(sql)?);
+                #[cfg(test)]
+                SCOPE_QUERIES.set(SCOPE_QUERIES.get() + 1);
+            }
+            read(
+                context
+                    .statements
+                    .get_mut(sql)
+                    .ok_or("missing prepared open query")?,
+            )
+        }
+        None => read(&mut db.prepare(sql)?),
+    }
+}
+#[cfg(test)]
+thread_local! {
+    static SCOPE_IDENTITIES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+    static SCOPE_SESSIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+    static SCOPE_QUERIES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+    static EVENT_VISITS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+#[cfg(test)]
+pub(crate) fn scope_counts() -> (usize, usize, usize, usize) {
+    (
+        SCOPE_IDENTITIES.get(),
+        SCOPE_SESSIONS.get(),
+        EVENT_VISITS.get(),
+        SCOPE_QUERIES.get(),
+    )
+}
 fn load(db: &Connection, key: &str) -> Result<Option<(Row, OpenRecord)>> {
+    load_in(db, key, None)
+}
+fn load_in(
+    db: &Connection,
+    key: &str,
+    mut context: Option<&mut ReadContext<'_>>,
+) -> Result<Option<(Row, OpenRecord)>> {
     #[cfg(test)]
     LOADS.set(LOADS.get() + 1);
-    let bad:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM windows_open_journal WHERE open_id=?1 AND (length(CAST(owner_id AS BLOB))!=32 OR typeof(input)!='blob' OR length(input) NOT BETWEEN 1 AND 16384 OR event_count NOT BETWEEN 0 AND 4096 OR length(state_hash)!=32 OR (head_hash IS NOT NULL AND length(head_hash)!=32))) OR EXISTS(SELECT 1 FROM windows_open_events WHERE open_id=?1 AND (typeof(action)!='blob' OR length(action) NOT BETWEEN 1 AND 16384 OR length(state_hash)!=32 OR length(CAST(event_id AS BLOB))!=32 OR (previous_hash IS NOT NULL AND length(previous_hash)!=32)))",[key],|r|r.get(0))?;
+    let bad: bool = query_in(
+        db,
+        context.as_deref_mut(),
+        "SELECT EXISTS(SELECT 1 FROM windows_open_journal WHERE open_id=?1 AND (length(CAST(owner_id AS BLOB))!=32 OR typeof(input)!='blob' OR length(input) NOT BETWEEN 1 AND 16384 OR event_count NOT BETWEEN 0 AND 4096 OR length(state_hash)!=32 OR (head_hash IS NOT NULL AND length(head_hash)!=32))) OR EXISTS(SELECT 1 FROM windows_open_events WHERE open_id=?1 AND (typeof(action)!='blob' OR length(action) NOT BETWEEN 1 AND 16384 OR length(state_hash)!=32 OR length(CAST(event_id AS BLOB))!=32 OR (previous_hash IS NOT NULL AND length(previous_hash)!=32)))",
+        |q| Ok(q.query_row([key], |r| r.get(0))?),
+    )?;
     if bad {
         return Err("per-open bounded metadata shape changed".into());
     }
-    let raw:Option<RawRow>=db.query_row("SELECT owner_id,input,event_count,head_hash,state_hash FROM windows_open_journal WHERE open_id=?",[key],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?))).optional()?;
-    let retained: Option<Vec<u8>> = db
-        .query_row(
-            "SELECT CASE WHEN length(input_hash)=32 THEN input_hash END FROM retained_windows_opens WHERE open_id=?",
-            [key],
-            |r| r.get(0),
-        )
-        .optional()?;
+    let raw: Option<RawRow> = query_in(
+        db,
+        context.as_deref_mut(),
+        "SELECT owner_id,input,event_count,head_hash,state_hash FROM windows_open_journal WHERE open_id=?",
+        |q| {
+            Ok(q.query_row([key], |r| {
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+            })
+            .optional()?)
+        },
+    )?;
+    let retained: Option<Vec<u8>> = query_in(
+        db,
+        context.as_deref_mut(),
+        "SELECT CASE WHEN length(input_hash)=32 THEN input_hash END FROM retained_windows_opens WHERE open_id=?",
+        |q| Ok(q.query_row([key], |r| r.get(0)).optional()?),
+    )?;
     let Some((owner, bytes, count, head, hash)) = raw else {
         if retained.is_some() {
             return Err("retained per-open record missing".into());
@@ -563,7 +655,12 @@ fn load(db: &Connection, key: &str) -> Result<Option<(Row, OpenRecord)>> {
     super::creator_import::check_admission(db, &input)?;
     creation::check_input(db, &input, &owner)?;
     if input.session_bound {
-        session::binding(db, &input.session, &input.volume)?;
+        match context.as_deref_mut() {
+            Some(context) => context.session(&input.session, &input.volume)?,
+            None => {
+                session::binding(db, &input.session, &input.volume)?;
+            }
+        }
     }
     let row = Row {
         input: input.clone(),
@@ -575,7 +672,10 @@ fn load(db: &Connection, key: &str) -> Result<Option<(Row, OpenRecord)>> {
         || row.count > EVENT_LIMIT
         || retained != Some(anchor(&row)?)
         || hash != checksum(&row)?
-        || identity::read(db)?.as_ref() != Some(&owner)
+        || match context.as_deref() {
+            Some(context) => context.owner.as_ref() != Some(&owner),
+            None => identity::read(db)?.as_ref() != Some(&owner),
+        }
     {
         return Err("per-open record integrity failure".into());
     }
@@ -585,25 +685,34 @@ fn load(db: &Connection, key: &str) -> Result<Option<(Row, OpenRecord)>> {
         events: Vec::new(),
     };
     let mut previous = None;
-    let mut stmt=db.prepare("SELECT event_id,ordinal,action,previous_hash,state_hash FROM windows_open_events WHERE open_id=? ORDER BY ordinal LIMIT 4097")?;
-    let mut rows = stmt.query([key])?;
-    while let Some(r) = rows.next()? {
-        let event = Event {
-            id: r.get(0)?,
-            action: serde_json::from_slice(&r.get::<_, Vec<u8>>(2)?)?,
-        };
-        let ordinal: i64 = r.get(1)?;
-        let old: Option<Vec<u8>> = r.get(3)?;
-        let hash: Vec<u8> = r.get(4)?;
-        if ordinal != record.events.len() as i64 + 1
-            || old != previous
-            || hash != event_hash(key, ordinal as usize, &event, &previous)?
-        {
-            return Err("per-open event chain integrity failure".into());
-        }
-        reduce(db, &mut record, &event)?;
-        previous = Some(hash);
-    }
+    query_in(
+        db,
+        context,
+        "SELECT event_id,ordinal,action,previous_hash,state_hash FROM windows_open_events WHERE open_id=? ORDER BY ordinal LIMIT 4097",
+        |stmt| {
+            let mut rows = stmt.query([key])?;
+            while let Some(r) = rows.next()? {
+                let event = Event {
+                    id: r.get(0)?,
+                    action: serde_json::from_slice(&r.get::<_, Vec<u8>>(2)?)?,
+                };
+                let ordinal: i64 = r.get(1)?;
+                let old: Option<Vec<u8>> = r.get(3)?;
+                let hash: Vec<u8> = r.get(4)?;
+                if ordinal != record.events.len() as i64 + 1
+                    || old != previous
+                    || hash != event_hash(key, ordinal as usize, &event, &previous)?
+                {
+                    return Err("per-open event chain integrity failure".into());
+                }
+                reduce(db, &mut record, &event)?;
+                #[cfg(test)]
+                EVENT_VISITS.set(EVENT_VISITS.get() + 1);
+                previous = Some(hash);
+            }
+            Ok(())
+        },
+    )?;
     if record.events.len() != row.count || previous != row.head {
         return Err("per-open event head missing or changed".into());
     }
@@ -614,6 +723,12 @@ pub(super) fn metadata_records(db: &Connection) -> Result<Vec<OpenRecord>> {
     Ok(all(db)?.into_iter().map(|(_, r)| r).collect())
 }
 fn all(db: &Connection) -> Result<Vec<(Row, OpenRecord)>> {
+    all_in(db, None)
+}
+fn all_in(
+    db: &Connection,
+    mut context: Option<&mut ReadContext<'_>>,
+) -> Result<Vec<(Row, OpenRecord)>> {
     session::check_index(db)?;
     retirement::check_index(db)?;
     let ids=db.prepare("SELECT open_id FROM windows_open_journal WHERE open_id NOT IN (SELECT open_id FROM retired_windows_opens) UNION SELECT open_id FROM retained_windows_opens WHERE open_id NOT IN (SELECT open_id FROM retired_windows_opens) LIMIT 257")?.query_map([],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
@@ -622,7 +737,9 @@ fn all(db: &Connection) -> Result<Vec<(Row, OpenRecord)>> {
     }
     let records = ids
         .iter()
-        .map(|key| load(db, key)?.ok_or_else(|| "per-open row missing".into()))
+        .map(|key| {
+            load_in(db, key, context.as_deref_mut())?.ok_or_else(|| "per-open row missing".into())
+        })
         .collect::<Result<Vec<_>>>()?;
     let count: i64 = db.query_row("SELECT count(*) FROM windows_open_events", [], |r| r.get(0))?;
     let expected: i64 = db.query_row(
@@ -693,6 +810,21 @@ fn controlled_slots(r: &OpenRecord) -> usize {
 }
 
 fn insert_row(db: &Connection, row: &Row, record: &OpenRecord) -> Result<()> {
+    if crate::chunk_mount::retry_enabled(db)?
+        && db.query_row("SELECT count(*) FROM windows_open_journal", [], |r| {
+            r.get::<_, i64>(0)
+        })? >= OPEN_LIMIT as i64
+    {
+        return Err(
+            "native retained open capacity is pinned; release readers and collect before opening"
+                .into(),
+        );
+    }
+    crate::chunk_mount::admission::consume(
+        db,
+        crate::chunk_mount::AdmissionDomain::Open,
+        &row.input.id,
+    )?;
     let mut records = all(db)?;
     if records.len() >= OPEN_LIMIT {
         return Err("per-open limit reached; history retained".into());
@@ -1090,10 +1222,11 @@ fn scope_record(b: &crate::chunk_mount::Binding, r: &OpenRecord) -> Result<()> {
 }
 pub(super) fn chunk_scope(db: &Connection, b: &crate::chunk_mount::Binding) -> Result<()> {
     bounded(db)?;
+    let mut context = ReadContext::new(db)?;
     // all() already replays every non-retired record, validates the live quota,
     // indexes and orphan-event count. Reuse those records only within this
     // read-only scope inspection; do not replay them a second time below.
-    for (_, record) in all(db)? {
+    for (_, record) in all_in(db, Some(&mut context))? {
         scope_record(b, &record)?;
     }
     // Retirement releases live capacity, not validation responsibility. Stream
@@ -1101,7 +1234,8 @@ pub(super) fn chunk_scope(db: &Connection, b: &crate::chunk_mount::Binding) -> R
     let mut q = db.prepare("SELECT j.open_id FROM windows_open_journal j JOIN retired_windows_opens r USING(open_id) ORDER BY j.open_id")?;
     for row in q.query_map([], |r| r.get::<_, String>(0))? {
         let key = row?;
-        let (_, record) = load(db, &key)?.ok_or("chunk open history missing")?;
+        let (_, record) =
+            load_in(db, &key, Some(&mut context))?.ok_or("chunk open history missing")?;
         scope_record(b, &record)?;
     }
     session::chunk_scope(db, b)
@@ -1279,4 +1413,76 @@ pub(crate) fn sparse_retired(db: &Connection, id: &str) -> Result<bool> {
     let (row, record) = load(db, id)?.ok_or("original open missing")?;
     retirement::check(db, &row, &record)?;
     retirement::is_retired(db, id)
+}
+
+#[cfg(test)]
+pub(crate) use retirement::{rewrite_epoch_for_test, rewrite_session_for_test};
+
+// Work selection only. Full mount proof is established before these reads;
+// no selected record or proof leaves the caller's read transaction.
+pub(crate) fn uncontended_native_open(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+    runtime: &str,
+    input: &OpenInput,
+) -> Result<bool> {
+    scope.binding().open(input)?;
+    session::current(scope.connection(), runtime, &input.session, &input.volume)?;
+    let records = all(scope.connection())?;
+    let pending = session::pending(scope.connection(), &input.volume, &input.node)?;
+    Ok(pending.is_none()
+        && !records.iter().any(|(_, r)| {
+            r.input.id == input.id || (r.input.volume == input.volume && r.input.node == input.node)
+        }))
+}
+
+// Select only a sole, current, ordinary POSIX native Close. This returns data,
+// not a capability; all post-flush decisions and mutations remain fresh.
+pub(crate) fn uncontended_native_close(
+    scope: &crate::chunk_mount::ReadScope<'_>,
+    runtime: &str,
+    session: &str,
+    open: &str,
+    callback: &str,
+) -> Result<Option<OpenRecord>> {
+    let db = scope.connection();
+    let record = sparse_open(db, open)?;
+    scope.binding().open(&record.input)?;
+    session::current(db, runtime, session, &record.input.volume)?;
+    let records = all(db)?;
+    let pending = session::pending(db, &record.input.volume, &record.input.node)?;
+    if record.input.session != session
+        || !record.input.controlled
+        || !record.input.session_bound
+        || !record.input.posix
+        || record.input.admission.is_some()
+        || record.input.creation.is_some()
+        || record.input.delete_on_close
+        || record.cleanup().is_some()
+        || !record
+            .events
+            .iter()
+            .any(|e| matches!(e.action, Action::BindSparse))
+        || record.close().is_none_or(|e| e.id != callback)
+        || record.completed(callback)
+        || !record.pending().is_empty()
+        || pending.is_some()
+        || record.events.iter().any(|e| {
+            matches!(
+                e.action,
+                Action::Callback(Callback::SetDelete { .. } | Callback::Cleanup { .. })
+                    | Action::Link { .. }
+                    | Action::Reply { .. }
+            )
+        })
+    {
+        return Ok(None);
+    }
+    let target = records
+        .iter()
+        .filter(|(_, r)| r.input.volume == record.input.volume && r.input.node == record.input.node)
+        .collect::<Vec<_>>();
+    if target.len() != 1 || target[0].1.input.id != open {
+        return Ok(None);
+    }
+    Ok(Some(record))
 }

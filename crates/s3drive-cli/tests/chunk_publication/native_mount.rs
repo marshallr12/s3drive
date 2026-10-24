@@ -28,6 +28,14 @@ impl Drop for Mount {
 }
 #[cfg(any(target_os = "linux", windows))]
 impl Mount {
+    pub(super) fn live_process_id(&mut self) -> std::result::Result<u32, String> {
+        if let Some(status) = self.child.try_wait().map_err(|e| e.to_string())? {
+            return Err(format!("owned mount daemon exited {status}"));
+        }
+        self.child
+            .id()
+            .ok_or_else(|| "owned mount daemon has no live PID".into())
+    }
     pub(super) async fn start(root: &Path) -> Self {
         use tokio::io::{AsyncBufReadExt, BufReader};
         let path = root.join("native mount 日本語");
