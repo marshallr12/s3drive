@@ -3305,16 +3305,31 @@ async fn native_retry_validation_work_quiet_recovery_requires_mode_and_empty_rol
         .call(|store| {
             assert_eq!(
                 store.state.connection.execute(
-                    "INSERT INTO manifest_creation_role VALUES(1,0,zeroblob(32))",
+                    "INSERT INTO manifest_creation_role VALUES(1,1,zeroblob(32))",
                     []
                 )?,
                 1
+            );
+            assert_eq!(
+                store.state.connection.query_row(
+                    "SELECT count(*) FROM manifest_creations",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                0
             );
             Ok(native_snapshot(&store.state))
         })
         .await
         .unwrap();
-    assert!(n.client.quiet_recovery_targets().await.is_err());
+    assert_eq!(
+        n.client
+            .quiet_recovery_targets()
+            .await
+            .unwrap_err()
+            .downcast_ref::<crate::manifest_creation::Failure>(),
+        Some(&crate::manifest_creation::Failure::Corrupt)
+    );
     n.storage
         .cache()
         .owner
