@@ -2067,7 +2067,8 @@ fn native_snapshot(s: &State) -> Vec<String> {
 }
 
 #[tokio::test]
-async fn native_retry_pinned_refusal_rechecks_resealed_unselected_edges_frontier_and_modes() {
+async fn native_retry_validation_work_pinned_refusal_rechecks_resealed_unselected_edges_frontier_and_modes()
+ {
     for case in 0..11 {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("pinned semantic corruption");
@@ -2139,9 +2140,13 @@ async fn native_retry_pinned_refusal_rechecks_resealed_unselected_edges_frontier
                         crate::namespace_client::opens::rewrite_session_for_test(&s.connection, &original, case == 9)?;
                     }
                     _ => {
-                        s.connection.execute("INSERT INTO windows_mount_sessions SELECT ?1,volume_id,runtime_id,owner_id,zeroblob(32) FROM windows_mount_sessions LIMIT 1", [hex(&[77;16])])?;
-                        // A complete scope scan must validate even unused sessions.
-                        assert!(crate::chunk_mount::compatible(&s.connection).is_err());
+                        let session = hex(&[77;16]);
+                        let runtime = hex(&[78;16]);
+                        assert_eq!(s.connection.query_row("SELECT count(*) FROM windows_mount_sessions WHERE session_id=?1 OR runtime_id=?2", params![session, runtime], |r| r.get::<_, i64>(0))?, 0);
+                        assert_eq!(s.connection.execute("INSERT INTO windows_mount_sessions SELECT ?1,volume_id,?2,owner_id,zeroblob(32) FROM windows_mount_sessions LIMIT 1", params![session, runtime])?, 1);
+                        // The unused row must exist before its deliberately bad seal
+                        // reaches the full session binding check, not a setup error.
+                        assert_eq!(crate::chunk_mount::compatible(&s.connection).unwrap_err().to_string(), "mount session binding changed");
                     }
                 }
                 Ok(native_snapshot(s))
