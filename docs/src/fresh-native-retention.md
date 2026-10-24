@@ -312,3 +312,16 @@ construction happens exactly once immediately and polling only afterward.
 These local frame measurements use the workstation's reduced-debug-info build,
 not hosted acceptance. CI adds an early workspace-unified exact lineage test;
 the full workspace and all native gates still must pass on the final source.
+
+The same anchor candidate's Windows actual mounted gate reached 220 saves before
+the unchanged 20-minute deadline. The test-dispatch correction does not resolve
+that separate production liveness blocker. A separate two-owner, 20-save native
+measurement now records actual syscall wall times and the owned mount daemon's
+CPU endpoints. It retains prior bytes, exact PUT/progress checks, cold mounted
+read and table/storage bounds. Linux reports CLK_TCK units; Windows reads only
+the live owned PID's TotalProcessorTime in 100-nanosecond units. Missing samples
+are explicit errors, never zero CPU. Sampling is separately bounded and its
+wall overhead reported; daemon background work during sampling may contribute
+to the CPU delta. Handle-drop return is not a server Close completion timestamp.
+The original 120-second syscall sequence and all 300-save gates are unchanged;
+this small diagnostic cannot substitute for their acceptance.

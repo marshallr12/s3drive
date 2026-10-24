@@ -296,6 +296,46 @@ jobs:
         run: |
           getconf CLK_TCK
           cargo test -p s3drive-cli --test chunk_publication native_retention_validation_work_shared_phases --locked -- --exact --nocapture --test-threads=1
+  native-phase-diagnostics:
+    # Separate measurement only; original 300-save acceptance is unchanged.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Restore Rust build cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: native-phases-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            rust-${{ runner.os }}-1.99.1-${{ hashFiles('Cargo.lock') }}-
+            rust-${{ runner.os }}-1.99.1-
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.99.1 --profile minimal
+      - name: Install pinned WinFsp runtime and SDK
+        if: runner.os == 'Windows'
+        run: ./scripts/install-winfsp.ps1
+      - name: Prepare Linux FUSE measurement
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fuse3
+          sudo modprobe fuse
+          test -c /dev/fuse
+          getconf CLK_TCK
+      - name: Build ordinary debug native fixture
+        timeout-minutes: 10
+        run: cargo test -p s3drive-cli --test chunk_publication --no-run --locked
+      - name: Measure actual native syscall phases and owned daemon CPU
+        timeout-minutes: 5
+        run: cargo test -p s3drive-cli --test chunk_publication native_retention_validation_work_native_phases --locked -- --exact --ignored --nocapture --test-threads=1
   native-cpu-profile:
     # Diagnostic only. Profiler wall time is not native/runtime acceptance.
     runs-on: ubuntu-latest

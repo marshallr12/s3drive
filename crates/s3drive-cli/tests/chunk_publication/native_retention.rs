@@ -212,8 +212,85 @@ async fn shared_count(root: &Path, s: &Server, count: u64) {
     phase!("bounds", inspect(root, start + count, peak));
     phases.report(start, count, total.elapsed());
 }
+// Endpoint samples belong to the owned mount daemon, not this fixture process.
+// Linux units are CLK_TCK; Windows TotalProcessorTime ticks are 100 ns.
+#[cfg(any(target_os = "linux", windows))]
+async fn sample_daemon(mount: &mut native_mount::Mount) -> std::result::Result<u64, String> {
+    let pid = mount.live_process_id()?;
+    let result = daemon_cpu(pid).await;
+    if mount.live_process_id()? != pid {
+        return Err("owned daemon PID changed".into());
+    }
+    result
+}
+#[cfg(any(target_os = "linux", windows))]
+async fn daemon_cpu(pid: u32) -> std::result::Result<u64, String> {
+    #[cfg(target_os = "linux")]
+    {
+        let stat =
+            std::fs::read_to_string(format!("/proc/{pid}/stat")).map_err(|e| e.to_string())?;
+        let (_, tail) = stat.rsplit_once(')').ok_or("missing process comm")?;
+        let fields = tail.split_whitespace().collect::<Vec<_>>();
+        let parse = |index: usize| -> std::result::Result<u64, String> {
+            fields
+                .get(index)
+                .ok_or("missing CPU field")?
+                .parse::<u64>()
+                .map_err(|e| e.to_string())
+        };
+        parse(11)?
+            .checked_add(parse(12)?)
+            .ok_or_else(|| "CPU counter overflow".into())
+    }
+    #[cfg(windows)]
+    {
+        use tokio::io::AsyncReadExt;
+        let mut command = tokio::process::Command::new("powershell.exe");
+        command
+            .args(["-NoLogo", "-NoProfile", "-NonInteractive", "-Command"])
+            .arg(format!(
+                "$ErrorActionPreference='Stop'; (Get-Process -Id {pid}).TotalProcessorTime.Ticks"
+            ))
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .kill_on_drop(true);
+        let mut child = command.spawn().map_err(|e| e.to_string())?;
+        let mut stdout = child.stdout.take().expect("piped sampler output");
+        let mut bytes = Vec::new();
+        let outcome = tokio::time::timeout(Duration::from_secs(10), async {
+            (&mut stdout).take(1024).read_to_end(&mut bytes).await?;
+            child.wait().await
+        })
+        .await;
+        let status = match outcome {
+            Ok(result) => result.map_err(|e| e.to_string())?,
+            Err(_) => {
+                let _ = tokio::time::timeout(Duration::from_secs(5), child.kill()).await;
+                let _ = tokio::time::timeout(Duration::from_secs(5), child.wait()).await;
+                return Err("owned CPU sampler timed out".into());
+            }
+        };
+        if !status.success() {
+            return Err(format!("owned CPU sampler exited {status}"));
+        }
+        std::str::from_utf8(&bytes)
+            .map_err(|e| e.to_string())?
+            .trim()
+            .parse::<u64>()
+            .map_err(|e| e.to_string())
+    }
+}
 #[cfg(any(target_os = "linux", windows))]
 pub async fn mounted(root: &Path, s: &Server) {
+    mounted_inner(root, s, false).await;
+}
+#[cfg(any(target_os = "linux", windows))]
+pub async fn mounted_diagnostic(root: &Path, s: &Server) {
+    mounted_inner(root, s, true).await;
+}
+#[cfg(any(target_os = "linux", windows))]
+async fn mounted_inner(root: &Path, s: &Server, diagnostic: bool) {
     use std::io::{Read, Seek, SeekFrom, Write};
     config(root, s);
     let start = std::fs::read_to_string(root.join("retention-cycle"))
@@ -221,42 +298,101 @@ pub async fn mounted(root: &Path, s: &Server) {
         .parse::<u64>()
         .unwrap();
     let state = root.join("native-retention-state");
+    let total = std::time::Instant::now();
     let mut mount = native_mount::Mount::start(root).await;
+    let startup = total.elapsed();
+    let pid = mount.live_process_id().unwrap();
+    let sample_start = std::time::Instant::now();
+    let before = if diagnostic {
+        Some(sample_daemon(&mut mount).await)
+    } else {
+        None
+    };
+    let first_sample = sample_start.elapsed();
     let file = mount.path.join(NAME);
-    let peak = native_mount::blocking(&mut mount, move || {
+    let (peak, phases, syscall_wall) = native_mount::blocking(&mut mount, move || {
         let mut peak = (0, 0);
+        let mut phases = PhaseStats::default();
+        let sequence = std::time::Instant::now();
+        macro_rules! phase {
+            ($name:literal, $work:expr) => {{
+                let time = std::time::Instant::now();
+                let value = $work;
+                if diagnostic {
+                    phases.record($name, time.elapsed(), None, None);
+                }
+                value
+            }};
+        }
         for n in start..start + 10 {
-            let mut handle = std::fs::OpenOptions::new()
-                .read(true)
-                .write(true)
-                .open(&file)
-                .unwrap();
+            let mut handle = phase!(
+                "open",
+                std::fs::OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .open(&file)
+                    .unwrap()
+            );
             if n > 0 {
                 let mut previous = vec![0; 17];
-                handle.read_exact(&mut previous).unwrap();
+                phase!("previous read", handle.read_exact(&mut previous).unwrap());
                 assert_eq!(
                     previous,
                     vec![((n - 1) % 251) as u8; 17],
                     "persisted bytes before overwrite"
                 );
-                handle.seek(SeekFrom::Start(0)).unwrap();
+                phase!("seek", handle.seek(SeekFrom::Start(0)).unwrap());
             }
             let bytes = vec![(n % 251) as u8; 17];
-            handle.write_all(&bytes).unwrap();
-            handle.sync_all().unwrap();
-            handle.seek(SeekFrom::Start(0)).unwrap();
+            phase!("write", handle.write_all(&bytes).unwrap());
+            phase!("sync_all", handle.sync_all().unwrap());
+            phase!("seek", handle.seek(SeekFrom::Start(0)).unwrap());
             let mut read = vec![0; 17];
-            handle.read_exact(&mut read).unwrap();
+            phase!("verification read", handle.read_exact(&mut read).unwrap());
             assert_eq!(read, bytes);
-            drop(handle);
-            assert_eq!(std::fs::read(&file).unwrap(), bytes);
+            phase!("handle drop return", drop(handle));
+            assert_eq!(
+                phase!("reopen read and drop", std::fs::read(&file).unwrap()),
+                bytes
+            );
             let size = sizes(&state);
             peak = (peak.0.max(size.0), peak.1.max(size.1));
         }
-        peak
+        (peak, phases, sequence.elapsed())
     })
     .await;
+    let sample_start = std::time::Instant::now();
+    let after = if diagnostic {
+        Some(sample_daemon(&mut mount).await)
+    } else {
+        None
+    };
+    let second_sample = sample_start.elapsed();
+    let stop_start = std::time::Instant::now();
     mount.stop().await;
+    let shutdown = stop_start.elapsed();
+    let owner_total = total.elapsed();
+    if diagnostic {
+        for (phase, (calls, micros, _)) in phases.0 {
+            eprintln!(
+                "NATIVE_MOUNT_PHASE start={start} phase={phase} calls={calls} wall_us={micros}"
+            );
+        }
+        let cpu = before
+            .as_ref()
+            .and_then(|v| v.as_ref().ok())
+            .zip(after.as_ref().and_then(|v| v.as_ref().ok()))
+            .and_then(|(a, b)| b.checked_sub(*a));
+        let unit = if cfg!(windows) { "100ns" } else { "CLK_TCK" };
+        eprintln!(
+            "NATIVE_MOUNT_OWNER start={start} saves=10 pid={pid} syscall_us={} startup_us={} shutdown_us={} sample_us={} daemon_cpu_start={before:?} daemon_cpu_end={after:?} daemon_cpu_delta={cpu:?} cpu_unit={unit} total_us={}",
+            syscall_wall.as_micros(),
+            startup.as_micros(),
+            shutdown.as_micros(),
+            (first_sample + second_sample).as_micros(),
+            owner_total.as_micros()
+        );
+    }
     inspect(root, start + 10, peak);
 }
 
@@ -292,13 +428,24 @@ async fn final_shared_at(root: &Path, s: &Server, completed: u64) {
 }
 #[cfg(any(target_os = "linux", windows))]
 pub async fn final_mounted(root: &Path, s: &Server) {
+    final_mounted_at(root, s, 300).await;
+}
+#[cfg(any(target_os = "linux", windows))]
+pub async fn final_mounted_diagnostic(root: &Path, s: &Server) {
+    final_mounted_at(root, s, 20).await;
+}
+#[cfg(any(target_os = "linux", windows))]
+async fn final_mounted_at(root: &Path, s: &Server, completed: u64) {
     config(root, s);
     let mut mount = native_mount::Mount::start(root).await;
     let path = mount.path.join(NAME);
     native_mount::blocking(&mut mount, move || {
-        assert_eq!(std::fs::read(path).unwrap(), vec![(299 % 251) as u8; 17])
+        assert_eq!(
+            std::fs::read(path).unwrap(),
+            vec![((completed - 1) % 251) as u8; 17]
+        )
     })
     .await;
     mount.stop().await;
-    inspect(root, 300, sizes(&root.join("native-retention-state")));
+    inspect(root, completed, sizes(&root.join("native-retention-state")));
 }

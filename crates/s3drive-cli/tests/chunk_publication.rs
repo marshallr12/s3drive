@@ -1372,6 +1372,14 @@ fn dispatch<'a>(
         "native_retention_final_mounted" => boxed_case(|| native_retention::final_mounted(root, s)),
         #[cfg(any(target_os = "linux", windows))]
         "native_retention_mounted" => boxed_case(|| native_retention::mounted(root, s)),
+        #[cfg(any(target_os = "linux", windows))]
+        "native_retention_mounted_diagnostic" => {
+            boxed_case(|| native_retention::mounted_diagnostic(root, s))
+        }
+        #[cfg(any(target_os = "linux", windows))]
+        "native_retention_final_mounted_diagnostic" => {
+            boxed_case(|| native_retention::final_mounted_diagnostic(root, s))
+        }
         "native_lifecycle_mounted" => boxed_case(|| native_lifecycle::mounted(config, root, s)),
         #[cfg(any(target_os = "linux", windows))]
         "native_lifecycle_mounted_known" => {
@@ -1467,6 +1475,12 @@ async fn run(mode: &str) {
             "native_retention_profile_warmup",
             "native_retention_profile_saves",
             "native_retention_final_profile",
+        ],
+        "native_retention_native_work" => vec![
+            "native_retention_seed",
+            "native_retention_mounted_diagnostic",
+            "native_retention_mounted_diagnostic",
+            "native_retention_final_mounted_diagnostic",
         ],
         "native_retention_validation_work" => vec![
             "native_retention_seed",
@@ -1784,7 +1798,9 @@ async fn run(mode: &str) {
         if stage.starts_with("native_retention_") {
             if matches!(
                 stage,
-                "native_retention_shared" | "native_retention_mounted"
+                "native_retention_shared"
+                    | "native_retention_mounted"
+                    | "native_retention_mounted_diagnostic"
             ) {
                 retention_completed += 10;
             } else if stage == "native_retention_profile_warmup" {
@@ -1926,7 +1942,7 @@ async fn run(mode: &str) {
             assert_eq!(retention_completed, 3);
             native_retention::expected_puts(3)
         }
-        "native_retention_validation_work" => {
+        "native_retention_validation_work" | "native_retention_native_work" => {
             assert_eq!(retention_completed, 20);
             native_retention::expected_puts(20)
         }
@@ -2488,4 +2504,11 @@ async fn native_sparse_sdk_controller_interleaving() {
 #[tokio::test]
 async fn native_retention_cpu_profile_post_anchor_saves() {
     run("native_retention_cpu_profile").await;
+}
+
+#[cfg(any(target_os = "linux", windows))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "diagnostic only; real FUSE/WinFsp required"]
+async fn native_retention_validation_work_native_phases() {
+    run("native_retention_native_work").await;
 }
