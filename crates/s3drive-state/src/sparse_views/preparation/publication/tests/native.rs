@@ -2225,6 +2225,7 @@ async fn native_retry_validation_work_per_open_close() {
                     "guard acquire" => assert_eq!(delta[0], 4),
                     "guard release" => assert_eq!(delta[0], 3),
                     "plans" => assert_eq!(delta[0], 1),
+                    "Close" => assert_eq!(delta[0], 4),
                     "completion" => assert_eq!(delta[0], 5),
                     _ => {}
                 }
@@ -2475,4 +2476,82 @@ async fn native_retry_validation_work_completion_keeps_unsettled_barrier() {
         .await
         .unwrap();
     n.storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_close_snapshots_keep_dirty_and_empty_modes() {
+    for retry in [false, true] {
+        for changed in [false, true] {
+            let tmp = tempfile::tempdir().unwrap();
+            let n = setup_mode(&tmp.path().join("close read intervals"), 16, retry).await;
+            let expected = if changed {
+                Some(dirty(&n, &n.view, 2, 5).await.id())
+            } else {
+                None
+            };
+            let closed = close_native(&n, &n.token, 71).await.unwrap();
+            assert_eq!(closed.plans.len(), usize::from(changed));
+            assert_eq!(closed.plans.first().map(|p| p.view().id()), expected);
+            let retried = close_native(&n, &n.token, 71).await.unwrap();
+            assert_eq!(closed.open, retried.open);
+            assert_eq!(
+                closed
+                    .plans
+                    .iter()
+                    .map(|p| p.id().unwrap())
+                    .collect::<Vec<_>>(),
+                retried
+                    .plans
+                    .iter()
+                    .map(|p| p.id().unwrap())
+                    .collect::<Vec<_>>()
+            );
+            assert!(close_native(&n, &n.token, 72).await.is_err());
+            n.storage.close().await.unwrap();
+        }
+    }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_final_close_snapshot_rechecks_after_initial_read() {
+    for case in 0..3 {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut n = setup_mode(&tmp.path().join("late close read corruption"), 16, true).await;
+        let original = n.token.input().id.clone();
+        let f = retry_cycle_mode(&n, fixture(), 1, false).await;
+        retry_reopen(&mut n, &f).await;
+        let key = n.key.clone();
+        let current = n.token.input().id.clone();
+        n.storage.cache().owner.call(move |store| {
+            let s = &mut store.state;
+            let before = native_snapshot(s);
+            let tx = s.connection.transaction()?;
+            {
+                let scope = crate::chunk_mount::read_scope(&tx, &key)?;
+                crate::sparse_views::preparation::ledger::inspect_scoped(&scope)?;
+            }
+            let open = opens::sparse_open(&tx, &current)?;
+            match case {
+                0 => crate::namespace_client::opens::rewrite_epoch_for_test(&tx, &original)?,
+                1 => {
+                    let binding = crate::chunk_mount::load(&tx)?.unwrap();
+                    let mut value = serde_json::to_value(&binding)?;
+                    value["frontier"] = serde_json::json!(value["frontier"].as_u64().unwrap() - 1);
+                    let binding: crate::chunk_mount::Binding = serde_json::from_value(value)?;
+                    tx.execute("UPDATE chunk_mount_role SET record=?1,state_hash=?2", params![serde_json::to_vec(&binding)?, hash(b"s3drive-chunk-mount-binding-v1\0", &binding)?.as_slice()])?;
+                }
+                _ => {
+                    assert_eq!(tx.execute("INSERT INTO windows_mount_sessions SELECT ?1,volume_id,?2,owner_id,zeroblob(32) FROM windows_mount_sessions LIMIT 1", params![hex(&[77;16]),hex(&[78;16])])?, 1);
+                }
+            }
+            // Actual final Close read helper, not an injected mid-Close crash.
+            assert!(crate::sparse_views::preparation::native::validated_result(&tx, &key, open).is_err());
+            tx.rollback()?;
+            assert!(s.connection.is_autocommit());
+            assert_eq!(native_snapshot(s), before);
+            crate::chunk_mount::require(&s.connection, &key)?;
+            Ok(())
+        }).await.unwrap();
+        n.storage.close().await.unwrap();
+    }
 }

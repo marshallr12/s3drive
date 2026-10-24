@@ -432,6 +432,20 @@ impl Token {
         Ok(())
     }
     fn validate(&self, db: &Connection, runtime: &Runtime) -> Result<OpenRecord> {
+        let record = self.validate_runtime(db, runtime)?;
+        crate::chunk_mount::require(db, &self.key)?.open(&record.input)?;
+        Ok(record)
+    }
+    fn validate_scoped(
+        &self,
+        scope: &crate::chunk_mount::ReadScope<'_>,
+        runtime: &Runtime,
+    ) -> Result<OpenRecord> {
+        let record = self.validate_runtime(scope.connection(), runtime)?;
+        scope.binding().open(&record.input)?;
+        Ok(record)
+    }
+    fn validate_runtime(&self, db: &Connection, runtime: &Runtime) -> Result<OpenRecord> {
         let record = opens::sparse_open(db, &self.input.id)?;
         if record.input != self.input
             || !runtime
@@ -441,7 +455,6 @@ impl Token {
         {
             return Err(Failure::Conflict.into());
         }
-        crate::chunk_mount::require(db, &self.key)?.open(&record.input)?;
         Ok(record)
     }
 }
@@ -457,6 +470,8 @@ fn hex(bytes: &[u8]) -> String {
 }
 mod close;
 pub use close::Close;
+#[cfg(test)]
+pub(super) use close::validated_result;
 
 fn is_bound(record: &OpenRecord) -> bool {
     record

@@ -122,3 +122,15 @@ after both completion events. Diagnostics require plans to use one scope and
 completion five, and test that an unsettled preparation still blocks completion
 without changing any persisted row. Other workflows and actual native gates
 remain pending.
+
+The next Linux run still stopped at 178 retained opens. The following Close
+refactor consolidates two read-only intervals: token/runtime/binding validation
+with the initial preparation snapshot, then a fresh full semantic and body
+snapshot after the entire freeze loop. No validation scope crosses preparation
+or event writes, and the intermediate post-Close preparation check remains
+fresh. Diagnostics require Close to use four scopes rather than nine. Tests
+cover empty and dirty-plan Close and exact retries in both opt-in modes, plus
+resealed unselected semantic corruption, frontier changes and an unused damaged
+session after the initial read. The latter exercises the actual final read
+helper with exact rollback, not an injected end-to-end mid-Close fault. All
+runtime and native acceptance limits remain unchanged and pending.

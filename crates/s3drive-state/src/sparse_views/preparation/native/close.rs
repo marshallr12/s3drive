@@ -183,12 +183,18 @@ fn close(state: &mut State, options: Options, token: &Token, callback: &str) -> 
     let tx = state
         .connection
         .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
-    let original = token.validate(&tx, &state.native_sparse)?;
+    // One immutable interval only; the scope ends before prepare can write.
+    let (original, before) = {
+        let scope = crate::chunk_mount::read_scope(&tx, &token.key)?;
+        let original = token.validate_scoped(&scope, &state.native_sparse)?;
+        let before = ledger::inspect_scoped(&scope)?;
+        (original, before)
+    };
     if let Some(old) = original.close() {
         if old.id != callback {
             return Err(Failure::Conflict.into());
         }
-        return result(&tx, original);
+        return result_from_snapshot(&before, original);
     }
     opens::sparse_current(
         &tx,
@@ -198,7 +204,6 @@ fn close(state: &mut State, options: Options, token: &Token, callback: &str) -> 
     if !state.native_sparse.closing(&original.input.id)? {
         return Err(Failure::Conflict.into());
     }
-    let before = ledger::inspect(&tx)?;
     for file in before.views.files.values() {
         let base = file.binding.base()?;
         if base.volume() != original.input.volume || base.node() != original.input.node {
@@ -264,8 +269,9 @@ fn close(state: &mut State, options: Options, token: &Token, callback: &str) -> 
             checkpoint("native-close", "FreezeStored");
         }
     }
-    let result = result(&tx, record)?;
-    metadata::validate(&tx)?;
+    // All freezes are persisted in this transaction before acquiring a fresh
+    // full graph proof. Nothing from the initial read authorizes this result.
+    let result = validated_result(&tx, &token.key, record)?;
     checkpoint("native-close", "Validated");
     tx.commit()?;
     checkpoint("native-close", "Committed");
@@ -292,15 +298,23 @@ fn close_fact(state: &mut State, token: &Token, callback: &str) -> Result<()> {
     }
     Ok(())
 }
-fn result(db: &Connection, open: OpenRecord) -> Result<Close> {
-    let saved = ledger::inspect(db)?;
+pub(in crate::sparse_views::preparation) fn validated_result(
+    tx: &rusqlite::Transaction<'_>,
+    key: &crate::chunk_mount::Key,
+    open: OpenRecord,
+) -> Result<Close> {
+    let scope = crate::chunk_mount::read_scope(tx, key)?;
+    let saved = ledger::inspect_scoped(&scope)?;
+    result_from_snapshot(&saved, open)
+}
+fn result_from_snapshot(saved: &ledger::Snapshot, open: OpenRecord) -> Result<Close> {
     let mut plans = Vec::new();
     for event in &open.events {
         if let Action::FreezeSparse { plan, .. } = event.action {
             plans.push(saved.info(plan)?);
         }
     }
-    sort(&saved, &mut plans)?;
+    sort(saved, &mut plans)?;
     Ok(Close { open, plans })
 }
 fn sort(saved: &ledger::Snapshot, plans: &mut [Info]) -> Result<()> {
