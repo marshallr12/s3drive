@@ -105,3 +105,40 @@ locked version changes. In-memory negative controls visit each excluded table,
 committed writes, rollback and drop/recreate schema changes in both ordinary and
 combined modes. These two tests pass locally. Native/full performance acceptance
 is pending; no measured speedup is claimed from this change alone.
+
+### Additional soak fixtures (acceptance pending)
+
+Two new, separate standard-runner release workloads supplement, never replace,
+the unchanged original six300-save fixtures:1000 actual saves across100 remounts,
+and300 actual saves round-robin across four64KiB files/30 remounts. Every prior
+file value is verified before overwrite; every new value is read after sync and
+Close, and every final file is verified in a new cold owner. Every segment checks
+exact completed count, sparse PUT schedule, retained rows and unchanged4MiB DB /
+8MiB WAL /2MiB staged-payload ceilings. Each native syscall segment still has its
+original120-second bound and subprocess180-second bound. The additional longer
+whole-workload steps have their own45-minute limits; original deadlines remain.
+
+### Private test packaging (not a public release)
+
+`scripts/package-test.py` creates a deterministic, exclusive-output ZIP from a
+clean tracked checkout, a built CLI and an explicit source-file allowlist. Its
+manifest records source commit/tree, compiler/target, lockfile digest and every
+file's SHA256/size. A dependency license inventory is informational, not legal
+clearance. WinFsp/FUSE binaries, credentials, configurations, databases and local
+validation archives are not included. Output must be outside the repository.
+
+Portable tests reject changed bytes, missing/extra/duplicate members, symlinks,
+unsafe paths and overwriting an existing archive. Hosted packaging runs the
+verified bundled CLI after relocating it into a fresh directory, checking
+`--version` and `--help` only. This does not prove driver mounting, installation,
+application saves or reboot. Bundles remain private and are not uploaded as
+public CI artifacts. Project licensing, signing, installer/upgrade behavior and
+physical-machine acceptance remain separate release gates.
+
+Example after building the exact clean source with the pinned compiler:
+
+```text
+cargo metadata --locked --format-version 1 > <private-directory>/dependencies.json
+python scripts/package-test.py --binary <built-CLI> --output <private-directory>/test.zip --target <rustc-host> --dependencies <private-directory>/dependencies.json
+python scripts/package-test.py --verify <private-directory>/test.zip
+```
