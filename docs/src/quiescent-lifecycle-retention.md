@@ -193,3 +193,11 @@ original120-second live sequence,180-second child and all existing gates remain
 unchanged. This is separate from the existing linked-profile1000-save and
 four-file64KiB300-save soaks. Complete per-cycle observations are emitted even
 on success. Execution is pending on the corresponding source commit.
+
+The first100-cycle fixture revision incorrectly requested exclusive creation of
+its surviving protected file on every owner. The corrected fixture creates only
+once and cold-verifies/reopens it thereafter. A separate eight-cycle/two-owner
+native regression covers this boundary before longer acceptance. Live and closed
+checks also bound permanent sessions, source bindings, owner/frontier records,
+reader-session rows, SQLite sequences and physical chunk bytes, not merely the
+erasable forest. Closed checks cover all physical/source/open child tables.

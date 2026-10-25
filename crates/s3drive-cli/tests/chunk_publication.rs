@@ -1491,6 +1491,7 @@ async fn run(mode: &str) {
     let mut component_completed = 0_u64;
     for stage in match mode {
         "native_component_soak100" => vec!["native_component_repeated_mounted"; 25],
+        "native_component_soak8" => vec!["native_component_repeated_mounted"; 2],
         "native_retention_cpu_profile" => vec![
             "native_retention_seed",
             "native_retention_profile_warmup",
@@ -2053,6 +2054,10 @@ async fn run(mode: &str) {
         "native_writer_mount" => 6,
         "native_lifecycle_cold_known" => 3,
         "native_lifecycle_cold_unknown" => 1,
+        "native_component_soak8" => {
+            assert_eq!(component_completed, 8);
+            45
+        }
         "native_component_soak100" => {
             assert_eq!(component_completed, 100);
             551
@@ -2644,4 +2649,11 @@ async fn component_retention_actual_repeated_lifecycle_with_dirty_readers_and_co
 #[ignore = "additional 100-cycle component lifecycle soak; real FUSE/WinFsp required"]
 async fn component_retention_extended_100_lifecycle_cycles_50_mounts() {
     run("component:native_component_soak100").await;
+}
+
+#[cfg(any(target_os = "linux", windows))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "multi-owner component lifecycle regression; real FUSE/WinFsp required"]
+async fn component_retention_actual_multiple_owners_preserve_cold_file_and_bound_permanent_rows() {
+    run("component:native_component_soak8").await;
 }

@@ -59,6 +59,17 @@ physical-hardware acceptance. Private test packaging works on hosted systems,
 not an installer or public release. Provider/headroom, MiniAir driver/native UI,
 startup installation and reboot evidence remain externally blocked.
 
+Latest component diagnostic source `ba665c1a6ffcd4daf9a54906e9139dccfbe1a878`
+passed53 focused state cases, the dispatch-admission regression, five shared
+cases and both actual native component cases (Linux34.44s, Windows90.98s) in
+[run40213501378](https://github.com/marshallr12/s3drive/actions/runs/40213501378).
+The100-cycle fixture had a second-owner create-new bug found during review;
+this is not long-soak acceptance. The next fixture correction reopens and
+cold-verifies its surviving file, adds a two-owner native regression, and bounds
+all permanent owner/session/source rows and physical payloads explicitly.
+Production code is unchanged since306ed181. Full original gates, extended soaks,
+artifact/source verification and independent main acceptance remain required.
+
 ## Corrected fresh linked-native candidate accepted (2026-10-25)
 
 Exact candidate `135a35bcbc8df575f7a9193f40da5e3adffead3c`, tree

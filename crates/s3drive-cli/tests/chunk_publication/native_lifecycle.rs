@@ -39,6 +39,43 @@ async fn mount_configuration(config: &s3drive_core::Config, root: &Path, s: &Ser
     std::fs::write(path, text).unwrap();
 }
 
+fn inspect_component_permanent(db: &rusqlite::Connection) {
+    for (table, maximum) in [
+        ("windows_mount_sessions", 2),
+        ("source_bindings", 1),
+        ("client_identity", 1),
+        ("retained_client_identity", 1),
+        ("chunk_mount_role", 1),
+        ("source_read_pin_session", 1),
+        ("sparse_scoped_mode", 1),
+        ("sparse_retry_mode", 1),
+        ("sqlite_sequence", 16),
+    ] {
+        let count = db
+            .query_row(&format!("SELECT count(*) FROM {table}"), [], |r| {
+                r.get::<_, i64>(0)
+            })
+            .unwrap();
+        assert!(
+            count <= maximum,
+            "permanent {table}={count} exceeds {maximum}"
+        );
+        eprintln!("COMPONENT_PERMANENT table={table} rows={count} maximum={maximum}");
+    }
+    let payload: i64 = db
+        .query_row(
+            "SELECT coalesce(sum(length(data)),0) FROM staged_chunks",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert!(
+        payload <= 2 * 1024 * 1024,
+        "physical payload exceeded bound"
+    );
+    eprintln!("COMPONENT_PHYSICAL payload={payload} maximum=2097152");
+}
+
 fn inspect_component_closed(root: &Path) {
     if !root.join("component-retention-fixture").exists() {
         return;
@@ -48,8 +85,29 @@ fn inspect_component_closed(root: &Path) {
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap();
+    inspect_component_permanent(&db);
     for table in [
         "windows_open_journal",
+        "windows_open_events",
+        "retained_windows_opens",
+        "retired_windows_opens",
+        "recovered_windows_opens",
+        "source_read_pins",
+        "staged_chunks",
+        "staged_extents",
+        "staged_operations",
+        "staged_heads",
+        "write_journal",
+        "remote_intents",
+        "retained_remote_intents",
+        "remote_flushes",
+        "write_settlements",
+        "sparse_view_files",
+        "sparse_view_operations",
+        "sparse_view_blocks",
+        "sparse_preparation_blobs",
+        "sparse_preparation_objects",
+        "sparse_publication_checks",
         "namespace_intents",
         "manifest_creations",
         "sparse_views",
@@ -782,7 +840,10 @@ pub async fn component_repeated_mounted(config: &s3drive_core::Config, root: &Pa
     let base = mount.path.clone();
     let database = root.join("native-state/metadata.sqlite3");
     blocking(&mut mount, move || {
-        let mut protected = std::fs::OpenOptions::new().create_new(true).write(true).read(true).open(base.join("protected.bin")).unwrap();
+        if completed != 0 {
+            assert_eq!(std::fs::read(base.join("protected.bin")).unwrap(), b"unsaved protected");
+        }
+        let mut protected = std::fs::OpenOptions::new().create_new(completed == 0).write(true).read(true).open(base.join("protected.bin")).unwrap();
         protected.write_all(b"unsaved protected").unwrap();
         let mut reader = std::fs::File::open(base.join("protected.bin")).unwrap();
         for cycle in completed..completed+4 {
@@ -813,6 +874,7 @@ pub async fn component_repeated_mounted(config: &s3drive_core::Config, root: &Pa
                 let count = db.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get::<_,i64>(0)).unwrap();
                 assert!(count<=maximum,"cycle {cycle}: {table}={count} exceeds {maximum}");
             }
+            inspect_component_permanent(&db);
             let bytes = std::fs::metadata(&database).unwrap().len();
             let wal = std::fs::metadata(database.with_file_name("metadata.sqlite3-wal")).map(|m|m.len()).unwrap_or(0);
             assert!(bytes<=4*1024*1024 && wal<=8*1024*1024);
