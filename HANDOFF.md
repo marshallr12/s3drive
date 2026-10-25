@@ -4,6 +4,30 @@ Updated 2026-10-25. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
+## Four remaining beta milestones in progress (2026-10-25)
+
+Accepted main is now `3fd2f05e6d833d45cc1bfb70eabe6aa754524402`, independently
+verified in [run40157712514](https://github.com/marshallr12/s3drive/actions/runs/40157712514).
+All seven jobs and 802 exact source blobs were reviewed; Linux1103/Windows1098
+workspace passes, six complete300-save workloads and six artifact digests passed.
+Windows debug mounted300 took1131.24s under the unchanged1200s limit. The older
+pending-main statements below are historical, superseded by this result.
+
+User requested all four remaining milestones: lifecycle cleanup, recovery
+cleanup, performance/longer soak and real-use beta/packaging. Work is on
+`codex/lifecycle-retention-completion` from the accepted main. Existing native
+owned/unlinked lifecycle is already implemented; do not rebuild it or equate it
+with retention. Current linked-retention creation/namespace refusals remain.
+
+The first safety correction preserves the observer session of a persisted
+recovery even if it owns no open. Both session admission and retirement pruning
+must retain that session until its recovery group can be safely reclaimed.
+New pending/finished recovery third-owner tests compile; local execution is
+blocked by the unchanged tmpfs durability guard. Hosted acceptance is pending.
+No old-format migration, provider writes or user-machine changes are included.
+See [the current completion plan](docs/src/beta-completion.md). Private evidence
+remains in the sibling validation directory, never in public commits.
+
 ## Corrected fresh linked-native candidate accepted (2026-10-25)
 
 Exact candidate `135a35bcbc8df575f7a9193f40da5e3adffead3c`, tree

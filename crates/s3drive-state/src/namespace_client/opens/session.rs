@@ -221,6 +221,14 @@ pub(super) fn check_index(db: &Connection) -> Result<()> {
     }
     Ok(())
 }
+// Recovery has its own observing session, which need not own an open. Keep
+// that identity until its complete recovery group is explicitly reclaimed.
+pub(super) fn prune_unused_sessions(db: &Connection, runtime: &str) -> Result<()> {
+    check_index(db)?;
+    db.execute("DELETE FROM windows_mount_sessions WHERE runtime_id<>?1 AND session_id NOT IN (SELECT json_extract(input,'$.session') FROM windows_open_journal) AND session_id NOT IN (SELECT json_extract(input,'$.session') FROM windows_session_recoveries)", [runtime])?;
+    check_index(db)?;
+    Ok(())
+}
 impl Journal<'_> {
     pub fn start_session(&mut self, session: &str, volume: &str) -> Result<()> {
         self.chunk_check()?;
@@ -257,7 +265,7 @@ impl Journal<'_> {
                     "fresh native runtime already has a session; reuse its exact identity".into(),
                 );
             }
-            tx.execute("DELETE FROM windows_mount_sessions WHERE runtime_id<>?1 AND session_id NOT IN (SELECT json_extract(input,'$.session') FROM windows_open_journal)",[&runtime])?;
+            prune_unused_sessions(&tx, &runtime)?;
             if tx.query_row("SELECT count(*) FROM windows_mount_sessions", [], |r| {
                 r.get::<_, i64>(0)
             })? >= 256

@@ -184,7 +184,7 @@ pub(crate) fn erase_native(db: &Connection, records: &[OpenRecord], runtime: &st
             )?;
         }
     }
-    db.execute("DELETE FROM windows_mount_sessions WHERE runtime_id<>?1 AND session_id NOT IN (SELECT json_extract(input,'$.session') FROM windows_open_journal)", [runtime])?;
+    session::prune_unused_sessions(db, runtime)?;
     check_index(db)?;
     Ok(())
 }

@@ -4557,3 +4557,74 @@ async fn native_retry_validation_work_upload_selections_preserve_branches_and_fr
         n.storage.close().await.unwrap();
     }
 }
+
+#[tokio::test]
+async fn native_retry_recovery_observer_session_survives_next_owner_without_an_open() {
+    for finish in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("recovery observer session");
+        let old = setup_mode(&path, 16, true).await;
+        let input = old.token.input().clone();
+        old.storage.close().await.unwrap();
+        let storage = Storage::open(
+            &path,
+            crate::cache::Options::default(),
+            crate::journal::Options::default(),
+        )
+        .await
+        .unwrap();
+        let key = old.key.clone();
+        let original = input.clone();
+        let recovery = storage
+            .cache()
+            .owner
+            .call(move |store| {
+                let state = &mut store.state;
+                let session = crate::chunk_mount::admission::next(
+                    &state.connection,
+                    crate::chunk_mount::AdmissionDomain::Session,
+                )?
+                .unwrap();
+                let mut journal = opens(state, &key);
+                journal.start_session(&session, &original.volume)?;
+                let proof =
+                    journal.prepare_recovery(&session, &original.volume, &original.node, None)?;
+                if finish {
+                    journal.finish_recovery(&session, &proof.input.id)?;
+                }
+                Ok(proof.input)
+            })
+            .await
+            .unwrap();
+        storage.close().await.unwrap();
+        let storage = Storage::open(
+            &path,
+            crate::cache::Options::default(),
+            crate::journal::Options::default(),
+        )
+        .await
+        .unwrap();
+        let key = old.key.clone();
+        storage
+            .cache()
+            .owner
+            .call(move |store| {
+                let state = &mut store.state;
+                let session = crate::chunk_mount::admission::next(
+                    &state.connection,
+                    crate::chunk_mount::AdmissionDomain::Session,
+                )?
+                .unwrap();
+                let mut journal = opens(state, &key);
+                journal.start_session(&session, &input.volume)?;
+                assert!(journal.obsolete_session(&recovery.session, &input.volume)?);
+                assert_eq!(journal.recovered(&input.id)?, finish);
+                assert!(journal.finish_recovery(&session, &recovery.id)?.finished);
+                assert!(journal.recovered(&input.id)?);
+                Ok(())
+            })
+            .await
+            .unwrap();
+        storage.close().await.unwrap();
+    }
+}

@@ -1,0 +1,82 @@
+# Remaining beta completion gates
+
+Research and implementation checkpoint: 2026-10-25. The user requested all four
+items below, using the cloud development workspace where suitable and standard
+public GitHub Actions otherwise. No paid larger runners, weakened durability
+checks, reduced original workloads or increased original deadlines.
+
+Baseline main `3fd2f05e6d833d45cc1bfb70eabe6aa754524402` passed independent full
+[source, logs and artifacts review](https://github.com/marshallr12/s3drive/actions/runs/40157712514).
+This is fresh existing-linked-file retention, not the four remaining milestones.
+Candidate acceptance and subsequent merged-main verification remain separate.
+
+## 1. Creation and namespace lifecycle cleanup
+
+Existing `owned-unlinked-v1` implements create, rename, replacement, unlink and
+open-file lifecycle. The `linked-retention-v1` profile deliberately refuses
+creator and namespace admission. Extending cleanup requires permanent identity
+expiry for namespace/creator admissions, compact original-operation evidence,
+closed dependency groups and reader-safe physical reclamation. Simply deleting
+terminal journal rows or removing the current refusal is unsafe: they remain
+provenance for original opens, owned epochs and exact retries.
+
+Acceptance must cover repeated create/save/rename/replace/unlink with held
+handles, last Close, remount, exact cold bytes and bounded local rows/bytes on
+both FUSE and WinFsp. Dirty, uncertain or conflicting work and cloned readers
+must retain history or impose backpressure, never force a cut. Remote object GC
+is not implied by local journal reclamation.
+
+## 2. Cleanup after recovery
+
+Recovery itself exists. Its observer session can differ from every recovered
+open's original session. Session pruning must preserve both kinds of identity
+while recovery records survive. The current safety correction adds this edge
+to both session-admission and open-retirement pruning, with pending and finished
+recovery fixtures across a third exclusive owner. Local compilation succeeds;
+local durable execution is blocked by tmpfs, not passed. Hosted proof is pending.
+
+Subsequent cleanup needs complete recovery-group proofs, original dirty-source
+and namespace settlement validation, unchanged Close semantics, expired replay
+identities and transactional removal. Recovery abandonment is not an observed
+native Close and cannot fabricate its completion suffix. Unknown outcomes,
+unprepared dirty epochs and live logical/physical readers remain protective.
+
+## 3. Performance and larger/longer soak
+
+Accepted main Windows debug300 took1131.24 seconds against1200. Preserve that
+exact gate and add workloads rather than replace it. Optimize measured repeated
+work without carrying validated graph proofs across writes, awaits or owner
+commands. Pure byte derivations are not authority or successful validation.
+
+Additional acceptance must exercise more files, larger content and more saves,
+including cold owners and storage bounds. Report exact source, profile, workload,
+per-segment timings, DB/WAL/staging peaks and final cold-read result. Diagnostic
+CPU counts and green job summaries alone are not acceptance.
+
+## 4. Real-use beta and packaging
+
+Hosted native/startup tests are not real provider or physical-machine evidence.
+Prepare a reproducible package, isolated installation/startup smoke checks,
+missing-driver behavior, native application save/reopen/rename/delete cases and
+an explicit physical reboot/sign-in checklist. Never install on the user's
+machine, alter startup/security or reboot merely because hosted CI passed.
+
+Proposed live scope, **not yet authorized**: an existing user-selected disposable
+unversioned bucket, fresh empty `s3drive-beta/<random-run-id>/` prefix; at most64
+keys,256 PUT attempts,2000 total HEAD/GET/LIST calls and64 exact-key cleanup DELETEs;
+64MiB uploaded and256MiB downloaded. Preflight, retries and pagination all count.
+Stop before any cap; preserve uncertain objects. Cleanup requires recorded exact
+identity/content and no unrelated keys. No recursive bucket deletion, bucket or
+account configuration change, or use of exhausted historical Wasabi permissions.
+
+The provider and spending ceiling need user confirmation; no verified price or
+claim of zero cost is supplied. A capability renewal probe, if needed, requires
+its own isolated reserved conformance scope and explicit allocation within the
+approved totals; an application prefix is not a capability probe prefix.
+Credentials must stay in private supported configuration, never chat or Git.
+
+Physical testing requires selection and authorization of the intended Windows
+host, isolated directories/mount, driver inspection first, separately approved
+installation if absent, temporary startup registration and user-scheduled reboot.
+A reboot interrupts sessions and unsaved applications. Linux MX requires separate
+host authorization. Record blocked gates honestly while independent work proceeds.
