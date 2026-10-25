@@ -68,7 +68,7 @@ missing-driver behavior, native application save/reopen/rename/delete cases and
 an explicit physical reboot/sign-in checklist. Never install on the user's
 machine, alter startup/security or reboot merely because hosted CI passed.
 
-Proposed live scope, **not yet authorized**: an existing user-selected disposable
+Proposed live scope, **writes still blocked**: an existing disposable
 unversioned bucket, fresh empty `s3drive-beta/<random-run-id>/` prefix; at most64
 keys,256 PUT attempts,2000 total HEAD/GET/LIST calls and64 exact-key cleanup DELETEs;
 64MiB uploaded and256MiB downloaded. Preflight, retries and pagination all count.
@@ -76,15 +76,19 @@ Stop before any cap; preserve uncertain objects. Cleanup requires recorded exact
 identity/content and no unrelated keys. No recursive bucket deletion, bucket or
 account configuration change, or use of exhausted historical Wasabi permissions.
 
-The provider and spending ceiling need user confirmation; no verified price or
-claim of zero cost is supplied. A capability renewal probe, if needed, requires
+The user permits bucket selection and requires staying within the existing1TB
+Wasabi plan, with no incremental overages. Actual usage/headroom and retained
+deleted-storage accounting are not verified; the account console is not signed
+in. No price or claim of zero cost is supplied. A capability renewal probe, if needed, requires
 its own isolated reserved conformance scope and explicit allocation within the
 approved totals; an application prefix is not a capability probe prefix.
 Credentials must stay in private supported configuration, never chat or Git.
 
-Physical testing requires selection and authorization of the intended Windows
-host, isolated directories/mount, driver inspection first, separately approved
-installation if absent, temporary startup registration and user-scheduled reboot.
+MiniAir was authorized for testing and read-only readiness inspection found
+Windows11 x64, ample NTFS space and no WinFsp. The user has no desktop access
+currently; interactive driver installation, temporary startup registration and
+reboot remain pending specific approval and access. Native UI automation is not
+available through the current host tools. No installation or reboot occurred.
 A reboot interrupts sessions and unsaved applications. Linux MX requires separate
 host authorization. Record blocked gates honestly while independent work proceeds.
 
@@ -142,3 +146,22 @@ cargo metadata --locked --format-version 1 > <private-directory>/dependencies.js
 python scripts/package-test.py --binary <built-CLI> --output <private-directory>/test.zip --target <rustc-host> --dependencies <private-directory>/dependencies.json
 python scripts/package-test.py --verify <private-directory>/test.zip
 ```
+
+### Recovery atomicity and current validation status
+
+The next candidate adds killed-owner checks at eligibility, evidence erasure,
+post-validation and commit. Precommit deaths must preserve the complete original
+snapshot; committed deletion must remove the complete group. Every precommit
+case then retries from a fresh owner, followed by another cold validation.
+A coherently resealed observer session sharing the original runtime must not
+turn a same-owner open into an abandoned one. These are modeled protocol tests,
+not native mount or provider acceptance.
+
+Candidate `57bda5d471da329562be9ea4dd31f9342c87a149` is running
+[the expanded suite](https://github.com/marshallr12/s3drive/actions/runs/40203142413).
+Its predecessor's package smoke assumed the wrong CLI version prefix; this
+candidate corrects it to the exact metadata package name. Actual relocated CLI
+smoke passed locally; complete hosted log review remains pending. The SQL-only
+candidate's fixed two-save Callgrind count fell from25,571,642,463 to23,032,359,387
+instructions (about9.9%); this is diagnostic evidence, not a wall-time speedup or
+acceptance. No candidate has replaced accepted main yet.

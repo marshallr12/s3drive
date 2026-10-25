@@ -28,6 +28,17 @@ No old-format migration, provider writes or user-machine changes are included.
 See [the current completion plan](docs/src/beta-completion.md). Private evidence
 remains in the sibling validation directory, never in public commits.
 
+Current unaccepted branch head before the next recovery-test update is
+`57bda5d471da329562be9ea4dd31f9342c87a149`, running expanded suite
+[40203142413](https://github.com/marshallr12/s3drive/actions/runs/40203142413).
+Changes include narrow no-effect recovery group cleanup, SQL statement caching
+with unchanged validation, additional1000-save and four64KiB-file soaks, and
+private deterministic test packaging. General creation/namespace and recovered
+publisher reclamation are still unfinished. MiniAir readiness found no WinFsp;
+installation/native application/reboot checks and actual Wasabi headroom remain
+blocked. See the completion plan for precise scope. No new main acceptance or
+public release is claimed.
+
 ## Corrected fresh linked-native candidate accepted (2026-10-25)
 
 Exact candidate `135a35bcbc8df575f7a9193f40da5e3adffead3c`, tree

@@ -243,7 +243,9 @@ pub(super) fn no_effect_retirement_groups(
             .optional()?;
         let Some(key) = key else { continue };
         let (input, proof) = recovery(db, &key)?;
-        if input.cancel.is_some()
+        if binding(db, &input.session, &input.volume)?
+            == binding(db, &record.input.session, &record.input.volume)?
+            || input.cancel.is_some()
             || proof.as_ref().is_none_or(|p| p.closure.is_some())
             || input
                 .opens

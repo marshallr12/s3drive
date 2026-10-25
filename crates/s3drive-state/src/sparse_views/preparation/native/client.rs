@@ -334,13 +334,17 @@ impl Client {
                 }) {
                     return Err(Failure::Conflict.into());
                 }
+                checkpoint("native-no-effect-retire", "Eligible");
                 opens::erase_native(
                     &tx,
                     &records,
                     state.incarnation.as_deref().ok_or(Failure::Conflict)?,
                 )?;
+                checkpoint("native-no-effect-retire", "Erased");
                 metadata::validate(&tx)?;
+                checkpoint("native-no-effect-retire", "Validated");
                 tx.commit()?;
+                checkpoint("native-no-effect-retire", "Committed");
                 state.native_sparse.forget_retired(&records);
                 Ok(true)
             })

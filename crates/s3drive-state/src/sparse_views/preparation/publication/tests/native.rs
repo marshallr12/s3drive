@@ -4747,3 +4747,217 @@ async fn native_retry_validation_work_no_effect_recovery_reclaims_complete_group
         view
     );
 }
+
+async fn recovered_no_effect_fixture(path: &std::path::Path) -> (Storage, Client) {
+    let old = setup_mode(path, 16, true).await;
+    let input = old.token.input().clone();
+    old.storage.close().await.unwrap();
+    let storage = Storage::open(
+        path,
+        crate::cache::Options::default(),
+        crate::journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    let capability = crate::chunk_mount::Client::new(
+        storage.cache().owner,
+        crate::journal::Options::default(),
+        old.key,
+    );
+    let session = capability
+        .next_admission(crate::chunk_mount::AdmissionDomain::Session)
+        .await
+        .unwrap()
+        .unwrap();
+    let journal = capability.opens();
+    journal
+        .start_session(session.clone(), input.volume.clone())
+        .await
+        .unwrap();
+    let recovery = journal
+        .prepare_recovery(session.clone(), input.volume, input.node, None)
+        .await
+        .unwrap();
+    journal
+        .finish_recovery(session, recovery.input.id)
+        .await
+        .unwrap();
+    journal.retire(input.id).await.unwrap();
+    let collector = capability
+        .native_sparse(views::Options::default(), Options::default())
+        .unwrap();
+    (storage, collector)
+}
+
+#[tokio::test]
+async fn native_retry_no_effect_recovery_killed_owner_rolls_back_or_commits_whole_group() {
+    use std::process::{Command, Stdio};
+    use std::time::{Duration, Instant};
+    for point in ["Eligible", "Erased", "Validated", "Committed"] {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("killed no-effect recovery");
+        let ready = tmp.path().join("ready");
+        let (storage, _) = recovered_no_effect_fixture(&path).await;
+        let before = storage
+            .cache()
+            .owner
+            .call(|store| Ok(native_snapshot(&store.state)))
+            .await
+            .unwrap();
+        storage.close().await.unwrap();
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "sparse_views::preparation::publication::tests::barriers::native::native_retry_no_effect_recovery_crash_child", "--nocapture"])
+            .env("S3DRIVE_NO_EFFECT_CRASH_DIR", &path)
+            .env("S3DRIVE_MIXED_CRASH_KIND", "native-no-effect-retire")
+            .env("S3DRIVE_MIXED_CRASH_POINT", point)
+            .env("S3DRIVE_MIXED_CRASH_READY", &ready)
+            .stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::piped()).spawn().unwrap();
+        let started = Instant::now();
+        while !ready.exists() {
+            if let Some(status) = child.try_wait().unwrap() {
+                use std::io::Read;
+                let mut err = String::new();
+                child
+                    .stderr
+                    .take()
+                    .unwrap()
+                    .read_to_string(&mut err)
+                    .unwrap();
+                panic!("{point}: {status}: {err}");
+            }
+            if started.elapsed() > Duration::from_secs(30) {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("no-effect retirement checkpoint timeout: {point}");
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert!(State::open_managed(&path).is_err());
+        child.kill().unwrap();
+        assert!(!child.wait().unwrap().success());
+        let state = State::open_managed(&path).unwrap();
+        if point != "Committed" {
+            assert_eq!(native_snapshot(&state), before);
+        }
+        for table in [
+            "windows_session_recoveries",
+            "recovered_windows_opens",
+            "windows_open_journal",
+        ] {
+            assert_eq!(
+                state
+                    .connection
+                    .query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r
+                        .get::<_, i64>(0))
+                    .unwrap(),
+                i64::from(point != "Committed")
+            );
+        }
+        crate::chunk_mount::validate_all(&state.connection).unwrap();
+        drop(state);
+        // Every precommit kill is retryable, and a committed erase is an
+        // idempotent no-op. Reopen once more to verify the retry itself persisted.
+        let (storage, collector) = reopen_no_effect_collector(&path).await;
+        assert_eq!(
+            collector
+                .retire_linked(fixture().node.id.clone())
+                .await
+                .unwrap(),
+            point != "Committed"
+        );
+        assert!(!collector.retire_linked(fixture().node.id).await.unwrap());
+        storage.close().await.unwrap();
+        let state = State::open_managed(&path).unwrap();
+        crate::chunk_mount::validate_all(&state.connection).unwrap();
+        for table in [
+            "windows_session_recoveries",
+            "recovered_windows_opens",
+            "windows_open_journal",
+        ] {
+            assert_eq!(
+                state
+                    .connection
+                    .query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r
+                        .get::<_, i64>(0))
+                    .unwrap(),
+                0
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn native_retry_no_effect_recovery_crash_child() {
+    let Some(path) = std::env::var_os("S3DRIVE_NO_EFFECT_CRASH_DIR") else {
+        return;
+    };
+    let (storage, collector) = reopen_no_effect_collector(std::path::Path::new(&path)).await;
+    assert!(collector.retire_linked(fixture().node.id).await.unwrap());
+    storage.close().await.unwrap();
+}
+
+async fn reopen_no_effect_collector(path: &std::path::Path) -> (Storage, Client) {
+    let storage = Storage::open(
+        path,
+        crate::cache::Options::default(),
+        crate::journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    let key = storage
+        .cache()
+        .owner
+        .call(|store| {
+            Ok(crate::chunk_mount::load(&store.state.connection)?
+                .unwrap()
+                .key())
+        })
+        .await
+        .unwrap();
+    let collector = Client::new(
+        storage.cache().owner,
+        key,
+        views::Options::default(),
+        Options::default(),
+    )
+    .unwrap();
+    (storage, collector)
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_no_effect_recovery_rejects_resealed_same_runtime() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp
+        .path()
+        .join("same runtime recovery cannot authorize erasure");
+    let (storage, collector) = recovered_no_effect_fixture(&path).await;
+    let before = storage.cache().owner.call(|store| {
+        let db = &store.state.connection;
+        let original: String = db.query_row("SELECT json_extract(input,'$.session') FROM windows_open_journal", [], |r| r.get(0))?;
+        let runtime: String = db.query_row("SELECT runtime_id FROM windows_mount_sessions WHERE session_id=?1", [&original], |r| r.get(0))?;
+        let observer: String = db.query_row("SELECT json_extract(input,'$.session') FROM windows_session_recoveries", [], |r| r.get(0))?;
+        let (volume, owner): (String, String) = db.query_row("SELECT volume_id,owner_id FROM windows_mount_sessions WHERE session_id=?1", [&observer], |r| Ok((r.get(0)?, r.get(1)?)))?;
+        let seal = hash(b"s3drive-mount-session-v1\0", &(&observer, &volume, &runtime, &owner))?;
+        assert_eq!(db.execute("UPDATE windows_mount_sessions SET runtime_id=?1,state_hash=?2 WHERE session_id=?3", rusqlite::params![runtime, seal.as_slice(), observer])?, 1);
+        Ok(native_snapshot(&store.state))
+    }).await.unwrap();
+    assert!(collector.retire_linked(fixture().node.id).await.is_err());
+    storage
+        .cache()
+        .owner
+        .call(move |store| {
+            assert_eq!(native_snapshot(&store.state), before);
+            assert_eq!(
+                store.state.connection.query_row(
+                    "SELECT count(*) FROM windows_session_recoveries",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                1
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    storage.close().await.unwrap();
+}
