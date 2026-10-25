@@ -1111,3 +1111,85 @@ fn native_retry_validation_work_component_creation_requires_exact_retained_physi
     j(&mut s).acknowledge(&i.operation, &q, receipt).unwrap();
     crate::chunk_mount::validate_all(&s.connection).unwrap();
 }
+
+#[tokio::test]
+async fn native_retry_validation_work_component_expired_creator_cannot_restage_or_reclaim_generation_id()
+ {
+    let tmp = tempfile::tempdir().unwrap();
+    let (mut state, mut authority, _key, mut input) = setup_contract(tmp.path(), true);
+    input.owner = None;
+    let original = ack(&mut state, &mut authority, &input);
+    let generation = original.generation().unwrap();
+    let admitted = chunk_mount::Input {
+        volume: input.volume.clone(),
+        controls: vec![names::Control {
+            store: input.store.clone(),
+            source: input.source,
+            fingerprint: input.fingerprint.clone(),
+        }],
+    };
+    drop(state);
+    let storage = crate::worker::Storage::open(
+        &tmp.path().join("client"),
+        crate::cache::Options::default(),
+        journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    let capability = storage.chunk_mount_components(admitted).await.unwrap();
+    let collector = capability
+        .native_sparse(
+            crate::sparse_views::Options::default(),
+            crate::sparse_views::preparation::Options::default(),
+        )
+        .unwrap();
+    assert!(
+        collector
+            .retire_component(input.operation.clone())
+            .await
+            .unwrap()
+    );
+    let old = input.clone();
+    storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            let before = catalog(s);
+            assert!(j(s).begin(old.clone()).is_err());
+            assert!(
+                journal::Journal::new(s, journal::Options::default())?
+                    .begin_operation(&old.stage_key()?, &old.target()?, Base::Missing, None, 64)
+                    .is_err()
+            );
+            assert!(
+                remote::Journal::new(s, remote::Options::default())?
+                    .prepare(generation)
+                    .is_err()
+            );
+            assert_eq!(catalog(s), before);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    input.operation = capability
+        .next_admission(chunk_mount::AdmissionDomain::Creation)
+        .await
+        .unwrap()
+        .unwrap();
+    input.name = "new immutable identity.bin".into();
+    storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            j(s).begin(input.clone())?;
+            let next = staged(s, &input);
+            assert!(next.value() > generation.value());
+            crate::chunk_mount::validate_all(&s.connection)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    storage.close().await.unwrap();
+}

@@ -677,3 +677,83 @@ pub async fn acknowledged_history(config: &s3drive_core::Config, root: &Path, s:
     assert!(fs.lookup(ROOT, "history.bin").await.is_err());
     native_writer::stop(fs).await;
 }
+
+/// Repeated real SDK create/rename/unlink closure while unrelated dirty handles
+/// and their cached reader remain live. No test-only collector calls.
+pub async fn component_repeated(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    let c = configuration(config, root, s).await;
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    let protected = fs
+        .create_file(ROOT, "protected.bin", |a, b| a == b, true)
+        .await
+        .unwrap();
+    protected
+        .write(0, Arc::from(&b"unsaved protected"[..]), false, false)
+        .await
+        .unwrap();
+    let reader = fs.open(protected.node.id).await.unwrap();
+    assert_eq!(reader.read(0, 64).await.unwrap(), b"unsaved protected");
+    for cycle in 0..4 {
+        let from = format!("temporary-{cycle}.bin");
+        let to = format!("renamed-{cycle}.bin");
+        let file = fs
+            .create_file(ROOT, &from, |a, b| a == b, true)
+            .await
+            .unwrap();
+        file.write(0, Arc::from(&b"initial content"[..]), false, false)
+            .await
+            .unwrap();
+        fs.rename_entry(ROOT, &from, ROOT, &to, false, |a, b| a == b)
+            .await
+            .unwrap();
+        assert!(fs.lookup(ROOT, &from).await.is_err());
+        assert_eq!(file.read(0, 64).await.unwrap(), b"initial content");
+        fs.remove_entry(ROOT, &to, false).await.unwrap();
+        assert!(fs.lookup(ROOT, &to).await.is_err());
+        file.write(0, Arc::from(&b"FINAL"[..]), false, false)
+            .await
+            .unwrap();
+        assert_eq!(file.read(0, 64).await.unwrap(), b"FINALal content");
+        file.native_object().unwrap().close().await.unwrap();
+        drop(file);
+        assert_eq!(reader.read(0, 64).await.unwrap(), b"unsaved protected");
+        let db = rusqlite::Connection::open_with_flags(
+            root.join("native-state/metadata.sqlite3"),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        for (table, count) in [
+            ("windows_open_journal", 2),
+            ("sparse_view_files", 1),
+            ("namespace_intents", 0),
+            ("manifest_creations", 0),
+            ("sparse_preparations", 0),
+            ("staged_generations", 0),
+        ] {
+            assert_eq!(
+                db.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r
+                    .get::<_, i64>(0))
+                    .unwrap(),
+                count,
+                "cycle {cycle} retained {table}"
+            );
+        }
+        eprintln!(
+            "COMPONENT_REPEAT cycle={cycle} unrelated_dirty_read=exact retained_files=1 retained_opens=2 physical=0"
+        );
+    }
+    protected.native_object().unwrap().close().await.unwrap();
+    assert_eq!(reader.read(0, 64).await.unwrap(), b"unsaved protected");
+    reader.native_object().unwrap().close().await.unwrap();
+    drop((protected, reader));
+    native_writer::stop(fs).await;
+    inspect_component_closed(root);
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    let node = fs.lookup(ROOT, "protected.bin").await.unwrap();
+    let file = fs.open(node.id).await.unwrap();
+    assert_eq!(file.read(0, 64).await.unwrap(), b"unsaved protected");
+    file.native_object().unwrap().close().await.unwrap();
+    drop(file);
+    native_writer::stop(fs).await;
+    inspect_component_closed(root);
+}

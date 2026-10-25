@@ -1,7 +1,7 @@
 # Experimental quiescent lifecycle retention
 
-Design checkpoint: 2026-10-25. **Unaccepted state-protocol prototype**, not a
-completed beta milestone or a mounted configuration option. The accepted
+Design checkpoint: 2026-10-25. **Unaccepted component-retention implementation**, not a
+completed beta milestone. A separate experimental mounted profile is available. The accepted
 `linked-retention-v1`, `owned-unlinked-v1` and absent/default profiles remain
 unchanged. No old-store conversion and no remote object deletion are proposed.
 
@@ -17,7 +17,7 @@ This prototype introduces a separate fresh combined-owner contract, admitted by
 `chunk_mount::admit_quiescent`, while keeping the existing version2 owner and
 monotonic admission frontier. Its explicit additional mode field prevents
 ordinary or linked admission from silently adopting this owner. The mode cannot
-contain linked-retention anchors. It currently exposes a state API only.
+contain linked-retention anchors. It exposes state APIs and an experimental fresh mounted profile.
 
 Instead of manufacturing a smaller proof for surviving data, a successful cut
 removes an entire validated local dependency forest. No local source survives
@@ -67,11 +67,10 @@ its actual creation route has been tested.
    only within the transaction and explicitly checked before commit; checking
    is never disabled.
 
-At present the selected forest is the **whole local store**. One unrelated live
-handle or reader can defer all reclamation. This is conservative backpressure,
-not completed cleanup under arbitrary concurrent or long-held-open workloads.
-Per-connected-component cuts and bounded repeated native lifecycle workloads
-remain required before claiming the broader lifecycle milestone complete.
+The original `retire_quiescent` API selects the whole store. The newer
+`retire_component` API selects a closed namespace-connected component while
+retaining unrelated live handles, readers and dirty work exactly. Broader bounded
+native lifecycle acceptance remains required before the milestone is complete.
 
 ## Acceptance still required
 
@@ -154,3 +153,13 @@ refusal. Candidate discovery now includes metadata-only records; six component
 process-kill boundaries retain an unrelated dirty file across rollback or commit.
 The SQLite AUTOINCREMENT sequence is explicitly included in unchanged permanent
 state checks, preventing generation identity reuse after empty-forest collection.
+
+On exact `160113a61d404ca81a9e2dcf5a5dc749a1317e8b`,
+[run40210526528](https://github.com/marshallr12/s3drive/actions/runs/40210526528)
+passed50 focused state cases and all4 shared create/unlink/replacement/cold-recovery
+cases, with closed-forest zero-count assertions. The complete diagnostic log was
+reviewed. Actual native and full-suite acceptance are still pending. A subsequent
+repeat test retains two unrelated dirty-file handles while cycling creation,
+rename, unlinked writes and actual Close; no test-only collection is invoked.
+Local aggregate gate reached successful format/Clippy but failed durable authority
+initialization on this unsupported local filesystem; it is not a local pass.

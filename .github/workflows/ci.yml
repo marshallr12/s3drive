@@ -351,6 +351,9 @@ jobs:
       - name: Measure actual native syscall phases and owned daemon CPU
         timeout-minutes: 5
         run: cargo test -p s3drive-cli --test chunk_publication native_retention_validation_work_native_phases --locked -- --exact --ignored --nocapture --test-threads=1
+      - name: Diagnose component cleanup through actual native callbacks
+        timeout-minutes: 8
+        run: cargo test -p s3drive-cli --test chunk_publication component_retention_actual_ --locked -- --ignored --nocapture --test-threads=1
   native-cpu-profile:
     # Diagnostic only. Profiler wall time is not native/runtime acceptance.
     runs-on: ubuntu-latest
