@@ -86,6 +86,23 @@ fn inspect_component_closed(root: &Path) {
     )
     .unwrap();
     inspect_component_permanent(&db);
+    let integrity: Vec<String> = db
+        .prepare("PRAGMA integrity_check")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert_eq!(integrity, ["ok"], "closed component SQLite integrity");
+    let foreign: bool = db
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM pragma_foreign_key_check)",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert!(!foreign, "closed component foreign-key violation");
+    eprintln!("COMPONENT_SQLITE integrity=ok foreign_keys=ok");
     for table in [
         "windows_open_journal",
         "windows_open_events",

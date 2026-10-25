@@ -212,3 +212,26 @@ preserve the entire catalog and original physical bytes; staging/linking a truly
 independent generation then succeeds. This tests the earlier invariant rather
 than constructing a falsely valid shared-generation witness. Component selection
 also independently refuses intersections with surviving creator/plan generations.
+
+## Linux SQLite lock-lifetime correction (acceptance pending)
+
+Research2026-10-25: a longer live-reader soak failed at cycle31 with SQLite's
+malformed-image error; a separate unchanged-production100-cycle run passed.
+Neither result justifies ignoring the intermittent failure. A deterministic
+cross-process probe then showed that a reopened live SQLite owner no longer
+held its SHM deadman lock. `OwnedDirectory::finish_initialization` opened and
+closed ordinary descriptors for SQLite's DB/WAL/SHM after SQLite established
+its own locks. POSIX close releases the process's locks on that inode, even
+when another descriptor still needs them. This is a documented application
+hazard, not evidence that upgrading SQLite would fix it.
+[SQLite locking guidance](https://www.sqlite.org/howtocorrupt.html#posix_advisory_locks_canceled_by_a_separate_thread_doing_close_).
+
+The Linux correction retains post-open verification handles before validating
+or tightening permissions. `State` drops SQLite first; the owned directory then
+drops verification handles **before** releasing its exclusive directory lock,
+including initialization-error paths. Windows descriptor behavior is unchanged.
+No permission, storage, reader or deadline guard is weakened. The deterministic
+probe fails on the earlier code and passes after retention; a separate external
+read-only SQLite observer exercises repeated writer owners and integrity checks.
+Local tmpfs results establish locking behavior only, not durable acknowledgment.
+Actual FUSE/WinFsp, repeated long soaks, crash and full acceptance remain required.

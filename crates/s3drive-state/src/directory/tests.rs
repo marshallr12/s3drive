@@ -232,3 +232,188 @@ fn cross_process_lock_survives_contenders_and_releases_after_kill() {
     assert!(reopened.register_source(&[9; 32], &"b".repeat(64)).is_err());
     assert!(path.join(LOCK).is_file());
 }
+
+#[cfg(target_os = "linux")]
+#[test]
+fn native_retry_validation_work_sqlite_wal_deadman_lock_survives_directory_reopen_validation() {
+    const CHILD: &str = "S3DRIVE_WAL_LOCK_PROBE";
+    if let Some(path) = std::env::var_os(CHILD) {
+        use nix::fcntl::{FcntlArg, fcntl};
+        // SQLite's documented unix SHM lock layout: deadman switch byte128.
+        // A separate process must not acquire it exclusively while SQLite lives.
+        let file = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(path)
+            .unwrap();
+        let lock = nix::libc::flock {
+            l_type: nix::libc::F_WRLCK as _,
+            l_whence: nix::libc::SEEK_SET as _,
+            l_start: 128,
+            l_len: 1,
+            l_pid: 0,
+        };
+        let result = fcntl(&file, FcntlArg::F_SETLK(&lock));
+        assert!(
+            matches!(
+                result,
+                Err(nix::errno::Errno::EAGAIN | nix::errno::Errno::EACCES)
+            ),
+            "live SQLite deadman lock missing: {result:?}"
+        );
+        return;
+    }
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("lock-protected SQLite");
+    let mut state = State::open_managed(&path).unwrap();
+    state.register_source(&[7; 32], &"a".repeat(64)).unwrap();
+    drop(state);
+    let state = State::open_managed(&path).unwrap();
+    let output = Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "directory::tests::native_retry_validation_work_sqlite_wal_deadman_lock_survives_directory_reopen_validation", "--nocapture"])
+        .env(CHILD, path.join("metadata.sqlite3-shm"))
+        .output().unwrap();
+    assert!(
+        output.status.success(),
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    drop(state);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn native_retry_validation_work_sqlite_external_observer_preserves_reopened_writer_and_integrity() {
+    const CHILD: &str = "S3DRIVE_WAL_READER_PROBE";
+    if let Some(root) = std::env::var_os(CHILD) {
+        let root = PathBuf::from(root);
+        let db = rusqlite::Connection::open_with_flags(
+            root.join("state/metadata.sqlite3"),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        db.busy_timeout(Duration::from_secs(2)).unwrap();
+        let mut previous: i64 = db
+            .query_row("SELECT value FROM lock_probe", [], |r| r.get(0))
+            .unwrap();
+        fs::write(root.join("observer-ready"), b"ready").unwrap();
+        for _ in 0..200 {
+            let value: i64 = db
+                .query_row("SELECT value FROM lock_probe", [], |r| r.get(0))
+                .unwrap();
+            assert!(value >= previous && value <= 400);
+            previous = value;
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        assert_eq!(
+            db.query_row("PRAGMA integrity_check", [], |r| r.get::<_, String>(0))
+                .unwrap(),
+            "ok"
+        );
+        return;
+    }
+    // Locking/SQLite consistency test, not durable staging acknowledgment.
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("state");
+    let state = State::open_managed(&path).unwrap();
+    state
+        .connection
+        .execute_batch(
+            "CREATE TABLE lock_probe(value INTEGER NOT NULL); INSERT INTO lock_probe VALUES(0)",
+        )
+        .unwrap();
+    drop(state);
+    for round in 0..4 {
+        let state = State::open_managed(&path).unwrap();
+        let ready = tmp.path().join("observer-ready");
+        if ready.exists() {
+            fs::remove_file(&ready).unwrap();
+        }
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "directory::tests::native_retry_validation_work_sqlite_external_observer_preserves_reopened_writer_and_integrity", "--nocapture"])
+            .env(CHILD, tmp.path()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
+        let until = Instant::now() + Duration::from_secs(5);
+        while !ready.exists() {
+            assert!(
+                child.try_wait().unwrap().is_none(),
+                "observer exited before ready"
+            );
+            assert!(Instant::now() < until, "observer readiness timeout");
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        for _ in 0..100 {
+            state
+                .connection
+                .execute("UPDATE lock_probe SET value=value+1", [])
+                .unwrap();
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        let output = child.wait_with_output().unwrap();
+        assert!(
+            output.status.success(),
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(
+            state
+                .connection
+                .query_row("SELECT value FROM lock_probe", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            (round + 1) * 100
+        );
+        assert_eq!(
+            state
+                .connection
+                .query_row("PRAGMA integrity_check", [], |r| r.get::<_, String>(0))
+                .unwrap(),
+            "ok"
+        );
+        drop(state);
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn native_retry_validation_work_sqlite_failed_verification_keeps_locks_until_connection_closes() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("failed verification");
+    let mut owner = OwnedDirectory::acquire(&path).unwrap();
+    let state = State::open(&owner.database_path()).unwrap();
+    state
+        .connection
+        .execute_batch("CREATE TABLE lock_probe(value INTEGER); INSERT INTO lock_probe VALUES(1)")
+        .unwrap();
+    // Inject an invalid sidecar only after SQLite has established its locks.
+    // Retained verification handles must remain alive even on this error path.
+    let other = tmp.path().join("linked synthetic sidecar");
+    fs::write(&other, b"not a hot journal").unwrap();
+    fs::hard_link(&other, path.join("metadata.sqlite3-journal")).unwrap();
+    let error = owner.finish_initialization().unwrap_err();
+    assert!(
+        error.to_string().contains("hard links are refused"),
+        "{error}"
+    );
+    let output = Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "directory::tests::native_retry_validation_work_sqlite_wal_deadman_lock_survives_directory_reopen_validation", "--nocapture"])
+        .env("S3DRIVE_WAL_LOCK_PROBE", path.join("metadata.sqlite3-shm"))
+        .output().unwrap();
+    assert!(
+        output.status.success(),
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    drop(state);
+    drop(owner);
+    fs::remove_file(path.join("metadata.sqlite3-journal")).unwrap();
+    let reopened = State::open_managed(&path).unwrap();
+    assert_eq!(
+        reopened
+            .connection
+            .query_row("SELECT value FROM lock_probe", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
+}

@@ -82,6 +82,18 @@ promptly. Source32cbd07 passed54 focused proofs (including physical alias refusa
 and three actual cases on each OS, but these do not override the longer failure.
 All component acceptance and merge remain blocked pending diagnosis/fix/full gates.
 
+Investigation found a deterministic Linux lock-lifetime defect in preexisting
+`OwnedDirectory::finish_initialization`: closing ordinary verification handles
+for DB/WAL/SHM after SQLite opens releases its POSIX locks. An external process
+could acquire the reopened live owner's SHM deadman lock; the baseline probe
+fails and Linux-only retained-handle correction passes. Verification handles
+now outlive SQLite but close before releasing directory ownership, including
+error paths. Windows handling is unchanged. External read-only observer tests
+and directory regressions pass locally (locking evidence, not durable staging).
+The soak retains live observers, adds per-segment SQLite integrity checks and
+three extra100-cycle repeats under a separate45-minute budget; no original
+workload or deadline changes. Full exact-source hosted verification is pending.
+
 ## Corrected fresh linked-native candidate accepted (2026-10-25)
 
 Exact candidate `135a35bcbc8df575f7a9193f40da5e3adffead3c`, tree

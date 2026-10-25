@@ -516,6 +516,14 @@ jobs:
       - name: Additional component 100 lifecycle cycles with dirty readers and 50 mounts
         timeout-minutes: 45
         run: cargo test -p s3drive-cli --test chunk_publication --release component_retention_extended_100_lifecycle_cycles_50_mounts --locked -- --exact --ignored --nocapture --test-threads=1
+      - name: Repeat component stress with live external observers and cold integrity checks
+        timeout-minutes: 45
+        shell: bash
+        run: |
+          for repeat in 1 2 3; do
+            echo "COMPONENT_REPEAT_RUN=$repeat"
+            cargo test -p s3drive-cli --test chunk_publication --release component_retention_extended_100_lifecycle_cycles_50_mounts --locked -- --exact --ignored --nocapture --test-threads=1
+          done
       - name: Additional actual 1000-save and 100-remount release soak
         timeout-minutes: 45
         run: cargo test -p s3drive-cli --test chunk_publication --release native_retention_extended_1000_saves_100_remounts --locked -- --ignored --exact --nocapture --test-threads=1

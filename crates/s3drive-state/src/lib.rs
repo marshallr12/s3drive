@@ -129,7 +129,7 @@ impl State {
     }
 
     fn open_owned(
-        owner: directory::OwnedDirectory,
+        mut owner: directory::OwnedDirectory,
         expected: Option<(&str, &str)>,
     ) -> Result<Self> {
         let mut state = match expected {
