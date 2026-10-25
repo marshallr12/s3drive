@@ -65,10 +65,14 @@ fn id(raw: Vec<u8>) -> Result<Id> {
     raw.try_into().map_err(|_| Failure::Corrupt.into())
 }
 fn has(db: &Connection, sql: &str) -> Result<bool> {
-    db.query_row(sql, [], |r| r.get(0)).map_err(Into::into)
+    db.prepare_cached(sql)?
+        .query_row([], |r| r.get(0))
+        .map_err(Into::into)
 }
 fn total(db: &Connection, sql: &str) -> Result<u64> {
-    db.query_row(sql, [], |r| number(r, 0)).map_err(Into::into)
+    db.prepare_cached(sql)?
+        .query_row([], |r| number(r, 0))
+        .map_err(Into::into)
 }
 /// Preparation tables have no application triggers. Refuse attached triggers
 /// before executing writes, including ones targeting generic staging/cache data.
@@ -144,7 +148,8 @@ fn inspect_in(
         objects: BTreeMap::new(),
         blobs: BTreeMap::new(),
     };
-    let mut q = db.prepare("SELECT blob,data FROM sparse_preparation_blobs ORDER BY blob")?;
+    let mut q =
+        db.prepare_cached("SELECT blob,data FROM sparse_preparation_blobs ORDER BY blob")?;
     for row in q.query_map([], |r| {
         Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, Vec<u8>>(1)?))
     })? {
@@ -154,7 +159,7 @@ fn inspect_in(
             return Err(Failure::Corrupt.into());
         }
     }
-    let mut q=db.prepare("SELECT plan_id,operation,view_id,input,state,state_hash FROM sparse_preparations ORDER BY plan_id")?;
+    let mut q=db.prepare_cached("SELECT plan_id,operation,view_id,input,state,state_hash FROM sparse_preparations ORDER BY plan_id")?;
     for row in q.query_map([], |r| {
         Ok((
             r.get::<_, Vec<u8>>(0)?,
@@ -181,7 +186,7 @@ fn inspect_in(
             return Err(Failure::Corrupt.into());
         }
     }
-    let mut q=db.prepare("SELECT plan_id,level,slot,record,state_hash FROM sparse_preparation_objects ORDER BY plan_id,level,slot")?;
+    let mut q=db.prepare_cached("SELECT plan_id,level,slot,record,state_hash FROM sparse_preparation_objects ORDER BY plan_id,level,slot")?;
     for row in q.query_map([], |r| {
         Ok((
             r.get::<_, Vec<u8>>(0)?,

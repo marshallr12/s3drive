@@ -94,6 +94,25 @@ The soak retains live observers, adds per-segment SQLite integrity checks and
 three extra100-cycle repeats under a separate45-minute budget; no original
 workload or deadline changes. Full exact-source hosted verification is pending.
 
+The lock-fix candidate `0dab6bde61771ce35f6826933d798402f597f228` in
+[run40217900789](https://github.com/marshallr12/s3drive/actions/runs/40217900789)
+passed all four100-cycle component runs on each OS:800 cycles/400 mounts total,
+400 closed SQLite integrity/FK checks, exact cold bytes and zero closed forests.
+Both extended1000-save and four64KiB-file300 workloads passed. Permanent-row
+maxima were1, component DB/WAL maxima778240/4177712 bytes, physical payload320.
+These complete extended logs were independently inspected, not just green steps.
+But Windows original debug300 reached290 then hit its unchanged1200s deadline.
+The candidate is NOT accepted; main remains3fd2f05. Linux full was still running.
+
+The next performance slice reuses bounded prepared SQL bytecode for hot ledger,
+anchor, journal and receipt reads (128 statements per State connection), never
+query rows, validation outcomes or authority. Every binding and read remains fresh;
+exact SQL strings/limits are unchanged. Prepare-only schema probes remain uncached.
+This targets16.91% of the prior diagnostic instructions spent preparing SQL.
+New warm-cache schema/trigger/row rollback checks and the original live-proof
+corruption checks must pass. Performance benefit and full acceptance are pending;
+no workload/deadline/profile relaxation or repeated-run lottery is authorized.
+
 ## Corrected fresh linked-native candidate accepted (2026-10-25)
 
 Exact candidate `135a35bcbc8df575f7a9193f40da5e3adffead3c`, tree

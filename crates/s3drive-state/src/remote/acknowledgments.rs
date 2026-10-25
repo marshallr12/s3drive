@@ -147,11 +147,9 @@ impl Journal<'_> {
     }
 }
 fn for_generation(connection: &Connection, generation: GenerationId) -> Result<Option<Info>> {
-    let exists: bool = connection.query_row(
-        "SELECT EXISTS(SELECT 1 FROM remote_intents WHERE generation_id=?1)",
-        [generation.value()],
-        |r| r.get(0),
-    )?;
+    let exists: bool = connection
+        .prepare_cached("SELECT EXISTS(SELECT 1 FROM remote_intents WHERE generation_id=?1)")?
+        .query_row([generation.value()], |r| r.get(0))?;
     exists.then(|| load(connection, generation)).transpose()
 }
 struct Root {
@@ -253,7 +251,7 @@ fn base_hash(base: &Base) -> [u8; 32] {
 // huge blobs. Only compact hashes/IDs are retained; no bodies or whole histories.
 fn validate(connection: &Connection) -> Result<Validated> {
     let mut roots = BTreeMap::new();
-    let mut q = connection.prepare("SELECT length(operation_id),length(receipt_hash),substr(operation_id,1,32),generation_id,covered_generations,substr(receipt_hash,1,32) FROM remote_flushes NOT INDEXED")?;
+    let mut q = connection.prepare_cached("SELECT length(operation_id),length(receipt_hash),substr(operation_id,1,32),generation_id,covered_generations,substr(receipt_hash,1,32) FROM remote_flushes NOT INDEXED")?;
     let mut rows = q.query([])?;
     while let Some(row) = rows.next()? {
         if roots.len() >= MAX_RECORDS as usize
@@ -292,7 +290,7 @@ fn validate(connection: &Connection) -> Result<Validated> {
         }
     }
     let mut nodes = BTreeMap::new();
-    let mut q = connection.prepare("SELECT generation_id,length(covering_operation),length(manifest_hash),length(settlement_hash),substr(covering_operation,1,32),substr(manifest_hash,1,32),substr(settlement_hash,1,32) FROM write_settlements NOT INDEXED")?;
+    let mut q = connection.prepare_cached("SELECT generation_id,length(covering_operation),length(manifest_hash),length(settlement_hash),substr(covering_operation,1,32),substr(manifest_hash,1,32),substr(settlement_hash,1,32) FROM write_settlements NOT INDEXED")?;
     let mut rows = q.query([])?;
     while let Some(row) = rows.next()? {
         if nodes.len() >= MAX_RECORDS as usize

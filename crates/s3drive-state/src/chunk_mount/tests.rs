@@ -1043,3 +1043,52 @@ fn native_retry_validation_work_quiescent_contract_keeps_profiles_separate_and_a
     );
     assert_eq!(rows(&state), before);
 }
+
+#[test]
+fn native_retry_validation_work_cached_sql_rechecks_live_rows_schema_and_rollback() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut state = State::open_managed(&tmp.path().join("fresh cached SQL")).unwrap();
+    let db = &mut state.connection;
+    for _ in 0..3 {
+        check_schema(db).unwrap();
+        preflight(db).unwrap();
+        assert!(load(db).unwrap().is_none());
+    }
+    for sql in [
+        "INSERT INTO chunk_mount_role(singleton,record,state_hash) VALUES(1,x'00',zeroblob(32))",
+        "CREATE TRIGGER cached_sql_guard AFTER UPDATE ON source_bindings BEGIN SELECT 1; END",
+        "ALTER TABLE chunk_mount_role RENAME COLUMN record TO wrong_record",
+        "PRAGMA user_version=49",
+    ] {
+        let tx = db.transaction().unwrap();
+        tx.execute_batch(sql).unwrap();
+        if sql.starts_with("ALTER") {
+            // Prepare-only schema probes must not reuse unstepped stale bytecode.
+            assert!(check_schema(&tx).is_err());
+        }
+        if sql.starts_with("CREATE TRIGGER") || sql.starts_with("PRAGMA") {
+            assert!(preflight(&tx).is_err());
+        } else {
+            assert!(load(&tx).is_err(), "{sql}");
+        }
+        tx.rollback().unwrap();
+        check_schema(db).unwrap();
+        preflight(db).unwrap();
+        assert!(load(db).unwrap().is_none());
+    }
+    db.pragma_update(None, "foreign_keys", false).unwrap();
+    assert!(preflight(db).is_err());
+    db.pragma_update(None, "foreign_keys", true).unwrap();
+    preflight(db).unwrap();
+    assert!(db.is_autocommit());
+    let busy: i64 = db
+        .query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(busy, 0);
+    // Warm query execution cannot pin a read transaction beyond the call.
+    assert_eq!(
+        db.query_row("PRAGMA integrity_check", [], |r| r.get::<_, String>(0))
+            .unwrap(),
+        "ok"
+    );
+}

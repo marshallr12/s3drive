@@ -213,11 +213,8 @@ impl Anchor {
         };
         let operation = super::super::transfers::object_operation(&info, &object, digest(&page))?;
         let mapped: Option<i64> = db
-            .query_row(
-                "SELECT generation_id FROM staged_operations WHERE operation_key=?1",
-                [operation.as_slice()],
-                |r| r.get(0),
-            )
+            .prepare_cached("SELECT generation_id FROM staged_operations WHERE operation_key=?1")?
+            .query_row([operation.as_slice()], |r| r.get(0))
             .optional()?;
         if mapped != Some(self.generation().value()) || digest(&page) != remote.payload_sha256 {
             return Err(Failure::Corrupt.into());
@@ -368,12 +365,12 @@ fn load_in(
     let db = isolation.db;
     #[cfg(test)]
     ANCHOR_LOADS.set(ANCHOR_LOADS.get() + 1);
-    let mut q = match db
-        .prepare("SELECT singleton,owner,entries,state_hash FROM sparse_retention_role LIMIT 2")
-    {
+    let mut q = match db.prepare_cached(
+        "SELECT singleton,owner,entries,state_hash FROM sparse_retention_role LIMIT 2",
+    ) {
         Ok(q) => q,
         Err(error) => {
-            let exists: i64 = db.query_row("SELECT count(*) FROM sqlite_schema WHERE type='table' AND name IN ('sparse_retention_role','sparse_retention_anchors')", [], |r|r.get(0))?;
+            let exists: i64 = db.prepare_cached("SELECT count(*) FROM sqlite_schema WHERE type='table' AND name IN ('sparse_retention_role','sparse_retention_anchors')")?.query_row( [], |r|r.get(0))?;
             let version: i32 = db.pragma_query_value(None, "user_version", |r| r.get(0))?;
             if exists == 0 && version < 50 {
                 return Ok(BTreeMap::new());
@@ -383,11 +380,9 @@ fn load_in(
     };
     let mut rows = q.query([])?;
     let Some(row) = rows.next()? else {
-        let any: bool = db.query_row(
-            "SELECT EXISTS(SELECT 1 FROM sparse_retention_anchors)",
-            [],
-            |r| r.get(0),
-        )?;
+        let any: bool = db
+            .prepare_cached("SELECT EXISTS(SELECT 1 FROM sparse_retention_anchors)")?
+            .query_row([], |r| r.get(0))?;
         return if any || !crate::chunk_mount::admission::witnesses(db)?.is_empty() {
             Err(Failure::Corrupt.into())
         } else {
@@ -412,7 +407,7 @@ fn load_in(
     let mut remembered = None;
     let mut role = CanonicalRoleHash::new(owner)?;
     let mut bytes = 0usize;
-    let mut q=db.prepare("SELECT target,view_id,generation_id,record,state_hash FROM sparse_retention_anchors ORDER BY target LIMIT 257")?;
+    let mut q=db.prepare_cached("SELECT target,view_id,generation_id,record,state_hash FROM sparse_retention_anchors ORDER BY target LIMIT 257")?;
     for row in q.query_map([], |r| {
         Ok((
             r.get::<_, Vec<u8>>(0)?,

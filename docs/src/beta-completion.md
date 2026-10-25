@@ -15,6 +15,16 @@ has state and shared lifecycle proofs, but actual callback verification exposed 
 reopen/Close reader-admission gap. The correction requires fresh native and full
 acceptance; no milestone or main merge is claimed from focused green tests.
 
+Latest acceptance blocker: lock-fix source `0dab6bd` passed800 combined
+Linux/Windows component lifecycle cycles and400 mount/integrity checks, plus
+both OS1000-save/large-file soaks in
+[run40217900789](https://github.com/marshallr12/s3drive/actions/runs/40217900789).
+However, original Windows debug300 timed out after290 saves under the unchanged
+20-minute gate. No main merge or overall milestone acceptance follows. The next
+slice targets the measured16.91% SQL-preparation instruction cost using a bounded
+128-statement bytecode cache. It does not cache rows, semantic proofs, database
+permissions or schema-probe outcomes; full fresh validations remain required.
+
 ## 1. Creation and namespace lifecycle cleanup
 
 Existing `owned-unlinked-v1` implements create, rename, replacement, unlink and

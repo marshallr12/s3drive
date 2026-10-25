@@ -197,7 +197,7 @@ pub(crate) fn identity_marker(db: &Connection, owner: &str) -> Result<bool> {
     if version != crate::SCHEMA_VERSION || !exists(db)? {
         return Ok(false);
     }
-    let mut q=db.prepare("SELECT singleton,CASE WHEN typeof(record)='blob' AND length(record) BETWEEN 1 AND 65536 THEN record END,CASE WHEN length(state_hash)=32 THEN state_hash END FROM chunk_mount_role LIMIT 2")?;
+    let mut q=db.prepare_cached("SELECT singleton,CASE WHEN typeof(record)='blob' AND length(record) BETWEEN 1 AND 65536 THEN record END,CASE WHEN length(state_hash)=32 THEN state_hash END FROM chunk_mount_role LIMIT 2")?;
     let rows = q
         .query_map([], |r| {
             Ok((
@@ -216,8 +216,7 @@ pub(crate) fn identity_marker(db: &Connection, owner: &str) -> Result<bool> {
         && digest.as_slice() == hash(b"s3drive-chunk-mount-binding-v1\0", &binding)?)
 }
 fn exists(db: &Connection) -> Result<bool> {
-    Ok(db.query_row(
-        "SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='table' AND name='chunk_mount_role')",
+    Ok(db.prepare_cached("SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='table' AND name='chunk_mount_role')")?.query_row(
         [],
         |r| r.get(0),
     )?)
@@ -229,11 +228,9 @@ pub(crate) fn check_schema(db: &Connection) -> Result<()> {
 fn preflight(db: &Connection) -> Result<()> {
     let version: i32 = db.pragma_query_value(None, "user_version", |r| r.get(0))?;
     let fk: bool = db.pragma_query_value(None, "foreign_keys", |r| r.get(0))?;
-    let bad: bool = db.query_row(
-        "SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='trigger')",
-        [],
-        |r| r.get(0),
-    )?;
+    let bad: bool = db
+        .prepare_cached("SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='trigger')")?
+        .query_row([], |r| r.get(0))?;
     if version != crate::SCHEMA_VERSION || !fk || bad {
         return Err("chunk mount schema/trigger guard failed".into());
     }
@@ -300,7 +297,7 @@ pub(crate) fn load(db: &Connection) -> Result<Option<Binding>> {
             Err("current chunk mount table missing".into())
         };
     }
-    let mut q=db.prepare("SELECT singleton,CASE WHEN typeof(record)='blob' AND length(record) BETWEEN 1 AND 65536 THEN record END,CASE WHEN typeof(state_hash)='blob' AND length(state_hash)=32 THEN state_hash END FROM chunk_mount_role LIMIT 2")?;
+    let mut q=db.prepare_cached("SELECT singleton,CASE WHEN typeof(record)='blob' AND length(record) BETWEEN 1 AND 65536 THEN record END,CASE WHEN typeof(state_hash)='blob' AND length(state_hash)=32 THEN state_hash END FROM chunk_mount_role LIMIT 2")?;
     let rows = q
         .query_map([], |r| {
             Ok((
@@ -330,7 +327,7 @@ pub(crate) fn load(db: &Connection) -> Result<Option<Binding>> {
         return Err("chunk mount permanent identity changed".into());
     }
     for c in &value.controls {
-        let fp:Option<String>=db.query_row("SELECT CASE WHEN length(config_fingerprint)=64 THEN config_fingerprint END FROM source_bindings WHERE source_id=?",[c.source.as_slice()],|r|r.get(0)).optional()?.flatten();
+        let fp:Option<String>=db.prepare_cached("SELECT CASE WHEN length(config_fingerprint)=64 THEN config_fingerprint END FROM source_bindings WHERE source_id=?")?.query_row([c.source.as_slice()],|r|r.get(0)).optional()?.flatten();
         if fp.as_ref() != Some(&c.fingerprint) {
             return Err("chunk mount source binding changed".into());
         }

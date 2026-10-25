@@ -4414,7 +4414,7 @@ async fn native_retry_validation_work_canonical_memo_keeps_live_proofs_fresh() {
             );
             let current = crate::pure_memo::work();
             assert_eq!([current[0] - counts[0], current[1] - counts[1]], [1, 1]);
-            for case in 0..8 {
+            for case in 0..11 {
                 let tx = s.connection.transaction()?;
                 match case {
                     0 => {
@@ -4467,18 +4467,27 @@ async fn native_retry_validation_work_canonical_memo_keeps_live_proofs_fresh() {
                                 > 0
                         );
                     }
-                    _ => {
+                    7 => {
                         assert!(
                             tx.execute("UPDATE staged_chunks SET data=zeroblob(length(data))", [])?
                                 > 0
                         );
+                    }
+                    8 => {
+                        tx.execute_batch("CREATE TRIGGER cache_guard AFTER UPDATE ON source_bindings BEGIN SELECT 1; END")?;
+                    }
+                    9 => {
+                        tx.execute_batch("ALTER TABLE sparse_retention_anchors RENAME COLUMN record TO wrong_record")?;
+                    }
+                    _ => {
+                        assert!(tx.execute("UPDATE source_bindings SET config_fingerprint=?1", ["f".repeat(64)])? > 0);
                     }
                 }
                 let hits = crate::pure_memo::work()[1];
                 assert!(
                     crate::sparse_views::preparation::publication::retention::load(&tx).is_err()
                 );
-                if case >= 4 {
+                if (4..8).contains(&case) {
                     assert!(
                         crate::pure_memo::work()[1] > hits,
                         "external proof case {case} must reach a warmed exact-byte hit"
