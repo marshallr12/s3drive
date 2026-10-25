@@ -204,7 +204,7 @@ pub struct Journal<'a> {
 }
 impl<'a> Journal<'a> {
     pub fn capacity(&self) -> Result<Capacity> {
-        let (used,generations):(i64,i64)=self.state.connection.query_row("SELECT (SELECT coalesce(sum(length(data)),0) FROM staged_chunks),(SELECT count(*) FROM staged_generations)",[],|r|Ok((r.get(0)?,r.get(1)?)))?;
+        let (used,generations):(i64,i64)=self.state.connection.prepare_cached("SELECT (SELECT coalesce(sum(length(data)),0) FROM staged_chunks),(SELECT count(*) FROM staged_generations)")?.query_row([],|r|Ok((r.get(0)?,r.get(1)?)))?;
         let used = u64::try_from(used)?;
         let generations = u64::try_from(generations)?;
         Ok(Capacity {
@@ -258,7 +258,7 @@ impl<'a> Journal<'a> {
         {
             return Err("invalid staged head catalog request".into());
         }
-        let mut statement = self.state.connection.prepare("SELECT max(generation_id) AS selected FROM staged_generations WHERE source_id=?1 AND phase='sealed' GROUP BY object_key HAVING selected>?2 ORDER BY selected LIMIT ?3")?;
+        let mut statement = self.state.connection.prepare_cached("SELECT max(generation_id) AS selected FROM staged_generations WHERE source_id=?1 AND phase='sealed' GROUP BY object_key HAVING selected>?2 ORDER BY selected LIMIT ?3")?;
         let ids = statement
             .query_map(
                 params![
@@ -417,8 +417,7 @@ impl<'a> Journal<'a> {
             return Err("invalid staged copy source or range".into());
         }
         validate_manifest(&self.state.connection, &parent, false)?;
-        let (start, length, digest): (i64,i64,Option<Vec<u8>>) = self.state.connection.query_row(
-            "SELECT offset_bytes,length_bytes,chunk_hash FROM staged_extents WHERE generation_id=?1 AND offset_bytes<=?2 ORDER BY offset_bytes DESC LIMIT 1",
+        let (start, length, digest): (i64,i64,Option<Vec<u8>>) = self.state.connection.prepare_cached("SELECT offset_bytes,length_bytes,chunk_hash FROM staged_extents WHERE generation_id=?1 AND offset_bytes<=?2 ORDER BY offset_bytes DESC LIMIT 1")?.query_row(
             params![source.0,source_offset as i64], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?)),
         )?;
         let skip = source_offset
@@ -740,11 +739,11 @@ fn digest32(value: Vec<u8>) -> Result<[u8; 32]> {
 }
 pub(crate) fn load(connection: &Connection, id: GenerationId) -> Result<Generation> {
     // Bound metadata allocation even when a damaged DB bypasses its CHECKs.
-    let shape:bool=connection.query_row("SELECT length(g.source_id)=32 AND length(b.config_fingerprint)=64 AND length(CAST(g.object_key AS BLOB)) BETWEEN 1 AND 1024 AND (g.base_etag IS NULL OR length(CAST(g.base_etag AS BLOB)) BETWEEN 1 AND 8192) AND (g.base_version IS NULL OR length(CAST(g.base_version AS BLOB)) BETWEEN 1 AND 8192) AND (g.manifest_hash IS NULL OR length(g.manifest_hash)=32) AND length(CAST(g.phase AS BLOB)) BETWEEN 6 AND 8 FROM staged_generations g JOIN source_bindings b ON b.source_id=g.source_id WHERE g.generation_id=?1",[id.0],|r|r.get(0))?;
+    let shape:bool=connection.prepare_cached("SELECT length(g.source_id)=32 AND length(b.config_fingerprint)=64 AND length(CAST(g.object_key AS BLOB)) BETWEEN 1 AND 1024 AND (g.base_etag IS NULL OR length(CAST(g.base_etag AS BLOB)) BETWEEN 1 AND 8192) AND (g.base_version IS NULL OR length(CAST(g.base_version AS BLOB)) BETWEEN 1 AND 8192) AND (g.manifest_hash IS NULL OR length(g.manifest_hash)=32) AND length(CAST(g.phase AS BLOB)) BETWEEN 6 AND 8 FROM staged_generations g JOIN source_bindings b ON b.source_id=g.source_id WHERE g.generation_id=?1")?.query_row([id.0],|r|r.get(0))?;
     if !shape {
         return Err("invalid staged metadata shape; data was preserved".into());
     }
-    let value=connection.query_row("SELECT g.source_id,b.config_fingerprint,g.object_key,g.parent_id,g.base_absent,g.base_etag,g.base_version,g.size_bytes,g.filled_bytes,g.extent_count,g.phase,g.manifest_hash FROM staged_generations g JOIN source_bindings b ON b.source_id=g.source_id WHERE g.generation_id=?1",[id.0],|r|{
+    let value=connection.prepare_cached("SELECT g.source_id,b.config_fingerprint,g.object_key,g.parent_id,g.base_absent,g.base_etag,g.base_version,g.size_bytes,g.filled_bytes,g.extent_count,g.phase,g.manifest_hash FROM staged_generations g JOIN source_bindings b ON b.source_id=g.source_id WHERE g.generation_id=?1")?.query_row([id.0],|r|{
         Ok((r.get::<_,Vec<u8>>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,Option<i64>>(3)?,r.get::<_,bool>(4)?,r.get::<_,Option<String>>(5)?,r.get::<_,Option<String>>(6)?,r.get::<_,i64>(7)?,r.get::<_,i64>(8)?,r.get::<_,i64>(9)?,r.get::<_,String>(10)?,r.get::<_,Option<Vec<u8>>>(11)?))
     })?;
     let (source, fingerprint, key, parent, absent, etag, version, size, filled, count, phase, hash) =
@@ -793,13 +792,12 @@ pub(crate) fn current_head(
     target: &Target,
 ) -> Result<Option<GenerationId>> {
     let head: Option<i64> = connection
-        .query_row(
+        .prepare_cached(
             "SELECT generation_id FROM staged_heads WHERE source_id=?1 AND object_key=?2",
-            params![target.source.as_slice(), target.key],
-            |r| r.get(0),
-        )
+        )?
+        .query_row(params![target.source.as_slice(), target.key], |r| r.get(0))
         .optional()?;
-    let latest:Option<i64>=connection.query_row("SELECT max(generation_id) FROM staged_generations WHERE source_id=?1 AND object_key=?2 AND phase='sealed'",params![target.source.as_slice(),target.key],|r|r.get(0))?;
+    let latest:Option<i64>=connection.prepare_cached("SELECT max(generation_id) FROM staged_generations WHERE source_id=?1 AND object_key=?2 AND phase='sealed'")?.query_row(params![target.source.as_slice(),target.key],|r|r.get(0))?;
     if head != latest {
         return Err("inconsistent staged head; data was preserved".into());
     }
@@ -819,21 +817,18 @@ pub(crate) fn validate_manifest(
 ) -> Result<[u8; 32]> {
     let mut hash = Sha256::new();
     let key_length: Option<i64> = connection
-        .query_row(
+        .prepare_cached(
             "SELECT length(operation_key) FROM staged_operations WHERE generation_id=?1",
-            [generation.id.0],
-            |r| r.get(0),
-        )
+        )?
+        .query_row([generation.id.0], |r| r.get(0))
         .optional()?;
     if let Some(length) = key_length {
         if length != 32 {
             return Err("invalid staged operation key shape".into());
         }
-        let key: Vec<u8> = connection.query_row(
-            "SELECT operation_key FROM staged_operations WHERE generation_id=?1",
-            [generation.id.0],
-            |r| r.get(0),
-        )?;
+        let key: Vec<u8> = connection
+            .prepare_cached("SELECT operation_key FROM staged_operations WHERE generation_id=?1")?
+            .query_row([generation.id.0], |r| r.get(0))?;
         hash.update(b"s3drive-staged-manifest-v2\0");
         hash.update(key);
     } else {
@@ -849,7 +844,7 @@ pub(crate) fn validate_manifest(
     field(&mut hash, etag.map(str::as_bytes));
     field(&mut hash, version.map(str::as_bytes));
     hash.update(generation.size.to_be_bytes());
-    let mut statement=connection.prepare("SELECT e.offset_bytes,e.length_bytes,length(e.chunk_hash),substr(e.chunk_hash,1,32),length(c.data),r.chunk_hash IS NOT NULL FROM staged_extents e LEFT JOIN staged_chunks c ON c.chunk_hash=e.chunk_hash LEFT JOIN retained_staged_chunks r ON r.chunk_hash=e.chunk_hash WHERE e.generation_id=?1 ORDER BY e.offset_bytes")?;
+    let mut statement=connection.prepare_cached("SELECT e.offset_bytes,e.length_bytes,length(e.chunk_hash),substr(e.chunk_hash,1,32),length(c.data),r.chunk_hash IS NOT NULL FROM staged_extents e LEFT JOIN staged_chunks c ON c.chunk_hash=e.chunk_hash LEFT JOIN retained_staged_chunks r ON r.chunk_hash=e.chunk_hash WHERE e.generation_id=?1 ORDER BY e.offset_bytes")?;
     let mut rows = statement.query([generation.id.0])?;
     let mut cursor = 0u64;
     let mut count = 0u64;
@@ -899,7 +894,7 @@ pub(crate) fn validate_manifest(
     }
     let digest: [u8; 32] = hash.finalize().into();
     if generation.phase == Phase::Sealed {
-        let pending:bool=connection.query_row("SELECT EXISTS(SELECT 1 FROM write_journal WHERE generation_id=?1 AND status='pending')",[generation.id.0],|r|r.get(0))?;
+        let pending:bool=connection.prepare_cached("SELECT EXISTS(SELECT 1 FROM write_journal WHERE generation_id=?1 AND status='pending')")?.query_row([generation.id.0],|r|r.get(0))?;
         if generation.manifest_hash != Some(digest) || !pending {
             return Err("staged manifest or journal is corrupt; data was preserved".into());
         }
@@ -908,20 +903,15 @@ pub(crate) fn validate_manifest(
 }
 fn read_chunk(connection: &Connection, digest: &[u8; 32]) -> Result<Vec<u8>> {
     let length: Option<i64> = connection
-        .query_row(
-            "SELECT length(data) FROM staged_chunks WHERE chunk_hash=?1",
-            [digest.as_slice()],
-            |r| r.get(0),
-        )
+        .prepare_cached("SELECT length(data) FROM staged_chunks WHERE chunk_hash=?1")?
+        .query_row([digest.as_slice()], |r| r.get(0))
         .optional()?;
     if !length.is_some_and(|length| (1..=CHUNK_BYTES as i64).contains(&length)) {
         return Err("missing or oversized staged chunk; data was preserved".into());
     }
-    let bytes: Vec<u8> = connection.query_row(
-        "SELECT data FROM staged_chunks WHERE chunk_hash=?1",
-        [digest.as_slice()],
-        |r| r.get(0),
-    )?;
+    let bytes: Vec<u8> = connection
+        .prepare_cached("SELECT data FROM staged_chunks WHERE chunk_hash=?1")?
+        .query_row([digest.as_slice()], |r| r.get(0))?;
     if Sha256::digest(&bytes).as_slice() != digest {
         return Err("staged chunk checksum mismatch; data was preserved".into());
     }

@@ -1355,9 +1355,23 @@ fn dispatch<'a>(
         "native_lifecycle_profile" => {
             boxed_case(|| native_lifecycle::profile_transition(config, root, s))
         }
+        #[cfg(any(target_os = "linux", windows))]
+        "native_component_repeated_mounted" => {
+            boxed_case(|| native_lifecycle::component_repeated_mounted(config, root, s))
+        }
+        "native_component_repeated" => {
+            boxed_case(|| native_lifecycle::component_repeated(config, root, s))
+        }
         "native_lifecycle_unlink" => boxed_case(|| native_lifecycle::unlink(config, root, s)),
         #[cfg(any(target_os = "linux", windows))]
         "native_retention_seed" => boxed_case(|| native_retention::seed(config, root, s)),
+        "native_retention_seed_large" => {
+            boxed_case(|| native_retention::seed_large(config, root, s))
+        }
+        #[cfg(any(target_os = "linux", windows))]
+        "native_retention_final_mounted_soak" => {
+            boxed_case(|| native_retention::final_mounted_soak(root, s))
+        }
         "native_retention_shared" => boxed_case(|| native_retention::shared(root, s)),
         "native_retention_profile_warmup" => {
             boxed_case(|| native_retention::profile_warmup(root, s))
@@ -1459,9 +1473,14 @@ fn dispatch<'a>(
     }
 }
 async fn run(mode: &str) {
+    let component = mode.starts_with("component:");
+    let mode = mode.strip_prefix("component:").unwrap_or(mode);
     let put_gate = fixture::PutGate::default();
     let f = fixture::Fixture::start_with_gate(Some(put_gate.clone())).await;
     let tmp = tempfile::tempdir().unwrap();
+    if component {
+        std::fs::write(tmp.path().join("component-retention-fixture"), b"fresh").unwrap();
+    }
     let setup = writes::setup(&f, tmp.path()).await;
     let mut counts = None;
     let mut mixed_recovery_window = None;
@@ -1469,7 +1488,10 @@ async fn run(mode: &str) {
     let mut mixed_batch_window = None;
     let mut creator_open_objects = None;
     let mut retention_completed = 0_u64;
+    let mut component_completed = 0_u64;
     for stage in match mode {
+        "native_component_soak100" => vec!["native_component_repeated_mounted"; 25],
+        "native_component_soak8" => vec!["native_component_repeated_mounted"; 2],
         "native_retention_cpu_profile" => vec![
             "native_retention_seed",
             "native_retention_profile_warmup",
@@ -1502,6 +1524,27 @@ async fn run(mode: &str) {
                 "native_retention_final_shared"
             } else {
                 "native_retention_final_mounted"
+            });
+            stages
+        }
+        "native_retention_soak1000" | "native_retention_large300" => {
+            let mut stages = vec![if mode == "native_retention_large300" {
+                "native_retention_seed_large"
+            } else {
+                "native_retention_seed"
+            }];
+            stages.extend(std::iter::repeat_n(
+                "native_retention_mounted",
+                if mode == "native_retention_large300" {
+                    30
+                } else {
+                    100
+                },
+            ));
+            stages.push(if mode == "native_retention_large300" {
+                "native_retention_final_mounted"
+            } else {
+                "native_retention_final_mounted_soak"
             });
             stages
         }
@@ -1769,8 +1812,19 @@ async fn run(mode: &str) {
             .unwrap()
             .unwrap();
         let err = errors.await.unwrap();
-        if stage.starts_with("native_lifecycle_mounted") || stage.starts_with("native_retention_") {
+        if component
+            || stage.starts_with("native_lifecycle_mounted")
+            || stage.starts_with("native_retention_")
+        {
             eprintln!("{err}");
+        }
+        if component && (result.is_err() || !status.success() || killed) {
+            native_lifecycle::inspect_component_failure(tmp.path());
+            let retained = tmp.keep();
+            panic!(
+                "component failure retained privately on runner at {}: case {stage}: {status}: {err}",
+                retained.display()
+            );
         }
         assert!(
             result.is_ok()
@@ -1795,6 +1849,20 @@ async fn run(mode: &str) {
                 },
             "case {stage}: {status}: {err}"
         );
+        if stage == "native_component_repeated_mounted" {
+            component_completed += 4;
+            assert_eq!(
+                std::fs::read_to_string(tmp.path().join("component-completed"))
+                    .unwrap()
+                    .parse::<u64>()
+                    .unwrap(),
+                component_completed
+            );
+            assert_eq!(
+                puts(&f),
+                1 + component_completed as usize * 5 + (component_completed as usize / 4) * 2
+            );
+        }
         if stage.starts_with("native_retention_") {
             if matches!(
                 stage,
@@ -1815,7 +1883,12 @@ async fn run(mode: &str) {
             assert_eq!(completed, retention_completed, "exact completed save count");
             assert_eq!(
                 puts(&f),
-                native_retention::expected_puts(retention_completed),
+                native_retention::expected_puts(retention_completed)
+                    + if mode == "native_retention_large300" {
+                        3
+                    } else {
+                        0
+                    },
                 "exact sparse PUT schedule after {stage}, {completed} saves"
             );
         }
@@ -1950,6 +2023,14 @@ async fn run(mode: &str) {
             assert_eq!(retention_completed, 300);
             native_retention::expected_puts(300)
         }
+        "native_retention_soak1000" => {
+            assert_eq!(retention_completed, 1000);
+            native_retention::expected_puts(1000)
+        }
+        "native_retention_large300" => {
+            assert_eq!(retention_completed, 300);
+            native_retention::expected_puts(300) + 3
+        }
         "cold_namespace_crash" | "cold_namespace_known" | "cold_namespace_rejected" => 1,
         "native_sparse_sdk_controller_interleaving"
         | "native_sparse_sdk_controller_linked"
@@ -1981,6 +2062,15 @@ async fn run(mode: &str) {
         "native_writer_mount" => 6,
         "native_lifecycle_cold_known" => 3,
         "native_lifecycle_cold_unknown" => 1,
+        "native_component_soak8" => {
+            assert_eq!(component_completed, 8);
+            45
+        }
+        "native_component_soak100" => {
+            assert_eq!(component_completed, 100);
+            551
+        }
+        "native_component_repeated" | "native_component_repeated_mounted" => 23,
         "native_lifecycle_unlink" => 5,
         "native_lifecycle_mounted" => 13,
         "native_lifecycle_mounted_known" => 3,
@@ -2511,4 +2601,67 @@ async fn native_retention_cpu_profile_post_anchor_saves() {
 #[ignore = "diagnostic only; real FUSE/WinFsp required"]
 async fn native_retention_validation_work_native_phases() {
     run("native_retention_native_work").await;
+}
+
+#[cfg(any(target_os = "linux", windows))]
+#[tokio::test]
+#[ignore = "additional actual mounted long soak; original 300-save gates remain required"]
+async fn native_retention_extended_1000_saves_100_remounts() {
+    run("native_retention_soak1000").await;
+}
+
+#[cfg(any(target_os = "linux", windows))]
+#[tokio::test]
+#[ignore = "additional four-file 64KiB actual mounted workload"]
+async fn native_retention_extended_four_files_64kib_300_saves() {
+    run("native_retention_large300").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn component_retention_shared_unlink_close_and_remount() {
+    run("component:native_lifecycle_unlink").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn component_retention_shared_replacement_preserves_old_handles() {
+    run("component:native_lifecycle_replace").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn component_retention_shared_cold_known_replays_original_root() {
+    run("component:native_lifecycle_cold_known").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn component_retention_shared_cold_unknown_protects_dirty_work() {
+    run("component:native_lifecycle_cold_unknown").await;
+}
+#[cfg(any(target_os = "linux", windows))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "dedicated component retention; real FUSE/WinFsp required"]
+async fn component_retention_actual_unlink_replace_dirty_handles_and_remount() {
+    run("component:native_lifecycle_mounted").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn component_retention_shared_repeated_lifecycle_preserves_unrelated_dirty_readers() {
+    run("component:native_component_repeated").await;
+}
+
+#[cfg(any(target_os = "linux", windows))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "dedicated component retention; real FUSE/WinFsp required"]
+async fn component_retention_actual_repeated_lifecycle_with_dirty_readers_and_cold_remount() {
+    run("component:native_component_repeated_mounted").await;
+}
+
+#[cfg(any(target_os = "linux", windows))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "additional 100-cycle component lifecycle soak; real FUSE/WinFsp required"]
+async fn component_retention_extended_100_lifecycle_cycles_50_mounts() {
+    run("component:native_component_soak100").await;
+}
+
+#[cfg(any(target_os = "linux", windows))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "multi-owner component lifecycle regression; real FUSE/WinFsp required"]
+async fn component_retention_actual_multiple_owners_preserve_cold_file_and_bound_permanent_rows() {
+    run("component:native_component_soak8").await;
 }

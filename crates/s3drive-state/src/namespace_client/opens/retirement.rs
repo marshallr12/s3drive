@@ -106,8 +106,9 @@ impl Journal<'_> {
     }
 }
 
-/// Fresh linked-native slice only. Recovery, creation and namespace ownership
-/// retain their original journals until their separate compact proofs exist.
+/// Fresh linked-native slice plus fully settled no-effect recovery groups.
+/// Publishers recovered without an observed Close, creation and namespace
+/// ownership retain their original journals until compact proofs exist.
 pub(crate) fn native_candidates(
     db: &Connection,
     volume: &str,
@@ -116,12 +117,7 @@ pub(crate) fn native_candidates(
     if !crate::chunk_mount::retry_enabled(db)? {
         return Err("native retention requires fresh retry contract".into());
     }
-    for table in [
-        "namespace_intents",
-        "manifest_creations",
-        "windows_session_recoveries",
-        "recovered_windows_opens",
-    ] {
+    for table in ["namespace_intents", "manifest_creations"] {
         if db.query_row(&format!("SELECT EXISTS(SELECT 1 FROM {table})"), [], |r| {
             r.get::<_, bool>(0)
         })? {
@@ -163,15 +159,33 @@ pub(crate) fn native_candidates(
         }
         records.push(record);
     }
+    session::no_effect_retirement_groups(db, &records)?;
     Ok(records)
 }
 pub(crate) fn erase_native(db: &Connection, records: &[OpenRecord], runtime: &str) -> Result<()> {
+    let recoveries = session::no_effect_retirement_groups(db, records)?;
+    // Check every sealed record while its complete recovery proof still exists.
     for record in records {
         if load(db, &record.input.id)?.as_ref().map(|(_, r)| r) != Some(record)
             || !is_retired(db, &record.input.id)?
         {
             return Err("native retirement proof changed".into());
         }
+    }
+    for recovery in recoveries {
+        db.execute(
+            "DELETE FROM recovered_windows_opens WHERE recovery_id=?1",
+            [&recovery],
+        )?;
+        if db.execute(
+            "DELETE FROM windows_session_recoveries WHERE recovery_id=?1",
+            [&recovery],
+        )? != 1
+        {
+            return Err("native recovery retirement lost its exact group".into());
+        }
+    }
+    for record in records {
         for table in [
             "windows_open_events",
             "retired_windows_opens",
@@ -184,7 +198,7 @@ pub(crate) fn erase_native(db: &Connection, records: &[OpenRecord], runtime: &st
             )?;
         }
     }
-    db.execute("DELETE FROM windows_mount_sessions WHERE runtime_id<>?1 AND session_id NOT IN (SELECT json_extract(input,'$.session') FROM windows_open_journal)", [runtime])?;
+    session::prune_unused_sessions(db, runtime)?;
     check_index(db)?;
     Ok(())
 }
@@ -360,4 +374,70 @@ pub(crate) fn rewrite_session_for_test(
         params![seal(&checksum), key],
     )?;
     Ok(())
+}
+
+/// Unlike linked anchors, a whole-forest cut leaves no source requiring an
+/// original Close suffix. This only selects; the caller must independently
+/// prove all source heads clean, roots settled, namespace closed and no readers.
+pub(crate) fn quiescent_candidates(db: &Connection) -> Result<Option<Vec<OpenRecord>>> {
+    quiescent_selected(db, None)
+}
+pub(crate) fn quiescent_component_candidates(
+    db: &Connection,
+    nodes: &std::collections::BTreeSet<String>,
+) -> Result<Option<Vec<OpenRecord>>> {
+    quiescent_selected(db, Some(nodes))
+}
+pub(crate) fn retained_records(db: &Connection) -> Result<Vec<OpenRecord>> {
+    session::check_index(db)?;
+    check_index(db)?;
+    let ids = db
+        .prepare("SELECT open_id FROM windows_open_journal ORDER BY open_id LIMIT 257")?
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    if ids.len() > OPEN_LIMIT {
+        return Err("retained open capacity exceeded".into());
+    }
+    ids.into_iter()
+        .map(|id| {
+            load(db, &id)?
+                .map(|(_, record)| record)
+                .ok_or_else(|| "retained open missing".into())
+        })
+        .collect()
+}
+fn quiescent_selected(
+    db: &Connection,
+    nodes: Option<&std::collections::BTreeSet<String>>,
+) -> Result<Option<Vec<OpenRecord>>> {
+    if !crate::chunk_mount::quiescent_enabled(db)? {
+        return Err("quiescent contract missing".into());
+    }
+    session::check_index(db)?;
+    check_index(db)?;
+    let ids = db
+        .prepare("SELECT open_id FROM windows_open_journal LIMIT 257")?
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    if ids.len() > OPEN_LIMIT {
+        return Err("quiescent open capacity exceeded".into());
+    }
+    let mut records = Vec::new();
+    for id in ids {
+        let (row, record) = load(db, &id)?.ok_or("quiescent open missing")?;
+        if nodes.is_some_and(|nodes| !nodes.contains(&record.input.node)) {
+            continue;
+        }
+        if !is_retired(db, &id)? || !terminal(db, &row, &record)? {
+            return Ok(None);
+        }
+        if !record.input.controlled || !record.input.session_bound {
+            return Err("quiescent open lacks original ownership".into());
+        }
+        records.push(record);
+    }
+    if !session::quiescent_groups(db, &records, nodes)? {
+        return Ok(None);
+    }
+    Ok(Some(records))
 }

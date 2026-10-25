@@ -56,6 +56,8 @@ pub enum SparseLifecycle {
     OwnedUnlinkedV1,
     /// Fresh linked files only; namespace/creator/removal work is refused.
     LinkedRetentionV1,
+    /// Fresh component cleanup; experimental until lifecycle acceptance completes.
+    ComponentRetentionV1,
 }
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]

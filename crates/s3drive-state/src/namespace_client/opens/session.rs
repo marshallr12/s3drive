@@ -221,6 +221,60 @@ pub(super) fn check_index(db: &Connection) -> Result<()> {
     }
     Ok(())
 }
+/// Select only complete no-effect recovery groups. Abandonment is not an
+/// observed Close and cannot stand in for a publisher's terminal suffix.
+pub(super) fn no_effect_retirement_groups(
+    db: &Connection,
+    records: &[OpenRecord],
+) -> Result<Vec<String>> {
+    check_index(db)?;
+    let selected = records
+        .iter()
+        .map(|r| r.input.id.as_str())
+        .collect::<std::collections::BTreeSet<_>>();
+    let mut groups = std::collections::BTreeSet::new();
+    for record in records {
+        let key: Option<String> = db
+            .query_row(
+                "SELECT recovery_id FROM recovered_windows_opens WHERE open_id=?1",
+                [&record.input.id],
+                |r| r.get(0),
+            )
+            .optional()?;
+        let Some(key) = key else { continue };
+        let (input, proof) = recovery(db, &key)?;
+        if binding(db, &input.session, &input.volume)?
+            == binding(db, &record.input.session, &record.input.volume)?
+            || input.cancel.is_some()
+            || proof.as_ref().is_none_or(|p| p.closure.is_some())
+            || input
+                .opens
+                .iter()
+                .any(|o| !selected.contains(o.id.as_str()))
+            || record.events.iter().any(|e| {
+                matches!(
+                    e.action,
+                    Action::OwnSparseEpoch { .. } | Action::FreezeSparse { .. }
+                )
+            })
+            || !crate::sparse_views::preparation::native::recovery_ready(db, record)?
+        {
+            return Err(
+                "recovery group still protects original effects or incomplete members".into(),
+            );
+        }
+        groups.insert(key);
+    }
+    Ok(groups.into_iter().collect())
+}
+// Recovery has its own observing session, which need not own an open. Keep
+// that identity until its complete recovery group is explicitly reclaimed.
+pub(super) fn prune_unused_sessions(db: &Connection, runtime: &str) -> Result<()> {
+    check_index(db)?;
+    db.execute("DELETE FROM windows_mount_sessions WHERE runtime_id<>?1 AND session_id NOT IN (SELECT json_extract(input,'$.session') FROM windows_open_journal) AND session_id NOT IN (SELECT json_extract(input,'$.session') FROM windows_session_recoveries)", [runtime])?;
+    check_index(db)?;
+    Ok(())
+}
 impl Journal<'_> {
     pub fn start_session(&mut self, session: &str, volume: &str) -> Result<()> {
         self.chunk_check()?;
@@ -257,7 +311,7 @@ impl Journal<'_> {
                     "fresh native runtime already has a session; reuse its exact identity".into(),
                 );
             }
-            tx.execute("DELETE FROM windows_mount_sessions WHERE runtime_id<>?1 AND session_id NOT IN (SELECT json_extract(input,'$.session') FROM windows_open_journal)",[&runtime])?;
+            prune_unused_sessions(&tx, &runtime)?;
             if tx.query_row("SELECT count(*) FROM windows_mount_sessions", [], |r| {
                 r.get::<_, i64>(0)
             })? >= 256
@@ -555,4 +609,37 @@ pub(super) fn pending(db: &Connection, volume: &str, node: &str) -> Result<Optio
         })
     })
     .transpose()
+}
+
+pub(super) fn quiescent_groups(
+    db: &Connection,
+    records: &[OpenRecord],
+    nodes: Option<&std::collections::BTreeSet<String>>,
+) -> Result<bool> {
+    check_index(db)?;
+    let ids = db
+        .prepare("SELECT recovery_id FROM windows_session_recoveries")?
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    for id in ids {
+        let (input, proof) = recovery(db, &id)?;
+        if nodes.is_some_and(|nodes| !nodes.contains(&input.node)) {
+            continue;
+        }
+        if proof.is_none() {
+            return Ok(false);
+        }
+        for member in &input.opens {
+            let record = records
+                .iter()
+                .find(|r| r.input.id == member.id)
+                .ok_or("recovery group is not wholly selected")?;
+            if binding(db, &input.session, &input.volume)?
+                == binding(db, &record.input.session, &record.input.volume)?
+            {
+                return Err("recovery cannot abandon its own runtime".into());
+            }
+        }
+    }
+    Ok(true)
 }

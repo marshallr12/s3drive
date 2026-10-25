@@ -4,6 +4,172 @@ Updated 2026-10-25. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
+## Candidate code accepted; real-use beta remains incomplete (2026-10-25)
+
+Exact source `59a10fe36b98d85d200bd24f7a51c79147e7a200`, tree
+`7c8bab19508d6b0ff1ebf55e59fdec2c1892ec7d`, passed independent review of
+[run40229890964](https://github.com/marshallr12/s3drive/actions/runs/40229890964): all nine complete job logs, 808 exact source files,
+six artifact digests, all four schema46–50 compatibility reports and 35 typed
+Windows reference observations. Linux1141/Windows1133 parent-harness
+workspace tests passed. The two warm-cache schema30 regressions are corrected;
+the original migration tests and all earlier acceptance gates remain unchanged.
+
+Original shared/debug/release300 workloads passed in 610.45/758.85/160.83s on Linux and
+707.23/1102.82/354.93s on Windows, with every remount segment and final cold read verified.
+Windows debug300 retains 97.18s below its unchanged1200s limit;
+this is limited headroom, not a hardware-independent performance guarantee.
+Additional release1000-save/100-remount and four64KiB-file300-save workloads
+passed on both OS. Each OS also passed four100-cycle component runs:800 combined
+cycles,400 mounts and400 closed SQLite integrity/FK checks. Component permanent
+row maxima were1, DB/WAL maxima778240/4161232 bytes and physical payload320 bytes.
+Diagnostic instructions were21,363,286,243,16.46% below the accepted-main baseline.
+
+Lifecycle and recovery cleanup are candidate-accepted for the **fresh opt-in
+`component-retention-v1`** profile. Unrelated open/dirty/read-protected work,
+uncertain outcomes and unfinished recovery remain protected; safe closed groups
+are reclaimed without fabricating Close. Defaults and the existing linked/owned
+profiles are unchanged. No remote object GC or alpha-store migration is added.
+
+Previous accepted baseline main is `3fd2f05e6d833d45cc1bfb70eabe6aa754524402`
+([run40157712514](https://github.com/marshallr12/s3drive/actions/runs/40157712514)).
+Candidate evidence must not be substituted for the separate exact merge/main
+verification. A documentation-only acceptance update does not change runtime,
+tests or CI. The merge commit requires its own complete source/log/artifact review.
+
+Real Wasabi headroom/provider acceptance, physical MiniAir driver/native-application
+UI/startup installation/reboot and public release/licensing remain incomplete.
+Private developer packaging and relocated CLI startup passed hosted Linux/Windows;
+that is not installation or physical/provider acceptance. Private validation
+archives, credentials and developer bundles remain unpublished.
+
+## Historical beta implementation checkpoints (2026-10-25)
+
+Accepted main is now `3fd2f05e6d833d45cc1bfb70eabe6aa754524402`, independently
+verified in [run40157712514](https://github.com/marshallr12/s3drive/actions/runs/40157712514).
+All seven jobs and 802 exact source blobs were reviewed; Linux1103/Windows1098
+workspace passes, six complete300-save workloads and six artifact digests passed.
+Windows debug mounted300 took1131.24s under the unchanged1200s limit. The older
+pending-main statements below are historical, superseded by this result.
+
+User requested all four remaining milestones: lifecycle cleanup, recovery
+cleanup, performance/longer soak and real-use beta/packaging. Work is on
+`codex/lifecycle-retention-completion` from the accepted main. Existing native
+owned/unlinked lifecycle is already implemented; do not rebuild it or equate it
+with retention. Current linked-retention creation/namespace refusals remain.
+
+The first safety correction preserves the observer session of a persisted
+recovery even if it owns no open. Both session admission and retirement pruning
+must retain that session until its recovery group can be safely reclaimed.
+New pending/finished recovery third-owner tests compile; local execution is
+blocked by the unchanged tmpfs durability guard. Hosted acceptance is pending.
+No old-format migration, provider writes or user-machine changes are included.
+See [the current completion plan](docs/src/beta-completion.md). Private evidence
+remains in the sibling validation directory, never in public commits.
+
+Current unaccepted linked/recovery/performance branch head is
+`cf2ab03fba6a32dc8fae58f699e1c795efca7dfb`, running expanded suite
+[40206107073](https://github.com/marshallr12/s3drive/actions/runs/40206107073).
+Changes include narrow no-effect recovery group cleanup, SQL statement caching
+with unchanged validation, additional1000-save and four64KiB-file soaks, and
+private deterministic test packaging. General creation/namespace and recovered
+publisher reclamation are still unfinished. MiniAir readiness found no WinFsp;
+installation/native application/reboot checks and actual Wasabi headroom remain
+blocked. See the completion plan for precise scope. No new main acceptance or
+public release is claimed.
+
+Experimental `codex/quiescent-lifecycle-proof` now implements fresh closed
+connected-component cleanup and exposes development-only `component-retention-v1`.
+It preserves unrelated dirty/open/read-protected work, expires namespace/creator/
+source identities and retains permanent owner/session/generation counters.
+Exact160113a passed50 focused state and four shared lifecycle/recovery cases;
+22480e91 passed51 state and five shared cases, but both actual native platforms
+failed a final reopened read. The correction306ed181 carries an independent
+reader lease through source dispatch until original-open activation, with a
+paused-admission/previous-Close regression. Its actual/full gates are pending.
+See the [design and evidence boundaries](docs/src/quiescent-lifecycle-retention.md).
+Do not merge from focused or shared passes alone. Main remains unchanged.
+
+On cf2ab03, the full Linux job passed1110 workspace tests and its three300-save
+runs; both added1000-save/four64KiB-file300 runs passed with all cold segments.
+Windows original debug300 passed its workflow step in1180s/1200, only20s margin;
+full Windows verification is pending. This is not robust wall-time headroom or
+physical-hardware acceptance. Private test packaging works on hosted systems,
+not an installer or public release. Provider/headroom, MiniAir driver/native UI,
+startup installation and reboot evidence remain externally blocked.
+
+Latest component diagnostic source `ba665c1a6ffcd4daf9a54906e9139dccfbe1a878`
+passed53 focused state cases, the dispatch-admission regression, five shared
+cases and both actual native component cases (Linux34.44s, Windows90.98s) in
+[run40213501378](https://github.com/marshallr12/s3drive/actions/runs/40213501378).
+The100-cycle fixture had a second-owner create-new bug found during review;
+this is not long-soak acceptance. The next fixture correction reopens and
+cold-verifies its surviving file, adds a two-owner native regression, and bounds
+all permanent owner/session/source rows and physical payloads explicitly.
+Production code is unchanged since306ed181. Full original gates, extended soaks,
+artifact/source verification and independent main acceptance remain required.
+
+The longer component soak found an unresolved acceptance blocker on c98496f:
+Linux completed28 cycles, then cycle31 Close reported `database disk image is
+malformed` and retained recovery. The whole workload correctly failed in
+[run40214811902](https://github.com/marshallr12/s3drive/actions/runs/40214811902).
+This is not attributed to physical corruption or a dependency without evidence.
+The original fixture did not retain DB/WAL. New failure-only read-only SQLite
+integrity diagnostics retain the synthetic directory privately on its runner;
+no raw archive is uploaded. The unchanged100-cycle step runs earlier to diagnose
+promptly. Source32cbd07 passed54 focused proofs (including physical alias refusal)
+and three actual cases on each OS, but these do not override the longer failure.
+All component acceptance and merge remain blocked pending diagnosis/fix/full gates.
+
+Investigation found a deterministic Linux lock-lifetime defect in preexisting
+`OwnedDirectory::finish_initialization`: closing ordinary verification handles
+for DB/WAL/SHM after SQLite opens releases its POSIX locks. An external process
+could acquire the reopened live owner's SHM deadman lock; the baseline probe
+fails and Linux-only retained-handle correction passes. Verification handles
+now outlive SQLite but close before releasing directory ownership, including
+error paths. Windows handling is unchanged. External read-only observer tests
+and directory regressions pass locally (locking evidence, not durable staging).
+The soak retains live observers, adds per-segment SQLite integrity checks and
+three extra100-cycle repeats under a separate45-minute budget; no original
+workload or deadline changes. Full exact-source hosted verification is pending.
+
+The lock-fix candidate `0dab6bde61771ce35f6826933d798402f597f228` in
+[run40217900789](https://github.com/marshallr12/s3drive/actions/runs/40217900789)
+passed all four100-cycle component runs on each OS:800 cycles/400 mounts total,
+400 closed SQLite integrity/FK checks, exact cold bytes and zero closed forests.
+Both extended1000-save and four64KiB-file300 workloads passed. Permanent-row
+maxima were1, component DB/WAL maxima778240/4177712 bytes, physical payload320.
+These complete extended logs were independently inspected, not just green steps.
+But Windows original debug300 reached290 then hit its unchanged1200s deadline.
+The candidate is NOT accepted; main remains3fd2f05. Linux full was still running.
+
+The next performance slice reuses bounded prepared SQL bytecode for hot ledger,
+anchor, journal and receipt reads (128 statements per State connection), never
+query rows, validation outcomes or authority. Every binding and read remains fresh;
+exact SQL strings/limits are unchanged. Prepare-only schema probes remain uncached.
+This targets16.91% of the prior diagnostic instructions spent preparing SQL.
+New warm-cache schema/trigger/row rollback checks and the original live-proof
+corruption checks must pass. Performance benefit and full acceptance are pending;
+no workload/deadline/profile relaxation or repeated-run lottery is authorized.
+
+Prepared-bytecode source `faa6b0bff1410c4c0fd40d1f4d3598cde364771a`
+[run40224366616](https://github.com/marshallr12/s3drive/actions/runs/40224366616)
+passed58 focused state tests, both actual native suites, all800 component cycles
+and both OS larger/longer workloads. Measured instructions fell7.58% versus
+0dab6bd (16.58% versus accepted-main diagnostic). Windows original debug300
+passed its unchanged20-minute step; complete full Windows evidence was pending.
+However, Linux full workspace caught two existing schema30 tests refusing a
+missing retention table after deliberately demoting a warmed connection. This is
+a false refusal, not data corruption. The candidate is not accepted.
+
+The narrow correction leaves retention's schema-presence prepare uncached:
+its existing absent-old-table fallback must observe errors during prepare, not
+only during execution. All other converted prepare-error paths were audited;
+this was the only one. Existing prepare-only schema probes remain uncached.
+A new direct warm-cache regression covers versions29/49/50, partial versus fully
+missing tables and rollback; current-format and partial tables still fail closed.
+Original historical migration tests remain unchanged. No new alpha migration
+scope, deadline change or main acceptance is implied; corrected full CI required.
+
 ## Corrected fresh linked-native candidate accepted (2026-10-25)
 
 Exact candidate `135a35bcbc8df575f7a9193f40da5e3adffead3c`, tree

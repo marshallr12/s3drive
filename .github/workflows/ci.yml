@@ -81,6 +81,12 @@ jobs:
           sudo apt-get install -y fuse3 tmux libglib2.0-bin
           sudo modprobe fuse
           test -c /dev/fuse
+      - name: Verify component cleanup shared lifecycle and cold recovery
+        timeout-minutes: 10
+        run: cargo test -p s3drive-cli --test chunk_publication component_retention_shared_ --locked -- --nocapture --test-threads=1
+      - name: Verify component cleanup actual native lifecycle
+        timeout-minutes: 8
+        run: cargo test -p s3drive-cli --test chunk_publication component_retention_actual_ --locked -- --ignored --nocapture --test-threads=1
       - name: Verify fresh linked-native shared saves and restart bounds
         timeout-minutes: 20
         run: cargo test -p s3drive-cli --test chunk_publication native_retention_shared_ --locked -- --nocapture --test-threads=1
@@ -291,6 +297,12 @@ jobs:
       - name: Measure bounded native protocol validation work
         timeout-minutes: 5
         run: cargo test -p s3drive-state native_retry_validation_work --locked -- --nocapture --test-threads=1
+      - name: Verify component admission reader survives concurrent prior Close
+        timeout-minutes: 5
+        run: cargo test -p s3drive-fs native_retention_runtime_component_admission_lease_survives_prior_close --locked -- --nocapture --test-threads=1
+      - name: Diagnose component shared lifecycle and cold recovery
+        timeout-minutes: 10
+        run: cargo test -p s3drive-cli --test chunk_publication component_retention_shared_ --locked -- --nocapture --test-threads=1
       - name: Measure actual shared filesystem dirty-save phases
         timeout-minutes: 5
         run: |
@@ -342,6 +354,9 @@ jobs:
       - name: Measure actual native syscall phases and owned daemon CPU
         timeout-minutes: 5
         run: cargo test -p s3drive-cli --test chunk_publication native_retention_validation_work_native_phases --locked -- --exact --ignored --nocapture --test-threads=1
+      - name: Diagnose component cleanup through actual native callbacks
+        timeout-minutes: 8
+        run: cargo test -p s3drive-cli --test chunk_publication component_retention_actual_ --locked -- --ignored --nocapture --test-threads=1
   native-cpu-profile:
     # Diagnostic only. Profiler wall time is not native/runtime acceptance.
     runs-on: ubuntu-latest
@@ -452,3 +467,66 @@ jobs:
       - run: python3 scripts/check-doc-links.py
       - run: mdbook build docs
       - run: mdbook test docs
+
+  extended-retention-soak:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: rust-${{ runner.os }}-1.99.1-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            rust-${{ runner.os }}-1.99.1-${{ hashFiles('Cargo.lock') }}-
+            rust-${{ runner.os }}-1.99.1-
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.99.1 --profile minimal
+      - name: Install pinned WinFsp on disposable hosted VM
+        if: runner.os == 'Windows'
+        run: ./scripts/install-winfsp.ps1
+      - name: Prepare Linux FUSE acceptance
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fuse3
+          sudo modprobe fuse
+          test -c /dev/fuse
+      - name: Build exact release extended fixture separately from workload deadlines
+        timeout-minutes: 25
+        run: cargo test -p s3drive-cli --test chunk_publication --release --locked --no-run
+      - name: Verify private developer package creation and relocated CLI startup
+        shell: bash
+        run: |
+          python scripts/test-package-test.py
+          cargo metadata --locked --format-version 1 > "$RUNNER_TEMP/s3drive-package-dependencies.json"
+          binary=target/release/s3drive
+          if [[ "$RUNNER_OS" == "Windows" ]]; then binary="$binary.exe"; fi
+          target=$(rustc --version --verbose | sed -n 's/^host: //p' | tr -d '\r')
+          python scripts/package-test.py --binary "$binary" --output "$RUNNER_TEMP/s3drive-private-test.zip" --target "$target" --dependencies "$RUNNER_TEMP/s3drive-package-dependencies.json"
+          python scripts/package-test.py --verify "$RUNNER_TEMP/s3drive-private-test.zip"
+          # Deliberately do not upload a private developer bundle as a public artifact.
+      - name: Additional component 100 lifecycle cycles with dirty readers and 50 mounts
+        timeout-minutes: 45
+        run: cargo test -p s3drive-cli --test chunk_publication --release component_retention_extended_100_lifecycle_cycles_50_mounts --locked -- --exact --ignored --nocapture --test-threads=1
+      - name: Repeat component stress with live external observers and cold integrity checks
+        timeout-minutes: 45
+        shell: bash
+        run: |
+          for repeat in 1 2 3; do
+            echo "COMPONENT_REPEAT_RUN=$repeat"
+            cargo test -p s3drive-cli --test chunk_publication --release component_retention_extended_100_lifecycle_cycles_50_mounts --locked -- --exact --ignored --nocapture --test-threads=1
+          done
+      - name: Additional actual 1000-save and 100-remount release soak
+        timeout-minutes: 45
+        run: cargo test -p s3drive-cli --test chunk_publication --release native_retention_extended_1000_saves_100_remounts --locked -- --ignored --exact --nocapture --test-threads=1
+      - name: Additional actual four-file 64KiB 300-save release workload
+        timeout-minutes: 45
+        run: cargo test -p s3drive-cli --test chunk_publication --release native_retention_extended_four_files_64kib_300_saves --locked -- --ignored --exact --nocapture --test-threads=1

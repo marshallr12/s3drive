@@ -3,6 +3,20 @@
 use super::*;
 use s3drive_fs::{ROOT, ReadOnlyFs};
 const NAME: &str = "retained 日本語 🦀.bin";
+fn shape(root: &Path) -> (u64, usize) {
+    if root.join("retention-large-fixture").exists() {
+        (4, 65536)
+    } else {
+        (1, 17)
+    }
+}
+fn name(index: u64, files: u64) -> String {
+    if files == 1 {
+        NAME.into()
+    } else {
+        format!("{NAME}.{index}")
+    }
+}
 // The seed publishes one empty manifest page. Each save publishes a new page,
 // but all-zero payloads (cycles 0 and 251) are structural holes, not data PUTs.
 pub fn expected_puts(completed: u64) -> usize {
@@ -18,6 +32,8 @@ fn native_retention_put_schedule_counts_zero_payloads_without_skipping_saves() {
     assert_eq!(expected_puts(251), 502);
     assert_eq!(expected_puts(252), 503);
     assert_eq!(expected_puts(300), 599);
+    assert_eq!(expected_puts(1000), 1997);
+    assert_eq!(expected_puts(300) + 3, 602);
 }
 fn config(root: &Path, s: &Server) -> s3drive_core::Config {
     let path = root.join("native-drive.toml");
@@ -32,11 +48,14 @@ pub async fn seed(c: &s3drive_core::Config, root: &Path, s: &Server) {
     native_writer::mount_configuration(c, root, s).await;
     let c = config(root, s);
     let fs = ReadOnlyFs::new(&c).await.unwrap();
-    let file = fs
-        .create_file(ROOT, NAME, |a, b| a == b, true)
-        .await
-        .unwrap();
-    drop(file);
+    let (files, _) = shape(root);
+    for index in 0..files {
+        let file = fs
+            .create_file(ROOT, &name(index, files), |a, b| a == b, true)
+            .await
+            .unwrap();
+        drop(file);
+    }
     native_writer::stop(fs).await;
     let path = root.join("native-drive.toml");
     let mut value: toml::Value = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
@@ -49,6 +68,10 @@ pub async fn seed(c: &s3drive_core::Config, root: &Path, s: &Server) {
     s3drive_core::Config::parse(&text).unwrap();
     std::fs::write(path, text).unwrap();
     std::fs::write(root.join("retention-cycle"), "0").unwrap();
+}
+pub async fn seed_large(c: &s3drive_core::Config, root: &Path, s: &Server) {
+    std::fs::write(root.join("retention-large-fixture"), b"four-files-64KiB").unwrap();
+    seed(c, root, s).await;
 }
 fn sizes(state: &Path) -> (u64, u64) {
     (
@@ -67,6 +90,7 @@ fn inspect(root: &Path, done: u64, peak: (u64, u64)) {
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap();
+    let files = i64::try_from(shape(root).0.min(done)).unwrap();
     for (table, n) in [
         ("windows_open_journal", 0),
         ("windows_open_events", 0),
@@ -74,9 +98,9 @@ fn inspect(root: &Path, done: u64, peak: (u64, u64)) {
         ("retained_windows_opens", 0),
         ("sparse_preparations", 0),
         ("sparse_publications", 0),
-        ("sparse_retention_anchors", 1),
-        ("sparse_views", 1),
-        ("staged_generations", 1),
+        ("sparse_retention_anchors", files),
+        ("sparse_views", files),
+        ("staged_generations", files),
         ("windows_mount_sessions", 1),
     ] {
         assert_eq!(
@@ -179,17 +203,21 @@ async fn shared_count(root: &Path, s: &Server, count: u64) {
         .unwrap();
     let fs = phase!("construct", ReadOnlyFs::new(&c).await.unwrap());
     let mut peak = (0, 0);
+    let (files, size) = shape(root);
     for n in start..start + count {
-        let node = phase!("lookup", fs.lookup(ROOT, NAME).await.unwrap());
+        let node = phase!(
+            "lookup",
+            fs.lookup(ROOT, &name(n % files, files)).await.unwrap()
+        );
         let file = phase!("open", fs.open_write(node.id).await.unwrap());
-        if n > 0 {
+        if n >= files {
             assert_eq!(
-                phase!("previous read", file.read(0, 17).await.unwrap()),
-                vec![((n - 1) % 251) as u8; 17],
+                phase!("previous read", file.read(0, size).await.unwrap()),
+                vec![((n - files) % 251) as u8; size],
                 "persisted bytes before overwrite"
             );
         }
-        let bytes = vec![(n % 251) as u8; 17];
+        let bytes = vec![(n % 251) as u8; size];
         phase!(
             "write",
             file.write(0, Arc::from(bytes.clone()), false, false)
@@ -198,7 +226,7 @@ async fn shared_count(root: &Path, s: &Server, count: u64) {
         );
         phase!("flush", file.flush().await.unwrap());
         assert_eq!(
-            phase!("verification read", file.read(0, 17).await.unwrap()),
+            phase!("verification read", file.read(0, size).await.unwrap()),
             bytes
         );
         phase!("actual Close", {
@@ -309,7 +337,8 @@ async fn mounted_inner(root: &Path, s: &Server, diagnostic: bool) {
         None
     };
     let first_sample = sample_start.elapsed();
-    let file = mount.path.join(NAME);
+    let (files, size) = shape(root);
+    let mount_path = mount.path.clone();
     let (peak, phases, syscall_wall) = native_mount::blocking(&mut mount, move || {
         let mut peak = (0, 0);
         let mut phases = PhaseStats::default();
@@ -325,6 +354,7 @@ async fn mounted_inner(root: &Path, s: &Server, diagnostic: bool) {
             }};
         }
         for n in start..start + 10 {
+            let file = mount_path.join(name(n % files, files));
             let mut handle = phase!(
                 "open",
                 std::fs::OpenOptions::new()
@@ -333,21 +363,21 @@ async fn mounted_inner(root: &Path, s: &Server, diagnostic: bool) {
                     .open(&file)
                     .unwrap()
             );
-            if n > 0 {
-                let mut previous = vec![0; 17];
+            if n >= files {
+                let mut previous = vec![0; size];
                 phase!("previous read", handle.read_exact(&mut previous).unwrap());
                 assert_eq!(
                     previous,
-                    vec![((n - 1) % 251) as u8; 17],
+                    vec![((n - files) % 251) as u8; size],
                     "persisted bytes before overwrite"
                 );
                 phase!("seek", handle.seek(SeekFrom::Start(0)).unwrap());
             }
-            let bytes = vec![(n % 251) as u8; 17];
+            let bytes = vec![(n % 251) as u8; size];
             phase!("write", handle.write_all(&bytes).unwrap());
             phase!("sync_all", handle.sync_all().unwrap());
             phase!("seek", handle.seek(SeekFrom::Start(0)).unwrap());
-            let mut read = vec![0; 17];
+            let mut read = vec![0; size];
             phase!("verification read", handle.read_exact(&mut read).unwrap());
             assert_eq!(read, bytes);
             phase!("handle drop return", drop(handle));
@@ -410,14 +440,18 @@ async fn final_shared_at(root: &Path, s: &Server, completed: u64) {
     let cpu = cpu_ticks();
     let c = config(root, s);
     let fs = ReadOnlyFs::new(&c).await.unwrap();
-    let node = fs.lookup(ROOT, NAME).await.unwrap();
-    let file = fs.open(node.id).await.unwrap();
-    assert_eq!(
-        file.read(0, 17).await.unwrap(),
-        vec![((completed - 1) % 251) as u8; 17]
-    );
-    file.native_object().unwrap().close().await.unwrap();
-    drop(file);
+    let (files, size) = shape(root);
+    for index in 0..files {
+        let node = fs.lookup(ROOT, &name(index, files)).await.unwrap();
+        let file = fs.open(node.id).await.unwrap();
+        let last = completed - 1 - ((completed - 1 - index) % files);
+        assert_eq!(
+            file.read(0, size).await.unwrap(),
+            vec![(last % 251) as u8; size]
+        );
+        file.native_object().unwrap().close().await.unwrap();
+        drop(file);
+    }
     native_writer::stop(fs).await;
     inspect(root, completed, sizes(&root.join("native-retention-state")));
     eprintln!(
@@ -438,14 +472,23 @@ pub async fn final_mounted_diagnostic(root: &Path, s: &Server) {
 async fn final_mounted_at(root: &Path, s: &Server, completed: u64) {
     config(root, s);
     let mut mount = native_mount::Mount::start(root).await;
-    let path = mount.path.join(NAME);
+    let (files, size) = shape(root);
+    let path = mount.path.clone();
     native_mount::blocking(&mut mount, move || {
-        assert_eq!(
-            std::fs::read(path).unwrap(),
-            vec![((completed - 1) % 251) as u8; 17]
-        )
+        for index in 0..files {
+            let last = completed - 1 - ((completed - 1 - index) % files);
+            assert_eq!(
+                std::fs::read(path.join(name(index, files))).unwrap(),
+                vec![(last % 251) as u8; size]
+            );
+        }
     })
     .await;
     mount.stop().await;
     inspect(root, completed, sizes(&root.join("native-retention-state")));
+}
+
+#[cfg(any(target_os = "linux", windows))]
+pub async fn final_mounted_soak(root: &Path, s: &Server) {
+    final_mounted_at(root, s, 1000).await;
 }

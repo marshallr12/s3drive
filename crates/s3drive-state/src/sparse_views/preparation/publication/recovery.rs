@@ -18,20 +18,20 @@ fn metadata(db: &Connection) -> Result<ledger::Meta> {
     crate::sparse_views::scoped::enabled(db)?;
     crate::sparse_views::pins::validate_headers(db)?;
     check_schema(db)?;
-    let tables:i64=db.query_row("SELECT count(*) FROM sqlite_schema WHERE type='table' AND name IN ('sparse_publication_role','sparse_publications','sparse_publication_checks','sparse_view_role','sparse_preparations')",[],|r|r.get(0))?;
+    let tables:i64=db.prepare_cached("SELECT count(*) FROM sqlite_schema WHERE type='table' AND name IN ('sparse_publication_role','sparse_publications','sparse_publication_checks','sparse_view_role','sparse_preparations')")?.query_row([],|r|r.get(0))?;
     if tables != 5 {
         return Err(Failure::Corrupt.into());
     }
     crate::sparse_views::isolation(db)?;
-    let roles: i64 = db.query_row("SELECT count(*) FROM sparse_view_role", [], |r| r.get(0))?;
+    let roles: i64 = db
+        .prepare_cached("SELECT count(*) FROM sparse_view_role")?
+        .query_row([], |r| r.get(0))?;
     if roles != 1 {
         return Err(Failure::Corrupt.into());
     }
-    let (single, format, sha): (i64, i64, Vec<u8>) = db.query_row(
-        "SELECT singleton,format,state_hash FROM sparse_view_role",
-        [],
-        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-    )?;
+    let (single, format, sha): (i64, i64, Vec<u8>) = db
+        .prepare_cached("SELECT singleton,format,state_hash FROM sparse_view_role")?
+        .query_row([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?;
     if single != 1 || format != 1 || sha.as_slice() != crate::sparse_views::role_hash()?.as_slice()
     {
         return Err(Failure::Corrupt.into());
@@ -53,7 +53,10 @@ fn metadata(db: &Connection) -> Result<ledger::Meta> {
         "SELECT EXISTS(SELECT 1 FROM sparse_publications p LEFT JOIN sparse_preparations s ON s.plan_id=p.plan_id WHERE s.plan_id IS NULL)",
         "SELECT EXISTS(SELECT 1 FROM sparse_publication_checks p LEFT JOIN sparse_preparations s ON s.plan_id=p.plan_id WHERE s.plan_id IS NULL)",
     ] {
-        if db.query_row(sql, [], |r| r.get::<_, bool>(0))? {
+        if db
+            .prepare_cached(sql)?
+            .query_row([], |r| r.get::<_, bool>(0))?
+        {
             return Err(Failure::Corrupt.into());
         }
     }

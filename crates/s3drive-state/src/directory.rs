@@ -27,6 +27,10 @@ const FILES: &[&str] = &[
 
 pub(crate) struct OwnedDirectory {
     path: PathBuf,
+    // State drops SQLite first. These must then close BEFORE _lock releases
+    // ownership, so a new same-process owner cannot lose its fresh POSIX locks.
+    #[cfg(target_os = "linux")]
+    _verified_files: Vec<File>,
     _lock: DirectoryLock,
     // Windows handles deny delete sharing, keeping all path components stable.
     _directories: Vec<File>,
@@ -128,6 +132,8 @@ impl OwnedDirectory {
             path,
             _lock: lock,
             _directories: directories,
+            #[cfg(target_os = "linux")]
+            _verified_files: Vec::new(),
         })
     }
 
@@ -153,7 +159,7 @@ impl OwnedDirectory {
     }
 
     #[cfg(any(target_os = "linux", windows))]
-    pub(crate) fn finish_initialization(&self) -> Result<()> {
+    pub(crate) fn finish_initialization(&mut self) -> Result<()> {
         // Recheck SQLite-created sidecars as well as preexisting files. The
         // connection has now established application/schema ownership.
         for name in FILES {
@@ -164,15 +170,23 @@ impl OwnedDirectory {
                 Err(e) => return Err(e.into()),
             }
             let file = platform::open_file(&path, false)?;
-            platform::verify_private(&file, false)?;
             #[cfg(target_os = "linux")]
-            platform::restrict_file(&file)?;
+            {
+                // Retain BEFORE validation: an initialization error must also
+                // drop SQLite before these handles release any of its locks.
+                self._verified_files.push(file);
+                let file = self._verified_files.last().ok_or("missing verified file")?;
+                platform::verify_private(file, false)?;
+                platform::restrict_file(file)?;
+            }
+            #[cfg(windows)]
+            platform::verify_private(&file, false)?;
         }
         Ok(())
     }
 
     #[cfg(not(any(target_os = "linux", windows)))]
-    pub(crate) fn finish_initialization(&self) -> Result<()> {
+    pub(crate) fn finish_initialization(&mut self) -> Result<()> {
         Err("managed local state is supported on Linux and Windows only".into())
     }
 }

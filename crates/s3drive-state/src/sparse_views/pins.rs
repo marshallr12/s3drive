@@ -95,7 +95,7 @@ pub(super) fn load(db: &Connection) -> Result<Ledger> {
 pub(super) fn load_in(scope: &mut IsolationCheck<'_>) -> Result<Ledger> {
     let db = scope.db;
     if check_schema(db).is_err() {
-        let n:i64=db.query_row("SELECT count(*) FROM sqlite_schema WHERE type='table' AND name IN ('source_read_pin_session','source_read_pins')",[],|r|r.get(0))?;
+        let n:i64=db.prepare_cached("SELECT count(*) FROM sqlite_schema WHERE type='table' AND name IN ('source_read_pin_session','source_read_pins')")?.query_row([],|r|r.get(0))?;
         let version: i32 = db.pragma_query_value(None, "user_version", |r| r.get(0))?;
         if n == 0 && version <= 36 {
             return Ok(Ledger::default());
@@ -103,7 +103,7 @@ pub(super) fn load_in(scope: &mut IsolationCheck<'_>) -> Result<Ledger> {
         return Err(Failure::Corrupt.into());
     }
     let mut out = Ledger::default();
-    let mut query=db.prepare("SELECT singleton,format,owner,issued,active,entries_hash,state_hash FROM source_read_pin_session LIMIT 2")?;
+    let mut query=db.prepare_cached("SELECT singleton,format,owner,issued,active,entries_hash,state_hash FROM source_read_pin_session LIMIT 2")?;
     let mut rows = query.query([])?;
     if let Some(r) = rows.next()? {
         let (singleton, format, owner, issued, active, ent, sha): (
@@ -149,7 +149,7 @@ pub(super) fn load_in(scope: &mut IsolationCheck<'_>) -> Result<Ledger> {
         out.role = Some(role);
     }
     let mut sequences = BTreeSet::new();
-    let mut query=db.prepare("SELECT pin_id,owner,sequence,view_id,state_hash FROM source_read_pins ORDER BY pin_id LIMIT 257")?;
+    let mut query=db.prepare_cached("SELECT pin_id,owner,sequence,view_id,state_hash FROM source_read_pins ORDER BY pin_id LIMIT 257")?;
     let mut rows = query.query([])?;
     while let Some(r) = rows.next()? {
         let (id, owner, sequence, view, sha): (Vec<u8>, String, i64, Vec<u8>, Vec<u8>) =
@@ -184,7 +184,7 @@ pub(super) fn load_in(scope: &mut IsolationCheck<'_>) -> Result<Ledger> {
         }
         _ => {}
     }
-    if !out.pins.is_empty() && db.query_row("SELECT EXISTS(SELECT 1 FROM source_read_pins p LEFT JOIN sparse_views v ON v.view_id=p.view_id WHERE v.view_id IS NULL)",[],|r|r.get::<_,bool>(0))? {
+    if !out.pins.is_empty() && db.prepare_cached("SELECT EXISTS(SELECT 1 FROM source_read_pins p LEFT JOIN sparse_views v ON v.view_id=p.view_id WHERE v.view_id IS NULL)")?.query_row([],|r|r.get::<_,bool>(0))? {
         return Err(Failure::Corrupt.into());
     }
     Ok(out)
@@ -202,11 +202,8 @@ pub(crate) fn verify_owner(state: &State) -> Result<()> {
     if let Some(expected) = state.source_pin_witness {
         let actual: Option<Vec<u8>> = state
             .connection
-            .query_row(
-                "SELECT state_hash FROM source_read_pin_session WHERE singleton=1",
-                [],
-                |r| r.get(0),
-            )
+            .prepare_cached("SELECT state_hash FROM source_read_pin_session WHERE singleton=1")?
+            .query_row([], |r| r.get(0))
             .optional()?;
         if actual.as_deref() != Some(expected.as_slice()) {
             return Err(Failure::Corrupt.into());
@@ -222,11 +219,10 @@ pub(super) fn current_owner(state: &State) -> Result<String> {
     Ok(owner.clone())
 }
 fn no_triggers(db: &Connection) -> Result<()> {
-    if db.query_row(
-        "SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='trigger')",
-        [],
-        |r| r.get::<_, bool>(0),
-    )? {
+    if db
+        .prepare_cached("SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='trigger')")?
+        .query_row([], |r| r.get::<_, bool>(0))?
+    {
         return Err(Failure::Corrupt.into());
     }
     Ok(())

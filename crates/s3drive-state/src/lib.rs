@@ -129,7 +129,7 @@ impl State {
     }
 
     fn open_owned(
-        owner: directory::OwnedDirectory,
+        mut owner: directory::OwnedDirectory,
         expected: Option<(&str, &str)>,
     ) -> Result<Self> {
         let mut state = match expected {
@@ -166,6 +166,9 @@ impl State {
                     | rusqlite::OpenFlags::SQLITE_OPEN_NOFOLLOW,
             )?
         };
+        // Bounded SQL bytecode only: every call binds and reads fresh rows.
+        // The hot validation set exceeds rusqlite's default 16-entry cache.
+        connection.set_prepared_statement_cache_capacity(128);
         connection.busy_timeout(Duration::from_secs(5))?;
         // Migrations must not depend on SQLite's compile-time FK default.
         connection.pragma_update(None, "foreign_keys", true)?;

@@ -5,6 +5,9 @@ use crate::{chunk_mount, namespace_client as names, namespace_client::opens};
 use std::{collections::BTreeMap, path::Path};
 mod prospective;
 fn setup(root: &Path) -> (State, State, chunk_mount::Key, Input) {
+    setup_contract(root, false)
+}
+fn setup_contract(root: &Path, fresh: bool) -> (State, State, chunk_mount::Key, Input) {
     std::fs::create_dir_all(root).unwrap();
     let mut a = State::open_managed(&root.join("authority")).unwrap();
     let v = a
@@ -23,7 +26,12 @@ fn setup(root: &Path) -> (State, State, chunk_mount::Key, Input) {
     let mut s = State::open_managed(&root.join("client")).unwrap();
     let mut i = input(4);
     i.volume = v.id;
-    let key = chunk_mount::admit(
+    let admit = if fresh {
+        chunk_mount::admit_quiescent
+    } else {
+        chunk_mount::admit
+    };
+    let key = admit(
         &mut s,
         chunk_mount::Input {
             volume: i.volume.clone(),
@@ -35,6 +43,12 @@ fn setup(root: &Path) -> (State, State, chunk_mount::Key, Input) {
         },
     )
     .unwrap();
+    if fresh {
+        i.operation =
+            chunk_mount::admission::next(&s.connection, chunk_mount::AdmissionDomain::Creation)
+                .unwrap()
+                .unwrap();
+    }
     i.owner = Some(key.owner().into());
     (s, a, key, i)
 }
@@ -1038,4 +1052,278 @@ fn assert_legacy_catalog(
         ]
     );
     assert_eq!(after, before);
+}
+
+#[test]
+fn native_retry_validation_work_quiescent_owned_creator_requires_import_and_closed_fence() {
+    let t = tempfile::tempdir().unwrap();
+    let (mut s, mut a, key, i) = setup(t.path());
+    let record = ack(&mut s, &mut a, &i);
+    let before = catalog(&s);
+    assert!(!super::super::super::retirement_ready(&s.connection, &record).unwrap());
+    assert_eq!(catalog(&s), before);
+    import(&mut s, &key, &i.operation).unwrap();
+    assert!(!super::super::super::retirement_ready(&s.connection, &record).unwrap());
+    let fence = ns(&mut s, &key)
+        .owned_removal(&i.volume, &i.operation)
+        .unwrap()
+        .unwrap()
+        .fence;
+    change(
+        &mut s,
+        &mut a,
+        &key,
+        &i,
+        5,
+        Mutation::CancelRemoval {
+            node: i.operation.clone(),
+            fence,
+        },
+    );
+    assert!(super::super::super::retirement_ready(&s.connection, &record).unwrap());
+}
+
+#[test]
+fn native_retry_validation_work_component_creation_requires_exact_retained_physical_authority() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (mut s, mut a, _key, i) = setup_contract(tmp.path(), true);
+    let operation = i.stage_key().unwrap();
+    let target = i.target().unwrap();
+    assert!(!admits_retry_staging(&s.connection, operation, &target, 64).unwrap());
+    assert!(
+        journal::Journal::new(&mut s, journal::Options::default())
+            .unwrap()
+            .begin_operation(&operation, &target, Base::Missing, None, 64)
+            .is_err()
+    );
+    j(&mut s).begin(i.clone()).unwrap();
+    assert!(admits_retry_staging(&s.connection, operation, &target, 64).unwrap());
+    assert!(!admits_retry_staging(&s.connection, [9; 32], &target, 64).unwrap());
+    assert!(admits_retry_staging(&s.connection, operation, &target, 65).is_err());
+    let g = staged(&mut s, &i);
+    assert!(!admits_retry_remote(&s.connection, g).unwrap());
+    j(&mut s).link(&i.operation, g).unwrap();
+    assert!(admits_retry_remote(&s.connection, g).unwrap());
+    verified(&mut s, g);
+    let r = j(&mut s).prepare_request(&i.operation).unwrap();
+    let q = r.request().unwrap().clone();
+    let receipt = a.namespace_apply(&q).unwrap();
+    j(&mut s).acknowledge(&i.operation, &q, receipt).unwrap();
+    crate::chunk_mount::validate_all(&s.connection).unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_component_expired_creator_cannot_restage_or_reclaim_generation_id()
+ {
+    let tmp = tempfile::tempdir().unwrap();
+    let (mut state, mut authority, _key, mut input) = setup_contract(tmp.path(), true);
+    input.owner = None;
+    let original = ack(&mut state, &mut authority, &input);
+    let generation = original.generation().unwrap();
+    let admitted = chunk_mount::Input {
+        volume: input.volume.clone(),
+        controls: vec![names::Control {
+            store: input.store.clone(),
+            source: input.source,
+            fingerprint: input.fingerprint.clone(),
+        }],
+    };
+    drop(state);
+    let storage = crate::worker::Storage::open(
+        &tmp.path().join("client"),
+        crate::cache::Options::default(),
+        journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    let capability = storage.chunk_mount_components(admitted).await.unwrap();
+    let collector = capability
+        .native_sparse(
+            crate::sparse_views::Options::default(),
+            crate::sparse_views::preparation::Options::default(),
+        )
+        .unwrap();
+    assert!(
+        collector
+            .retire_component(input.operation.clone())
+            .await
+            .unwrap()
+    );
+    let old = input.clone();
+    storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            let before = catalog(s);
+            assert!(j(s).begin(old.clone()).is_err());
+            assert!(
+                journal::Journal::new(s, journal::Options::default())?
+                    .begin_operation(&old.stage_key()?, &old.target()?, Base::Missing, None, 64)
+                    .is_err()
+            );
+            assert!(
+                remote::Journal::new(s, remote::Options::default())?
+                    .prepare(generation)
+                    .is_err()
+            );
+            assert_eq!(catalog(s), before);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    input.operation = capability
+        .next_admission(chunk_mount::AdmissionDomain::Creation)
+        .await
+        .unwrap()
+        .unwrap();
+    input.name = "new immutable identity.bin".into();
+    storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            j(s).begin(input.clone())?;
+            let next = staged(s, &input);
+            assert!(next.value() > generation.value());
+            crate::chunk_mount::validate_all(&s.connection)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_component_namespace_identity_expires_without_erasing_remote_node()
+ {
+    let tmp = tempfile::tempdir().unwrap();
+    let (mut state, mut authority, key, i) = setup_contract(tmp.path(), true);
+    let operation =
+        chunk_mount::admission::next(&state.connection, chunk_mount::AdmissionDomain::Namespace)
+            .unwrap()
+            .unwrap();
+    let input = names::Input {
+        request: Apply {
+            volume: i.volume.clone(),
+            operation: operation.clone(),
+            expected_sequence: i.expected_sequence,
+            mutation: Mutation::CreateEntry {
+                parent: i.parent.id.clone(),
+                parent_revision: i.parent.revision,
+                store: None,
+                name: "retained remote directory".into(),
+                node_kind: ns::Kind::Directory,
+            },
+        },
+        store: i.store.clone(),
+        source: i.source,
+        fingerprint: i.fingerprint.clone(),
+        entries: Vec::new(),
+        destination_control: None,
+    };
+    ns(&mut state, &key).begin(input.clone()).unwrap();
+    let receipt = authority.namespace_apply(&input.request).unwrap();
+    ns(&mut state, &key)
+        .acknowledge(&operation, Ok(receipt.clone()))
+        .unwrap();
+    drop(state);
+    let storage = crate::worker::Storage::open(
+        &tmp.path().join("client"),
+        crate::cache::Options::default(),
+        journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    let capability = storage
+        .chunk_mount_components(chunk_mount::Input {
+            volume: i.volume.clone(),
+            controls: vec![names::Control {
+                store: i.store,
+                source: i.source,
+                fingerprint: i.fingerprint,
+            }],
+        })
+        .await
+        .unwrap();
+    let collector = capability
+        .native_sparse(
+            crate::sparse_views::Options::default(),
+            crate::sparse_views::preparation::Options::default(),
+        )
+        .unwrap();
+    assert!(
+        collector
+            .retention_candidates()
+            .await
+            .unwrap()
+            .contains(&operation)
+    );
+    assert!(collector.retire_component(operation.clone()).await.unwrap());
+    assert!(
+        !collector
+            .retention_candidates()
+            .await
+            .unwrap()
+            .contains(&operation)
+    );
+    assert!(capability.namespace().begin(input.clone()).await.is_err());
+    // This is an authority receipt lookup through its exact idempotent request,
+    // not replay permission for the expired client intent.
+    assert_eq!(authority.namespace_apply(&input.request).unwrap(), receipt);
+    storage.close().await.unwrap();
+}
+
+#[test]
+fn native_retry_validation_work_component_creator_cannot_alias_surviving_physical_generation() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (mut s, _authority, _key, first) = setup_contract(tmp.path(), true);
+    // This original creator retains a complete physical witness. The second
+    // creator has valid independent admission but may not borrow that witness.
+    let original = prepared(&mut s, &first);
+    let generation = original.generation().unwrap();
+    let mut second = first.clone();
+    second.operation =
+        chunk_mount::admission::next(&s.connection, chunk_mount::AdmissionDomain::Creation)
+            .unwrap()
+            .unwrap();
+    second.name = "independent creator.bin".into();
+    j(&mut s).begin(second.clone()).unwrap();
+    let before = catalog(&s);
+    let body = journal::read_data(&s.connection, generation, 0, 64, false).unwrap();
+    let error = j(&mut s).link(&second.operation, generation).unwrap_err();
+    assert_eq!(error.downcast_ref::<Failure>(), Some(&Failure::Conflict));
+    assert_eq!(catalog(&s), before);
+    assert_eq!(
+        journal::read_data(&s.connection, generation, 0, 64, false).unwrap(),
+        body
+    );
+    // A shared generation cannot acquire a second valid staging-key witness:
+    // staged_operations.generation_id is UNIQUE for every creator/transfer/root.
+    // Exercise the real schema rather than resealing an unreachable valid alias.
+    let error = s
+        .connection
+        .execute(
+            "INSERT INTO staged_operations(operation_key,generation_id) VALUES(?1,?2)",
+            params![second.stage_key().unwrap().as_slice(), generation.value()],
+        )
+        .unwrap_err();
+    assert_eq!(
+        error.sqlite_error_code(),
+        Some(rusqlite::ErrorCode::ConstraintViolation)
+    );
+    assert_eq!(catalog(&s), before);
+    assert_eq!(
+        journal::read_data(&s.connection, generation, 0, 64, false).unwrap(),
+        body
+    );
+    assert_eq!(j(&mut s).get(&first.operation).unwrap(), original);
+    let independent = staged(&mut s, &second);
+    assert_ne!(independent, generation);
+    j(&mut s).link(&second.operation, independent).unwrap();
+    crate::chunk_mount::validate_all(&s.connection).unwrap();
+    assert_eq!(
+        journal::read_data(&s.connection, generation, 0, 64, false).unwrap(),
+        body
+    );
 }

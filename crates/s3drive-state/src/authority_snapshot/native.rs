@@ -814,7 +814,7 @@ mod tests {
     fn actual_schema_eight_is_copied_without_migration() {
         let tmp = tempfile::tempdir().unwrap();
         let source = tmp.path().join("legacy");
-        let owner = OwnedDirectory::acquire(&source).unwrap();
+        let mut owner = OwnedDirectory::acquire(&source).unwrap();
         let db = Connection::open(owner.database_path()).unwrap();
         for sql in [
             include_str!("../../migrations/001.sql"),

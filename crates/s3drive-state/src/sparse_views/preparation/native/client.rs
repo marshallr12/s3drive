@@ -77,6 +77,34 @@ impl Client {
             })
             .await
     }
+    /// Separate fresh lifecycle mode; no surviving proof is summarized or
+    /// rebound. Ineligible forests remain byte-for-byte retained.
+    pub async fn retire_quiescent(&self) -> Result<bool> {
+        let key = self.key.clone();
+        self.owner
+            .call(move |worker| publication::retention::quiescent::retire(&mut worker.state, &key))
+            .await
+    }
+    /// Bounded node discovery, including closed metadata-only work. Each result
+    /// must be independently revalidated by retire_component.
+    pub async fn retention_candidates(&self) -> Result<Vec<String>> {
+        let key = self.key.clone();
+        self.owner
+            .call(move |worker| {
+                publication::retention::quiescent::component::candidates(&mut worker.state, &key)
+            })
+            .await
+    }
+    /// Reclaim one closed connected lifecycle component without removing an
+    /// unrelated file's handles, readers, dirty data or unknown effects.
+    pub async fn retire_component(&self, node: String) -> Result<bool> {
+        let key = self.key.clone();
+        self.owner
+            .call(move |worker| {
+                publication::retention::quiescent::component::retire(&mut worker.state, &key, &node)
+            })
+            .await
+    }
     pub async fn bind(&self, open: String) -> Result<Token> {
         let key = self.key.clone();
         self.owner
@@ -334,13 +362,17 @@ impl Client {
                 }) {
                     return Err(Failure::Conflict.into());
                 }
+                checkpoint("native-no-effect-retire", "Eligible");
                 opens::erase_native(
                     &tx,
                     &records,
                     state.incarnation.as_deref().ok_or(Failure::Conflict)?,
                 )?;
+                checkpoint("native-no-effect-retire", "Erased");
                 metadata::validate(&tx)?;
+                checkpoint("native-no-effect-retire", "Validated");
                 tx.commit()?;
+                checkpoint("native-no-effect-retire", "Committed");
                 state.native_sparse.forget_retired(&records);
                 Ok(true)
             })

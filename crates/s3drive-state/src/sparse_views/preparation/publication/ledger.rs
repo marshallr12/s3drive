@@ -87,11 +87,10 @@ impl Meta {
     }
 }
 pub(super) fn no_triggers(db: &Connection) -> Result<()> {
-    if db.query_row(
-        "SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='trigger')",
-        [],
-        |r| r.get::<_, bool>(0),
-    )? {
+    if db
+        .prepare_cached("SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='trigger')")?
+        .query_row([], |r| r.get::<_, bool>(0))?
+    {
         return Err(Failure::Corrupt.into());
     }
     Ok(())
@@ -100,7 +99,7 @@ fn id(raw: Vec<u8>) -> Result<Id> {
     raw.try_into().map_err(|_| Failure::Corrupt.into())
 }
 fn count(db: &Connection, sql: &str) -> Result<u64> {
-    let n: i64 = db.query_row(sql, [], |r| r.get(0))?;
+    let n: i64 = db.prepare_cached(sql)?.query_row([], |r| r.get(0))?;
     u64::try_from(n).map_err(|_| Failure::Corrupt.into())
 }
 #[cfg(test)]
@@ -132,7 +131,10 @@ pub(in crate::sparse_views) fn inspect(db: &Connection) -> Result<Meta> {
         "SELECT EXISTS(SELECT 1 FROM sparse_publications WHERE typeof(plan_id)!='blob' OR length(plan_id)!=32 OR typeof(reserve_id)!='text' OR length(reserve_id)!=32 OR typeof(publish_id)!='text' OR length(publish_id)!=32 OR typeof(record)!='blob' OR length(record) NOT BETWEEN 1 AND 65536 OR typeof(state_hash)!='blob' OR length(state_hash)!=32)",
         "SELECT EXISTS(SELECT 1 FROM sparse_publication_checks WHERE typeof(plan_id)!='blob' OR length(plan_id)!=32 OR typeof(slot)!='integer' OR slot NOT BETWEEN 0 AND 65535 OR typeof(record)!='blob' OR length(record) NOT BETWEEN 1 AND 2048 OR typeof(state_hash)!='blob' OR length(state_hash)!=32)",
     ] {
-        if db.query_row(sql, [], |r| r.get::<_, bool>(0))? {
+        if db
+            .prepare_cached(sql)?
+            .query_row([], |r| r.get::<_, bool>(0))?
+        {
             return Err(Failure::Corrupt.into());
         }
     }
@@ -144,7 +146,7 @@ pub(in crate::sparse_views) fn inspect(db: &Connection) -> Result<Meta> {
         return Err(Failure::Corrupt.into());
     }
     let mut meta = Meta::default();
-    let mut q=db.prepare("SELECT plan_id,reserve_id,publish_id,record,state_hash FROM sparse_publications ORDER BY plan_id")?;
+    let mut q=db.prepare_cached("SELECT plan_id,reserve_id,publish_id,record,state_hash FROM sparse_publications ORDER BY plan_id")?;
     for row in q.query_map([], |r| {
         Ok((
             r.get::<_, Vec<u8>>(0)?,
@@ -166,7 +168,7 @@ pub(in crate::sparse_views) fn inspect(db: &Connection) -> Result<Meta> {
             return Err(Failure::Corrupt.into());
         }
     }
-    let mut q=db.prepare("SELECT plan_id,slot,record,state_hash FROM sparse_publication_checks ORDER BY plan_id,slot")?;
+    let mut q=db.prepare_cached("SELECT plan_id,slot,record,state_hash FROM sparse_publication_checks ORDER BY plan_id,slot")?;
     for row in q.query_map([], |r| {
         Ok((
             r.get::<_, Vec<u8>>(0)?,
@@ -194,7 +196,7 @@ pub(in crate::sparse_views) fn inspect(db: &Connection) -> Result<Meta> {
                 return Err(Failure::Corrupt.into());
             }
             p.historical(db, &r.input.binding)?;
-            let raw: Vec<u8> = db.query_row("SELECT CASE WHEN typeof(input)='blob' AND length(input) BETWEEN 1 AND 65536 THEN input END FROM sparse_preparations WHERE plan_id=?1", [r.input.plan.as_slice()], |row|row.get(0))?;
+            let raw: Vec<u8> = db.prepare_cached("SELECT CASE WHEN typeof(input)='blob' AND length(input) BETWEEN 1 AND 65536 THEN input END FROM sparse_preparations WHERE plan_id=?1")?.query_row( [r.input.plan.as_slice()], |row|row.get(0))?;
             let source: super::super::model::Input = serde_json::from_slice(&raw)?;
             if serde_json::to_vec(&source)? != raw
                 || source.id()? != r.input.plan
@@ -208,11 +210,11 @@ pub(in crate::sparse_views) fn inspect(db: &Connection) -> Result<Meta> {
             }
         }
     }
-    let (singleton, admitted, checked, sha): (i64, i64, i64, Vec<u8>) = db.query_row(
-        "SELECT singleton,admitted,checked,state_hash FROM sparse_publication_role",
-        [],
-        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
-    )?;
+    let (singleton, admitted, checked, sha): (i64, i64, i64, Vec<u8>) = db
+        .prepare_cached(
+            "SELECT singleton,admitted,checked,state_hash FROM sparse_publication_role",
+        )?
+        .query_row([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?;
     if singleton != 1
         || admitted != records as i64
         || checked != checks as i64

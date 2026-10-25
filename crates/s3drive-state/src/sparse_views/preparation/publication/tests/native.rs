@@ -21,6 +21,15 @@ async fn setup_mode_posix(
     retry: bool,
     posix: bool,
 ) -> Native {
+    setup_contract(path, plans, retry, posix, false).await
+}
+async fn setup_contract(
+    path: &std::path::Path,
+    plans: usize,
+    retry: bool,
+    posix: bool,
+    quiescent: bool,
+) -> Native {
     let storage = Storage::open(
         path,
         crate::cache::Options::default(),
@@ -34,7 +43,12 @@ async fn setup_mode_posix(
             let s = &mut store.state;
             let f = fixture();
             let key = if retry {
-                crate::chunk_mount::admit_retry(
+                let admit = if quiescent {
+                    crate::chunk_mount::admit_quiescent
+                } else {
+                    crate::chunk_mount::admit_retry
+                };
+                admit(
                     s,
                     crate::chunk_mount::Input {
                         volume: f.binding.base()?.volume().into(),
@@ -50,11 +64,11 @@ async fn setup_mode_posix(
             };
             let input = open_with_posix(s, &f, &key, posix);
             views::scoped::enable(s)?;
-            let view = views::Journal::new(s, views::Options::default())?.begin_scoped(
-                views::ScopedOperation::new(&f.binding, [1; 32])?,
-                f.binding,
-                17,
-            )?;
+            let operation =
+                crate::chunk_mount::admission::source_operation(&s.connection, &f.binding)?
+                    .unwrap_or(views::ScopedOperation::new(&f.binding, [1; 32])?);
+            let view = views::Journal::new(s, views::Options::default())?
+                .begin_scoped(operation, f.binding, 17)?;
             Ok((key, input, view))
         })
         .await
@@ -1502,7 +1516,17 @@ async fn native_retry_fresh_contract_closes_ids_before_transactional_retirement(
 async fn retry_cycle(n: &Native, f: Fixture, iteration: u64) -> Fixture {
     retry_cycle_mode(n, f, iteration, true).await
 }
-async fn retry_cycle_mode(n: &Native, mut f: Fixture, iteration: u64, collect: bool) -> Fixture {
+async fn retry_cycle_mode(n: &Native, f: Fixture, iteration: u64, collect: bool) -> Fixture {
+    retry_cycle_contract(n, f, iteration, collect, false).await
+}
+async fn retry_cycle_contract(
+    n: &Native,
+    mut f: Fixture,
+    iteration: u64,
+    collect: bool,
+    abandon: bool,
+) -> Fixture {
+    assert!(!(collect && abandon));
     let bytes = vec![(iteration % 251) as u8; 17];
     let context =
         Context::new(&n.view, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
@@ -1512,13 +1536,30 @@ async fn retry_cycle_mode(n: &Native, mut f: Fixture, iteration: u64, collect: b
         .unwrap();
     let callback = hex(&hash(b"retry-cycle-close", &n.token.input().id).unwrap()[..16]);
     let completion = hex(&hash(b"retry-cycle-completion", &n.token.input().id).unwrap()[..16]);
-    n.token.observe_close();
-    let close = n
-        .client
-        .close(n.token.clone(), callback.clone())
-        .await
-        .unwrap();
-    let info = close.plans[0].clone();
+    let info = if abandon {
+        let head = n
+            .storage
+            .sparse_views(views::Options::default())
+            .unwrap()
+            .current_head(n.view.binding().clone())
+            .await
+            .unwrap();
+        n.client
+            .prepare(
+                n.token.clone(),
+                Context::new(&head, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap(),
+            )
+            .await
+            .unwrap()
+    } else {
+        n.token.observe_close();
+        let close = n
+            .client
+            .close(n.token.clone(), callback.clone())
+            .await
+            .unwrap();
+        close.plans[0].clone()
+    };
     let plan = info.id().unwrap();
     let f =
         n.storage
@@ -1565,21 +1606,23 @@ async fn retry_cycle_mode(n: &Native, mut f: Fixture, iteration: u64, collect: b
             })
             .await
             .unwrap();
-    n.client
-        .complete(n.token.clone(), callback, completion)
-        .await
-        .unwrap();
-    let key = n.key.clone();
-    let open = n.token.input().id.clone();
-    n.storage
-        .cache()
-        .owner
-        .call(move |store| {
-            opens(&mut store.state, &key).retire(&open)?;
-            Ok(())
-        })
-        .await
-        .unwrap();
+    if !abandon {
+        n.client
+            .complete(n.token.clone(), callback, completion)
+            .await
+            .unwrap();
+        let key = n.key.clone();
+        let open = n.token.input().id.clone();
+        n.storage
+            .cache()
+            .owner
+            .call(move |store| {
+                opens(&mut store.state, &key).retire(&open)?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
     if collect {
         assert!(n.client.retire_linked(f.node.id.clone()).await.unwrap());
     }
@@ -4371,7 +4414,7 @@ async fn native_retry_validation_work_canonical_memo_keeps_live_proofs_fresh() {
             );
             let current = crate::pure_memo::work();
             assert_eq!([current[0] - counts[0], current[1] - counts[1]], [1, 1]);
-            for case in 0..8 {
+            for case in 0..11 {
                 let tx = s.connection.transaction()?;
                 match case {
                     0 => {
@@ -4424,18 +4467,27 @@ async fn native_retry_validation_work_canonical_memo_keeps_live_proofs_fresh() {
                                 > 0
                         );
                     }
-                    _ => {
+                    7 => {
                         assert!(
                             tx.execute("UPDATE staged_chunks SET data=zeroblob(length(data))", [])?
                                 > 0
                         );
+                    }
+                    8 => {
+                        tx.execute_batch("CREATE TRIGGER cache_guard AFTER UPDATE ON source_bindings BEGIN SELECT 1; END")?;
+                    }
+                    9 => {
+                        tx.execute_batch("ALTER TABLE sparse_retention_anchors RENAME COLUMN record TO wrong_record")?;
+                    }
+                    _ => {
+                        assert!(tx.execute("UPDATE source_bindings SET config_fingerprint=?1", ["f".repeat(64)])? > 0);
                     }
                 }
                 let hits = crate::pure_memo::work()[1];
                 assert!(
                     crate::sparse_views::preparation::publication::retention::load(&tx).is_err()
                 );
-                if case >= 4 {
+                if (4..8).contains(&case) {
                     assert!(
                         crate::pure_memo::work()[1] > hits,
                         "external proof case {case} must reach a warmed exact-byte hit"
@@ -4556,4 +4608,1348 @@ async fn native_retry_validation_work_upload_selections_preserve_branches_and_fr
         }).await.unwrap();
         n.storage.close().await.unwrap();
     }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_recovery_observer_session_survives_next_owner_without_an_open()
+ {
+    for finish in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("recovery observer session");
+        let old = setup_mode(&path, 16, true).await;
+        let input = old.token.input().clone();
+        old.storage.close().await.unwrap();
+        let storage = Storage::open(
+            &path,
+            crate::cache::Options::default(),
+            crate::journal::Options::default(),
+        )
+        .await
+        .unwrap();
+        let key = old.key.clone();
+        let original = input.clone();
+        let recovery = storage
+            .cache()
+            .owner
+            .call(move |store| {
+                let state = &mut store.state;
+                let session = crate::chunk_mount::admission::next(
+                    &state.connection,
+                    crate::chunk_mount::AdmissionDomain::Session,
+                )?
+                .unwrap();
+                let mut journal = opens(state, &key);
+                journal.start_session(&session, &original.volume)?;
+                let proof =
+                    journal.prepare_recovery(&session, &original.volume, &original.node, None)?;
+                if finish {
+                    journal.finish_recovery(&session, &proof.input.id)?;
+                }
+                Ok(proof.input)
+            })
+            .await
+            .unwrap();
+        storage.close().await.unwrap();
+        let storage = Storage::open(
+            &path,
+            crate::cache::Options::default(),
+            crate::journal::Options::default(),
+        )
+        .await
+        .unwrap();
+        let key = old.key.clone();
+        storage
+            .cache()
+            .owner
+            .call(move |store| {
+                let state = &mut store.state;
+                let session = crate::chunk_mount::admission::next(
+                    &state.connection,
+                    crate::chunk_mount::AdmissionDomain::Session,
+                )?
+                .unwrap();
+                let mut journal = opens(state, &key);
+                journal.start_session(&session, &input.volume)?;
+                assert!(journal.obsolete_session(&recovery.session, &input.volume)?);
+                assert_eq!(journal.recovered(&input.id)?, finish);
+                assert!(journal.finish_recovery(&session, &recovery.id)?.finished);
+                assert!(journal.recovered(&input.id)?);
+                Ok(())
+            })
+            .await
+            .unwrap();
+        storage.close().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_no_effect_recovery_reclaims_complete_group_only_after_last_reader()
+ {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("no effect recovery retention");
+    let old = setup_mode(&path, 16, true).await;
+    let input = old.token.input().clone();
+    let view = old.view.id();
+    old.storage.close().await.unwrap();
+    let storage = Storage::open(
+        &path,
+        crate::cache::Options::default(),
+        crate::journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    let key = old.key.clone();
+    let capability = crate::chunk_mount::Client::new(
+        storage.cache().owner,
+        crate::journal::Options::default(),
+        key.clone(),
+    );
+    let session = capability
+        .next_admission(crate::chunk_mount::AdmissionDomain::Session)
+        .await
+        .unwrap()
+        .unwrap();
+    let journal = capability.opens();
+    journal
+        .start_session(session.clone(), input.volume.clone())
+        .await
+        .unwrap();
+    let recovery = journal
+        .prepare_recovery(
+            session.clone(),
+            input.volume.clone(),
+            input.node.clone(),
+            None,
+        )
+        .await
+        .unwrap();
+    let collector = capability
+        .native_sparse(views::Options::default(), Options::default())
+        .unwrap();
+    assert!(journal.retire(input.id.clone()).await.is_err());
+    assert!(!collector.retire_linked(input.node.clone()).await.unwrap());
+    assert!(
+        journal
+            .finish_recovery(session.clone(), recovery.input.id.clone())
+            .await
+            .unwrap()
+            .finished
+    );
+    journal.retire(input.id.clone()).await.unwrap();
+    let local = storage.sparse_views(views::Options::default()).unwrap();
+    let reader = local.guard(view).await.unwrap();
+    let clone = reader.clone();
+    drop(reader);
+    assert!(!collector.retire_linked(input.node.clone()).await.unwrap());
+    assert!(journal.recovered(input.id.clone()).await.unwrap());
+    drop(clone);
+    // A swallowed group deletion must roll back both membership and original
+    // open evidence, not leave a falsely empty collector result.
+    storage.cache().owner.call(|store| {
+        store.state.connection.execute_batch("CREATE TRIGGER ignore_recovery_retirement BEFORE DELETE ON windows_session_recoveries BEGIN SELECT RAISE(IGNORE); END")?;
+        Ok(())
+    }).await.unwrap();
+    assert!(collector.retire_linked(input.node.clone()).await.is_err());
+    storage
+        .cache()
+        .owner
+        .call(|store| {
+            store
+                .state
+                .connection
+                .execute_batch("DROP TRIGGER ignore_recovery_retirement")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(journal.recovered(input.id.clone()).await.unwrap());
+    assert!(collector.retire_linked(input.node.clone()).await.unwrap());
+    assert!(!collector.retire_linked(input.node.clone()).await.unwrap());
+    assert!(journal.get(input.id.clone()).await.is_err());
+    assert!(journal.prepare(input.clone()).await.is_err());
+    assert!(
+        journal
+            .finish_recovery(session, recovery.input.id)
+            .await
+            .is_err()
+    );
+    storage.close().await.unwrap();
+    let mut state = State::open_managed(&path).unwrap();
+    for table in [
+        "windows_session_recoveries",
+        "recovered_windows_opens",
+        "windows_open_journal",
+        "retired_windows_opens",
+    ] {
+        assert_eq!(
+            state
+                .connection
+                .query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r
+                    .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+    }
+    assert_eq!(
+        views::Journal::new(&mut state, views::Options::default())
+            .unwrap()
+            .current_head(&fixture().binding)
+            .unwrap()
+            .id(),
+        view
+    );
+}
+
+async fn recovered_no_effect_fixture(path: &std::path::Path) -> (Storage, Client) {
+    let old = setup_mode(path, 16, true).await;
+    let input = old.token.input().clone();
+    old.storage.close().await.unwrap();
+    let storage = Storage::open(
+        path,
+        crate::cache::Options::default(),
+        crate::journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    let capability = crate::chunk_mount::Client::new(
+        storage.cache().owner,
+        crate::journal::Options::default(),
+        old.key,
+    );
+    let session = capability
+        .next_admission(crate::chunk_mount::AdmissionDomain::Session)
+        .await
+        .unwrap()
+        .unwrap();
+    let journal = capability.opens();
+    journal
+        .start_session(session.clone(), input.volume.clone())
+        .await
+        .unwrap();
+    let recovery = journal
+        .prepare_recovery(session.clone(), input.volume, input.node, None)
+        .await
+        .unwrap();
+    journal
+        .finish_recovery(session, recovery.input.id)
+        .await
+        .unwrap();
+    journal.retire(input.id).await.unwrap();
+    let collector = capability
+        .native_sparse(views::Options::default(), Options::default())
+        .unwrap();
+    (storage, collector)
+}
+
+#[tokio::test]
+async fn native_retry_no_effect_recovery_killed_owner_rolls_back_or_commits_whole_group() {
+    use std::process::{Command, Stdio};
+    use std::time::{Duration, Instant};
+    for point in ["Eligible", "Erased", "Validated", "Committed"] {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("killed no-effect recovery");
+        let ready = tmp.path().join("ready");
+        let (storage, _) = recovered_no_effect_fixture(&path).await;
+        let before = storage
+            .cache()
+            .owner
+            .call(|store| Ok(native_snapshot(&store.state)))
+            .await
+            .unwrap();
+        storage.close().await.unwrap();
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "sparse_views::preparation::publication::tests::barriers::native::native_retry_no_effect_recovery_crash_child", "--nocapture"])
+            .env("S3DRIVE_NO_EFFECT_CRASH_DIR", &path)
+            .env("S3DRIVE_MIXED_CRASH_KIND", "native-no-effect-retire")
+            .env("S3DRIVE_MIXED_CRASH_POINT", point)
+            .env("S3DRIVE_MIXED_CRASH_READY", &ready)
+            .stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::piped()).spawn().unwrap();
+        let started = Instant::now();
+        while !ready.exists() {
+            if let Some(status) = child.try_wait().unwrap() {
+                use std::io::Read;
+                let mut err = String::new();
+                child
+                    .stderr
+                    .take()
+                    .unwrap()
+                    .read_to_string(&mut err)
+                    .unwrap();
+                panic!("{point}: {status}: {err}");
+            }
+            if started.elapsed() > Duration::from_secs(30) {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("no-effect retirement checkpoint timeout: {point}");
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert!(State::open_managed(&path).is_err());
+        child.kill().unwrap();
+        assert!(!child.wait().unwrap().success());
+        let state = State::open_managed(&path).unwrap();
+        if point != "Committed" {
+            assert_eq!(native_snapshot(&state), before);
+        }
+        for table in [
+            "windows_session_recoveries",
+            "recovered_windows_opens",
+            "windows_open_journal",
+        ] {
+            assert_eq!(
+                state
+                    .connection
+                    .query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r
+                        .get::<_, i64>(0))
+                    .unwrap(),
+                i64::from(point != "Committed")
+            );
+        }
+        crate::chunk_mount::validate_all(&state.connection).unwrap();
+        drop(state);
+        // Every precommit kill is retryable, and a committed erase is an
+        // idempotent no-op. Reopen once more to verify the retry itself persisted.
+        let (storage, collector) = reopen_no_effect_collector(&path).await;
+        assert_eq!(
+            collector
+                .retire_linked(fixture().node.id.clone())
+                .await
+                .unwrap(),
+            point != "Committed"
+        );
+        assert!(!collector.retire_linked(fixture().node.id).await.unwrap());
+        storage.close().await.unwrap();
+        let state = State::open_managed(&path).unwrap();
+        crate::chunk_mount::validate_all(&state.connection).unwrap();
+        for table in [
+            "windows_session_recoveries",
+            "recovered_windows_opens",
+            "windows_open_journal",
+        ] {
+            assert_eq!(
+                state
+                    .connection
+                    .query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r
+                        .get::<_, i64>(0))
+                    .unwrap(),
+                0
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn native_retry_no_effect_recovery_crash_child() {
+    let Some(path) = std::env::var_os("S3DRIVE_NO_EFFECT_CRASH_DIR") else {
+        return;
+    };
+    let (storage, collector) = reopen_no_effect_collector(std::path::Path::new(&path)).await;
+    assert!(collector.retire_linked(fixture().node.id).await.unwrap());
+    storage.close().await.unwrap();
+}
+
+async fn reopen_no_effect_collector(path: &std::path::Path) -> (Storage, Client) {
+    let storage = Storage::open(
+        path,
+        crate::cache::Options::default(),
+        crate::journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    let key = storage
+        .cache()
+        .owner
+        .call(|store| {
+            Ok(crate::chunk_mount::load(&store.state.connection)?
+                .unwrap()
+                .key())
+        })
+        .await
+        .unwrap();
+    let collector = Client::new(
+        storage.cache().owner,
+        key,
+        views::Options::default(),
+        Options::default(),
+    )
+    .unwrap();
+    (storage, collector)
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_no_effect_recovery_rejects_resealed_same_runtime() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp
+        .path()
+        .join("same runtime recovery cannot authorize erasure");
+    let (storage, collector) = recovered_no_effect_fixture(&path).await;
+    let before = storage.cache().owner.call(|store| {
+        let db = &store.state.connection;
+        let original: String = db.query_row("SELECT json_extract(input,'$.session') FROM windows_open_journal", [], |r| r.get(0))?;
+        // Rebind the recovery's observer, not a session's runtime: the latter
+        // is independently forbidden by the existing UNIQUE(volume,runtime).
+        let (raw, proof): (Vec<u8>, Option<Vec<u8>>) = db.query_row("SELECT input,proof FROM windows_session_recoveries", [], |r| Ok((r.get(0)?, r.get(1)?)))?;
+        let mut input: opens::session::RecoveryInput = serde_json::from_slice(&raw)?;
+        let old = input.id.clone();
+        input.session = original;
+        input.id = hex(&hash(b"s3drive-session-recovery-id-v1\0", &(&input.session, &input.volume, &input.node))?[..16]);
+        let proof: Option<serde_json::Value> = proof.map(|b| serde_json::from_slice(&b)).transpose()?;
+        let seal = hash(b"s3drive-session-recovery-v1\0", &(&input, &proof))?;
+        let tx = store.state.connection.transaction()?;
+        tx.pragma_update(None, "defer_foreign_keys", true)?;
+        assert_eq!(tx.execute("UPDATE windows_session_recoveries SET recovery_id=?1,input=?2,state_hash=?3 WHERE recovery_id=?4", rusqlite::params![input.id, serde_json::to_vec(&input)?, seal.as_slice(), old])?, 1);
+        assert_eq!(tx.execute("UPDATE recovered_windows_opens SET recovery_id=?1 WHERE recovery_id=?2", rusqlite::params![input.id, old])?, 1);
+        assert!(!tx.query_row("SELECT EXISTS(SELECT 1 FROM pragma_foreign_key_check)", [], |r| r.get::<_, bool>(0))?);
+        tx.commit()?;
+        Ok(native_snapshot(&store.state))
+    }).await.unwrap();
+    assert!(collector.retire_linked(fixture().node.id).await.is_err());
+    storage
+        .cache()
+        .owner
+        .call(move |store| {
+            assert_eq!(native_snapshot(&store.state), before);
+            assert_eq!(
+                store.state.connection.query_row(
+                    "SELECT count(*) FROM windows_session_recoveries",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                1
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_quiescent_closed_forest_expires_original_open_and_preserves_owner()
+ {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("quiescent forest");
+    let n = setup_contract(&path, 16, true, true, true).await;
+    let original = n.token.input().clone();
+    assert!(!n.client.retire_quiescent().await.unwrap());
+    let f = retry_cycle_mode(&n, fixture(), 1, false).await;
+    let local = n.storage.sparse_views(views::Options::default()).unwrap();
+    let head = local.current_head(f.binding.clone()).await.unwrap();
+    let reader = local.guard(head.id()).await.unwrap();
+    let clone = reader.clone();
+    drop(reader);
+    assert!(!n.client.retire_quiescent().await.unwrap());
+    drop(clone);
+    let binding = n
+        .storage
+        .cache()
+        .owner
+        .call(|store| Ok(crate::chunk_mount::load(&store.state.connection)?.unwrap()))
+        .await
+        .unwrap();
+    assert!(n.client.retire_quiescent().await.unwrap());
+    assert!(!n.client.retire_quiescent().await.unwrap());
+    assert!(n.client.bind(original.id.clone()).await.is_err());
+    let key = n.key.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            assert_eq!(
+                crate::chunk_mount::load(&store.state.connection)?.unwrap(),
+                binding
+            );
+            assert!(opens(&mut store.state, &key).prepare(original).is_err());
+            for table in [
+                "windows_open_journal",
+                "sparse_views",
+                "sparse_preparations",
+                "staged_generations",
+                "remote_intents",
+                "sparse_publications",
+            ] {
+                assert_eq!(
+                    store.state.connection.query_row(
+                        &format!("SELECT count(*) FROM {table}"),
+                        [],
+                        |r| r.get::<_, i64>(0)
+                    )?,
+                    0
+                );
+            }
+            crate::chunk_mount::validate_all(&store.state.connection)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    n.storage.close().await.unwrap();
+    let state = State::open_managed(&path).unwrap();
+    crate::chunk_mount::validate_all(&state.connection).unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_quiescent_dirty_and_unknown_forests_are_unchanged() {
+    for prepare in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let n = setup_contract(&tmp.path().join("protected forest"), 16, true, true, true).await;
+        let view = dirty(&n, &n.view, 2, 5).await;
+        if prepare {
+            n.client
+                .prepare(n.token.clone(), context(&view))
+                .await
+                .unwrap();
+        }
+        let before = n
+            .storage
+            .cache()
+            .owner
+            .call(|store| Ok(native_snapshot(&store.state)))
+            .await
+            .unwrap();
+        assert!(!n.client.retire_quiescent().await.unwrap());
+        assert!(!n.client.retire_component(fixture().node.id).await.unwrap());
+        n.storage
+            .cache()
+            .owner
+            .call(move |store| {
+                assert_eq!(native_snapshot(&store.state), before);
+                Ok(())
+            })
+            .await
+            .unwrap();
+        n.storage.close().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_quiescent_recovered_publisher_is_not_a_close() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("recovered publisher forest");
+    let old = setup_contract(&path, 16, true, true, true).await;
+    let original = old.token.input().clone();
+    let f = retry_cycle_contract(&old, fixture(), 2, false, true).await;
+    assert!(record(&old, &old.token).await.close().is_none());
+    old.storage.close().await.unwrap();
+    let (storage, collector) = reopen_no_effect_collector(&path).await;
+    let capability = crate::chunk_mount::Client::new(
+        storage.cache().owner,
+        crate::journal::Options::default(),
+        old.key,
+    );
+    let session = capability
+        .next_admission(crate::chunk_mount::AdmissionDomain::Session)
+        .await
+        .unwrap()
+        .unwrap();
+    let journal = capability.opens();
+    journal
+        .start_session(session.clone(), original.volume.clone())
+        .await
+        .unwrap();
+    let recovery = journal
+        .prepare_recovery(
+            session.clone(),
+            original.volume.clone(),
+            original.node.clone(),
+            None,
+        )
+        .await
+        .unwrap();
+    assert!(!collector.retire_quiescent().await.unwrap());
+    journal
+        .finish_recovery(session, recovery.input.id)
+        .await
+        .unwrap();
+    journal.retire(original.id.clone()).await.unwrap();
+    assert!(
+        journal
+            .get(original.id.clone())
+            .await
+            .unwrap()
+            .close()
+            .is_none()
+    );
+    let local = storage.sparse_views(views::Options::default()).unwrap();
+    let head = local.current_head(f.binding).await.unwrap();
+    let pin = local.guard(head.id()).await.unwrap();
+    assert!(!collector.retire_quiescent().await.unwrap());
+    drop(pin);
+    assert!(collector.retire_quiescent().await.unwrap());
+    assert!(journal.get(original.id.clone()).await.is_err());
+    assert!(journal.prepare(original).await.is_err());
+    storage.close().await.unwrap();
+    let state = State::open_managed(&path).unwrap();
+    crate::chunk_mount::validate_all(&state.connection).unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_quiescent_killed_owner_preserves_whole_forest_or_empty_cut() {
+    use std::process::{Command, Stdio};
+    use std::time::{Duration, Instant};
+    for point in [
+        "Eligible",
+        "SourceErased",
+        "LifecycleErased",
+        "PhysicalErased",
+        "Validated",
+        "Committed",
+    ] {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("quiescent killed owner");
+        let ready = tmp.path().join("ready");
+        let n = setup_contract(&path, 16, true, true, true).await;
+        retry_cycle_mode(&n, fixture(), 3, false).await;
+        let before = n
+            .storage
+            .cache()
+            .owner
+            .call(|store| Ok(native_snapshot(&store.state)))
+            .await
+            .unwrap();
+        n.storage.close().await.unwrap();
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "sparse_views::preparation::publication::tests::barriers::native::native_retry_quiescent_crash_child", "--nocapture"])
+            .env("S3DRIVE_QUIESCENT_CRASH_DIR", &path)
+            .env("S3DRIVE_MIXED_CRASH_KIND", "quiescent-retire")
+            .env("S3DRIVE_MIXED_CRASH_POINT", point)
+            .env("S3DRIVE_MIXED_CRASH_READY", &ready)
+            .stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::piped()).spawn().unwrap();
+        let started = Instant::now();
+        while !ready.exists() {
+            if let Some(status) = child.try_wait().unwrap() {
+                use std::io::Read;
+                let mut err = String::new();
+                child
+                    .stderr
+                    .take()
+                    .unwrap()
+                    .read_to_string(&mut err)
+                    .unwrap();
+                panic!("{point}: {status}: {err}");
+            }
+            if started.elapsed() > Duration::from_secs(30) {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("quiescent retirement checkpoint timeout: {point}");
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert!(State::open_managed(&path).is_err());
+        child.kill().unwrap();
+        assert!(!child.wait().unwrap().success());
+        let state = State::open_managed(&path).unwrap();
+        if point != "Committed" {
+            assert_eq!(native_snapshot(&state), before);
+        }
+        for table in [
+            "windows_open_journal",
+            "sparse_preparations",
+            "sparse_publications",
+        ] {
+            assert_eq!(
+                state
+                    .connection
+                    .query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r
+                        .get::<_, i64>(0))
+                    .unwrap(),
+                i64::from(point != "Committed")
+            );
+        }
+        crate::chunk_mount::validate_all(&state.connection).unwrap();
+        drop(state);
+        let (storage, collector) = reopen_no_effect_collector(&path).await;
+        assert_eq!(
+            collector.retire_quiescent().await.unwrap(),
+            point != "Committed"
+        );
+        assert!(!collector.retire_quiescent().await.unwrap());
+        storage.close().await.unwrap();
+        let state = State::open_managed(&path).unwrap();
+        crate::chunk_mount::validate_all(&state.connection).unwrap();
+    }
+}
+
+#[tokio::test]
+async fn native_retry_quiescent_crash_child() {
+    let Some(path) = std::env::var_os("S3DRIVE_QUIESCENT_CRASH_DIR") else {
+        return;
+    };
+    let (storage, collector) = reopen_no_effect_collector(std::path::Path::new(&path)).await;
+    assert!(collector.retire_quiescent().await.unwrap());
+    storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_quiescent_refuses_delete_triggers_without_changes() {
+    let tmp = tempfile::tempdir().unwrap();
+    let n = setup_contract(&tmp.path().join("quiescent trigger"), 16, true, true, true).await;
+    retry_cycle_mode(&n, fixture(), 4, false).await;
+    let before = n.storage.cache().owner.call(|store| {
+        store.state.connection.execute_batch("CREATE TRIGGER refuse_quiescent_delete BEFORE DELETE ON sparse_views BEGIN SELECT RAISE(IGNORE); END")?;
+        Ok(native_snapshot(&store.state))
+    }).await.unwrap();
+    assert!(n.client.retire_quiescent().await.is_err());
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            assert_eq!(native_snapshot(&store.state), before);
+            store
+                .state
+                .connection
+                .execute_batch("DROP TRIGGER refuse_quiescent_delete")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(n.client.retire_quiescent().await.unwrap());
+    n.storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_quiescent_callback_child_requires_original_link() {
+    let tmp = tempfile::tempdir().unwrap();
+    let n = setup_contract(
+        &tmp.path().join("callback namespace expiry"),
+        16,
+        true,
+        true,
+        true,
+    )
+    .await;
+    let key = n.key.clone();
+    let original = n.token.input().id.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            let f = fixture();
+            let callback = hex(&[81; 16]);
+            let mut input = removal(&f, &f.node, 80);
+            let ns::Mutation::RemoveEntry { node, parent } = input.request.mutation.clone() else {
+                panic!()
+            };
+            input.request.mutation = ns::Mutation::ArmRemoval {
+                node,
+                parent,
+                owner: key.owner().into(),
+            };
+            let mut h = Sha256::new();
+            h.update(b"s3drive-disposition-controller-v1\0");
+            h.update(&original);
+            h.update(&callback);
+            h.update("set");
+            input.request.operation = hex(&h.finalize()[..16]);
+            assert!(names(s, &key).begin(input.clone()).is_err());
+            opens(s, &key).callback(
+                &original,
+                &callback,
+                opens::Callback::SetDelete { delete: true },
+            )?;
+            opens(s, &key).link(&original, &hex(&[82; 16]), &callback, input.clone())?;
+            assert!(opens::retained_namespace_child(
+                &s.connection,
+                &input.request.operation,
+                Some(&input)
+            )?);
+            let before = crate::chunk_mount::admission::frontier(&s.connection)?;
+            names(s, &key).begin(input.clone())?;
+            assert_eq!(names(s, &key).begin(input.clone())?.input, input);
+            assert_eq!(
+                crate::chunk_mount::admission::frontier(&s.connection)?,
+                before
+            );
+            crate::chunk_mount::validate_all(&s.connection)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(!n.client.retire_quiescent().await.unwrap());
+    n.storage.close().await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn native_retry_validation_work_quiescent_physical_clone_and_acquisition_race() {
+    for reader_first in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let n = setup_contract(
+            &tmp.path().join("quiescent physical exclusion"),
+            16,
+            true,
+            true,
+            true,
+        )
+        .await;
+        retry_cycle_mode(&n, fixture(), 5, false).await;
+        let generation = n
+            .storage
+            .cache()
+            .owner
+            .call(|store| {
+                let plan: Vec<u8> = store.state.connection.query_row(
+                    "SELECT plan_id FROM sparse_preparations",
+                    [],
+                    |r| r.get(0),
+                )?;
+                Ok(j(&mut store.state)
+                    .get(plan.try_into().unwrap())?
+                    .physical
+                    .generation)
+            })
+            .await
+            .unwrap();
+        let staging = n.storage.staging();
+        let reader = staging.snapshot(generation).await.unwrap();
+        let clone = reader.clone();
+        drop(reader);
+        let expected = clone.read(0, 4096).await.unwrap();
+        let (bytes, collected) = tokio::join!(clone.read(0, 4096), n.client.retire_quiescent());
+        assert_eq!(bytes.unwrap(), expected);
+        assert!(!collected.unwrap());
+        drop(clone);
+        let (acquired, collected) = if reader_first {
+            tokio::join!(staging.snapshot(generation), n.client.retire_quiescent())
+        } else {
+            let (collected, acquired) =
+                tokio::join!(n.client.retire_quiescent(), staging.snapshot(generation));
+            (acquired, collected)
+        };
+        match acquired {
+            Ok(reader) => {
+                assert!(
+                    !collected.unwrap(),
+                    "an admitted lease must protect its generation"
+                );
+                assert_eq!(reader.read(0, 4096).await.unwrap(), expected);
+                drop(reader);
+                assert!(n.client.retire_quiescent().await.unwrap());
+            }
+            Err(_) => assert!(
+                collected.unwrap(),
+                "a completed cut must reject later acquisition"
+            ),
+        }
+        assert!(staging.snapshot(generation).await.is_err());
+        n.storage.close().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_quiescent_cold_source_reimport_expires_old_commands() {
+    let tmp = tempfile::tempdir().unwrap();
+    let n = setup_contract(
+        &tmp.path().join("source reimport expiry"),
+        16,
+        true,
+        true,
+        true,
+    )
+    .await;
+    // The initial source ordinal follows session and open admission. Capture
+    // the exact original token from its known ordinal only in this fixture.
+    let owner = n.key.owner().to_owned();
+    let old_token = n
+        .storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let serial = crate::chunk_mount::admission::frontier(&store.state.connection)?;
+            let digest = hash(
+                b"s3drive-native-admission-v1\0",
+                &(&owner, "source", serial),
+            )?;
+            let issued = format!("{serial:016x}{}", hex(&digest[..8]));
+            views::ScopedOperation::new(
+                &fixture().binding,
+                hash(b"s3drive-native-source-admission-v1\0", &issued)?,
+            )
+        })
+        .await
+        .unwrap();
+    assert_eq!(old_token.id().unwrap(), n.view.operation());
+    let old_view = n.view.id();
+    let original = n.token.input().clone();
+    close_native(&n, &n.token, 71).await.unwrap();
+    n.client
+        .complete(n.token.clone(), hex(&[71; 16]), hex(&[72; 16]))
+        .await
+        .unwrap();
+    let key = n.key.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            opens(&mut store.state, &key).retire(&original.id)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(n.client.retire_quiescent().await.unwrap());
+    let key = n.key.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            let f = fixture();
+            assert!(
+                views::Journal::new(s, views::Options::default())?
+                    .begin_scoped(old_token, f.binding.clone(), 17)
+                    .is_err()
+            );
+            // Arbitrary legacy/source IDs cannot recreate a forgotten graph.
+            assert!(
+                views::Journal::new(s, views::Options::default())?
+                    .begin_scoped(
+                        views::ScopedOperation::new(&f.binding, [1; 32])?,
+                        f.binding.clone(),
+                        17
+                    )
+                    .is_err()
+            );
+            let token = crate::chunk_mount::admission::source_operation(&s.connection, &f.binding)?
+                .unwrap();
+            let new = views::Journal::new(s, views::Options::default())?.begin_scoped(
+                token,
+                f.binding.clone(),
+                17,
+            )?;
+            assert_ne!(new.id(), old_view);
+            assert_eq!(
+                views::Journal::new(s, views::Options::default())?
+                    .begin_scoped(token, f.binding, 17)?
+                    .id(),
+                new.id()
+            );
+            assert!(
+                views::Journal::new(s, views::Options::default())?
+                    .write_scoped(token, old_view, 0, &[99])
+                    .is_err()
+            );
+            crate::chunk_mount::require(&s.connection, &key)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(
+        n.client
+            .write(n.token.clone(), context(&n.view), [3; 32], 0, vec![99])
+            .await
+            .is_err()
+    );
+    n.storage.close().await.unwrap();
+}
+
+async fn quiescent_admit_file(n: &Native, f: &Fixture) -> (Token, View) {
+    let mut input = n.token.input().clone();
+    input.node = f.node.id.clone();
+    let binding = f.binding.clone();
+    let key = n.key.clone();
+    let (id, view) = n
+        .storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            input.id = crate::chunk_mount::admission::next(
+                &s.connection,
+                crate::chunk_mount::AdmissionDomain::Open,
+            )?
+            .unwrap();
+            let activation = hex(&hash(b"quiescent-file-activation", &input.id)?[..16]);
+            opens(s, &key).prepare(input.clone())?;
+            opens(s, &key).activate(&input.id, &activation)?;
+            let operation =
+                crate::chunk_mount::admission::source_operation(&s.connection, &binding)?.unwrap();
+            let view = views::Journal::new(s, views::Options::default())?
+                .begin_scoped(operation, binding, 17)?;
+            Ok((input.id, view))
+        })
+        .await
+        .unwrap();
+    (n.client.bind(id).await.unwrap(), view)
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_component_repeated_cleanup_preserves_unrelated_dirty_open_and_reader()
+ {
+    for prepare_other in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("connected component retention");
+        let mut n = setup_contract(&path, 16, true, true, true).await;
+        let other = fixture_node([3; 16]);
+        let (other_token, other_view) = quiescent_admit_file(&n, &other).await;
+        let context = Context::new(
+            &other_view,
+            other.base.root.encode().to_vec(),
+            other.base.page.encode(),
+        )
+        .unwrap();
+        let other_view = n
+            .client
+            .write(other_token.clone(), context, [2; 32], 5, vec![255])
+            .await
+            .unwrap();
+        if prepare_other {
+            n.client
+                .prepare(
+                    other_token.clone(),
+                    Context::new(
+                        &other_view,
+                        other.base.root.encode().to_vec(),
+                        other.base.page.encode(),
+                    )
+                    .unwrap(),
+                )
+                .await
+                .unwrap();
+        }
+        let local = n.storage.sparse_views(views::Options::default()).unwrap();
+        let held = local.guard(other_view.id()).await.unwrap();
+        let clone = held.clone();
+        drop(held);
+        let original_other = record(&n, &other_token).await;
+        let mut f = fixture();
+        for iteration in 1..=16 {
+            f = retry_cycle_mode(&n, f, iteration, false).await;
+            assert!(!n.client.retire_quiescent().await.unwrap());
+            assert!(n.client.retire_component(f.node.id.clone()).await.unwrap());
+            assert!(!n.client.retire_component(f.node.id.clone()).await.unwrap());
+            assert_eq!(record(&n, &other_token).await, original_other);
+            assert_eq!(
+                clone.read(5, 1).await.unwrap(),
+                vec![views::Piece::Local(vec![255])]
+            );
+            n.storage
+                .cache()
+                .owner
+                .call(move |store| {
+                    for (table, expected) in [
+                        ("sparse_view_files", 1),
+                        ("windows_open_journal", 1),
+                        ("sparse_publications", 0),
+                        ("staged_generations", 0),
+                        ("sparse_preparations", i64::from(prepare_other)),
+                    ] {
+                        assert_eq!(
+                            store.state.connection.query_row(
+                                &format!("SELECT count(*) FROM {table}"),
+                                [],
+                                |r| r.get::<_, i64>(0)
+                            )?,
+                            expected
+                        );
+                    }
+                    crate::chunk_mount::validate_all(&store.state.connection)?;
+                    Ok(())
+                })
+                .await
+                .unwrap();
+            if iteration != 16 {
+                let (token, view) = quiescent_admit_file(&n, &f).await;
+                n.token = token;
+                n.view = view;
+            }
+        }
+        let context = Context::new(
+            &other_view,
+            other.base.root.encode().to_vec(),
+            other.base.page.encode(),
+        )
+        .unwrap();
+        let next = n
+            .client
+            .write(other_token.clone(), context, [3; 32], 6, vec![254])
+            .await
+            .unwrap();
+        assert!(!next.is_clean());
+        assert!(!n.client.retire_component(other.node.id).await.unwrap());
+        drop(clone);
+        n.storage.close().await.unwrap();
+        let mut state = State::open_managed(&path).unwrap();
+        assert!(
+            !views::Journal::new(&mut state, views::Options::default())
+                .unwrap()
+                .current_head(&other.binding)
+                .unwrap()
+                .is_clean()
+        );
+    }
+}
+
+#[tokio::test]
+async fn native_retry_component_killed_owner_preserves_untouched_forest_or_complete_component_cut()
+{
+    use std::process::{Command, Stdio};
+    use std::time::{Duration, Instant};
+    for point in [
+        "Eligible",
+        "SourceErased",
+        "LifecycleErased",
+        "PhysicalErased",
+        "Validated",
+        "Committed",
+    ] {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("quiescent killed owner");
+        let ready = tmp.path().join("ready");
+        let n = setup_contract(&path, 16, true, true, true).await;
+        let other = fixture_node([3; 16]);
+        let (token, view) = quiescent_admit_file(&n, &other).await;
+        n.client
+            .write(
+                token,
+                Context::new(
+                    &view,
+                    other.base.root.encode().to_vec(),
+                    other.base.page.encode(),
+                )
+                .unwrap(),
+                [5; 32],
+                5,
+                vec![255],
+            )
+            .await
+            .unwrap();
+        retry_cycle_mode(&n, fixture(), 3, false).await;
+        let before = n
+            .storage
+            .cache()
+            .owner
+            .call(|store| Ok(native_snapshot(&store.state)))
+            .await
+            .unwrap();
+        n.storage.close().await.unwrap();
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "sparse_views::preparation::publication::tests::barriers::native::native_retry_component_crash_child", "--nocapture"])
+            .env("S3DRIVE_COMPONENT_CRASH_DIR", &path)
+            .env("S3DRIVE_MIXED_CRASH_KIND", "component-retire")
+            .env("S3DRIVE_MIXED_CRASH_POINT", point)
+            .env("S3DRIVE_MIXED_CRASH_READY", &ready)
+            .stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::piped()).spawn().unwrap();
+        let started = Instant::now();
+        while !ready.exists() {
+            if let Some(status) = child.try_wait().unwrap() {
+                use std::io::Read;
+                let mut err = String::new();
+                child
+                    .stderr
+                    .take()
+                    .unwrap()
+                    .read_to_string(&mut err)
+                    .unwrap();
+                panic!("{point}: {status}: {err}");
+            }
+            if started.elapsed() > Duration::from_secs(30) {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("quiescent retirement checkpoint timeout: {point}");
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert!(State::open_managed(&path).is_err());
+        child.kill().unwrap();
+        assert!(!child.wait().unwrap().success());
+        let state = State::open_managed(&path).unwrap();
+        if point != "Committed" {
+            assert_eq!(native_snapshot(&state), before);
+        }
+        for table in [
+            "windows_open_journal",
+            "sparse_preparations",
+            "sparse_publications",
+        ] {
+            assert_eq!(
+                state
+                    .connection
+                    .query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r
+                        .get::<_, i64>(0))
+                    .unwrap(),
+                i64::from(point != "Committed") + i64::from(table == "windows_open_journal")
+            );
+        }
+        crate::chunk_mount::validate_all(&state.connection).unwrap();
+        drop(state);
+        let (storage, collector) = reopen_no_effect_collector(&path).await;
+        assert_eq!(
+            collector.retire_component(fixture().node.id).await.unwrap(),
+            point != "Committed"
+        );
+        assert!(!collector.retire_component(fixture().node.id).await.unwrap());
+        storage.close().await.unwrap();
+        let state = State::open_managed(&path).unwrap();
+        crate::chunk_mount::validate_all(&state.connection).unwrap();
+    }
+}
+
+#[tokio::test]
+async fn native_retry_component_crash_child() {
+    let Some(path) = std::env::var_os("S3DRIVE_COMPONENT_CRASH_DIR") else {
+        return;
+    };
+    let (storage, collector) = reopen_no_effect_collector(std::path::Path::new(&path)).await;
+    assert!(collector.retire_component(fixture().node.id).await.unwrap());
+    storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_component_recovered_publisher_preserves_unrelated_abandoned_dirty_open()
+ {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("recovered publisher forest");
+    let old = setup_contract(&path, 16, true, true, true).await;
+    let other = fixture_node([3; 16]);
+    let (other_token, other_view) = quiescent_admit_file(&old, &other).await;
+    let other_view = old
+        .client
+        .write(
+            other_token.clone(),
+            Context::new(
+                &other_view,
+                other.base.root.encode().to_vec(),
+                other.base.page.encode(),
+            )
+            .unwrap(),
+            [6; 32],
+            5,
+            vec![255],
+        )
+        .await
+        .unwrap();
+    let other_record = record(&old, &other_token).await;
+    let original = old.token.input().clone();
+    let f = retry_cycle_contract(&old, fixture(), 2, false, true).await;
+    assert!(record(&old, &old.token).await.close().is_none());
+    old.storage.close().await.unwrap();
+    let (storage, collector) = reopen_no_effect_collector(&path).await;
+    let capability = crate::chunk_mount::Client::new(
+        storage.cache().owner,
+        crate::journal::Options::default(),
+        old.key,
+    );
+    let session = capability
+        .next_admission(crate::chunk_mount::AdmissionDomain::Session)
+        .await
+        .unwrap()
+        .unwrap();
+    let journal = capability.opens();
+    journal
+        .start_session(session.clone(), original.volume.clone())
+        .await
+        .unwrap();
+    let recovery = journal
+        .prepare_recovery(
+            session.clone(),
+            original.volume.clone(),
+            original.node.clone(),
+            None,
+        )
+        .await
+        .unwrap();
+    assert!(!collector.retire_component(fixture().node.id).await.unwrap());
+    journal
+        .finish_recovery(session, recovery.input.id)
+        .await
+        .unwrap();
+    journal.retire(original.id.clone()).await.unwrap();
+    assert!(
+        journal
+            .get(original.id.clone())
+            .await
+            .unwrap()
+            .close()
+            .is_none()
+    );
+    let local = storage.sparse_views(views::Options::default()).unwrap();
+    let head = local.current_head(f.binding).await.unwrap();
+    let pin = local.guard(head.id()).await.unwrap();
+    assert!(!collector.retire_component(fixture().node.id).await.unwrap());
+    drop(pin);
+    assert!(collector.retire_component(fixture().node.id).await.unwrap());
+    assert_eq!(
+        journal.get(other_token.input().id.clone()).await.unwrap(),
+        other_record
+    );
+    assert_eq!(local.current_head(other.binding).await.unwrap(), other_view);
+    assert_eq!(
+        local
+            .guard(other_view.id())
+            .await
+            .unwrap()
+            .read(5, 1)
+            .await
+            .unwrap(),
+        vec![views::Piece::Local(vec![255])]
+    );
+    assert!(journal.get(original.id.clone()).await.is_err());
+    assert!(journal.prepare(original).await.is_err());
+    storage.close().await.unwrap();
+    let state = State::open_managed(&path).unwrap();
+    crate::chunk_mount::validate_all(&state.connection).unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_component_database_page_exhaustion_is_complete_cut_or_exact_rollback() {
+    let tmp = tempfile::tempdir().unwrap();
+    let n = setup_contract(
+        &tmp.path().join("component database exhaustion"),
+        16,
+        true,
+        true,
+        true,
+    )
+    .await;
+    retry_cycle_mode(&n, fixture(), 1, false).await;
+    let key = n.key.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            s.connection
+                .execute_batch("CREATE TABLE component_pressure(data BLOB)")?;
+            let pages: i64 = s
+                .connection
+                .pragma_query_value(None, "page_count", |r| r.get(0))?;
+            s.connection.pragma_update(None, "max_page_count", pages)?;
+            loop {
+                match s
+                    .connection
+                    .execute("INSERT INTO component_pressure VALUES(zeroblob(3500))", [])
+                {
+                    Ok(_) => (),
+                    Err(e) if e.sqlite_error_code() == Some(rusqlite::ErrorCode::DiskFull) => break,
+                    Err(e) => return Err(e.into()),
+                }
+            }
+            let before = native_snapshot(s);
+            let cut =
+                crate::sparse_views::preparation::publication::retention::quiescent::component::retire(s, &key, &fixture().node.id);
+            let completed = match cut {
+                Ok(true) => true,
+                Ok(false) => panic!("eligible component became protected without mutation"),
+                Err(error) => {
+                    assert_eq!(
+                        error
+                            .downcast_ref::<rusqlite::Error>()
+                            .and_then(|e| e.sqlite_error_code()),
+                        Some(rusqlite::ErrorCode::DiskFull)
+                    );
+                    assert_eq!(native_snapshot(s), before);
+                    false
+                }
+            };
+            s.connection
+                .pragma_update(None, "max_page_count", pages + 1024)?;
+            assert_eq!(
+                crate::sparse_views::preparation::publication::retention::quiescent::component::retire(s, &key, &fixture().node.id)?,
+                !completed
+            );
+            crate::chunk_mount::validate_all(&s.connection)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    n.storage.close().await.unwrap();
 }

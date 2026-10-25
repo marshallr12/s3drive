@@ -429,3 +429,139 @@ pub(crate) fn empty_for_mount(scope: &crate::chunk_mount::ReadScope<'_>) -> Resu
     isolation_in(scope.connection(), Some(scope))?;
     Ok(inspect(scope.connection())?.is_empty())
 }
+
+/// Full creator proofs remain in place during this check. Incomplete metadata
+/// or physical outcomes never become eligible merely because no handle exists.
+pub(crate) fn quiescent_generations(db: &Connection) -> Result<Option<Vec<journal::GenerationId>>> {
+    preflight(db)?;
+    isolation(db)?;
+    let records = inspect(db)?;
+    let mut generations = Vec::new();
+    for record in records.values() {
+        if !retirement_ready(db, record)? {
+            return Ok(None);
+        }
+        if let Some(generation) = record.generation {
+            if record.physical.is_none() {
+                return Ok(None);
+            }
+            generations.push(generation);
+        }
+    }
+    Ok(Some(generations))
+}
+
+pub(crate) fn retirement_records(db: &Connection) -> Result<Vec<Record>> {
+    preflight(db)?;
+    isolation(db)?;
+    Ok(inspect(db)?.into_values().collect())
+}
+// The caller has validated a complete connected dependency cut, before any
+// source/open mutation. No independent creator reclamation is authorized here.
+pub(crate) fn erase_component(
+    db: &Connection,
+    selected: &std::collections::BTreeSet<String>,
+) -> Result<()> {
+    let mut records = inspect(db)?;
+    for id in selected {
+        let record = records.remove(id).ok_or(Failure::Missing)?;
+        if !retirement_ready(db, &record)? {
+            return Err(Failure::Incomplete.into());
+        }
+        if db.execute("DELETE FROM manifest_creations WHERE operation=?1", [id])? != 1 {
+            return Err(Failure::Corrupt.into());
+        }
+    }
+    if records.is_empty() {
+        db.execute("DELETE FROM manifest_creation_role", [])?;
+    } else {
+        db.execute(
+            "UPDATE manifest_creation_role SET records=?1,state_hash=?2 WHERE singleton=1",
+            params![records.len() as i64, projection(&records)?.as_slice()],
+        )?;
+    }
+    if inspect(db)? != records {
+        return Err(Failure::Corrupt.into());
+    }
+    Ok(())
+}
+
+/// An owned creation receipt is not a closed lifecycle: before import it still
+/// represents a remote deferred entry whose fence exists only in this creator.
+/// Require its exact imported history and a completed ownership closure.
+pub(crate) fn retirement_ready(db: &Connection, record: &Record) -> Result<bool> {
+    if record.receipt.is_none() && record.rejection.is_none() {
+        return Ok(false);
+    }
+    if record.receipt.is_some() && record.input.owner.is_some() {
+        let Some(imported) = crate::namespace_client::load(db, &record.input.operation)? else {
+            return Ok(false);
+        };
+        if record.request.as_ref() != Some(&imported.input.request)
+            || !matches!(&imported.outcome, Some(Ok(receipt)) if record.receipt.as_ref() == Some(receipt))
+        {
+            return Err(Failure::Conflict.into());
+        }
+        if crate::namespace_client::removals::owned(
+            db,
+            &record.input.volume,
+            &record.input.operation,
+        )?
+        .is_some()
+        {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+// Fresh component mode admits physical creation only from its retained,
+// monotonically consumed creation ID. Erasure expires the staging permission.
+pub(crate) fn admits_retry_staging(
+    db: &Connection,
+    operation: [u8; 32],
+    target: &journal::Target,
+    size: u64,
+) -> Result<bool> {
+    if !crate::chunk_mount::quiescent_enabled(db)? {
+        return Ok(false);
+    }
+    let binding = crate::chunk_mount::load(db)?.ok_or(Failure::Conflict)?;
+    for record in retirement_records(db)? {
+        if record.input.stage_key()? != operation {
+            continue;
+        }
+        crate::chunk_mount::admission::retained(
+            &binding,
+            crate::chunk_mount::AdmissionDomain::Creation,
+            &record.input.operation,
+        )?;
+        if record.input.target()? != *target || record.input.body()?.len() as u64 != size {
+            return Err(Failure::Conflict.into());
+        }
+        return Ok(true);
+    }
+    Ok(false)
+}
+pub(crate) fn admits_retry_remote(
+    db: &Connection,
+    generation: journal::GenerationId,
+) -> Result<bool> {
+    if !crate::chunk_mount::quiescent_enabled(db)? {
+        return Ok(false);
+    }
+    let binding = crate::chunk_mount::load(db)?.ok_or(Failure::Conflict)?;
+    for record in retirement_records(db)? {
+        if record.generation != Some(generation) {
+            continue;
+        }
+        crate::chunk_mount::admission::retained(
+            &binding,
+            crate::chunk_mount::AdmissionDomain::Creation,
+            &record.input.operation,
+        )?;
+        journal_impl::check_staged(db, &record.input, generation, true)?;
+        return Ok(true);
+    }
+    Ok(false)
+}

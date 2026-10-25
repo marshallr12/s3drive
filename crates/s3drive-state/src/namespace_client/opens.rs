@@ -1486,3 +1486,58 @@ pub(crate) fn uncontended_native_close(
     }
     Ok(Some(record))
 }
+
+/// Validate deterministic callback child identity from the complete original
+/// open. Candidate SQL selects only; load rechecks the event chain and effects.
+pub(crate) fn retained_namespace_child(
+    db: &Connection,
+    operation: &str,
+    admitting: Option<&Input>,
+) -> Result<bool> {
+    let ids = db.prepare("SELECT DISTINCT open_id FROM windows_open_events WHERE json_extract(action,'$.type')='link' AND json_extract(action,'$.value.input.request.operation')=?1 LIMIT 257")?
+        .query_map([operation], |r| r.get::<_, String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+    if ids.len() > OPEN_LIMIT {
+        return Err("namespace child open bound".into());
+    }
+    let binding = crate::chunk_mount::load(db)?.ok_or("namespace child owner missing")?;
+    for id in ids {
+        crate::chunk_mount::admission::retained(
+            &binding,
+            crate::chunk_mount::AdmissionDomain::Open,
+            &id,
+        )?;
+        let (_, record) = load(db, &id)?.ok_or("namespace child open disappeared")?;
+        if admitting.is_some() && retirement::is_retired(db, &id)? {
+            continue;
+        }
+        for event in &record.events {
+            let Action::Link { callback, input } = &event.action else {
+                continue;
+            };
+            if input.request.operation != operation
+                || admitting.is_some_and(|a| a != input.as_ref())
+            {
+                continue;
+            }
+            for role in ["set", "restore", "promote", "commit", "retain", "release"] {
+                let mut h = ProofSha256::new();
+                h.update(b"s3drive-disposition-controller-v1\0");
+                h.update(&id);
+                h.update(callback);
+                h.update(role);
+                let expected: String = h.finalize()[..16]
+                    .iter()
+                    .map(|b| format!("{b:02x}"))
+                    .collect();
+                if expected == operation {
+                    return Ok(true);
+                }
+            }
+        }
+    }
+    Ok(false)
+}
+
+pub(crate) use retirement::{
+    quiescent_candidates, quiescent_component_candidates, retained_records,
+};

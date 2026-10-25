@@ -43,6 +43,8 @@ pub(crate) struct Binding {
     controls: Vec<Control>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     frontier: Option<u64>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    quiescent_retention: bool,
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     terminals: std::collections::BTreeMap<String, [u8; 32]>,
 }
@@ -114,6 +116,7 @@ impl Binding {
         if !matches!(self.format, 1 | 2)
             || (self.format == 2) != self.frontier.is_some()
             || (self.format == 1 && !self.terminals.is_empty())
+            || (self.quiescent_retention && (self.format != 2 || !self.terminals.is_empty()))
             || self.terminals.len() > 256
             || !id(&self.volume)
             || !id(&self.owner)
@@ -194,7 +197,7 @@ pub(crate) fn identity_marker(db: &Connection, owner: &str) -> Result<bool> {
     if version != crate::SCHEMA_VERSION || !exists(db)? {
         return Ok(false);
     }
-    let mut q=db.prepare("SELECT singleton,CASE WHEN typeof(record)='blob' AND length(record) BETWEEN 1 AND 65536 THEN record END,CASE WHEN length(state_hash)=32 THEN state_hash END FROM chunk_mount_role LIMIT 2")?;
+    let mut q=db.prepare_cached("SELECT singleton,CASE WHEN typeof(record)='blob' AND length(record) BETWEEN 1 AND 65536 THEN record END,CASE WHEN length(state_hash)=32 THEN state_hash END FROM chunk_mount_role LIMIT 2")?;
     let rows = q
         .query_map([], |r| {
             Ok((
@@ -213,8 +216,7 @@ pub(crate) fn identity_marker(db: &Connection, owner: &str) -> Result<bool> {
         && digest.as_slice() == hash(b"s3drive-chunk-mount-binding-v1\0", &binding)?)
 }
 fn exists(db: &Connection) -> Result<bool> {
-    Ok(db.query_row(
-        "SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='table' AND name='chunk_mount_role')",
+    Ok(db.prepare_cached("SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='table' AND name='chunk_mount_role')")?.query_row(
         [],
         |r| r.get(0),
     )?)
@@ -226,44 +228,55 @@ pub(crate) fn check_schema(db: &Connection) -> Result<()> {
 fn preflight(db: &Connection) -> Result<()> {
     let version: i32 = db.pragma_query_value(None, "user_version", |r| r.get(0))?;
     let fk: bool = db.pragma_query_value(None, "foreign_keys", |r| r.get(0))?;
-    let bad: bool = db.query_row(
-        "SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='trigger')",
-        [],
-        |r| r.get(0),
-    )?;
+    let bad: bool = db
+        .prepare_cached("SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type='trigger')")?
+        .query_row([], |r| r.get(0))?;
     if version != crate::SCHEMA_VERSION || !fk || bad {
         return Err("chunk mount schema/trigger guard failed".into());
     }
     Ok(())
 }
+const FOREIGN_TABLES: &[&str] = &[
+    "managed_publications",
+    "managed_rejections",
+    "logical_files",
+    "logical_edits",
+    "logical_publication_links",
+    "logical_conflicts",
+    "namespace_volume",
+    "namespace_nodes",
+    "namespace_operations",
+    "namespace_stores",
+    "namespace_uploads",
+    "namespace_removals",
+    "namespace_removal_events",
+    "chunk_client_role",
+    "chunk_publications",
+    "chunk_source_role",
+    "chunk_source_settlements",
+];
 fn foreign(db: &Connection) -> Result<()> {
-    for table in [
-        "managed_publications",
-        "managed_rejections",
-        "logical_files",
-        "logical_edits",
-        "logical_publication_links",
-        "logical_conflicts",
-        "namespace_volume",
-        "namespace_nodes",
-        "namespace_operations",
-        "namespace_stores",
-        "namespace_uploads",
-        "namespace_removals",
-        "namespace_removal_events",
-        "chunk_client_role",
-        "chunk_publications",
-        "chunk_source_role",
-        "chunk_source_settlements",
-    ] {
-        if db.query_row(&format!("SELECT EXISTS(SELECT 1 FROM {table})"), [], |r| {
-            r.get::<_, bool>(0)
-        })? {
-            return Err("chunk mount refuses foreign/old writer roles".into());
-        }
+    // Cache SQL bytecode, never rows or successful validation. Every invocation
+    // executes every required empty-table condition against its own snapshot.
+    static SQL: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+        format!(
+            "SELECT {}",
+            FOREIGN_TABLES
+                .iter()
+                .map(|table| format!("EXISTS(SELECT 1 FROM {table})"))
+                .collect::<Vec<_>>()
+                .join(" OR ")
+        )
+    });
+    if db
+        .prepare_cached(&SQL)?
+        .query_row([], |r| r.get::<_, bool>(0))?
+    {
+        return Err("chunk mount refuses foreign/old writer roles".into());
     }
     Ok(())
 }
+
 #[cfg(test)]
 thread_local! { static LOADS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
 #[cfg(test)]
@@ -284,7 +297,7 @@ pub(crate) fn load(db: &Connection) -> Result<Option<Binding>> {
             Err("current chunk mount table missing".into())
         };
     }
-    let mut q=db.prepare("SELECT singleton,CASE WHEN typeof(record)='blob' AND length(record) BETWEEN 1 AND 65536 THEN record END,CASE WHEN typeof(state_hash)='blob' AND length(state_hash)=32 THEN state_hash END FROM chunk_mount_role LIMIT 2")?;
+    let mut q=db.prepare_cached("SELECT singleton,CASE WHEN typeof(record)='blob' AND length(record) BETWEEN 1 AND 65536 THEN record END,CASE WHEN typeof(state_hash)='blob' AND length(state_hash)=32 THEN state_hash END FROM chunk_mount_role LIMIT 2")?;
     let rows = q
         .query_map([], |r| {
             Ok((
@@ -314,7 +327,7 @@ pub(crate) fn load(db: &Connection) -> Result<Option<Binding>> {
         return Err("chunk mount permanent identity changed".into());
     }
     for c in &value.controls {
-        let fp:Option<String>=db.query_row("SELECT CASE WHEN length(config_fingerprint)=64 THEN config_fingerprint END FROM source_bindings WHERE source_id=?",[c.source.as_slice()],|r|r.get(0)).optional()?.flatten();
+        let fp:Option<String>=db.prepare_cached("SELECT CASE WHEN length(config_fingerprint)=64 THEN config_fingerprint END FROM source_bindings WHERE source_id=?")?.query_row([c.source.as_slice()],|r|r.get(0)).optional()?.flatten();
         if fp.as_ref() != Some(&c.fingerprint) {
             return Err("chunk mount source binding changed".into());
         }
@@ -495,17 +508,25 @@ pub(crate) fn require_legacy(db: &Connection) -> Result<()> {
 }
 /// Durable admission; no migration, network, file-body reads or namespace effects.
 pub fn admit(state: &mut State, input: Input) -> Result<Key> {
-    admit_mode(state, input, false)
+    admit_mode(state, input, false, false)
 }
 /// Establish the current retry contract before the first mounted operation.
 /// Existing format-one owners are deliberately not converted during alpha.
 pub fn admit_retry(state: &mut State, input: Input) -> Result<Key> {
-    admit_mode(state, input, true)
+    admit_mode(state, input, true, false)
+}
+/// Separate fresh lifecycle contract: whole dependency forests may be evicted
+/// only at a fully validated quiescent cut. Existing profiles are not converted.
+pub fn admit_quiescent(state: &mut State, input: Input) -> Result<Key> {
+    admit_mode(state, input, true, true)
+}
+pub(crate) fn quiescent_enabled(db: &Connection) -> Result<bool> {
+    Ok(load(db)?.is_some_and(|binding| binding.quiescent_retention))
 }
 pub(crate) fn retry_enabled(db: &Connection) -> Result<bool> {
     Ok(load(db)?.is_some_and(|binding| binding.format == 2))
 }
-fn admit_mode(state: &mut State, input: Input, retry: bool) -> Result<Key> {
+fn admit_mode(state: &mut State, input: Input, retry: bool, quiescent: bool) -> Result<Key> {
     state.verify_staging_storage()?;
     if !retry && crate::sparse_views::preparation::retry::enabled(&state.connection)? {
         return Err("retry-safety owner cannot activate native composition".into());
@@ -523,7 +544,7 @@ fn admit_mode(state: &mut State, input: Input, retry: bool) -> Result<Key> {
     let old = load(&tx)?;
     let before = old.clone();
     let mut b = if let Some(old) = old {
-        if (old.format == 2) != retry {
+        if (old.format == 2) != retry || old.quiescent_retention != quiescent {
             return Err("chunk mount retry format differs; alpha stores are not converted".into());
         }
         old
@@ -565,6 +586,7 @@ fn admit_mode(state: &mut State, input: Input, retry: bool) -> Result<Key> {
         Binding {
             format: if retry { 2 } else { 1 },
             frontier: retry.then_some(0),
+            quiescent_retention: quiescent,
             terminals: std::collections::BTreeMap::new(),
             volume: input.volume.clone(),
             owner,

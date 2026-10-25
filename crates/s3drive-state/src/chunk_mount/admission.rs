@@ -7,6 +7,8 @@ pub enum Domain {
     Open,
     Session,
     Namespace,
+    Creation,
+    Source,
 }
 impl Domain {
     fn label(self) -> &'static str {
@@ -14,6 +16,8 @@ impl Domain {
             Self::Open => "open",
             Self::Session => "session",
             Self::Namespace => "namespace",
+            Self::Creation => "creation",
+            Self::Source => "source",
         }
     }
 }
@@ -152,5 +156,96 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
             retained(&binding, domain, &id)?;
         }
     }
+    if binding.quiescent_retention {
+        let ids = db
+            .prepare("SELECT operation FROM manifest_creations LIMIT 257")?
+            .query_map([], |r| r.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        if ids.len() > 256 {
+            return Err("native creator admission capacity exceeded".into());
+        }
+        for id in ids {
+            retained(&binding, Domain::Creation, &id)?;
+        }
+        let ids = db
+            .prepare("SELECT operation_id FROM namespace_intents LIMIT 4097")?
+            .query_map([], |r| r.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        if ids.len() > 4096 {
+            return Err("native namespace admission capacity exceeded".into());
+        }
+        for id in ids {
+            if retained(&binding, Domain::Namespace, &id).is_ok()
+                || retained(&binding, Domain::Creation, &id).is_ok()
+            {
+                continue;
+            }
+            if !names::opens::retained_namespace_child(db, &id, None)? {
+                return Err("native namespace identity lost original admission".into());
+            }
+        }
+    }
     Ok(())
+}
+
+/// Direct namespace requests consume the next permanent ordinal. Callback
+/// children instead derive from an original retained open and callback, so
+/// losing their open on a completed cut permanently expires every child ID.
+pub(crate) fn namespace(db: &Connection, input: &names::Input) -> Result<()> {
+    if !super::quiescent_enabled(db)? {
+        return Err("namespace retention contract is absent".into());
+    }
+    if next(db, Domain::Namespace)?.as_deref() == Some(&input.request.operation) {
+        return consume(db, Domain::Namespace, &input.request.operation);
+    }
+    if names::opens::retained_namespace_child(db, &input.request.operation, Some(input))? {
+        Ok(())
+    } else {
+        Err("namespace operation is expired or lacks original callback".into())
+    }
+}
+
+/// A cold source re-import receives a new initial-view identity even when its
+/// verified remote binding has not changed. Old source commands cannot recreate
+/// the erased parent graph and thereby revive their old derived IDs.
+pub(crate) fn source_operation(
+    db: &Connection,
+    binding: &crate::sparse_views::Binding,
+) -> Result<Option<crate::sparse_views::ScopedOperation>> {
+    if !super::quiescent_enabled(db)? {
+        return Ok(None);
+    }
+    let id = next(db, Domain::Source)?.ok_or("source admission frontier missing")?;
+    Ok(Some(crate::sparse_views::ScopedOperation::new(
+        binding,
+        hash(b"s3drive-native-source-admission-v1\0", &id)?,
+    )?))
+}
+pub(crate) fn consume_source(
+    db: &Connection,
+    binding: &crate::sparse_views::Binding,
+    operation: [u8; 32],
+) -> Result<()> {
+    let Some(expected) = source_operation(db, binding)? else {
+        return Ok(());
+    };
+    if expected.id()? != operation {
+        return Err("source command belongs to an expired or unissued admission".into());
+    }
+    let id = next(db, Domain::Source)?.ok_or("source admission frontier missing")?;
+    consume(db, Domain::Source, &id)
+}
+impl Client {
+    pub async fn next_source_operation(
+        &self,
+        binding: crate::sparse_views::Binding,
+    ) -> Result<Option<crate::sparse_views::ScopedOperation>> {
+        let key = self.key.clone();
+        self.owner
+            .call(move |worker| {
+                require(&worker.state.connection, &key)?;
+                source_operation(&worker.state.connection, &binding)
+            })
+            .await
+    }
 }

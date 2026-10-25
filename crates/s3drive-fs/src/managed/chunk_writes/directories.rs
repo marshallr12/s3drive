@@ -131,7 +131,9 @@ impl Writes {
         let input = Input {
             request: Apply {
                 volume: self.volume.clone(),
-                operation: hex(&fresh()?[..16]),
+                operation: self
+                    .admission_id(chunk_mount::AdmissionDomain::Namespace)
+                    .await?,
                 expected_sequence: info.sequence.max(node.revision),
                 mutation: Mutation::CreateEntry {
                     parent: node.id,
@@ -147,6 +149,8 @@ impl Writes {
             entries: Vec::new(),
             destination_control: None,
         };
-        self.apply_directory(input).await
+        let node = self.apply_directory(input).await?;
+        self.collect_component(node.id.clone()).await?;
+        Ok(node)
     }
 }

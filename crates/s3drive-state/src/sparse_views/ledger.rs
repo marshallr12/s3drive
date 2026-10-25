@@ -103,7 +103,7 @@ pub(super) fn inspect(db: &Connection) -> Result<Ledger> {
     load(db, true, true)
 }
 fn count(db: &Connection, sql: &str) -> Result<u64> {
-    let n: i64 = db.query_row(sql, [], |r| r.get(0))?;
+    let n: i64 = db.prepare_cached(sql)?.query_row([], |r| r.get(0))?;
     n.try_into().map_err(|_| Failure::Corrupt.into())
 }
 /// Structural history only. This distinct type cannot supply source bytes.
@@ -259,7 +259,10 @@ fn load_in(
         "SELECT EXISTS(SELECT 1 FROM sparse_views WHERE typeof(view_id)!='blob' OR length(view_id)!=32 OR typeof(target)!='blob' OR length(target)!=32 OR typeof(record)!='blob' OR length(record) NOT BETWEEN 1 AND 1048576 OR typeof(state_hash)!='blob' OR length(state_hash)!=32)",
         "SELECT EXISTS(SELECT 1 FROM sparse_view_operations WHERE typeof(operation)!='blob' OR length(operation)!=32 OR typeof(view_id)!='blob' OR length(view_id)!=32 OR typeof(request)!='blob' OR length(request) NOT BETWEEN 1 AND 4096 OR typeof(state_hash)!='blob' OR length(state_hash)!=32)",
     ] {
-        if db.query_row(sql, [], |r| r.get::<_, bool>(0))? {
+        if db
+            .prepare_cached(sql)?
+            .query_row([], |r| r.get::<_, bool>(0))?
+        {
             return Err(Failure::Corrupt.into());
         }
     }
@@ -281,16 +284,15 @@ fn load_in(
     if bodies {
         read_blocks(db, &mut out)?;
     }
-    let role: Vec<u8> = db.query_row(
-        "SELECT state_hash FROM sparse_view_role WHERE singleton=1",
-        [],
-        |r| r.get(0),
-    )?;
+    let role: Vec<u8> = db
+        .prepare_cached("SELECT state_hash FROM sparse_view_role WHERE singleton=1")?
+        .query_row([], |r| r.get(0))?;
     if role != role_hash()? {
         return Err(Failure::Corrupt.into());
     }
-    let mut q =
-        db.prepare("SELECT target,binding,head,state_hash FROM sparse_view_files ORDER BY target")?;
+    let mut q = db.prepare_cached(
+        "SELECT target,binding,head,state_hash FROM sparse_view_files ORDER BY target",
+    )?;
     let rows = q.query_map([], |r| {
         Ok((
             r.get::<_, Vec<u8>>(0)?,
@@ -323,7 +325,7 @@ fn load_in(
     }
     let mut operations = BTreeMap::new();
     let mut operation_ids = BTreeSet::new();
-    let mut q=db.prepare("SELECT operation,view_id,request,state_hash FROM sparse_view_operations ORDER BY operation")?;
+    let mut q=db.prepare_cached("SELECT operation,view_id,request,state_hash FROM sparse_view_operations ORDER BY operation")?;
     let rows = q.query_map([], |r| {
         Ok((
             r.get::<_, Vec<u8>>(0)?,
@@ -345,8 +347,9 @@ fn load_in(
     }
     let mut extents = 0usize;
     let mut used = BTreeSet::new();
-    let mut q =
-        db.prepare("SELECT view_id,target,record,state_hash FROM sparse_views ORDER BY view_id")?;
+    let mut q = db.prepare_cached(
+        "SELECT view_id,target,record,state_hash FROM sparse_views ORDER BY view_id",
+    )?;
     let rows = q.query_map([], |r| {
         Ok((
             r.get::<_, Vec<u8>>(0)?,
@@ -479,7 +482,7 @@ fn read_blocks(db: &Connection, out: &mut Ledger) -> Result<()> {
     if count(db, "SELECT count(*) FROM sparse_view_blocks")? > HARD_BLOCKS as u64 {
         return Err(Failure::Corrupt.into());
     }
-    let bad:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM sparse_view_blocks WHERE typeof(block)!='blob' OR length(block)!=32 OR typeof(data)!='blob' OR length(data) NOT BETWEEN 1 AND 1048576)",[],|r|r.get(0))?;
+    let bad:bool=db.prepare_cached("SELECT EXISTS(SELECT 1 FROM sparse_view_blocks WHERE typeof(block)!='blob' OR length(block)!=32 OR typeof(data)!='blob' OR length(data) NOT BETWEEN 1 AND 1048576)")?.query_row([],|r|r.get(0))?;
     let bytes = count(
         db,
         "SELECT coalesce(sum(length(data)),0) FROM sparse_view_blocks",
@@ -487,7 +490,7 @@ fn read_blocks(db: &Connection, out: &mut Ledger) -> Result<()> {
     if bad || bytes > HARD_DIRTY {
         return Err(Failure::Corrupt.into());
     }
-    let mut q = db.prepare("SELECT block,data FROM sparse_view_blocks ORDER BY block")?;
+    let mut q = db.prepare_cached("SELECT block,data FROM sparse_view_blocks ORDER BY block")?;
     let rows = q.query_map([], |r| {
         Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, Vec<u8>>(1)?))
     })?;

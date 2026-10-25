@@ -85,7 +85,9 @@ impl Writes {
         let input = Input {
             request: Apply {
                 volume: self.volume.clone(),
-                operation: hex(&fresh()?[..16]),
+                operation: self
+                    .admission_id(chunk_mount::AdmissionDomain::Namespace)
+                    .await?,
                 expected_sequence: info.sequence,
                 mutation,
             },
@@ -99,7 +101,10 @@ impl Writes {
                 .map_err(error)?,
             destination_control: destination.map(Box::new),
         };
-        self.native_saved_change(input).await
+        let node = first.id.clone();
+        let receipt = self.native_saved_change(input).await?;
+        self.collect_component(node).await?;
+        Ok(receipt)
     }
     pub(super) async fn native_saved_change(&self, input: Input) -> Result<Receipt> {
         if input.request.volume != self.volume {

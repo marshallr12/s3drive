@@ -298,7 +298,9 @@ impl<'a> Journal<'a> {
             }
             return Ok(r);
         }
-        if crate::chunk_mount::retry_enabled(&self.state.connection)? {
+        if crate::chunk_mount::retry_enabled(&self.state.connection)?
+            && !crate::chunk_mount::quiescent_enabled(&self.state.connection)?
+        {
             return Err("fresh native namespace retry admission is not implemented".into());
         }
         removals::check_begin(&self.state.connection, &input)?;
@@ -355,6 +357,9 @@ impl<'a> Journal<'a> {
             tx.query_row("SELECT count(*) FROM namespace_intents", [], |r| r.get(0))?;
         if count >= LIMIT {
             return Err("namespace intent limit reached".into());
+        }
+        if crate::chunk_mount::quiescent_enabled(&tx)? {
+            crate::chunk_mount::admission::namespace(&tx, &r.input)?;
         }
         let inserted = tx.execute(
             "INSERT INTO namespace_intents VALUES(?1,?2,NULL,?3)",
@@ -503,6 +508,68 @@ pub(crate) fn chunk_scope(db: &Connection, b: &crate::chunk_mount::Binding) -> R
         b.namespace(&row.input)?;
     }
     opens::chunk_scope(db, b)
+}
+
+pub(crate) fn retirement_records(db: &Connection) -> Result<Vec<Record>> {
+    removals::records(db)
+}
+pub(crate) fn retirement_nodes(input: &Input) -> std::collections::BTreeSet<String> {
+    let mut nodes = input
+        .entries
+        .iter()
+        .map(|e| e.id.clone())
+        .collect::<std::collections::BTreeSet<_>>();
+    if matches!(
+        input.request.mutation,
+        Mutation::CreateEntry { .. }
+            | Mutation::CreateDeferredEntry { .. }
+            | Mutation::CreateEmptyManifest { .. }
+            | Mutation::CreateDeferredEmptyManifest { .. }
+    ) {
+        nodes.insert(input.request.operation.clone());
+    }
+    nodes
+}
+pub(crate) fn component_closed(
+    db: &Connection,
+    volume: &str,
+    nodes: &std::collections::BTreeSet<String>,
+) -> Result<bool> {
+    for record in removals::records(db)? {
+        if !retirement_nodes(&record.input).is_disjoint(nodes) && record.outcome.is_none() {
+            return Ok(false);
+        }
+    }
+    for node in nodes {
+        if removals::owned(db, volume, node)?.is_some() {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+/// A closed namespace forest has no unknown operation and no surviving owned
+/// removal. Complete history is validated before it can leave local storage.
+pub(crate) fn quiescent(db: &Connection) -> Result<bool> {
+    let records = removals::records(db)?;
+    if records.iter().any(|r| r.outcome.is_none()) {
+        return Ok(false);
+    }
+    let mut nodes = std::collections::BTreeSet::new();
+    for record in &records {
+        for entry in &record.input.entries {
+            nodes.insert((record.input.request.volume.clone(), entry.id.clone()));
+        }
+        if let Some(Ok(receipt)) = &record.outcome {
+            nodes.insert((record.input.request.volume.clone(), receipt.node.id.clone()));
+        }
+    }
+    for (volume, node) in nodes {
+        if removals::owned(db, &volume, &node)?.is_some() {
+            return Ok(false);
+        }
+    }
+    Ok(true)
 }
 
 #[cfg(test)]

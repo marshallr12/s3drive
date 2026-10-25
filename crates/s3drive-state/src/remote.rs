@@ -243,11 +243,9 @@ pub struct Verification {
 
 pub(crate) fn for_generation(db: &Connection, id: GenerationId) -> Result<Option<Info>> {
     Options::default().validate()?;
-    let exists: bool = db.query_row(
-        "SELECT EXISTS(SELECT 1 FROM remote_intents WHERE generation_id=?1)",
-        [id.value()],
-        |r| r.get(0),
-    )?;
+    let exists: bool = db
+        .prepare_cached("SELECT EXISTS(SELECT 1 FROM remote_intents WHERE generation_id=?1)")?
+        .query_row([id.value()], |r| r.get(0))?;
     exists.then(|| load(db, id)).transpose()
 }
 
@@ -272,7 +270,7 @@ impl<'a> Journal<'a> {
         if !(1..=1000).contains(&limit) {
             return Err(Failure::InvalidInput.into());
         }
-        let mut q=self.state.connection.prepare("SELECT generation_id FROM remote_intents WHERE generation_id>?1 ORDER BY generation_id LIMIT ?2")?;
+        let mut q=self.state.connection.prepare_cached("SELECT generation_id FROM remote_intents WHERE generation_id>?1 ORDER BY generation_id LIMIT ?2")?;
         let ids = q
             .query_map(params![after.map_or(0, GenerationId::value), limit], |r| {
                 r.get::<_, i64>(0)
@@ -589,7 +587,8 @@ pub(crate) fn preparation_base(
     let anchor = history.anchor;
     // Another credential generation's local bytes need explicit rebinding,
     // including when they have not yet reached the remote journal.
-    let mut heads = connection.prepare("SELECT generation_id FROM staged_heads NOT INDEXED")?;
+    let mut heads =
+        connection.prepare_cached("SELECT generation_id FROM staged_heads NOT INDEXED")?;
     let mut rows = heads.query([])?;
     while let Some(row) = rows.next()? {
         let other = journal::load(connection, GenerationId::from_database(row.get(0)?)?)?;
@@ -726,11 +725,12 @@ fn same_locator(a: &Target, b: &Target) -> bool {
     a.fingerprint() == b.fingerprint() && a.object_key() == b.object_key()
 }
 fn scan(connection: &Connection, mut visit: impl FnMut(&Info) -> Result<()>) -> Result<()> {
-    let orphan:bool=connection.query_row("SELECT EXISTS(SELECT 1 FROM retained_remote_intents r LEFT JOIN remote_intents i ON i.operation_id=r.operation_id WHERE i.operation_id IS NULL)",[],|r|r.get(0))?;
+    let orphan:bool=connection.prepare_cached("SELECT EXISTS(SELECT 1 FROM retained_remote_intents r LEFT JOIN remote_intents i ON i.operation_id=r.operation_id WHERE i.operation_id IS NULL)")?.query_row([],|r|r.get(0))?;
     if orphan {
         return Err(Failure::Corrupt.into());
     }
-    let mut q = connection.prepare("SELECT generation_id FROM remote_intents NOT INDEXED")?;
+    let mut q =
+        connection.prepare_cached("SELECT generation_id FROM remote_intents NOT INDEXED")?;
     let mut rows = q.query([])?;
     let mut count = 0;
     while let Some(row) = rows.next()? {
@@ -744,11 +744,9 @@ fn scan(connection: &Connection, mut visit: impl FnMut(&Info) -> Result<()>) -> 
     Ok(())
 }
 fn load_operation(connection: &Connection, id: OperationId) -> Result<Info> {
-    let generation: i64 = connection.query_row(
-        "SELECT generation_id FROM remote_intents WHERE operation_id=?1",
-        [id.0.as_slice()],
-        |r| r.get(0),
-    )?;
+    let generation: i64 = connection
+        .prepare_cached("SELECT generation_id FROM remote_intents WHERE operation_id=?1")?
+        .query_row([id.0.as_slice()], |r| r.get(0))?;
     let info = load(connection, GenerationId::from_database(generation)?)?;
     if info.operation != id {
         return Err(Failure::Corrupt.into());
@@ -758,11 +756,9 @@ fn load_operation(connection: &Connection, id: OperationId) -> Result<Info> {
 pub(crate) fn load(connection: &Connection, generation: GenerationId) -> Result<Info> {
     let info = raw_load(connection, generation)?;
     if let Some(anchor) = info.anchor {
-        let id: i64 = connection.query_row(
-            "SELECT generation_id FROM remote_intents WHERE operation_id=?1",
-            [anchor.0.as_slice()],
-            |r| r.get(0),
-        )?;
+        let id: i64 = connection
+            .prepare_cached("SELECT generation_id FROM remote_intents WHERE operation_id=?1")?
+            .query_row([anchor.0.as_slice()], |r| r.get(0))?;
         let base = raw_load(connection, GenerationId::from_database(id)?)?;
         if base.operation != anchor
             || base.phase != Phase::Verified
@@ -778,11 +774,11 @@ pub(crate) fn load(connection: &Connection, generation: GenerationId) -> Result<
     Ok(info)
 }
 fn raw_load(connection: &Connection, generation: GenerationId) -> Result<Info> {
-    let shape:bool=connection.query_row("SELECT coalesce(length(operation_id)=32 AND length(source_id)=32 AND length(config_fingerprint)=64 AND length(CAST(object_key AS BLOB)) BETWEEN 1 AND 1024 AND length(manifest_hash)=32 AND length(payload_sha256)=32 AND length(intent_hash)=32 AND length(state_hash)=32 AND (guard_etag IS NULL OR length(CAST(guard_etag AS BLOB)) BETWEEN 1 AND 8192) AND (remote_etag IS NULL OR length(CAST(remote_etag AS BLOB)) BETWEEN 1 AND 8192) AND (remote_version IS NULL OR length(CAST(remote_version AS BLOB)) BETWEEN 1 AND 8192) AND (anchor_operation IS NULL OR length(anchor_operation)=32) AND (anchor_receipt IS NULL OR length(anchor_receipt)=32) AND length(phase) BETWEEN 1 AND 12 AND length(reason) BETWEEN 1 AND 12 AND length(observation) BETWEEN 1 AND 8,0) FROM remote_intents WHERE generation_id=?1",[generation.value()],|r|r.get(0))?;
+    let shape:bool=connection.prepare_cached("SELECT coalesce(length(operation_id)=32 AND length(source_id)=32 AND length(config_fingerprint)=64 AND length(CAST(object_key AS BLOB)) BETWEEN 1 AND 1024 AND length(manifest_hash)=32 AND length(payload_sha256)=32 AND length(intent_hash)=32 AND length(state_hash)=32 AND (guard_etag IS NULL OR length(CAST(guard_etag AS BLOB)) BETWEEN 1 AND 8192) AND (remote_etag IS NULL OR length(CAST(remote_etag AS BLOB)) BETWEEN 1 AND 8192) AND (remote_version IS NULL OR length(CAST(remote_version AS BLOB)) BETWEEN 1 AND 8192) AND (anchor_operation IS NULL OR length(anchor_operation)=32) AND (anchor_receipt IS NULL OR length(anchor_receipt)=32) AND length(phase) BETWEEN 1 AND 12 AND length(reason) BETWEEN 1 AND 12 AND length(observation) BETWEEN 1 AND 8,0) FROM remote_intents WHERE generation_id=?1")?.query_row([generation.value()],|r|r.get(0))?;
     if !shape {
         return Err(Failure::Corrupt.into());
     }
-    let row=connection.query_row("SELECT operation_id,source_id,config_fingerprint,object_key,manifest_hash,payload_sha256,size_bytes,guard_etag,anchor_operation,anchor_receipt,intent_hash,phase,reason,observation,rejection_status,remote_etag,remote_version,state_hash FROM remote_intents WHERE generation_id=?1",[generation.value()],|r|Ok((r.get::<_,Vec<u8>>(0)?,r.get::<_,Vec<u8>>(1)?,r.get::<_,String>(2)?,r.get::<_,String>(3)?,r.get::<_,Vec<u8>>(4)?,r.get::<_,Vec<u8>>(5)?,r.get::<_,i64>(6)?,r.get::<_,Option<String>>(7)?,r.get::<_,Option<Vec<u8>>>(8)?,r.get::<_,Option<Vec<u8>>>(9)?,r.get::<_,Vec<u8>>(10)?,r.get::<_,String>(11)?,r.get::<_,String>(12)?,r.get::<_,String>(13)?,r.get::<_,Option<u16>>(14)?,r.get::<_,Option<String>>(15)?,r.get::<_,Option<String>>(16)?,r.get::<_,Vec<u8>>(17)?)))?;
+    let row=connection.prepare_cached("SELECT operation_id,source_id,config_fingerprint,object_key,manifest_hash,payload_sha256,size_bytes,guard_etag,anchor_operation,anchor_receipt,intent_hash,phase,reason,observation,rejection_status,remote_etag,remote_version,state_hash FROM remote_intents WHERE generation_id=?1")?.query_row([generation.value()],|r|Ok((r.get::<_,Vec<u8>>(0)?,r.get::<_,Vec<u8>>(1)?,r.get::<_,String>(2)?,r.get::<_,String>(3)?,r.get::<_,Vec<u8>>(4)?,r.get::<_,Vec<u8>>(5)?,r.get::<_,i64>(6)?,r.get::<_,Option<String>>(7)?,r.get::<_,Option<Vec<u8>>>(8)?,r.get::<_,Option<Vec<u8>>>(9)?,r.get::<_,Vec<u8>>(10)?,r.get::<_,String>(11)?,r.get::<_,String>(12)?,r.get::<_,String>(13)?,r.get::<_,Option<u16>>(14)?,r.get::<_,Option<String>>(15)?,r.get::<_,Option<String>>(16)?,r.get::<_,Vec<u8>>(17)?)))?;
     let (
         op,
         source,
@@ -830,11 +826,11 @@ fn raw_load(connection: &Connection, generation: GenerationId) -> Result<Info> {
         revision,
         state_hash: digest(sh)?,
     };
-    let retained: bool = connection.query_row(
-        "SELECT EXISTS(SELECT 1 FROM retained_remote_intents WHERE operation_id=?1)",
-        [info.operation.0.as_slice()],
-        |r| r.get(0),
-    )?;
+    let retained: bool = connection
+        .prepare_cached(
+            "SELECT EXISTS(SELECT 1 FROM retained_remote_intents WHERE operation_id=?1)",
+        )?
+        .query_row([info.operation.0.as_slice()], |r| r.get(0))?;
     let generation_data = journal::load(connection, generation)?;
     journal::validate_manifest(connection, &generation_data, false)?;
     if info.size > MAX_BODY_BYTES as u64

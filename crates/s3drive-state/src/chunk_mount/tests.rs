@@ -965,3 +965,130 @@ fn retry_safety_refuses_native_owner_activation_without_changing_default_composi
     assert_eq!(rows(&s), before);
     assert_eq!(admit(&mut s, declared).unwrap(), key);
 }
+
+#[test]
+fn native_retry_validation_work_cached_foreign_sql_rereads_rows_and_schema() {
+    let mut db = Connection::open_in_memory().unwrap();
+    for table in FOREIGN_TABLES {
+        db.execute_batch(&format!("CREATE TABLE {table}(value INTEGER)"))
+            .unwrap();
+    }
+    foreign(&db).unwrap();
+    for table in FOREIGN_TABLES {
+        db.execute(&format!("INSERT INTO {table} VALUES(1)"), [])
+            .unwrap();
+        assert!(foreign(&db).is_err(), "{table}");
+        db.execute(&format!("DELETE FROM {table}"), []).unwrap();
+        foreign(&db).unwrap();
+        let tx = db.transaction().unwrap();
+        tx.execute(&format!("INSERT INTO {table} VALUES(2)"), [])
+            .unwrap();
+        assert!(foreign(&tx).is_err());
+        tx.rollback().unwrap();
+        foreign(&db).unwrap();
+        db.execute_batch(&format!("DROP TABLE {table}")).unwrap();
+        assert!(foreign(&db).is_err(), "missing {table}");
+        db.execute_batch(&format!(
+            "CREATE TABLE {table}(changed TEXT); INSERT INTO {table} VALUES('present')"
+        ))
+        .unwrap();
+        assert!(foreign(&db).is_err(), "recreated {table}");
+        db.execute(&format!("DELETE FROM {table}"), []).unwrap();
+        foreign(&db).unwrap();
+    }
+    assert!(db.is_autocommit());
+}
+
+#[test]
+fn native_retry_validation_work_quiescent_contract_keeps_profiles_separate_and_admissions_monotonic()
+ {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut state = State::open_managed(&tmp.path().join("quiescent admission")).unwrap();
+    let declared = input();
+    let key = admit_quiescent(&mut state, declared.clone()).unwrap();
+    assert!(admit_retry(&mut state, declared.clone()).is_err());
+    assert!(admit(&mut state, declared.clone()).is_err());
+    assert_eq!(admit_quiescent(&mut state, declared.clone()).unwrap(), key);
+    let mut create = creation(&declared, 30);
+    create.owner = Some(key.owner().into());
+    create.operation = admission::next(&state.connection, AdmissionDomain::Creation)
+        .unwrap()
+        .unwrap();
+    let mut journal = crate::manifest_creation::Journal::for_chunks(
+        &mut state,
+        crate::manifest_creation::Limits::default(),
+        &key,
+    )
+    .unwrap();
+    journal.begin(create.clone()).unwrap();
+    assert_eq!(journal.begin(create.clone()).unwrap().input(), &create);
+    let mut name = directory(&declared, 31);
+    name.request.operation = admission::next(&state.connection, AdmissionDomain::Namespace)
+        .unwrap()
+        .unwrap();
+    assert_ne!(create.operation, name.request.operation);
+    let mut journal =
+        names::Journal::for_chunks(&mut state, journal::Options::default(), &key).unwrap();
+    journal.begin(name.clone()).unwrap();
+    assert_eq!(journal.begin(name.clone()).unwrap().input, name);
+    validate_all(&state.connection).unwrap();
+    let before = rows(&state);
+    let mut invalid = directory(&declared, 32);
+    invalid.request.operation = create.operation;
+    assert!(
+        names::Journal::for_chunks(&mut state, journal::Options::default(), &key)
+            .unwrap()
+            .begin(invalid)
+            .is_err()
+    );
+    assert_eq!(rows(&state), before);
+}
+
+#[test]
+fn native_retry_validation_work_cached_sql_rechecks_live_rows_schema_and_rollback() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut state = State::open_managed(&tmp.path().join("fresh cached SQL")).unwrap();
+    let db = &mut state.connection;
+    for _ in 0..3 {
+        check_schema(db).unwrap();
+        preflight(db).unwrap();
+        assert!(load(db).unwrap().is_none());
+    }
+    for sql in [
+        "INSERT INTO chunk_mount_role(singleton,record,state_hash) VALUES(1,x'00',zeroblob(32))",
+        "CREATE TRIGGER cached_sql_guard AFTER UPDATE ON source_bindings BEGIN SELECT 1; END",
+        "ALTER TABLE chunk_mount_role RENAME COLUMN record TO wrong_record",
+        "PRAGMA user_version=49",
+    ] {
+        let tx = db.transaction().unwrap();
+        tx.execute_batch(sql).unwrap();
+        if sql.starts_with("ALTER") {
+            // Prepare-only schema probes must not reuse unstepped stale bytecode.
+            assert!(check_schema(&tx).is_err());
+        }
+        if sql.starts_with("CREATE TRIGGER") || sql.starts_with("PRAGMA") {
+            assert!(preflight(&tx).is_err());
+        } else {
+            assert!(load(&tx).is_err(), "{sql}");
+        }
+        tx.rollback().unwrap();
+        check_schema(db).unwrap();
+        preflight(db).unwrap();
+        assert!(load(db).unwrap().is_none());
+    }
+    db.pragma_update(None, "foreign_keys", false).unwrap();
+    assert!(preflight(db).is_err());
+    db.pragma_update(None, "foreign_keys", true).unwrap();
+    preflight(db).unwrap();
+    assert!(db.is_autocommit());
+    let busy: i64 = db
+        .query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(busy, 0);
+    // Warm query execution cannot pin a read transaction beyond the call.
+    assert_eq!(
+        db.query_row("PRAGMA integrity_check", [], |r| r.get::<_, String>(0))
+            .unwrap(),
+        "ok"
+    );
+}
