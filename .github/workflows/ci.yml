@@ -81,6 +81,12 @@ jobs:
           sudo apt-get install -y fuse3 tmux libglib2.0-bin
           sudo modprobe fuse
           test -c /dev/fuse
+      - name: Verify component cleanup shared lifecycle and cold recovery
+        timeout-minutes: 10
+        run: cargo test -p s3drive-cli --test chunk_publication component_retention_shared_ --locked -- --nocapture --test-threads=1
+      - name: Verify component cleanup actual native lifecycle
+        timeout-minutes: 8
+        run: cargo test -p s3drive-cli --test chunk_publication component_retention_actual_ --locked -- --ignored --nocapture --test-threads=1
       - name: Verify fresh linked-native shared saves and restart bounds
         timeout-minutes: 20
         run: cargo test -p s3drive-cli --test chunk_publication native_retention_shared_ --locked -- --nocapture --test-threads=1
@@ -291,6 +297,9 @@ jobs:
       - name: Measure bounded native protocol validation work
         timeout-minutes: 5
         run: cargo test -p s3drive-state native_retry_validation_work --locked -- --nocapture --test-threads=1
+      - name: Diagnose component shared lifecycle and cold recovery
+        timeout-minutes: 10
+        run: cargo test -p s3drive-cli --test chunk_publication component_retention_shared_ --locked -- --nocapture --test-threads=1
       - name: Measure actual shared filesystem dirty-save phases
         timeout-minutes: 5
         run: |

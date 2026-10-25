@@ -8,7 +8,11 @@ async fn configuration(
 ) -> s3drive_core::Config {
     let mut c = native_writer::configuration(config, root, s).await;
     c.managed.as_mut().unwrap().sparse_lifecycle =
-        Some(s3drive_core::SparseLifecycle::OwnedUnlinkedV1);
+        Some(if root.join("component-retention-fixture").exists() {
+            s3drive_core::SparseLifecycle::ComponentRetentionV1
+        } else {
+            s3drive_core::SparseLifecycle::OwnedUnlinkedV1
+        });
     c.validate().unwrap();
     c
 }
@@ -21,12 +25,49 @@ async fn mount_configuration(config: &s3drive_core::Config, root: &Path, s: &Ser
         .unwrap()
         .as_table_mut()
         .unwrap()
-        .insert("sparse-lifecycle".into(), "owned-unlinked-v1".into());
+        .insert(
+            "sparse-lifecycle".into(),
+            if root.join("component-retention-fixture").exists() {
+                "component-retention-v1"
+            } else {
+                "owned-unlinked-v1"
+            }
+            .into(),
+        );
     let text = toml::to_string(&c).unwrap();
     s3drive_core::Config::parse(&text).unwrap();
     std::fs::write(path, text).unwrap();
 }
 
+fn inspect_component_closed(root: &Path) {
+    if !root.join("component-retention-fixture").exists() {
+        return;
+    }
+    let db = rusqlite::Connection::open_with_flags(
+        root.join("native-state/metadata.sqlite3"),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    for table in [
+        "windows_open_journal",
+        "namespace_intents",
+        "manifest_creations",
+        "sparse_views",
+        "sparse_preparations",
+        "sparse_publications",
+        "staged_generations",
+        "windows_session_recoveries",
+    ] {
+        assert_eq!(
+            db.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r
+                .get::<_, i64>(0))
+                .unwrap(),
+            0,
+            "component closed forest retained {table}"
+        );
+    }
+    eprintln!("COMPONENT_RETENTION closed forest zero; permanent identities preserved");
+}
 pub async fn unlink(config: &s3drive_core::Config, root: &Path, s: &Server) {
     let c = configuration(config, root, s).await;
     let fs = ReadOnlyFs::new(&c).await.unwrap();
@@ -80,9 +121,11 @@ pub async fn unlink(config: &s3drive_core::Config, root: &Path, s: &Server) {
     ));
     drop((file, other, original));
     native_writer::stop(fs).await;
+    inspect_component_closed(root);
     let fs = ReadOnlyFs::new(&c).await.unwrap();
     assert!(fs.lookup(ROOT, "held 日本語.bin").await.is_err());
     native_writer::stop(fs).await;
+    inspect_component_closed(root);
 }
 pub async fn replace(config: &s3drive_core::Config, root: &Path, s: &Server) {
     let c = configuration(config, root, s).await;
@@ -126,6 +169,7 @@ pub async fn replace(config: &s3drive_core::Config, root: &Path, s: &Server) {
     current.native_object().unwrap().close().await.unwrap();
     drop((old, temp, current));
     native_writer::stop(fs).await;
+    inspect_component_closed(root);
     let fs = ReadOnlyFs::new(&c).await.unwrap();
     let saved = fs.lookup(ROOT, "saved 日本語.bin").await.unwrap();
     let current = fs.open(saved.id).await.unwrap();
@@ -133,6 +177,7 @@ pub async fn replace(config: &s3drive_core::Config, root: &Path, s: &Server) {
     current.native_object().unwrap().close().await.unwrap();
     drop(current);
     native_writer::stop(fs).await;
+    inspect_component_closed(root);
 }
 
 #[cfg(any(target_os = "linux", windows))]
@@ -234,6 +279,7 @@ pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
     .await;
     mount.stop().await;
     drop(mount);
+    inspect_component_closed(root);
     let mut mount = Mount::start(root).await;
     let base = mount.path.clone();
     blocking(&mut mount, move || {

@@ -614,7 +614,8 @@ impl Object {
                         .lock()
                         .map_err(|_| Error::Internal)?
                         .remove(object.entry.native.open());
-                    if object.writer.native_retention {
+                    if object.writer.native_retention || object.writer.component_retention {
+                        let _retention = object.writer.retention_serial.lock().await;
                         let node = object
                             .entry
                             .file
@@ -643,14 +644,16 @@ impl Object {
                                 .lock()
                                 .map_err(|_| Error::Internal)?
                                 .take();
-                            object
+                            let collector = object
                                 .writer
                                 ._capability
                                 .native_sparse(views::Options::default(), plans::Options::default())
-                                .map_err(error)?
-                                .retire_linked(node)
-                                .await
                                 .map_err(error)?;
+                            if object.writer.component_retention {
+                                collector.retire_component(node).await.map_err(error)?;
+                            } else {
+                                collector.retire_linked(node).await.map_err(error)?;
+                            }
                         }
                     }
                     Ok(())

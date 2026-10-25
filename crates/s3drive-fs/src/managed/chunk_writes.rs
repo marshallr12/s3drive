@@ -59,6 +59,8 @@ pub(crate) struct Writes {
     native: std::sync::OnceLock<native::Mount>,
     native_lifecycle: bool,
     native_retention: bool,
+    component_retention: bool,
+    retention_serial: AsyncMutex<()>,
     native_serial: Arc<AsyncMutex<()>>,
 }
 pub(crate) enum Opened {
@@ -113,6 +115,29 @@ impl File {
     }
 }
 impl Writes {
+    async fn collect_component(&self, node: String) -> Result<()> {
+        if self.component_retention {
+            let _retention = self.retention_serial.lock().await;
+            self._capability
+                .native_sparse(views::Options::default(), plans::Options::default())
+                .map_err(error)?
+                .retire_component(node)
+                .await
+                .map_err(error)?;
+        }
+        Ok(())
+    }
+    async fn admission_id(&self, domain: chunk_mount::AdmissionDomain) -> Result<String> {
+        if self.component_retention {
+            self._capability
+                .next_admission(domain)
+                .await
+                .map_err(error)?
+                .ok_or(Error::Conflict)
+        } else {
+            Ok(hex(&fresh()?[..16]))
+        }
+    }
     pub(crate) fn native_enabled(&self) -> bool {
         self.native_lifecycle
     }
@@ -127,6 +152,8 @@ impl Writes {
     ) -> Result<Self> {
         let native_lifecycle = lifecycle.is_some();
         let native_retention = lifecycle == Some(s3drive_core::SparseLifecycle::LinkedRetentionV1);
+        let component_retention =
+            lifecycle == Some(s3drive_core::SparseLifecycle::ComponentRetentionV1);
         let mut stores = HashMap::new();
         let mut controls = Vec::new();
         for (id, e) in executors {
@@ -169,7 +196,9 @@ impl Writes {
             volume: volume.clone(),
             controls,
         };
-        let capability = if native_retention {
+        let capability = if component_retention {
+            storage.chunk_mount_components(input).await
+        } else if native_retention {
             storage.chunk_mount_retry(input).await
         } else {
             storage.chunk_mount(input).await
@@ -207,6 +236,8 @@ impl Writes {
             native: std::sync::OnceLock::new(),
             native_lifecycle,
             native_retention,
+            component_retention,
+            retention_serial: AsyncMutex::new(()),
             native_serial: Arc::new(AsyncMutex::new(())),
         };
         tokio::time::timeout(DEADLINE, writer.recover())
@@ -363,7 +394,9 @@ impl Writes {
             .ok_or(Error::ReadOnly)?;
         let receipt = creator
             .create(Draft {
-                operation: hex(&fresh()?[..16]),
+                operation: self
+                    .admission_id(chunk_mount::AdmissionDomain::Creation)
+                    .await?,
                 expected_sequence: v.sequence,
                 parent: NodeGuard {
                     id: p.id,
@@ -375,6 +408,7 @@ impl Writes {
             .map_err(error)?;
         let node = receipt.metadata().node.clone();
         self.remember(&node)?;
+        self.collect_component(node.id.clone()).await?;
         Ok(node)
     }
     async fn select_inner(
@@ -411,8 +445,9 @@ impl Writes {
     }
     async fn open_inner(&self, node: &str) -> Result<Arc<File>> {
         let _serial = self.open_serial.lock().await;
+        let _retention = self.retention_serial.lock().await;
         let recovered_targets = self.recover().await?;
-        if self.native_retention {
+        if self.native_retention || self.component_retention {
             // A last reader may have released after Close deferred collection.
             // Retry before creating our own reader or consuming open capacity.
             let collector = self
@@ -433,7 +468,11 @@ impl Writes {
             for node in targets {
                 // Discovery is not deletion permission: every target gets its
                 // own fresh safety checks and independent transaction here.
-                collector.retire_linked(node).await.map_err(error)?;
+                if self.component_retention {
+                    collector.retire_component(node).await.map_err(error)?;
+                } else {
+                    collector.retire_linked(node).await.map_err(error)?;
+                }
             }
         }
         let remote = self.reader.open_file(node).await.map_err(error)?;
@@ -455,13 +494,17 @@ impl Writes {
             Err(e) if e.downcast_ref::<views::Failure>() == Some(&views::Failure::NotFound) => self
                 .local
                 .begin_scoped(
-                    token(
-                        &b,
-                        derived(
-                            b"s3drive-native-chunk-open-v1\0",
-                            &b.epoch().map_err(error)?,
-                        ),
-                    )?,
+                    self._capability
+                        .next_source_operation(b.clone())
+                        .await
+                        .map_err(error)?
+                        .unwrap_or(token(
+                            &b,
+                            derived(
+                                b"s3drive-native-chunk-open-v1\0",
+                                &b.epoch().map_err(error)?,
+                            ),
+                        )?),
                     b.clone(),
                     remote.size(),
                 )

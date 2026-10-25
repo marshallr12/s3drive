@@ -128,3 +128,18 @@ file, its open and a cloned logical reader survive, both with and without an
 unfinished preparation. This compiles with workspace Clippy; durable hosted
 execution and namespace/crash coverage remain pending. The mounted profile is
 still not exposed. This is implementation progress, not milestone acceptance.
+
+## Experimental mounted integration (not accepted)
+
+`component-retention-v1` selects the fresh contract explicitly; existing defaults
+and `linked-retention-v1` remain distinct. It uses expiring source, creation and
+namespace admissions and retries component collection after actual Close, known
+creation/namespace completion and before cold source admission. A dedicated
+retention mutex excludes collection from the source-head-to-reader admission
+window; independent readers and active original opens still protect their data.
+It never manufactures Close, changes remote deletion policy or collects S3 objects.
+
+Shared and actual native unlink/replacement/remount scenarios are added separately
+from all existing gates, with exact zero-forest assertions after closed scenarios.
+Their hosted execution, plus broader bounded concurrent lifecycle workloads,
+remains pending. This profile is development-only, not a beta readiness claim.

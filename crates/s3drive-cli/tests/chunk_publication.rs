@@ -1466,9 +1466,14 @@ fn dispatch<'a>(
     }
 }
 async fn run(mode: &str) {
+    let component = mode.starts_with("component:");
+    let mode = mode.strip_prefix("component:").unwrap_or(mode);
     let put_gate = fixture::PutGate::default();
     let f = fixture::Fixture::start_with_gate(Some(put_gate.clone())).await;
     let tmp = tempfile::tempdir().unwrap();
+    if component {
+        std::fs::write(tmp.path().join("component-retention-fixture"), b"fresh").unwrap();
+    }
     let setup = writes::setup(&f, tmp.path()).await;
     let mut counts = None;
     let mut mixed_recovery_window = None;
@@ -2566,4 +2571,27 @@ async fn native_retention_extended_1000_saves_100_remounts() {
 #[ignore = "additional four-file 64KiB actual mounted workload"]
 async fn native_retention_extended_four_files_64kib_300_saves() {
     run("native_retention_large300").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn component_retention_shared_unlink_close_and_remount() {
+    run("component:native_lifecycle_unlink").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn component_retention_shared_replacement_preserves_old_handles() {
+    run("component:native_lifecycle_replace").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn component_retention_shared_cold_known_replays_original_root() {
+    run("component:native_lifecycle_cold_known").await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn component_retention_shared_cold_unknown_protects_dirty_work() {
+    run("component:native_lifecycle_cold_unknown").await;
+}
+#[cfg(any(target_os = "linux", windows))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "dedicated component retention; real FUSE/WinFsp required"]
+async fn component_retention_actual_unlink_replace_dirty_handles_and_remount() {
+    run("component:native_lifecycle_mounted").await;
 }
