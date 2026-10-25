@@ -5,6 +5,12 @@ pub struct DataNeed {
     pub slot: u64,
     pub uses_base: bool,
 }
+/// Read-only historical/fresh work selection. Later effects revalidate state.
+pub enum BeginSelection {
+    Existing(Box<Record>),
+    Unchecked,
+    Fresh(Box<super::super::TreeReceipt>),
+}
 pub struct Journal<'a> {
     pub(super) state: &'a mut State,
     limits: Limits,
@@ -16,6 +22,41 @@ impl<'a> Journal<'a> {
             state,
             limits: limits.validate()?,
         })
+    }
+    pub fn begin_selection(&mut self, plan: Id) -> Result<BeginSelection> {
+        let tx = self
+            .state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred)?;
+        let result = (|| {
+            let meta = ledger::inspect(&tx)?;
+            let source = super::super::ledger::inspect(&tx)?;
+            ledger::validate_source_snapshot(&tx, &meta, &source)?;
+            if let Some(record) = meta.records.get(&plan) {
+                return Ok(BeginSelection::Existing(Box::new(record.clone())));
+            }
+            ledger::validate_checks(&meta, &source)?;
+            let info = source.info(plan)?;
+            info.root()?.ok_or(Failure::Incomplete)?;
+            for ((_, level, slot), saved) in
+                source.objects.range((plan, -1, 0)..=(plan, -1, u64::MAX))
+            {
+                if *level == -1
+                    && !meta.checks.contains_key(&(plan, *slot))
+                    && matches!(saved.object.kind, super::super::model::Kind::Data { .. })
+                {
+                    // Preserve unchecked's range validation before its first
+                    // returned need. The range is data, not authentication.
+                    info.view()
+                        .range(saved.object.offset(), saved.object.length as usize)?;
+                    return Ok(BeginSelection::Unchecked);
+                }
+            }
+            let tree = super::super::transfers::checked_trees(&tx, &source)?.tree(plan)?;
+            Ok(BeginSelection::Fresh(Box::new(tree)))
+        })();
+        tx.rollback()?;
+        result
     }
     pub fn get(&mut self, plan: Id) -> Result<Record> {
         let tx = self
@@ -420,6 +461,9 @@ impl Client {
         self.owner
             .call(move |s| f(&mut Journal::new(&mut s.state, limits)?))
             .await
+    }
+    pub async fn begin_selection(&self, plan: Id) -> Result<BeginSelection> {
+        self.call(move |j| j.begin_selection(plan)).await
     }
     pub async fn get(&self, plan: Id) -> Result<Record> {
         self.call(move |j| j.get(plan)).await

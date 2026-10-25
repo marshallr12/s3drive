@@ -457,3 +457,23 @@ from hostile internal callers. Focused tests count one source-header and root
 metadata decode while requiring two independent body reads, exercise late body
 and metadata damage, and preserve exact rollback checks. Hosted performance and
 all original acceptance gates are still required; no deadline is increased.
+
+### Corrective pure-value and read-selection work (not yet accepted)
+
+The main Windows timeout remains unresolved pending exact-source execution.
+The next correction retains at most one 16 KiB canonical byte slice and three
+fixed-size payload-reference hashes on the dedicated state worker. It parses
+anchors again on every read, checks exact freshly queried bytes, and repeats all
+row, role, semantic, owner, frontier, witness and physical checks. Only pure
+canonical serialization and reference derivations are reused. The memo is
+inactive outside the worker lifetime and clears on exit or unwind; it does not
+retain a decoded object graph or any successful validation result.
+
+Immutable preparation `Info` values derive their ID once from private owned
+input. Upload/dependency and publication work selections combine adjacent
+read-only observations in one transaction, ending it before provider awaits or
+local mutation. Materialization retains the global trigger guard and fresh
+child-receipt checks; subsequent effect admission and post-write validation are
+unchanged. These changes require fresh adversarial tests, both-platform native
+measurements and all original full gates. Instruction-profile estimates are not
+filesystem latency or acceptance evidence.

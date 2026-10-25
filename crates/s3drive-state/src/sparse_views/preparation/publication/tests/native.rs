@@ -528,7 +528,7 @@ async fn native_sparse_epoch_context_cannot_change_plain_or_domain_separated_pag
     let closed = close_native(&n, &n.token, 71).await.unwrap();
     assert_eq!(closed.plans.len(), 1);
     assert_eq!(closed.plans[0].view().id(), view.id());
-    let input = &closed.plans[0].input;
+    let input = closed.plans[0].input();
     assert_eq!(input.base_page, digest(&fixture().base.page.encode()));
     assert_ne!(input.base_page, *fixture().base.root.page().sha256());
     n.storage.close().await.unwrap();
@@ -2228,6 +2228,20 @@ async fn native_retry_validation_work_pinned_refusal_rechecks_resealed_unselecte
                         )
                         .is_err()
                 );
+                let position = crate::sparse_views::preparation::Position { level: 0, slot: 0 };
+                assert!(
+                    pj(&mut store.state)
+                        .upload_selection(corrupt_plan, position)
+                        .is_err()
+                );
+                assert!(store.state.connection.is_autocommit());
+                assert!(
+                    pj(&mut store.state)
+                        .dependency_selection(corrupt_plan, position)
+                        .is_err()
+                );
+                assert!(store.state.connection.is_autocommit());
+                assert!(j(&mut store.state).begin_selection(corrupt_plan).is_err());
                 assert!(store.state.connection.is_autocommit());
                 assert_eq!(native_snapshot(&store.state), before);
                 Ok(())
@@ -4256,6 +4270,275 @@ async fn native_retry_validation_work_metadata_absent_cache_preserves_full_sourc
             })
             .await
             .unwrap();
+        n.storage.close().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_info_identity_is_immutable_and_exact() {
+    for linked in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let n = setup_mode(&tmp.path().join("immutable info"), 16, linked).await;
+        let f = fixture();
+        let context =
+            Context::new(&n.view, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
+        n.client
+            .write(n.token.clone(), context, [2; 32], 0, vec![7; 17])
+            .await
+            .unwrap();
+        let context =
+            Context::new(&n.view, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
+        let info = n.client.prepare(n.token.clone(), context).await.unwrap();
+        let expected = crate::proof_hash::reference_json(
+            b"s3drive-mixed-preparation-input-v1\0",
+            info.input(),
+        );
+        assert_eq!(info.id().unwrap(), expected);
+        let before = crate::sparse_views::preparation::model::identity_work();
+        for _ in 0..20 {
+            assert_eq!(info.clone().id().unwrap(), expected);
+        }
+        let after = crate::sparse_views::preparation::model::identity_work();
+        assert_eq!(
+            after[0], before[0],
+            "Info lookup must not rehash immutable input"
+        );
+        let mut progress = info.clone();
+        progress.progress.cursor.offset += 1;
+        assert_eq!(progress.id().unwrap(), expected);
+        for field in 0..8 {
+            let mut changed = info.input().clone();
+            match field {
+                0 => changed.operation[0] ^= 1,
+                1 => changed.view[0] ^= 1,
+                2 => changed.generation[0] ^= 1,
+                3 => changed.base_root[0] ^= 1,
+                4 => changed.base_page[0] ^= 1,
+                5 => changed.native = None,
+                6 => changed.retry = None,
+                _ => changed.base_root.push(0),
+            }
+            let oracle = crate::proof_hash::reference_json(
+                b"s3drive-mixed-preparation-input-v1\0",
+                &changed,
+            );
+            let rebuilt = Info::new(changed, info.view().clone(), info.progress.clone()).unwrap();
+            assert_eq!(rebuilt.id().unwrap(), oracle);
+            assert_eq!(info.id().unwrap(), expected);
+        }
+        n.storage.close().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_canonical_memo_keeps_live_proofs_fresh() {
+    let tmp = tempfile::tempdir().unwrap();
+    let n = setup_mode(&tmp.path().join("canonical values not proofs"), 16, true).await;
+    retry_cycle(&n, fixture(), 1).await;
+    n.storage
+        .cache()
+        .owner
+        .call(|store| {
+            let s = &mut store.state;
+            let before = native_snapshot(s);
+            crate::pure_memo::clear_entry();
+            let counts = crate::pure_memo::work();
+            let proofs =
+                crate::sparse_views::preparation::publication::retention::inspection_counts();
+            let cold =
+                crate::sparse_views::preparation::publication::retention::load(&s.connection)?;
+            let warm =
+                crate::sparse_views::preparation::publication::retention::load(&s.connection)?;
+            assert!(cold == warm);
+            assert_eq!(
+                crate::sparse_views::preparation::publication::retention::inspection_counts().1
+                    - proofs.1,
+                2
+            );
+            let current = crate::pure_memo::work();
+            assert_eq!([current[0] - counts[0], current[1] - counts[1]], [1, 1]);
+            for case in 0..8 {
+                let tx = s.connection.transaction()?;
+                match case {
+                    0 => {
+                        tx.execute("UPDATE sparse_retry_mode SET state_hash=zeroblob(32)", [])?;
+                    }
+                    1 => {
+                        tx.execute(
+                            "UPDATE sparse_retention_role SET state_hash=zeroblob(32)",
+                            [],
+                        )?;
+                    }
+                    2 => {
+                        tx.execute(
+                            "UPDATE sparse_retention_anchors SET state_hash=zeroblob(32)",
+                            [],
+                        )?;
+                    }
+                    3 => {
+                        let raw: Vec<u8> =
+                            tx.query_row("SELECT record FROM sparse_retention_anchors", [], |r| {
+                                r.get(0)
+                            })?;
+                        let mut noncanonical = vec![b' '];
+                        noncanonical.extend(raw);
+                        tx.execute(
+                            "UPDATE sparse_retention_anchors SET record=?1",
+                            [noncanonical],
+                        )?;
+                    }
+                    4 | 5 => {
+                        let mount = crate::chunk_mount::load(&tx)?.unwrap();
+                        let mut value = serde_json::to_value(mount)?;
+                        if case == 4 {
+                            value["terminals"] = serde_json::json!({});
+                        } else {
+                            value["frontier"] = serde_json::json!(0);
+                        }
+                        let mount: crate::chunk_mount::Binding = serde_json::from_value(value)?;
+                        tx.execute(
+                            "UPDATE chunk_mount_role SET record=?1,state_hash=?2",
+                            params![
+                                serde_json::to_vec(&mount)?,
+                                hash(b"s3drive-chunk-mount-binding-v1\0", &mount)?.as_slice()
+                            ],
+                        )?;
+                    }
+                    6 => {
+                        assert!(
+                            tx.execute("UPDATE remote_flushes SET receipt_hash=zeroblob(32)", [])?
+                                > 0
+                        );
+                    }
+                    _ => {
+                        assert!(
+                            tx.execute("UPDATE staged_chunks SET data=zeroblob(length(data))", [])?
+                                > 0
+                        );
+                    }
+                }
+                let hits = crate::pure_memo::work()[1];
+                assert!(
+                    crate::sparse_views::preparation::publication::retention::load(&tx).is_err()
+                );
+                if case >= 4 {
+                    assert!(
+                        crate::pure_memo::work()[1] > hits,
+                        "external proof case {case} must reach a warmed exact-byte hit"
+                    );
+                }
+                tx.rollback()?;
+                assert_eq!(native_snapshot(s), before);
+                assert!(
+                    crate::sparse_views::preparation::publication::retention::load(&s.connection)?
+                        == cold
+                );
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+    n.storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_upload_selections_preserve_branches_and_fresh_checks() {
+    for (linked, value) in [(false, 0), (false, 7), (true, 0), (true, 7)] {
+        let tmp = tempfile::tempdir().unwrap();
+        let n = setup_mode(
+            &tmp.path().join("data selections not permission"),
+            16,
+            linked,
+        )
+        .await;
+        let f = fixture();
+        let context =
+            Context::new(&n.view, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
+        n.client
+            .write(n.token.clone(), context, [2; 32], 0, vec![value; 17])
+            .await
+            .unwrap();
+        let context =
+            Context::new(&n.view, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
+        let info = n.client.prepare(n.token.clone(), context).await.unwrap();
+        n.storage.cache().owner.call(move |store| {
+            let s = &mut store.state;
+            let plan = info.id()?;
+            let info = pj(s).append(plan, info.cursor(), Candidate::Bytes(vec![value;17]))?;
+            let info = crate::sparse_views::preparation::tests::fixture::finish(s, info);
+            let data = crate::sparse_views::preparation::Position { level:-1, slot:0 };
+            let root = crate::sparse_views::preparation::Position { level:0, slot:0 };
+            let before = native_snapshot(s);
+            let counters = native_work_here();
+            let selected = pj(s).upload_selection(plan, data)?;
+            assert_eq!(native_work_here()[7] - counters[7], 1);
+            assert_eq!(selected.info.id()?, plan);
+            assert_eq!(selected.transfer, pj(s).transfer(plan, data)?);
+            assert!(selected.prior.is_none());
+            let counters = native_work_here();
+            let dependency = pj(s).dependency_selection(plan, root)?;
+            assert_eq!(native_work_here()[7] - counters[7], 1);
+            assert_eq!(dependency.info.id()?, plan);
+            assert_eq!(dependency.children, pj(s).children(plan, root)?);
+            match (dependency.content, pj(s).dependency(plan, root.level, root.slot)?) {
+                (crate::sparse_views::preparation::Dependency::New { role:a, reference:b, bytes:c },
+                 crate::sparse_views::preparation::Dependency::New { role:d, reference:e, bytes:f }) => {
+                    assert_eq!(a,d); assert_eq!(b,e); assert_eq!(c,f);
+                }
+                _ => panic!("expected a new page dependency"),
+            }
+            assert!(matches!(j(s).begin_selection(plan)?, BeginSelection::Unchecked));
+            assert_eq!(native_snapshot(s), before);
+            j(s).check(plan, 0, None)?;
+            let error = j(s).begin_selection(plan).err().expect("physical tree absent");
+            assert_eq!(error.downcast_ref::<crate::sparse_views::preparation::TransferFailure>(), Some(&crate::sparse_views::preparation::TransferFailure::Incomplete));
+            for position in [data, root] {
+                let Some(staged) = pj(s).materialize(plan, position, crate::journal::Options::default())? else {
+                    assert_eq!(value, 0);
+                    assert_eq!(position, data);
+                    assert!(pj(s).upload_selection(plan, position)?.transfer.is_none());
+                    assert!(matches!(pj(s).dependency_selection(plan, position)?.content, crate::sparse_views::preparation::Dependency::Hole { offset:0, length:17 }));
+                    continue;
+                };
+                let remote = crate::remote::Journal::new(s, crate::remote::Options::default())?.prepare(staged.generation().unwrap())?;
+                assert_eq!(pj(s).upload_selection(plan, position)?.prior.unwrap().phase, crate::remote::Phase::Prepared);
+                let permit = crate::remote::Journal::new(s, crate::remote::Options::default())?.claim(remote.operation, &remote.target)?;
+                assert_eq!(pj(s).upload_selection(plan, position)?.prior.unwrap().phase, crate::remote::Phase::InFlight);
+                let mut journal = crate::remote::Journal::new(s, crate::remote::Options::default())?;
+                journal.verified(crate::remote::Verification {
+                    operation: remote.operation, target: remote.target,
+                    payload_sha256: remote.payload_sha256, size: remote.size,
+                    revision: crate::remote::Revision::new("\"owned-model\"", None)?,
+                })?;
+                journal.acknowledge(remote.operation)?;
+                drop(permit);
+            }
+            let selected = pj(s).upload_selection(plan, data)?;
+            if value == 0 { assert!(selected.transfer.is_none()); assert!(selected.prior.is_none()); }
+            else { assert_eq!(selected.prior.as_ref().unwrap().phase, crate::remote::Phase::Verified); }
+            let before = native_snapshot(s);
+            let counters = native_work_here();
+            let BeginSelection::Fresh(tree) = j(s).begin_selection(plan)? else { panic!("fresh selection") };
+            assert_eq!(native_work_here()[7] - counters[7], 1);
+            assert_eq!(tree.plan().id()?, plan);
+            assert_eq!(tree.root(), &info.root()?.unwrap());
+            assert_eq!(native_snapshot(s), before);
+            let operation = match info.retry_operation() {
+                Some(token) => token.publish_operation()?,
+                None => hex(&hash(b"selection publication", &plan)?[..16]),
+            };
+            let record = j(s).begin(plan, f.node.clone(), f.store.clone(), f.node.revision, operation)?;
+            let BeginSelection::Existing(saved) = j(s).begin_selection(plan)? else { panic!("historical selection") };
+            assert!(*saved == record);
+            // The selection above must not authorize materialization after a
+            // later SQL change, even a trigger unrelated to preparation tables.
+            s.connection.execute_batch("CREATE TRIGGER selection_unrelated_trigger AFTER INSERT ON remote_intents BEGIN SELECT 1; END")?;
+            let before = native_snapshot(s);
+            assert!(pj(s).materialize(plan, root, crate::journal::Options::default()).is_err());
+            assert_eq!(native_snapshot(s), before);
+            s.connection.execute_batch("DROP TRIGGER selection_unrelated_trigger")?;
+            Ok(())
+        }).await.unwrap();
         n.storage.close().await.unwrap();
     }
 }

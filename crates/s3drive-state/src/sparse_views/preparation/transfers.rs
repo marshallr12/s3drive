@@ -250,7 +250,59 @@ fn dependencies(
         .filter_map(|p| transfer(db, s, i, p).transpose())
         .collect()
 }
+/// Immutable work selection only, never provider/send authority.
+pub struct UploadSelection {
+    pub info: Info,
+    pub transfer: Option<Transfer>,
+    pub prior: Option<remote::Info>,
+}
+pub struct DependencySelection {
+    pub info: Info,
+    pub content: Dependency,
+    pub children: Vec<Position>,
+}
 impl Journal<'_> {
+    pub fn upload_selection(&mut self, plan: Id, p: Position) -> Result<UploadSelection> {
+        let tx = self
+            .state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred)?;
+        let result = (|| {
+            let s = inspect(&tx)?;
+            let info = ready(&s, plan)?;
+            let transfer = transfer(&tx, &s, &info, p)?;
+            let prior = match transfer.as_ref().and_then(Transfer::generation) {
+                Some(generation) => remote::for_generation(&tx, generation)?,
+                None => None,
+            };
+            Ok(UploadSelection {
+                info,
+                transfer,
+                prior,
+            })
+        })();
+        tx.rollback()?;
+        result
+    }
+    pub fn dependency_selection(&mut self, plan: Id, p: Position) -> Result<DependencySelection> {
+        let tx = self
+            .state
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Deferred)?;
+        let result = (|| {
+            let s = inspect(&tx)?;
+            let info = ready(&s, plan)?;
+            let content = journal::dependency_from(&s, plan, p.level, p.slot)?;
+            let children = children(&s, &info, p)?;
+            Ok(DependencySelection {
+                info,
+                content,
+                children,
+            })
+        })();
+        tx.rollback()?;
+        result
+    }
     /// Bounded lexicographic walk of admitted records; invalid cursors/limits
     /// fail, while an actual final position yields an empty next page.
     pub fn positions(
@@ -364,6 +416,9 @@ impl Journal<'_> {
                 .connection
                 .transaction_with_behavior(TransactionBehavior::Deferred)?;
             let result: Result<_> = (|| {
+                // This preserves require_dependencies' global trigger guard,
+                // including the optimized mode2 route before any staging.
+                no_triggers(&tx)?;
                 let Some(scope) = crate::chunk_mount::read_scope_current(&tx)? else {
                     return Ok(None);
                 };
@@ -547,6 +602,12 @@ fn inspect_tree_checked(
 impl Client {
     pub fn same_storage(&self, storage: &Storage) -> bool {
         storage.same_owner(&self.owner)
+    }
+    pub async fn upload_selection(&self, plan: Id, p: Position) -> Result<UploadSelection> {
+        self.call(move |j| j.upload_selection(plan, p)).await
+    }
+    pub async fn dependency_selection(&self, plan: Id, p: Position) -> Result<DependencySelection> {
+        self.call(move |j| j.dependency_selection(plan, p)).await
     }
     pub async fn positions(
         &self,

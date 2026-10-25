@@ -30,13 +30,11 @@ impl Saved {
         )
     }
     pub fn info(&self, views: &super::super::ledger::Ledger) -> Result<Info> {
-        #[cfg(test)]
-        model::info_constructed();
-        Ok(Info {
-            input: self.input.clone(),
-            view: View(views.record(self.input.view)?.clone()),
-            progress: self.progress.clone(),
-        })
+        Info::new(
+            self.input.clone(),
+            View(views.record(self.input.view)?.clone()),
+            self.progress.clone(),
+        )
     }
 }
 #[derive(Clone, PartialEq, Eq)]
@@ -272,7 +270,7 @@ impl Snapshot {
     pub fn reference(&self, info: &Info, o: &Object) -> Result<Option<Reference>> {
         match &o.kind {
             Kind::Zero => Ok(None),
-            Kind::Inherited(w) => Ok(w.resolve(&info.input, &info.view, &self.blobs)?.reference),
+            Kind::Inherited(w) => Ok(w.resolve(info.input(), &info.view, &self.blobs)?.reference),
             Kind::Data { blob } | Kind::Page { blob } => {
                 let bytes = self.blobs.get(blob).ok_or(Failure::Corrupt)?;
                 if matches!(o.kind, Kind::Data { .. }) && bytes.iter().all(|b| *b == 0) {
@@ -280,7 +278,7 @@ impl Snapshot {
                 }
                 Ok(Some(Reference::new(
                     *info.view.binding().store(),
-                    info.input.generation,
+                    info.input().generation,
                     ordinal(o.level, o.slot),
                     if matches!(o.kind, Kind::Page { .. }) {
                         Page::decode(bytes)?.digest()
@@ -321,7 +319,7 @@ impl Snapshot {
             }
             Kind::Page { blob } => {
                 let p = Page::decode(self.blobs.get(blob).ok_or(Failure::Corrupt)?)?;
-                let base = RootDescriptor::decode(&info.input.base_root)?;
+                let base = RootDescriptor::decode(&info.input().base_root)?;
                 if o.level < 0
                     || o.length != length
                     || p.volume() != base.volume()
@@ -334,7 +332,7 @@ impl Snapshot {
                 }
             }
             Kind::Inherited(w) => {
-                let p = w.resolve(&info.input, &info.view, &self.blobs)?;
+                let p = w.resolve(info.input(), &info.view, &self.blobs)?;
                 if (p.level, p.offset, p.length) != (o.level, offset, o.length)
                     || o.length != length
                     || o.length == 0
@@ -342,7 +340,7 @@ impl Snapshot {
                     || !matches!(info.view.intent_span(offset),Some(Range::Base{offset:at,length:n}) if at==offset && n>=o.length)
                     || p.reference
                         .as_ref()
-                        .is_some_and(|r| r.generation() == &info.input.generation)
+                        .is_some_and(|r| r.generation() == &info.input().generation)
                 {
                     return Err(Failure::Corrupt.into());
                 }
@@ -446,7 +444,7 @@ impl Snapshot {
                 entries.push(entry);
             }
         }
-        let old = RootDescriptor::decode(&info.input.base_root)?;
+        let old = RootDescriptor::decode(&info.input().base_root)?;
         let p = Page::new(*old.volume(), *old.node(), offset, level as u8, entries)?;
         if p.length() != length {
             return Err(Failure::Corrupt.into());
@@ -455,9 +453,9 @@ impl Snapshot {
     }
     fn validate_plan(&self, info: &Info) -> Result<()> {
         let plan = info.id()?;
-        info.input.validate(&info.view, &self.blobs)?;
-        let base = RootDescriptor::decode(&info.input.base_root)?;
-        if &info.input.generation == base.page().generation() {
+        info.input().validate(&info.view, &self.blobs)?;
+        let base = RootDescriptor::decode(&info.input().base_root)?;
+        if &info.input().generation == base.page().generation() {
             return Err(Failure::Corrupt.into());
         }
         let cursor = info.progress.cursor;
@@ -558,19 +556,19 @@ impl Snapshot {
             let b = info.view.binding();
             let base = b.base()?;
             if *plan != saved.input.id()?
-                || !operations.insert(info.input.operation)
+                || !operations.insert(info.input().operation)
                 || !generations.insert((
                     base.volume().to_owned(),
                     base.node().to_owned(),
                     *b.store(),
                     b.root().to_owned(),
-                    info.input.generation,
+                    info.input().generation,
                 ))
             {
                 return Err(Failure::Corrupt.into());
             }
             self.validate_plan(&info)?;
-            used.insert(info.input.base_page);
+            used.insert(info.input().base_page);
         }
         for ((plan, _, _), saved) in &self.objects {
             if !self.plans.contains_key(plan) {

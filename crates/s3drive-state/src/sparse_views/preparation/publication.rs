@@ -17,7 +17,7 @@ pub use model::{Input, Physical, Record, Rejection};
 mod journal;
 pub(in crate::sparse_views) mod ledger;
 mod lineage;
-pub use journal::{Client, DataNeed, Journal};
+pub use journal::{BeginSelection, Client, DataNeed, Journal};
 pub(in crate::sparse_views) mod settlement;
 pub use settlement::{Acknowledgment, SourceReceipt};
 mod recovery;

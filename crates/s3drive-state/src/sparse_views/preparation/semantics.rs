@@ -61,15 +61,15 @@ pub(super) fn check(
             // Keep only one root and at most two witness pages, rather than
             // cloning all retained preparation data for a single check.
             let mut blobs = BTreeMap::from([(
-                info.input.base_page,
+                info.input().base_page,
                 snapshot
                     .blobs
-                    .get(&info.input.base_page)
+                    .get(&info.input().base_page)
                     .ok_or(Failure::Corrupt)?
                     .clone(),
             )]);
             let witness = proof::Witness::admit(&original.witness, false, &mut blobs)?;
-            let resolved = witness.resolve(&info.input, &info.view, &blobs)?;
+            let resolved = witness.resolve(info.input(), &info.view, &blobs)?;
             if resolved.level != -1 || resolved.offset != object.offset() {
                 return Err(Failure::Conflict.into());
             }

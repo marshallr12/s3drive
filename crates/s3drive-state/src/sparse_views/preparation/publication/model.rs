@@ -55,6 +55,20 @@ impl Input {
         &self.publish_operation
     }
     pub fn reservation(&self) -> Result<ns::Reservation> {
+        self.reservation_with_reference(None)
+    }
+    pub(super) fn reservation_with_reference(
+        &self,
+        prepared: Option<Option<&str>>,
+    ) -> Result<ns::Reservation> {
+        let derived;
+        let reference = match prepared {
+            Some(reference) => reference,
+            None => {
+                derived = ns::payload_reference(&self.base.payload);
+                derived.as_deref()
+            }
+        };
         self.binding.validate()?;
         let base = self.binding.base()?;
         let root = self.root()?;
@@ -130,7 +144,7 @@ impl Input {
             || manifest.root().map_err(|_| Failure::Corrupt)? != root
             || *expected_revision != self.base.revision
             || self.base.revision > self.reserve.expected_sequence
-            || guard.expected != ns::payload_reference(&self.base.payload)
+            || guard.expected.as_deref() != reference
             || self.base.id != base.node()
             || self.base.kind != ns::Kind::File
             || self.base.deleted != guard.detached
@@ -156,8 +170,7 @@ impl Input {
                             .root()
                             .map_err(|_| Failure::Corrupt)?
                             != original
-                        || ns::payload_reference(&self.base.payload).as_deref()
-                            != Some(base.payload_reference())
+                        || reference != Some(base.payload_reference())
                 }
                 Some(p) => p == [0; 32] || p == self.plan,
             }
@@ -296,8 +309,40 @@ impl Record {
         });
         self.validate()
     }
+    pub(super) fn references(&self) -> Result<crate::pure_memo::References> {
+        fn fixed(payload: &Option<ns::Payload>) -> Result<Option<[u8; 64]>> {
+            ns::payload_reference(payload)
+                .map(|s| {
+                    s.into_bytes()
+                        .try_into()
+                        .map_err(|_| Failure::Corrupt.into())
+                })
+                .transpose()
+        }
+        Ok(crate::pure_memo::References([
+            fixed(&self.input.base.payload)?,
+            self.reservation
+                .as_ref()
+                .map(|r| fixed(&r.node.payload))
+                .transpose()?
+                .flatten(),
+            self.receipt
+                .as_ref()
+                .map(|r| fixed(&r.node.payload))
+                .transpose()?
+                .flatten(),
+        ]))
+    }
     pub(super) fn validate(&self) -> Result<()> {
-        let expected = self.input.reservation()?;
+        self.validate_with_references(None)
+    }
+    pub(super) fn validate_with_references(
+        &self,
+        references: Option<&crate::pure_memo::References>,
+    ) -> Result<()> {
+        let expected = self
+            .input
+            .reservation_with_reference(references.map(|r| r.text(0)).transpose()?)?;
         if self.format
             != if self.input.owned.is_some() {
                 4
@@ -320,8 +365,10 @@ impl Record {
             && (r.sequence <= self.input.reserve.expected_sequence
                 || !receipt_node(&r.node, &expected, r.sequence)
                 || r.artifact != Some(ns::Artifact::Reservation(expected.clone()))
-                || ns::payload_reference(&r.node.payload)
-                    != expected.guard.as_ref().ok_or(Failure::Corrupt)?.expected)
+                || match references {
+                    Some(values) => values.text(1)?.map(str::to_owned),
+                    None => ns::payload_reference(&r.node.payload),
+                } != expected.guard.as_ref().ok_or(Failure::Corrupt)?.expected)
         {
             return Err(Failure::Corrupt.into());
         }
@@ -367,7 +414,10 @@ impl Record {
         {
             return Err(Failure::Corrupt.into());
         }
-        settlement::validate_record(self)?;
+        settlement::validate_record_with_reference(
+            self,
+            references.map(|r| r.text(2)).transpose()?,
+        )?;
         Ok(())
     }
 }

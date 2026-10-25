@@ -547,10 +547,10 @@ impl Preparation {
             .clone()
             .try_acquire_owned()
             .map_err(|_| ReadFailure::Busy)?;
-        let info = self.client.info(self.id).await?;
-        self.scope(&info)?;
-        let content = self.client.dependency(self.id, p.level, p.slot).await?;
-        let children = self.client.children(self.id, p).await?;
+        let selected = self.client.dependency_selection(self.id, p).await?;
+        self.scope(&selected.info)?;
+        let content = selected.content;
+        let children = selected.children;
         Box::pin(self.edited.base.authorize_sparse()).await?;
         let session = DependencySession {
             preparation: self,

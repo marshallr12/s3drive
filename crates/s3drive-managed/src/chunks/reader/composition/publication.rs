@@ -386,6 +386,12 @@ impl MixedPublisher {
         }
     }
     async fn fresh(&self) -> Result<(Node, Store, u64)> {
+        self.fresh_selected(None).await
+    }
+    async fn fresh_selected(
+        &self,
+        selected: Option<plans::TreeReceipt>,
+    ) -> Result<(Node, Store, u64)> {
         let prep = &self.0.preparation;
         let base = &prep.edited.base;
         let reader = &base.0.reader.0;
@@ -397,8 +403,12 @@ impl MixedPublisher {
         bounded(
             reader.options,
             Box::pin(async {
-                let info = prep.info().await?;
-                let tree = prep.client.tree_receipt(self.plan()).await?;
+                let tree = match selected {
+                    Some(tree) => tree,
+                    None => prep.client.tree_receipt(self.plan()).await?,
+                };
+                let info = tree.plan();
+                prep.scope(info)?;
                 if tree.plan().view() != info.view()
                     || tree.root() != &info.root()?.ok_or(MixedRootFailure::NotPrepared)?
                 {
@@ -517,27 +527,18 @@ impl MixedPublisher {
             .slots
             .try_acquire()
             .map_err(|_| MixedRootFailure::Busy)?;
-        match self.0.client.get(self.plan()).await {
-            Ok(r) => {
+        let tree = match self.0.client.begin_selection(self.plan()).await? {
+            roots::BeginSelection::Existing(r) => {
                 self.0.recovery.scope(&r)?;
                 if r.input().publish_operation() != publish_operation {
                     return Err(MixedRootFailure::Binding.into());
                 }
-                return Ok(r);
+                return Ok(*r);
             }
-            Err(e) if e.downcast_ref::<roots::Failure>() == Some(&roots::Failure::Missing) => {}
-            Err(e) => return Err(e),
-        }
-        if !self
-            .0
-            .client
-            .unchecked(self.plan(), None, 1)
-            .await?
-            .is_empty()
-        {
-            return Err(MixedRootFailure::NotPrepared.into());
-        }
-        let (node, store, sequence) = self.fresh().await?;
+            roots::BeginSelection::Unchecked => return Err(MixedRootFailure::NotPrepared.into()),
+            roots::BeginSelection::Fresh(tree) => *tree,
+        };
+        let (node, store, sequence) = self.fresh_selected(Some(tree)).await?;
         self.0
             .client
             .begin(self.plan(), node, store, sequence, publish_operation)

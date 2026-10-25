@@ -50,18 +50,15 @@ impl MixedUploader {
     async fn upload_inner(&self, p: plans::Position) -> Result<Option<remote::FlushReceipt>> {
         let client = &self.preparation.client;
         let plan = self.plan();
-        let info = self.preparation.info().await?;
-        info.root()?.ok_or(ReadFailure::Binding)?;
-        let Some(t) = client.transfer(plan, p).await? else {
+        let selected = client.upload_selection(plan, p).await?;
+        self.preparation.scope(&selected.info)?;
+        selected.info.root()?.ok_or(ReadFailure::Binding)?;
+        let Some(t) = selected.transfer else {
             self.preparation.dependency(p.level, p.slot).await?;
             return Ok(None);
         };
         self.binding(&t)?;
-        let prior = if let Some(g) = t.generation() {
-            self.executor.storage().uploads().for_generation(g).await?
-        } else {
-            None
-        };
+        let prior = selected.prior;
         if prior
             .as_ref()
             .is_some_and(|i| i.phase != remote::Phase::Prepared)
@@ -92,7 +89,8 @@ impl MixedUploader {
         // A page's local graph is structural. Check its direct inherited/hole/
         // new-data semantics using the actual pinned source, then require exact
         // historical receipts before any fresh parent materialization/send.
-        client.require_dependencies(plan, p).await?;
+        // materialize independently checks every dependency receipt and the
+        // global no-trigger guard in its fresh pre-staging snapshot.
         let staged = client
             .materialize(plan, p, &self.executor.storage())
             .await?
