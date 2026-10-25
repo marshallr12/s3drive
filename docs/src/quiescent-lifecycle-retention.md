@@ -201,3 +201,14 @@ native regression covers this boundary before longer acceptance. Live and closed
 checks also bound permanent sessions, source bindings, owner/frontier records,
 reader-session rows, SQLite sequences and physical chunk bytes, not merely the
 erasable forest. Closed checks cover all physical/source/open child tables.
+
+Physical alias review: `staged_operations.generation_id` has a UNIQUE schema
+constraint and creator linking requires its own exact staging key, target,
+sealed body and original generation. A focused negative test keeps an original
+complete physical witness, independently admits another creator, and verifies
+that borrowing the original generation returns typed Conflict. Adding a second
+key for that generation fails the actual uniqueness constraint. Both refusals
+preserve the entire catalog and original physical bytes; staging/linking a truly
+independent generation then succeeds. This tests the earlier invariant rather
+than constructing a falsely valid shared-generation witness. Component selection
+also independently refuses intersections with surviving creator/plan generations.

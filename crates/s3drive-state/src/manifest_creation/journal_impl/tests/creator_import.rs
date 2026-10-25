@@ -1273,3 +1273,57 @@ async fn native_retry_validation_work_component_namespace_identity_expires_witho
     assert_eq!(authority.namespace_apply(&input.request).unwrap(), receipt);
     storage.close().await.unwrap();
 }
+
+#[test]
+fn native_retry_validation_work_component_creator_cannot_alias_surviving_physical_generation() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (mut s, _authority, _key, first) = setup_contract(tmp.path(), true);
+    // This original creator retains a complete physical witness. The second
+    // creator has valid independent admission but may not borrow that witness.
+    let original = prepared(&mut s, &first);
+    let generation = original.generation().unwrap();
+    let mut second = first.clone();
+    second.operation =
+        chunk_mount::admission::next(&s.connection, chunk_mount::AdmissionDomain::Creation)
+            .unwrap()
+            .unwrap();
+    second.name = "independent creator.bin".into();
+    j(&mut s).begin(second.clone()).unwrap();
+    let before = catalog(&s);
+    let body = journal::read_data(&s.connection, generation, 0, 64, false).unwrap();
+    let error = j(&mut s).link(&second.operation, generation).unwrap_err();
+    assert_eq!(error.downcast_ref::<Failure>(), Some(&Failure::Conflict));
+    assert_eq!(catalog(&s), before);
+    assert_eq!(
+        journal::read_data(&s.connection, generation, 0, 64, false).unwrap(),
+        body
+    );
+    // A shared generation cannot acquire a second valid staging-key witness:
+    // staged_operations.generation_id is UNIQUE for every creator/transfer/root.
+    // Exercise the real schema rather than resealing an unreachable valid alias.
+    let error = s
+        .connection
+        .execute(
+            "INSERT INTO staged_operations(operation_key,generation_id) VALUES(?1,?2)",
+            params![second.stage_key().unwrap().as_slice(), generation.value()],
+        )
+        .unwrap_err();
+    assert_eq!(
+        error.sqlite_error_code(),
+        Some(rusqlite::ErrorCode::ConstraintViolation)
+    );
+    assert_eq!(catalog(&s), before);
+    assert_eq!(
+        journal::read_data(&s.connection, generation, 0, 64, false).unwrap(),
+        body
+    );
+    assert_eq!(j(&mut s).get(&first.operation).unwrap(), original);
+    let independent = staged(&mut s, &second);
+    assert_ne!(independent, generation);
+    j(&mut s).link(&second.operation, independent).unwrap();
+    crate::chunk_mount::validate_all(&s.connection).unwrap();
+    assert_eq!(
+        journal::read_data(&s.connection, generation, 0, 64, false).unwrap(),
+        body
+    );
+}
