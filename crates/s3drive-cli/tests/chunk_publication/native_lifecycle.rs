@@ -762,7 +762,22 @@ pub async fn component_repeated(config: &s3drive_core::Config, root: &Path, s: &
 pub async fn component_repeated_mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
     use native_mount::{Mount, blocking};
     use std::io::{Read, Seek, SeekFrom, Write};
-    mount_configuration(config, root, s).await;
+    let completed = match std::fs::read_to_string(root.join("component-completed")) {
+        Ok(value) => value.parse::<u64>().unwrap(),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => 0,
+        Err(error) => panic!("component progress: {error}"),
+    };
+    if completed == 0 {
+        mount_configuration(config, root, s).await;
+    } else {
+        let path = root.join("native-drive.toml");
+        let mut value: toml::Value =
+            toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        value["managed"]["authority"] = s.url.clone().into();
+        let text = toml::to_string(&value).unwrap();
+        s3drive_core::Config::parse(&text).unwrap();
+        std::fs::write(path, text).unwrap();
+    }
     let mut mount = Mount::start(root).await;
     let base = mount.path.clone();
     let database = root.join("native-state/metadata.sqlite3");
@@ -770,7 +785,7 @@ pub async fn component_repeated_mounted(config: &s3drive_core::Config, root: &Pa
         let mut protected = std::fs::OpenOptions::new().create_new(true).write(true).read(true).open(base.join("protected.bin")).unwrap();
         protected.write_all(b"unsaved protected").unwrap();
         let mut reader = std::fs::File::open(base.join("protected.bin")).unwrap();
-        for cycle in 0..4 {
+        for cycle in completed..completed+4 {
             let from = base.join(format!("temporary-{cycle}.bin"));
             let to = base.join(format!("renamed-{cycle}.bin"));
             let mut file = std::fs::OpenOptions::new().create_new(true).write(true).read(true).open(&from).unwrap();
@@ -821,7 +836,7 @@ pub async fn component_repeated_mounted(config: &s3drive_core::Config, root: &Pa
             std::fs::read(base.join("protected.bin")).unwrap(),
             b"unsaved protected"
         );
-        for cycle in 0..4 {
+        for cycle in 0..completed + 4 {
             assert!(!base.join(format!("temporary-{cycle}.bin")).exists());
             assert!(!base.join(format!("renamed-{cycle}.bin")).exists());
         }
@@ -830,4 +845,13 @@ pub async fn component_repeated_mounted(config: &s3drive_core::Config, root: &Pa
     mount.stop().await;
     drop(mount);
     inspect_component_closed(root);
+    std::fs::write(
+        root.join("component-completed"),
+        (completed + 4).to_string(),
+    )
+    .unwrap();
+    eprintln!(
+        "COMPONENT_NATIVE_SOAK completed={} cold_read=exact closed_forest=zero",
+        completed + 4
+    );
 }

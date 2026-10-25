@@ -182,3 +182,14 @@ pending at this checkpoint. New acceptance additions exercise repeated actual
 native lifecycle with an unrelated dirty reader, expired namespace identity,
 and genuine SQLite page-cap exhaustion (complete validated cut or exact rollback,
 not a claim of physical-disk/WAL exhaustion simulation).
+
+The additional native component soak runs100 create/rename/unlink/held-write/Close
+cycles over25 independent owners and50 actual mounts, retaining an unrelated
+dirty writer/reader during each four-cycle segment. Every segment checks live
+row/DB/WAL bounds, both final cold bytes and zero closed local forest, and all
+previously removed names. The parent verifies exact cumulative cycle counts and
+551 unique immutable PUTs. It has its own45-minute release workload budget;
+original120-second live sequence,180-second child and all existing gates remain
+unchanged. This is separate from the existing linked-profile1000-save and
+four-file64KiB300-save soaks. Complete per-cycle observations are emitted even
+on success. Execution is pending on the corresponding source commit.

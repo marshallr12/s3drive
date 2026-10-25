@@ -1488,7 +1488,9 @@ async fn run(mode: &str) {
     let mut mixed_batch_window = None;
     let mut creator_open_objects = None;
     let mut retention_completed = 0_u64;
+    let mut component_completed = 0_u64;
     for stage in match mode {
+        "native_component_soak100" => vec!["native_component_repeated_mounted"; 25],
         "native_retention_cpu_profile" => vec![
             "native_retention_seed",
             "native_retention_profile_warmup",
@@ -1809,7 +1811,10 @@ async fn run(mode: &str) {
             .unwrap()
             .unwrap();
         let err = errors.await.unwrap();
-        if stage.starts_with("native_lifecycle_mounted") || stage.starts_with("native_retention_") {
+        if component
+            || stage.starts_with("native_lifecycle_mounted")
+            || stage.starts_with("native_retention_")
+        {
             eprintln!("{err}");
         }
         assert!(
@@ -1835,6 +1840,20 @@ async fn run(mode: &str) {
                 },
             "case {stage}: {status}: {err}"
         );
+        if stage == "native_component_repeated_mounted" {
+            component_completed += 4;
+            assert_eq!(
+                std::fs::read_to_string(tmp.path().join("component-completed"))
+                    .unwrap()
+                    .parse::<u64>()
+                    .unwrap(),
+                component_completed
+            );
+            assert_eq!(
+                puts(&f),
+                1 + component_completed as usize * 5 + (component_completed as usize / 4) * 2
+            );
+        }
         if stage.starts_with("native_retention_") {
             if matches!(
                 stage,
@@ -2034,6 +2053,10 @@ async fn run(mode: &str) {
         "native_writer_mount" => 6,
         "native_lifecycle_cold_known" => 3,
         "native_lifecycle_cold_unknown" => 1,
+        "native_component_soak100" => {
+            assert_eq!(component_completed, 100);
+            551
+        }
         "native_component_repeated" | "native_component_repeated_mounted" => 23,
         "native_lifecycle_unlink" => 5,
         "native_lifecycle_mounted" => 13,
@@ -2614,4 +2637,11 @@ async fn component_retention_shared_repeated_lifecycle_preserves_unrelated_dirty
 #[ignore = "dedicated component retention; real FUSE/WinFsp required"]
 async fn component_retention_actual_repeated_lifecycle_with_dirty_readers_and_cold_remount() {
     run("component:native_component_repeated_mounted").await;
+}
+
+#[cfg(any(target_os = "linux", windows))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "additional 100-cycle component lifecycle soak; real FUSE/WinFsp required"]
+async fn component_retention_extended_100_lifecycle_cycles_50_mounts() {
+    run("component:native_component_soak100").await;
 }

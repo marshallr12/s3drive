@@ -519,3 +519,6 @@ jobs:
       - name: Additional actual four-file 64KiB 300-save release workload
         timeout-minutes: 45
         run: cargo test -p s3drive-cli --test chunk_publication --release native_retention_extended_four_files_64kib_300_saves --locked -- --ignored --exact --nocapture --test-threads=1
+      - name: Additional component 100 lifecycle cycles with dirty readers and 50 mounts
+        timeout-minutes: 45
+        run: cargo test -p s3drive-cli --test chunk_publication --release component_retention_extended_100_lifecycle_cycles_50_mounts --locked -- --exact --ignored --nocapture --test-threads=1
