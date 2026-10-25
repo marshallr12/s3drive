@@ -212,15 +212,27 @@ pub(crate) fn isolation_for_validated_mount(db: &Connection) -> Result<()> {
     isolation_tables(db, true)
 }
 fn isolation_tables(db: &Connection, combined: bool) -> Result<()> {
-    for table in EXCLUDED {
-        if combined && crate::chunk_mount::CLIENT_TABLES.contains(table) {
-            continue;
-        }
-        if db.query_row(&format!("SELECT EXISTS(SELECT 1 FROM {table})"), [], |r| {
-            r.get::<_, bool>(0)
-        })? {
-            return Err(Failure::Isolated.into());
-        }
+    fn query(combined: bool) -> String {
+        format!(
+            "SELECT {}",
+            EXCLUDED
+                .iter()
+                .filter(|table| !combined || !crate::chunk_mount::CLIENT_TABLES.contains(table))
+                .map(|table| format!("EXISTS(SELECT 1 FROM {table})"))
+                .collect::<Vec<_>>()
+                .join(" OR ")
+        )
+    }
+    static ORDINARY: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| query(false));
+    static COMBINED: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| query(true));
+    let sql = if combined { &COMBINED } else { &ORDINARY };
+    // A prepared statement retains no admission result: it is executed again
+    // after each write and SQLite invalidates its bytecode after schema changes.
+    if db
+        .prepare_cached(sql)?
+        .query_row([], |r| r.get::<_, bool>(0))?
+    {
+        return Err(Failure::Isolated.into());
     }
     Ok(())
 }

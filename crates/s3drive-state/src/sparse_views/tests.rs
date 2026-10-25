@@ -277,3 +277,39 @@ fn native_retry_validation_work_empty_sources_still_require_isolation() {
         0
     );
 }
+
+#[test]
+fn native_retry_validation_work_cached_isolation_sql_keeps_exact_table_sets() {
+    let mut db = Connection::open_in_memory().unwrap();
+    for table in EXCLUDED {
+        db.execute_batch(&format!("CREATE TABLE {table}(value INTEGER)"))
+            .unwrap();
+    }
+    for combined in [false, true] {
+        isolation_tables(&db, combined).unwrap();
+        for table in EXCLUDED {
+            let excluded = !combined || !crate::chunk_mount::CLIENT_TABLES.contains(table);
+            db.execute(&format!("INSERT INTO {table} VALUES(1)"), [])
+                .unwrap();
+            assert_eq!(
+                isolation_tables(&db, combined).is_err(),
+                excluded,
+                "{table} combined={combined}"
+            );
+            db.execute(&format!("DELETE FROM {table}"), []).unwrap();
+            isolation_tables(&db, combined).unwrap();
+            let tx = db.transaction().unwrap();
+            tx.execute(&format!("INSERT INTO {table} VALUES(2)"), [])
+                .unwrap();
+            assert_eq!(isolation_tables(&tx, combined).is_err(), excluded);
+            tx.rollback().unwrap();
+            isolation_tables(&db, combined).unwrap();
+            db.execute_batch(&format!("DROP TABLE {table}")).unwrap();
+            assert_eq!(isolation_tables(&db, combined).is_err(), excluded);
+            db.execute_batch(&format!("CREATE TABLE {table}(changed TEXT)"))
+                .unwrap();
+            isolation_tables(&db, combined).unwrap();
+        }
+    }
+    assert!(db.is_autocommit());
+}

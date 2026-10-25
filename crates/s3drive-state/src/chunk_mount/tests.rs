@@ -965,3 +965,36 @@ fn retry_safety_refuses_native_owner_activation_without_changing_default_composi
     assert_eq!(rows(&s), before);
     assert_eq!(admit(&mut s, declared).unwrap(), key);
 }
+
+#[test]
+fn native_retry_validation_work_cached_foreign_sql_rereads_rows_and_schema() {
+    let mut db = Connection::open_in_memory().unwrap();
+    for table in FOREIGN_TABLES {
+        db.execute_batch(&format!("CREATE TABLE {table}(value INTEGER)"))
+            .unwrap();
+    }
+    foreign(&db).unwrap();
+    for table in FOREIGN_TABLES {
+        db.execute(&format!("INSERT INTO {table} VALUES(1)"), [])
+            .unwrap();
+        assert!(foreign(&db).is_err(), "{table}");
+        db.execute(&format!("DELETE FROM {table}"), []).unwrap();
+        foreign(&db).unwrap();
+        let tx = db.transaction().unwrap();
+        tx.execute(&format!("INSERT INTO {table} VALUES(2)"), [])
+            .unwrap();
+        assert!(foreign(&tx).is_err());
+        tx.rollback().unwrap();
+        foreign(&db).unwrap();
+        db.execute_batch(&format!("DROP TABLE {table}")).unwrap();
+        assert!(foreign(&db).is_err(), "missing {table}");
+        db.execute_batch(&format!(
+            "CREATE TABLE {table}(changed TEXT); INSERT INTO {table} VALUES('present')"
+        ))
+        .unwrap();
+        assert!(foreign(&db).is_err(), "recreated {table}");
+        db.execute(&format!("DELETE FROM {table}"), []).unwrap();
+        foreign(&db).unwrap();
+    }
+    assert!(db.is_autocommit());
+}

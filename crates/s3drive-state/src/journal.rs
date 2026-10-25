@@ -740,11 +740,11 @@ fn digest32(value: Vec<u8>) -> Result<[u8; 32]> {
 }
 pub(crate) fn load(connection: &Connection, id: GenerationId) -> Result<Generation> {
     // Bound metadata allocation even when a damaged DB bypasses its CHECKs.
-    let shape:bool=connection.query_row("SELECT length(g.source_id)=32 AND length(b.config_fingerprint)=64 AND length(CAST(g.object_key AS BLOB)) BETWEEN 1 AND 1024 AND (g.base_etag IS NULL OR length(CAST(g.base_etag AS BLOB)) BETWEEN 1 AND 8192) AND (g.base_version IS NULL OR length(CAST(g.base_version AS BLOB)) BETWEEN 1 AND 8192) AND (g.manifest_hash IS NULL OR length(g.manifest_hash)=32) AND length(CAST(g.phase AS BLOB)) BETWEEN 6 AND 8 FROM staged_generations g JOIN source_bindings b ON b.source_id=g.source_id WHERE g.generation_id=?1",[id.0],|r|r.get(0))?;
+    let shape:bool=connection.prepare_cached("SELECT length(g.source_id)=32 AND length(b.config_fingerprint)=64 AND length(CAST(g.object_key AS BLOB)) BETWEEN 1 AND 1024 AND (g.base_etag IS NULL OR length(CAST(g.base_etag AS BLOB)) BETWEEN 1 AND 8192) AND (g.base_version IS NULL OR length(CAST(g.base_version AS BLOB)) BETWEEN 1 AND 8192) AND (g.manifest_hash IS NULL OR length(g.manifest_hash)=32) AND length(CAST(g.phase AS BLOB)) BETWEEN 6 AND 8 FROM staged_generations g JOIN source_bindings b ON b.source_id=g.source_id WHERE g.generation_id=?1")?.query_row([id.0],|r|r.get(0))?;
     if !shape {
         return Err("invalid staged metadata shape; data was preserved".into());
     }
-    let value=connection.query_row("SELECT g.source_id,b.config_fingerprint,g.object_key,g.parent_id,g.base_absent,g.base_etag,g.base_version,g.size_bytes,g.filled_bytes,g.extent_count,g.phase,g.manifest_hash FROM staged_generations g JOIN source_bindings b ON b.source_id=g.source_id WHERE g.generation_id=?1",[id.0],|r|{
+    let value=connection.prepare_cached("SELECT g.source_id,b.config_fingerprint,g.object_key,g.parent_id,g.base_absent,g.base_etag,g.base_version,g.size_bytes,g.filled_bytes,g.extent_count,g.phase,g.manifest_hash FROM staged_generations g JOIN source_bindings b ON b.source_id=g.source_id WHERE g.generation_id=?1")?.query_row([id.0],|r|{
         Ok((r.get::<_,Vec<u8>>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,Option<i64>>(3)?,r.get::<_,bool>(4)?,r.get::<_,Option<String>>(5)?,r.get::<_,Option<String>>(6)?,r.get::<_,i64>(7)?,r.get::<_,i64>(8)?,r.get::<_,i64>(9)?,r.get::<_,String>(10)?,r.get::<_,Option<Vec<u8>>>(11)?))
     })?;
     let (source, fingerprint, key, parent, absent, etag, version, size, filled, count, phase, hash) =

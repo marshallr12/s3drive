@@ -236,34 +236,47 @@ fn preflight(db: &Connection) -> Result<()> {
     }
     Ok(())
 }
+const FOREIGN_TABLES: &[&str] = &[
+    "managed_publications",
+    "managed_rejections",
+    "logical_files",
+    "logical_edits",
+    "logical_publication_links",
+    "logical_conflicts",
+    "namespace_volume",
+    "namespace_nodes",
+    "namespace_operations",
+    "namespace_stores",
+    "namespace_uploads",
+    "namespace_removals",
+    "namespace_removal_events",
+    "chunk_client_role",
+    "chunk_publications",
+    "chunk_source_role",
+    "chunk_source_settlements",
+];
 fn foreign(db: &Connection) -> Result<()> {
-    for table in [
-        "managed_publications",
-        "managed_rejections",
-        "logical_files",
-        "logical_edits",
-        "logical_publication_links",
-        "logical_conflicts",
-        "namespace_volume",
-        "namespace_nodes",
-        "namespace_operations",
-        "namespace_stores",
-        "namespace_uploads",
-        "namespace_removals",
-        "namespace_removal_events",
-        "chunk_client_role",
-        "chunk_publications",
-        "chunk_source_role",
-        "chunk_source_settlements",
-    ] {
-        if db.query_row(&format!("SELECT EXISTS(SELECT 1 FROM {table})"), [], |r| {
-            r.get::<_, bool>(0)
-        })? {
-            return Err("chunk mount refuses foreign/old writer roles".into());
-        }
+    // Cache SQL bytecode, never rows or successful validation. Every invocation
+    // executes every required empty-table condition against its own snapshot.
+    static SQL: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+        format!(
+            "SELECT {}",
+            FOREIGN_TABLES
+                .iter()
+                .map(|table| format!("EXISTS(SELECT 1 FROM {table})"))
+                .collect::<Vec<_>>()
+                .join(" OR ")
+        )
+    });
+    if db
+        .prepare_cached(&SQL)?
+        .query_row([], |r| r.get::<_, bool>(0))?
+    {
+        return Err("chunk mount refuses foreign/old writer roles".into());
     }
     Ok(())
 }
+
 #[cfg(test)]
 thread_local! { static LOADS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
 #[cfg(test)]

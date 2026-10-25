@@ -87,3 +87,21 @@ host, isolated directories/mount, driver inspection first, separately approved
 installation if absent, temporary startup registration and user-scheduled reboot.
 A reboot interrupts sessions and unsaved applications. Linux MX requires separate
 host authorization. Record blocked gates honestly while independent work proceeds.
+
+### SQL compilation/dispatch candidate (unaccepted)
+
+The accepted main's two-save Callgrind profile showed repeated empty-role table
+queries and staged/remote row preparation as measurable costs. A new candidate
+combines the exact excluded-table sets into one SQL expression per guard and
+uses rusqlite's bounded prepared-statement cache for those two guards plus the
+four staged/remote row shape/data queries. This caches SQL bytecode, **not** query
+results, decoded graphs or successful proofs. Every invocation executes again;
+shape checks still precede allocation and all semantic/hash checks remain.
+
+Resolved rusqlite0.40.2 source was inspected: cached statements are removed while
+borrowed, clear bindings when returned and are connection-owned. Enabling its
+`cache` feature adds only locked hashlink0.12.2 (MIT OR Apache-2.0); no existing
+locked version changes. In-memory negative controls visit each excluded table,
+committed writes, rollback and drop/recreate schema changes in both ordinary and
+combined modes. These two tests pass locally. Native/full performance acceptance
+is pending; no measured speedup is claimed from this change alone.
