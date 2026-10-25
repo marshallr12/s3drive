@@ -81,6 +81,39 @@ fn generations(
     Ok(ids)
 }
 
+/// Discovery is not collection permission; each seed receives a new proof.
+pub(in crate::sparse_views) fn candidates(
+    state: &mut State,
+    key: &crate::chunk_mount::Key,
+) -> Result<Vec<String>> {
+    state.verify_staging_storage()?;
+    let tx = state
+        .connection
+        .transaction_with_behavior(TransactionBehavior::Deferred)?;
+    if !crate::chunk_mount::quiescent_enabled(&tx)? {
+        return Err(Failure::Conflict.into());
+    }
+    let scope = crate::chunk_mount::read_scope(&tx, key)?;
+    let saved = prep::ledger::inspect_scoped(&scope)?;
+    let mut nodes = BTreeSet::new();
+    for file in saved.views.files.values() {
+        nodes.insert(file.binding.base()?.node().to_owned());
+    }
+    for record in names::retirement_records(&tx)? {
+        nodes.extend(names::retirement_nodes(&record.input));
+    }
+    for record in opens::retained_records(&tx)? {
+        nodes.insert(record.input.node);
+    }
+    for record in crate::manifest_creation::retirement_records(&tx)? {
+        nodes.insert(record.input().operation.clone());
+    }
+    if nodes.len() > 16384 {
+        return Err(Failure::Corrupt.into());
+    }
+    Ok(nodes.into_iter().collect())
+}
+
 pub(in crate::sparse_views) fn retire(
     state: &mut State,
     key: &crate::chunk_mount::Key,

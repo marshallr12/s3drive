@@ -454,16 +454,20 @@ impl Writes {
                 ._capability
                 .native_sparse(views::Options::default(), plans::Options::default())
                 .map_err(error)?;
-            let targets = match recovered_targets {
-                Some(targets) => targets,
-                None => self
-                    .local
-                    .heads()
-                    .await
-                    .map_err(error)?
-                    .into_iter()
-                    .map(|head| Ok(head.binding().base().map_err(error)?.node().to_owned()))
-                    .collect::<Result<Vec<_>>>()?,
+            let targets = if self.component_retention {
+                collector.retention_candidates().await.map_err(error)?
+            } else {
+                match recovered_targets {
+                    Some(targets) => targets,
+                    None => self
+                        .local
+                        .heads()
+                        .await
+                        .map_err(error)?
+                        .into_iter()
+                        .map(|head| Ok(head.binding().base().map_err(error)?.node().to_owned()))
+                        .collect::<Result<Vec<_>>>()?,
+                }
             };
             for node in targets {
                 // Discovery is not deletion permission: every target gets its

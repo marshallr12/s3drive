@@ -194,6 +194,7 @@ pub(super) fn permanent_rows(db: &Connection) -> Result<Vec<Vec<rusqlite::types:
     use rusqlite::types::{Value, ValueRef};
     let mut result = Vec::new();
     for table in [
+        "sqlite_sequence",
         "chunk_mount_role",
         "client_identity",
         "retained_client_identity",

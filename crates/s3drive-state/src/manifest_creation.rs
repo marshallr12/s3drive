@@ -514,3 +514,54 @@ pub(crate) fn retirement_ready(db: &Connection, record: &Record) -> Result<bool>
     }
     Ok(true)
 }
+
+// Fresh component mode admits physical creation only from its retained,
+// monotonically consumed creation ID. Erasure expires the staging permission.
+pub(crate) fn admits_retry_staging(
+    db: &Connection,
+    operation: [u8; 32],
+    target: &journal::Target,
+    size: u64,
+) -> Result<bool> {
+    if !crate::chunk_mount::quiescent_enabled(db)? {
+        return Ok(false);
+    }
+    let binding = crate::chunk_mount::load(db)?.ok_or(Failure::Conflict)?;
+    for record in retirement_records(db)? {
+        if record.input.stage_key()? != operation {
+            continue;
+        }
+        crate::chunk_mount::admission::retained(
+            &binding,
+            crate::chunk_mount::AdmissionDomain::Creation,
+            &record.input.operation,
+        )?;
+        if record.input.target()? != *target || record.input.body()?.len() as u64 != size {
+            return Err(Failure::Conflict.into());
+        }
+        return Ok(true);
+    }
+    Ok(false)
+}
+pub(crate) fn admits_retry_remote(
+    db: &Connection,
+    generation: journal::GenerationId,
+) -> Result<bool> {
+    if !crate::chunk_mount::quiescent_enabled(db)? {
+        return Ok(false);
+    }
+    let binding = crate::chunk_mount::load(db)?.ok_or(Failure::Conflict)?;
+    for record in retirement_records(db)? {
+        if record.generation != Some(generation) {
+            continue;
+        }
+        crate::chunk_mount::admission::retained(
+            &binding,
+            crate::chunk_mount::AdmissionDomain::Creation,
+            &record.input.operation,
+        )?;
+        journal_impl::check_staged(db, &record.input, generation, true)?;
+        return Ok(true);
+    }
+    Ok(false)
+}

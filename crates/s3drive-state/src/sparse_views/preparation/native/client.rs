@@ -85,6 +85,16 @@ impl Client {
             .call(move |worker| publication::retention::quiescent::retire(&mut worker.state, &key))
             .await
     }
+    /// Bounded node discovery, including closed metadata-only work. Each result
+    /// must be independently revalidated by retire_component.
+    pub async fn retention_candidates(&self) -> Result<Vec<String>> {
+        let key = self.key.clone();
+        self.owner
+            .call(move |worker| {
+                publication::retention::quiescent::component::candidates(&mut worker.state, &key)
+            })
+            .await
+    }
     /// Reclaim one closed connected lifecycle component without removing an
     /// unrelated file's handles, readers, dirty data or unknown effects.
     pub async fn retire_component(&self, node: String) -> Result<bool> {

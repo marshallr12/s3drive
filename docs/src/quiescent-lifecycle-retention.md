@@ -143,3 +143,14 @@ Shared and actual native unlink/replacement/remount scenarios are added separate
 from all existing gates, with exact zero-forest assertions after closed scenarios.
 Their hosted execution, plus broader bounded concurrent lifecycle workloads,
 remains pending. This profile is development-only, not a beta readiness claim.
+
+The first mounted diagnostic exposed a missing prerequisite: retry-safe stores
+correctly refused the creator's generic staging path (`ScopedRequired`). The
+correction admits physical creation only when an exact retained, consumed creator
+identity authorizes its operation key, target and body length; remote preparation
+additionally requires its linked, validated generation. It does not reopen generic
+staging. Tests cover pre-admission refusal, wrong key/size, and pre-link remote
+refusal. Candidate discovery now includes metadata-only records; six component
+process-kill boundaries retain an unrelated dirty file across rollback or commit.
+The SQLite AUTOINCREMENT sequence is explicitly included in unchanged permanent
+state checks, preventing generation identity reuse after empty-forest collection.

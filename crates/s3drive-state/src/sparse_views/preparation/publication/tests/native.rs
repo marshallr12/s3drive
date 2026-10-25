@@ -5667,3 +5667,118 @@ async fn native_retry_validation_work_component_repeated_cleanup_preserves_unrel
         );
     }
 }
+
+#[tokio::test]
+async fn native_retry_component_killed_owner_preserves_untouched_forest_or_complete_component_cut()
+{
+    use std::process::{Command, Stdio};
+    use std::time::{Duration, Instant};
+    for point in [
+        "Eligible",
+        "SourceErased",
+        "LifecycleErased",
+        "PhysicalErased",
+        "Validated",
+        "Committed",
+    ] {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("quiescent killed owner");
+        let ready = tmp.path().join("ready");
+        let n = setup_contract(&path, 16, true, true, true).await;
+        let other = fixture_node([3; 16]);
+        let (token, view) = quiescent_admit_file(&n, &other).await;
+        n.client
+            .write(
+                token,
+                Context::new(
+                    &view,
+                    other.base.root.encode().to_vec(),
+                    other.base.page.encode(),
+                )
+                .unwrap(),
+                [5; 32],
+                5,
+                vec![255],
+            )
+            .await
+            .unwrap();
+        retry_cycle_mode(&n, fixture(), 3, false).await;
+        let before = n
+            .storage
+            .cache()
+            .owner
+            .call(|store| Ok(native_snapshot(&store.state)))
+            .await
+            .unwrap();
+        n.storage.close().await.unwrap();
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "sparse_views::preparation::publication::tests::barriers::native::native_retry_component_crash_child", "--nocapture"])
+            .env("S3DRIVE_COMPONENT_CRASH_DIR", &path)
+            .env("S3DRIVE_MIXED_CRASH_KIND", "component-retire")
+            .env("S3DRIVE_MIXED_CRASH_POINT", point)
+            .env("S3DRIVE_MIXED_CRASH_READY", &ready)
+            .stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::piped()).spawn().unwrap();
+        let started = Instant::now();
+        while !ready.exists() {
+            if let Some(status) = child.try_wait().unwrap() {
+                use std::io::Read;
+                let mut err = String::new();
+                child
+                    .stderr
+                    .take()
+                    .unwrap()
+                    .read_to_string(&mut err)
+                    .unwrap();
+                panic!("{point}: {status}: {err}");
+            }
+            if started.elapsed() > Duration::from_secs(30) {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("quiescent retirement checkpoint timeout: {point}");
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert!(State::open_managed(&path).is_err());
+        child.kill().unwrap();
+        assert!(!child.wait().unwrap().success());
+        let state = State::open_managed(&path).unwrap();
+        if point != "Committed" {
+            assert_eq!(native_snapshot(&state), before);
+        }
+        for table in [
+            "windows_open_journal",
+            "sparse_preparations",
+            "sparse_publications",
+        ] {
+            assert_eq!(
+                state
+                    .connection
+                    .query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r
+                        .get::<_, i64>(0))
+                    .unwrap(),
+                i64::from(point != "Committed") + i64::from(table == "windows_open_journal")
+            );
+        }
+        crate::chunk_mount::validate_all(&state.connection).unwrap();
+        drop(state);
+        let (storage, collector) = reopen_no_effect_collector(&path).await;
+        assert_eq!(
+            collector.retire_component(fixture().node.id).await.unwrap(),
+            point != "Committed"
+        );
+        assert!(!collector.retire_component(fixture().node.id).await.unwrap());
+        storage.close().await.unwrap();
+        let state = State::open_managed(&path).unwrap();
+        crate::chunk_mount::validate_all(&state.connection).unwrap();
+    }
+}
+
+#[tokio::test]
+async fn native_retry_component_crash_child() {
+    let Some(path) = std::env::var_os("S3DRIVE_COMPONENT_CRASH_DIR") else {
+        return;
+    };
+    let (storage, collector) = reopen_no_effect_collector(std::path::Path::new(&path)).await;
+    assert!(collector.retire_component(fixture().node.id).await.unwrap());
+    storage.close().await.unwrap();
+}

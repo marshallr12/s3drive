@@ -5,6 +5,9 @@ use crate::{chunk_mount, namespace_client as names, namespace_client::opens};
 use std::{collections::BTreeMap, path::Path};
 mod prospective;
 fn setup(root: &Path) -> (State, State, chunk_mount::Key, Input) {
+    setup_contract(root, false)
+}
+fn setup_contract(root: &Path, fresh: bool) -> (State, State, chunk_mount::Key, Input) {
     std::fs::create_dir_all(root).unwrap();
     let mut a = State::open_managed(&root.join("authority")).unwrap();
     let v = a
@@ -23,7 +26,12 @@ fn setup(root: &Path) -> (State, State, chunk_mount::Key, Input) {
     let mut s = State::open_managed(&root.join("client")).unwrap();
     let mut i = input(4);
     i.volume = v.id;
-    let key = chunk_mount::admit(
+    let admit = if fresh {
+        chunk_mount::admit_quiescent
+    } else {
+        chunk_mount::admit
+    };
+    let key = admit(
         &mut s,
         chunk_mount::Input {
             volume: i.volume.clone(),
@@ -35,6 +43,12 @@ fn setup(root: &Path) -> (State, State, chunk_mount::Key, Input) {
         },
     )
     .unwrap();
+    if fresh {
+        i.operation =
+            chunk_mount::admission::next(&s.connection, chunk_mount::AdmissionDomain::Creation)
+                .unwrap()
+                .unwrap();
+    }
     i.owner = Some(key.owner().into());
     (s, a, key, i)
 }
@@ -1067,4 +1081,33 @@ fn native_retry_validation_work_quiescent_owned_creator_requires_import_and_clos
         },
     );
     assert!(super::super::super::retirement_ready(&s.connection, &record).unwrap());
+}
+
+#[test]
+fn native_retry_validation_work_component_creation_requires_exact_retained_physical_authority() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (mut s, mut a, _key, i) = setup_contract(tmp.path(), true);
+    let operation = i.stage_key().unwrap();
+    let target = i.target().unwrap();
+    assert!(!admits_retry_staging(&s.connection, operation, &target, 64).unwrap());
+    assert!(
+        journal::Journal::new(&mut s, journal::Options::default())
+            .unwrap()
+            .begin_operation(&operation, &target, Base::Missing, None, 64)
+            .is_err()
+    );
+    j(&mut s).begin(i.clone()).unwrap();
+    assert!(admits_retry_staging(&s.connection, operation, &target, 64).unwrap());
+    assert!(!admits_retry_staging(&s.connection, [9; 32], &target, 64).unwrap());
+    assert!(admits_retry_staging(&s.connection, operation, &target, 65).is_err());
+    let g = staged(&mut s, &i);
+    assert!(!admits_retry_remote(&s.connection, g).unwrap());
+    j(&mut s).link(&i.operation, g).unwrap();
+    assert!(admits_retry_remote(&s.connection, g).unwrap());
+    verified(&mut s, g);
+    let r = j(&mut s).prepare_request(&i.operation).unwrap();
+    let q = r.request().unwrap().clone();
+    let receipt = a.namespace_apply(&q).unwrap();
+    j(&mut s).acknowledge(&i.operation, &q, receipt).unwrap();
+    crate::chunk_mount::validate_all(&s.connection).unwrap();
 }

@@ -204,6 +204,9 @@ pub(crate) fn admit_staging(
     if *base != Base::Missing || parent.is_some() {
         return Err(Failure::Conflict.into());
     }
+    if crate::manifest_creation::admits_retry_staging(db, operation, target, size)? {
+        return Ok(());
+    }
     let s = ledger::inspect(db)?;
     for (plan, level, slot) in s.objects.keys() {
         let i = s.info(*plan)?;
@@ -231,6 +234,9 @@ pub(crate) fn admit_staging(
 }
 pub(crate) fn admit_remote(db: &Connection, generation: GenerationId) -> Result<()> {
     if !enabled(db)? {
+        return Ok(());
+    }
+    if crate::manifest_creation::admits_retry_remote(db, generation)? {
         return Ok(());
     }
     let s = ledger::inspect(db)?;
