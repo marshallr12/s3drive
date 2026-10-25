@@ -4,7 +4,45 @@ Updated 2026-10-25. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
-## Four remaining beta milestones in progress (2026-10-25)
+## Candidate code accepted; real-use beta remains incomplete (2026-10-25)
+
+Exact source `59a10fe36b98d85d200bd24f7a51c79147e7a200`, tree
+`7c8bab19508d6b0ff1ebf55e59fdec2c1892ec7d`, passed independent review of
+[run40229890964](https://github.com/marshallr12/s3drive/actions/runs/40229890964): all nine complete job logs, 808 exact source files,
+six artifact digests, all four schema46–50 compatibility reports and 35 typed
+Windows reference observations. Linux1141/Windows1133 parent-harness
+workspace tests passed. The two warm-cache schema30 regressions are corrected;
+the original migration tests and all earlier acceptance gates remain unchanged.
+
+Original shared/debug/release300 workloads passed in 610.45/758.85/160.83s on Linux and
+707.23/1102.82/354.93s on Windows, with every remount segment and final cold read verified.
+Windows debug300 retains 97.18s below its unchanged1200s limit;
+this is limited headroom, not a hardware-independent performance guarantee.
+Additional release1000-save/100-remount and four64KiB-file300-save workloads
+passed on both OS. Each OS also passed four100-cycle component runs:800 combined
+cycles,400 mounts and400 closed SQLite integrity/FK checks. Component permanent
+row maxima were1, DB/WAL maxima778240/4161232 bytes and physical payload320 bytes.
+Diagnostic instructions were21,363,286,243,16.46% below the accepted-main baseline.
+
+Lifecycle and recovery cleanup are candidate-accepted for the **fresh opt-in
+`component-retention-v1`** profile. Unrelated open/dirty/read-protected work,
+uncertain outcomes and unfinished recovery remain protected; safe closed groups
+are reclaimed without fabricating Close. Defaults and the existing linked/owned
+profiles are unchanged. No remote object GC or alpha-store migration is added.
+
+Previous accepted baseline main is `3fd2f05e6d833d45cc1bfb70eabe6aa754524402`
+([run40157712514](https://github.com/marshallr12/s3drive/actions/runs/40157712514)).
+Candidate evidence must not be substituted for the separate exact merge/main
+verification. A documentation-only acceptance update does not change runtime,
+tests or CI. The merge commit requires its own complete source/log/artifact review.
+
+Real Wasabi headroom/provider acceptance, physical MiniAir driver/native-application
+UI/startup installation/reboot and public release/licensing remain incomplete.
+Private developer packaging and relocated CLI startup passed hosted Linux/Windows;
+that is not installation or physical/provider acceptance. Private validation
+archives, credentials and developer bundles remain unpublished.
+
+## Historical beta implementation checkpoints (2026-10-25)
 
 Accepted main is now `3fd2f05e6d833d45cc1bfb70eabe6aa754524402`, independently
 verified in [run40157712514](https://github.com/marshallr12/s3drive/actions/runs/40157712514).

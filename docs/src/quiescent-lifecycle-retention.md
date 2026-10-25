@@ -1,9 +1,11 @@
 # Experimental quiescent lifecycle retention
 
-Design checkpoint: 2026-10-25. **Unaccepted component-retention implementation**, not a
-completed beta milestone. A separate experimental mounted profile is available. The accepted
-`linked-retention-v1`, `owned-unlinked-v1` and absent/default profiles remain
-unchanged. No old-store conversion and no remote object deletion are proposed.
+Candidate code acceptance: `59a10fe36b98d85d200bd24f7a51c79147e7a200` in
+[run40229890964](https://github.com/marshallr12/s3drive/actions/runs/40229890964), independently reviewed on hosted Linux FUSE
+and Windows WinFsp. See [complete scope and results](beta-completion.md).
+This is not completed real-use beta validation. The fresh opt-in mounted profile
+remains experimental; default, linked-retention and owned-unlinked profiles are
+unchanged. No old-store conversion or remote object deletion is enabled.
 
 ## Why a different cut
 
@@ -13,7 +15,7 @@ activation, original dirty epochs, namespace ownership and exact retries. The
 linked-file anchor deliberately cannot summarize those dependencies. In
 particular, abandonment of an obsolete session is not an observed native Close.
 
-This prototype introduces a separate fresh combined-owner contract, admitted by
+This profile introduces a separate fresh combined-owner contract, admitted by
 `chunk_mount::admit_quiescent`, while keeping the existing version2 owner and
 monotonic admission frontier. Its explicit additional mode field prevents
 ordinary or linked admission from silently adopting this owner. The mode cannot
@@ -40,9 +42,9 @@ ID cannot be recreated by retrying its original token. The initial graph and
 all child mutation IDs therefore differ after a completed cut.
 
 Prospective creator/open atomic admission remains explicitly refused in this
-prototype. It needs its own paired reservation proof, rather than consuming two
-IDs in separate transactions. No native application coverage is implied until
-its actual creation route has been tested.
+profile. It needs its own paired reservation proof, rather than consuming two
+IDs in separate transactions. The ordinary native creation route has hosted coverage; native application UI
+and physical-machine coverage remain separate beta gates.
 
 ## Current conservative eligibility
 
@@ -69,19 +71,20 @@ its actual creation route has been tested.
 
 The original `retire_quiescent` API selects the whole store. The newer
 `retire_component` API selects a closed namespace-connected component while
-retaining unrelated live handles, readers and dirty work exactly. Broader bounded
-native lifecycle acceptance remains required before the milestone is complete.
+retaining unrelated live handles, readers and dirty work exactly. The bounded
+native lifecycle and recovery gates passed on the exact candidate above; physical
+provider/hardware/application validation remains separate.
 
-## Acceptance still required
+## Accepted code-level test contract
 
-The prototype has modeled tests for separate admission profiles, expired source
+The profile has modeled tests for separate admission profiles, expired source
 re-imports, physical clone/acquisition races, exact retained
 retries, active-open and reader-clone deferral, dirty/incomplete preservation,
 closed publisher eviction and completed recovery without fabricating Close.
-Compilation alone is not durable execution. Hosted tests must establish these
-claims on actual supported storage before acceptance.
+Compilation alone is not durable execution. Exact-source hosted tests established
+these claims on supported storage; local tmpfs durable setup remains unsupported.
 
-Before native enablement/acceptance, add and inspect:
+The independently reviewed hosted gates include:
 
 - Exact stale namespace, creator, open, source command and owner rejection after
   a cut; unchanged owner/frontier and cold live namespace/content reload.
@@ -101,6 +104,11 @@ and physical-machine evidence remains a separate gate in the
 [beta completion plan](beta-completion.md).
 
 
+## Historical implementation and investigation checkpoints
+
+The dated checkpoints below preserve earlier incomplete and rejected cohorts.
+Their pending statements are historical; the exact candidate status above supersedes them.
+
 ### First hosted state-protocol result (not acceptance)
 
 On exact `e11c5d66b6c8da37285b61618b947248f6218fe7`,
@@ -110,7 +118,7 @@ Complete focused logs were reviewed. The full suite and Windows remain pending;
 the follow-on source-expiry/post-cut/concurrent-acquisition additions are newer
 code and do not inherit that result. No mounted option is enabled.
 
-## Connected-component implementation in progress
+### Connected-component implementation in progress
 
 The state-only collector also has a node-seeded component variant. Namespace
 operations and original-open linked operations connect their affected file nodes;
@@ -128,7 +136,7 @@ unfinished preparation. This compiles with workspace Clippy; durable hosted
 execution and namespace/crash coverage remain pending. The mounted profile is
 still not exposed. This is implementation progress, not milestone acceptance.
 
-## Experimental mounted integration (not accepted)
+### Experimental mounted integration (not accepted)
 
 `component-retention-v1` selects the fresh contract explicitly; existing defaults
 and `linked-retention-v1` remain distinct. It uses expiring source, creation and
@@ -213,7 +221,7 @@ independent generation then succeeds. This tests the earlier invariant rather
 than constructing a falsely valid shared-generation witness. Component selection
 also independently refuses intersections with surviving creator/plan generations.
 
-## Linux SQLite lock-lifetime correction (acceptance pending)
+### Linux SQLite lock-lifetime correction (acceptance pending)
 
 Research2026-10-25: a longer live-reader soak failed at cycle31 with SQLite's
 malformed-image error; a separate unchanged-production100-cycle run passed.

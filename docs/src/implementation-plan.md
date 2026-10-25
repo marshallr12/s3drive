@@ -1,19 +1,20 @@
 # Phased implementation plan
 
-Fresh linked-native retention has corrected candidate acceptance on 2026-10-25:
-`135a35bcbc8df575f7a9193f40da5e3adffead3c` passed
-[run40148159139](https://github.com/marshallr12/s3drive/actions/runs/40148159139)
-on Linux and Windows: all seven jobs, six artifacts, full workspace,
-shared300 and actual debug/release mounted300, reader-capacity, crash/full-disk
-rollback and compatibility gates. The earlier main `3ed77d4` failed its Windows
-mounted300 deadline after 250 saves. The corrected candidate's Windows debug
-step leaves only about 52 seconds under the unchanged 20-minute bound; this is
-not robust headroom. Corrected-main verification remains pending at this
-revision and must not be replaced by the candidate result. See the
-[bounded linked-file contract and evidence](fresh-native-retention.md).
-Defaults, creation/namespace/owned/deferred and retained-recovery limitations
-remain unchanged. Alpha databases are disposable; no old-format migration is
-required, and unsupported formats still fail closed.
+Fresh component lifecycle/recovery cleanup has exact candidate code acceptance
+at `59a10fe36b98d85d200bd24f7a51c79147e7a200` in
+[run40229890964](https://github.com/marshallr12/s3drive/actions/runs/40229890964). Full Linux/Windows suites, original six300-save gates,
+800 additional component cycles, both larger/longer workloads and six exact-run
+artifacts were independently reviewed. See [scope and remaining beta gates](beta-completion.md)
+and the [component contract](quiescent-lifecycle-retention.md).
+The prior linked-retention main baseline3fd2f05 was independently accepted in
+[run40157712514](https://github.com/marshallr12/s3drive/actions/runs/40157712514).
+Candidate acceptance and merged-main verification are separate; verify the exact
+merge commit independently, never infer it from a candidate's green summary.
+
+The new cleanup remains fresh-only and opt-in. Defaults and existing profiles
+are unchanged, dirty/unknown work remains protected, and no remote GC or alpha
+migration is added. Actual hardware/provider/native-application UI/startup/reboot
+validation and release licensing are still pending; the overall beta is incomplete.
 
 Each phase must leave a buildable tree, explicit behavior contract and durable
 verification evidence. P0 is complete; P1 has a read-only transport and local

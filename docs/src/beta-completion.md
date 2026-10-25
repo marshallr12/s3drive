@@ -1,86 +1,91 @@
-# Remaining beta completion gates
+# Beta completion status
 
-Research and implementation checkpoint: 2026-10-25. The user requested all four
-items below, using the cloud development workspace where suitable and standard
-public GitHub Actions otherwise. No paid larger runners, weakened durability
-checks, reduced original workloads or increased original deadlines.
+## Candidate code accepted; real-use beta remains incomplete (2026-10-25)
 
-Baseline main `3fd2f05e6d833d45cc1bfb70eabe6aa754524402` passed independent full
-[source, logs and artifacts review](https://github.com/marshallr12/s3drive/actions/runs/40157712514).
-This is fresh existing-linked-file retention, not the four remaining milestones.
-Candidate acceptance and subsequent merged-main verification remain separate.
+Exact source `59a10fe36b98d85d200bd24f7a51c79147e7a200`, tree
+`7c8bab19508d6b0ff1ebf55e59fdec2c1892ec7d`, passed independent review of
+[run40229890964](https://github.com/marshallr12/s3drive/actions/runs/40229890964): all nine complete job logs, 808 exact source files,
+six artifact digests, all four schema46–50 compatibility reports and 35 typed
+Windows reference observations. Linux1141/Windows1133 parent-harness
+workspace tests passed. The two warm-cache schema30 regressions are corrected;
+the original migration tests and all earlier acceptance gates remain unchanged.
 
-Current experimental work: [fresh connected-component retention](quiescent-lifecycle-retention.md)
-has state and shared lifecycle proofs, but actual callback verification exposed a
-reopen/Close reader-admission gap. The correction requires fresh native and full
-acceptance; no milestone or main merge is claimed from focused green tests.
+Original shared/debug/release300 workloads passed in 610.45/758.85/160.83s on Linux and
+707.23/1102.82/354.93s on Windows, with every remount segment and final cold read verified.
+Windows debug300 retains 97.18s below its unchanged1200s limit;
+this is limited headroom, not a hardware-independent performance guarantee.
+Additional release1000-save/100-remount and four64KiB-file300-save workloads
+passed on both OS. Each OS also passed four100-cycle component runs:800 combined
+cycles,400 mounts and400 closed SQLite integrity/FK checks. Component permanent
+row maxima were1, DB/WAL maxima778240/4161232 bytes and physical payload320 bytes.
+Diagnostic instructions were21,363,286,243,16.46% below the accepted-main baseline.
 
-Latest acceptance blocker: lock-fix source `0dab6bd` passed800 combined
-Linux/Windows component lifecycle cycles and400 mount/integrity checks, plus
-both OS1000-save/large-file soaks in
-[run40217900789](https://github.com/marshallr12/s3drive/actions/runs/40217900789).
-However, original Windows debug300 timed out after290 saves under the unchanged
-20-minute gate. No main merge or overall milestone acceptance follows. The next
-slice targets the measured16.91% SQL-preparation instruction cost using a bounded
-128-statement bytecode cache. It does not cache rows, semantic proofs, database
-permissions or schema-probe outcomes; full fresh validations remain required.
+Lifecycle and recovery cleanup are candidate-accepted for the **fresh opt-in
+`component-retention-v1`** profile. Unrelated open/dirty/read-protected work,
+uncertain outcomes and unfinished recovery remain protected; safe closed groups
+are reclaimed without fabricating Close. Defaults and the existing linked/owned
+profiles are unchanged. No remote object GC or alpha-store migration is added.
 
-The bytecode slice `faa6b0b` reduced diagnostic instructions7.58% and passed
-Windows debug300's unchanged step, but full Linux workspace caught two existing
-old-schema tests: a cached presence query deferred a missing-table error until
-execution, bypassing the old-schema empty-role fallback. That false refusal is
-corrected by keeping the schema-detection prepare uncached, with a new warm
-old/current-schema regression; all original acceptance gates remain required.
+Previous accepted baseline main is `3fd2f05e6d833d45cc1bfb70eabe6aa754524402`
+([run40157712514](https://github.com/marshallr12/s3drive/actions/runs/40157712514)).
+Candidate evidence must not be substituted for the separate exact merge/main
+verification. A documentation-only acceptance update does not change runtime,
+tests or CI. The merge commit requires its own complete source/log/artifact review.
 
-## 1. Creation and namespace lifecycle cleanup
+Real Wasabi headroom/provider acceptance, physical MiniAir driver/native-application
+UI/startup installation/reboot and public release/licensing remain incomplete.
+Private developer packaging and relocated CLI startup passed hosted Linux/Windows;
+that is not installation or physical/provider acceptance. Private validation
+archives, credentials and developer bundles remain unpublished.
 
-Existing `owned-unlinked-v1` implements create, rename, replacement, unlink and
-open-file lifecycle. The `linked-retention-v1` profile deliberately refuses
-creator and namespace admission. Extending cleanup requires permanent identity
-expiry for namespace/creator admissions, compact original-operation evidence,
-closed dependency groups and reader-safe physical reclamation. Simply deleting
-terminal journal rows or removing the current refusal is unsafe: they remain
-provenance for original opens, owned epochs and exact retries.
+## 1. Lifecycle cleanup: hosted code acceptance
 
-Acceptance must cover repeated create/save/rename/replace/unlink with held
-handles, last Close, remount, exact cold bytes and bounded local rows/bytes on
-both FUSE and WinFsp. Dirty, uncertain or conflicting work and cloned readers
-must retain history or impose backpressure, never force a cut. Remote object GC
-is not implied by local journal reclamation.
+The fresh component profile covers native creation, rename, replacement, unlink,
+write/read through held handles, last Close, repeated cold re-admission and bounded
+retention while unrelated dirty writers and cloned readers remain active. It
+selects complete dependency groups and revalidates the surviving graph after
+transactional deletion. Consumed open/session/namespace/creator/source identities
+cannot be resurrected after eviction; permanent monotonic frontiers stay bounded.
+Dirty, uncertain, incomplete or reader-pinned groups defer cleanup or retain
+backpressure. Prospective atomic creator/open admission remains unsupported; the
+ordinary native creation route is tested. This does not add remote object GC.
 
-## 2. Cleanup after recovery
+## 2. Recovery cleanup: hosted code acceptance
 
-Recovery itself exists. Its observer session can differ from every recovered
-open's original session. Session pruning must preserve both kinds of identity
-while recovery records survive. The current safety correction adds this edge
-to both session-admission and open-retirement pruning, with pending and finished
-recovery fixtures across a third exclusive owner. Local compilation succeeds;
-local durable execution is blocked by tmpfs, not passed. Hosted proof is pending.
+Observer-session identities remain protected while recovery records survive.
+Finished no-effect groups and wholly settled recovered publishers can be reclaimed;
+unfinished groups crossing selected nodes, pending dirty epochs, unknown remote
+outcomes and live logical/physical readers cannot. Recovery abandonment never
+stands in for native Close. Original retry and authority identities remain exact.
+Process-kill cutpoints, deletion refusal, genuine SQLite page exhaustion, stale
+identity rejection and cold reload tests passed without weakening durability,
+foreign-key checks, corruption detection or rollback requirements.
 
-A following unaccepted candidate reclaims only complete, finished no-effect
-recovery groups: no creation/admission, namespace closure, owned source epoch or
-frozen publication. A clone-held reader defers collection; deletion refusal must
-preserve all records; consumed open IDs cannot be admitted again. This is not
-cleanup of recovered publishers or owned/namespace histories. The new tests
-compile locally; hosted results remain pending.
+## 3. Performance and longer/larger workloads: hosted acceptance
 
-Broader cleanup needs complete recovery-group proofs, original dirty-source
-and namespace settlement validation, unchanged Close semantics, expired replay
-identities and transactional removal. Recovery abandonment is not an observed
-native Close and cannot fabricate its completion suffix. Unknown outcomes,
-unprepared dirty epochs and live logical/physical readers remain protective.
+SQL compilation reuse is bounded to128 statements per State connection. It caches
+bytecode, not rows, decoded graphs, validation outcomes or authority. Every query
+binds and executes again; mutable PRAGMAs stay fresh. Prepare-only schema probes
+and schema-presence/error-fallback detection remain uncached. Warm-cache negative
+controls cover changed proof/source bytes, triggers, schema changes and rollback.
+The diagnostic instruction reduction above is measurable; Windows wall-time
+headroom remains limited and must be monitored on actual hardware.
 
-## 3. Performance and larger/longer soak
+Additional1000-save and four64KiB-file300-save workloads supplement rather than
+replace the original six300-save gates. All cold bytes, exact PUT schedules and
+4MiB DB/8MiB WAL/2MiB physical-payload ceilings passed. Original120-second native
+segments,180-second child bounds and all original overall deadlines are unchanged.
+The component stress preserves external read-only SQLite observers. The proven
+Linux POSIX lock-lifetime defect is fixed by retaining verification descriptors
+until SQLite closes, then closing them before releasing directory ownership.
 
-Accepted main Windows debug300 took1131.24 seconds against1200. Preserve that
-exact gate and add workloads rather than replace it. Optimize measured repeated
-work without carrying validated graph proofs across writes, awaits or owner
-commands. Pure byte derivations are not authority or successful validation.
-
-Additional acceptance must exercise more files, larger content and more saves,
-including cold owners and storage bounds. Report exact source, profile, workload,
-per-segment timings, DB/WAL/staging peaks and final cold-read result. Diagnostic
-CPU counts and green job summaries alone are not acceptance.
+Historical rejected sources remain in Git and private evidence: c98496f exposed
+an intermittent malformed-database failure;0dab6bd fixed a deterministic SHM lock
+hazard but failed Windows debug300's deadline;faa6b0b improved performance but
+falsely refused two warmed old-schema fixtures.59a10fe corrects the last regression.
+No failure was dismissed, no deadline was enlarged, and no uncertain data was
+silently discarded. These diagnostics do not establish physical corruption of
+the original failure database, whose raw DB/WAL was not retained.
 
 ## 4. Real-use beta and packaging
 
@@ -114,36 +119,6 @@ available through the current host tools. No installation or reboot occurred.
 A reboot interrupts sessions and unsaved applications. Linux MX requires separate
 host authorization. Record blocked gates honestly while independent work proceeds.
 
-### SQL compilation/dispatch candidate (unaccepted)
-
-The accepted main's two-save Callgrind profile showed repeated empty-role table
-queries and staged/remote row preparation as measurable costs. A new candidate
-combines the exact excluded-table sets into one SQL expression per guard and
-uses rusqlite's bounded prepared-statement cache for those two guards plus the
-four staged/remote row shape/data queries. This caches SQL bytecode, **not** query
-results, decoded graphs or successful proofs. Every invocation executes again;
-shape checks still precede allocation and all semantic/hash checks remain.
-
-Resolved rusqlite0.40.2 source was inspected: cached statements are removed while
-borrowed, clear bindings when returned and are connection-owned. Enabling its
-`cache` feature adds only locked hashlink0.12.2 (MIT OR Apache-2.0); no existing
-locked version changes. In-memory negative controls visit each excluded table,
-committed writes, rollback and drop/recreate schema changes in both ordinary and
-combined modes. These two tests pass locally. Native/full performance acceptance
-is pending; no measured speedup is claimed from this change alone.
-
-### Additional soak fixtures (acceptance pending)
-
-Two new, separate standard-runner release workloads supplement, never replace,
-the unchanged original six300-save fixtures:1000 actual saves across100 remounts,
-and300 actual saves round-robin across four64KiB files/30 remounts. Every prior
-file value is verified before overwrite; every new value is read after sync and
-Close, and every final file is verified in a new cold owner. Every segment checks
-exact completed count, sparse PUT schedule, retained rows and unchanged4MiB DB /
-8MiB WAL /2MiB staged-payload ceilings. Each native syscall segment still has its
-original120-second bound and subprocess180-second bound. The additional longer
-whole-workload steps have their own45-minute limits; original deadlines remain.
-
 ### Private test packaging (not a public release)
 
 `scripts/package-test.py` creates a deterministic, exclusive-output ZIP from a
@@ -168,29 +143,3 @@ cargo metadata --locked --format-version 1 > <private-directory>/dependencies.js
 python scripts/package-test.py --binary <built-CLI> --output <private-directory>/test.zip --target <rustc-host> --dependencies <private-directory>/dependencies.json
 python scripts/package-test.py --verify <private-directory>/test.zip
 ```
-
-### Recovery atomicity and current validation status
-
-The next candidate adds killed-owner checks at eligibility, evidence erasure,
-post-validation and commit. Precommit deaths must preserve the complete original
-snapshot; committed deletion must remove the complete group. Every precommit
-case then retries from a fresh owner, followed by another cold validation.
-A coherently resealed observer session sharing the original runtime must not
-turn a same-owner open into an abandoned one. These are modeled protocol tests,
-not native mount or provider acceptance.
-
-Candidate `57bda5d471da329562be9ea4dd31f9342c87a149` is running
-[the expanded suite](https://github.com/marshallr12/s3drive/actions/runs/40203142413).
-Its predecessor's package smoke assumed the wrong CLI version prefix; this
-candidate corrects it to the exact metadata package name. Actual relocated CLI
-smoke passed locally; complete hosted log review remains pending. The SQL-only
-candidate's fixed two-save Callgrind count fell from25,571,642,463 to23,032,359,387
-instructions (about9.9%); this is diagnostic evidence, not a wall-time speedup or
-acceptance. No candidate has replaced accepted main yet.
-
-The next negative-test correction does not alter runtime cleanup behavior:
-`1c02382` passed47 focused cases per OS, including killed-owner retirement, but
-its resealed-session fixture failed early on SQLite's existing unique runtime
-constraint. The corrected fixture instead rebinds/reseals the recovery observer
-and its exact membership key atomically, leaving session uniqueness and foreign
-keys intact, to exercise the intended same-runtime reclamation refusal.
