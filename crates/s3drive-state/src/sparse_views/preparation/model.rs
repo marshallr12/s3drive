@@ -107,7 +107,8 @@ pub(super) struct Progress {
 }
 #[derive(Clone)]
 pub struct Info {
-    pub(super) input: Input,
+    input: Input,
+    id: Id,
     pub(super) view: View,
     pub(super) progress: Progress,
 }
@@ -117,6 +118,23 @@ impl fmt::Debug for Info {
     }
 }
 impl Info {
+    pub(super) fn new(input: Input, view: View, progress: Progress) -> Result<Self> {
+        #[cfg(test)]
+        info_constructed();
+        let id = input.id()?;
+        Ok(Self {
+            input,
+            id,
+            view,
+            progress,
+        })
+    }
+    pub(super) fn input(&self) -> &Input {
+        &self.input
+    }
+    pub(super) fn into_input(self) -> Input {
+        self.input
+    }
     pub fn retry_operation(&self) -> Option<retry::Operation> {
         self.input.retry
     }
@@ -132,7 +150,7 @@ impl Info {
     pub fn id(&self) -> Result<Id> {
         #[cfg(test)]
         INFO_IDS.set(INFO_IDS.get() + 1);
-        self.input.id()
+        Ok(self.id)
     }
     pub fn operation(&self) -> Id {
         self.input.operation

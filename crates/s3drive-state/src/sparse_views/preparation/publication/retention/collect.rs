@@ -120,11 +120,11 @@ impl Journal<'_> {
             owner,
             view: before.views.record(proof.anchor())?.clone(),
             published: Identity::capture(&info.view().0),
-            input: info.input.clone(),
+            input: info.input().clone(),
             progress: info.progress.clone(),
             original_page: before
                 .blobs
-                .get(&info.input.base_page)
+                .get(&info.input().base_page)
                 .ok_or(Failure::Corrupt)?
                 .clone(),
             publication: meta

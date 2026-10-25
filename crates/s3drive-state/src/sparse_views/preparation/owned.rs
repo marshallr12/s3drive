@@ -358,11 +358,11 @@ impl Journal<'_> {
         }
         validate_settlement(&tx, &before, plan, &settlement)?;
         let mut after = before.clone();
-        let mut progress = info.progress;
+        let mut progress = info.progress.clone();
         progress.settlement = Some(settlement);
         after
             .plans
-            .insert(plan, ledger::Saved::new(info.input, progress)?);
+            .insert(plan, ledger::Saved::new(info.into_input(), progress)?);
         journal::write_delta(&tx, &before, &after, "settle")?;
         let result = after.info(plan)?;
         tx.commit()?;

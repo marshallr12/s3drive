@@ -241,6 +241,16 @@ pub struct Verification {
     pub revision: Revision,
 }
 
+pub(crate) fn for_generation(db: &Connection, id: GenerationId) -> Result<Option<Info>> {
+    Options::default().validate()?;
+    let exists: bool = db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM remote_intents WHERE generation_id=?1)",
+        [id.value()],
+        |r| r.get(0),
+    )?;
+    exists.then(|| load(db, id)).transpose()
+}
+
 pub struct Journal<'a> {
     state: &'a mut State,
     options: Options,
@@ -256,12 +266,7 @@ impl<'a> Journal<'a> {
         load_operation(&self.state.connection, id)
     }
     pub fn for_generation(&self, id: GenerationId) -> Result<Option<Info>> {
-        let exists: bool = self.state.connection.query_row(
-            "SELECT EXISTS(SELECT 1 FROM remote_intents WHERE generation_id=?1)",
-            [id.value()],
-            |r| r.get(0),
-        )?;
-        exists.then(|| load(&self.state.connection, id)).transpose()
+        for_generation(&self.state.connection, id)
     }
     pub fn list(&self, after: Option<GenerationId>, limit: u16) -> Result<Vec<Info>> {
         if !(1..=1000).contains(&limit) {

@@ -135,7 +135,9 @@ impl<'a> Journal<'a> {
             progress.cursor.level = 0;
             progress.cursor.slot = 0;
         }
-        after.plans.insert(plan, Saved::new(info.input, progress)?);
+        after
+            .plans
+            .insert(plan, Saved::new(info.into_input(), progress)?);
         after.validate()?;
         after.admit(self.options)?;
         write_delta(&tx, &before, &after, "append")?;
@@ -196,10 +198,10 @@ impl<'a> Journal<'a> {
             }
             progress.cursor.slot += 1;
             if expected.level == root_level(info.view.size()) {
-                let old = RootDescriptor::decode(&info.input.base_root)?;
+                let old = RootDescriptor::decode(&info.input().base_root)?;
                 let reference = Reference::new(
                     *info.view.binding().store(),
-                    info.input.generation,
+                    info.input().generation,
                     ordinal(expected.level, expected.slot),
                     page.digest(),
                 )?;
@@ -216,7 +218,9 @@ impl<'a> Journal<'a> {
             progress.cursor.level += 1;
             progress.cursor.slot = 0;
         }
-        after.plans.insert(plan, Saved::new(info.input, progress)?);
+        after
+            .plans
+            .insert(plan, Saved::new(info.into_input(), progress)?);
         after.validate()?;
         after.admit(self.options)?;
         write_delta(&tx, &before, &after, "step")?;
@@ -232,33 +236,42 @@ impl<'a> Journal<'a> {
             .connection
             .transaction_with_behavior(TransactionBehavior::Deferred)?;
         let s = ledger::inspect(&tx)?;
-        let info = s.info(plan)?;
-        let o = s.object(plan, level, slot)?;
-        let role = if level < 0 {
-            s3drive_core::manifest::objects::Role::Data
-        } else {
-            s3drive_core::manifest::objects::Role::Page
-        };
-        let result = match (&o.kind, s.reference(&info, o)?) {
-            (_, None) => Dependency::Hole {
-                offset: o.offset(),
-                length: o.length,
-            },
-            (Kind::Inherited(w), Some(reference)) => Dependency::Inherited {
-                role,
-                reference,
-                proof: w.encode(&s.blobs)?,
-            },
-            (Kind::Data { blob } | Kind::Page { blob }, Some(reference)) => Dependency::New {
-                role,
-                reference,
-                bytes: s.blobs.get(blob).ok_or(Failure::Corrupt)?.clone(),
-            },
-            _ => return Err(Failure::Corrupt.into()),
-        };
+        let result = dependency_from(&s, plan, level, slot)?;
         tx.commit()?;
         Ok(result)
     }
+}
+pub(super) fn dependency_from(
+    s: &ledger::Snapshot,
+    plan: Id,
+    level: i8,
+    slot: u64,
+) -> Result<Dependency> {
+    let info = s.info(plan)?;
+    let o = s.object(plan, level, slot)?;
+    let role = if level < 0 {
+        s3drive_core::manifest::objects::Role::Data
+    } else {
+        s3drive_core::manifest::objects::Role::Page
+    };
+    let result = match (&o.kind, s.reference(&info, o)?) {
+        (_, None) => Dependency::Hole {
+            offset: o.offset(),
+            length: o.length,
+        },
+        (Kind::Inherited(w), Some(reference)) => Dependency::Inherited {
+            role,
+            reference,
+            proof: w.encode(&s.blobs)?,
+        },
+        (Kind::Data { blob } | Kind::Page { blob }, Some(reference)) => Dependency::New {
+            role,
+            reference,
+            bytes: s.blobs.get(blob).ok_or(Failure::Corrupt)?.clone(),
+        },
+        _ => return Err(Failure::Corrupt.into()),
+    };
+    Ok(result)
 }
 /// Tagged local preparation intent. No historical remote receipt is invented.
 pub enum Dependency {
@@ -346,7 +359,7 @@ fn inherited_object(
     page: bool,
 ) -> Result<Object> {
     let witness = proof::Witness::admit(raw, page, &mut s.blobs)?;
-    let p = witness.resolve(&info.input, &info.view, &s.blobs)?;
+    let p = witness.resolve(info.input(), &info.view, &s.blobs)?;
     if p.offset != offset {
         return Err(Failure::Conflict.into());
     }

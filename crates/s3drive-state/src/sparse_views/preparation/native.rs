@@ -671,8 +671,8 @@ fn verify_terminal_plan_in(
     let token = scoped_plan_identity(native, info.view().binding(), info.view().id())?;
     let (operation, generation, retry) = (token.id()?, token.generation()?, Some(token));
     if info.operation() != operation
-        || info.input.generation != generation
-        || info.input.retry != retry
+        || info.input().generation != generation
+        || info.input().retry != retry
     {
         return Err(Failure::Corrupt.into());
     }

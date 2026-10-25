@@ -109,11 +109,23 @@ impl Anchor {
         owner: Id,
         scope: Option<&crate::chunk_mount::ReadScope<'_>>,
     ) -> Result<()> {
+        self.validate_with_references(isolation, owner, scope, None)
+    }
+    fn validate_with_references(
+        &self,
+        isolation: &mut views::IsolationCheck<'_>,
+        owner: Id,
+        scope: Option<&crate::chunk_mount::ReadScope<'_>>,
+        references: Option<&crate::pure_memo::References>,
+    ) -> Result<()> {
         let db = isolation.db;
-        self.publication.validate()?;
+        self.publication.validate_with_references(references)?;
         let parent = self.published.source()?;
         let ack = self.publication.acknowledgment().ok_or(Failure::Corrupt)?;
-        let request = settlement::request(&self.publication)?;
+        let request = settlement::request_with_reference(
+            &self.publication,
+            references.map(|r| r.text(2)).transpose()?,
+        )?;
         if !matches!(self.format, 1 | 2)
             || (self.format == 2) != self.native.is_some()
             || self.owner != owner
@@ -132,13 +144,11 @@ impl Anchor {
         {
             return Err(Failure::Corrupt.into());
         }
-        #[cfg(test)]
-        super::super::model::info_constructed();
-        let info = Info {
-            input: self.input.clone(),
-            view: views::View(parent),
-            progress: self.progress.clone(),
-        };
+        let info = Info::new(
+            self.input.clone(),
+            views::View(parent),
+            self.progress.clone(),
+        )?;
         if let Some(proof) = &self.native {
             let mount = match scope {
                 Some(scope) => proof.validate_scoped(scope, &info, self.view.id)?,
@@ -157,7 +167,10 @@ impl Anchor {
             .receipt(db, self.generation())?
             .ok_or(Failure::Corrupt)?;
         let remote = receipt.info();
-        let reservation = self.publication.input.reservation()?;
+        let reservation = self
+            .publication
+            .input
+            .reservation_with_reference(references.map(|r| r.text(0)).transpose()?)?;
         let revision = remote.revision.as_ref().ok_or(Failure::Corrupt)?;
         let physical = Physical {
             generation: remote.generation,
@@ -395,6 +408,7 @@ fn load_in(
     }
     ledger::no_triggers(db)?;
     let mut anchors = BTreeMap::new();
+    let mut remembered = None;
     let mut role = CanonicalRoleHash::new(owner)?;
     let mut bytes = 0usize;
     let mut q=db.prepare("SELECT target,view_id,generation_id,record,state_hash FROM sparse_retention_anchors ORDER BY target LIMIT 257")?;
@@ -412,23 +426,43 @@ fn load_in(
         if raw.len() > 2_097_152 || bytes > views::HARD_METADATA as usize {
             return Err(Failure::Corrupt.into());
         }
-        let a: Anchor = serde_json::from_slice(&raw)?;
-        // Canonical equality is still mandatory. Reuse only those exact bytes
-        // for the identical domain-separated row hash, not unverified JSON.
-        let (a, canonical) = a.canonical()?;
-        if canonical != raw
-            || target != a.target()?
+        // Parse on every invocation. Only pure canonical bytes and fixed-size
+        // reference digests may be remembered for this dedicated worker.
+        let mut a: Anchor = serde_json::from_slice(&raw)?;
+        let hit = crate::pure_memo::get(&raw);
+        let references = match hit {
+            Some(values) => {
+                a.canonical_len = raw.len();
+                values
+            }
+            None => {
+                let (parsed, canonical) = a.canonical()?;
+                if canonical != raw {
+                    return Err(Failure::Corrupt.into());
+                }
+                a = parsed;
+                a.publication.references()?
+            }
+        };
+        let canonical = &raw;
+        if target != a.target()?
             || view != a.view.id
             || generation != a.generation().value()
-            || sha != canonical_anchor_hash(&canonical)
+            || sha != canonical_anchor_hash(canonical)
         {
             return Err(Failure::Corrupt.into());
         }
         #[cfg(test)]
         ANCHOR_CHECKS.set(ANCHOR_CHECKS.get() + 1);
-        a.validate_in(isolation, owner, scope)?;
+        a.validate_with_references(isolation, owner, scope, Some(&references))?;
         let target = a.target()?;
-        role.push(target, &canonical)?;
+        role.push(target, canonical)?;
+        if hit.is_none() && raw.len() <= crate::pure_memo::MAX_RAW {
+            // Move the already bounded SQL row, rather than clone it. Only
+            // one candidate survives until the full role/witness check ends.
+            drop(remembered.take());
+            remembered = Some((raw, references));
+        }
         if anchors.insert(target, a).is_some() {
             return Err(Failure::Corrupt.into());
         }
@@ -451,6 +485,9 @@ fn load_in(
     }
     if anchors.len() != entries as usize || sha != role.finish() {
         return Err(Failure::Corrupt.into());
+    }
+    if let Some((raw, references)) = remembered {
+        crate::pure_memo::remember(&raw, references);
     }
     Ok(anchors)
 }

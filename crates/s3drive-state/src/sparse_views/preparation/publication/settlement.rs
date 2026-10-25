@@ -65,9 +65,23 @@ impl SourceReceipt {
     }
 }
 pub(super) fn request(r: &Record) -> Result<ViewRequest> {
+    request_with_reference(r, None)
+}
+pub(super) fn request_with_reference(
+    r: &Record,
+    prepared: Option<Option<&str>>,
+) -> Result<ViewRequest> {
     let receipt = r.receipt.as_ref().ok_or(Failure::Incomplete)?;
     let payload = receipt.node.payload.as_ref().ok_or(Failure::Corrupt)?;
-    let reference = ns::payload_reference(&receipt.node.payload).ok_or(Failure::Corrupt)?;
+    let derived;
+    let reference = match prepared {
+        Some(reference) => reference,
+        None => {
+            derived = ns::payload_reference(&receipt.node.payload);
+            derived.as_deref()
+        }
+    }
+    .ok_or(Failure::Corrupt)?;
     let root = r.input.root()?;
     let old = &r.input.binding;
     let binding = Binding::new(
@@ -75,7 +89,7 @@ pub(super) fn request(r: &Record) -> Result<ViewRequest> {
             &payload.reservation.volume,
             &payload.reservation.node,
             &payload.reservation.id,
-            &reference,
+            reference,
         )?,
         *old.store(),
         *old.source(),
@@ -95,7 +109,10 @@ pub(super) fn request(r: &Record) -> Result<ViewRequest> {
     q.validate()?;
     Ok(q)
 }
-pub(super) fn validate_record(r: &Record) -> Result<()> {
+pub(super) fn validate_record_with_reference(
+    r: &Record,
+    reference: Option<Option<&str>>,
+) -> Result<()> {
     let Some(a) = &r.acknowledgment else {
         return Ok(());
     };
@@ -113,7 +130,7 @@ pub(super) fn validate_record(r: &Record) -> Result<()> {
                 || id
                     != views::hash(
                         b"s3drive-sparse-rebase-view-v1\0",
-                        &(a.operation, request(r)?),
+                        &(a.operation, request_with_reference(r, reference)?),
                     )?
             {
                 return Err(Failure::Corrupt.into());

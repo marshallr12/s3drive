@@ -128,8 +128,8 @@ fn validate_snapshot_in(s: &ledger::Snapshot, on: bool) -> Result<()> {
     Ok(())
 }
 fn current(s: &ledger::Snapshot, info: &Info) -> Result<()> {
-    let t = info.input.retry.ok_or(Failure::ScopedRequired)?;
-    t.matches(&info.input, info.view.binding())?;
+    let t = info.input().retry.ok_or(Failure::ScopedRequired)?;
+    t.matches(info.input(), info.view.binding())?;
     let f = s
         .views
         .files
@@ -178,7 +178,7 @@ pub(super) fn admit_root(
     current(s, info)?;
     if operation
         != info
-            .input
+            .input()
             .retry
             .ok_or(Failure::ScopedRequired)?
             .publish_operation()?
@@ -207,7 +207,7 @@ pub(crate) fn admit_staging(
     let s = ledger::inspect(db)?;
     for (plan, level, slot) in s.objects.keys() {
         let i = s.info(*plan)?;
-        if i.root()?.is_none() || i.input.retry.is_none() {
+        if i.root()?.is_none() || i.input().retry.is_none() {
             continue;
         }
         if let Some(t) = transfers::transfer(
@@ -236,7 +236,7 @@ pub(crate) fn admit_remote(db: &Connection, generation: GenerationId) -> Result<
     let s = ledger::inspect(db)?;
     for (plan, level, slot) in s.objects.keys() {
         let i = s.info(*plan)?;
-        if i.root()?.is_none() || i.input.retry.is_none() {
+        if i.root()?.is_none() || i.input().retry.is_none() {
             continue;
         }
         if let Some(t) = transfers::transfer(
@@ -416,7 +416,7 @@ pub(super) fn checkpoint_snapshot(
 ) -> Result<Checkpoint> {
     publication::ledger::validate_source_snapshot(db, meta, s)?;
     let info = s.info(plan)?;
-    let token = info.input.retry.ok_or(Failure::ScopedRequired)?;
+    let token = info.input().retry.ok_or(Failure::ScopedRequired)?;
     let record = meta.records.get(&plan).ok_or(Failure::NotFound)?;
     let ack = record.acknowledgment().ok_or(Failure::Conflict)?;
     let anchor = ack.clean_view().ok_or(Failure::Conflict)?;
@@ -451,7 +451,7 @@ pub(super) fn checkpoint_snapshot(
         }
         // Native/owned history still carries independent open/epoch dependency
         // edges. Do not certify their retirement with a source-only proof.
-        let terminal = i.input.retry.is_some()
+        let terminal = i.input().retry.is_some()
             && i.ownership().is_none()
             && (i.native_ownership().is_none() || native_terminal)
             && meta

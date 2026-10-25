@@ -76,6 +76,13 @@ impl Storage {
                         return;
                     }
                 };
+                let memo = match crate::pure_memo::Lifetime::begin() {
+                    Ok(memo) => memo,
+                    Err(error) => {
+                        let _ = ready.send(Err(error));
+                        return;
+                    }
+                };
                 if ready.send(Ok(())).is_err() {
                     return;
                 }
@@ -97,6 +104,7 @@ impl Storage {
                 // Do not acknowledge close until the DB and its directory lock
                 // have been released. Unwinding also releases ownership, but
                 // cannot acknowledge a successful close.
+                drop(memo);
                 drop(store);
                 if let Some(reply) = closing {
                     let _ = reply.send(());

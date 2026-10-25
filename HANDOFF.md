@@ -1,20 +1,26 @@
 # S3Drive handoff
 
-Updated 2026-10-24. Event-bound manifest authority is accepted at schema46;
+Updated 2026-10-25. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
-## Fresh linked-native cleanup candidate accepted (2026-10-24)
+## Corrected fresh linked-native candidate accepted (2026-10-25)
 
-Exact candidate `3a7b95d4aa74deb15ea12f0820882893c5919f85`, tree
-`ac8d23d199151beeb90b5dfd43f7494d16f65003`, passed independent review of
-[run40130958279](https://github.com/marshallr12/s3drive/actions/runs/40130958279):
-all seven jobs, Linux1099/Windows1094 parent-harness workspace passes,
-801 exact source blobs, six artifact digests and 35 typed Windows
-reference records. Both OS passed shared300 and actual mounted debug/release300,
-including every remount segment and final cold read, plus full workspace,
-original native lifecycle, compatibility, reader-capacity, crash and full-disk
-rollback gates. Main verification remains pending at this documentation revision.
+Exact candidate `135a35bcbc8df575f7a9193f40da5e3adffead3c`, tree
+`b6dcb5cf7452e67552237c71d8792f2750cc2add`, passed independent review of
+[run40148159139](https://github.com/marshallr12/s3drive/actions/runs/40148159139):
+all seven jobs, Linux1103/Windows1098 parent-harness workspace passes,
+802 exact source blobs, six artifact digests and 35 typed Windows references.
+Both OS passed shared300, actual debug/release mounted300, every remount segment
+and final cold read, plus full workspace, original lifecycle, compatibility,
+reader-capacity, crash and full-disk rollback gates. Corrected-main verification
+remains pending at this documentation revision.
+
+Previous merged main `3ed77d43b94dca7d0c2ab05f140df9f68a3b4777` failed its
+Windows mounted300 deadline after 250 saves despite earlier candidate acceptance.
+That failure is not erased by this corrective candidate. Its Windows debug step
+passed in 19m08s under the unchanged 20-minute limit, only about 52 seconds of
+margin, not robust headroom. Main must pass its own full suite before acceptance.
 
 See [accepted scope and development history](docs/src/fresh-native-retention.md).
 This is opt-in cleanup for existing linked manifest files, not whole mounted
@@ -22,8 +28,8 @@ cleanup. Creation, namespace rename/removal/replacement, owned/deferred work and
 retained recovery cleanup remain unsupported/protected. Defaults are unchanged;
 no real store or provider object was deleted. Alpha databases are disposable:
 do not add old-format migration or backward-compatibility work. Unsupported
-formats still fail closed. Previous main `5a46fc0` remains the accepted baseline
-until the merged main's independent full verification completes.
+formats still fail closed. Main `5a46fc0` remains the last accepted main baseline
+until the corrected merge's independent full verification completes.
 
 ## Accepted ordinary-store cleanup and migration candidate (2026-10-23)
 

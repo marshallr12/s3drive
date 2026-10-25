@@ -15,7 +15,9 @@ mod semantics;
 pub use semantics::OriginalChunk;
 mod transfers;
 pub use journal::{Client, Dependency, Journal};
-pub use transfers::{Position, Transfer, TransferFailure, TreeReceipt};
+pub use transfers::{
+    DependencySelection, Position, Transfer, TransferFailure, TreeReceipt, UploadSelection,
+};
 const MAX_PLANS: usize = 256;
 const MAX_OBJECTS: usize = 262_144;
 const MAX_METADATA: u64 = 32 * 1024 * 1024;
