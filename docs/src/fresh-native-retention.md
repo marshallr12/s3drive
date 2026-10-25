@@ -461,13 +461,18 @@ all original acceptance gates are still required; no deadline is increased.
 ### Corrective pure-value and read-selection work (not yet accepted)
 
 The main Windows timeout remains unresolved pending exact-source execution.
-The next correction retains at most one 16 KiB canonical byte slice and three
+The next correction retains at most one 2 MiB canonical byte slice and three
 fixed-size payload-reference hashes on the dedicated state worker. It parses
 anchors again on every read, checks exact freshly queried bytes, and repeats all
 row, role, semantic, owner, frontier, witness and physical checks. Only pure
 canonical serialization and reference derivations are reused. The memo is
 inactive outside the worker lifetime and clears on exit or unwind; it does not
-retain a decoded object graph or any successful validation result.
+retain a decoded object graph or any successful validation result. The cap is
+the existing maximum valid anchor row size. A pending admitted SQL row is moved,
+not cloned, and the previous memo entry is dropped before allocating its
+replacement; at most one extra bounded row participates in that handoff. This
+is a retained-memo bound, not a process-memory ceiling: ordinary bounded SQL
+row and serde allocations still occur and are not cached.
 
 Immutable preparation `Info` values derive their ID once from private owned
 input. Upload/dependency and publication work selections combine adjacent

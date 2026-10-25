@@ -30,7 +30,11 @@ impl<'a> Journal<'a> {
             .transaction_with_behavior(TransactionBehavior::Deferred)?;
         let result = (|| {
             let meta = ledger::inspect(&tx)?;
-            let source = super::super::ledger::inspect(&tx)?;
+            let scope = crate::chunk_mount::read_scope_current(&tx)?;
+            let source = match &scope {
+                Some(scope) => super::super::ledger::inspect_scoped(scope)?,
+                None => super::super::ledger::inspect(&tx)?,
+            };
             ledger::validate_source_snapshot(&tx, &meta, &source)?;
             if let Some(record) = meta.records.get(&plan) {
                 return Ok(BeginSelection::Existing(Box::new(record.clone())));

@@ -4282,12 +4282,13 @@ async fn native_retry_validation_work_info_identity_is_immutable_and_exact() {
         let f = fixture();
         let context =
             Context::new(&n.view, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
-        n.client
+        let dirty = n
+            .client
             .write(n.token.clone(), context, [2; 32], 0, vec![7; 17])
             .await
             .unwrap();
         let context =
-            Context::new(&n.view, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
+            Context::new(&dirty, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
         let info = n.client.prepare(n.token.clone(), context).await.unwrap();
         let expected = crate::proof_hash::reference_json(
             b"s3drive-mixed-preparation-input-v1\0",
@@ -4341,6 +4342,19 @@ async fn native_retry_validation_work_canonical_memo_keeps_live_proofs_fresh() {
         .call(|store| {
             let s = &mut store.state;
             let before = native_snapshot(s);
+            let raw_len: i64 = s.connection.query_row(
+                "SELECT length(record) FROM sparse_retention_anchors",
+                [],
+                |r| r.get(0),
+            )?;
+            eprintln!(
+                "CANONICAL_MEMO raw_bytes={raw_len} cap_bytes={}",
+                crate::pure_memo::MAX_RAW
+            );
+            assert!(
+                raw_len <= crate::pure_memo::MAX_RAW as i64,
+                "ordinary fixture must exercise real admission"
+            );
             crate::pure_memo::clear_entry();
             let counts = crate::pure_memo::work();
             let proofs =
@@ -4454,12 +4468,13 @@ async fn native_retry_validation_work_upload_selections_preserve_branches_and_fr
         let f = fixture();
         let context =
             Context::new(&n.view, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
-        n.client
+        let dirty = n
+            .client
             .write(n.token.clone(), context, [2; 32], 0, vec![value; 17])
             .await
             .unwrap();
         let context =
-            Context::new(&n.view, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
+            Context::new(&dirty, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
         let info = n.client.prepare(n.token.clone(), context).await.unwrap();
         n.storage.cache().owner.call(move |store| {
             let s = &mut store.state;

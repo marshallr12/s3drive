@@ -3,7 +3,7 @@
 //! are fixed-size payload-reference bytes. No decoded object graph is retained.
 use std::{cell::RefCell, marker::PhantomData, rc::Rc};
 
-pub(crate) const MAX_RAW: usize = 16 * 1024;
+pub(crate) const MAX_RAW: usize = 2 * 1024 * 1024;
 // Retained storage is at most MAX_RAW plus size_of::<RefCell<Memo>>():
 // one exact-size boxed slice and inline fixed arrays, no nested allocation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -70,6 +70,9 @@ pub(crate) fn remember(raw: &[u8], references: References) {
     MEMO.with(|cell| {
         let mut memo = cell.borrow_mut();
         if memo.active && raw.len() <= MAX_RAW {
+            // Drop the old slice before allocating its replacement, bounding
+            // memo handoff storage as well as retained entry size.
+            memo.entry = None;
             memo.entry = Some(Entry {
                 raw: raw.into(),
                 references,

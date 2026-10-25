@@ -268,7 +268,12 @@ impl Journal<'_> {
             .connection
             .transaction_with_behavior(TransactionBehavior::Deferred)?;
         let result = (|| {
-            let s = inspect(&tx)?;
+            no_triggers(&tx)?;
+            let scope = crate::chunk_mount::read_scope_current(&tx)?;
+            let s = match &scope {
+                Some(scope) => ledger::inspect_scoped(scope)?,
+                None => inspect(&tx)?,
+            };
             let info = ready(&s, plan)?;
             let transfer = transfer(&tx, &s, &info, p)?;
             let prior = match transfer.as_ref().and_then(Transfer::generation) {
@@ -290,7 +295,12 @@ impl Journal<'_> {
             .connection
             .transaction_with_behavior(TransactionBehavior::Deferred)?;
         let result = (|| {
-            let s = inspect(&tx)?;
+            no_triggers(&tx)?;
+            let scope = crate::chunk_mount::read_scope_current(&tx)?;
+            let s = match &scope {
+                Some(scope) => ledger::inspect_scoped(scope)?,
+                None => inspect(&tx)?,
+            };
             let info = ready(&s, plan)?;
             let content = journal::dependency_from(&s, plan, p.level, p.slot)?;
             let children = children(&s, &info, p)?;

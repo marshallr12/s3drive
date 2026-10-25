@@ -455,11 +455,14 @@ fn load_in(
         #[cfg(test)]
         ANCHOR_CHECKS.set(ANCHOR_CHECKS.get() + 1);
         a.validate_with_references(isolation, owner, scope, Some(&references))?;
-        if hit.is_none() && raw.len() <= crate::pure_memo::MAX_RAW {
-            remembered = Some((raw.clone(), references));
-        }
         let target = a.target()?;
         role.push(target, canonical)?;
+        if hit.is_none() && raw.len() <= crate::pure_memo::MAX_RAW {
+            // Move the already bounded SQL row, rather than clone it. Only
+            // one candidate survives until the full role/witness check ends.
+            drop(remembered.take());
+            remembered = Some((raw, references));
+        }
         if anchors.insert(target, a).is_some() {
             return Err(Failure::Corrupt.into());
         }
