@@ -8,6 +8,7 @@ pub enum Domain {
     Session,
     Namespace,
     Creation,
+    Source,
 }
 impl Domain {
     fn label(self) -> &'static str {
@@ -16,6 +17,7 @@ impl Domain {
             Self::Session => "session",
             Self::Namespace => "namespace",
             Self::Creation => "creation",
+            Self::Source => "source",
         }
     }
 }
@@ -200,5 +202,50 @@ pub(crate) fn namespace(db: &Connection, input: &names::Input) -> Result<()> {
         Ok(())
     } else {
         Err("namespace operation is expired or lacks original callback".into())
+    }
+}
+
+/// A cold source re-import receives a new initial-view identity even when its
+/// verified remote binding has not changed. Old source commands cannot recreate
+/// the erased parent graph and thereby revive their old derived IDs.
+pub(crate) fn source_operation(
+    db: &Connection,
+    binding: &crate::sparse_views::Binding,
+) -> Result<Option<crate::sparse_views::ScopedOperation>> {
+    if !super::quiescent_enabled(db)? {
+        return Ok(None);
+    }
+    let id = next(db, Domain::Source)?.ok_or("source admission frontier missing")?;
+    Ok(Some(crate::sparse_views::ScopedOperation::new(
+        binding,
+        hash(b"s3drive-native-source-admission-v1\0", &id)?,
+    )?))
+}
+pub(crate) fn consume_source(
+    db: &Connection,
+    binding: &crate::sparse_views::Binding,
+    operation: [u8; 32],
+) -> Result<()> {
+    let Some(expected) = source_operation(db, binding)? else {
+        return Ok(());
+    };
+    if expected.id()? != operation {
+        return Err("source command belongs to an expired or unissued admission".into());
+    }
+    let id = next(db, Domain::Source)?.ok_or("source admission frontier missing")?;
+    consume(db, Domain::Source, &id)
+}
+impl Client {
+    pub async fn next_source_operation(
+        &self,
+        binding: crate::sparse_views::Binding,
+    ) -> Result<Option<crate::sparse_views::ScopedOperation>> {
+        let key = self.key.clone();
+        self.owner
+            .call(move |worker| {
+                require(&worker.state.connection, &key)?;
+                source_operation(&worker.state.connection, &binding)
+            })
+            .await
     }
 }

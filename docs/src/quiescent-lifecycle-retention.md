@@ -27,14 +27,17 @@ consumed identity frontier, scoped/retry mode and source bindings remain.
 
 ## Admission and expiry
 
-Direct namespace and canonical creator requests use separate owner-bound domains
+Direct namespace, canonical creator and cold source-import requests use separate owner-bound domains
 of the permanent monotonic frontier. Exact retained retries precede consumption;
 a forgotten original request cannot be inserted again. Existing callback policy
 uses deterministic children of an original open ID, callback and fixed role.
 Such namespace admission requires the complete original retained event chain and
 exact linked input; a retired open cannot admit a new child. Erasing the parent
 therefore expires its callback children as well. No callback identity is replaced
-merely to retry an uncertain operation.
+merely to retry an uncertain operation. A source re-import consumes a fresh
+ordinal even if its remote descriptor is unchanged, so an erased source parent
+ID cannot be recreated by retrying its original token. The initial graph and
+all child mutation IDs therefore differ after a completed cut.
 
 Prospective creator/open atomic admission remains explicitly refused in this
 prototype. It needs its own paired reservation proof, rather than consuming two
@@ -58,8 +61,9 @@ its actual creation route has been tested.
    known creator/transfer/root generations must equal all staged generations;
    unrelated staging blocks the cut rather than being erased.
 5. End the read proof, remove the selected source/lifecycle/physical records,
-   then construct an entirely fresh proof. The permanent binding must be exactly
-   unchanged and all cut graphs empty. Cyclic source foreign keys are deferred
+   then construct an entirely fresh proof. The permanent binding, identity/session rows, source bindings and mode/reader
+   counters must be byte-for-byte unchanged; source, publication, namespace,
+   creator, recovery/open and physical journals must be empty. Cyclic source foreign keys are deferred
    only within the transaction and explicitly checked before commit; checking
    is never disabled.
 
@@ -71,7 +75,8 @@ remain required before claiming the broader lifecycle milestone complete.
 
 ## Acceptance still required
 
-The prototype has modeled tests for separate admission profiles, exact retained
+The prototype has modeled tests for separate admission profiles, expired source
+re-imports, physical clone/acquisition races, exact retained
 retries, active-open and reader-clone deferral, dirty/incomplete preservation,
 closed publisher eviction and completed recovery without fabricating Close.
 Compilation alone is not durable execution. Hosted tests must establish these
@@ -95,3 +100,13 @@ The filesystem must invalidate only its own evicted cached file entries; it
 cannot drop independent readers to force eligibility. Package/startup/provider
 and physical-machine evidence remains a separate gate in the
 [beta completion plan](beta-completion.md).
+
+
+### First hosted state-protocol result (not acceptance)
+
+On exact `e11c5d66b6c8da37285b61618b947248f6218fe7`,
+[run40206741871](https://github.com/marshallr12/s3drive/actions/runs/40206741871)
+passed45 Linux focused diagnostic cases, including six initial quiescent tests.
+Complete focused logs were reviewed. The full suite and Windows remain pending;
+the follow-on source-expiry/post-cut/concurrent-acquisition additions are newer
+code and do not inherit that result. No mounted option is enabled.

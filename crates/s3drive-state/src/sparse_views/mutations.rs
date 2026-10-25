@@ -172,6 +172,7 @@ impl<'a> Journal<'a> {
         if before.files.contains_key(&target) {
             return Err(Failure::Conflict.into());
         }
+        crate::chunk_mount::admission::consume_source(&tx, &record.request.binding, operation)?;
         let raw = encode(&record.request.binding)?;
         if raw.len() > BINDING_BYTES {
             return Err(Failure::Bounds.into());

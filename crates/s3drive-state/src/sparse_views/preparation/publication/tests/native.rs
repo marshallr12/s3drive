@@ -64,11 +64,11 @@ async fn setup_contract(
             };
             let input = open_with_posix(s, &f, &key, posix);
             views::scoped::enable(s)?;
-            let view = views::Journal::new(s, views::Options::default())?.begin_scoped(
-                views::ScopedOperation::new(&f.binding, [1; 32])?,
-                f.binding,
-                17,
-            )?;
+            let operation =
+                crate::chunk_mount::admission::source_operation(&s.connection, &f.binding)?
+                    .unwrap_or(views::ScopedOperation::new(&f.binding, [1; 32])?);
+            let view = views::Journal::new(s, views::Options::default())?
+                .begin_scoped(operation, f.binding, 17)?;
             Ok((key, input, view))
         })
         .await
@@ -5356,5 +5356,177 @@ async fn native_retry_validation_work_quiescent_callback_child_requires_original
         .await
         .unwrap();
     assert!(!n.client.retire_quiescent().await.unwrap());
+    n.storage.close().await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn native_retry_validation_work_quiescent_physical_clone_and_acquisition_race() {
+    for reader_first in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let n = setup_contract(
+            &tmp.path().join("quiescent physical exclusion"),
+            16,
+            true,
+            true,
+            true,
+        )
+        .await;
+        retry_cycle_mode(&n, fixture(), 5, false).await;
+        let generation = n
+            .storage
+            .cache()
+            .owner
+            .call(|store| {
+                let plan: Vec<u8> = store.state.connection.query_row(
+                    "SELECT plan_id FROM sparse_preparations",
+                    [],
+                    |r| r.get(0),
+                )?;
+                Ok(j(&mut store.state)
+                    .get(plan.try_into().unwrap())?
+                    .physical
+                    .generation)
+            })
+            .await
+            .unwrap();
+        let staging = n.storage.staging();
+        let reader = staging.snapshot(generation).await.unwrap();
+        let clone = reader.clone();
+        drop(reader);
+        let expected = clone.read(0, 4096).await.unwrap();
+        let (bytes, collected) = tokio::join!(clone.read(0, 4096), n.client.retire_quiescent());
+        assert_eq!(bytes.unwrap(), expected);
+        assert!(!collected.unwrap());
+        drop(clone);
+        let (acquired, collected) = if reader_first {
+            tokio::join!(staging.snapshot(generation), n.client.retire_quiescent())
+        } else {
+            let (collected, acquired) =
+                tokio::join!(n.client.retire_quiescent(), staging.snapshot(generation));
+            (acquired, collected)
+        };
+        match acquired {
+            Ok(reader) => {
+                assert!(
+                    !collected.unwrap(),
+                    "an admitted lease must protect its generation"
+                );
+                assert_eq!(reader.read(0, 4096).await.unwrap(), expected);
+                drop(reader);
+                assert!(n.client.retire_quiescent().await.unwrap());
+            }
+            Err(_) => assert!(
+                collected.unwrap(),
+                "a completed cut must reject later acquisition"
+            ),
+        }
+        assert!(staging.snapshot(generation).await.is_err());
+        n.storage.close().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_quiescent_cold_source_reimport_expires_old_commands() {
+    let tmp = tempfile::tempdir().unwrap();
+    let n = setup_contract(
+        &tmp.path().join("source reimport expiry"),
+        16,
+        true,
+        true,
+        true,
+    )
+    .await;
+    // The initial source ordinal follows session and open admission. Capture
+    // the exact original token from its known ordinal only in this fixture.
+    let owner = n.key.owner().to_owned();
+    let old_token = n
+        .storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let serial = crate::chunk_mount::admission::frontier(&store.state.connection)?;
+            let digest = hash(
+                b"s3drive-native-admission-v1\0",
+                &(&owner, "source", serial),
+            )?;
+            let issued = format!("{serial:016x}{}", hex(&digest[..8]));
+            views::ScopedOperation::new(
+                &fixture().binding,
+                hash(b"s3drive-native-source-admission-v1\0", &issued)?,
+            )
+        })
+        .await
+        .unwrap();
+    assert_eq!(old_token.id().unwrap(), n.view.operation());
+    let old_view = n.view.id();
+    let original = n.token.input().clone();
+    close_native(&n, &n.token, 71).await.unwrap();
+    n.client
+        .complete(n.token.clone(), hex(&[71; 16]), hex(&[72; 16]))
+        .await
+        .unwrap();
+    let key = n.key.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            opens(&mut store.state, &key).retire(&original.id)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(n.client.retire_quiescent().await.unwrap());
+    let key = n.key.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            let f = fixture();
+            assert!(
+                views::Journal::new(s, views::Options::default())?
+                    .begin_scoped(old_token, f.binding.clone(), 17)
+                    .is_err()
+            );
+            // Arbitrary legacy/source IDs cannot recreate a forgotten graph.
+            assert!(
+                views::Journal::new(s, views::Options::default())?
+                    .begin_scoped(
+                        views::ScopedOperation::new(&f.binding, [1; 32])?,
+                        f.binding.clone(),
+                        17
+                    )
+                    .is_err()
+            );
+            let token = crate::chunk_mount::admission::source_operation(&s.connection, &f.binding)?
+                .unwrap();
+            let new = views::Journal::new(s, views::Options::default())?.begin_scoped(
+                token,
+                f.binding.clone(),
+                17,
+            )?;
+            assert_ne!(new.id(), old_view);
+            assert_eq!(
+                views::Journal::new(s, views::Options::default())?
+                    .begin_scoped(token, f.binding, 17)?
+                    .id(),
+                new.id()
+            );
+            assert!(
+                views::Journal::new(s, views::Options::default())?
+                    .write_scoped(token, old_view, 0, &[99])
+                    .is_err()
+            );
+            crate::chunk_mount::require(&s.connection, &key)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(
+        n.client
+            .write(n.token.clone(), context(&n.view), [3; 32], 0, vec![99])
+            .await
+            .is_err()
+    );
     n.storage.close().await.unwrap();
 }

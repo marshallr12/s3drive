@@ -9,6 +9,10 @@ pub(in crate::sparse_views) fn retire(
     key: &crate::chunk_mount::Key,
 ) -> Result<bool> {
     state.verify_staging_storage()?;
+    // New physical acquisitions require this serialized worker's mutable
+    // State. Other threads may only clone/drop existing strong tokens, never
+    // upgrade a Weak token. Thus an empty result cannot gain a reader before
+    // this synchronous command ends; concurrent drops only overprotect.
     let readers = state.staging_readers.active();
     let tx = state
         .connection
@@ -19,6 +23,7 @@ pub(in crate::sparse_views) fn retire(
     }
     let scope = crate::chunk_mount::read_scope(&tx, key)?;
     let binding = scope.binding().clone();
+    let permanent = permanent_rows(&tx)?;
     let before = prep::ledger::inspect_scoped(&scope)?;
     let roots = ledger::inspect(&tx)?;
     ledger::validate_source_snapshot(&tx, &roots, &before)?;
@@ -126,6 +131,35 @@ pub(in crate::sparse_views) fn retire(
     }
     prep::journal::checkpoint("quiescent-retire", "PhysicalErased");
     crate::chunk_mount::validate_all(&tx)?;
+    for table in [
+        "namespace_intents",
+        "manifest_creations",
+        "manifest_creation_role",
+        "windows_session_recoveries",
+        "recovered_windows_opens",
+        "windows_open_events",
+        "retired_windows_opens",
+        "retained_windows_opens",
+        "windows_open_journal",
+        "staged_generations",
+        "staged_extents",
+        "staged_operations",
+        "staged_heads",
+        "write_journal",
+        "remote_intents",
+        "retained_remote_intents",
+        "remote_flushes",
+        "write_settlements",
+    ] {
+        if tx.query_row(&format!("SELECT EXISTS(SELECT 1 FROM {table})"), [], |r| {
+            r.get::<_, bool>(0)
+        })? {
+            return Err(Failure::Corrupt.into());
+        }
+    }
+    if permanent_rows(&tx)? != permanent {
+        return Err(Failure::Corrupt.into());
+    }
     let fresh_scope = crate::chunk_mount::read_scope(&tx, key)?;
     let after = prep::ledger::inspect_scoped(&fresh_scope)?;
     if fresh_scope.binding() != &binding
@@ -150,4 +184,45 @@ pub(in crate::sparse_views) fn retire(
     state.native_sparse.forget_retired(&records);
     prep::journal::checkpoint("quiescent-retire", "Committed");
     Ok(true)
+}
+
+// Expected bytes only for this transaction, not reusable validation authority.
+// Keep all owner/session/source identities byte-for-byte, including unused
+// source bindings; the cut neither rebinds credentials nor resets reader IDs.
+fn permanent_rows(db: &Connection) -> Result<Vec<Vec<rusqlite::types::Value>>> {
+    use rusqlite::types::{Value, ValueRef};
+    let mut result = Vec::new();
+    for table in [
+        "chunk_mount_role",
+        "client_identity",
+        "retained_client_identity",
+        "source_bindings",
+        "windows_mount_sessions",
+        "source_read_pin_session",
+        "sparse_scoped_mode",
+        "sparse_retry_mode",
+    ] {
+        let mut statement = db.prepare(&format!("SELECT * FROM {table} ORDER BY 1 LIMIT 257"))?;
+        let columns = statement.column_count();
+        let mut rows = statement.query([])?;
+        let mut count = 0;
+        // Boundary marker prevents equality across different table partitions.
+        result.push(vec![Value::Text(table.into())]);
+        while let Some(row) = rows.next()? {
+            count += 1;
+            if count > 256 {
+                return Err(Failure::Corrupt.into());
+            }
+            let mut values = Vec::new();
+            for column in 0..columns {
+                if matches!(row.get_ref(column)?, ValueRef::Text(b) | ValueRef::Blob(b) if b.len() > 65536)
+                {
+                    return Err(Failure::Corrupt.into());
+                }
+                values.push(row.get::<_, Value>(column)?);
+            }
+            result.push(values);
+        }
+    }
+    Ok(result)
 }
