@@ -414,6 +414,26 @@ jobs:
             else
               echo "No matching identity symbols; attribution unavailable, not zero cost."
             fi
+            echo "Complete bounded direct-callee sections for intrinsic representation work:"
+            python - "$RUNNER_TEMP/native-cpu-profile/identities.txt" <<'PYREPORT'
+          import pathlib, re, sys
+          report = pathlib.Path(sys.argv[1]).read_text()
+          selected = re.compile(r"retention::(?:Anchor|native::Terminal).*::validate_in|preparation::model::(?:Input|Info).*::(?:validate|id)|publication::model::(?:Input|Record).*::(?:validate|matches|reservation)|sparse_views::model::Record.*::child|transfers::object_operation")
+          blocks = []
+          for block in re.split(r"\n[ \t]*\n", report):
+              if any(re.search(r"\s\*\s", line) and selected.search(line) for line in block.splitlines()):
+                  blocks.append(block)
+          if not blocks:
+              print("No matching direct-callee sections; attribution unavailable, not zero cost.")
+          for index, block in enumerate(blocks[:12]):
+              lines = block.splitlines()
+              print(f"Section {index + 1}: inclusive costs overlap and must not be summed across callers.")
+              print("\n".join(lines[:120]))
+              if len(lines) > 120:
+                  print(f"Section truncated: {len(lines) - 120} additional lines omitted.")
+          if len(blocks) > 12:
+              print(f"Additional matching sections omitted: {len(blocks) - 12}.")
+          PYREPORT
             echo "Targeted validation/serialization/SQL families (inclusive report):"
             grep -E 'retention|Terminal|Anchor|serde|sha2|checked_flushes|read_data|rusqlite|sqlite|preparation.*ledger|sparse_views.*ledger' "$RUNNER_TEMP/native-cpu-profile/inclusive.txt" | awk 'NR <= 200' || true
           else

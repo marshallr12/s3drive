@@ -3,10 +3,19 @@
 Status: exact candidate `3a7b95d4aa74deb15ea12f0820882893c5919f85`, tree
 `ac8d23d199151beeb90b5dfd43f7494d16f65003`, passed independent source, full-log
 and artifact review of [run40130958279](https://github.com/marshallr12/s3drive/actions/runs/40130958279),
-attempt 1, on 2026-10-24. All seven jobs passed. Merge/main verification remains
-pending at this documentation revision; candidate acceptance is not a claim
+attempt 1, on 2026-10-24. All seven jobs passed. The main follow-up below failed;
+corrective verification remains pending. Candidate acceptance is not a claim
 about a later main commit. The default and `owned-unlinked-v1` profile remain
 unchanged.
+
+Main follow-up: merge `3ed77d43b94dca7d0c2ab05f140df9f68a3b4777` contains
+that accepted candidate plus evidence-only documentation. Its independent
+[main run40140286274](https://github.com/marshallr12/s3drive/actions/runs/40140286274)
+failed the unchanged Windows mounted300 deadline after 250 saves on 2026-10-24
+UTC. No integrity assertion failed before the timeout, but main is not accepted.
+The earlier candidate result remains historical evidence, not a substitute for
+this failed main gate. Corrective performance work is pending; no unchanged
+rerun, deadline increase or smaller workload establishes acceptance.
 
 Both Linux FUSE and Windows WinFsp completed all 300 saves, actual Close calls,
 30 owner/remount segments and the final cold read in debug and release. Shared
