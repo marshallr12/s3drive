@@ -1818,6 +1818,14 @@ async fn run(mode: &str) {
         {
             eprintln!("{err}");
         }
+        if component && (result.is_err() || !status.success() || killed) {
+            native_lifecycle::inspect_component_failure(tmp.path());
+            let retained = tmp.keep();
+            panic!(
+                "component failure retained privately on runner at {}: case {stage}: {status}: {err}",
+                retained.display()
+            );
+        }
         assert!(
             result.is_ok()
                 && if matches!(

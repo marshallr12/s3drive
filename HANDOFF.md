@@ -70,6 +70,18 @@ all permanent owner/session/source rows and physical payloads explicitly.
 Production code is unchanged since306ed181. Full original gates, extended soaks,
 artifact/source verification and independent main acceptance remain required.
 
+The longer component soak found an unresolved acceptance blocker on c98496f:
+Linux completed28 cycles, then cycle31 Close reported `database disk image is
+malformed` and retained recovery. The whole workload correctly failed in
+[run40214811902](https://github.com/marshallr12/s3drive/actions/runs/40214811902).
+This is not attributed to physical corruption or a dependency without evidence.
+The original fixture did not retain DB/WAL. New failure-only read-only SQLite
+integrity diagnostics retain the synthetic directory privately on its runner;
+no raw archive is uploaded. The unchanged100-cycle step runs earlier to diagnose
+promptly. Source32cbd07 passed54 focused proofs (including physical alias refusal)
+and three actual cases on each OS, but these do not override the longer failure.
+All component acceptance and merge remain blocked pending diagnosis/fix/full gates.
+
 ## Corrected fresh linked-native candidate accepted (2026-10-25)
 
 Exact candidate `135a35bcbc8df575f7a9193f40da5e3adffead3c`, tree

@@ -917,3 +917,51 @@ pub async fn component_repeated_mounted(config: &s3drive_core::Config, root: &Pa
         completed + 4
     );
 }
+
+// Synthetic test data only. No raw database/archive is uploaded or emitted.
+pub fn inspect_component_failure(root: &Path) {
+    let path = root.join("native-state/metadata.sqlite3");
+    let db = match rusqlite::Connection::open_with_flags(
+        path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    ) {
+        Ok(db) => db,
+        Err(error) => {
+            eprintln!("COMPONENT_FAILURE open={error:?}");
+            return;
+        }
+    };
+    db.busy_timeout(Duration::from_secs(2)).unwrap();
+    eprintln!("COMPONENT_FAILURE sqlite={}", rusqlite::version());
+    for sql in ["PRAGMA quick_check(8)", "PRAGMA integrity_check(8)"] {
+        let result = (|| -> rusqlite::Result<Vec<String>> {
+            db.prepare(sql)?
+                .query_map([], |r| r.get(0))?
+                .take(8)
+                .collect()
+        })();
+        eprintln!("COMPONENT_FAILURE {sql}: {result:?}");
+    }
+    for table in [
+        "sparse_view_files",
+        "sparse_views",
+        "sparse_preparations",
+        "sparse_publications",
+        "staged_generations",
+        "staged_chunks",
+        "windows_open_journal",
+        "namespace_intents",
+        "manifest_creations",
+    ] {
+        let result = db.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| {
+            r.get::<_, i64>(0)
+        });
+        eprintln!("COMPONENT_FAILURE count {table}: {result:?}");
+    }
+    let foreign: rusqlite::Result<bool> = db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM pragma_foreign_key_check)",
+        [],
+        |r| r.get(0),
+    );
+    eprintln!("COMPONENT_FAILURE foreign_key_violation={foreign:?}");
+}
