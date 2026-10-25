@@ -35,7 +35,14 @@ to both session-admission and open-retirement pruning, with pending and finished
 recovery fixtures across a third exclusive owner. Local compilation succeeds;
 local durable execution is blocked by tmpfs, not passed. Hosted proof is pending.
 
-Subsequent cleanup needs complete recovery-group proofs, original dirty-source
+A following unaccepted candidate reclaims only complete, finished no-effect
+recovery groups: no creation/admission, namespace closure, owned source epoch or
+frozen publication. A clone-held reader defers collection; deletion refusal must
+preserve all records; consumed open IDs cannot be admitted again. This is not
+cleanup of recovered publishers or owned/namespace histories. The new tests
+compile locally; hosted results remain pending.
+
+Broader cleanup needs complete recovery-group proofs, original dirty-source
 and namespace settlement validation, unchanged Close semantics, expired replay
 identities and transactional removal. Recovery abandonment is not an observed
 native Close and cannot fabricate its completion suffix. Unknown outcomes,

@@ -106,8 +106,9 @@ impl Journal<'_> {
     }
 }
 
-/// Fresh linked-native slice only. Recovery, creation and namespace ownership
-/// retain their original journals until their separate compact proofs exist.
+/// Fresh linked-native slice plus fully settled no-effect recovery groups.
+/// Publishers recovered without an observed Close, creation and namespace
+/// ownership retain their original journals until compact proofs exist.
 pub(crate) fn native_candidates(
     db: &Connection,
     volume: &str,
@@ -116,12 +117,7 @@ pub(crate) fn native_candidates(
     if !crate::chunk_mount::retry_enabled(db)? {
         return Err("native retention requires fresh retry contract".into());
     }
-    for table in [
-        "namespace_intents",
-        "manifest_creations",
-        "windows_session_recoveries",
-        "recovered_windows_opens",
-    ] {
+    for table in ["namespace_intents", "manifest_creations"] {
         if db.query_row(&format!("SELECT EXISTS(SELECT 1 FROM {table})"), [], |r| {
             r.get::<_, bool>(0)
         })? {
@@ -163,15 +159,33 @@ pub(crate) fn native_candidates(
         }
         records.push(record);
     }
+    session::no_effect_retirement_groups(db, &records)?;
     Ok(records)
 }
 pub(crate) fn erase_native(db: &Connection, records: &[OpenRecord], runtime: &str) -> Result<()> {
+    let recoveries = session::no_effect_retirement_groups(db, records)?;
+    // Check every sealed record while its complete recovery proof still exists.
     for record in records {
         if load(db, &record.input.id)?.as_ref().map(|(_, r)| r) != Some(record)
             || !is_retired(db, &record.input.id)?
         {
             return Err("native retirement proof changed".into());
         }
+    }
+    for recovery in recoveries {
+        db.execute(
+            "DELETE FROM recovered_windows_opens WHERE recovery_id=?1",
+            [&recovery],
+        )?;
+        if db.execute(
+            "DELETE FROM windows_session_recoveries WHERE recovery_id=?1",
+            [&recovery],
+        )? != 1
+        {
+            return Err("native recovery retirement lost its exact group".into());
+        }
+    }
+    for record in records {
         for table in [
             "windows_open_events",
             "retired_windows_opens",

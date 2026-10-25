@@ -4559,7 +4559,8 @@ async fn native_retry_validation_work_upload_selections_preserve_branches_and_fr
 }
 
 #[tokio::test]
-async fn native_retry_recovery_observer_session_survives_next_owner_without_an_open() {
+async fn native_retry_validation_work_recovery_observer_session_survives_next_owner_without_an_open()
+ {
     for finish in [false, true] {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("recovery observer session");
@@ -4627,4 +4628,122 @@ async fn native_retry_recovery_observer_session_survives_next_owner_without_an_o
             .unwrap();
         storage.close().await.unwrap();
     }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_no_effect_recovery_reclaims_complete_group_only_after_last_reader()
+ {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("no effect recovery retention");
+    let old = setup_mode(&path, 16, true).await;
+    let input = old.token.input().clone();
+    let view = old.view.id();
+    old.storage.close().await.unwrap();
+    let storage = Storage::open(
+        &path,
+        crate::cache::Options::default(),
+        crate::journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    let key = old.key.clone();
+    let capability = crate::chunk_mount::Client::new(
+        storage.cache().owner,
+        crate::journal::Options::default(),
+        key.clone(),
+    );
+    let session = capability
+        .next_admission(crate::chunk_mount::AdmissionDomain::Session)
+        .await
+        .unwrap()
+        .unwrap();
+    let journal = capability.opens();
+    journal
+        .start_session(session.clone(), input.volume.clone())
+        .await
+        .unwrap();
+    let recovery = journal
+        .prepare_recovery(
+            session.clone(),
+            input.volume.clone(),
+            input.node.clone(),
+            None,
+        )
+        .await
+        .unwrap();
+    let collector = capability
+        .native_sparse(views::Options::default(), Options::default())
+        .unwrap();
+    assert!(journal.retire(input.id.clone()).await.is_err());
+    assert!(!collector.retire_linked(input.node.clone()).await.unwrap());
+    assert!(
+        journal
+            .finish_recovery(session.clone(), recovery.input.id.clone())
+            .await
+            .unwrap()
+            .finished
+    );
+    journal.retire(input.id.clone()).await.unwrap();
+    let local = storage.sparse_views(views::Options::default()).unwrap();
+    let reader = local.guard(view).await.unwrap();
+    let clone = reader.clone();
+    drop(reader);
+    assert!(!collector.retire_linked(input.node.clone()).await.unwrap());
+    assert!(journal.recovered(input.id.clone()).await.unwrap());
+    drop(clone);
+    // A swallowed group deletion must roll back both membership and original
+    // open evidence, not leave a falsely empty collector result.
+    storage.cache().owner.call(|store| {
+        store.state.connection.execute_batch("CREATE TRIGGER ignore_recovery_retirement BEFORE DELETE ON windows_session_recoveries BEGIN SELECT RAISE(IGNORE); END")?;
+        Ok(())
+    }).await.unwrap();
+    assert!(collector.retire_linked(input.node.clone()).await.is_err());
+    storage
+        .cache()
+        .owner
+        .call(|store| {
+            store
+                .state
+                .connection
+                .execute_batch("DROP TRIGGER ignore_recovery_retirement")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(journal.recovered(input.id.clone()).await.unwrap());
+    assert!(collector.retire_linked(input.node.clone()).await.unwrap());
+    assert!(!collector.retire_linked(input.node.clone()).await.unwrap());
+    assert!(journal.get(input.id.clone()).await.is_err());
+    assert!(journal.prepare(input.clone()).await.is_err());
+    assert!(
+        journal
+            .finish_recovery(session, recovery.input.id)
+            .await
+            .is_err()
+    );
+    storage.close().await.unwrap();
+    let mut state = State::open_managed(&path).unwrap();
+    for table in [
+        "windows_session_recoveries",
+        "recovered_windows_opens",
+        "windows_open_journal",
+        "retired_windows_opens",
+    ] {
+        assert_eq!(
+            state
+                .connection
+                .query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r
+                    .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+    }
+    assert_eq!(
+        views::Journal::new(&mut state, views::Options::default())
+            .unwrap()
+            .current_head(&fixture().binding)
+            .unwrap()
+            .id(),
+        view
+    );
 }

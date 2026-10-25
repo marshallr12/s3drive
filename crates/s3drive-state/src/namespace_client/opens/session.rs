@@ -221,6 +221,50 @@ pub(super) fn check_index(db: &Connection) -> Result<()> {
     }
     Ok(())
 }
+/// Select only complete no-effect recovery groups. Abandonment is not an
+/// observed Close and cannot stand in for a publisher's terminal suffix.
+pub(super) fn no_effect_retirement_groups(
+    db: &Connection,
+    records: &[OpenRecord],
+) -> Result<Vec<String>> {
+    check_index(db)?;
+    let selected = records
+        .iter()
+        .map(|r| r.input.id.as_str())
+        .collect::<std::collections::BTreeSet<_>>();
+    let mut groups = std::collections::BTreeSet::new();
+    for record in records {
+        let key: Option<String> = db
+            .query_row(
+                "SELECT recovery_id FROM recovered_windows_opens WHERE open_id=?1",
+                [&record.input.id],
+                |r| r.get(0),
+            )
+            .optional()?;
+        let Some(key) = key else { continue };
+        let (input, proof) = recovery(db, &key)?;
+        if input.cancel.is_some()
+            || proof.as_ref().is_none_or(|p| p.closure.is_some())
+            || input
+                .opens
+                .iter()
+                .any(|o| !selected.contains(o.id.as_str()))
+            || record.events.iter().any(|e| {
+                matches!(
+                    e.action,
+                    Action::OwnSparseEpoch { .. } | Action::FreezeSparse { .. }
+                )
+            })
+            || !crate::sparse_views::preparation::native::recovery_ready(db, record)?
+        {
+            return Err(
+                "recovery group still protects original effects or incomplete members".into(),
+            );
+        }
+        groups.insert(key);
+    }
+    Ok(groups.into_iter().collect())
+}
 // Recovery has its own observing session, which need not own an open. Keep
 // that identity until its complete recovery group is explicitly reclaimed.
 pub(super) fn prune_unused_sessions(db: &Connection, runtime: &str) -> Result<()> {
