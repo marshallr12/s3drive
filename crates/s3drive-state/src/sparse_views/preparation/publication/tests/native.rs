@@ -4934,11 +4934,21 @@ async fn native_retry_validation_work_no_effect_recovery_rejects_resealed_same_r
     let before = storage.cache().owner.call(|store| {
         let db = &store.state.connection;
         let original: String = db.query_row("SELECT json_extract(input,'$.session') FROM windows_open_journal", [], |r| r.get(0))?;
-        let runtime: String = db.query_row("SELECT runtime_id FROM windows_mount_sessions WHERE session_id=?1", [&original], |r| r.get(0))?;
-        let observer: String = db.query_row("SELECT json_extract(input,'$.session') FROM windows_session_recoveries", [], |r| r.get(0))?;
-        let (volume, owner): (String, String) = db.query_row("SELECT volume_id,owner_id FROM windows_mount_sessions WHERE session_id=?1", [&observer], |r| Ok((r.get(0)?, r.get(1)?)))?;
-        let seal = hash(b"s3drive-mount-session-v1\0", &(&observer, &volume, &runtime, &owner))?;
-        assert_eq!(db.execute("UPDATE windows_mount_sessions SET runtime_id=?1,state_hash=?2 WHERE session_id=?3", rusqlite::params![runtime, seal.as_slice(), observer])?, 1);
+        // Rebind the recovery's observer, not a session's runtime: the latter
+        // is independently forbidden by the existing UNIQUE(volume,runtime).
+        let (raw, proof): (Vec<u8>, Option<Vec<u8>>) = db.query_row("SELECT input,proof FROM windows_session_recoveries", [], |r| Ok((r.get(0)?, r.get(1)?)))?;
+        let mut input: opens::session::RecoveryInput = serde_json::from_slice(&raw)?;
+        let old = input.id.clone();
+        input.session = original;
+        input.id = hex(&hash(b"s3drive-session-recovery-id-v1\0", &(&input.session, &input.volume, &input.node))?[..16]);
+        let proof: Option<serde_json::Value> = proof.map(|b| serde_json::from_slice(&b)).transpose()?;
+        let seal = hash(b"s3drive-session-recovery-v1\0", &(&input, &proof))?;
+        let tx = store.state.connection.transaction()?;
+        tx.pragma_update(None, "defer_foreign_keys", true)?;
+        assert_eq!(tx.execute("UPDATE windows_session_recoveries SET recovery_id=?1,input=?2,state_hash=?3 WHERE recovery_id=?4", rusqlite::params![input.id, serde_json::to_vec(&input)?, seal.as_slice(), old])?, 1);
+        assert_eq!(tx.execute("UPDATE recovered_windows_opens SET recovery_id=?1 WHERE recovery_id=?2", rusqlite::params![input.id, old])?, 1);
+        assert!(!tx.query_row("SELECT EXISTS(SELECT 1 FROM pragma_foreign_key_check)", [], |r| r.get::<_, bool>(0))?);
+        tx.commit()?;
         Ok(native_snapshot(&store.state))
     }).await.unwrap();
     assert!(collector.retire_linked(fixture().node.id).await.is_err());

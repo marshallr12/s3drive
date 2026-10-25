@@ -165,3 +165,10 @@ smoke passed locally; complete hosted log review remains pending. The SQL-only
 candidate's fixed two-save Callgrind count fell from25,571,642,463 to23,032,359,387
 instructions (about9.9%); this is diagnostic evidence, not a wall-time speedup or
 acceptance. No candidate has replaced accepted main yet.
+
+The next negative-test correction does not alter runtime cleanup behavior:
+`1c02382` passed47 focused cases per OS, including killed-owner retirement, but
+its resealed-session fixture failed early on SQLite's existing unique runtime
+constraint. The corrected fixture instead rebinds/reseals the recovery observer
+and its exact membership key atomically, leaving session uniqueness and foreign
+keys intact, to exercise the intended same-runtime reclamation refusal.
