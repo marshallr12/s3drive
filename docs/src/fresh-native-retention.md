@@ -1,10 +1,44 @@
 # Fresh linked-native retention
 
-Status: exact candidate `3a7b95d4aa74deb15ea12f0820882893c5919f85`, tree
+Status on 2026-10-25: corrected candidate
+`135a35bcbc8df575f7a9193f40da5e3adffead3c`, tree
+`b6dcb5cf7452e67552237c71d8792f2750cc2add`, passed independent source,
+full-log and artifact review of
+[run40148159139](https://github.com/marshallr12/s3drive/actions/runs/40148159139),
+attempt 1. All seven jobs passed. Corrected-main verification is pending at this
+documentation revision; the previous main failure below remains part of the
+record. Defaults and the existing-linked-file scope are unchanged.
+
+Workspace parent-harness totals were Linux 1103 passed and Windows 1098 passed,
+zero failures, with 21/37 ignored respectively. Each OS passed 41 fresh-native
+retry cases; the focused Linux diagnostic job passed 34 tests, including all
+four regressions that failed the first corrective attempt. Independent review
+matched all 802 source blobs, six artifact digests, and 21 replacement plus 14
+disposition reference records.
+
+All six 300-save fixtures completed every ten-save segment through 300 and the
+final cold read with WAL zero. Shared/debug-mounted/release-mounted test times
+were 764.03/948.73/239.82 seconds on Linux and 729.46/1146.74/496.07 seconds on
+Windows. The Windows debug step took 19m08s under its unchanged 20-minute bound,
+leaving only about 52 seconds of margin. This is not robust timing headroom;
+only an independent full run of the corrected main can establish its result.
+Original native lifecycle suites passed three debug and three release cases per
+OS: Linux 53.01/10.25 seconds and Windows 76.91/21.38 seconds.
+
+Measured database peak was 692224 bytes and staged payload peak 145 bytes.
+Shared WAL peaked at 4350752 bytes on both OS; mounted debug/release WAL peaked
+at 4379592 on Linux and 4136512 on Windows. These are bounded observations over
+the tested 300 saves, not an unlimited-workload or hardware timing guarantee.
+Full workspace, compatibility, reader-capacity, killed-owner, SQLITE_FULL,
+forged-proof and native gates passed without relaxing a deadline or workload.
+
+## Earlier candidate and failed main follow-up
+
+Historical candidate: `3a7b95d4aa74deb15ea12f0820882893c5919f85`, tree
 `ac8d23d199151beeb90b5dfd43f7494d16f65003`, passed independent source, full-log
 and artifact review of [run40130958279](https://github.com/marshallr12/s3drive/actions/runs/40130958279),
 attempt 1, on 2026-10-24. All seven jobs passed. The main follow-up below failed;
-corrective verification remains pending. Candidate acceptance is not a claim
+the correction above has separate candidate acceptance. Candidate acceptance is not a claim
 about a later main commit. The default and `owned-unlinked-v1` profile remain
 unchanged.
 
@@ -14,10 +48,11 @@ that accepted candidate plus evidence-only documentation. Its independent
 failed the unchanged Windows mounted300 deadline after 250 saves on 2026-10-24
 UTC. No integrity assertion failed before the timeout, but main is not accepted.
 The earlier candidate result remains historical evidence, not a substitute for
-this failed main gate. Corrective performance work is pending; no unchanged
+this failed main gate. Corrected-main verification remains pending; no unchanged
 rerun, deadline increase or smaller workload establishes acceptance.
 
-Both Linux FUSE and Windows WinFsp completed all 300 saves, actual Close calls,
+For historical candidate `3a7b95d`, both Linux FUSE and Windows WinFsp completed
+all 300 saves, actual Close calls,
 30 owner/remount segments and the final cold read in debug and release. Shared
 300-save restart coverage also passed on both OS. Debug mounted300 took 1072.49s
 on Linux and 1064.62s on Windows under the unchanged 1200s step bound; release
@@ -458,10 +493,10 @@ metadata decode while requiring two independent body reads, exercise late body
 and metadata damage, and preserve exact rollback checks. Hosted performance and
 all original acceptance gates are still required; no deadline is increased.
 
-### Corrective pure-value and read-selection work (not yet accepted)
+### Accepted corrective pure-value and read-selection work
 
-The main Windows timeout remains unresolved pending exact-source execution.
-The next correction retains at most one 2 MiB canonical byte slice and three
+The correction passed the exact candidate run identified above; corrected-main
+verification is still pending. It retains at most one 2 MiB canonical byte slice and three
 fixed-size payload-reference hashes on the dedicated state worker. It parses
 anchors again on every read, checks exact freshly queried bytes, and repeats all
 row, role, semantic, owner, frontier, witness and physical checks. Only pure
@@ -479,6 +514,11 @@ input. Upload/dependency and publication work selections combine adjacent
 read-only observations in one transaction, ending it before provider awaits or
 local mutation. Materialization retains the global trigger guard and fresh
 child-receipt checks; subsequent effect admission and post-write validation are
-unchanged. These changes require fresh adversarial tests, both-platform native
-measurements and all original full gates. Instruction-profile estimates are not
-filesystem latency or acceptance evidence.
+unchanged. Format2 selections obtain a fresh full native read scope, not only
+ordinary preparation inspection. The initial corrective attempt failed this
+unselected-semantic-edge assertion, two stale-view fixtures and the memo-hit
+assertion; all four passed after correction. The actual fixture anchor measured
+17655 bytes, above the original 16 KiB optimization cap. With the bounded cap
+corrected, profiling observed 9 canonical serializations while retaining 252
+fresh parses and hashes. Instruction counts are diagnostic evidence, not a
+substitute for the full candidate and pending corrected-main gates.

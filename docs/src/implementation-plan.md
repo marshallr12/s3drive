@@ -1,14 +1,18 @@
 # Phased implementation plan
 
-Fresh linked-native retention has exact candidate acceptance on 2026-10-24:
-`3a7b95d4aa74deb15ea12f0820882893c5919f85` passed
-[run40130958279](https://github.com/marshallr12/s3drive/actions/runs/40130958279)
-on Linux and Windows, including shared300, actual debug/release mounted300,
-reader-capacity release/reopen, full workspace, crash/full-disk rollback and
-compatibility gates. Main verification is pending at this revision. See the
-[bounded linked-file contract and evidence](fresh-native-retention.md); this does
-not enable defaults or complete creation, namespace, owned/deferred or retained
-recovery cleanup. Alpha databases are disposable; no old-format migration is
+Fresh linked-native retention has corrected candidate acceptance on 2026-10-25:
+`135a35bcbc8df575f7a9193f40da5e3adffead3c` passed
+[run40148159139](https://github.com/marshallr12/s3drive/actions/runs/40148159139)
+on Linux and Windows: all seven jobs, six artifacts, full workspace,
+shared300 and actual debug/release mounted300, reader-capacity, crash/full-disk
+rollback and compatibility gates. The earlier main `3ed77d4` failed its Windows
+mounted300 deadline after 250 saves. The corrected candidate's Windows debug
+step leaves only about 52 seconds under the unchanged 20-minute bound; this is
+not robust headroom. Corrected-main verification remains pending at this
+revision and must not be replaced by the candidate result. See the
+[bounded linked-file contract and evidence](fresh-native-retention.md).
+Defaults, creation/namespace/owned/deferred and retained-recovery limitations
+remain unchanged. Alpha databases are disposable; no old-format migration is
 required, and unsupported formats still fail closed.
 
 Each phase must leave a buildable tree, explicit behavior contract and durable
