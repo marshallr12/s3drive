@@ -163,3 +163,13 @@ repeat test retains two unrelated dirty-file handles while cycling creation,
 rename, unlinked writes and actual Close; no test-only collection is invoked.
 Local aggregate gate reached successful format/Clippy but failed durable authority
 initialization on this unsupported local filesystem; it is not a local pass.
+
+Actual callbacks on both Linux and Windows at `22480e91` exposed a final-reopen
+read failure after otherwise successful unlink/replacement operations. Shared
+coverage (51 state and five lifecycle cases) passed, so it did not establish
+native acceptance. Source admission now carries an independent reader lease
+through dispatch until original-open activation; a prior Close may clear only its
+own cached reader, never that arriving open's lease. A deterministic regression
+pauses at that dispatch boundary and completes the prior Close before activation.
+The original deadlines remain unchanged. This correction still requires fresh
+shared, actual-native, crash and full-suite verification.

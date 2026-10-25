@@ -5098,6 +5098,7 @@ async fn native_retry_validation_work_quiescent_dirty_and_unknown_forests_are_un
             .await
             .unwrap();
         assert!(!n.client.retire_quiescent().await.unwrap());
+        assert!(!n.client.retire_component(fixture().node.id).await.unwrap());
         n.storage
             .cache()
             .owner
@@ -5781,4 +5782,100 @@ async fn native_retry_component_crash_child() {
     let (storage, collector) = reopen_no_effect_collector(std::path::Path::new(&path)).await;
     assert!(collector.retire_component(fixture().node.id).await.unwrap());
     storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_component_recovered_publisher_preserves_unrelated_abandoned_dirty_open()
+ {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("recovered publisher forest");
+    let old = setup_contract(&path, 16, true, true, true).await;
+    let other = fixture_node([3; 16]);
+    let (other_token, other_view) = quiescent_admit_file(&old, &other).await;
+    let other_view = old
+        .client
+        .write(
+            other_token.clone(),
+            Context::new(
+                &other_view,
+                other.base.root.encode().to_vec(),
+                other.base.page.encode(),
+            )
+            .unwrap(),
+            [6; 32],
+            5,
+            vec![255],
+        )
+        .await
+        .unwrap();
+    let other_record = record(&old, &other_token).await;
+    let original = old.token.input().clone();
+    let f = retry_cycle_contract(&old, fixture(), 2, false, true).await;
+    assert!(record(&old, &old.token).await.close().is_none());
+    old.storage.close().await.unwrap();
+    let (storage, collector) = reopen_no_effect_collector(&path).await;
+    let capability = crate::chunk_mount::Client::new(
+        storage.cache().owner,
+        crate::journal::Options::default(),
+        old.key,
+    );
+    let session = capability
+        .next_admission(crate::chunk_mount::AdmissionDomain::Session)
+        .await
+        .unwrap()
+        .unwrap();
+    let journal = capability.opens();
+    journal
+        .start_session(session.clone(), original.volume.clone())
+        .await
+        .unwrap();
+    let recovery = journal
+        .prepare_recovery(
+            session.clone(),
+            original.volume.clone(),
+            original.node.clone(),
+            None,
+        )
+        .await
+        .unwrap();
+    assert!(!collector.retire_component(fixture().node.id).await.unwrap());
+    journal
+        .finish_recovery(session, recovery.input.id)
+        .await
+        .unwrap();
+    journal.retire(original.id.clone()).await.unwrap();
+    assert!(
+        journal
+            .get(original.id.clone())
+            .await
+            .unwrap()
+            .close()
+            .is_none()
+    );
+    let local = storage.sparse_views(views::Options::default()).unwrap();
+    let head = local.current_head(f.binding).await.unwrap();
+    let pin = local.guard(head.id()).await.unwrap();
+    assert!(!collector.retire_component(fixture().node.id).await.unwrap());
+    drop(pin);
+    assert!(collector.retire_component(fixture().node.id).await.unwrap());
+    assert_eq!(
+        journal.get(other_token.input().id.clone()).await.unwrap(),
+        other_record
+    );
+    assert_eq!(local.current_head(other.binding).await.unwrap(), other_view);
+    assert_eq!(
+        local
+            .guard(other_view.id())
+            .await
+            .unwrap()
+            .read(5, 1)
+            .await
+            .unwrap(),
+        vec![views::Piece::Local(vec![255])]
+    );
+    assert!(journal.get(original.id.clone()).await.is_err());
+    assert!(journal.prepare(original).await.is_err());
+    storage.close().await.unwrap();
+    let state = State::open_managed(&path).unwrap();
+    crate::chunk_mount::validate_all(&state.connection).unwrap();
 }

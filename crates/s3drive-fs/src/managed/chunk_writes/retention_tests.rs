@@ -9,6 +9,13 @@ mod fixture;
 const CHILD: &str = "managed::chunk_writes::retention_tests::native_retention_runtime_child";
 #[tokio::test]
 async fn native_retention_runtime_reader_release_reopens_at_capacity() {
+    runtime_fixture(false).await;
+}
+#[tokio::test]
+async fn native_retention_runtime_component_admission_lease_survives_prior_close() {
+    runtime_fixture(true).await;
+}
+async fn runtime_fixture(component: bool) {
     let tmp = tempfile::tempdir().unwrap();
     let credentials = tmp.path().join("credentials");
     let aws_config = tmp.path().join("aws-config");
@@ -22,6 +29,10 @@ async fn native_retention_runtime_reader_release_reopens_at_capacity() {
     command
         .args(["--exact", CHILD, "--nocapture"])
         .env("S3DRIVE_FS_RETENTION_ROOT", tmp.path())
+        .env(
+            "S3DRIVE_FS_COMPONENT_ADMISSION",
+            if component { "1" } else { "0" },
+        )
         .env("AWS_SHARED_CREDENTIALS_FILE", credentials)
         .env("AWS_CONFIG_FILE", aws_config)
         .env("AWS_EC2_METADATA_DISABLED", "true")
@@ -31,12 +42,19 @@ async fn native_retention_runtime_reader_release_reopens_at_capacity() {
         .stdout(std::process::Stdio::inherit())
         .stderr(std::process::Stdio::inherit());
     let mut child = command.spawn().unwrap();
-    let status = match tokio::time::timeout(Duration::from_secs(900), child.wait()).await {
+    let status = match tokio::time::timeout(
+        Duration::from_secs(if component { 180 } else { 900 }),
+        child.wait(),
+    )
+    .await
+    {
         Ok(status) => status.unwrap(),
         Err(_) => {
             child.kill().await.unwrap();
             child.wait().await.unwrap();
-            panic!("native runtime capacity child exceeded 900 seconds");
+            panic!(
+                "native runtime fixture exceeded its unchanged capacity or component admission deadline"
+            );
         }
     };
     assert!(
@@ -150,8 +168,12 @@ async fn native_retention_runtime_child() {
     );
     stop(fs).await;
     c.writes.as_mut().unwrap().directory = root.join("fresh");
-    c.managed.as_mut().unwrap().sparse_lifecycle =
-        Some(s3drive_core::SparseLifecycle::LinkedRetentionV1);
+    let component = std::env::var("S3DRIVE_FS_COMPONENT_ADMISSION").as_deref() == Ok("1");
+    c.managed.as_mut().unwrap().sparse_lifecycle = Some(if component {
+        s3drive_core::SparseLifecycle::ComponentRetentionV1
+    } else {
+        s3drive_core::SparseLifecycle::LinkedRetentionV1
+    });
     let fs = ReadOnlyFs::new(&c).await.unwrap();
     let node = fs.lookup(ROOT, "pressure").await.unwrap();
     let file = fs.open_write(node.id).await.unwrap();
@@ -159,6 +181,41 @@ async fn native_retention_runtime_child() {
         .await
         .unwrap();
     assert_eq!(file.read(0, 17).await.unwrap(), b"held reader bytes");
+    if component {
+        file.flush().await.unwrap();
+        let (writer, original) = file.chunk_write.as_ref().unwrap();
+        let target = original.binding.base().unwrap().node().to_owned();
+        // Pause between source admission and original-open activation. This
+        // independent dispatch lease must survive the previous Close dropping
+        // its shared cache, even though no new open record exists yet.
+        let admission = writer.open_inner(&target).await.unwrap();
+        file.native_object().unwrap().close().await.unwrap();
+        let collector = writer
+            ._capability
+            .native_sparse(views::Options::default(), plans::Options::default())
+            .unwrap();
+        assert!(!collector.retire_component(target.clone()).await.unwrap());
+        let next = writer.native_object(admission.file.clone()).await.unwrap();
+        drop(admission.reader);
+        assert_eq!(
+            admission.file.read(0, 17).await.unwrap(),
+            b"held reader bytes"
+        );
+        next.close().await.unwrap();
+        drop((next, admission.file, file));
+        stop(fs).await;
+        let fs = ReadOnlyFs::new(&c).await.unwrap();
+        let node = fs.lookup(ROOT, "pressure").await.unwrap();
+        let file = fs.open(node.id).await.unwrap();
+        assert_eq!(file.read(0, 17).await.unwrap(), b"held reader bytes");
+        file.native_object().unwrap().close().await.unwrap();
+        drop(file);
+        stop(fs).await;
+        done.send(()).unwrap();
+        server.await.unwrap();
+        authority.shutdown().await.unwrap();
+        return;
+    }
     let guard = file
         .chunk_write
         .as_ref()

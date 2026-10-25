@@ -64,9 +64,16 @@ pub(crate) struct Writes {
     native_serial: Arc<AsyncMutex<()>>,
 }
 pub(crate) enum Opened {
-    Sparse(Arc<File>),
+    Sparse(Admission),
     Chunks(Box<s3drive_managed::chunks::File>),
     Legacy(Box<s3drive_managed::FileSnapshot>),
+}
+/// Independent reader lease spans dispatch from source admission until the
+/// original native open is activated. Close may drop its own shared cache but
+/// cannot release this lease for a concurrently arriving open.
+pub(crate) struct Admission {
+    pub file: Arc<File>,
+    pub reader: Option<EditedFile>,
 }
 pub(crate) struct File {
     binding: Binding,
@@ -443,7 +450,7 @@ impl Writes {
             .map(|file| Opened::Legacy(Box::new(file)))
             .map_err(error)
     }
-    async fn open_inner(&self, node: &str) -> Result<Arc<File>> {
+    async fn open_inner(&self, node: &str) -> Result<Admission> {
         let _serial = self.open_serial.lock().await;
         let _retention = self.retention_serial.lock().await;
         let recovered_targets = self.recover().await?;
@@ -541,14 +548,26 @@ impl Writes {
                 .and_then(Weak::upgrade)
         };
         if let Some(file) = held {
-            file.head().await?;
-            return Ok(file);
+            let head = file.head().await?;
+            let reader = if self.component_retention {
+                let reader = self
+                    .reader
+                    .reopen_edited(self.local.clone(), head.id())
+                    .await
+                    .map_err(error)?;
+                *file.edited.lock().map_err(|_| Error::Internal)? = Some(reader.clone());
+                Some(reader)
+            } else {
+                None
+            };
+            return Ok(Admission { file, reader });
         }
         let edited = self
             .reader
             .reopen_edited(self.local.clone(), head.id())
             .await
             .map_err(error)?;
+        let admission_reader = self.component_retention.then(|| edited.clone());
         let mut metadata = logical_metadata(remote.metadata())?;
         metadata.size = head.size();
         let file = Arc::new(File {
@@ -563,7 +582,10 @@ impl Writes {
         let mut entries = self.entries.lock().map_err(|_| Error::Internal)?;
         entries.retain(|_, f| f.strong_count() > 0);
         entries.insert(node.into(), Arc::downgrade(&file));
-        Ok(file)
+        Ok(Admission {
+            file,
+            reader: admission_reader,
+        })
     }
     pub async fn metadata(&self, n: &RemoteNode) -> Result<Option<ObjectMetadata>> {
         self.remember(n)?;

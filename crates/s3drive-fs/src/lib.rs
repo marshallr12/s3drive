@@ -741,8 +741,13 @@ impl ReadOnlyFs {
         selected: managed::chunk_writes::Opened,
     ) -> Result<OpenFile> {
         use managed::chunk_writes::Opened;
+        let mut admission_reader = None;
         let (initial_metadata, managed, managed_chunks, chunk_write) = match selected {
-            Opened::Sparse(file) => (file.metadata()?, None, None, Some((writer.clone(), file))),
+            Opened::Sparse(admission) => {
+                admission_reader = admission.reader;
+                let file = admission.file;
+                (file.metadata()?, None, None, Some((writer.clone(), file)))
+            }
             Opened::Chunks(file) => (
                 managed::logical_metadata(file.metadata())?,
                 None,
@@ -760,6 +765,8 @@ impl ReadOnlyFs {
         } else {
             None
         };
+        // Activation now protects the source; only our dispatch lease ends.
+        drop(admission_reader);
         Ok(OpenFile {
             node,
             native,
