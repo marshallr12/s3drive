@@ -89,8 +89,10 @@ def build(binary, output, target, dependencies):
         raise ValueError("bundle requires a clean tracked source tree")
     if not binary.is_file() or binary.stat().st_size > MAX_BYTES:
         raise ValueError("invalid test binary")
+    packages = json.loads(dependencies.read_text(encoding="utf-8"))["packages"]
+    cli = [p for p in packages if p["name"] == "s3drive-cli"]
     version = command(str(binary), "--version")
-    if not version.startswith("s3drive "):
+    if len(cli) != 1 or version != "s3drive-cli " + cli[0]["version"]:
         raise ValueError("unexpected binary version output")
     entries = {"bin/" + binary.name: binary.read_bytes()}
     for name in ALLOWLIST:
@@ -98,7 +100,6 @@ def build(binary, output, target, dependencies):
         if path.is_symlink() or not path.is_file():
             raise ValueError("allowlisted source must be a regular file")
         entries[name] = path.read_bytes()
-    packages = json.loads(dependencies.read_text(encoding="utf-8"))["packages"]
     inventory = [{"name": p["name"], "version": p["version"], "license": p.get("license")} for p in packages]
     entries["dependency-license-inventory.json"] = (json.dumps(sorted(inventory, key=lambda p: (p["name"], p["version"])), indent=2) + "\n").encode()
     entries["TEST-BUNDLE-NOTICE.txt"] = (
