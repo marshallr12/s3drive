@@ -365,9 +365,11 @@ fn load_in(
     let db = isolation.db;
     #[cfg(test)]
     ANCHOR_LOADS.set(ANCHOR_LOADS.get() + 1);
-    let mut q = match db.prepare_cached(
-        "SELECT singleton,owner,entries,state_hash FROM sparse_retention_role LIMIT 2",
-    ) {
+    // This prepare also detects absent old-schema tables. A cached statement
+    // would defer a changed-schema error until step, bypassing that fallback.
+    let mut q = match db
+        .prepare("SELECT singleton,owner,entries,state_hash FROM sparse_retention_role LIMIT 2")
+    {
         Ok(q) => q,
         Err(error) => {
             let exists: i64 = db.prepare_cached("SELECT count(*) FROM sqlite_schema WHERE type='table' AND name IN ('sparse_retention_role','sparse_retention_anchors')")?.query_row( [], |r|r.get(0))?;
@@ -514,6 +516,39 @@ pub(crate) fn validate_native_anchors(db: &Connection) -> Result<()> {
 #[cfg(test)]
 mod canonical_encoding_tests {
     use super::*;
+    #[test]
+    fn native_retry_validation_work_schema_presence_is_not_cached() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut state = crate::State::open_managed(&tmp.path().join("schema presence")).unwrap();
+        for version in [29, 49, 50] {
+            for both_absent in [false, true] {
+                // Populate all ordinary bytecode caches on the current schema.
+                assert!(load(&state.connection).unwrap().is_empty());
+                assert!(load(&state.connection).unwrap().is_empty());
+                let tx = state.connection.transaction().unwrap();
+                tx.execute_batch("DROP TABLE sparse_retention_role")
+                    .unwrap();
+                if both_absent {
+                    tx.execute_batch("DROP TABLE sparse_retention_anchors")
+                        .unwrap();
+                }
+                tx.pragma_update(None, "user_version", version).unwrap();
+                let result = load(&tx);
+                if version < 50 && both_absent {
+                    assert!(result.unwrap().is_empty());
+                } else {
+                    assert!(
+                        result.is_err(),
+                        "version={version} both_absent={both_absent}"
+                    );
+                }
+                tx.rollback().unwrap();
+                assert!(load(&state.connection).unwrap().is_empty());
+            }
+        }
+        assert_eq!(state.info().unwrap().schema_version, 50);
+    }
+
     #[test]
     fn native_retry_validation_work_canonical_hash_bytes_match_independent_serde() {
         for count in [0usize, 1, 2, 256] {

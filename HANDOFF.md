@@ -113,6 +113,25 @@ New warm-cache schema/trigger/row rollback checks and the original live-proof
 corruption checks must pass. Performance benefit and full acceptance are pending;
 no workload/deadline/profile relaxation or repeated-run lottery is authorized.
 
+Prepared-bytecode source `faa6b0bff1410c4c0fd40d1f4d3598cde364771a`
+[run40224366616](https://github.com/marshallr12/s3drive/actions/runs/40224366616)
+passed58 focused state tests, both actual native suites, all800 component cycles
+and both OS larger/longer workloads. Measured instructions fell7.58% versus
+0dab6bd (16.58% versus accepted-main diagnostic). Windows original debug300
+passed its unchanged20-minute step; complete full Windows evidence was pending.
+However, Linux full workspace caught two existing schema30 tests refusing a
+missing retention table after deliberately demoting a warmed connection. This is
+a false refusal, not data corruption. The candidate is not accepted.
+
+The narrow correction leaves retention's schema-presence prepare uncached:
+its existing absent-old-table fallback must observe errors during prepare, not
+only during execution. All other converted prepare-error paths were audited;
+this was the only one. Existing prepare-only schema probes remain uncached.
+A new direct warm-cache regression covers versions29/49/50, partial versus fully
+missing tables and rollback; current-format and partial tables still fail closed.
+Original historical migration tests remain unchanged. No new alpha migration
+scope, deadline change or main acceptance is implied; corrected full CI required.
+
 ## Corrected fresh linked-native candidate accepted (2026-10-25)
 
 Exact candidate `135a35bcbc8df575f7a9193f40da5e3adffead3c`, tree

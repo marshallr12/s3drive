@@ -25,6 +25,13 @@ slice targets the measured16.91% SQL-preparation instruction cost using a bounde
 128-statement bytecode cache. It does not cache rows, semantic proofs, database
 permissions or schema-probe outcomes; full fresh validations remain required.
 
+The bytecode slice `faa6b0b` reduced diagnostic instructions7.58% and passed
+Windows debug300's unchanged step, but full Linux workspace caught two existing
+old-schema tests: a cached presence query deferred a missing-table error until
+execution, bypassing the old-schema empty-role fallback. That false refusal is
+corrected by keeping the schema-detection prepare uncached, with a new warm
+old/current-schema regression; all original acceptance gates remain required.
+
 ## 1. Creation and namespace lifecycle cleanup
 
 Existing `owned-unlinked-v1` implements create, rename, replacement, unlink and
