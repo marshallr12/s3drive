@@ -28,9 +28,9 @@ No old-format migration, provider writes or user-machine changes are included.
 See [the current completion plan](docs/src/beta-completion.md). Private evidence
 remains in the sibling validation directory, never in public commits.
 
-Current unaccepted branch head before the next recovery-test update is
-`57bda5d471da329562be9ea4dd31f9342c87a149`, running expanded suite
-[40203142413](https://github.com/marshallr12/s3drive/actions/runs/40203142413).
+Current unaccepted linked/recovery/performance branch head is
+`cf2ab03fba6a32dc8fae58f699e1c795efca7dfb`, running expanded suite
+[40206107073](https://github.com/marshallr12/s3drive/actions/runs/40206107073).
 Changes include narrow no-effect recovery group cleanup, SQL statement caching
 with unchanged validation, additional1000-save and four64KiB-file soaks, and
 private deterministic test packaging. General creation/namespace and recovered
@@ -38,6 +38,14 @@ publisher reclamation are still unfinished. MiniAir readiness found no WinFsp;
 installation/native application/reboot checks and actual Wasabi headroom remain
 blocked. See the completion plan for precise scope. No new main acceptance or
 public release is claimed.
+
+A separate experimental `codex/quiescent-lifecycle-proof` development branch
+adds a fresh **state-only** whole-forest eviction contract, not a new mounted
+profile. Its [design and incomplete acceptance checklist](docs/src/quiescent-lifecycle-retention.md)
+explain permanent identity expiry, clean/closed dependency proofs, reader and
+unknown-outcome protection, and the current whole-store deferral limitation.
+No lifecycle or beta milestone is accepted from this prototype. Do not merge it
+merely because compilation or a focused test passes.
 
 ## Corrected fresh linked-native candidate accepted (2026-10-25)
 

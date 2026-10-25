@@ -610,3 +610,29 @@ pub(super) fn pending(db: &Connection, volume: &str, node: &str) -> Result<Optio
     })
     .transpose()
 }
+
+pub(super) fn quiescent_groups(db: &Connection, records: &[OpenRecord]) -> Result<bool> {
+    check_index(db)?;
+    let ids = db
+        .prepare("SELECT recovery_id FROM windows_session_recoveries")?
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    for id in ids {
+        let (input, proof) = recovery(db, &id)?;
+        if proof.is_none() {
+            return Ok(false);
+        }
+        for member in &input.opens {
+            let record = records
+                .iter()
+                .find(|r| r.input.id == member.id)
+                .ok_or("recovery group is not wholly selected")?;
+            if binding(db, &input.session, &input.volume)?
+                == binding(db, &record.input.session, &record.input.volume)?
+            {
+                return Err("recovery cannot abandon its own runtime".into());
+            }
+        }
+    }
+    Ok(true)
+}

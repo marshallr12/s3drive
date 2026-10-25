@@ -21,6 +21,15 @@ async fn setup_mode_posix(
     retry: bool,
     posix: bool,
 ) -> Native {
+    setup_contract(path, plans, retry, posix, false).await
+}
+async fn setup_contract(
+    path: &std::path::Path,
+    plans: usize,
+    retry: bool,
+    posix: bool,
+    quiescent: bool,
+) -> Native {
     let storage = Storage::open(
         path,
         crate::cache::Options::default(),
@@ -34,7 +43,12 @@ async fn setup_mode_posix(
             let s = &mut store.state;
             let f = fixture();
             let key = if retry {
-                crate::chunk_mount::admit_retry(
+                let admit = if quiescent {
+                    crate::chunk_mount::admit_quiescent
+                } else {
+                    crate::chunk_mount::admit_retry
+                };
+                admit(
                     s,
                     crate::chunk_mount::Input {
                         volume: f.binding.base()?.volume().into(),
@@ -1502,7 +1516,17 @@ async fn native_retry_fresh_contract_closes_ids_before_transactional_retirement(
 async fn retry_cycle(n: &Native, f: Fixture, iteration: u64) -> Fixture {
     retry_cycle_mode(n, f, iteration, true).await
 }
-async fn retry_cycle_mode(n: &Native, mut f: Fixture, iteration: u64, collect: bool) -> Fixture {
+async fn retry_cycle_mode(n: &Native, f: Fixture, iteration: u64, collect: bool) -> Fixture {
+    retry_cycle_contract(n, f, iteration, collect, false).await
+}
+async fn retry_cycle_contract(
+    n: &Native,
+    mut f: Fixture,
+    iteration: u64,
+    collect: bool,
+    abandon: bool,
+) -> Fixture {
+    assert!(!(collect && abandon));
     let bytes = vec![(iteration % 251) as u8; 17];
     let context =
         Context::new(&n.view, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap();
@@ -1512,13 +1536,30 @@ async fn retry_cycle_mode(n: &Native, mut f: Fixture, iteration: u64, collect: b
         .unwrap();
     let callback = hex(&hash(b"retry-cycle-close", &n.token.input().id).unwrap()[..16]);
     let completion = hex(&hash(b"retry-cycle-completion", &n.token.input().id).unwrap()[..16]);
-    n.token.observe_close();
-    let close = n
-        .client
-        .close(n.token.clone(), callback.clone())
-        .await
-        .unwrap();
-    let info = close.plans[0].clone();
+    let info = if abandon {
+        let head = n
+            .storage
+            .sparse_views(views::Options::default())
+            .unwrap()
+            .current_head(n.view.binding().clone())
+            .await
+            .unwrap();
+        n.client
+            .prepare(
+                n.token.clone(),
+                Context::new(&head, f.base.root.encode().to_vec(), f.base.page.encode()).unwrap(),
+            )
+            .await
+            .unwrap()
+    } else {
+        n.token.observe_close();
+        let close = n
+            .client
+            .close(n.token.clone(), callback.clone())
+            .await
+            .unwrap();
+        close.plans[0].clone()
+    };
     let plan = info.id().unwrap();
     let f =
         n.storage
@@ -1565,21 +1606,23 @@ async fn retry_cycle_mode(n: &Native, mut f: Fixture, iteration: u64, collect: b
             })
             .await
             .unwrap();
-    n.client
-        .complete(n.token.clone(), callback, completion)
-        .await
-        .unwrap();
-    let key = n.key.clone();
-    let open = n.token.input().id.clone();
-    n.storage
-        .cache()
-        .owner
-        .call(move |store| {
-            opens(&mut store.state, &key).retire(&open)?;
-            Ok(())
-        })
-        .await
-        .unwrap();
+    if !abandon {
+        n.client
+            .complete(n.token.clone(), callback, completion)
+            .await
+            .unwrap();
+        let key = n.key.clone();
+        let open = n.token.input().id.clone();
+        n.storage
+            .cache()
+            .owner
+            .call(move |store| {
+                opens(&mut store.state, &key).retire(&open)?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
     if collect {
         assert!(n.client.retire_linked(f.node.id.clone()).await.unwrap());
     }
@@ -4970,4 +5013,348 @@ async fn native_retry_validation_work_no_effect_recovery_rejects_resealed_same_r
         .await
         .unwrap();
     storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_quiescent_closed_forest_expires_original_open_and_preserves_owner()
+ {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("quiescent forest");
+    let n = setup_contract(&path, 16, true, true, true).await;
+    let original = n.token.input().clone();
+    assert!(!n.client.retire_quiescent().await.unwrap());
+    let f = retry_cycle_mode(&n, fixture(), 1, false).await;
+    let local = n.storage.sparse_views(views::Options::default()).unwrap();
+    let head = local.current_head(f.binding.clone()).await.unwrap();
+    let reader = local.guard(head.id()).await.unwrap();
+    let clone = reader.clone();
+    drop(reader);
+    assert!(!n.client.retire_quiescent().await.unwrap());
+    drop(clone);
+    let binding = n
+        .storage
+        .cache()
+        .owner
+        .call(|store| Ok(crate::chunk_mount::load(&store.state.connection)?.unwrap()))
+        .await
+        .unwrap();
+    assert!(n.client.retire_quiescent().await.unwrap());
+    assert!(!n.client.retire_quiescent().await.unwrap());
+    assert!(n.client.bind(original.id.clone()).await.is_err());
+    let key = n.key.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            assert_eq!(
+                crate::chunk_mount::load(&store.state.connection)?.unwrap(),
+                binding
+            );
+            assert!(opens(&mut store.state, &key).prepare(original).is_err());
+            for table in [
+                "windows_open_journal",
+                "sparse_views",
+                "sparse_preparations",
+                "staged_generations",
+                "remote_intents",
+                "sparse_publications",
+            ] {
+                assert_eq!(
+                    store.state.connection.query_row(
+                        &format!("SELECT count(*) FROM {table}"),
+                        [],
+                        |r| r.get::<_, i64>(0)
+                    )?,
+                    0
+                );
+            }
+            crate::chunk_mount::validate_all(&store.state.connection)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    n.storage.close().await.unwrap();
+    let state = State::open_managed(&path).unwrap();
+    crate::chunk_mount::validate_all(&state.connection).unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_quiescent_dirty_and_unknown_forests_are_unchanged() {
+    for prepare in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let n = setup_contract(&tmp.path().join("protected forest"), 16, true, true, true).await;
+        let view = dirty(&n, &n.view, 2, 5).await;
+        if prepare {
+            n.client
+                .prepare(n.token.clone(), context(&view))
+                .await
+                .unwrap();
+        }
+        let before = n
+            .storage
+            .cache()
+            .owner
+            .call(|store| Ok(native_snapshot(&store.state)))
+            .await
+            .unwrap();
+        assert!(!n.client.retire_quiescent().await.unwrap());
+        n.storage
+            .cache()
+            .owner
+            .call(move |store| {
+                assert_eq!(native_snapshot(&store.state), before);
+                Ok(())
+            })
+            .await
+            .unwrap();
+        n.storage.close().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_quiescent_recovered_publisher_is_not_a_close() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("recovered publisher forest");
+    let old = setup_contract(&path, 16, true, true, true).await;
+    let original = old.token.input().clone();
+    let f = retry_cycle_contract(&old, fixture(), 2, false, true).await;
+    assert!(record(&old, &old.token).await.close().is_none());
+    old.storage.close().await.unwrap();
+    let (storage, collector) = reopen_no_effect_collector(&path).await;
+    let capability = crate::chunk_mount::Client::new(
+        storage.cache().owner,
+        crate::journal::Options::default(),
+        old.key,
+    );
+    let session = capability
+        .next_admission(crate::chunk_mount::AdmissionDomain::Session)
+        .await
+        .unwrap()
+        .unwrap();
+    let journal = capability.opens();
+    journal
+        .start_session(session.clone(), original.volume.clone())
+        .await
+        .unwrap();
+    let recovery = journal
+        .prepare_recovery(
+            session.clone(),
+            original.volume.clone(),
+            original.node.clone(),
+            None,
+        )
+        .await
+        .unwrap();
+    assert!(!collector.retire_quiescent().await.unwrap());
+    journal
+        .finish_recovery(session, recovery.input.id)
+        .await
+        .unwrap();
+    journal.retire(original.id.clone()).await.unwrap();
+    assert!(
+        journal
+            .get(original.id.clone())
+            .await
+            .unwrap()
+            .close()
+            .is_none()
+    );
+    let local = storage.sparse_views(views::Options::default()).unwrap();
+    let head = local.current_head(f.binding).await.unwrap();
+    let pin = local.guard(head.id()).await.unwrap();
+    assert!(!collector.retire_quiescent().await.unwrap());
+    drop(pin);
+    assert!(collector.retire_quiescent().await.unwrap());
+    assert!(journal.get(original.id.clone()).await.is_err());
+    assert!(journal.prepare(original).await.is_err());
+    storage.close().await.unwrap();
+    let state = State::open_managed(&path).unwrap();
+    crate::chunk_mount::validate_all(&state.connection).unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_quiescent_killed_owner_preserves_whole_forest_or_empty_cut() {
+    use std::process::{Command, Stdio};
+    use std::time::{Duration, Instant};
+    for point in [
+        "Eligible",
+        "SourceErased",
+        "LifecycleErased",
+        "PhysicalErased",
+        "Validated",
+        "Committed",
+    ] {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("quiescent killed owner");
+        let ready = tmp.path().join("ready");
+        let n = setup_contract(&path, 16, true, true, true).await;
+        retry_cycle_mode(&n, fixture(), 3, false).await;
+        let before = n
+            .storage
+            .cache()
+            .owner
+            .call(|store| Ok(native_snapshot(&store.state)))
+            .await
+            .unwrap();
+        n.storage.close().await.unwrap();
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "sparse_views::preparation::publication::tests::barriers::native::native_retry_quiescent_crash_child", "--nocapture"])
+            .env("S3DRIVE_QUIESCENT_CRASH_DIR", &path)
+            .env("S3DRIVE_MIXED_CRASH_KIND", "quiescent-retire")
+            .env("S3DRIVE_MIXED_CRASH_POINT", point)
+            .env("S3DRIVE_MIXED_CRASH_READY", &ready)
+            .stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::piped()).spawn().unwrap();
+        let started = Instant::now();
+        while !ready.exists() {
+            if let Some(status) = child.try_wait().unwrap() {
+                use std::io::Read;
+                let mut err = String::new();
+                child
+                    .stderr
+                    .take()
+                    .unwrap()
+                    .read_to_string(&mut err)
+                    .unwrap();
+                panic!("{point}: {status}: {err}");
+            }
+            if started.elapsed() > Duration::from_secs(30) {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("quiescent retirement checkpoint timeout: {point}");
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert!(State::open_managed(&path).is_err());
+        child.kill().unwrap();
+        assert!(!child.wait().unwrap().success());
+        let state = State::open_managed(&path).unwrap();
+        if point != "Committed" {
+            assert_eq!(native_snapshot(&state), before);
+        }
+        for table in [
+            "windows_open_journal",
+            "sparse_preparations",
+            "sparse_publications",
+        ] {
+            assert_eq!(
+                state
+                    .connection
+                    .query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r
+                        .get::<_, i64>(0))
+                    .unwrap(),
+                i64::from(point != "Committed")
+            );
+        }
+        crate::chunk_mount::validate_all(&state.connection).unwrap();
+        drop(state);
+        let (storage, collector) = reopen_no_effect_collector(&path).await;
+        assert_eq!(
+            collector.retire_quiescent().await.unwrap(),
+            point != "Committed"
+        );
+        assert!(!collector.retire_quiescent().await.unwrap());
+        storage.close().await.unwrap();
+        let state = State::open_managed(&path).unwrap();
+        crate::chunk_mount::validate_all(&state.connection).unwrap();
+    }
+}
+
+#[tokio::test]
+async fn native_retry_quiescent_crash_child() {
+    let Some(path) = std::env::var_os("S3DRIVE_QUIESCENT_CRASH_DIR") else {
+        return;
+    };
+    let (storage, collector) = reopen_no_effect_collector(std::path::Path::new(&path)).await;
+    assert!(collector.retire_quiescent().await.unwrap());
+    storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_quiescent_refuses_delete_triggers_without_changes() {
+    let tmp = tempfile::tempdir().unwrap();
+    let n = setup_contract(&tmp.path().join("quiescent trigger"), 16, true, true, true).await;
+    retry_cycle_mode(&n, fixture(), 4, false).await;
+    let before = n.storage.cache().owner.call(|store| {
+        store.state.connection.execute_batch("CREATE TRIGGER refuse_quiescent_delete BEFORE DELETE ON sparse_views BEGIN SELECT RAISE(IGNORE); END")?;
+        Ok(native_snapshot(&store.state))
+    }).await.unwrap();
+    assert!(n.client.retire_quiescent().await.is_err());
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            assert_eq!(native_snapshot(&store.state), before);
+            store
+                .state
+                .connection
+                .execute_batch("DROP TRIGGER refuse_quiescent_delete")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(n.client.retire_quiescent().await.unwrap());
+    n.storage.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_quiescent_callback_child_requires_original_link() {
+    let tmp = tempfile::tempdir().unwrap();
+    let n = setup_contract(
+        &tmp.path().join("callback namespace expiry"),
+        16,
+        true,
+        true,
+        true,
+    )
+    .await;
+    let key = n.key.clone();
+    let original = n.token.input().id.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            let f = fixture();
+            let callback = hex(&[81; 16]);
+            let mut input = removal(&f, &f.node, 80);
+            let ns::Mutation::RemoveEntry { node, parent } = input.request.mutation.clone() else {
+                panic!()
+            };
+            input.request.mutation = ns::Mutation::ArmRemoval {
+                node,
+                parent,
+                owner: key.owner().into(),
+            };
+            let mut h = Sha256::new();
+            h.update(b"s3drive-disposition-controller-v1\0");
+            h.update(&original);
+            h.update(&callback);
+            h.update("set");
+            input.request.operation = hex(&h.finalize()[..16]);
+            assert!(names(s, &key).begin(input.clone()).is_err());
+            opens(s, &key).callback(
+                &original,
+                &callback,
+                opens::Callback::SetDelete { delete: true },
+            )?;
+            opens(s, &key).link(&original, &hex(&[82; 16]), &callback, input.clone())?;
+            assert!(opens::retained_namespace_child(
+                &s.connection,
+                &input.request.operation,
+                Some(&input)
+            )?);
+            let before = crate::chunk_mount::admission::frontier(&s.connection)?;
+            names(s, &key).begin(input.clone())?;
+            assert_eq!(names(s, &key).begin(input.clone())?.input, input);
+            assert_eq!(
+                crate::chunk_mount::admission::frontier(&s.connection)?,
+                before
+            );
+            crate::chunk_mount::validate_all(&s.connection)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(!n.client.retire_quiescent().await.unwrap());
+    n.storage.close().await.unwrap();
 }

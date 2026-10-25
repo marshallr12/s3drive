@@ -11,6 +11,7 @@ use crate::sparse_views::{
 use rusqlite::OptionalExtension;
 mod collect;
 mod native;
+pub(in crate::sparse_views) mod quiescent;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

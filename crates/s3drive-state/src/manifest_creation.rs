@@ -429,3 +429,24 @@ pub(crate) fn empty_for_mount(scope: &crate::chunk_mount::ReadScope<'_>) -> Resu
     isolation_in(scope.connection(), Some(scope))?;
     Ok(inspect(scope.connection())?.is_empty())
 }
+
+/// Full creator proofs remain in place during this check. Incomplete metadata
+/// or physical outcomes never become eligible merely because no handle exists.
+pub(crate) fn quiescent_generations(db: &Connection) -> Result<Option<Vec<journal::GenerationId>>> {
+    preflight(db)?;
+    isolation(db)?;
+    let records = inspect(db)?;
+    let mut generations = Vec::new();
+    for record in records.values() {
+        if record.receipt.is_none() && record.rejection.is_none() {
+            return Ok(None);
+        }
+        if let Some(generation) = record.generation {
+            if record.physical.is_none() {
+                return Ok(None);
+            }
+            generations.push(generation);
+        }
+    }
+    Ok(Some(generations))
+}

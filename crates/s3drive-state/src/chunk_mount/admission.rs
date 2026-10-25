@@ -7,6 +7,7 @@ pub enum Domain {
     Open,
     Session,
     Namespace,
+    Creation,
 }
 impl Domain {
     fn label(self) -> &'static str {
@@ -14,6 +15,7 @@ impl Domain {
             Self::Open => "open",
             Self::Session => "session",
             Self::Namespace => "namespace",
+            Self::Creation => "creation",
         }
     }
 }
@@ -152,5 +154,51 @@ pub(crate) fn validate(db: &Connection) -> Result<()> {
             retained(&binding, domain, &id)?;
         }
     }
+    if binding.quiescent_retention {
+        let ids = db
+            .prepare("SELECT operation FROM manifest_creations LIMIT 257")?
+            .query_map([], |r| r.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        if ids.len() > 256 {
+            return Err("native creator admission capacity exceeded".into());
+        }
+        for id in ids {
+            retained(&binding, Domain::Creation, &id)?;
+        }
+        let ids = db
+            .prepare("SELECT operation_id FROM namespace_intents LIMIT 4097")?
+            .query_map([], |r| r.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        if ids.len() > 4096 {
+            return Err("native namespace admission capacity exceeded".into());
+        }
+        for id in ids {
+            if retained(&binding, Domain::Namespace, &id).is_ok()
+                || retained(&binding, Domain::Creation, &id).is_ok()
+            {
+                continue;
+            }
+            if !names::opens::retained_namespace_child(db, &id, None)? {
+                return Err("native namespace identity lost original admission".into());
+            }
+        }
+    }
     Ok(())
+}
+
+/// Direct namespace requests consume the next permanent ordinal. Callback
+/// children instead derive from an original retained open and callback, so
+/// losing their open on a completed cut permanently expires every child ID.
+pub(crate) fn namespace(db: &Connection, input: &names::Input) -> Result<()> {
+    if !super::quiescent_enabled(db)? {
+        return Err("namespace retention contract is absent".into());
+    }
+    if next(db, Domain::Namespace)?.as_deref() == Some(&input.request.operation) {
+        return consume(db, Domain::Namespace, &input.request.operation);
+    }
+    if names::opens::retained_namespace_child(db, &input.request.operation, Some(input))? {
+        Ok(())
+    } else {
+        Err("namespace operation is expired or lacks original callback".into())
+    }
 }

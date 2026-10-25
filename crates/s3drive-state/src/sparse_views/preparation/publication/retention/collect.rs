@@ -231,58 +231,7 @@ impl Journal<'_> {
         }
         prep::journal::checkpoint("retire", "SourceStored");
         for generation in &generations {
-            // Exact verified, parentless plans only. Foreign-key dependencies
-            // outside this forest fail the transaction rather than being erased.
-            if tx.query_row(
-                "SELECT EXISTS(SELECT 1 FROM staged_generations WHERE parent_id=?1)",
-                [generation],
-                |r| r.get::<_, bool>(0),
-            )? {
-                return Err(Failure::Conflict.into());
-            }
-            let mut q=tx.prepare("SELECT chunk_hash FROM staged_extents WHERE generation_id=?1 AND chunk_hash IS NOT NULL")?;
-            let chunks = q
-                .query_map([generation], |r| r.get::<_, Vec<u8>>(0))?
-                .collect::<rusqlite::Result<Vec<_>>>()?;
-            drop(q);
-            tx.execute(
-                "DELETE FROM write_settlements WHERE generation_id=?1",
-                [generation],
-            )?;
-            tx.execute(
-                "DELETE FROM remote_flushes WHERE generation_id=?1",
-                [generation],
-            )?;
-            tx.execute("DELETE FROM retained_remote_intents WHERE operation_id IN (SELECT operation_id FROM remote_intents WHERE generation_id=?1)",[generation])?;
-            tx.execute(
-                "DELETE FROM remote_intents WHERE generation_id=?1",
-                [generation],
-            )?;
-            for table in [
-                "write_journal",
-                "staged_heads",
-                "staged_operations",
-                "staged_extents",
-                "staged_generations",
-            ] {
-                tx.execute(
-                    &format!("DELETE FROM {table} WHERE generation_id=?1"),
-                    [generation],
-                )?;
-            }
-            for chunk in chunks {
-                if !tx.query_row(
-                    "SELECT EXISTS(SELECT 1 FROM staged_extents WHERE chunk_hash=?1)",
-                    [&chunk],
-                    |r| r.get::<_, bool>(0),
-                )? {
-                    tx.execute(
-                        "DELETE FROM retained_staged_chunks WHERE chunk_hash=?1",
-                        [&chunk],
-                    )?;
-                    tx.execute("DELETE FROM staged_chunks WHERE chunk_hash=?1", [&chunk])?;
-                }
-            }
+            erase_generation(&tx, generation)?;
         }
         prep::journal::checkpoint("retire", "PhysicalStored");
         if native_mode {
@@ -331,4 +280,64 @@ impl Client {
         self.call(move |j| j.retire_checkpoint(&proof, options))
             .await
     }
+}
+
+// Caller must prove exact generation membership and no physical readers.
+pub(super) fn erase_generation(db: &Connection, generation: &i64) -> Result<()> {
+    // Exact verified, parentless plans only. Foreign-key dependencies
+    // outside this forest fail the transaction rather than being erased.
+    if db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM staged_generations WHERE parent_id=?1)",
+        [generation],
+        |r| r.get::<_, bool>(0),
+    )? {
+        return Err(Failure::Conflict.into());
+    }
+    let mut q = db.prepare(
+        "SELECT chunk_hash FROM staged_extents WHERE generation_id=?1 AND chunk_hash IS NOT NULL",
+    )?;
+    let chunks = q
+        .query_map([generation], |r| r.get::<_, Vec<u8>>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    drop(q);
+    db.execute(
+        "DELETE FROM write_settlements WHERE generation_id=?1",
+        [generation],
+    )?;
+    db.execute(
+        "DELETE FROM remote_flushes WHERE generation_id=?1",
+        [generation],
+    )?;
+    db.execute("DELETE FROM retained_remote_intents WHERE operation_id IN (SELECT operation_id FROM remote_intents WHERE generation_id=?1)",[generation])?;
+    db.execute(
+        "DELETE FROM remote_intents WHERE generation_id=?1",
+        [generation],
+    )?;
+    for table in [
+        "write_journal",
+        "staged_heads",
+        "staged_operations",
+        "staged_extents",
+        "staged_generations",
+    ] {
+        db.execute(
+            &format!("DELETE FROM {table} WHERE generation_id=?1"),
+            [generation],
+        )?;
+    }
+    for chunk in chunks {
+        if !db.query_row(
+            "SELECT EXISTS(SELECT 1 FROM staged_extents WHERE chunk_hash=?1)",
+            [&chunk],
+            |r| r.get::<_, bool>(0),
+        )? {
+            db.execute(
+                "DELETE FROM retained_staged_chunks WHERE chunk_hash=?1",
+                [&chunk],
+            )?;
+            db.execute("DELETE FROM staged_chunks WHERE chunk_hash=?1", [&chunk])?;
+        }
+    }
+
+    Ok(())
 }

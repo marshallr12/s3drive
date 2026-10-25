@@ -998,3 +998,48 @@ fn native_retry_validation_work_cached_foreign_sql_rereads_rows_and_schema() {
     }
     assert!(db.is_autocommit());
 }
+
+#[test]
+fn native_retry_validation_work_quiescent_contract_keeps_profiles_separate_and_admissions_monotonic()
+ {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut state = State::open_managed(&tmp.path().join("quiescent admission")).unwrap();
+    let declared = input();
+    let key = admit_quiescent(&mut state, declared.clone()).unwrap();
+    assert!(admit_retry(&mut state, declared.clone()).is_err());
+    assert!(admit(&mut state, declared.clone()).is_err());
+    assert_eq!(admit_quiescent(&mut state, declared.clone()).unwrap(), key);
+    let mut create = creation(&declared, 30);
+    create.owner = Some(key.owner().into());
+    create.operation = admission::next(&state.connection, AdmissionDomain::Creation)
+        .unwrap()
+        .unwrap();
+    let mut journal = crate::manifest_creation::Journal::for_chunks(
+        &mut state,
+        crate::manifest_creation::Limits::default(),
+        &key,
+    )
+    .unwrap();
+    journal.begin(create.clone()).unwrap();
+    assert_eq!(journal.begin(create.clone()).unwrap().input(), &create);
+    let mut name = directory(&declared, 31);
+    name.request.operation = admission::next(&state.connection, AdmissionDomain::Namespace)
+        .unwrap()
+        .unwrap();
+    assert_ne!(create.operation, name.request.operation);
+    let mut journal =
+        names::Journal::for_chunks(&mut state, journal::Options::default(), &key).unwrap();
+    journal.begin(name.clone()).unwrap();
+    assert_eq!(journal.begin(name.clone()).unwrap().input, name);
+    validate_all(&state.connection).unwrap();
+    let before = rows(&state);
+    let mut invalid = directory(&declared, 32);
+    invalid.request.operation = create.operation;
+    assert!(
+        names::Journal::for_chunks(&mut state, journal::Options::default(), &key)
+            .unwrap()
+            .begin(invalid)
+            .is_err()
+    );
+    assert_eq!(rows(&state), before);
+}

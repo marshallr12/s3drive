@@ -43,6 +43,8 @@ pub(crate) struct Binding {
     controls: Vec<Control>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     frontier: Option<u64>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    quiescent_retention: bool,
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     terminals: std::collections::BTreeMap<String, [u8; 32]>,
 }
@@ -114,6 +116,7 @@ impl Binding {
         if !matches!(self.format, 1 | 2)
             || (self.format == 2) != self.frontier.is_some()
             || (self.format == 1 && !self.terminals.is_empty())
+            || (self.quiescent_retention && (self.format != 2 || !self.terminals.is_empty()))
             || self.terminals.len() > 256
             || !id(&self.volume)
             || !id(&self.owner)
@@ -508,17 +511,25 @@ pub(crate) fn require_legacy(db: &Connection) -> Result<()> {
 }
 /// Durable admission; no migration, network, file-body reads or namespace effects.
 pub fn admit(state: &mut State, input: Input) -> Result<Key> {
-    admit_mode(state, input, false)
+    admit_mode(state, input, false, false)
 }
 /// Establish the current retry contract before the first mounted operation.
 /// Existing format-one owners are deliberately not converted during alpha.
 pub fn admit_retry(state: &mut State, input: Input) -> Result<Key> {
-    admit_mode(state, input, true)
+    admit_mode(state, input, true, false)
+}
+/// Separate fresh lifecycle contract: whole dependency forests may be evicted
+/// only at a fully validated quiescent cut. Existing profiles are not converted.
+pub fn admit_quiescent(state: &mut State, input: Input) -> Result<Key> {
+    admit_mode(state, input, true, true)
+}
+pub(crate) fn quiescent_enabled(db: &Connection) -> Result<bool> {
+    Ok(load(db)?.is_some_and(|binding| binding.quiescent_retention))
 }
 pub(crate) fn retry_enabled(db: &Connection) -> Result<bool> {
     Ok(load(db)?.is_some_and(|binding| binding.format == 2))
 }
-fn admit_mode(state: &mut State, input: Input, retry: bool) -> Result<Key> {
+fn admit_mode(state: &mut State, input: Input, retry: bool, quiescent: bool) -> Result<Key> {
     state.verify_staging_storage()?;
     if !retry && crate::sparse_views::preparation::retry::enabled(&state.connection)? {
         return Err("retry-safety owner cannot activate native composition".into());
@@ -536,7 +547,7 @@ fn admit_mode(state: &mut State, input: Input, retry: bool) -> Result<Key> {
     let old = load(&tx)?;
     let before = old.clone();
     let mut b = if let Some(old) = old {
-        if (old.format == 2) != retry {
+        if (old.format == 2) != retry || old.quiescent_retention != quiescent {
             return Err("chunk mount retry format differs; alpha stores are not converted".into());
         }
         old
@@ -578,6 +589,7 @@ fn admit_mode(state: &mut State, input: Input, retry: bool) -> Result<Key> {
         Binding {
             format: if retry { 2 } else { 1 },
             frontier: retry.then_some(0),
+            quiescent_retention: quiescent,
             terminals: std::collections::BTreeMap::new(),
             volume: input.volume.clone(),
             owner,

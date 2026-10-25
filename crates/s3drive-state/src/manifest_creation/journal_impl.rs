@@ -49,7 +49,9 @@ impl<'a> Journal<'a> {
         mut hook: impl FnMut(&str) -> Result<()>,
     ) -> Result<Record> {
         input.validate()?;
-        if crate::chunk_mount::retry_enabled(&self.state.connection)? {
+        if crate::chunk_mount::retry_enabled(&self.state.connection)?
+            && !crate::chunk_mount::quiescent_enabled(&self.state.connection)?
+        {
             return Err("fresh linked-native retention does not admit creation".into());
         }
         let runtime = if input.open.is_some() {
@@ -99,6 +101,18 @@ impl<'a> Journal<'a> {
             let result = old.clone();
             tx.commit()?;
             return Ok(result);
+        }
+        if crate::chunk_mount::quiescent_enabled(&tx)? {
+            // Prospective creation reserves a second identity atomically; its
+            // separate admission protocol is not inferred from an ordinary draft.
+            if input.open.is_some() {
+                return Err(Failure::Isolated.into());
+            }
+            crate::chunk_mount::admission::consume(
+                &tx,
+                crate::chunk_mount::AdmissionDomain::Creation,
+                &input.operation,
+            )?;
         }
         if rows.len() >= self.limits.records
             || (rows.len() + 1) * RECORD_BYTES > self.limits.metadata_bytes

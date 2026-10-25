@@ -375,3 +375,36 @@ pub(crate) fn rewrite_session_for_test(
     )?;
     Ok(())
 }
+
+/// Unlike linked anchors, a whole-forest cut leaves no source requiring an
+/// original Close suffix. This only selects; the caller must independently
+/// prove all source heads clean, roots settled, namespace closed and no readers.
+pub(crate) fn quiescent_candidates(db: &Connection) -> Result<Option<Vec<OpenRecord>>> {
+    if !crate::chunk_mount::quiescent_enabled(db)? {
+        return Err("quiescent contract missing".into());
+    }
+    session::check_index(db)?;
+    check_index(db)?;
+    let ids = db
+        .prepare("SELECT open_id FROM windows_open_journal LIMIT 257")?
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    if ids.len() > OPEN_LIMIT {
+        return Err("quiescent open capacity exceeded".into());
+    }
+    let mut records = Vec::new();
+    for id in ids {
+        let (row, record) = load(db, &id)?.ok_or("quiescent open missing")?;
+        if !is_retired(db, &id)? || !terminal(db, &row, &record)? {
+            return Ok(None);
+        }
+        if !record.input.controlled || !record.input.session_bound {
+            return Err("quiescent open lacks original ownership".into());
+        }
+        records.push(record);
+    }
+    if !session::quiescent_groups(db, &records)? {
+        return Ok(None);
+    }
+    Ok(Some(records))
+}

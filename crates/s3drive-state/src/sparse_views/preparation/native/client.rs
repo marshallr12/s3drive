@@ -77,6 +77,14 @@ impl Client {
             })
             .await
     }
+    /// Separate fresh lifecycle mode; no surviving proof is summarized or
+    /// rebound. Ineligible forests remain byte-for-byte retained.
+    pub async fn retire_quiescent(&self) -> Result<bool> {
+        let key = self.key.clone();
+        self.owner
+            .call(move |worker| publication::retention::quiescent::retire(&mut worker.state, &key))
+            .await
+    }
     pub async fn bind(&self, open: String) -> Result<Token> {
         let key = self.key.clone();
         self.owner
