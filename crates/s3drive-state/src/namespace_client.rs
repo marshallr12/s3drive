@@ -510,6 +510,44 @@ pub(crate) fn chunk_scope(db: &Connection, b: &crate::chunk_mount::Binding) -> R
     opens::chunk_scope(db, b)
 }
 
+pub(crate) fn retirement_records(db: &Connection) -> Result<Vec<Record>> {
+    removals::records(db)
+}
+pub(crate) fn retirement_nodes(input: &Input) -> std::collections::BTreeSet<String> {
+    let mut nodes = input
+        .entries
+        .iter()
+        .map(|e| e.id.clone())
+        .collect::<std::collections::BTreeSet<_>>();
+    if matches!(
+        input.request.mutation,
+        Mutation::CreateEntry { .. }
+            | Mutation::CreateDeferredEntry { .. }
+            | Mutation::CreateEmptyManifest { .. }
+            | Mutation::CreateDeferredEmptyManifest { .. }
+    ) {
+        nodes.insert(input.request.operation.clone());
+    }
+    nodes
+}
+pub(crate) fn component_closed(
+    db: &Connection,
+    volume: &str,
+    nodes: &std::collections::BTreeSet<String>,
+) -> Result<bool> {
+    for record in removals::records(db)? {
+        if !retirement_nodes(&record.input).is_disjoint(nodes) && record.outcome.is_none() {
+            return Ok(false);
+        }
+    }
+    for node in nodes {
+        if removals::owned(db, volume, node)?.is_some() {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
 /// A closed namespace forest has no unknown operation and no surviving owned
 /// removal. Complete history is validated before it can leave local storage.
 pub(crate) fn quiescent(db: &Connection) -> Result<bool> {

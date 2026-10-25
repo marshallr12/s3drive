@@ -1,6 +1,7 @@
 //! Experimental whole-forest eviction, never an inferred Close or remote GC.
 //! A retained reader or any unfinished dependency protects the entire forest.
 use super::*;
+pub(in crate::sparse_views) mod component;
 use crate::namespace_client::{self as names, opens};
 use crate::sparse_views::preparation as prep;
 
@@ -189,7 +190,7 @@ pub(in crate::sparse_views) fn retire(
 // Expected bytes only for this transaction, not reusable validation authority.
 // Keep all owner/session/source identities byte-for-byte, including unused
 // source bindings; the cut neither rebinds credentials nor resets reader IDs.
-fn permanent_rows(db: &Connection) -> Result<Vec<Vec<rusqlite::types::Value>>> {
+pub(super) fn permanent_rows(db: &Connection) -> Result<Vec<Vec<rusqlite::types::Value>>> {
     use rusqlite::types::{Value, ValueRef};
     let mut result = Vec::new();
     for table in [

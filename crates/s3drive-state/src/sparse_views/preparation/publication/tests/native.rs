@@ -5530,3 +5530,140 @@ async fn native_retry_validation_work_quiescent_cold_source_reimport_expires_old
     );
     n.storage.close().await.unwrap();
 }
+
+async fn quiescent_admit_file(n: &Native, f: &Fixture) -> (Token, View) {
+    let mut input = n.token.input().clone();
+    input.node = f.node.id.clone();
+    let binding = f.binding.clone();
+    let key = n.key.clone();
+    let (id, view) = n
+        .storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            input.id = crate::chunk_mount::admission::next(
+                &s.connection,
+                crate::chunk_mount::AdmissionDomain::Open,
+            )?
+            .unwrap();
+            let activation = hex(&hash(b"quiescent-file-activation", &input.id)?[..16]);
+            opens(s, &key).prepare(input.clone())?;
+            opens(s, &key).activate(&input.id, &activation)?;
+            let operation =
+                crate::chunk_mount::admission::source_operation(&s.connection, &binding)?.unwrap();
+            let view = views::Journal::new(s, views::Options::default())?
+                .begin_scoped(operation, binding, 17)?;
+            Ok((input.id, view))
+        })
+        .await
+        .unwrap();
+    (n.client.bind(id).await.unwrap(), view)
+}
+
+#[tokio::test]
+async fn native_retry_validation_work_component_repeated_cleanup_preserves_unrelated_dirty_open_and_reader()
+ {
+    for prepare_other in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("connected component retention");
+        let mut n = setup_contract(&path, 16, true, true, true).await;
+        let other = fixture_node([3; 16]);
+        let (other_token, other_view) = quiescent_admit_file(&n, &other).await;
+        let context = Context::new(
+            &other_view,
+            other.base.root.encode().to_vec(),
+            other.base.page.encode(),
+        )
+        .unwrap();
+        let other_view = n
+            .client
+            .write(other_token.clone(), context, [2; 32], 5, vec![255])
+            .await
+            .unwrap();
+        if prepare_other {
+            n.client
+                .prepare(
+                    other_token.clone(),
+                    Context::new(
+                        &other_view,
+                        other.base.root.encode().to_vec(),
+                        other.base.page.encode(),
+                    )
+                    .unwrap(),
+                )
+                .await
+                .unwrap();
+        }
+        let local = n.storage.sparse_views(views::Options::default()).unwrap();
+        let held = local.guard(other_view.id()).await.unwrap();
+        let clone = held.clone();
+        drop(held);
+        let original_other = record(&n, &other_token).await;
+        let mut f = fixture();
+        for iteration in 1..=16 {
+            f = retry_cycle_mode(&n, f, iteration, false).await;
+            assert!(!n.client.retire_quiescent().await.unwrap());
+            assert!(n.client.retire_component(f.node.id.clone()).await.unwrap());
+            assert!(!n.client.retire_component(f.node.id.clone()).await.unwrap());
+            assert_eq!(record(&n, &other_token).await, original_other);
+            assert_eq!(
+                clone.read(5, 1).await.unwrap(),
+                vec![views::Piece::Local(vec![255])]
+            );
+            n.storage
+                .cache()
+                .owner
+                .call(move |store| {
+                    for (table, expected) in [
+                        ("sparse_view_files", 1),
+                        ("windows_open_journal", 1),
+                        ("sparse_publications", 0),
+                        ("staged_generations", 0),
+                        ("sparse_preparations", i64::from(prepare_other)),
+                    ] {
+                        assert_eq!(
+                            store.state.connection.query_row(
+                                &format!("SELECT count(*) FROM {table}"),
+                                [],
+                                |r| r.get::<_, i64>(0)
+                            )?,
+                            expected
+                        );
+                    }
+                    crate::chunk_mount::validate_all(&store.state.connection)?;
+                    Ok(())
+                })
+                .await
+                .unwrap();
+            if iteration != 16 {
+                let (token, view) = quiescent_admit_file(&n, &f).await;
+                n.token = token;
+                n.view = view;
+            }
+        }
+        let context = Context::new(
+            &other_view,
+            other.base.root.encode().to_vec(),
+            other.base.page.encode(),
+        )
+        .unwrap();
+        let next = n
+            .client
+            .write(other_token.clone(), context, [3; 32], 6, vec![254])
+            .await
+            .unwrap();
+        assert!(!next.is_clean());
+        assert!(!n.client.retire_component(other.node.id).await.unwrap());
+        drop(clone);
+        n.storage.close().await.unwrap();
+        let mut state = State::open_managed(&path).unwrap();
+        assert!(
+            !views::Journal::new(&mut state, views::Options::default())
+                .unwrap()
+                .current_head(&other.binding)
+                .unwrap()
+                .is_clean()
+        );
+    }
+}

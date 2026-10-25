@@ -611,7 +611,11 @@ pub(super) fn pending(db: &Connection, volume: &str, node: &str) -> Result<Optio
     .transpose()
 }
 
-pub(super) fn quiescent_groups(db: &Connection, records: &[OpenRecord]) -> Result<bool> {
+pub(super) fn quiescent_groups(
+    db: &Connection,
+    records: &[OpenRecord],
+    nodes: Option<&std::collections::BTreeSet<String>>,
+) -> Result<bool> {
     check_index(db)?;
     let ids = db
         .prepare("SELECT recovery_id FROM windows_session_recoveries")?
@@ -619,6 +623,9 @@ pub(super) fn quiescent_groups(db: &Connection, records: &[OpenRecord]) -> Resul
         .collect::<rusqlite::Result<Vec<_>>>()?;
     for id in ids {
         let (input, proof) = recovery(db, &id)?;
+        if nodes.is_some_and(|nodes| !nodes.contains(&input.node)) {
+            continue;
+        }
         if proof.is_none() {
             return Ok(false);
         }

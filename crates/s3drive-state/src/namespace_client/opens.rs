@@ -1538,4 +1538,6 @@ pub(crate) fn retained_namespace_child(
     Ok(false)
 }
 
-pub(crate) use retirement::quiescent_candidates;
+pub(crate) use retirement::{
+    quiescent_candidates, quiescent_component_candidates, retained_records,
+};

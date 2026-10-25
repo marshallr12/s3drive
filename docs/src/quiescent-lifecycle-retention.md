@@ -110,3 +110,21 @@ passed45 Linux focused diagnostic cases, including six initial quiescent tests.
 Complete focused logs were reviewed. The full suite and Windows remain pending;
 the follow-on source-expiry/post-cut/concurrent-acquisition additions are newer
 code and do not inherit that result. No mounted option is enabled.
+
+## Connected-component implementation in progress
+
+The state-only collector also has a node-seeded component variant. Namespace
+operations and original-open linked operations connect their affected file nodes;
+parent directories are not file-content dependencies. It refuses dirty heads,
+readers, active opens, unfinished recovery or uncertain publication in the selected
+component, while preserving the exact source/root/namespace/creator/open records
+outside it. Selected physical generations must be disjoint from every surviving
+publication and creator. Owned creation receipts cannot be erased before namespace
+import and closure of the owned removal fence. Identity frontiers and owner/session
+bindings remain permanent.
+
+A two-file test repeatedly reclaims a clean closed file while an unrelated dirty
+file, its open and a cloned logical reader survive, both with and without an
+unfinished preparation. This compiles with workspace Clippy; durable hosted
+execution and namespace/crash coverage remain pending. The mounted profile is
+still not exposed. This is implementation progress, not milestone acceptance.

@@ -380,6 +380,36 @@ pub(crate) fn rewrite_session_for_test(
 /// original Close suffix. This only selects; the caller must independently
 /// prove all source heads clean, roots settled, namespace closed and no readers.
 pub(crate) fn quiescent_candidates(db: &Connection) -> Result<Option<Vec<OpenRecord>>> {
+    quiescent_selected(db, None)
+}
+pub(crate) fn quiescent_component_candidates(
+    db: &Connection,
+    nodes: &std::collections::BTreeSet<String>,
+) -> Result<Option<Vec<OpenRecord>>> {
+    quiescent_selected(db, Some(nodes))
+}
+pub(crate) fn retained_records(db: &Connection) -> Result<Vec<OpenRecord>> {
+    session::check_index(db)?;
+    check_index(db)?;
+    let ids = db
+        .prepare("SELECT open_id FROM windows_open_journal ORDER BY open_id LIMIT 257")?
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    if ids.len() > OPEN_LIMIT {
+        return Err("retained open capacity exceeded".into());
+    }
+    ids.into_iter()
+        .map(|id| {
+            load(db, &id)?
+                .map(|(_, record)| record)
+                .ok_or_else(|| "retained open missing".into())
+        })
+        .collect()
+}
+fn quiescent_selected(
+    db: &Connection,
+    nodes: Option<&std::collections::BTreeSet<String>>,
+) -> Result<Option<Vec<OpenRecord>>> {
     if !crate::chunk_mount::quiescent_enabled(db)? {
         return Err("quiescent contract missing".into());
     }
@@ -395,6 +425,9 @@ pub(crate) fn quiescent_candidates(db: &Connection) -> Result<Option<Vec<OpenRec
     let mut records = Vec::new();
     for id in ids {
         let (row, record) = load(db, &id)?.ok_or("quiescent open missing")?;
+        if nodes.is_some_and(|nodes| !nodes.contains(&record.input.node)) {
+            continue;
+        }
         if !is_retired(db, &id)? || !terminal(db, &row, &record)? {
             return Ok(None);
         }
@@ -403,7 +436,7 @@ pub(crate) fn quiescent_candidates(db: &Connection) -> Result<Option<Vec<OpenRec
         }
         records.push(record);
     }
-    if !session::quiescent_groups(db, &records)? {
+    if !session::quiescent_groups(db, &records, nodes)? {
         return Ok(None);
     }
     Ok(Some(records))

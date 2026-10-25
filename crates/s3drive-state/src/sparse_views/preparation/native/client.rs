@@ -85,6 +85,16 @@ impl Client {
             .call(move |worker| publication::retention::quiescent::retire(&mut worker.state, &key))
             .await
     }
+    /// Reclaim one closed connected lifecycle component without removing an
+    /// unrelated file's handles, readers, dirty data or unknown effects.
+    pub async fn retire_component(&self, node: String) -> Result<bool> {
+        let key = self.key.clone();
+        self.owner
+            .call(move |worker| {
+                publication::retention::quiescent::component::retire(&mut worker.state, &key, &node)
+            })
+            .await
+    }
     pub async fn bind(&self, open: String) -> Result<Token> {
         let key = self.key.clone();
         self.owner

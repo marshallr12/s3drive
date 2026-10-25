@@ -1039,3 +1039,32 @@ fn assert_legacy_catalog(
     );
     assert_eq!(after, before);
 }
+
+#[test]
+fn native_retry_validation_work_quiescent_owned_creator_requires_import_and_closed_fence() {
+    let t = tempfile::tempdir().unwrap();
+    let (mut s, mut a, key, i) = setup(t.path());
+    let record = ack(&mut s, &mut a, &i);
+    let before = catalog(&s);
+    assert!(!super::super::super::retirement_ready(&s.connection, &record).unwrap());
+    assert_eq!(catalog(&s), before);
+    import(&mut s, &key, &i.operation).unwrap();
+    assert!(!super::super::super::retirement_ready(&s.connection, &record).unwrap());
+    let fence = ns(&mut s, &key)
+        .owned_removal(&i.volume, &i.operation)
+        .unwrap()
+        .unwrap()
+        .fence;
+    change(
+        &mut s,
+        &mut a,
+        &key,
+        &i,
+        5,
+        Mutation::CancelRemoval {
+            node: i.operation.clone(),
+            fence,
+        },
+    );
+    assert!(super::super::super::retirement_ready(&s.connection, &record).unwrap());
+}
