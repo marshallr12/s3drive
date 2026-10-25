@@ -757,3 +757,77 @@ pub async fn component_repeated(config: &s3drive_core::Config, root: &Path, s: &
     native_writer::stop(fs).await;
     inspect_component_closed(root);
 }
+
+#[cfg(any(target_os = "linux", windows))]
+pub async fn component_repeated_mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    use native_mount::{Mount, blocking};
+    use std::io::{Read, Seek, SeekFrom, Write};
+    mount_configuration(config, root, s).await;
+    let mut mount = Mount::start(root).await;
+    let base = mount.path.clone();
+    let database = root.join("native-state/metadata.sqlite3");
+    blocking(&mut mount, move || {
+        let mut protected = std::fs::OpenOptions::new().create_new(true).write(true).read(true).open(base.join("protected.bin")).unwrap();
+        protected.write_all(b"unsaved protected").unwrap();
+        let mut reader = std::fs::File::open(base.join("protected.bin")).unwrap();
+        for cycle in 0..4 {
+            let from = base.join(format!("temporary-{cycle}.bin"));
+            let to = base.join(format!("renamed-{cycle}.bin"));
+            let mut file = std::fs::OpenOptions::new().create_new(true).write(true).read(true).open(&from).unwrap();
+            file.write_all(b"initial content").unwrap();
+            std::fs::rename(&from, &to).unwrap();
+            assert!(!from.exists());
+            std::fs::remove_file(&to).unwrap();
+            assert!(!to.exists());
+            file.seek(SeekFrom::Start(0)).unwrap();
+            file.write_all(b"FINAL").unwrap();
+            file.sync_all().unwrap();
+            file.seek(SeekFrom::Start(0)).unwrap();
+            let mut bytes = Vec::new();
+            file.read_to_end(&mut bytes).unwrap();
+            assert_eq!(bytes,b"FINALal content");
+            drop(file);
+            reader.seek(SeekFrom::Start(0)).unwrap();
+            bytes.clear();
+            reader.read_to_end(&mut bytes).unwrap();
+            assert_eq!(bytes,b"unsaved protected");
+            let db = rusqlite::Connection::open_with_flags(&database, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+            // OS Close dispatch may still be in flight. Bounded overlap is not
+            // mistaken for an observed terminal Close or forced reclamation.
+            for (table, maximum) in [("windows_open_journal",8), ("sparse_view_files",3), ("staged_generations",8), ("namespace_intents",16)] {
+                let count = db.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get::<_,i64>(0)).unwrap();
+                assert!(count<=maximum,"cycle {cycle}: {table}={count} exceeds {maximum}");
+            }
+            let bytes = std::fs::metadata(&database).unwrap().len();
+            let wal = std::fs::metadata(database.with_file_name("metadata.sqlite3-wal")).map(|m|m.len()).unwrap_or(0);
+            assert!(bytes<=4*1024*1024 && wal<=8*1024*1024);
+            eprintln!("COMPONENT_NATIVE_REPEAT cycle={cycle} db={bytes} wal={wal} unrelated_dirty_read=exact");
+        }
+        protected.sync_all().unwrap();
+        drop(protected);
+        reader.seek(SeekFrom::Start(0)).unwrap();
+        let mut bytes = Vec::new();
+        reader.read_to_end(&mut bytes).unwrap();
+        assert_eq!(bytes,b"unsaved protected");
+        drop(reader);
+    }).await;
+    mount.stop().await;
+    drop(mount);
+    inspect_component_closed(root);
+    let mut mount = Mount::start(root).await;
+    let base = mount.path.clone();
+    blocking(&mut mount, move || {
+        assert_eq!(
+            std::fs::read(base.join("protected.bin")).unwrap(),
+            b"unsaved protected"
+        );
+        for cycle in 0..4 {
+            assert!(!base.join(format!("temporary-{cycle}.bin")).exists());
+            assert!(!base.join(format!("renamed-{cycle}.bin")).exists());
+        }
+    })
+    .await;
+    mount.stop().await;
+    drop(mount);
+    inspect_component_closed(root);
+}

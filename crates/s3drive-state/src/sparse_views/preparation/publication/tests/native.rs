@@ -5879,3 +5879,68 @@ async fn native_retry_validation_work_component_recovered_publisher_preserves_un
     let state = State::open_managed(&path).unwrap();
     crate::chunk_mount::validate_all(&state.connection).unwrap();
 }
+
+#[tokio::test]
+async fn native_retry_component_database_page_exhaustion_is_complete_cut_or_exact_rollback() {
+    let tmp = tempfile::tempdir().unwrap();
+    let n = setup_contract(
+        &tmp.path().join("component database exhaustion"),
+        16,
+        true,
+        true,
+        true,
+    )
+    .await;
+    retry_cycle_mode(&n, fixture(), 1, false).await;
+    let key = n.key.clone();
+    n.storage
+        .cache()
+        .owner
+        .call(move |store| {
+            let s = &mut store.state;
+            s.connection
+                .execute_batch("CREATE TABLE component_pressure(data BLOB)")?;
+            let pages: i64 = s
+                .connection
+                .pragma_query_value(None, "page_count", |r| r.get(0))?;
+            s.connection.pragma_update(None, "max_page_count", pages)?;
+            loop {
+                match s
+                    .connection
+                    .execute("INSERT INTO component_pressure VALUES(zeroblob(3500))", [])
+                {
+                    Ok(_) => (),
+                    Err(e) if e.sqlite_error_code() == Some(rusqlite::ErrorCode::DiskFull) => break,
+                    Err(e) => return Err(e.into()),
+                }
+            }
+            let before = native_snapshot(s);
+            let cut =
+                crate::sparse_views::preparation::publication::retention::quiescent::component::retire(s, &key, &fixture().node.id);
+            let completed = match cut {
+                Ok(true) => true,
+                Ok(false) => panic!("eligible component became protected without mutation"),
+                Err(error) => {
+                    assert_eq!(
+                        error
+                            .downcast_ref::<rusqlite::Error>()
+                            .and_then(|e| e.sqlite_error_code()),
+                        Some(rusqlite::ErrorCode::DiskFull)
+                    );
+                    assert_eq!(native_snapshot(s), before);
+                    false
+                }
+            };
+            s.connection
+                .pragma_update(None, "max_page_count", pages + 1024)?;
+            assert_eq!(
+                crate::sparse_views::preparation::publication::retention::quiescent::component::retire(s, &key, &fixture().node.id)?,
+                !completed
+            );
+            crate::chunk_mount::validate_all(&s.connection)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    n.storage.close().await.unwrap();
+}

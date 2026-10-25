@@ -1193,3 +1193,83 @@ async fn native_retry_validation_work_component_expired_creator_cannot_restage_o
         .unwrap();
     storage.close().await.unwrap();
 }
+
+#[tokio::test]
+async fn native_retry_validation_work_component_namespace_identity_expires_without_erasing_remote_node()
+ {
+    let tmp = tempfile::tempdir().unwrap();
+    let (mut state, mut authority, key, i) = setup_contract(tmp.path(), true);
+    let operation =
+        chunk_mount::admission::next(&state.connection, chunk_mount::AdmissionDomain::Namespace)
+            .unwrap()
+            .unwrap();
+    let input = names::Input {
+        request: Apply {
+            volume: i.volume.clone(),
+            operation: operation.clone(),
+            expected_sequence: i.expected_sequence,
+            mutation: Mutation::CreateEntry {
+                parent: i.parent.id.clone(),
+                parent_revision: i.parent.revision,
+                store: None,
+                name: "retained remote directory".into(),
+                node_kind: ns::Kind::Directory,
+            },
+        },
+        store: i.store.clone(),
+        source: i.source,
+        fingerprint: i.fingerprint.clone(),
+        entries: Vec::new(),
+        destination_control: None,
+    };
+    ns(&mut state, &key).begin(input.clone()).unwrap();
+    let receipt = authority.namespace_apply(&input.request).unwrap();
+    ns(&mut state, &key)
+        .acknowledge(&operation, Ok(receipt.clone()))
+        .unwrap();
+    drop(state);
+    let storage = crate::worker::Storage::open(
+        &tmp.path().join("client"),
+        crate::cache::Options::default(),
+        journal::Options::default(),
+    )
+    .await
+    .unwrap();
+    let capability = storage
+        .chunk_mount_components(chunk_mount::Input {
+            volume: i.volume.clone(),
+            controls: vec![names::Control {
+                store: i.store,
+                source: i.source,
+                fingerprint: i.fingerprint,
+            }],
+        })
+        .await
+        .unwrap();
+    let collector = capability
+        .native_sparse(
+            crate::sparse_views::Options::default(),
+            crate::sparse_views::preparation::Options::default(),
+        )
+        .unwrap();
+    assert!(
+        collector
+            .retention_candidates()
+            .await
+            .unwrap()
+            .contains(&operation)
+    );
+    assert!(collector.retire_component(operation.clone()).await.unwrap());
+    assert!(
+        !collector
+            .retention_candidates()
+            .await
+            .unwrap()
+            .contains(&operation)
+    );
+    assert!(capability.namespace().begin(input.clone()).await.is_err());
+    // This is an authority receipt lookup through its exact idempotent request,
+    // not replay permission for the expired client intent.
+    assert_eq!(authority.namespace_apply(&input.request).unwrap(), receipt);
+    storage.close().await.unwrap();
+}

@@ -10,6 +10,11 @@ Baseline main `3fd2f05e6d833d45cc1bfb70eabe6aa754524402` passed independent full
 This is fresh existing-linked-file retention, not the four remaining milestones.
 Candidate acceptance and subsequent merged-main verification remain separate.
 
+Current experimental work: [fresh connected-component retention](quiescent-lifecycle-retention.md)
+has state and shared lifecycle proofs, but actual callback verification exposed a
+reopen/Close reader-admission gap. The correction requires fresh native and full
+acceptance; no milestone or main merge is claimed from focused green tests.
+
 ## 1. Creation and namespace lifecycle cleanup
 
 Existing `owned-unlinked-v1` implements create, rename, replacement, unlink and

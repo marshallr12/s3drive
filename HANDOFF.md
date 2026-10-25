@@ -39,13 +39,25 @@ installation/native application/reboot checks and actual Wasabi headroom remain
 blocked. See the completion plan for precise scope. No new main acceptance or
 public release is claimed.
 
-A separate experimental `codex/quiescent-lifecycle-proof` development branch
-adds a fresh **state-only** whole-forest eviction contract, not a new mounted
-profile. Its [design and incomplete acceptance checklist](docs/src/quiescent-lifecycle-retention.md)
-explain permanent identity expiry, clean/closed dependency proofs, reader and
-unknown-outcome protection, and the current whole-store deferral limitation.
-No lifecycle or beta milestone is accepted from this prototype. Do not merge it
-merely because compilation or a focused test passes.
+Experimental `codex/quiescent-lifecycle-proof` now implements fresh closed
+connected-component cleanup and exposes development-only `component-retention-v1`.
+It preserves unrelated dirty/open/read-protected work, expires namespace/creator/
+source identities and retains permanent owner/session/generation counters.
+Exact160113a passed50 focused state and four shared lifecycle/recovery cases;
+22480e91 passed51 state and five shared cases, but both actual native platforms
+failed a final reopened read. The correction306ed181 carries an independent
+reader lease through source dispatch until original-open activation, with a
+paused-admission/previous-Close regression. Its actual/full gates are pending.
+See the [design and evidence boundaries](docs/src/quiescent-lifecycle-retention.md).
+Do not merge from focused or shared passes alone. Main remains unchanged.
+
+On cf2ab03, the full Linux job passed1110 workspace tests and its three300-save
+runs; both added1000-save/four64KiB-file300 runs passed with all cold segments.
+Windows original debug300 passed its workflow step in1180s/1200, only20s margin;
+full Windows verification is pending. This is not robust wall-time headroom or
+physical-hardware acceptance. Private test packaging works on hosted systems,
+not an installer or public release. Provider/headroom, MiniAir driver/native UI,
+startup installation and reboot evidence remain externally blocked.
 
 ## Corrected fresh linked-native candidate accepted (2026-10-25)
 

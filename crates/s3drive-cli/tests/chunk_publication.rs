@@ -1355,6 +1355,10 @@ fn dispatch<'a>(
         "native_lifecycle_profile" => {
             boxed_case(|| native_lifecycle::profile_transition(config, root, s))
         }
+        #[cfg(any(target_os = "linux", windows))]
+        "native_component_repeated_mounted" => {
+            boxed_case(|| native_lifecycle::component_repeated_mounted(config, root, s))
+        }
         "native_component_repeated" => {
             boxed_case(|| native_lifecycle::component_repeated(config, root, s))
         }
@@ -2030,7 +2034,7 @@ async fn run(mode: &str) {
         "native_writer_mount" => 6,
         "native_lifecycle_cold_known" => 3,
         "native_lifecycle_cold_unknown" => 1,
-        "native_component_repeated" => 23,
+        "native_component_repeated" | "native_component_repeated_mounted" => 23,
         "native_lifecycle_unlink" => 5,
         "native_lifecycle_mounted" => 13,
         "native_lifecycle_mounted_known" => 3,
@@ -2603,4 +2607,11 @@ async fn component_retention_actual_unlink_replace_dirty_handles_and_remount() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn component_retention_shared_repeated_lifecycle_preserves_unrelated_dirty_readers() {
     run("component:native_component_repeated").await;
+}
+
+#[cfg(any(target_os = "linux", windows))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "dedicated component retention; real FUSE/WinFsp required"]
+async fn component_retention_actual_repeated_lifecycle_with_dirty_readers_and_cold_remount() {
+    run("component:native_component_repeated_mounted").await;
 }

@@ -173,3 +173,12 @@ own cached reader, never that arriving open's lease. A deterministic regression
 pauses at that dispatch boundary and completes the prior Close before activation.
 The original deadlines remain unchanged. This correction still requires fresh
 shared, actual-native, crash and full-suite verification.
+
+The reader-admission correction on exact `306ed1817bd40d6830741c6136cbddca4733693e`
+passed the actual Linux unlink/replacement/held-handle/cold-remount case in16.70s
+in [run40211998842](https://github.com/marshallr12/s3drive/actions/runs/40211998842),
+with its complete focused log reviewed. Windows and full acceptance remain
+pending at this checkpoint. New acceptance additions exercise repeated actual
+native lifecycle with an unrelated dirty reader, expired namespace identity,
+and genuine SQLite page-cap exhaustion (complete validated cut or exact rollback,
+not a claim of physical-disk/WAL exhaustion simulation).
