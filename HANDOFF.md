@@ -4,6 +4,45 @@ Updated 2026-10-25. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
+## Hosted item4 candidate accepted; independent main verification required (2026-10-26)
+
+Main `f2410ec8b25609b34926b87b5474d7ad3671c647` independently passed
+[run40241620855](https://github.com/marshallr12/s3drive/actions/runs/40241620855):
+all nine complete job logs, 808 exact source files, six artifact digests/reports,
+Linux1141/Windows1133 workspace tests, six original300 workloads and all800
+component cycles/400 integrity checks. Windows debug300 was1019.67s under1200s.
+The candidate-only checkpoint below is historical; the separate main proof passed.
+
+The user requested item4 testing through GitHub Actions on2026-10-26. Hosted
+CLI-application and relocated-package/startup gates now have **candidate acceptance**.
+They add actual Git checkout/replacement/rename/delete and reader sharing through
+FUSE/WinFsp, then interrupted mount-process recovery; two deterministic packages
+of one real binary; offline relocated durable initialization; and the shipped
+startup scripts with the relocated binary. No product behavior/default changes.
+No GUI application, physical reboot, cross-machine reproducible compiler output,
+live Wasabi, public binary distribution or licensing acceptance is implied.
+Provider headroom/access and actual hardware/GUI/reboot remain blocked separately.
+
+Exact candidate `34e42a41b28512a045e5e813cc8eaf071b363edd`, tree
+`4555e7493fa7b6e6735fce8e259d9ef45e8222d0`, passed
+[run40258999976](https://github.com/marshallr12/s3drive/actions/runs/40258999976):
+all nine complete logs, 810 exact source files, six artifact digests/reports,
+Linux1143/Windows1135 workspace tests and all original and extended gates.
+Original shared/debug/release300 times were360.00/429.37/99.90s on Linux and
+689.96/1096.64/341.19s on Windows; debug retains103.36s under unchanged1200s.
+Both OSes passed400 component cycles/200 cold integrity checks, with all nine
+permanent table maxima1. Long1000-save/large64KiB workloads were474.55/284.59s
+on Linux and1245.61/610.74s on Windows. Product runtime/defaults are unchanged.
+This documentation-only update preserves accepted runtime/tests/CI. The merge
+commit still requires its own independent complete main verification.
+
+Windows relocated startup exercised the existing disposable-runner-only profile
+cleanup policy: after functional/security checks and unmount, an OS-held profile
+sharing violation may defer profile deletion to VM destruction. Fixture-owned
+process absence and dummy-credential removal remain mandatory; other cleanup
+errors fail. This policy is not authorized for user hardware. See the
+[full hosted scope and rejected fixture history](docs/src/beta-completion.md).
+
 ## Candidate code accepted; real-use beta remains incomplete (2026-10-25)
 
 Exact source `59a10fe36b98d85d200bd24f7a51c79147e7a200`, tree

@@ -17,7 +17,7 @@ async fn configuration(
     c
 }
 #[cfg(any(target_os = "linux", windows))]
-async fn mount_configuration(config: &s3drive_core::Config, root: &Path, s: &Server) {
+pub(super) async fn mount_configuration(config: &s3drive_core::Config, root: &Path, s: &Server) {
     native_writer::mount_configuration(config, root, s).await;
     let path = root.join("native-drive.toml");
     let mut c: toml::Value = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();

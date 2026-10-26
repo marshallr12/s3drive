@@ -41,7 +41,11 @@ impl Mount {
         let path = root.join("native mount 日本語");
         #[cfg(target_os = "linux")]
         std::fs::create_dir_all(&path).unwrap();
-        let mut command = tokio::process::Command::new(env!("CARGO_BIN_EXE_s3drive"));
+        let executable = std::env::var_os("S3DRIVE_TEST_PACKAGED_CLI")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| env!("CARGO_BIN_EXE_s3drive").into());
+        assert!(executable.is_absolute() && executable.is_file());
+        let mut command = tokio::process::Command::new(executable);
         command
             .arg("mount")
             .arg(root.join("native-drive.toml"))
@@ -85,6 +89,21 @@ impl Mount {
             panic!("native chunk writer mount never became ready: {log}");
         }
         mount
+    }
+    pub(super) async fn interrupt(&mut self) {
+        assert!(self.child.try_wait().unwrap().is_none());
+        tokio::time::timeout(Duration::from_secs(15), self.child.kill())
+            .await
+            .unwrap()
+            .unwrap();
+        let status = self.child.wait().await.unwrap();
+        assert!(!status.success(), "owned mount was not interrupted");
+        let log = tokio::time::timeout(Duration::from_secs(5), &mut self.log)
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(log.len() <= 65536);
+        eprintln!("HOSTED_APPLICATION owned_daemon_interrupted={status}");
     }
     pub(super) async fn stop(&mut self) {
         #[cfg(target_os = "linux")]
@@ -189,7 +208,11 @@ impl Mount {
     }
     pub(super) async fn refused(root: &Path) {
         let path = root.join("native mount 日本語");
-        let mut command = tokio::process::Command::new(env!("CARGO_BIN_EXE_s3drive"));
+        let executable = std::env::var_os("S3DRIVE_TEST_PACKAGED_CLI")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| env!("CARGO_BIN_EXE_s3drive").into());
+        assert!(executable.is_absolute() && executable.is_file());
+        let mut command = tokio::process::Command::new(executable);
         command
             .arg("mount")
             .arg(root.join("native-drive.toml"))

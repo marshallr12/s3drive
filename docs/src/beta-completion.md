@@ -87,6 +87,65 @@ No failure was dismissed, no deadline was enlarged, and no uncertain data was
 silently discarded. These diagnostics do not establish physical corruption of
 the original failure database, whose raw DB/WAL was not retained.
 
+## Hosted item4 candidate acceptance (2026-10-26; main proof separate)
+
+The preceding code scope is now also independently verified on main
+`f2410ec8b25609b34926b87b5474d7ad3671c647` in
+[run40241620855](https://github.com/marshallr12/s3drive/actions/runs/40241620855).
+The user requested further item4 tests on standard GitHub Actions, not MiniAir.
+
+New test-only coverage runs genuine Git CLI subprocesses against the mounted
+filesystem: Unicode document checkout, forced replacement, rename, deletion,
+retained-reader checks, Windows exclusive sharing refusal, application reopen,
+and exact cold reads after terminating the owned mount daemon. Git metadata lives
+outside the drive, with no remote, credential helper, commit identity or network
+operation. This is **CLI application I/O**, not Office/Notepad UI acceptance or a
+claim that a complete Git repository can safely reside on the drive. Commands
+follow official [checkout-index](https://git-scm.com/docs/git-checkout-index),
+[mv](https://git-scm.com/docs/git-mv) and [rm](https://git-scm.com/docs/git-rm)
+documentation reviewed2026-10-26. The loopback object fixture is not Wasabi.
+
+Private packaging now compares two independently assembled archives of the same
+built binary, records archive/binary/source digests, runs relocated config checks
+and idempotent schema50 state initialization with integrity/FK validation, then
+uses that relocated binary for actual mounts and the shipped startup/session
+tests. Deterministic archive assembly is not reproducible compiler output across
+machines. Existing Linux desktop/terminal-loss and Windows Task Scheduler separate
+logon tests are rerun, not replaced by a synthetic supervisor mock. An owned
+process interruption is not a physical reboot. Archives remain unpublished.
+Exact candidate `34e42a41b28512a045e5e813cc8eaf071b363edd`, tree
+`4555e7493fa7b6e6735fce8e259d9ef45e8222d0`, passed
+[run40258999976](https://github.com/marshallr12/s3drive/actions/runs/40258999976):
+all nine complete logs, 810 exact source files, six artifact digests/reports,
+Linux1143/Windows1135 workspace tests and all original and extended gates.
+Original shared/debug/release300 times were360.00/429.37/99.90s on Linux and
+689.96/1096.64/341.19s on Windows; debug retains103.36s under unchanged1200s.
+Both OSes passed400 component cycles/200 cold integrity checks, with all nine
+permanent table maxima1. Long1000-save/large64KiB workloads were474.55/284.59s
+on Linux and1245.61/610.74s on Windows. Product runtime/defaults are unchanged.
+This documentation-only update preserves accepted runtime/tests/CI. The merge
+commit still requires its own independent complete main verification.
+
+Git2.55.0 on Linux and2.56.0.windows.2 performed the tested operations. The
+provenance checker derives bucket/prefix composition from the actual fixture
+configuration, verifies three creators/reservations/publications and exactly
+nine canonical objects, including exact payloads and root/page hashes. Two pure
+checker tests cover configured prefixes/buckets and missing/extra/corrupt evidence.
+Windows additionally passed all nine relocated native/startup cases. Its known
+OS-held fixture-profile error32 used the existing explicit disposable-VM policy:
+functional/security checks and unmount must pass, no fixture-owned process may
+remain, dummy credentials must be removed, and every other cleanup error fails.
+Only profile deletion is deferred to hosted VM destruction, not silently claimed.
+
+Rejected hosted test fixtures are preserved: e7ad8bb omitted loopback path-style
+configuration; d4b2f27 incorrectly counted a nonexistent setup seed PUT;6dccc49
+omitted the configured source prefix in its new provenance checker;d7e51f8 omitted
+the existing disposable-runner cleanup flag from the new startup invocation.
+Corrections affect only tests/CI, not product guards or existing deadlines. The
+final exact candidate above passed all gates; prior green subsets were not used
+as candidate or main acceptance.
+
+
 ## 4. Real-use beta and packaging
 
 Hosted native/startup tests are not real provider or physical-machine evidence.

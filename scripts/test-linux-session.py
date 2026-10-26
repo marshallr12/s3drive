@@ -12,7 +12,7 @@ import uuid
 
 repo = Path(__file__).resolve().parent.parent
 binary = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else repo / "target/debug/s3drive"
-manager = repo / "scripts/linux-session.py"
+manager = Path(os.environ.get("S3DRIVE_TEST_PACKAGED_SESSION", str(repo / "scripts/linux-session.py"))).resolve(strict=True)
 name = "acceptance"
 session = "s3drive-" + uuid.uuid4().hex[:12]
 

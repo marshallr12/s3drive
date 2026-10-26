@@ -513,6 +513,31 @@ jobs:
           python scripts/package-test.py --binary "$binary" --output "$RUNNER_TEMP/s3drive-private-test.zip" --target "$target" --dependencies "$RUNNER_TEMP/s3drive-package-dependencies.json"
           python scripts/package-test.py --verify "$RUNNER_TEMP/s3drive-private-test.zip"
           # Deliberately do not upload a private developer bundle as a public artifact.
+      - name: Verify repeatable private packages and relocated durable startup
+        shell: bash
+        run: |
+          binary=target/release/s3drive
+          if [[ "$RUNNER_OS" == "Windows" ]]; then binary="$binary.exe"; fi
+          target=$(rustc --version --verbose | sed -n 's/^host: //p' | tr -d '\r')
+          python scripts/test-package-native.py --binary "$binary" --dependencies "$RUNNER_TEMP/s3drive-package-dependencies.json" --target "$target" --output-root "$RUNNER_TEMP/s3drive-repeat-package"
+      - name: Verify genuine Git application saves through relocated mounted CLI and interrupted owner
+        timeout-minutes: 5
+        run: cargo test -p s3drive-cli --test chunk_publication --release hosted_application_git_save_replace_rename_delete_and_interrupted_cold_remount --locked -- --exact --ignored --nocapture --test-threads=1
+      - name: Verify relocated Linux shipped startup survives terminal exit
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          sudo apt-get install -y tmux libglib2.0-bin
+          python3 scripts/test-linux-session.py "$S3DRIVE_TEST_PACKAGED_CLI"
+      - name: Verify relocated Windows shipped startup across independent logons
+        if: runner.os == 'Windows'
+        timeout-minutes: 15
+        env:
+          # Same disposable-profile cleanup policy as the original native gate.
+          # Functional/security checks and all other cleanup remain mandatory.
+          S3DRIVE_DISPOSABLE_WINDOWS_VM: '1'
+        run: cargo test -p s3drive-cli --test windows_mount --release --locked -- --ignored --nocapture --test-threads=1
       - name: Additional component 100 lifecycle cycles with dirty readers and 50 mounts
         timeout-minutes: 45
         run: cargo test -p s3drive-cli --test chunk_publication --release component_retention_extended_100_lifecycle_cycles_50_mounts --locked -- --exact --ignored --nocapture --test-threads=1

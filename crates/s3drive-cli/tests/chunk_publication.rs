@@ -22,6 +22,9 @@ mod mixed_roots;
 mod mixed_uploads;
 #[path = "chunk_publication/namespace_recovery.rs"]
 mod namespace_recovery;
+#[cfg(any(target_os = "linux", windows))]
+#[path = "chunk_publication/native_application.rs"]
+mod native_application;
 #[path = "chunk_publication/native_directories.rs"]
 mod native_directories;
 #[path = "chunk_publication/native_lifecycle.rs"]
@@ -1359,6 +1362,8 @@ fn dispatch<'a>(
         "native_component_repeated_mounted" => {
             boxed_case(|| native_lifecycle::component_repeated_mounted(config, root, s))
         }
+        #[cfg(any(target_os = "linux", windows))]
+        "native_application" => boxed_case(|| native_application::mounted(config, root, s)),
         "native_component_repeated" => {
             boxed_case(|| native_lifecycle::component_repeated(config, root, s))
         }
@@ -2010,6 +2015,10 @@ async fn run(mode: &str) {
             );
         }
     }
+    #[cfg(any(target_os = "linux", windows))]
+    if mode == "native_application" {
+        native_application::verify_objects(tmp.path(), &f);
+    }
     let expected = match mode {
         "native_retention_cpu_profile" => {
             assert_eq!(retention_completed, 3);
@@ -2077,6 +2086,9 @@ async fn run(mode: &str) {
         "native_lifecycle_mounted_unknown" => 1,
         "native_lifecycle_replace" => 8,
         "native_lifecycle_profile" => 5,
+        // setup() creates a legacy empty authority entry without a PUT.
+        // Each of three Git creations emits empty manifest + payload + manifest.
+        "native_application" => 3 * 3,
         "native_lifecycle_ordered" => 5,
         "native_lifecycle_history" => 7,
         "native_lifecycle_disposition" | "native_lifecycle_disposition_concurrent" => 5,
@@ -2664,4 +2676,11 @@ async fn component_retention_extended_100_lifecycle_cycles_50_mounts() {
 #[ignore = "multi-owner component lifecycle regression; real FUSE/WinFsp required"]
 async fn component_retention_actual_multiple_owners_preserve_cold_file_and_bound_permanent_rows() {
     run("component:native_component_soak8").await;
+}
+
+#[cfg(any(target_os = "linux", windows))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "genuine Git CLI, real FUSE/WinFsp, isolated loopback provider"]
+async fn hosted_application_git_save_replace_rename_delete_and_interrupted_cold_remount() {
+    run("component:native_application").await;
 }
