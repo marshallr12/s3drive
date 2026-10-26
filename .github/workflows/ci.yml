@@ -533,6 +533,10 @@ jobs:
       - name: Verify relocated Windows shipped startup across independent logons
         if: runner.os == 'Windows'
         timeout-minutes: 15
+        env:
+          # Same disposable-profile cleanup policy as the original native gate.
+          # Functional/security checks and all other cleanup remain mandatory.
+          S3DRIVE_DISPOSABLE_WINDOWS_VM: '1'
         run: cargo test -p s3drive-cli --test windows_mount --release --locked -- --ignored --nocapture --test-threads=1
       - name: Additional component 100 lifecycle cycles with dirty readers and 50 mounts
         timeout-minutes: 45
