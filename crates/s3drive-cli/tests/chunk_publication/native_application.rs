@@ -237,16 +237,27 @@ pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
 
 // Independently cross-check three application saves against actual object bytes
 // and canonical authority identities, not just a guessed aggregate PUT count.
+type ApplicationObjects = std::collections::BTreeMap<String, (Vec<u8>, String)>;
+fn physical_key(source: &s3drive_core::Source, key: &str) -> String {
+    format!("/{}/{}{}", source.bucket, source.prefix, key)
+}
 pub fn verify_objects(root: &Path, f: &fixture::Fixture) {
+    let config = s3drive_core::Config::parse(
+        &std::fs::read_to_string(root.join("native-drive.toml")).unwrap(),
+    )
+    .unwrap();
+    let applies: Vec<Apply> =
+        serde_json::from_slice(&std::fs::read(root.join("application-operations.json")).unwrap())
+            .unwrap();
+    verify_map(applies, &f.objects.lock().unwrap(), &config.sources[0]);
+}
+fn verify_map(applies: Vec<Apply>, objects: &ApplicationObjects, source: &s3drive_core::Source) {
     use s3drive_core::manifest::{
         Entry,
         objects::{Namespace, Role, RootDescriptor},
     };
     use sha2::{Digest, Sha256};
     use std::collections::{BTreeMap, BTreeSet};
-    let applies: Vec<Apply> =
-        serde_json::from_slice(&std::fs::read(root.join("application-operations.json")).unwrap())
-            .unwrap();
     let mut unique = BTreeMap::new();
     let mut ordered = Vec::new();
     for a in applies {
@@ -256,7 +267,7 @@ pub fn verify_objects(root: &Path, f: &fixture::Fixture) {
             ordered.push(a);
         }
     }
-    let objects = f.objects.lock().unwrap();
+    // Namespace keys are relative to the parsed configured source.
     let mut expected = BTreeSet::new();
     let mut creators = BTreeSet::new();
     let mut reservations = BTreeSet::new();
@@ -282,11 +293,17 @@ pub fn verify_objects(root: &Path, f: &fixture::Fixture) {
                     binary(store),
                 )
                 .unwrap();
-                let key = format!(
-                    "/test-bucket/{}",
-                    ns.root_key(&descriptor).unwrap().as_str()
+                let key = physical_key(source, ns.root_key(&descriptor).unwrap().as_str());
+                assert_eq!(
+                    objects
+                        .get(&key)
+                        .unwrap_or_else(|| panic!(
+                            "missing canonical empty object {key}; actual keys {:?}",
+                            objects.keys().collect::<Vec<_>>()
+                        ))
+                        .0,
+                    bytes
                 );
-                assert_eq!(objects.get(&key).unwrap().0, bytes);
                 assert!(expected.insert(key));
             }
             Mutation::ReserveManifest {
@@ -305,10 +322,7 @@ pub fn verify_objects(root: &Path, f: &fixture::Fixture) {
                     binary(store),
                 )
                 .unwrap();
-                let key = format!(
-                    "/test-bucket/{}",
-                    ns.root_key(&descriptor).unwrap().as_str()
-                );
+                let key = physical_key(source, ns.root_key(&descriptor).unwrap().as_str());
                 let page = descriptor
                     .verify_page(&objects.get(&key).unwrap().0)
                     .unwrap();
@@ -316,10 +330,7 @@ pub fn verify_objects(root: &Path, f: &fixture::Fixture) {
                 let [Entry::Data { length, object }] = page.page().entries() else {
                     panic!("expected exactly one data extent")
                 };
-                let key = format!(
-                    "/test-bucket/{}",
-                    ns.key(Role::Data, object).unwrap().as_str()
-                );
+                let key = physical_key(source, ns.key(Role::Data, object).unwrap().as_str());
                 let bytes = &objects.get(&key).unwrap().0;
                 assert_eq!(*length, bytes.len() as u64);
                 assert_eq!(object.sha256().as_slice(), Sha256::digest(bytes).as_slice());
@@ -339,7 +350,7 @@ pub fn verify_objects(root: &Path, f: &fixture::Fixture) {
     assert_eq!(expected.len(), 9);
     let actual = objects
         .keys()
-        .filter(|k| k.starts_with("/test-bucket/writable/.s3drive/"))
+        .filter(|k| k.starts_with(&physical_key(source, "writable/.s3drive/")))
         .cloned()
         .collect::<BTreeSet<_>>();
     assert_eq!(
@@ -349,4 +360,194 @@ pub fn verify_objects(root: &Path, f: &fixture::Fixture) {
     eprintln!(
         "HOSTED_APPLICATION_PROVENANCE creators=3 exact_published_saves=3 canonical_objects=9 payloads=exact"
     );
+}
+
+fn constructed_objects(
+    bucket: &str,
+    prefix: &str,
+) -> (Vec<Apply>, ApplicationObjects, s3drive_core::Source) {
+    use s3drive_core::manifest::{
+        Entry, Page, Reference,
+        objects::{Namespace, Role, RootDescriptor},
+    };
+    use s3drive_state::namespace::{ContentGuard, ManifestRoot};
+    use sha2::{Digest, Sha256};
+    let config = s3drive_core::Config::parse(&format!("version=1\nmode='read-only'\n[[sources]]\nalias='docs'\nbucket='{bucket}'\nregion='us-east-1'\nprefix='{prefix}'\n")).unwrap();
+    let source = config.sources.into_iter().next().unwrap();
+    let mut records = Vec::new();
+    let mut objects = ApplicationObjects::new();
+    for (i, bytes) in [FIRST, SECOND, SECOND].into_iter().enumerate() {
+        let volume = id(1);
+        let store = id(200);
+        let node = id(100 + i as u64);
+        let generation = id(1000 + i as u64);
+        let reserve = id(2000 + i as u64);
+        let ns = Namespace::new(
+            "writable/.s3drive/".into(),
+            binary(&volume),
+            binary(&node),
+            binary(&store),
+        )
+        .unwrap();
+        let (empty, body) = RootDescriptor::empty(
+            binary(&volume),
+            binary(&node),
+            binary(&store),
+            binary(&node),
+        )
+        .unwrap();
+        objects.insert(
+            format!(
+                "/{bucket}/{prefix}{}",
+                ns.root_key(&empty).unwrap().as_str()
+            ),
+            (body, "fixture-etag".into()),
+        );
+        records.push(Apply {
+            volume: volume.clone(),
+            operation: node.clone(),
+            expected_sequence: 1,
+            mutation: Mutation::CreateEmptyManifest {
+                parent: s3drive_authority::ROOT.into(),
+                parent_revision: 1,
+                name: NAME.into(),
+                store: store.clone(),
+                upload_operation: "a".repeat(64),
+                etag: "fixture-etag".into(),
+                version: None,
+            },
+        });
+        let data = Reference::new(
+            binary(&store),
+            binary(&generation),
+            0,
+            Sha256::digest(bytes).into(),
+        )
+        .unwrap();
+        objects.insert(
+            format!(
+                "/{bucket}/{prefix}{}",
+                ns.key(Role::Data, &data).unwrap().as_str()
+            ),
+            (bytes.to_vec(), "fixture-etag".into()),
+        );
+        let page = Page::new(
+            binary(&volume),
+            binary(&node),
+            0,
+            0,
+            vec![Entry::Data {
+                length: bytes.len() as u64,
+                object: data,
+            }],
+        )
+        .unwrap();
+        let descriptor = RootDescriptor::new(
+            binary(&volume),
+            binary(&node),
+            bytes.len() as u64,
+            Reference::new(binary(&store), binary(&generation), 1 << 56, page.digest()).unwrap(),
+        )
+        .unwrap();
+        let body = page.encode();
+        objects.insert(
+            format!(
+                "/{bucket}/{prefix}{}",
+                ns.root_key(&descriptor).unwrap().as_str()
+            ),
+            (body.clone(), "fixture-etag".into()),
+        );
+        records.push(Apply {
+            volume: volume.clone(),
+            operation: reserve.clone(),
+            expected_sequence: 2,
+            mutation: Mutation::ReserveManifest {
+                node,
+                expected_revision: 1,
+                store,
+                size: body.len() as u64,
+                sha256: page.digest().iter().map(|b| format!("{b:02x}")).collect(),
+                manifest: Box::new(ManifestRoot::new(descriptor).unwrap()),
+                guard: ContentGuard {
+                    expected: None,
+                    detached: false,
+                    removal: None,
+                    removal_claim: None,
+                },
+            },
+        });
+        records.push(Apply {
+            volume,
+            operation: id(3000 + i as u64),
+            expected_sequence: 3,
+            mutation: Mutation::Publish {
+                reservation: reserve,
+                upload_operation: "b".repeat(64),
+                etag: "fixture-etag".into(),
+                version: None,
+            },
+        });
+    }
+    (records, objects, source)
+}
+#[test]
+fn application_object_provenance_accepts_exact_configured_three_saves() {
+    for (bucket, prefix) in [
+        ("test-bucket", "desktop/"),
+        ("other-bucket", "nested/prefix/"),
+    ] {
+        let (mut records, objects, source) = constructed_objects(bucket, prefix);
+        assert_eq!(objects.len(), 9);
+        records.push(records[0].clone()); // Exact original retries are not extra saves.
+        verify_map(records, &objects, &source);
+    }
+}
+#[test]
+fn application_object_provenance_refuses_missing_extra_corrupt_and_foreign_evidence() {
+    let (records, objects, source) = constructed_objects("test-bucket", "desktop/");
+    for case in [
+        "missing", "extra", "data", "page", "empty", "prefix", "bucket", "publish", "retry",
+    ] {
+        let mut records = records.clone();
+        let mut objects = objects.clone();
+        let mut source = source.clone();
+        match case {
+            "missing" => {
+                objects.pop_first();
+            }
+            "extra" => {
+                objects.insert(
+                    "/test-bucket/desktop/writable/.s3drive/unexpected".into(),
+                    (vec![1], "fixture".into()),
+                );
+            }
+            "data" | "page" | "empty" => {
+                let key = objects
+                    .keys()
+                    .find(|key| match case {
+                        "data" => key.contains("/data/"),
+                        "empty" => key.contains(&format!("/{}/page/", id(100))),
+                        _ => key.contains(&format!("/{}/page/", id(1000))),
+                    })
+                    .unwrap()
+                    .clone();
+                objects.get_mut(&key).unwrap().0[0] ^= 1;
+            }
+            "prefix" => source.prefix = "wrong/".into(),
+            "bucket" => source.bucket = "wrong-bucket".into(),
+            "publish" => {
+                records.pop();
+            }
+            "retry" => {
+                let mut changed = records[0].clone();
+                changed.expected_sequence += 1;
+                records.push(changed);
+            }
+            _ => unreachable!(),
+        }
+        assert!(
+            std::panic::catch_unwind(|| verify_map(records, &objects, &source)).is_err(),
+            "accepted {case}"
+        );
+    }
 }
