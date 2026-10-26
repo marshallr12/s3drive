@@ -2015,6 +2015,10 @@ async fn run(mode: &str) {
             );
         }
     }
+    #[cfg(any(target_os = "linux", windows))]
+    if mode == "native_application" {
+        native_application::verify_objects(tmp.path(), &f);
+    }
     let expected = match mode {
         "native_retention_cpu_profile" => {
             assert_eq!(retention_completed, 3);
@@ -2082,7 +2086,9 @@ async fn run(mode: &str) {
         "native_lifecycle_mounted_unknown" => 1,
         "native_lifecycle_replace" => 8,
         "native_lifecycle_profile" => 5,
-        "native_application" => 10,
+        // setup() creates a legacy empty authority entry without a PUT.
+        // Each of three Git creations emits empty manifest + payload + manifest.
+        "native_application" => 3 * 3,
         "native_lifecycle_ordered" => 5,
         "native_lifecycle_history" => 7,
         "native_lifecycle_disposition" | "native_lifecycle_disposition_concurrent" => 5,

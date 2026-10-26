@@ -225,7 +225,128 @@ pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
     .await;
     mount.stop().await;
     drop(mount);
+    std::fs::write(
+        root.join("application-operations.json"),
+        serde_json::to_vec(&s.proxy.applies()).unwrap(),
+    )
+    .unwrap();
     eprintln!(
         "HOSTED_APPLICATION git={version:?} initial={first_hash} final={second_hash} create=exact replace=exact rename=exact delete=exact held_reader=exact interrupted_daemon_cold_read=exact"
+    );
+}
+
+// Independently cross-check three application saves against actual object bytes
+// and canonical authority identities, not just a guessed aggregate PUT count.
+pub fn verify_objects(root: &Path, f: &fixture::Fixture) {
+    use s3drive_core::manifest::{
+        Entry,
+        objects::{Namespace, Role, RootDescriptor},
+    };
+    use sha2::{Digest, Sha256};
+    use std::collections::{BTreeMap, BTreeSet};
+    let applies: Vec<Apply> =
+        serde_json::from_slice(&std::fs::read(root.join("application-operations.json")).unwrap())
+            .unwrap();
+    let mut unique = BTreeMap::new();
+    let mut ordered = Vec::new();
+    for a in applies {
+        if let Some(previous) = unique.insert(a.operation.clone(), a.clone()) {
+            assert_eq!(previous, a, "operation retry changed identity/input");
+        } else {
+            ordered.push(a);
+        }
+    }
+    let objects = f.objects.lock().unwrap();
+    let mut expected = BTreeSet::new();
+    let mut creators = BTreeSet::new();
+    let mut reservations = BTreeSet::new();
+    let mut published = BTreeSet::new();
+    let mut contents = Vec::new();
+    for a in &ordered {
+        match &a.mutation {
+            Mutation::CreateEmptyManifest { store, name, .. }
+            | Mutation::CreateDeferredEmptyManifest { store, name, .. } => {
+                assert_eq!(name, NAME);
+                assert!(creators.insert(a.operation.clone()));
+                let (descriptor, bytes) = RootDescriptor::empty(
+                    binary(&a.volume),
+                    binary(&a.operation),
+                    binary(store),
+                    binary(&a.operation),
+                )
+                .unwrap();
+                let ns = Namespace::new(
+                    "writable/.s3drive/".into(),
+                    binary(&a.volume),
+                    binary(&a.operation),
+                    binary(store),
+                )
+                .unwrap();
+                let key = format!(
+                    "/test-bucket/{}",
+                    ns.root_key(&descriptor).unwrap().as_str()
+                );
+                assert_eq!(objects.get(&key).unwrap().0, bytes);
+                assert!(expected.insert(key));
+            }
+            Mutation::ReserveManifest {
+                node,
+                store,
+                manifest,
+                ..
+            } => {
+                assert!(creators.contains(node));
+                assert!(reservations.insert(a.operation.clone()));
+                let descriptor = manifest.root().unwrap();
+                let ns = Namespace::new(
+                    "writable/.s3drive/".into(),
+                    binary(&a.volume),
+                    binary(node),
+                    binary(store),
+                )
+                .unwrap();
+                let key = format!(
+                    "/test-bucket/{}",
+                    ns.root_key(&descriptor).unwrap().as_str()
+                );
+                let page = descriptor
+                    .verify_page(&objects.get(&key).unwrap().0)
+                    .unwrap();
+                assert!(expected.insert(key));
+                let [Entry::Data { length, object }] = page.page().entries() else {
+                    panic!("expected exactly one data extent")
+                };
+                let key = format!(
+                    "/test-bucket/{}",
+                    ns.key(Role::Data, object).unwrap().as_str()
+                );
+                let bytes = &objects.get(&key).unwrap().0;
+                assert_eq!(*length, bytes.len() as u64);
+                assert_eq!(object.sha256().as_slice(), Sha256::digest(bytes).as_slice());
+                contents.push(bytes.clone());
+                assert!(expected.insert(key));
+            }
+            Mutation::Publish { reservation, .. } => {
+                assert!(published.insert(reservation.clone()));
+            }
+            _ => {}
+        }
+    }
+    assert_eq!(creators.len(), 3);
+    assert_eq!(reservations.len(), 3);
+    assert_eq!(published, reservations);
+    assert_eq!(contents, [FIRST.to_vec(), SECOND.to_vec(), SECOND.to_vec()]);
+    assert_eq!(expected.len(), 9);
+    let actual = objects
+        .keys()
+        .filter(|k| k.starts_with("/test-bucket/writable/.s3drive/"))
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    assert_eq!(
+        actual, expected,
+        "unexpected or missing immutable object identity"
+    );
+    eprintln!(
+        "HOSTED_APPLICATION_PROVENANCE creators=3 exact_published_saves=3 canonical_objects=9 payloads=exact"
     );
 }
