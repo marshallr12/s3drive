@@ -20,7 +20,10 @@ spec.loader.exec_module(bundle)
 
 
 def run(*args):
-    return subprocess.run(list(map(str, args)), check=True, capture_output=True, text=True, timeout=30)
+    result = subprocess.run(list(map(str, args)), capture_output=True, text=True, timeout=30)
+    if result.returncode:
+        raise AssertionError(f"isolated packaged CLI {args[1]} failed ({result.returncode}): {result.stderr[:4096]}")
+    return result
 
 
 def main():
@@ -52,7 +55,7 @@ def main():
     assert hashlib.sha256(binary.read_bytes()).hexdigest() == manifest["files"]["bin/" + args.binary.name]["sha256"]
     # Shipped CLI parser and durable SQLite initialization, no provider access.
     config = relocated / "offline.toml"
-    config.write_text("version=1\nmode='read-only'\n[[sources]]\nalias='docs'\nbucket='fixture'\nregion='us-east-1'\nendpoint='http://127.0.0.1:1'\nallow_http_loopback=true\n", encoding="utf-8")
+    config.write_text("version=1\nmode='read-only'\n[[sources]]\nalias='docs'\nbucket='fixture'\nregion='us-east-1'\nendpoint='http://127.0.0.1:1'\nallow_http_loopback=true\npath_style=true\n", encoding="utf-8")
     run(binary, "config-check", config)
     state = relocated / "private state"
     run(binary, "init-state", "--directory", state)
