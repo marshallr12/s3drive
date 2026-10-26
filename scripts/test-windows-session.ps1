@@ -215,7 +215,8 @@ try {
         Copy-Item -LiteralPath (Join-Path $ManagedFixture 'managed-fixture.json') -Destination $root
         [IO.File]::WriteAllText((Join-Path $ManagedFixture 'control-root.txt'),$root,[Text.UTF8Encoding]::new($false))
     }
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'windows-session.ps1') -Destination (Join-Path $root 'source-manager.ps1')
+    $sourceManager = if ($env:S3DRIVE_TEST_PACKAGED_SESSION) { $env:S3DRIVE_TEST_PACKAGED_SESSION } else { Join-Path $PSScriptRoot 'windows-session.ps1' }
+    Copy-Item -LiteralPath $sourceManager -Destination (Join-Path $root 'source-manager.ps1')
     # All worker paths are derived from its own private directory. The account
     # password arrives through a pipe, never a file, environment or argv string.
     @'

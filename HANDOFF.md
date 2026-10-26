@@ -4,6 +4,25 @@ Updated 2026-10-25. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
+## Hosted beta continuation (2026-10-26; new tests pending)
+
+Main `f2410ec8b25609b34926b87b5474d7ad3671c647` independently passed
+[run40241620855](https://github.com/marshallr12/s3drive/actions/runs/40241620855):
+all nine complete job logs, 808 exact source files, six artifact digests/reports,
+Linux1141/Windows1133 workspace tests, six original300 workloads and all800
+component cycles/400 integrity checks. Windows debug300 was1019.67s under1200s.
+The candidate-only checkpoint below is historical; the separate main proof passed.
+
+The user requested item4 testing through GitHub Actions on2026-10-26. New hosted
+CLI-application and relocated-package/startup gates are **not yet accepted**.
+They add actual Git checkout/replacement/rename/delete and reader sharing through
+FUSE/WinFsp, then interrupted mount-process recovery; two deterministic packages
+of one real binary; offline relocated durable initialization; and the shipped
+startup scripts with the relocated binary. No product behavior/default changes.
+No GUI application, physical reboot, cross-machine reproducible compiler output,
+live Wasabi, public binary distribution or licensing acceptance is implied.
+Provider headroom/access and actual hardware/GUI/reboot remain blocked separately.
+
 ## Candidate code accepted; real-use beta remains incomplete (2026-10-25)
 
 Exact source `59a10fe36b98d85d200bd24f7a51c79147e7a200`, tree

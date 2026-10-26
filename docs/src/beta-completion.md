@@ -87,6 +87,34 @@ No failure was dismissed, no deadline was enlarged, and no uncertain data was
 silently discarded. These diagnostics do not establish physical corruption of
 the original failure database, whose raw DB/WAL was not retained.
 
+## Hosted item4 continuation (2026-10-26; pending acceptance)
+
+The preceding code scope is now also independently verified on main
+`f2410ec8b25609b34926b87b5474d7ad3671c647` in
+[run40241620855](https://github.com/marshallr12/s3drive/actions/runs/40241620855).
+The user requested further item4 tests on standard GitHub Actions, not MiniAir.
+
+New test-only coverage runs genuine Git CLI subprocesses against the mounted
+filesystem: Unicode document checkout, forced replacement, rename, deletion,
+retained-reader checks, Windows exclusive sharing refusal, application reopen,
+and exact cold reads after terminating the owned mount daemon. Git metadata lives
+outside the drive, with no remote, credential helper, commit identity or network
+operation. This is **CLI application I/O**, not Office/Notepad UI acceptance or a
+claim that a complete Git repository can safely reside on the drive. Commands
+follow official [checkout-index](https://git-scm.com/docs/git-checkout-index),
+[mv](https://git-scm.com/docs/git-mv) and [rm](https://git-scm.com/docs/git-rm)
+documentation reviewed2026-10-26. The loopback object fixture is not Wasabi.
+
+Private packaging now compares two independently assembled archives of the same
+built binary, records archive/binary/source digests, runs relocated config checks
+and idempotent schema50 state initialization with integrity/FK validation, then
+uses that relocated binary for actual mounts and the shipped startup/session
+tests. Deterministic archive assembly is not reproducible compiler output across
+machines. Existing Linux desktop/terminal-loss and Windows Task Scheduler separate
+logon tests are rerun, not replaced by a synthetic supervisor mock. An owned
+process interruption is not a physical reboot. Archives remain unpublished.
+These additions are pending full candidate and independent-main acceptance.
+
 ## 4. Real-use beta and packaging
 
 Hosted native/startup tests are not real provider or physical-machine evidence.

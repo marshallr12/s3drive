@@ -428,7 +428,10 @@ async fn actual_windows_drive_names_reads_security_and_teardown() {
                     .join("../../scripts/test-windows-session.ps1"),
             )
             .arg("-Executable")
-            .arg(env!("CARGO_BIN_EXE_s3drive"))
+            .arg(
+                std::env::var_os("S3DRIVE_TEST_PACKAGED_CLI")
+                    .unwrap_or_else(|| env!("CARGO_BIN_EXE_s3drive").into()),
+            )
             .arg("-Config")
             .arg(&config)
             .kill_on_drop(true)
