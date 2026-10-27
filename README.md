@@ -155,6 +155,7 @@ On Windows with WinFsp installed, choose an unused letter:
 
 See [development](docs/src/development.md) for verification scope and
 [HANDOFF.md](HANDOFF.md) for the next phase. All crates have `publish = false`.
-This is a public research repository; no project distribution license has been
-selected. The Windows dependency licensing decision is recorded in
-[decisions](docs/src/decisions.md).
+This is a public research repository licensed under [MIT](LICENSE). Third-party
+dependencies retain their own terms; public binary distribution remains a
+separate acceptance/release decision. See [notices](THIRD-PARTY-NOTICES.md) and
+the historical Windows dependency decision in [decisions](docs/src/decisions.md).

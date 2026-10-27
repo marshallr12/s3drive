@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory=$true)][string]$Current,
-    [Parameter(Mandatory=$true)][string]$Previous
+    [Parameter(Mandatory=$true)][string]$Previous,
+    [Parameter(Mandatory=$true)][string]$Rollback
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -11,6 +12,8 @@ $currentInfo = Get-Content (Join-Path $Current 'installer.json') -Raw | ConvertF
 $previousInfo = Get-Content (Join-Path $Previous 'installer.json') -Raw | ConvertFrom-Json
 $currentMsi = Join-Path $Current $currentInfo.msi
 $previousMsi = Join-Path $Previous $previousInfo.msi
+$rollbackInfo = Get-Content (Join-Path $Rollback 'installer.json') -Raw | ConvertFrom-Json
+$rollbackMsi = Join-Path $Rollback $rollbackInfo.msi
 $root = Join-Path $env:RUNNER_TEMP ('s3drive-installer-test-' + [guid]::NewGuid().ToString('N'))
 $install = Join-Path $env:ProgramFiles 'S3Drive'
 if (Test-Path $install) { throw 'Refusing preexisting S3Drive install directory.' }
@@ -36,9 +39,9 @@ function Msi([string]$Label, [string[]]$Arguments, [int[]]$Expected = @(0), [str
 function Assert-UserData {
     if ((Get-FileHash $config).Hash -ne $configHash -or (Get-FileHash $dirty).Hash -ne $dirtyHash) { throw 'User config/dirty bytes changed.' }
 }
-function Assert-Payload {
+function Assert-Payload($Info = $currentInfo) {
     $manifest = Get-Content (Join-Path $install 'build-manifest.json') -Raw | ConvertFrom-Json
-    if ($manifest.source_commit -ne $currentInfo.source) { throw 'Installed source mismatch.' }
+    if ($manifest.source_commit -ne $Info.source -or $manifest.msi_version -ne $Info.version) { throw 'Installed source mismatch.' }
     foreach ($file in $manifest.files.PSObject.Properties) {
         $path = Join-Path $install $file.Name
         if ((Get-FileHash $path -Algorithm SHA256).Hash.ToLowerInvariant() -ne $file.Value) { throw "Installed payload mismatch: $($file.Name)" }
@@ -62,9 +65,6 @@ try {
     [IO.File]::WriteAllText($manual, 'user-owned extra file; installer must preserve this')
     $manualHash = (Get-FileHash $manual).Hash
     Assert-UserData
-    Msi 'upgrade-current' @('/i', "`"$currentMsi`"")
-    Assert-Payload
-    if ((Get-FileHash $manual).Hash -ne $manualHash) { throw 'Upgrade removed user-created file.' }
     # Exercise the installed binary's real durable state path, not a mock binary.
     $state = Join-Path $sentinel 'private-state'
     & $binary init-state --directory $state
@@ -72,7 +72,27 @@ try {
     $db = Join-Path $state 'metadata.sqlite3'
     if (-not (Test-Path $db)) { throw 'Installed CLI database absent.' }
     $dbHash = (Get-FileHash $db).Hash
-    Msi 'repair-current' @('/fa', "`"$currentMsi`"")
+    Assert-Payload $previousInfo
+    Msi 'failed-upgrade-rollback' @('/i', "`"$rollbackMsi`"", 'WIXFAILWHENDEFERRED=1') @(1603) 'FailWhenDeferred'
+    Assert-Payload $previousInfo
+    if ((Get-FileHash $manual).Hash -ne $manualHash -or (Get-FileHash $db).Hash -ne $dbHash) { throw 'Failed upgrade rollback changed user data.' }
+    $oldRegistration = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$($previousInfo.product_code)"
+    if (-not (Test-Path $oldRegistration)) { throw 'Rollback did not restore old product registration.' }
+    Msi 'upgrade-current' @('/i', "`"$currentMsi`"")
+    Assert-Payload
+    if ((Get-FileHash $manual).Hash -ne $manualHash) { throw 'Upgrade removed user-created file.' }
+    if ((Get-FileHash $db).Hash -ne $dbHash) { throw 'Upgrade changed user database.' }
+    # Existing exact native test now launches the MSI-installed executable.
+    $oldPackaged = $env:S3DRIVE_TEST_PACKAGED_CLI
+    try {
+        $env:S3DRIVE_TEST_PACKAGED_CLI = $binary
+        cargo test -p s3drive-cli --test chunk_publication --release hosted_application_git_save_replace_rename_delete_and_interrupted_cold_remount --locked -- --exact --ignored --nocapture --test-threads=1
+        if ($LASTEXITCODE -ne 0) { throw 'MSI-installed CLI native application fixture failed.' }
+        $sequence.Add('installed-native-application=passed')
+    } finally {
+        $env:S3DRIVE_TEST_PACKAGED_CLI = $oldPackaged
+    }
+    Msi 'repair-current'  @('/fa', "`"$currentMsi`"")
     Assert-Payload
     Msi 'repeat-current' @('/i', "`"$currentMsi`"")
     Assert-Payload

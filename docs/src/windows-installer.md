@@ -47,6 +47,9 @@ a new distribution; a different binary must not be silently shipped under the
 same version. Major upgrade identity is stable, product identity is stable per
 version, and downgrade is rejected. Upgrade removes the earlier managed payload
 inside the installation transaction so a failed new installation can roll back.
+The separate hosted failure fixture adds the official WiX deferred-failure action;
+it is absent from the ordinary installer. The native test verifies old payload,
+registration and user data after the failed upgrade, then upgrades normally.
 The hosted prior-version fixture packages the same binary as `0.0.9`; it verifies
 installer mechanics, **not migration from an actual older database or release**.
 
@@ -80,13 +83,15 @@ reboot is performed or authorized by this installer build workflow.
 ## Verification matrix
 
 The additive standard GitHub Actions job builds the exact locked release binary,
-collects source notices and builds current/prior-fixture MSIs. On its disposable
+collects notices from the Windows-resolved dependency graph and builds current/prior-fixture MSIs plus a separate rollback-failure fixture. On its disposable
 Windows runner it tests:
 
 - missing WinFsp refusal without payload installation;
-- previous-package install and current-package upgrade;
+- previous-package install, injected failed-upgrade rollback and current upgrade;
 - every installed payload hash and source manifest;
 - installed CLI version, offline configuration parsing and durable initialization;
+- actual WinFsp Git save/replace/rename/delete and interrupted-owner cold recovery
+  using the MSI-installed CLI against the owned loopback fixture;
 - repair, repeated install, downgrade refusal and reinstall;
 - uninstall even when the independent driver was removed;
 - preservation of configuration, a database, binary dirty-data sentinel and an
@@ -112,9 +117,13 @@ release. MSI bytes themselves are not claimed reproducible across builds.
 The build refuses a dirty tracked checkout, unsafe notice sources, missing license
 metadata/files and a mismatched binary/tool version. Notice inventories and hashes
 are included; package-level automated collection still needs a distribution review.
-S3Drive is MIT; WinFsp and all dependencies retain their own licenses.
+S3Drive-owned source is MIT. The locked `winfsp`/`winfsp-sys` Rust bindings
+declare GPL-3.0 separately from the driver; the combined executable is not
+represented as MIT-only. Public redistribution remains held for compliance
+review, including source obligations. All dependencies retain their own licenses.
 
 Primary references reviewed 2026-10-27:
+[WiX deferred failure injection](https://docs.firegiant.com/wix/tools/wixext/util/),
 [WiX major upgrades](https://docs.firegiant.com/wix/schema/wxs/majorupgrade/),
 [registry search](https://docs.firegiant.com/wix/schema/wxs/registrysearch/),
 [WixUI](https://docs.firegiant.com/wix/tools/wixext/wixui/), and

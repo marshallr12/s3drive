@@ -4,6 +4,8 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+import shutil
+from unittest.mock import patch
 import unittest
 import xml.etree.ElementTree as ET
 
@@ -64,6 +66,31 @@ class InstallerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'unsafe dependency'):
                 m.collect_notices(metadata, root / 'escape')
 
+    def test_pinned_fallback_identity_and_tamper_refusal(self):
+        key = 'asn1-rs-impl-0.2.0'
+        record = json.loads((m.ROOT / 'packaging/notices/provenance.json').read_text())[key]
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            source = root / 'crate'
+            source.mkdir()
+            vcs = source / '.cargo_vcs_info.json'
+            vcs.write_text(json.dumps({'git': {'sha1': record['upstream_commit']}}))
+            package = {'name': 'asn1-rs-impl', 'version': '0.2.0', 'license': record['license'],
+                       'manifest_path': str(source / 'Cargo.toml')}
+            shutil.copyfile(m.ROOT / 'Cargo.lock', root / 'Cargo.lock')
+            shutil.copytree(m.ROOT / 'packaging/notices', root / 'packaging/notices')
+            with patch.object(m, 'ROOT', root):
+                base, paths, result = m.notice_fallback(package)
+                self.assertEqual(len(paths), 2)
+                self.assertEqual(result, record)
+                vcs.write_text(json.dumps({'git': {'sha1': '0' * 40}}))
+                with self.assertRaisesRegex(ValueError, 'upstream source identity'):
+                    m.notice_fallback(package)
+                vcs.write_text(json.dumps({'git': {'sha1': record['upstream_commit']}}))
+                paths[0].write_text('tampered notice')
+                with self.assertRaisesRegex(ValueError, 'notice content mismatch'):
+                    m.notice_fallback(package)
+
     def test_notice_source_escape_and_symlink_refused(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
@@ -73,6 +100,14 @@ class InstallerTests(unittest.TestCase):
             package.mkdir()
             with self.assertRaises(ValueError):
                 m.regular(outside, package)
+            with self.assertRaises(ValueError):
+                m.regular(package / '..' / 'outside', package)
+            metadata = {'packages': [{'name': 'example', 'version': '1.0.0', 'id': 'example',
+                'source': 'registry+https://github.com/rust-lang/crates.io-index',
+                'manifest_path': str(package / 'Cargo.toml'), 'license_file': '../outside'}]}
+            with self.assertRaisesRegex(ValueError, 'escapes package'):
+                m.collect_notices(metadata, root / 'escaped-output')
+            self.assertFalse((root / 'escaped-output').exists())
             link = package / 'LICENSE'
             try:
                 link.symlink_to(outside)

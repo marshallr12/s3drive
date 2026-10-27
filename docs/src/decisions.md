@@ -15,7 +15,7 @@ to the user.
 | D007 | Adopted for P1 reads | AWS SDK implements list/head/range reads; mutation/recovery requirements still need evaluation |
 | D008 | Proposed | Explicit flush means remote durability by default; offline local durability must be a separate mode |
 | D009 | Adopted | Unknown capabilities remain unknown; no fallback from failed conditional writes to unconditional overwrite |
-| D010 | Prototype; distribution deferred; original private setting superseded by D040 | P3 uses GPL-3.0 winfsp wrapper; application distribution license and installer arrangement remain undecided |
+| D010 | Prototype; public binary distribution deferred; source license selected 2026-10-27 | P3 uses GPL-3.0 winfsp/winfsp-sys bindings. Owner selected MIT for S3Drive-owned source; dependencies are not relicensed. Private MSI validation is in progress; combined Windows binary redistribution/compliance remains a separate gate. Original private setting was superseded by D040 |
 | D011 | Deferred | Full POSIX/NTFS compatibility, distributed locks, writable database workloads and cross-source atomicity |
 | D012 | Deferred | Tray UI and optional Cloud Files surface until the shared engine is reliable |
 | D013 | Adopted for P1 | Source configuration controls S3 endpoint/region; explicit profiles do not fall back to ambient keys; numeric-loopback HTTP is test-only opt-in |

@@ -32,15 +32,46 @@ def sha(path):
 
 def regular(path, root):
     path = Path(path)
-    if not path.is_relative_to(root) or any(p.is_symlink() for p in (path, *path.parents)):
+    if ('..' in path.parts or not path.is_relative_to(root)
+            or not path.resolve().is_relative_to(root.resolve())
+            or any(p.is_symlink() for p in (path, *path.parents))):
         raise ValueError('notice source escapes package or is a symlink')
     if not path.is_file() or path.stat().st_size > 8 * 1024 * 1024:
         raise ValueError('missing or oversized notice source')
     return path
 
 
+def notice_fallback(package):
+    index = ROOT / 'packaging/notices/provenance.json'
+    if not index.exists():
+        return None
+    records = json.loads(index.read_text(encoding='utf-8'))
+    key = package['name'] + '-' + package['version']
+    record = records.get(key)
+    if record is None:
+        return None
+    if record['license'] != package.get('license'):
+        raise ValueError('fallback license declaration mismatch')
+    lock = tomllib.loads((ROOT / 'Cargo.lock').read_text())['package']
+    pinned = [p for p in lock if p['name'] == package['name'] and p['version'] == package['version']]
+    if len(pinned) != 1 or pinned[0].get('checksum') != record['crate_sha256']:
+        raise ValueError('fallback crate identity mismatch')
+    vcs = Path(package['manifest_path']).parent / '.cargo_vcs_info.json'
+    if json.loads(vcs.read_text(encoding='utf-8'))['git']['sha1'] != record['upstream_commit']:
+        raise ValueError('fallback upstream source identity mismatch')
+    base = ROOT / 'packaging/notices' / key
+    paths = []
+    for file in record['files']:
+        path = regular(base / file['name'], base)
+        if sha(path) != file['sha256']:
+            raise ValueError('fallback notice content mismatch')
+        paths.append(path)
+    return base, paths, record
+
+
 def collect_notices(metadata, output):
-    packages = metadata['packages']
+    resolved = {node['id'] for node in metadata['resolve']['nodes']} if metadata.get('resolve') else None
+    packages = [p for p in metadata['packages'] if resolved is None or p['id'] in resolved]
     inventory = []
     total = 0
     for package in sorted(packages, key=lambda p: (p['name'], p['version'], p['id'])):
@@ -63,13 +94,20 @@ def collect_notices(metadata, output):
                 paths.append(root / package['license_file'])
         if not package.get('license') and not package.get('license_file'):
             raise ValueError(f'missing license declaration: {name} {version}')
+        provenance = None
         if not paths:
-            raise ValueError(f'missing license/notice files: {name} {version}')
+            fallback = notice_fallback(package)
+            if fallback is None:
+                raise ValueError(f'missing license/notice files: {name} {version}')
+            base, paths, provenance = fallback
         records = []
         for path in sorted(set(paths)):
             regular(path, base)
             relative = path.relative_to(base)
             destination = output / (name + '-' + version) / relative
+            if (not destination.resolve().is_relative_to(output.resolve())
+                    or any(p.is_symlink() for p in (destination, *destination.parents))):
+                raise ValueError('notice destination escapes packet')
             if destination.exists():
                 raise ValueError('duplicate dependency notice destination')
             total += path.stat().st_size
@@ -79,7 +117,7 @@ def collect_notices(metadata, output):
             shutil.copyfile(path, destination)
             records.append({'path': destination.relative_to(output).as_posix(), 'sha256': sha(destination)})
         inventory.append({'name': name, 'version': version, 'source': source,
-                          'license': package.get('license'), 'notices': records})
+                          'license': package.get('license'), 'notices': records, 'fallback_provenance': provenance})
     (output / 'inventory.json').write_text(json.dumps(inventory, indent=2) + '\n', encoding='utf-8')
     return inventory
 
@@ -132,6 +170,7 @@ def main():
     parser.add_argument('--dependencies', type=Path, required=True)
     parser.add_argument('--output-root', type=Path, required=True)
     parser.add_argument('--wix', type=Path, required=True)
+    parser.add_argument('--test-rollback', action='store_true', help='hosted-only deferred failure fixture')
     parser.add_argument('--test-older-version', help='disposable CI upgrade fixture only; binary unchanged')
     args = parser.parse_args()
     if os.name != 'nt':
@@ -144,6 +183,8 @@ def main():
     version = tomllib.loads((ROOT / 'Cargo.toml').read_text())['workspace']['package']['version']
     source_version = version
     version_tuple(version)
+    if args.test_rollback and os.environ.get('GITHUB_ACTIONS') != 'true':
+        raise ValueError('rollback fixture allowed only on hosted CI')
     if args.test_older_version:
         if os.environ.get('GITHUB_ACTIONS') != 'true' or version_tuple(args.test_older_version) >= version_tuple(version):
             raise ValueError('older version override allowed only for hosted downgrade/upgrade fixture')
@@ -163,22 +204,42 @@ def main():
         shutil.copyfile(source, target)
     notices = payload / 'third-party'
     notices.mkdir()
-    collect_notices(json.loads(args.dependencies.read_text(encoding='utf-8-sig')), notices)
+    metadata = json.loads(args.dependencies.read_text(encoding='utf-8-sig'))
+    cli = [p for p in metadata['packages'] if p['name'] == 's3drive-cli']
+    if (Path(metadata['workspace_root']).resolve() != ROOT
+            or len(cli) != 1 or cli[0]['version'] != source_version
+            or cli[0].get('source') is not None
+            or Path(cli[0]['manifest_path']).resolve() != ROOT / 'crates/s3drive-cli/Cargo.toml'):
+        raise ValueError('dependency metadata does not identify this source workspace')
+    collect_notices(metadata, notices)
     manifest = {'source_commit': run('git', 'rev-parse', 'HEAD'), 'source_tree': run('git', 'rev-parse', 'HEAD^{tree}'),
-                'msi_version': version, 'binary_version': source_version, 'test_fixture': bool(args.test_older_version),
+                'msi_version': version, 'binary_version': source_version, 'test_fixture': bool(args.test_older_version or args.test_rollback),
                 'target': 'x86_64-pc-windows-msvc', 'cargo_lock_sha256': sha(ROOT / 'Cargo.lock'),
                 'files': {p.relative_to(payload).as_posix(): sha(p) for p in sorted(payload.rglob('*')) if p.is_file()}}
     (payload / 'build-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
     license_rtf = output / 'license.rtf'
-    license_text = (ROOT / 'LICENSE').read_text().replace('\\', '\\\\').replace('{', '\\{').replace('}', '\\}')
+    license_intro = ('Private experimental installer. S3Drive-owned source is MIT licensed.\n'
+                     'Dependencies retain their own terms, including GPL-3.0 Windows Rust bindings.\n'
+                     'See THIRD-PARTY-NOTICES.md and the installed third-party notice packet.\n'
+                     'This is not a declaration that the combined executable is MIT-only.\n\n')
+    license_text = (license_intro + (ROOT / 'LICENSE').read_text()).replace('\\', '\\\\').replace('{', '\\{').replace('}', '\\}')
     license_rtf.write_text('{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Segoe UI;}}\\f0\\fs18\n' + license_text.replace('\n', '\\par\n') + '}', encoding='ascii')
     payload_xml(payload, output / 'payload.wxs')
     product = str(uuid.uuid5(NAMESPACE, 'product:' + version))
     msi = output / ('s3drive-' + version + '-x64.msi')
-    run(args.wix, 'build', ROOT / 'packaging/windows/product.wxs', output / 'payload.wxs',
+    product_source = ROOT / 'packaging/windows/product.wxs'
+    extra = []
+    if args.test_rollback:
+        # Official WiX fault injection exists ONLY in this separate hosted fixture.
+        text = product_source.read_text().replace('<Package ', '<Package xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util" ', 1)
+        text = text.replace('</Package>', '<util:FailWhenDeferred /></Package>')
+        product_source = output / 'rollback-product.wxs'
+        product_source.write_text(text, encoding='utf-8')
+        extra = ['-ext', 'WixToolset.Util.wixext/' + WIX_VERSION]
+    run(args.wix, 'build', product_source, output / 'payload.wxs',
         '-arch', 'x64', '-ext', 'WixToolset.UI.wixext/' + WIX_VERSION,
         '-d', 'Version=' + version, '-d', 'ProductCode=' + product,
-        '-d', 'LicenseRtf=' + str(license_rtf), '-o', msi)
+        '-d', 'LicenseRtf=' + str(license_rtf), '-o', msi, *extra)
     result = {'source': manifest['source_commit'], 'msi': msi.name, 'sha256': sha(msi), 'product_code': '{' + product.upper() + '}', 'version': version,
               'binary_sha256': sha(payload / 's3drive.exe')}
     (output / 'installer.json').write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
