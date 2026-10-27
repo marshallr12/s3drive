@@ -23,7 +23,12 @@ FILES = ('LICENSE', 'COPYRIGHT', 'THIRD-PARTY-NOTICES.md', 'README.md',
 
 
 def run(*args):
-    return subprocess.check_output(list(map(str, args)), cwd=ROOT, text=True, timeout=180).strip()
+    try:
+        return subprocess.check_output(list(map(str, args)), cwd=ROOT, text=True, timeout=180, stderr=subprocess.STDOUT).strip()
+    except subprocess.CalledProcessError as error:
+        # These build commands contain no credentials; retain compiler diagnostics.
+        print(error.output, file=__import__('sys').stderr)
+        raise
 
 
 def sha(path):

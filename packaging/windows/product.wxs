@@ -8,7 +8,7 @@
     <!-- No custom actions, driver download, user data, service or startup registration. -->
     <Property Id="REBOOT" Value="ReallySuppress" />
     <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
-    <Property Id="ARPNOMODIFY" Value="1" />
+    <!-- WixUI_Minimal supplies ARPNOMODIFY=1; do not duplicate its symbol. -->
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/marshallr12/s3drive" />
     <Property Id="WINFSP_RUNTIME">
       <RegistrySearch Id="WinFspDirectory" Root="HKLM" Key="SOFTWARE\WinFsp" Name="InstallDir" Type="directory" Bitness="always32">

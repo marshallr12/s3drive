@@ -73,6 +73,8 @@ class InstallerTests(unittest.TestCase):
         self.assertIn('Installed OR WINFSP_RUNTIME', product)
         self.assertIn('Schedule="afterInstallInitialize"', product)
         self.assertIn('MSIRESTARTMANAGERCONTROL', product)
+        # Pinned WixUI_Minimal already defines this property; duplicating it fails linking.
+        self.assertNotIn('<Property Id="ARPNOMODIFY"', product)
 
     def test_notice_collection_and_missing_notice_refusal(self):
         with tempfile.TemporaryDirectory() as d:
