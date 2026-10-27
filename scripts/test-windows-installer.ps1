@@ -32,8 +32,14 @@ $sequence = [Collections.Generic.List[string]]::new()
 function Msi([string]$Label, [string[]]$Arguments, [int[]]$Expected = @(0), [string]$Message = '') {
     $log = Join-Path $root ($Label + '.log')
     $process = Start-Process msiexec.exe -ArgumentList ($Arguments + @('/qn', '/norestart', 'REBOOT=ReallySuppress', '/l*v', "`"$log`"")) -Wait -PassThru
-    if ($Expected -notcontains $process.ExitCode) { throw "$Label exit $($process.ExitCode), expected $Expected; log $log" }
-    if ($Message -and -not (Select-String -Path $log -SimpleMatch $Message -Quiet)) { throw "$Label lacked required refusal reason" }
+    if ($Expected -notcontains $process.ExitCode) {
+        Select-String -Path $log -Pattern 'error|Return value 3|FailWhenDeferred|ScriptType=2|RemoveExistingProducts' | Select-Object -Last 40 | ForEach-Object { Write-Output $_.Line }
+        throw "$Label exit $($process.ExitCode), expected $Expected; log $log" }
+    if ($Message -and -not (Select-String -Path $log -SimpleMatch $Message -Quiet)) {
+        Select-String -Path $log -Pattern 'error|Return value 3|FailWhenDeferred|ScriptType=2|RemoveExistingProducts' | Select-Object -Last 40 | ForEach-Object { Write-Output $_.Line }
+        throw "$Label lacked required refusal reason"
+    }
+    $script:LastMsiLog = $log
     $sequence.Add("$Label=$($process.ExitCode)")
 }
 function Assert-UserData {
@@ -74,6 +80,8 @@ try {
     $dbHash = (Get-FileHash $db).Hash
     Assert-Payload $previousInfo
     Msi 'failed-upgrade-rollback' @('/i', "`"$rollbackMsi`"", 'WIXFAILWHENDEFERRED=1') @(1603) 'FailWhenDeferred'
+    python scripts/check-msi-rollback.py $script:LastMsiLog
+    if ($LASTEXITCODE -ne 0) { throw 'MSI deferred failure/rollback sequence was not proven.' }
     Assert-Payload $previousInfo
     if ((Get-FileHash $manual).Hash -ne $manualHash -or (Get-FileHash $db).Hash -ne $dbHash) { throw 'Failed upgrade rollback changed user data.' }
     $oldRegistration = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$($previousInfo.product_code)"

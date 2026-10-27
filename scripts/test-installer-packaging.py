@@ -15,6 +15,37 @@ spec.loader.exec_module(m)
 
 
 class InstallerTests(unittest.TestCase):
+    def test_rollback_log_requires_executed_fault_and_ordered_rollback(self):
+        spec = importlib.util.spec_from_file_location('rollback', Path(__file__).with_name('check-msi-rollback.py'))
+        checker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(checker)
+        lines = [
+            'Action start 12:00:00: RemoveExistingProducts.',
+            'MSI (s): Executing op: FileCopy(SourceName=s3drive.exe)',
+            'MSI (s): Executing op: CustomActionSchedule(Action=Wix4FailWhenDeferred_X64,ActionType=3073)',
+            'CustomAction Wix4FailWhenDeferred_X64 returned actual error code 1603',
+            'MSI (s): Executing op: Header(Signature=1,ScriptType=2,ScriptMajorVersion=21)',
+            'Action ended 12:00:01: InstallFinalize. Return value 3.',
+        ]
+        self.assertTrue(checker.verify('\n'.join(lines)))
+        for index in range(len(lines)):
+            with self.subTest(missing=index), self.assertRaises(ValueError):
+                checker.verify('\n'.join(lines[:index] + lines[index+1:]))
+        with self.assertRaises(ValueError):
+            checker.verify('WIXFAILWHENDEFERRED=1 FailWhenDeferred error 1603')
+        with self.assertRaises(ValueError):
+            checker.verify('\n'.join(reversed(lines)))
+
+    def test_project_license_is_gpl_version_three_only(self):
+        manifest = m.tomllib.loads((m.ROOT / 'Cargo.toml').read_text())
+        self.assertEqual(manifest['workspace']['package']['license'], 'GPL-3.0-only')
+        self.assertIn('GNU GENERAL PUBLIC LICENSE', (m.ROOT / 'LICENSE').read_text())
+        self.assertIn('Version 3, 29 June 2007', (m.ROOT / 'LICENSE').read_text())
+        self.assertIn('GPL-3.0-only', (m.ROOT / 'COPYRIGHT').read_text())
+        for path in (m.ROOT / 'crates').glob('*/Cargo.toml'):
+            self.assertTrue(m.tomllib.loads(path.read_text())['package']['license']['workspace'])
+        self.assertIn('COPYRIGHT', m.FILES)
+
     def test_version_bounds(self):
         self.assertEqual(m.version_tuple('0.1.0'), (0, 1, 0))
         for bad in ('1.2', '1.2.3.4', '1.2.3-beta', '256.0.0', '0.256.0', '0.0.65536', '../a'):

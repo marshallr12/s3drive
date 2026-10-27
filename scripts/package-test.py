@@ -11,7 +11,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 ALLOWLIST = (
-    "LICENSE", "THIRD-PARTY-NOTICES.md", "README.md", "docs/src/managed-bootstrap.md", "docs/src/beta-completion.md",
+    "LICENSE", "COPYRIGHT", "THIRD-PARTY-NOTICES.md", "README.md", "docs/src/managed-bootstrap.md", "docs/src/beta-completion.md",
     "scripts/linux-session.py", "scripts/windows-session.ps1",
     "scripts/package-test.py",
 )

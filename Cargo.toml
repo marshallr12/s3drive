@@ -7,7 +7,7 @@ default-members = ["crates/s3drive-cli"]
 version = "0.1.0"
 edition = "2024"
 publish = false
-license = "MIT"
+license = "GPL-3.0-only"
 repository = "https://github.com/marshallr12/s3drive"
 
 [workspace.dependencies]

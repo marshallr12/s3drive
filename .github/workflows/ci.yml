@@ -564,6 +564,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Verify Windows packaging safety before expensive build
+        run: python scripts/test-installer-packaging.py
       - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
@@ -590,8 +592,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'WiX rollback fixture extension install failed' }
       - name: Build private current and previous-version fixture installers
         run: |
-          python scripts/test-installer-packaging.py
-          if ($LASTEXITCODE -ne 0) { throw 'Portable installer tests failed' }
           cargo metadata --locked --format-version 1 --filter-platform x86_64-pc-windows-msvc > "$env:RUNNER_TEMP/installer-dependencies.json"
           if ($LASTEXITCODE -ne 0) { throw 'Locked dependency metadata failed' }
           python scripts/build-windows-installer.py --binary target/release/s3drive.exe --dependencies "$env:RUNNER_TEMP/installer-dependencies.json" --wix "$env:RUNNER_TEMP/wix-tools/wix.exe" --output-root "$env:RUNNER_TEMP/installer-current"

@@ -17,7 +17,7 @@ NS = 'http://wixtoolset.org/schemas/v4/wxs'
 NAMESPACE = uuid.UUID('28ae71f8-3d39-4af2-88c5-76e28e2a83ef')
 WIX_VERSION = '4.0.6'
 NOTICE = re.compile(r'^(licen[cs]e|copying|copyright|notice|authors|patents)(?:$|[._-])', re.I)
-FILES = ('LICENSE', 'THIRD-PARTY-NOTICES.md', 'README.md',
+FILES = ('LICENSE', 'COPYRIGHT', 'THIRD-PARTY-NOTICES.md', 'README.md',
          'docs/src/windows-installer.md', 'docs/src/managed-bootstrap.md',
          'scripts/windows-session.ps1')
 
@@ -71,6 +71,8 @@ def notice_fallback(package):
 
 def collect_notices(metadata, output):
     resolved = {node['id'] for node in metadata['resolve']['nodes']} if metadata.get('resolve') else None
+    if resolved is not None and not resolved:
+        raise ValueError('empty resolved dependency graph')
     packages = [p for p in metadata['packages'] if resolved is None or p['id'] in resolved]
     inventory = []
     total = 0
@@ -83,7 +85,7 @@ def collect_notices(metadata, output):
         if source is None:
             if not root.resolve().is_relative_to(ROOT):
                 raise ValueError('unrecognized local dependency')
-            paths = [ROOT / 'LICENSE']
+            paths = [ROOT / 'LICENSE', ROOT / 'COPYRIGHT']
             base = ROOT
         else:
             if not source.startswith('registry+'):
@@ -211,6 +213,9 @@ def main():
             or cli[0].get('source') is not None
             or Path(cli[0]['manifest_path']).resolve() != ROOT / 'crates/s3drive-cli/Cargo.toml'):
         raise ValueError('dependency metadata does not identify this source workspace')
+    resolved_ids = {n['id'] for n in metadata['resolve']['nodes']}
+    if cli[0]['id'] not in resolved_ids:
+        raise ValueError('CLI missing from resolved dependency graph')
     collect_notices(metadata, notices)
     manifest = {'source_commit': run('git', 'rev-parse', 'HEAD'), 'source_tree': run('git', 'rev-parse', 'HEAD^{tree}'),
                 'msi_version': version, 'binary_version': source_version, 'test_fixture': bool(args.test_older_version or args.test_rollback),
@@ -218,10 +223,10 @@ def main():
                 'files': {p.relative_to(payload).as_posix(): sha(p) for p in sorted(payload.rglob('*')) if p.is_file()}}
     (payload / 'build-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
     license_rtf = output / 'license.rtf'
-    license_intro = ('Private experimental installer. S3Drive-owned source is MIT licensed.\n'
+    license_intro = ('Private experimental installer. S3Drive-owned source is GPL version 3 only.\n'
                      'Dependencies retain their own terms, including GPL-3.0 Windows Rust bindings.\n'
                      'See THIRD-PARTY-NOTICES.md and the installed third-party notice packet.\n'
-                     'This is not a declaration that the combined executable is MIT-only.\n\n')
+                     'The complete GPL terms and dependency notices accompany this installer.\n\n')
     license_text = (license_intro + (ROOT / 'LICENSE').read_text()).replace('\\', '\\\\').replace('{', '\\{').replace('}', '\\}')
     license_rtf.write_text('{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Segoe UI;}}\\f0\\fs18\n' + license_text.replace('\n', '\\par\n') + '}', encoding='ascii')
     payload_xml(payload, output / 'payload.wxs')

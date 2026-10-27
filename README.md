@@ -3,7 +3,7 @@
 Research and Rust workspace for making one or more S3-compatible buckets appear
 as a local filesystem on Linux and Windows.
 
-Licensed under [MIT](LICENSE); dependencies retain their own
+Licensed under [GPL-3.0-only](LICENSE); dependencies retain their own
 [licenses and notices](THIRD-PARTY-NOTICES.md).
 
 **Current hosted baseline:** main `74e1540` passed independent
@@ -155,7 +155,7 @@ On Windows with WinFsp installed, choose an unused letter:
 
 See [development](docs/src/development.md) for verification scope and
 [HANDOFF.md](HANDOFF.md) for the next phase. All crates have `publish = false`.
-This is a public research repository licensed under [MIT](LICENSE). Third-party
+This is a public research repository licensed under [GPL-3.0-only](LICENSE). Third-party
 dependencies retain their own terms; public binary distribution remains a
 separate acceptance/release decision. See [notices](THIRD-PARTY-NOTICES.md) and
 the historical Windows dependency decision in [decisions](docs/src/decisions.md).

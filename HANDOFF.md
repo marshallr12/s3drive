@@ -17,7 +17,8 @@ existing defaults/profiles and protection of dirty, uncertain and pinned work ar
 unchanged. Hosted Git CLI application I/O and relocated package/startup acceptance
 are complete, not Office GUI, physical reboot or live Wasabi acceptance.
 
-The owner selected MIT licensing on 2026-10-27. The new
+The owner selected GPL version 3 only on 2026-10-27, superseding the earlier
+MIT choice for this revision. The new
 [Windows MSI](docs/src/windows-installer.md) and its additional CI gate are under
 validation, not yet accepted or publicly released. Third-party notices remain
 under their own terms. Earlier candidate/pending-main statements below are dated

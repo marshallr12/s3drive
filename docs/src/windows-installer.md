@@ -4,7 +4,7 @@
 
 The new x64 MSI is **under hosted validation**, not an accepted or published
 release yet. It installs the experimental command-line application, session
-helper, documentation, MIT license and collected dependency notices. S3Drive is
+helper, documentation, GPL-3.0-only license and collected dependency notices. S3Drive is
 not a desktop settings GUI. Windows 10/11 physical-machine acceptance, Office
 application workflows, sign-in/reboot and live-provider acceptance remain separate.
 
@@ -117,9 +117,8 @@ release. MSI bytes themselves are not claimed reproducible across builds.
 The build refuses a dirty tracked checkout, unsafe notice sources, missing license
 metadata/files and a mismatched binary/tool version. Notice inventories and hashes
 are included; package-level automated collection still needs a distribution review.
-S3Drive-owned source is MIT. The locked `winfsp`/`winfsp-sys` Rust bindings
-declare GPL-3.0 separately from the driver; the combined executable is not
-represented as MIT-only. Public redistribution remains held for compliance
+S3Drive-owned source is GPL version 3 only. The locked `winfsp`/`winfsp-sys` Rust bindings
+declare GPL-3.0 separately from the driver. Public redistribution remains held for compliance
 review, including source obligations. All dependencies retain their own licenses.
 
 Primary references reviewed 2026-10-27:
