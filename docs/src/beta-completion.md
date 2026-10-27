@@ -15,8 +15,11 @@ are complete, not Office GUI, physical reboot or live Wasabi acceptance.
 
 The owner selected GPL version 3 only on 2026-10-27, superseding the earlier
 MIT choice for this revision. The new
-[Windows MSI](windows-installer.md) and its additional CI gate are under
-validation, not yet accepted or publicly released. Third-party notices remain
+[Windows MSI](windows-installer.md) and its additional CI gate have hosted candidate acceptance at `1593ac9`
+([run40553716413](https://github.com/marshallr12/s3drive/actions/runs/40553716413));
+all ten full logs,835 source blobs and six artifact digests/reports were reviewed.
+The documentation successor and any merge still require exact-source verification;
+no public binary release or real-machine acceptance is implied. Third-party notices remain
 under their own terms. Earlier candidate/pending-main statements below are dated
 historical checkpoints, superseded by this independent main result, not requests
 to rerun completed phases. Real hardware/provider acceptance remains incomplete.

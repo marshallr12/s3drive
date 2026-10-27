@@ -2,8 +2,9 @@
 
 ## Status and scope (2026-10-27)
 
-The new x64 MSI is **under hosted validation**, not an accepted or published
-release yet. It installs the experimental command-line application, session
+The x64 MSI has **hosted candidate acceptance** at `1593ac9` in
+[run40553716413](https://github.com/marshallr12/s3drive/actions/runs/40553716413),
+not a merged or publicly published release. It installs the experimental command-line application, session
 helper, documentation, GPL-3.0-only license and collected dependency notices. S3Drive is
 not a desktop settings GUI. Windows 10/11 physical-machine acceptance, Office
 application workflows, sign-in/reboot and live-provider acceptance remain separate.
@@ -127,3 +128,44 @@ Primary references reviewed 2026-10-27:
 [registry search](https://docs.firegiant.com/wix/schema/wxs/registrysearch/),
 [WixUI](https://docs.firegiant.com/wix/tools/wixext/wixui/), and
 [Windows Installer reboot control](https://learn.microsoft.com/en-us/windows/win32/msi/reboot).
+
+## Exact candidate evidence (2026-10-27)
+
+Source `1593ac9508a9d583da000c63a7ac040256703815`, tree
+`44cc76b008cdda67a4efb05ec2e072d2ec60be2c`, passed all ten jobs in
+[run40553716413](https://github.com/marshallr12/s3drive/actions/runs/40553716413).
+Review covered all ten full logs, 835 exact source blobs and all six artifact
+digests/reports, including schema46–50 compatibility and 35 Windows reference
+observations. Workspace totals were Linux1143 / Windows1135; original and
+extended native gates were retained unchanged.
+
+The installer job proved missing-WinFsp refusal, installation, executed deferred
+failure followed by rollback, normal upgrade, repair, repeat installation,
+downgrade refusal, uninstall without WinFsp, reinstall and final uninstall.
+User configuration, unsaved bytes, a real SQLite database and an unknown file in
+the install directory remained unchanged. The MSI-installed executable passed
+native Git save/replace/rename/delete and interrupted cold remount in16.22s.
+The prior-version MSI uses the same binary, not a historical released binary.
+The production MSI has no injected failure action. Its private test digest was
+`0163d8266e4f075fe83cb72f7d2614cb79b2eaba25f785f8ecb1d7d5d677184c`;
+no binary artifact was published.
+
+Original shared/debug/release300-save times were617.49/769.91/158.88s on Linux
+and546.31/855.22/303.56s on Windows. Windows debug retained344.78s below its
+unchanged1200s limit; this is not a hardware-independent performance promise.
+Both OSes passed400 component cycles and200 cold SQLite integrity checks.
+Additional1000-save/four-file64KiB300-save workloads were469.54/280.69s on Linux
+and1175.29/566.77s on Windows.
+
+Earlier installer attempts are not accepted evidence:40545722462 exposed missing
+upstream crate notices,40548138606 exposed Windows checkout newline conversion
+of pinned notice bytes, and40552374768 exposed a duplicate WiX UI property.
+Pinned upstream notices, binary-preserving attributes and single ownership of
+the WiX property corrected these failures; no acceptance assertion was waived.
+
+This documentation-only successor does not change runtime, installer authoring,
+tests or CI. Its exact-source CI and any subsequent merge/main verification are
+separate from the accepted candidate evidence above. Real-machine GUI/UAC,
+files-in-use, Office, reboot, live-provider, signing and public redistribution
+acceptance remain incomplete. GPL selection does not waive dependency/source
+obligations or authorize a public binary release.

@@ -4,7 +4,9 @@ Current accepted main is `74e1540`, independently verified in
 [run40270589324](https://github.com/marshallr12/s3drive/actions/runs/40270589324).
 See [current beta status](beta-completion.md) for the completed hosted scope and
 remaining physical/provider gates. GPL-3.0-only licensing is selected; the new
-[Windows installer](windows-installer.md) is under validation. The candidate and
+[Windows installer](windows-installer.md) has hosted candidate acceptance at
+`1593ac9`/run40553716413, with separate documentation-successor and merge/main
+verification still required. The candidate and
 pending-main statements below preserve historical phase checkpoints.
 
 Fresh component lifecycle/recovery cleanup has exact candidate code acceptance

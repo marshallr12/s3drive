@@ -10,7 +10,7 @@ Licensed under [GPL-3.0-only](LICENSE); dependencies retain their own
 [CI40270589324](https://github.com/marshallr12/s3drive/actions/runs/40270589324).
 Fresh opt-in `component-retention-v1` lifecycle/recovery cleanup and hosted CLI
 application/package/startup tests are accepted. See [precise scope](docs/src/beta-completion.md).
-The new [Windows MSI](docs/src/windows-installer.md) is under validation, not a
+The [Windows MSI](docs/src/windows-installer.md) has hosted candidate acceptance, not a
 published release. Physical hardware/Office/reboot and live-provider acceptance
 remain separate.
 
