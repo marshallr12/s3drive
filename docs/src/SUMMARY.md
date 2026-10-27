@@ -2,6 +2,7 @@
 
 - [Purpose and current status](README.md)
 - [Remaining beta completion gates](beta-completion.md)
+- [Windows installer and acceptance](windows-installer.md)
 - [Experimental quiescent lifecycle retention](quiescent-lifecycle-retention.md)
 - [Existing tools and Rust libraries](landscape.md)
 - [Proposed architecture](architecture.md)

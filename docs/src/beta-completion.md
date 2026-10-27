@@ -1,6 +1,30 @@
 # Beta completion status
 
-## Candidate code accepted; real-use beta remains incomplete (2026-10-25)
+## Current accepted baseline (2026-10-27)
+
+Main `74e1540bd765fd8f2a61000d073e15780f455f31` independently passed
+[run40270589324](https://github.com/marshallr12/s3drive/actions/runs/40270589324):
+all nine complete job logs, 810 exact source files and six verified artifacts;
+Linux 1143 / Windows 1135 workspace tests and all original/extended gates.
+Windows shared/debug/release 300-save times were 684.33/1093.25/348.67 seconds;
+the unchanged 1200-second debug limit retained 106.75 seconds of margin.
+The lifecycle/recovery cleanup remains fresh-only opt-in `component-retention-v1`;
+existing defaults/profiles and protection of dirty, uncertain and pinned work are
+unchanged. Hosted Git CLI application I/O and relocated package/startup acceptance
+are complete, not Office GUI, physical reboot or live Wasabi acceptance.
+
+The owner selected GPL version 3 only on 2026-10-27, superseding the earlier
+MIT choice for this revision. The new
+[Windows MSI](windows-installer.md) and its additional CI gate have hosted candidate acceptance at `1593ac9`
+([run40553716413](https://github.com/marshallr12/s3drive/actions/runs/40553716413));
+all ten full logs,835 source blobs and six artifact digests/reports were reviewed.
+The documentation successor and any merge still require exact-source verification;
+no public binary release or real-machine acceptance is implied. Third-party notices remain
+under their own terms. Earlier candidate/pending-main statements below are dated
+historical checkpoints, superseded by this independent main result, not requests
+to rerun completed phases. Real hardware/provider acceptance remains incomplete.
+
+## Historical candidate acceptance (2026-10-25)
 
 Exact source `59a10fe36b98d85d200bd24f7a51c79147e7a200`, tree
 `7c8bab19508d6b0ff1ebf55e59fdec2c1892ec7d`, passed independent review of

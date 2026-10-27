@@ -3,6 +3,17 @@
 Research and Rust workspace for making one or more S3-compatible buckets appear
 as a local filesystem on Linux and Windows.
 
+Licensed under [GPL-3.0-only](LICENSE); dependencies retain their own
+[licenses and notices](THIRD-PARTY-NOTICES.md).
+
+**Current hosted baseline:** main `74e1540` passed independent
+[CI40270589324](https://github.com/marshallr12/s3drive/actions/runs/40270589324).
+Fresh opt-in `component-retention-v1` lifecycle/recovery cleanup and hosted CLI
+application/package/startup tests are accepted. See [precise scope](docs/src/beta-completion.md).
+The [Windows MSI](docs/src/windows-installer.md) has hosted candidate acceptance, not a
+published release. Physical hardware/Office/reboot and live-provider acceptance
+remain separate.
+
 **Target selected: [managed layout with stronger coordination](docs/src/managed-layout.md).**
 A shared Rust metadata service owns the authoritative SQLite namespace; each
 client keeps its own private SQLite cache/journal and transfers immutable file
@@ -47,11 +58,13 @@ include the atomic authority transaction, verified creator/open import and
 [prospective state admission](docs/src/creator-open-state.md). State source
 20420d7/schema45 passed its full local and own Linux/Windows/book/native regression
 gates. It reserves an inactive open and cleanup capacity atomically. The [typed creation SDK](docs/src/creator-open-sdk.md), source8022fae3, now passes
-its own full local and hosted Linux/Windows/book/native regressions. Chunk-backed
-native lifecycle integration remains pending.
+its own full local and hosted Linux/Windows/book/native regressions. Prospective atomic creation/open integration remains separate from the accepted
+ordinary native lifecycle route.
 
-This remains an experimental profile. Rename/delete, deferred/open-unlinked
-publication and complete retention/GC remain unfinished.
+These remain experimental profiles. Native rename/delete and owned/unlinked
+publication have subsequent accepted checkpoints; fresh opt-in component retention
+bounds settled local history. This is not remote object GC or a change to the
+original/default profile.
 Its64-file/512-view/64MiB dirty defaults are prototypes. Existing profiles keep
 their own behavior; no bucket migration or real writable user configuration is
 installed. No real user startup, remote hosting or Turso backend is provisioned.
@@ -142,6 +155,7 @@ On Windows with WinFsp installed, choose an unused letter:
 
 See [development](docs/src/development.md) for verification scope and
 [HANDOFF.md](HANDOFF.md) for the next phase. All crates have `publish = false`.
-This is a public research repository; no project distribution license has been
-selected. The Windows dependency licensing decision is recorded in
-[decisions](docs/src/decisions.md).
+This is a public research repository licensed under [GPL-3.0-only](LICENSE). Third-party
+dependencies retain their own terms; public binary distribution remains a
+separate acceptance/release decision. See [notices](THIRD-PARTY-NOTICES.md) and
+the historical Windows dependency decision in [decisions](docs/src/decisions.md).

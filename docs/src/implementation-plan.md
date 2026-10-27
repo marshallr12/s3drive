@@ -1,5 +1,14 @@
 # Phased implementation plan
 
+Current accepted main is `74e1540`, independently verified in
+[run40270589324](https://github.com/marshallr12/s3drive/actions/runs/40270589324).
+See [current beta status](beta-completion.md) for the completed hosted scope and
+remaining physical/provider gates. GPL-3.0-only licensing is selected; the new
+[Windows installer](windows-installer.md) has hosted candidate acceptance at
+`1593ac9`/run40553716413, with separate documentation-successor and merge/main
+verification still required. The candidate and
+pending-main statements below preserve historical phase checkpoints.
+
 Fresh component lifecycle/recovery cleanup has exact candidate code acceptance
 at `59a10fe36b98d85d200bd24f7a51c79147e7a200` in
 [run40229890964](https://github.com/marshallr12/s3drive/actions/runs/40229890964). Full Linux/Windows suites, original six300-save gates,
