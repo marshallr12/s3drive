@@ -11,7 +11,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 ALLOWLIST = (
-    "README.md", "docs/src/managed-bootstrap.md", "docs/src/beta-completion.md",
+    "LICENSE", "THIRD-PARTY-NOTICES.md", "README.md", "docs/src/managed-bootstrap.md", "docs/src/beta-completion.md",
     "scripts/linux-session.py", "scripts/windows-session.ps1",
     "scripts/package-test.py",
 )
@@ -103,7 +103,7 @@ def build(binary, output, target, dependencies):
     inventory = [{"name": p["name"], "version": p["version"], "license": p.get("license")} for p in packages]
     entries["dependency-license-inventory.json"] = (json.dumps(sorted(inventory, key=lambda p: (p["name"], p["version"])), indent=2) + "\n").encode()
     entries["TEST-BUNDLE-NOTICE.txt"] = (
-        "Private developer test bundle, not a licensed/signed public distribution.\n"
+        "Private developer test bundle, not a signed or approved public distribution.\n"
         "No WinFsp/FUSE driver, credentials, configuration, database or user data included.\n"
         "No automatic installation, startup registration, elevation or reboot.\n"
         "The dependency inventory is not legal clearance or a complete license packet.\n"

@@ -460,6 +460,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Verify native fixture schema expectations
         run: python3 scripts/check-schema-fixtures.py
+      - name: Verify installer packaging safety
+        run: python3 scripts/test-installer-packaging.py
       - name: Install pinned Rust
         run: rustup toolchain install 1.99.1 --profile minimal
       - name: Install mdBook
@@ -555,3 +557,46 @@ jobs:
       - name: Additional actual four-file 64KiB 300-save release workload
         timeout-minutes: 45
         run: cargo test -p s3drive-cli --test chunk_publication --release native_retention_extended_four_files_64kib_300_saves --locked -- --ignored --exact --nocapture --test-threads=1
+
+
+  windows-installer:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: rust-${{ runner.os }}-1.99.1-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            rust-${{ runner.os }}-1.99.1-${{ hashFiles('Cargo.lock') }}-
+            rust-${{ runner.os }}-1.99.1-
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.99.1 --profile minimal
+      - name: Install pinned WinFsp SDK on disposable test VM
+        run: ./scripts/install-winfsp.ps1
+      - name: Build exact locked release CLI
+        run: cargo build -p s3drive-cli --release --locked
+      - name: Install pinned official NuGet WiX builder and UI extension
+        run: |
+          dotnet tool install wix --version 4.0.6 --tool-path "$env:RUNNER_TEMP/wix-tools"
+          if ($LASTEXITCODE -ne 0) { throw 'WiX tool install failed' }
+          & "$env:RUNNER_TEMP/wix-tools/wix.exe" extension add --global WixToolset.UI.wixext/4.0.6
+          if ($LASTEXITCODE -ne 0) { throw 'WiX UI extension install failed' }
+      - name: Build private current and previous-version fixture installers
+        run: |
+          python scripts/test-installer-packaging.py
+          if ($LASTEXITCODE -ne 0) { throw 'Portable installer tests failed' }
+          cargo metadata --locked --format-version 1 > "$env:RUNNER_TEMP/installer-dependencies.json"
+          if ($LASTEXITCODE -ne 0) { throw 'Locked dependency metadata failed' }
+          python scripts/build-windows-installer.py --binary target/release/s3drive.exe --dependencies "$env:RUNNER_TEMP/installer-dependencies.json" --wix "$env:RUNNER_TEMP/wix-tools/wix.exe" --output-root "$env:RUNNER_TEMP/installer-current"
+          if ($LASTEXITCODE -ne 0) { throw 'Current MSI build failed' }
+          python scripts/build-windows-installer.py --binary target/release/s3drive.exe --dependencies "$env:RUNNER_TEMP/installer-dependencies.json" --wix "$env:RUNNER_TEMP/wix-tools/wix.exe" --output-root "$env:RUNNER_TEMP/installer-previous" --test-older-version 0.0.9
+          if ($LASTEXITCODE -ne 0) { throw 'Previous-version MSI fixture build failed' }
+      - name: Verify real MSI prerequisite upgrade repair downgrade and data-preserving uninstall
+        timeout-minutes: 15
+        run: ./scripts/test-windows-installer.ps1 -Current "$env:RUNNER_TEMP/installer-current" -Previous "$env:RUNNER_TEMP/installer-previous"
+      # No public binary artifact or private validation archive upload.

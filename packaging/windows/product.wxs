@@ -1,0 +1,30 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="S3Drive" Manufacturer="Marshall Rosenstein" Version="$(var.Version)"
+           ProductCode="$(var.ProductCode)" UpgradeCode="28AE71F8-3D39-4AF2-88C5-76E28E2A83EF"
+           Language="1033" Scope="perMachine" InstallerVersion="500">
+    <SummaryInformation Description="Experimental S3Drive CLI and documentation" />
+    <MajorUpgrade DowngradeErrorMessage="A newer S3Drive version is installed." Schedule="afterInstallInitialize" />
+    <MediaTemplate EmbedCab="yes" />
+    <!-- No custom actions, driver download, user data, service or startup registration. -->
+    <Property Id="REBOOT" Value="ReallySuppress" />
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/marshallr12/s3drive" />
+    <Property Id="WINFSP_RUNTIME">
+      <RegistrySearch Id="WinFspDirectory" Root="HKLM" Key="SOFTWARE\WinFsp" Name="InstallDir" Type="directory" Bitness="always32">
+        <DirectorySearch Id="WinFspBin" Path="bin" Depth="0">
+          <FileSearch Id="WinFspDll" Name="winfsp-x64.dll" MinVersion="2.1.0.0" />
+        </DirectorySearch>
+      </RegistrySearch>
+    </Property>
+    <Launch Condition="Installed OR WINFSP_RUNTIME" Message="Install the official WinFsp 2.1 x64 runtime first (https://winfsp.dev/). S3Drive does not install a driver or reboot your computer." />
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="S3Drive" />
+    </StandardDirectory>
+    <Feature Id="Main" Title="S3Drive" Level="1">
+      <ComponentGroupRef Id="Payload" />
+    </Feature>
+    <ui:WixUI Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+  </Package>
+</Wix>

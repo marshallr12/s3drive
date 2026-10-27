@@ -1,10 +1,30 @@
 # S3Drive handoff
 
-Updated 2026-10-25. Event-bound manifest authority is accepted at schema46;
+Updated 2026-10-27. Event-bound manifest authority is accepted at schema46;
 the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
-## Hosted item4 candidate accepted; independent main verification required (2026-10-26)
+## Current accepted baseline (2026-10-27)
+
+Main `74e1540bd765fd8f2a61000d073e15780f455f31` independently passed
+[run40270589324](https://github.com/marshallr12/s3drive/actions/runs/40270589324):
+all nine complete job logs, 810 exact source files and six verified artifacts;
+Linux 1143 / Windows 1135 workspace tests and all original/extended gates.
+Windows shared/debug/release 300-save times were 684.33/1093.25/348.67 seconds;
+the unchanged 1200-second debug limit retained 106.75 seconds of margin.
+The lifecycle/recovery cleanup remains fresh-only opt-in `component-retention-v1`;
+existing defaults/profiles and protection of dirty, uncertain and pinned work are
+unchanged. Hosted Git CLI application I/O and relocated package/startup acceptance
+are complete, not Office GUI, physical reboot or live Wasabi acceptance.
+
+The owner selected MIT licensing on 2026-10-27. The new
+[Windows MSI](docs/src/windows-installer.md) and its additional CI gate are under
+validation, not yet accepted or publicly released. Third-party notices remain
+under their own terms. Earlier candidate/pending-main statements below are dated
+historical checkpoints, superseded by this independent main result, not requests
+to rerun completed phases. Real hardware/provider acceptance remains incomplete.
+
+## Historical hosted item4 candidate checkpoint (2026-10-26)
 
 Main `f2410ec8b25609b34926b87b5474d7ad3671c647` independently passed
 [run40241620855](https://github.com/marshallr12/s3drive/actions/runs/40241620855):
