@@ -1,6 +1,7 @@
-# Physical Windows + Wasabi acceptance plan (proposal, 2026-11-08)
+# Physical Windows + Wasabi acceptance plan (2026-11-08)
 
-**Status: proposal awaiting owner sign-off. Nothing in this plan has run.**
+**Status: approved by the owner on 2026-11-08 and partly executed; results are
+recorded at the end of this page.** The first draft was a proposal only.
 The owner chose Wasabi over a local S3 emulator on 2026-11-08 for the first
 physical-machine mount, startup and Office/Explorer test. Choosing Wasabi
 selects this plan's direction; it does not approve the writes below.
@@ -73,3 +74,50 @@ the count with the owner before deletion. Separate approval is needed for any
 rerun, a larger bound, another prefix, multipart or versioned-bucket checks.
 This plan does not establish multi-host coordination, remote hosting, or
 provider-wide behavior.
+
+## Results so far (2026-11-08, in progress)
+
+Owner approval was given in the project thread at 19:19 UTC. Only the
+`wasabi-s3drive` profile was added by the owner (a root key, not a sub-user key;
+the owner intends to rotate or delete it after testing). Claude never handled
+key material.
+
+**Probe.** `probe-writes plan`/`run` under `s3drive-conformance/7d38d354…/`:
+all ten checks passed and the six fixture keys were removed. The report is the
+write-policy evidence for the managed volume (`evidence_max_age_seconds` 604800).
+
+**Managed volume.** Loopback authority `portable-collision-v1`, volume
+`2e463bd1…`, store `4325a5fc…`, root `s3drive-physical-20261108/.s3drive/`,
+version 7 `posix-v1` writable profile, mounted at `%USERPROFILE%\S3DriveTest`.
+Scripted checks passed: file creation, a Unicode folder and file name, a 3 MiB
+random file (read back SHA-256 identical, also after three forced process kills
+and cold remounts), rename, delete and overwrite.
+
+**Defects found** (each is a code change for a separate PR):
+
+1. **Per-open cost grows with local history.** A Word *Save As* of a 3.4 MB
+   document grew `managed-state/metadata.sqlite3` to 277 MB within about two
+   minutes. Afterwards every file open costs 7–25 CPU-seconds, including the
+   10-byte `hello.txt`, and a cold remount about 60–95 CPU-seconds. Word opens
+   files dozens of times per save, so the save ran for more than eight minutes
+   and appeared hung; Word retried with a second temp file. This is the
+   version 7 whole-generation profile without local reclamation. It is not an
+   infinite loop or a deadlock: operations complete serially. Two full memory
+   dumps of the mount process (spinning, and later idle with a queued request),
+   the matching PDB and a copy of the database are kept locally under
+   `%LOCALAPPDATA%\S3Drive\physical-20261108\evidence\`, unpublished.
+2. **CopyFile-based copies fail** with `ERROR_WRITE_PROTECT`: Explorer paste,
+   drag-and-drop, `Copy-Item`, `cmd copy`, `System.IO.File.Copy`. A direct
+   `CreateFileW` probe confirms the cause: the WinFsp adapter refuses any create
+   that requests `WRITE_DAC` or `WRITE_OWNER`, which `CopyFile` always does.
+   Plain creates, stream copies, renames and deletes work.
+3. **All timestamps report as 1969-12-31** (zero), on every file and directory.
+
+**Provider usage.** `s3drive list` under the application prefix found nine
+objects totalling 9.5 MB: one object per closed file generation (the 3 MiB
+file, two generations of Word's temp file, four small files, the 0-byte
+document, one deleted file). Uploads are not amplified; the growth is local.
+
+**Not yet done:** scheduled startup tasks, sign-out/sign-in, reboot, a scripted
+reproduction of the Word save pattern, and prefix cleanup with the owner's
+confirmation of the key count.
