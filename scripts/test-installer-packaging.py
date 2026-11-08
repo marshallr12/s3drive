@@ -98,6 +98,9 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("RegisterTaskDefinition($taskName,$definition,2,$identity.Name,$null,3,$null)", script)
         self.assertIn("'Software\\Classes\\Applications\\Explorer.exe\\Drives'", script)
         self.assertIn('Remove-DriveIcon $value.mountpoint $value.icon', script)
+        # Coordinators also default to the passwordless sign-in task (PIN-only accounts).
+        self.assertIn('$signIn = -not $Credential -and -not $CrossLogon', script)
+        self.assertIn("version=4;component='authority'", script)
         # The directory mode keeps its password-backed batch logon.
         self.assertIn("RegisterTaskDefinition($taskName,$definition,2,$identity.Name,$plainPassword,1,$null)", script)
 

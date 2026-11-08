@@ -124,9 +124,20 @@ tested yet. The letter exists only in that user's non-elevated session: an
 elevated (Run as administrator) program does not see it unless the machine
 enables linked connections. Elevated tools and SSH sessions should use the
 directory mode below. Managed volumes still need their coordinator registered
-separately (`-Component Authority`, password-backed) before the drive starts.
+separately with `-Component Authority`; see below.
 [Task Scheduler logon types](https://learn.microsoft.com/en-us/windows/win32/taskschd/principal-logontype),
 [WinFsp service architecture](https://github.com/winfsp/winfsp/wiki/WinFsp-Service-Architecture)
+
+**Coordinator at sign-in.** A managed drive needs its local coordinator
+running first. `-Component Authority` registrations now also default to the
+interactive-token sign-in task (manifest version 4, started through the same
+windowless launcher), so an account that signs in only with a Windows Hello
+PIN, and does not know its password, can register both. Register the
+coordinator before the drive; both start at sign-in, and the drive's
+supervisor retries a failed start three times, ten seconds apart, if the
+coordinator is not ready yet. That ordering has not been tested on a real sign-in.
+Pass `-CrossLogon` (or `-Credential`) to keep the previous password-backed
+batch logon, which keeps the coordinator running across sign-outs and SSH.
 
 The hosted installer job registers this default from the MSI payload, checks
 the task (interactive, least privilege, launcher action), the icon value and

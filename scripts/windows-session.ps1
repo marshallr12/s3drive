@@ -9,6 +9,11 @@ Mount registrations have two modes:
   task uses the interactive token, so no password is stored or requested.
 - directory: an NTFS directory path, mounted in a separate batch logon that
   stays visible across logons and SSH. It needs the account password.
+
+Coordinator (-Component Authority) registrations also start at sign-in in the
+user's own session by default, without a password, so accounts that sign in
+with a Windows Hello PIN can use them. Pass -CrossLogon (or -Credential) for
+the password-backed batch logon that keeps it running across logons and SSH.
 #>
 [CmdletBinding()]
 param(
@@ -27,7 +32,8 @@ param(
     [string]$AuthorityListen,
     [string]$TlsCert,
     [string]$TlsKey,
-    [System.Management.Automation.PSCredential]$Credential
+    [System.Management.Automation.PSCredential]$Credential,
+    [switch]$CrossLogon
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -85,6 +91,15 @@ function Authority-Arguments($Authority) {
     return $result
 }
 function Is-DriveMode($Value) { return $Value.version -eq 3 }
+# Versions 3 (drive) and 4 (coordinator) run in the signed-in session.
+function Is-SignIn($Value) { return $Value.version -in @(3,4) }
+function Select-Launcher([string]$Executable) {
+    # Prefer the installed windowless launcher beside s3drive.exe.
+    $launcher = Join-Path (Split-Path -Parent $Executable) 's3drive-launch.exe'
+    if ([IO.File]::Exists($launcher)) { return $launcher }
+    Write-Warning 's3drive-launch.exe not found; a console window may flash at sign-in'
+    return $powershell
+}
 function Assert-DriveManifest($Value) {
     $fields = @('version','mode','owner_sid','task_name','executable','config','mountpoint','launcher','icon','arguments','description')
     $keys = @($Value.PSObject.Properties.Name)
@@ -149,12 +164,13 @@ function Remove-DriveIcon([string]$Drive, [string]$IconPath) {
 function Read-Manifest {
     Assert-PrivateRoot
     $value = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $kind = if ($value.version -in @(1,3)) { 'Mount' } elseif ($value.version -eq 2) { $value.component } else { '' }
-    if (($value.version -eq 2 -and $kind -ine 'Authority') -or $kind -ine $Component -or $value.owner_sid -ne $sid -or $value.task_name -ne $taskName) {
+    $kind = if ($value.version -in @(1,3)) { 'Mount' } elseif ($value.version -in @(2,4)) { $value.component } else { '' }
+    if (($value.version -in @(2,4) -and $kind -ine 'Authority') -or $kind -ine $Component -or $value.owner_sid -ne $sid -or $value.task_name -ne $taskName) {
         throw 'Unsupported registration or different owning account'
     }
     if ($kind -ieq 'Authority') {
         $manifestFields = @('version','component','owner_sid','task_name','executable','authority','arguments','description')
+        if ($value.version -eq 4) { $manifestFields += 'launcher' }
         $manifestKeys = @($value.PSObject.Properties.Name)
         if ($manifestKeys.Count -ne $manifestFields.Count) { throw 'Unsupported authority manifest fields' }
         foreach ($field in $manifestFields) { if ($manifestKeys -cnotcontains $field) { throw 'Incomplete authority manifest' } }
@@ -191,9 +207,9 @@ function Assert-Task($Task, $Value) {
     $principal = $definition.Principal.UserId
     if ($principal -match '^S-1-') { $principalSid=[Security.Principal.SecurityIdentifier]::new($principal).Value }
     else { $principalSid=([Security.Principal.NTAccount]::new($principal)).Translate([Security.Principal.SecurityIdentifier]).Value }
-    # Drive mode: interactive token (3) in the user's session. Otherwise password (1).
-    $logonType = if (Is-DriveMode $Value) { 3 } else { 1 }
-    $actionPath = if (Is-DriveMode $Value) { $Value.launcher } else { $powershell }
+    # Sign-in registrations: interactive token (3) in the user's session. Otherwise password (1).
+    $logonType = if (Is-SignIn $Value) { 3 } else { 1 }
+    $actionPath = if (Is-SignIn $Value) { $Value.launcher } else { $powershell }
     if ($principalSid -ne $sid -or $definition.Principal.LogonType -ne $logonType -or $definition.Principal.RunLevel -ne 0) {
         throw 'Scheduled task owner or logon policy changed; refusing control'
     }
@@ -337,6 +353,7 @@ try {
     if ($Action -eq 'Install') {
         if (-not $Executable) { throw 'Install requires Executable' }
         $driveMode = $false
+        $signIn = $false
         $Executable = (Get-Item -LiteralPath $Executable).FullName
         $authority = $null
         if ($Component -eq 'Authority') {
@@ -344,6 +361,8 @@ try {
                 -not $AuthorityTokenFile -or -not $AuthorityListen -or $Config -or $MountPoint -or
                 ([bool]$TlsCert -ne [bool]$TlsKey)) { throw 'Authority install requires all authority settings, no mount options and a complete optional TLS pair' }
             if ($AuthorityDirectory -notmatch '^[A-Za-z]:[\\/]') { throw 'Authority directory must be an absolute local path' }
+            # Default: start in the signed-in session with no password (works with a PIN).
+            $signIn = -not $Credential -and -not $CrossLogon
             $authority = @{directory=[IO.Path]::GetFullPath($AuthorityDirectory); volume=$AuthorityVolume;
                 name_policy=$AuthorityNamePolicy;token_file=[IO.Path]::GetFullPath($AuthorityTokenFile);listen=$AuthorityListen;
                 tls_cert=$(if($TlsCert){[IO.Path]::GetFullPath($TlsCert)}else{$null});tls_key=$(if($TlsKey){[IO.Path]::GetFullPath($TlsKey)}else{$null})}
@@ -358,14 +377,13 @@ try {
             # No MountPoint, or a bare letter such as G:, selects the default drive mode.
             $driveMode = (-not $MountPoint) -or ($MountPoint -match '^[A-Za-z]:\\?$')
             if ($driveMode) {
-                if ($Credential) { throw 'Drive-letter mode runs in your own sign-in session and does not use a password' }
+                if ($Credential -or $CrossLogon) { throw 'Drive-letter mode runs in your own sign-in session; use a directory MountPoint for cross-logon access' }
+                $signIn = $true
                 $MountPoint = Select-DriveLetter $MountPoint
                 $installDirectory = Split-Path -Parent $Executable
                 if (-not $Icon) { $Icon = Join-Path $installDirectory 's3drive.ico' }
                 if ([IO.File]::Exists($Icon)) { $Icon = (Get-Item -LiteralPath $Icon).FullName; Assert-DriveIconFree $MountPoint $Icon }
                 else { Write-Warning 'S3Drive icon not found; Explorer will show its default drive icon'; $Icon = $null }
-                $launcher = Join-Path $installDirectory 's3drive-launch.exe'
-                if (-not [IO.File]::Exists($launcher)) { Write-Warning 's3drive-launch.exe not found; a console window may flash at sign-in'; $launcher = $powershell }
                 $protectedRoot = $MountPoint + '\'
             } else {
                 if ($Icon) { throw 'Icon applies only to drive-letter mounts' }
@@ -393,7 +411,8 @@ try {
         $service = Scheduler
         if ($null -ne (Registered-Task $service)) { throw 'Scheduled task already exists; remove the old registration first' }
         if ([IO.Directory]::Exists($root) -or [IO.File]::Exists($root)) { throw 'State directory already exists; use a new directory or remove the old registration data' }
-        if (-not $driveMode) {
+        if ($signIn) { $launcher = Select-Launcher $Executable }
+        if (-not $signIn) {
             if ($null -eq $Credential) {
                 $Credential = Get-Credential -UserName $identity.Name -Message 'Windows account password for independent S3Drive startup (not an S3 key)'
             }
@@ -419,7 +438,7 @@ try {
         if ($authority) { $invocation += ' -Component Authority' }
         $invocation += '; exit $LASTEXITCODE'
         $arguments = '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand ' + [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($invocation))
-        if ($driveMode -and $launcher -eq $powershell) { $arguments = '-WindowStyle Hidden ' + $arguments }
+        if ($signIn -and $launcher -eq $powershell) { $arguments = '-WindowStyle Hidden ' + $arguments }
         $description = "S3Drive startup v1; owner $sid; registration $Name"
         $value = @{ version=1; owner_sid=$sid; task_name=$taskName; executable=$Executable; config=$Config; mountpoint=$MountPoint; arguments=$arguments; description=$description }
         if ($driveMode) {
@@ -431,15 +450,21 @@ try {
             $description = "S3Drive authority startup v2; owner $sid; registration $Name"
             $value = @{version=2;component='authority';owner_sid=$sid;task_name=$taskName;executable=$Executable;
                 authority=$authority;arguments=$arguments;description=$description}
+            if ($signIn) {
+                $description = "S3Drive authority sign-in startup v4; owner $sid; registration $Name"
+                $value = @{version=4;component='authority';owner_sid=$sid;task_name=$taskName;executable=$Executable;
+                    authority=$authority;launcher=$launcher;arguments=$arguments;description=$description}
+            }
         }
         $value | ConvertTo-Json | Set-Content -LiteralPath $manifestPath -Encoding UTF8
         $definition = $service.NewTask(0)
         $definition.RegistrationInfo.Description = $description
         $definition.Principal.UserId = $identity.Name
-        # Drive: TASK_LOGON_INTERACTIVE_TOKEN, so the letter is created in the
-        # signed-in session Explorer uses. Otherwise TASK_LOGON_PASSWORD, an
-        # independent batch logon whose directory mount spans logons and SSH.
-        $definition.Principal.LogonType = $(if ($driveMode) { 3 } else { 1 })
+        # Sign-in: TASK_LOGON_INTERACTIVE_TOKEN, so a drive letter is created in
+        # the signed-in session Explorer uses and no password is needed.
+        # Otherwise TASK_LOGON_PASSWORD, an independent batch logon that spans
+        # logons and SSH.
+        $definition.Principal.LogonType = $(if ($signIn) { 3 } else { 1 })
         $definition.Principal.RunLevel = 0 # least privilege
         $definition.Settings.Enabled = $true
         $definition.Settings.AllowDemandStart = $true
@@ -456,12 +481,12 @@ try {
         $trigger.UserId = $identity.Name
         $trigger.Enabled = $true
         $exec = $definition.Actions.Create(0)
-        $exec.Path = $(if ($driveMode) { $launcher } else { $powershell })
+        $exec.Path = $(if ($signIn) { $launcher } else { $powershell })
         $exec.Arguments = $arguments
         $exec.WorkingDirectory = $env:SystemRoot
         # COM receives the password in memory. It is not a process argument,
         # script, log, manifest field or repository secret.
-        if ($driveMode) {
+        if ($signIn) {
             # The interactive token needs no stored password.
             $registered = $service.GetFolder('\').RegisterTaskDefinition($taskName,$definition,2,$identity.Name,$null,3,$null)
         } else {
@@ -472,6 +497,7 @@ try {
         Assert-Task $registered $value
         if ($driveMode -and $Icon) { Set-DriveIcon $MountPoint $Icon }
         if ($driveMode) { Write-Output "Installed $taskName for drive $MountPoint. Use Start now; it mounts again at each sign-in." }
+        elseif ($signIn) { Write-Output "Installed $taskName. Use Start now; it starts again at each sign-in." }
         else { Write-Output "Installed $taskName. Use Start now; future account logons trigger it." }
     } else {
         $value = Read-Manifest
