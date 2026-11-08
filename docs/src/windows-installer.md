@@ -36,6 +36,15 @@ a Windows security warning. No public binary is uploaded by this CI job.
    Follow [managed bootstrap](managed-bootstrap.md) and
    [startup/session setup](startup-and-sessions.md). Configuration checking is
    offline and does not validate a bucket, authorize writes or install startup.
+6. To get the default drive (a new drive letter with the S3Drive icon at each
+   sign-in, like Google Drive), run the installed
+   `scripts\windows-session.ps1 -Action Install` as yourself without
+   `-MountPoint`, then `-Action Start`. See
+   [the drive-letter default](startup-and-sessions.md#windows-default-a-drive-letter-for-the-signed-in-user-2026-11-08).
+   The MSI installs the drive icon (`s3drive.ico`) and windowless startup
+   launcher (`s3drive-launch.exe`) beside `s3drive.exe`, but it still registers
+   no startup task itself: it is a per-machine package that runs before any
+   user configuration exists.
 
 No writable provider configuration is supplied. Do not use real data for the
 first physical acceptance run. Store/schema changes remain explicit application
@@ -91,6 +100,8 @@ Windows runner it tests:
 - previous-package install, injected failed-upgrade rollback and current upgrade;
 - every installed payload hash and source manifest;
 - installed CLI version, offline configuration parsing and durable initialization;
+- default per-user drive registration from the installed helper, launcher and
+  icon (task shape, icon value, Status and clean Remove; not a sign-in start);
 - actual WinFsp Git save/replace/rename/delete and interrupted-owner cold recovery
   using the MSI-installed CLI against the owned loopback fixture;
 - repair, repeated install, downgrade refusal and reinstall;

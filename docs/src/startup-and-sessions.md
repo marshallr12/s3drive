@@ -78,6 +78,72 @@ at boot, not just sign-in. It is **not a dependency for MX Linux** and is not
 enabled automatically.
 [loginctl lingering](https://www.freedesktop.org/software/systemd/man/252/loginctl.html)
 
+## Windows default: a drive letter for the signed-in user (2026-11-08)
+
+The owner decided on 2026-11-08 that the installed default should behave like
+Google Drive: a new drive letter with an S3Drive icon, mounted for the
+signed-in user. `scripts/windows-session.ps1` now does this whenever
+`-MountPoint` is omitted or is a bare letter such as `G:`:
+
+```powershell
+$app = "$env:ProgramFiles\S3Drive"
+& "$app\scripts\windows-session.ps1" -Action Install -Name default `
+  -Executable "$app\s3drive.exe" -Config "$env:APPDATA\S3Drive\s3drive.toml"
+& "$app\scripts\windows-session.ps1" -Action Start -Name default
+```
+
+- **Letter.** Without `-MountPoint` the helper picks `S:` if it is free,
+  otherwise the first free letter from `Z:` downward. It skips letters in use
+  in this session, remembered network drives (`HKCU\Network`) and letters
+  held by this account's other registrations under the default state location.
+  An explicit letter that is in use, or `A:`–`C:`, is refused.
+- **Session.** The task uses Task Scheduler's interactive-token logon type
+  (`TASK_LOGON_INTERACTIVE_TOKEN`) at least privilege, triggered at this
+  account's sign-in. It runs in the same logon session as Explorer, so the
+  letter is visible there. No Windows password is requested or stored, and the
+  *Log on as a batch job* right is not needed. The drive is unmounted when the
+  user signs out and comes back at the next sign-in.
+- **Icon.** The helper writes the per-user Explorer override
+  `HKCU\Software\Classes\Applications\Explorer.exe\Drives\<letter>\DefaultIcon`
+  pointing at the installed `s3drive.ico`. It refuses a letter whose icon was
+  already customized by something else, and `Remove` deletes only the exact
+  value it wrote. The volume label is already `S3Drive`.
+- **No console window.** The task starts the installed `s3drive-launch.exe`, a
+  Windows-subsystem program that runs the fixed system Windows PowerShell with
+  `CREATE_NO_WINDOW`. If the launcher is missing (a development build), the
+  helper falls back to `powershell.exe -WindowStyle Hidden`, which can flash.
+- **Registration format.** Drive registrations use manifest version 3
+  (`mode = "drive"`); the existing directory (version 1) and coordinator
+  (version 2) registrations are unchanged and keep working.
+
+Limits. Sign-out ends the mount process without the graceful stdin-close path
+(Windows terminates interactive console processes at logoff), so the next
+mount relies on the existing journal crash recovery; forced-kill cold remounts
+passed on the physical machine on 2026-11-08, but sign-out itself has not been
+tested yet. The letter exists only in that user's non-elevated session: an
+elevated (Run as administrator) program does not see it unless the machine
+enables linked connections. Elevated tools and SSH sessions should use the
+directory mode below. Managed volumes still need their coordinator registered
+separately with `-Component Authority`; see below.
+[Task Scheduler logon types](https://learn.microsoft.com/en-us/windows/win32/taskschd/principal-logontype),
+[WinFsp service architecture](https://github.com/winfsp/winfsp/wiki/WinFsp-Service-Architecture)
+
+**Coordinator at sign-in.** A managed drive needs its local coordinator
+running first. `-Component Authority` registrations now also default to the
+interactive-token sign-in task (manifest version 4, started through the same
+windowless launcher), so an account that signs in only with a Windows Hello
+PIN, and does not know its password, can register both. Register the
+coordinator before the drive; both start at sign-in, and the drive's
+supervisor retries a failed start three times, ten seconds apart, if the
+coordinator is not ready yet. That ordering has not been tested on a real sign-in.
+Pass `-CrossLogon` (or `-Credential`) to keep the previous password-backed
+batch logon, which keeps the coordinator running across sign-outs and SSH.
+
+The hosted installer job registers this default from the MSI payload, checks
+the task (interactive, least privilege, launcher action), the icon value and
+`Status`, then removes it and checks both are gone. It does not start the task:
+that needs a real desktop sign-in and remains physical-machine acceptance.
+
 ## Windows session boundary
 
 A task running only in an interactive desktop session does not establish the
@@ -87,7 +153,9 @@ runs independently of the launching terminal, as the user's account, and
 exposes an NTFS directory mount as the common desktop/SSH path. A drive letter
 can remain a convenience inside an individual session.
 
-`scripts/windows-session.ps1` implements a password-backed Task Scheduler
+Passing an absolute directory `-MountPoint` selects the **directory mode**
+described here, which remains the option for SSH and cross-logon access.
+`scripts/windows-session.ps1` implements it as a password-backed Task Scheduler
 registration. Native cross-logon acceptance passed on the hosted Windows VM.
 The scheduled
 process uses the mounting account at least privilege in a separate batch logon,
