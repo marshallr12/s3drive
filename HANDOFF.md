@@ -574,7 +574,16 @@ docs/src/evidence/creator-open-sdk-hosted-20261021.tar.gz. Writer DONE, NEVER re
 Updated 2026-11-08. Completed phases (owned-unlinked sparse publication,
 component retention, the Windows MSI) are not to be redone; see their docs.
 
-1. **First physical Windows install (in progress 2026-11-08).** Build the MSI
+1. **Physical Windows acceptance (first pass done 2026-11-08; see
+   docs/src/wasabi-physical-windows-plan.md).** MSI install, probe and managed
+   mount worked. Four defects block real use and are the next code work, in
+   order: (a) per-write/per-open cost that grows with local history (Word's
+   save pattern stalls; repeatable); (b) WinFsp create refuses
+   MAXIMUM_ALLOWED/WRITE_DAC/WRITE_OWNER and the TEMPORARY/HIDDEN attributes,
+   breaking Office and CopyFile; (c) zero timestamps; (d) startup needs the
+   account password, unusable with PIN sign-in. Sign-in/reboot acceptance
+   waits for passwordless startup (PR #2 direction, coordinator included).
+   **Original item:** Build the MSI
    locally, install with `msiexec /l*v` on a real Windows 10/11 machine with
    throwaway data, then verify sign-in startup, reboot and a real Office/Explorer
    save. Follow docs/src/windows-installer.md and startup-and-sessions.md.

@@ -138,6 +138,18 @@ desktop app, which redirects its writes under `AppData\Local` to the package's
 moved to the real path. `%TEMP%` is not redirected. Test state should be
 created in a location both can see before registering scheduled tasks.
 
+**Startup registration (not completed).** The install path worked up to
+configuration validation of the installed helper. Registration then needs the
+Windows account password for `TASK_LOGON_PASSWORD`, and the owner signs in with
+a Windows Hello PIN and does not know the account password. This is defect 4:
+the per-account startup design is unusable on a typical PIN-only Windows
+sign-in; startup must run at sign-in from the interactive session without a
+stored password (the Google-Drive-style default chosen by the owner on
+2026-11-08). PR #2 adds that for the drive-letter mount; the coordinator
+registration still needs the same treatment. Sign-out/sign-in and reboot
+acceptance therefore wait for that work. Two registration directories left by
+the failed attempt must be removed before any retry.
+
 **Not yet done:** scheduled startup tasks, sign-out/sign-in, reboot, and prefix
 cleanup with the owner's confirmation of the key count. Office tests cannot pass
 on this build and were stopped.
