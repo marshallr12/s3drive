@@ -106,11 +106,17 @@ and cold remounts), rename, delete and overwrite.
    dumps of the mount process (spinning, and later idle with a queued request),
    the matching PDB and a copy of the database are kept locally under
    `%LOCALAPPDATA%\S3Drive\physical-20261108\evidence\`, unpublished.
-2. **CopyFile-based copies fail** with `ERROR_WRITE_PROTECT`: Explorer paste,
-   drag-and-drop, `Copy-Item`, `cmd copy`, `System.IO.File.Copy`. A direct
-   `CreateFileW` probe confirms the cause: the WinFsp adapter refuses any create
-   that requests `WRITE_DAC` or `WRITE_OWNER`, which `CopyFile` always does.
-   Plain creates, stream copies, renames and deletes work.
+2. **Office and CopyFile creates are refused.** Direct `CreateFileW` probes on
+   a fresh store show: a create requesting `MAXIMUM_ALLOWED` or `GENERIC_ALL`,
+   or any mask containing `WRITE_DAC`/`WRITE_OWNER`, fails with
+   `ERROR_WRITE_PROTECT` (19); a create with `FILE_ATTRIBUTE_TEMPORARY` fails
+   with `ERROR_NOT_SUPPORTED` (50), and the adapter accepts only the NORMAL and
+   ARCHIVE attributes on create and set-attributes. `CopyFile` (Explorer paste,
+   drag-and-drop, `copy`, `Copy-Item`) always asks for `WRITE_DAC`; Excel writes
+   its save temp file (for example `D1834730`) with the temporary attribute and
+   reported "cannot access the file"; Word reported "a file permission error".
+   Office lock files (`~$name`) also need the HIDDEN attribute. Plain creates,
+   stream copies, `DELETE`, delete-on-close, renames and deletes work.
 3. **All timestamps report as 1969-12-31** (zero), on every file and directory.
 
 **Provider usage.** `s3drive list` under the application prefix found nine
@@ -118,6 +124,20 @@ objects totalling 9.5 MB: one object per closed file generation (the 3 MiB
 file, two generations of Word's temp file, four small files, the 0-byte
 document, one deleted file). Uploads are not amplified; the growth is local.
 
-**Not yet done:** scheduled startup tasks, sign-out/sign-in, reboot, a scripted
-reproduction of the Word save pattern, and prefix cleanup with the owner's
-confirmation of the key count.
+**Scripted reproduction of the Word save pattern** (`word-save-repro.ps1`,
+kept outside the repository): on a *fresh* store, writing 3.4 MB as 4 KiB
+sequential writes with a flush after each one did not finish within 240 s; the
+mount process used 157 CPU-seconds and the local database grew by 33 MB before
+the run was stopped. The cost is therefore per flushed write, not only a
+consequence of an already large history. A plain 3 MiB `WriteAllBytes` of the
+same size completes in well under a second.
+
+**Operational note.** Claude's tools run inside the packaged (MSIX) Claude
+desktop app, which redirects its writes under `AppData\Local` to the package's
+`LocalCache`; the owner's own shell could not see the test state until it was
+moved to the real path. `%TEMP%` is not redirected. Test state should be
+created in a location both can see before registering scheduled tasks.
+
+**Not yet done:** scheduled startup tasks, sign-out/sign-in, reboot, and prefix
+cleanup with the owner's confirmation of the key count. Office tests cannot pass
+on this build and were stopped.
