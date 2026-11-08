@@ -491,6 +491,12 @@ sparse-journal phase. Do not treat this authority acceptance as native activatio
 
 ## Decisions and permissions
 
+- 2026-11-08 owner decision: the installed default must behave like Google
+  Drive on Windows: a new drive letter with a custom S3Drive icon, mounted for
+  the signed-in user, not the current manual directory mount. Design and
+  implement this as its own work item (installer defaults, startup
+  registration, WinFsp drive-letter mount, DriveIcons registration). The
+  directory mount can remain an option for SSH/cross-logon paths.
 - marshallr12/s3drive is intentionally PUBLIC. Visibility checks GET-only; no
   mutation without a new specific user request. Original private goal superseded.
 - Managed immutable chunks/manifests, normal mounted names, Rust coordinator and
@@ -586,7 +592,10 @@ component retention, the Windows MSI) are not to be redone; see their docs.
    retry-forest closure and snapshot restore remain.
 5. **Hosted metadata service.** Real server deployment, backup/restore, policy
    renewal, a second machine, partitions/fencing.
-6. **Release hygiene.** Code signing and public redistribution review (GPL source
+6. **Google-Drive-style default (owner decision 2026-11-08).** Installer and
+   startup should mount a drive letter with a custom icon for the signed-in user
+   by default; see Decisions. Separate design/implementation work item.
+7. **Release hygiene.** Code signing and public redistribution review (GPL source
    obligations). Watch Windows debug CI time: the 300-save gate had about 107 s
    of margin under its 1200 s limit at `74e1540`.
 
