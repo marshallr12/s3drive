@@ -86,6 +86,7 @@
 - [Implemented Linux read-only mount](linux-mount.md)
 - [Windows read-only drive](windows-mount.md)
 - [Wasabi integration target](wasabi.md)
+  - [Physical Windows + Wasabi plan (proposal)](wasabi-physical-windows-plan.md)
 - [Cache, SQLite and recovery](storage-and-recovery.md)
 - [Local staged generations](staged-writes.md)
 - [Conditional uploads and provider probe](conditional-uploads.md)

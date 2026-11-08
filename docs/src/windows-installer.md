@@ -1,10 +1,12 @@
 # Windows installer
 
-## Status and scope (2026-10-27)
+## Status and scope (2026-11-08)
 
 The x64 MSI has **hosted candidate acceptance** at `1593ac9` in
-[run40553716413](https://github.com/marshallr12/s3drive/actions/runs/40553716413),
-not a merged or publicly published release. It installs the experimental command-line application, session
+[run40553716413](https://github.com/marshallr12/s3drive/actions/runs/40553716413)
+and is merged at main `feea0a9`, whose ten-job
+[run40591665044](https://github.com/marshallr12/s3drive/actions/runs/40591665044)
+including `windows-installer` passed. It is not a publicly published release. It installs the experimental command-line application, session
 helper, documentation, GPL-3.0-only license and collected dependency notices. S3Drive is
 not a desktop settings GUI. Windows 10/11 physical-machine acceptance, Office
 application workflows, sign-in/reboot and live-provider acceptance remain separate.

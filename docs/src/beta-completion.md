@@ -1,6 +1,14 @@
 # Beta completion status
 
-## Current accepted baseline (2026-10-27)
+## Current main (2026-11-08)
+
+Main `feea0a9eb0dc0d38b5f8ededb698c56cac6fdc9a` (merge of the GPL-3.0-only Windows
+installer and its documentation successor) passed all ten jobs of
+[run40591665044](https://github.com/marshallr12/s3drive/actions/runs/40591665044),
+completed 2026-10-28, including the `windows-installer` job. The MSI is now on
+main; it is still unsigned, unpublished and without real-machine acceptance.
+
+## Previous accepted baseline (2026-10-27)
 
 Main `74e1540bd765fd8f2a61000d073e15780f455f31` independently passed
 [run40270589324](https://github.com/marshallr12/s3drive/actions/runs/40270589324):
@@ -18,7 +26,7 @@ MIT choice for this revision. The new
 [Windows MSI](windows-installer.md) and its additional CI gate have hosted candidate acceptance at `1593ac9`
 ([run40553716413](https://github.com/marshallr12/s3drive/actions/runs/40553716413));
 all ten full logs,835 source blobs and six artifact digests/reports were reviewed.
-The documentation successor and any merge still require exact-source verification;
+The documentation successor and merge were later verified at main `feea0a9` (above);
 no public binary release or real-machine acceptance is implied. Third-party notices remain
 under their own terms. Earlier candidate/pending-main statements below are dated
 historical checkpoints, superseded by this independent main result, not requests
