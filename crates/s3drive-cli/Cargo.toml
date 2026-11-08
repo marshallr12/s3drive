@@ -3,6 +3,8 @@ name = "s3drive-cli"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
+# The launcher is a second bin; keep `cargo run` selecting the CLI.
+default-run = "s3drive"
 license.workspace = true
 repository.workspace = true
 
