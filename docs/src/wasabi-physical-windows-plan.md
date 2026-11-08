@@ -119,10 +119,16 @@ and cold remounts), rename, delete and overwrite.
    stream copies, `DELETE`, delete-on-close, renames and deletes work.
 3. **All timestamps report as 1969-12-31** (zero), on every file and directory.
 
-**Provider usage.** `s3drive list` under the application prefix found nine
-objects totalling 9.5 MB: one object per closed file generation (the 3 MiB
-file, two generations of Word's temp file, four small files, the 0-byte
-document, one deleted file). Uploads are not amplified; the growth is local.
+**Provider usage.** After the Word test, `s3drive list` under the application
+prefix found nine objects totalling 9.5 MB: one object per closed file
+generation (the 3 MiB file, two generations of Word's temp file, four small
+files, the 0-byte document, one deleted file). After the scripted reproduction
+on the `run3` store the prefix held 140 objects and 41.7 MB: the interrupted
+4 KiB flushed-write run alone produced 131 objects, so **each flush of an open
+file publishes a new whole-file generation**. Word does not flush per write, so
+its save produced only two generations; applications that do flush will
+amplify uploads as well as local history. Totals stayed within the approved
+500-PUT / 256 MiB bound.
 
 **Scripted reproduction of the Word save pattern** (`word-save-repro.ps1`,
 kept outside the repository): on a *fresh* store, writing 3.4 MB as 4 KiB
