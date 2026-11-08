@@ -2,6 +2,13 @@
 <#
 Per-user Windows startup. Task Scheduler keeps the mount independent of the
 launching terminal. Registration accepts a PSCredential only in local memory.
+
+Mount registrations have two modes:
+- drive (default): a drive letter with the S3Drive icon, mounted in the
+  signed-in user's own logon session at each sign-in, like Google Drive. The
+  task uses the interactive token, so no password is stored or requested.
+- directory: an NTFS directory path, mounted in a separate batch logon that
+  stays visible across logons and SSH. It needs the account password.
 #>
 [CmdletBinding()]
 param(
@@ -10,6 +17,7 @@ param(
     [string]$Executable,
     [string]$Config,
     [string]$MountPoint,
+    [string]$Icon,
     [string]$StateDirectory,
     [ValidateSet('Mount','Authority')][string]$Component = 'Mount',
     [string]$AuthorityDirectory,
@@ -38,6 +46,8 @@ $manager = Join-Path $root 'manager.ps1'
 $stopFile = Join-Path $root 'stop'
 $logFile = Join-Path $root 'session.log'
 $powershell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+# Per-user Explorer drive icon overrides; HKCU needs no elevation.
+$driveIconRoot = 'Software\Classes\Applications\Explorer.exe\Drives'
 
 function Assert-NoReparseAncestors([string]$Path) {
     $item = [IO.DirectoryInfo]::new($Path)
@@ -74,10 +84,72 @@ function Authority-Arguments($Authority) {
     if ($Authority.tls_cert) { $result += @('--tls-cert',$Authority.tls_cert,'--tls-key',$Authority.tls_key) }
     return $result
 }
+function Is-DriveMode($Value) { return $Value.version -eq 3 }
+function Assert-DriveManifest($Value) {
+    $fields = @('version','mode','owner_sid','task_name','executable','config','mountpoint','launcher','icon','arguments','description')
+    $keys = @($Value.PSObject.Properties.Name)
+    if ($keys.Count -ne $fields.Count) { throw 'Unsupported drive manifest fields' }
+    foreach ($field in $fields) { if ($keys -cnotcontains $field) { throw 'Incomplete drive manifest' } }
+    if ($Value.mode -cne 'drive' -or $Value.mountpoint -cnotmatch '^[A-Z]:$') { throw 'Invalid drive registration' }
+}
+function Registered-DriveLetters {
+    # Letters claimed by this account's other default-location registrations,
+    # including ones that are not mounted right now.
+    $parent = Join-Path $env:LOCALAPPDATA 'S3Drive\startup'
+    foreach ($directory in @(Get-ChildItem -LiteralPath $parent -Directory -ErrorAction SilentlyContinue)) {
+        $file = Join-Path $directory.FullName 'startup.json'
+        try { $point = [string](Get-Content -LiteralPath $file -Raw -Encoding UTF8 | ConvertFrom-Json).mountpoint } catch { continue }
+        if ($point -match '^[A-Za-z]:$') { $point.Substring(0,1).ToUpperInvariant() }
+    }
+}
+function Used-DriveLetters {
+    # Letters visible in this logon session, remembered network drives and
+    # other S3Drive registrations.
+    $used = @([IO.Directory]::GetLogicalDrives() | ForEach-Object { $_.Substring(0,1).ToUpperInvariant() })
+    $used += @(Get-ChildItem -LiteralPath 'HKCU:\Network' -ErrorAction SilentlyContinue | ForEach-Object { $_.PSChildName.ToUpperInvariant() })
+    return $used + @(Registered-DriveLetters)
+}
+function Select-DriveLetter([string]$Requested) {
+    # Honour an explicit letter, else prefer S: then search downward from Z:.
+    $used = @(Used-DriveLetters)
+    if ($Requested) {
+        $letter = $Requested.Substring(0,1).ToUpperInvariant()
+        if ($letter -in @('A','B','C') -or $used -contains $letter) { throw "Drive ${letter}: is in use or reserved; choose another letter or omit MountPoint" }
+        return "${letter}:"
+    }
+    foreach ($letter in @('S') + @([char[]](90..68) | ForEach-Object { [string]$_ })) {
+        if ($used -notcontains $letter) { return "${letter}:" }
+    }
+    throw 'No free drive letter; pass a directory MountPoint instead'
+}
+function Assert-DriveIconFree([string]$Drive, [string]$IconPath) {
+    # Never take over a drive icon that another program or the user set.
+    $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey("$driveIconRoot\$($Drive.Substring(0,1))\DefaultIcon")
+    if ($null -eq $key) { return }
+    try { $existing = $key.GetValue('') } finally { $key.Dispose() }
+    if ($null -ne $existing -and $existing -cne $IconPath) { throw "Drive ${Drive} already has a custom icon; choose another letter" }
+}
+function Set-DriveIcon([string]$Drive, [string]$IconPath) {
+    # Explorer reads this per-user override when it shows the drive letter.
+    $key = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey("$driveIconRoot\$($Drive.Substring(0,1))\DefaultIcon")
+    try { $key.SetValue('', $IconPath) } finally { $key.Dispose() }
+}
+function Remove-DriveIcon([string]$Drive, [string]$IconPath) {
+    # Delete only the exact icon value this registration wrote, then the empty letter key.
+    $letterKey = "$driveIconRoot\$($Drive.Substring(0,1))"
+    $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey("$letterKey\DefaultIcon")
+    if ($null -eq $key) { return }
+    try { $owned = ($key.GetValue('') -ceq $IconPath) -and $key.ValueCount -eq 1 -and $key.SubKeyCount -eq 0 } finally { $key.Dispose() }
+    if (-not $owned) { return }
+    [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKey("$letterKey\DefaultIcon")
+    $parent = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($letterKey)
+    try { $empty = $parent.ValueCount -eq 0 -and $parent.SubKeyCount -eq 0 } finally { $parent.Dispose() }
+    if ($empty) { [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKey($letterKey) }
+}
 function Read-Manifest {
     Assert-PrivateRoot
     $value = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $kind = if ($value.version -eq 1) { 'Mount' } elseif ($value.version -eq 2) { $value.component } else { '' }
+    $kind = if ($value.version -in @(1,3)) { 'Mount' } elseif ($value.version -eq 2) { $value.component } else { '' }
     if (($value.version -eq 2 -and $kind -ine 'Authority') -or $kind -ine $Component -or $value.owner_sid -ne $sid -or $value.task_name -ne $taskName) {
         throw 'Unsupported registration or different owning account'
     }
@@ -98,6 +170,7 @@ function Read-Manifest {
         }
         if ([bool]$value.authority.tls_cert -ne [bool]$value.authority.tls_key) { throw 'Incomplete authority TLS registration' }
     }
+    if (Is-DriveMode $value) { Assert-DriveManifest $value }
     return $value
 }
 function Scheduler {
@@ -118,13 +191,16 @@ function Assert-Task($Task, $Value) {
     $principal = $definition.Principal.UserId
     if ($principal -match '^S-1-') { $principalSid=[Security.Principal.SecurityIdentifier]::new($principal).Value }
     else { $principalSid=([Security.Principal.NTAccount]::new($principal)).Translate([Security.Principal.SecurityIdentifier]).Value }
-    if ($principalSid -ne $sid -or $definition.Principal.LogonType -ne 1 -or $definition.Principal.RunLevel -ne 0) {
+    # Drive mode: interactive token (3) in the user's session. Otherwise password (1).
+    $logonType = if (Is-DriveMode $Value) { 3 } else { 1 }
+    $actionPath = if (Is-DriveMode $Value) { $Value.launcher } else { $powershell }
+    if ($principalSid -ne $sid -or $definition.Principal.LogonType -ne $logonType -or $definition.Principal.RunLevel -ne 0) {
         throw 'Scheduled task owner or logon policy changed; refusing control'
     }
     if ($definition.RegistrationInfo.Description -cne $Value.description) {
         throw 'Scheduled task description changed; refusing control'
     }
-    if ($definition.Actions.Count -ne 1 -or $definition.Actions.Item(1).Path -ine $powershell -or
+    if ($definition.Actions.Count -ne 1 -or $definition.Actions.Item(1).Path -ine $actionPath -or
         $definition.Actions.Item(1).Arguments -cne $Value.arguments -or
         $definition.Actions.Item(1).WorkingDirectory -ine $env:SystemRoot) {
         throw 'Scheduled task action changed; refusing control'
@@ -260,6 +336,7 @@ function Run-Mount($Value) {
 try {
     if ($Action -eq 'Install') {
         if (-not $Executable) { throw 'Install requires Executable' }
+        $driveMode = $false
         $Executable = (Get-Item -LiteralPath $Executable).FullName
         $authority = $null
         if ($Component -eq 'Authority') {
@@ -276,15 +353,30 @@ try {
             $protectedRoot = $authority.directory
             $protected = @($Executable,$root,$authority.token_file) + @($authority.tls_cert,$authority.tls_key | Where-Object {$_})
         } else {
-            if (-not $Config -or -not $MountPoint -or $AuthorityDirectory -or $AuthorityVolume -or $AuthorityNamePolicy -or $AuthorityTokenFile -or $AuthorityListen -or $TlsCert -or $TlsKey) { throw 'Mount install requires Config/MountPoint and no authority options' }
+            if (-not $Config -or $AuthorityDirectory -or $AuthorityVolume -or $AuthorityNamePolicy -or $AuthorityTokenFile -or $AuthorityListen -or $TlsCert -or $TlsKey) { throw 'Mount install requires Config and no authority options' }
             $Config = (Get-Item -LiteralPath $Config).FullName
-            if ($MountPoint -notmatch '^[A-Za-z]:[\\/]') { throw 'MountPoint must be an absolute local directory path' }
-            $MountPoint = [IO.Path]::GetFullPath($MountPoint)
-            if ($MountPoint -notmatch '^[A-Za-z]:\\.+' -or [IO.File]::Exists($MountPoint) -or [IO.Directory]::Exists($MountPoint)) {
-                throw 'Use a new absolute NTFS directory mountpoint, not an existing directory or drive letter'
+            # No MountPoint, or a bare letter such as G:, selects the default drive mode.
+            $driveMode = (-not $MountPoint) -or ($MountPoint -match '^[A-Za-z]:\\?$')
+            if ($driveMode) {
+                if ($Credential) { throw 'Drive-letter mode runs in your own sign-in session and does not use a password' }
+                $MountPoint = Select-DriveLetter $MountPoint
+                $installDirectory = Split-Path -Parent $Executable
+                if (-not $Icon) { $Icon = Join-Path $installDirectory 's3drive.ico' }
+                if ([IO.File]::Exists($Icon)) { $Icon = (Get-Item -LiteralPath $Icon).FullName; Assert-DriveIconFree $MountPoint $Icon }
+                else { Write-Warning 'S3Drive icon not found; Explorer will show its default drive icon'; $Icon = $null }
+                $launcher = Join-Path $installDirectory 's3drive-launch.exe'
+                if (-not [IO.File]::Exists($launcher)) { Write-Warning 's3drive-launch.exe not found; a console window may flash at sign-in'; $launcher = $powershell }
+                $protectedRoot = $MountPoint + '\'
+            } else {
+                if ($Icon) { throw 'Icon applies only to drive-letter mounts' }
+                if ($MountPoint -notmatch '^[A-Za-z]:[\\/]') { throw 'MountPoint must be a drive letter or an absolute local directory path' }
+                $MountPoint = [IO.Path]::GetFullPath($MountPoint)
+                if ($MountPoint -notmatch '^[A-Za-z]:\\.+' -or [IO.File]::Exists($MountPoint) -or [IO.Directory]::Exists($MountPoint)) {
+                    throw 'Use a new absolute NTFS directory mountpoint, not an existing directory'
+                }
+                if (-not [IO.Directory]::Exists([IO.Path]::GetDirectoryName($MountPoint))) { throw 'Mountpoint parent must already exist' }
+                $protectedRoot = $MountPoint
             }
-            if (-not [IO.Directory]::Exists([IO.Path]::GetDirectoryName($MountPoint))) { throw 'Mountpoint parent must already exist' }
-            $protectedRoot = $MountPoint
             $protected = @($Executable,$Config,$root)
             & $Executable config-check $Config
             if ($LASTEXITCODE -ne 0) { throw 'Configuration validation failed' }
@@ -301,12 +393,14 @@ try {
         $service = Scheduler
         if ($null -ne (Registered-Task $service)) { throw 'Scheduled task already exists; remove the old registration first' }
         if ([IO.Directory]::Exists($root) -or [IO.File]::Exists($root)) { throw 'State directory already exists; use a new directory or remove the old registration data' }
-        if ($null -eq $Credential) {
-            $Credential = Get-Credential -UserName $identity.Name -Message 'Windows account password for independent S3Drive startup (not an S3 key)'
+        if (-not $driveMode) {
+            if ($null -eq $Credential) {
+                $Credential = Get-Credential -UserName $identity.Name -Message 'Windows account password for independent S3Drive startup (not an S3 key)'
+            }
+            if ($null -eq $Credential) { throw 'Registration cancelled' }
+            $credentialSid = ([Security.Principal.NTAccount]::new($Credential.UserName)).Translate([Security.Principal.SecurityIdentifier]).Value
+            if ($credentialSid -ne $sid) { throw 'Register startup as the same account that will access the drive' }
         }
-        if ($null -eq $Credential) { throw 'Registration cancelled' }
-        $credentialSid = ([Security.Principal.NTAccount]::new($Credential.UserName)).Translate([Security.Principal.SecurityIdentifier]).Value
-        if ($credentialSid -ne $sid) { throw 'Register startup as the same account that will access the drive' }
         $null = [IO.Directory]::CreateDirectory($root)
         $acl = [Security.AccessControl.DirectorySecurity]::new()
         $acl.SetOwner($identity.User)
@@ -325,8 +419,14 @@ try {
         if ($authority) { $invocation += ' -Component Authority' }
         $invocation += '; exit $LASTEXITCODE'
         $arguments = '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand ' + [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($invocation))
+        if ($driveMode -and $launcher -eq $powershell) { $arguments = '-WindowStyle Hidden ' + $arguments }
         $description = "S3Drive startup v1; owner $sid; registration $Name"
         $value = @{ version=1; owner_sid=$sid; task_name=$taskName; executable=$Executable; config=$Config; mountpoint=$MountPoint; arguments=$arguments; description=$description }
+        if ($driveMode) {
+            $description = "S3Drive drive startup v3; owner $sid; registration $Name"
+            $value = @{ version=3; mode='drive'; owner_sid=$sid; task_name=$taskName; executable=$Executable; config=$Config;
+                mountpoint=$MountPoint; launcher=$launcher; icon=$Icon; arguments=$arguments; description=$description }
+        }
         if ($authority) {
             $description = "S3Drive authority startup v2; owner $sid; registration $Name"
             $value = @{version=2;component='authority';owner_sid=$sid;task_name=$taskName;executable=$Executable;
@@ -336,7 +436,10 @@ try {
         $definition = $service.NewTask(0)
         $definition.RegistrationInfo.Description = $description
         $definition.Principal.UserId = $identity.Name
-        $definition.Principal.LogonType = 1 # TASK_LOGON_PASSWORD, independent batch logon
+        # Drive: TASK_LOGON_INTERACTIVE_TOKEN, so the letter is created in the
+        # signed-in session Explorer uses. Otherwise TASK_LOGON_PASSWORD, an
+        # independent batch logon whose directory mount spans logons and SSH.
+        $definition.Principal.LogonType = $(if ($driveMode) { 3 } else { 1 })
         $definition.Principal.RunLevel = 0 # least privilege
         $definition.Settings.Enabled = $true
         $definition.Settings.AllowDemandStart = $true
@@ -353,16 +456,23 @@ try {
         $trigger.UserId = $identity.Name
         $trigger.Enabled = $true
         $exec = $definition.Actions.Create(0)
-        $exec.Path = $powershell
+        $exec.Path = $(if ($driveMode) { $launcher } else { $powershell })
         $exec.Arguments = $arguments
         $exec.WorkingDirectory = $env:SystemRoot
         # COM receives the password in memory. It is not a process argument,
         # script, log, manifest field or repository secret.
-        $plainPassword = $Credential.GetNetworkCredential().Password
-        try { $registered = $service.GetFolder('\').RegisterTaskDefinition($taskName,$definition,2,$identity.Name,$plainPassword,1,$null) }
-        finally { $plainPassword = $null; $Credential = $null }
+        if ($driveMode) {
+            # The interactive token needs no stored password.
+            $registered = $service.GetFolder('\').RegisterTaskDefinition($taskName,$definition,2,$identity.Name,$null,3,$null)
+        } else {
+            $plainPassword = $Credential.GetNetworkCredential().Password
+            try { $registered = $service.GetFolder('\').RegisterTaskDefinition($taskName,$definition,2,$identity.Name,$plainPassword,1,$null) }
+            finally { $plainPassword = $null; $Credential = $null }
+        }
         Assert-Task $registered $value
-        Write-Output "Installed $taskName. Use Start now; future account logons trigger it."
+        if ($driveMode -and $Icon) { Set-DriveIcon $MountPoint $Icon }
+        if ($driveMode) { Write-Output "Installed $taskName for drive $MountPoint. Use Start now; it mounts again at each sign-in." }
+        else { Write-Output "Installed $taskName. Use Start now; future account logons trigger it." }
     } else {
         $value = Read-Manifest
         if ($Action -eq 'Run') { exit (Run-Mount $value) }
@@ -391,7 +501,12 @@ try {
                 if ($Component -eq 'Authority') {
                     $status.component='authority';$status.expected_volume=$value.authority.volume;
                     $status.listen=$value.authority.listen;$status.provider_access_verified=$false
-                } else { $status.mount_path_exists=[IO.Directory]::Exists($value.mountpoint);$status.mountpoint=$value.mountpoint }
+                } else {
+                    $drive = Is-DriveMode $value
+                    $status.mode=$(if ($drive) {'drive'} else {'directory'})
+                    $status.mount_path_exists=[IO.Directory]::Exists($(if ($drive) {$value.mountpoint + '\'} else {$value.mountpoint}))
+                    $status.mountpoint=$value.mountpoint
+                }
                 $status | ConvertTo-Json
             }
             'Stop' { Stop-Mount $task; Write-Output "$Component stopped" }
@@ -399,6 +514,7 @@ try {
                 if ($null -ne $task) { $task.Enabled = $false }
                 Stop-Mount $task
                 if ($null -ne $task) { $service.GetFolder('\').DeleteTask($taskName,0) }
+                if ((Is-DriveMode $value) -and $value.icon) { Remove-DriveIcon $value.mountpoint $value.icon }
                 foreach ($file in @('startup.json','manager.ps1','stop','runtime.json')) {
                     Remove-Item -LiteralPath (Join-Path $root $file) -Force -ErrorAction SilentlyContinue
                 }

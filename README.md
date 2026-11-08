@@ -79,8 +79,9 @@ passed. Its disposable objects were removed; live managed-provider acceptance
 requires a separate scope. No real writable user configuration is installed.
 
 The adapters use **Linux FUSE** and **Windows WinFsp**. Linux sign-in startup
-supports MX without systemd. Windows uses an account-owned scheduled supervisor
-and NTFS folder path shared across logons. Physical workstation reboot/PAM/SSH,
+supports MX without systemd. Windows defaults to a drive letter with an S3Drive
+icon, mounted at each sign-in for the signed-in user; an NTFS folder path shared
+across logons remains the SSH/cross-logon option. Physical workstation reboot/PAM/SSH,
 Windows10/11, multi-host partitions and backup/failover remain separate checks.
 
 ## Read the research

@@ -20,6 +20,9 @@ NOTICE = re.compile(r'^(licen[cs]e|copying|copyright|notice|authors|patents)(?:$
 FILES = ('LICENSE', 'COPYRIGHT', 'THIRD-PARTY-NOTICES.md', 'README.md',
          'docs/src/windows-installer.md', 'docs/src/managed-bootstrap.md',
          'scripts/windows-session.ps1')
+# Installed beside s3drive.exe: the drive-letter startup task finds both there.
+DRIVE_ICON = 'packaging/windows/s3drive.ico'
+LAUNCHER = 's3drive-launch.exe'
 
 
 def run(*args):
@@ -162,6 +165,19 @@ def payload_xml(payload, destination):
     ET.ElementTree(wix).write(destination, encoding='utf-8', xml_declaration=True)
 
 
+def copy_drive_support(binary, payload):
+    """Copy the windowless startup launcher and Explorer drive icon to the payload root.
+
+    The launcher is built by the same cargo invocation, so it must sit beside the CLI.
+    """
+    launcher = regular(Path(binary).resolve(strict=True).with_name(LAUNCHER), Path(binary).resolve().parent)
+    shutil.copyfile(launcher, payload / LAUNCHER)
+    icon = regular(ROOT / DRIVE_ICON, ROOT)
+    if icon.read_bytes()[:4] != b'\x00\x00\x01\x00':
+        raise ValueError('drive icon is not a Windows .ico file')
+    shutil.copyfile(icon, payload / 's3drive.ico')
+
+
 def version_tuple(version):
     if not re.fullmatch(r'\d+\.\d+\.\d+', version):
         raise ValueError('MSI requires major.minor.patch numeric version')
@@ -204,6 +220,7 @@ def main():
     payload = output / 'payload'
     payload.mkdir()
     shutil.copyfile(args.binary, payload / 's3drive.exe')
+    copy_drive_support(args.binary, payload)
     for name in FILES:
         source = regular(ROOT / name, ROOT)
         target = payload / name

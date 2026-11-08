@@ -58,6 +58,34 @@ function Assert-Payload($Info = $currentInfo) {
     if ($LASTEXITCODE -ne 0) { throw 'Installed CLI config-check failed.' }
     Assert-UserData
 }
+function Session-Helper([string[]]$Arguments) {
+    $helper = Join-Path $install 'scripts\windows-session.ps1'
+    $output = & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $helper @Arguments
+    if ($LASTEXITCODE -ne 0) { throw "Installed session helper failed: $Arguments" }
+    return $output
+}
+function Assert-DriveRegistration {
+    # Default per-user registration from the installed payload: a free drive letter,
+    # interactive sign-in task, windowless launcher and Explorer icon. Starting it
+    # needs a real desktop sign-in; that is physical acceptance, not this job.
+    $name = 'ci-drive-' + [guid]::NewGuid().ToString('N').Substring(0, 8)
+    $state = Join-Path $root 'drive-startup'
+    $common = @('-Name', $name, '-StateDirectory', $state)
+    Session-Helper (@('-Action', 'Install', '-Executable', $binary, '-Config', $config) + $common) | Out-Null
+    $manifest = Get-Content (Join-Path $state 'startup.json') -Raw | ConvertFrom-Json
+    if ($manifest.version -ne 3 -or $manifest.mode -ne 'drive' -or $manifest.mountpoint -cnotmatch '^[A-Z]:$') { throw 'Default registration is not a drive letter.' }
+    if ($manifest.launcher -ne (Join-Path $install 's3drive-launch.exe') -or $manifest.icon -ne (Join-Path $install 's3drive.ico')) { throw 'Drive registration did not use installed launcher/icon.' }
+    $task = Get-ScheduledTask -TaskName $manifest.task_name
+    if ($task.Principal.LogonType -ne 'Interactive' -or $task.Principal.RunLevel -ne 'Limited' -or $task.Actions[0].Execute -ne $manifest.launcher) { throw 'Drive task is not a least-privilege sign-in task.' }
+    $iconKey = 'HKCU:\Software\Classes\Applications\Explorer.exe\Drives\' + $manifest.mountpoint.Substring(0, 1) + '\DefaultIcon'
+    if ((Get-Item -LiteralPath $iconKey).GetValue('') -ne $manifest.icon) { throw 'Drive icon was not registered.' }
+    $status = (Session-Helper (@('-Action', 'Status') + $common)) -join "`n" | ConvertFrom-Json
+    if ($status.mode -ne 'drive' -or $status.mountpoint -ne $manifest.mountpoint) { throw 'Drive status mismatch.' }
+    Session-Helper (@('-Action', 'Remove') + $common) | Out-Null
+    if (Get-ScheduledTask -TaskName $manifest.task_name -ErrorAction SilentlyContinue) { throw 'Drive task survived Remove.' }
+    if (Test-Path -LiteralPath $iconKey) { throw 'Drive icon survived Remove.' }
+    $sequence.Add('default-drive-registration=passed')
+}
 $winfspMsi = Join-Path $env:RUNNER_TEMP 'winfsp-2.1.25156.msi'
 if (-not (Test-Path $winfspMsi)) { throw 'Pinned CI-only WinFsp MSI absent.' }
 try {
@@ -90,6 +118,7 @@ try {
     Assert-Payload
     if ((Get-FileHash $manual).Hash -ne $manualHash) { throw 'Upgrade removed user-created file.' }
     if ((Get-FileHash $db).Hash -ne $dbHash) { throw 'Upgrade changed user database.' }
+    Assert-DriveRegistration
     # Existing exact native test now launches the MSI-installed executable.
     $oldPackaged = $env:S3DRIVE_TEST_PACKAGED_CLI
     try {

@@ -76,6 +76,31 @@ class InstallerTests(unittest.TestCase):
         # Pinned WixUI_Minimal already defines this property; duplicating it fails linking.
         self.assertNotIn('<Property Id="ARPNOMODIFY"', product)
 
+    def test_drive_support_copied_beside_cli(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            build, payload = root / 'release', root / 'payload'
+            build.mkdir()
+            payload.mkdir()
+            binary = build / 's3drive.exe'
+            binary.write_bytes(b'cli')
+            with self.assertRaises(ValueError):
+                m.copy_drive_support(binary, payload)
+            (build / m.LAUNCHER).write_bytes(b'launcher')
+            m.copy_drive_support(binary, payload)
+            self.assertEqual((payload / m.LAUNCHER).read_bytes(), b'launcher')
+            self.assertEqual((payload / 's3drive.ico').read_bytes(), (m.ROOT / m.DRIVE_ICON).read_bytes())
+
+    def test_session_helper_defaults_to_signed_in_drive_letter(self):
+        # Static contract only; native Task Scheduler behavior is tested on Windows CI.
+        script = (m.ROOT / 'scripts/windows-session.ps1').read_text(encoding='utf-8')
+        self.assertIn("$driveMode = (-not $MountPoint) -or", script)
+        self.assertIn("RegisterTaskDefinition($taskName,$definition,2,$identity.Name,$null,3,$null)", script)
+        self.assertIn("'Software\\Classes\\Applications\\Explorer.exe\\Drives'", script)
+        self.assertIn('Remove-DriveIcon $value.mountpoint $value.icon', script)
+        # The directory mode keeps its password-backed batch logon.
+        self.assertIn("RegisterTaskDefinition($taskName,$definition,2,$identity.Name,$plainPassword,1,$null)", script)
+
     def test_notice_collection_and_missing_notice_refusal(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
