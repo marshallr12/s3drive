@@ -16,6 +16,9 @@ pub(super) struct Mount {
     // Strong original capabilities survive kernel-handle removal and failed Close.
     // Never rebuilt from persisted IDs. Bound before admitting another Open.
     opens: Mutex<HashMap<String, Entry>>,
+    /// Files, by node, whose buffered run outlived its handle because the
+    /// journal refused it at Close. Held until the run is journaled.
+    kept: Mutex<HashMap<String, Arc<File>>>,
 }
 #[derive(Clone)]
 struct Entry {
@@ -117,6 +120,7 @@ impl Writes {
                 runtime: tokio::runtime::Handle::current(),
                 controllers,
                 opens: Mutex::new(HashMap::new()),
+                kept: Mutex::new(HashMap::new()),
             })
             .map_err(|_| Error::Internal)?;
         // Only explicit previous-session policy may abandon clean old opens.
@@ -239,10 +243,37 @@ impl Writes {
             controller,
         })
     }
+    /// Journals the node's buffered writes, then publishes the node. The
+    /// journaled state is published even when the journal refuses the
+    /// buffered bytes; that refusal is then returned. The caller owns
+    /// `native_serial`.
     pub(super) async fn flush_native_node(&self, node: &str) -> Result<()> {
-        // Caller owns native_serial. Never reacquire it from the content hook.
-        // Buffered writes join the journal before anything selects or publishes.
-        self.drain_node(node).await?;
+        let drained = self.drain_making_room(node).await;
+        self.publish_node(node).await?;
+        drained
+    }
+    /// Publication the disposition controller asks for during cleanup, Close
+    /// or delete. Buffered bytes the journal refuses stay buffered and must
+    /// not fail that callback: the handle that holds them, or a later one,
+    /// reports them.
+    async fn flush_for_controller(&self, node: &str) -> Result<()> {
+        if let Err(failure) = self.drain_making_room(node).await {
+            eprintln!("Buffered write still not journaled at a controller flush ({failure:?})");
+        }
+        self.publish_node(node).await
+    }
+    /// Publishes the node's journaled state. The caller owns `native_serial`;
+    /// never reacquire it from the content hook. The future is type-erased
+    /// because several callers nest it and the compiler's `Send` check would
+    /// otherwise recurse through the whole publication.
+    pub(super) fn publish_node<'a>(
+        &'a self,
+        node: &'a str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + 'a>> {
+        Box::pin(self.publish_journaled(node))
+    }
+    /// Body of `publish_node`.
+    async fn publish_journaled(&self, node: &str) -> Result<()> {
         let _publishing = self.publish_serial.lock().await;
         let mount = self.native.get().ok_or(Error::Internal)?;
         let entries: Vec<_> = mount
@@ -273,12 +304,7 @@ impl Writes {
             .flush_selection(first.file.binding.clone())
             .await
             .map_err(error)?;
-        first
-            .file
-            .metadata
-            .lock()
-            .map_err(|_| Error::Internal)?
-            .size = selected.head.size();
+        first.file.note_journal_size(selected.head.size())?;
         if !selected.head.is_clean()
             && !selected
                 .plans
@@ -294,12 +320,7 @@ impl Writes {
                 .flush_selection(first.file.binding.clone())
                 .await
                 .map_err(error)?;
-            first
-                .file
-                .metadata
-                .lock()
-                .map_err(|_| Error::Internal)?
-                .size = selected.head.size();
+            first.file.note_journal_size(selected.head.size())?;
         }
         // ACK identities select work only. Each original plan still reopens and
         // validates all state before every provider effect or acknowledgment.
@@ -389,7 +410,7 @@ impl NativeContent for Content {
             self.0
                 .upgrade()
                 .ok_or(Error::Internal)?
-                .flush_native_node(node)
+                .flush_for_controller(node)
                 .await?;
             Ok(())
         })
@@ -624,13 +645,14 @@ impl Object {
             .state
             .compare_exchange(0, 1, Ordering::AcqRel, Ordering::Acquire)
             .is_ok();
-        // A handle closed while it still owns buffered bytes journals them
-        // first: the capability refuses every write once Close is observed.
+        // A handle closed while it owns buffered bytes, or while the file has
+        // bytes kept from an earlier Close, journals them first: the
+        // capability refuses every write once Close is observed.
         let buffered = first
             && self
                 .entry
                 .file
-                .retire(self.entry.native.open(), &self.entry.direct);
+                .claim(self.entry.native.open(), &self.entry.direct);
         let observed = if buffered {
             Ok(())
         } else {
@@ -652,7 +674,7 @@ impl Object {
 
                 let result = tokio::time::timeout(DEADLINE, async {
                     if buffered {
-                        object.settle_or_discard().await;
+                        object.settle_or_keep().await;
                     }
                     object.entry.native.close(cb.clone()).await.map_err(error)?;
                     object

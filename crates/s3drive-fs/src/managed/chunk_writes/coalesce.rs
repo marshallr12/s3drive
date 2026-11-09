@@ -14,15 +14,18 @@ use std::sync::atomic::AtomicU64;
 pub(super) const CAPACITY: usize = 1024 * 1024;
 /// A buffered run is journaled after this long without a further write.
 pub(super) const IDLE: Duration = Duration::from_secs(1);
+/// Test-only switch: the journal refuses every buffered run as if it were full.
+#[cfg(test)]
+pub(super) static REFUSE_RUNS: AtomicBool = AtomicBool::new(false);
 /// Source of run identities, so an idle timer never adopts a later run.
 static NEXT_RUN: AtomicU64 = AtomicU64::new(1);
 
-/// Accepted but not yet journaled bytes of one node, owned by one open handle.
+/// Accepted but not yet journaled bytes of one node. The run is owned by one
+/// open handle, or by none once that handle closed while the journal refused it.
 pub(super) struct Pending {
-    /// Native open whose capability must journal the run.
+    /// Native open whose capability journals the run; empty when it is kept
+    /// after its owner closed, and any open handle of the node may journal it.
     open: String,
-    /// File size before the run, restored if the run has to be discarded.
-    base: u64,
     /// Logical file size including the run.
     size: u64,
     /// Identity of this run and the number of merges it has absorbed.
@@ -47,7 +50,6 @@ impl Pending {
     fn new(open: &str, size: u64) -> Self {
         Self {
             open: open.to_owned(),
-            base: size,
             size,
             mark: (NEXT_RUN.fetch_add(1, Ordering::Relaxed), 0),
             offset: 0,
@@ -161,19 +163,38 @@ impl File {
         self.metadata.lock().map_err(|_| Error::Internal)?.size = size;
         Ok(())
     }
-    /// Drops the run if `open` owns it and restores the size it had hidden.
-    /// Returns the number of bytes lost. Only Close uses this, for a run the
-    /// journal refused: the closing capability can never write it afterwards.
-    pub(super) fn discard(&self, open: &str) -> Result<Option<usize>> {
+    /// Records the journal's size, unless buffered bytes extend the file past it.
+    pub(super) fn note_journal_size(&self, size: u64) -> Result<()> {
+        let logical = self.buffered_size()?.unwrap_or(size);
+        self.metadata.lock().map_err(|_| Error::Internal)?.size = logical;
+        Ok(())
+    }
+    /// Detaches the run from `open`, which is closing while the journal still
+    /// refuses the bytes. The run stays buffered and counts toward the size,
+    /// owned by no handle. Returns the number of bytes kept.
+    pub(super) fn orphan(&self, open: &str) -> Result<Option<usize>> {
         let mut slot = self.slot()?;
-        if slot.as_ref().is_none_or(|p| p.open != open) {
-            return Ok(None);
-        }
-        let Some(run) = slot.take() else {
+        let Some(run) = slot.as_mut().filter(|p| p.open == open) else {
             return Ok(None);
         };
-        self.metadata.lock().map_err(|_| Error::Internal)?.size = run.base;
+        run.open.clear();
         Ok(Some(run.bytes.len()))
+    }
+    /// Close entry for `open`: it stops buffering and takes over a run kept
+    /// after an earlier handle closed. Returns true when it now owns buffered
+    /// bytes that must be journaled before its Close is observed.
+    pub(super) fn claim(&self, open: &str, direct: &AtomicBool) -> bool {
+        let Ok(mut slot) = self.pending.lock() else {
+            return false;
+        };
+        direct.store(true, Ordering::Release);
+        let Some(run) = slot.as_mut() else {
+            return false;
+        };
+        if run.open.is_empty() {
+            run.open = open.to_owned();
+        }
+        run.open == open
     }
 }
 

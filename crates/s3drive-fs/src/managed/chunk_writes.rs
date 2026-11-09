@@ -595,6 +595,13 @@ impl Writes {
     }
     pub async fn metadata(&self, n: &RemoteNode) -> Result<Option<ObjectMetadata>> {
         self.remember(n)?;
+        // Buffered bytes decide the size even when no handle is open and the
+        // journal head is already published: a run kept after Close.
+        if let Some(size) = self.buffered_size_of(&n.id)? {
+            let mut m = logical_metadata(n)?;
+            m.size = size;
+            return Ok(Some(m));
+        }
         let heads = self.local.heads().await.map_err(error)?;
         if let Some(h) = heads
             .iter()
@@ -607,7 +614,7 @@ impl Writes {
                 return Ok(None);
             }
             let mut m = logical_metadata(n)?;
-            m.size = self.buffered_size_of(&n.id)?.unwrap_or(h.size());
+            m.size = h.size();
             return Ok(Some(m));
         }
         Ok(None)
@@ -768,13 +775,23 @@ impl Writes {
         if self.native_lifecycle {
             let _serial = self.native_serial.lock().await;
             self.recover().await?;
-            for h in self.local.heads().await.map_err(error)? {
-                self.flush_native_node(h.binding().base().map_err(error)?.node())
-                    .await?;
-            }
-            return Ok(());
+            return self.flush_native_heads().await;
         }
         self.flush_heads_legacy().await
+    }
+    /// Publishes every journaled file. Bytes the journal refuses must not stop
+    /// the other files from being published, so the first such refusal is
+    /// returned only at the end. The caller holds `native_serial`.
+    async fn flush_native_heads(&self) -> Result<()> {
+        let mut unsaved = Ok(());
+        for h in self.local.heads().await.map_err(error)? {
+            let node = h.binding().base().map_err(error)?.node().to_owned();
+            let drained = self.drain_making_room(&node).await;
+            self.publish_node(&node).await?;
+            unsaved = unsaved.and(drained);
+        }
+        // A kept run may belong to a file whose journal was already retired.
+        unsaved.and(self.drain_kept().await)
     }
     async fn flush_heads_legacy(&self) -> Result<()> {
         self.recover().await?;
@@ -807,5 +824,7 @@ impl Writes {
     }
 }
 
+#[cfg(test)]
+mod kept_tests;
 #[cfg(test)]
 mod retention_tests;

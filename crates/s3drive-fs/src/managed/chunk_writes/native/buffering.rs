@@ -13,43 +13,108 @@ impl Writes {
         let Some((open, offset, bytes)) = file.run()? else {
             return Ok(());
         };
-        let owner = self.native_entry(&open)?;
+        #[cfg(test)]
+        if coalesce::REFUSE_RUNS.load(Ordering::Acquire) {
+            return Err(Error::NoSpace);
+        }
+        let carrier = self.carrier(file, &open)?;
         let head = file.head().await?;
-        let edited = owner.edited(&head).await?;
-        let next = owner
-            .native
-            .write(&edited, fresh()?, offset, bytes)
-            .await
-            .map_err(error)?;
-        file.journaled(next.size())
+        let edited = carrier.edited(&head).await?;
+        let write = carrier.native.write(&edited, fresh()?, offset, bytes);
+        file.journaled(write.await.map_err(error)?.size())?;
+        self.release(file)
     }
-    /// Journals buffered writes of `node` if one of its handles holds any. The
-    /// caller holds `native_serial`.
-    pub(in super::super) async fn drain_node(&self, node: &str) -> Result<()> {
-        let held = {
-            let entries = self.entries.lock().map_err(|_| Error::Internal)?;
-            entries.get(node).and_then(Weak::upgrade)
-        };
-        let Some(file) = held else {
-            return Ok(());
-        };
-        let _file = file.serial.lock().await;
-        self.drain(&file).await
+    /// Journals the node's buffered run; when the journal is full, publishes
+    /// what it already holds to make room and tries once more. The caller
+    /// holds `native_serial`.
+    pub(in super::super) async fn drain_making_room(&self, node: &str) -> Result<()> {
+        match self.drain_node(node).await {
+            Err(Error::NoSpace) => {}
+            outcome => return outcome,
+        }
+        self.publish_node(node).await?;
+        self.drain_node(node).await
     }
-    /// The original handle that accepted a buffered run.
-    fn native_entry(&self, open: &str) -> Result<Entry> {
+    /// Journals buffered writes of `node` if the node holds any. The caller
+    /// holds `native_serial`. Type-erased for the same reason as `publish_node`.
+    pub(in super::super) fn drain_node<'a>(
+        &'a self,
+        node: &'a str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + 'a>> {
+        Box::pin(async move {
+            let held = {
+                let entries = self.entries.lock().map_err(|_| Error::Internal)?;
+                entries.get(node).and_then(Weak::upgrade)
+            };
+            let Some(file) = held else {
+                return Ok(());
+            };
+            let _file = file.serial.lock().await;
+            self.drain(&file).await
+        })
+    }
+    /// Retries every run kept after its handle closed and returns the first
+    /// failure, so flush-all and unmount report bytes that are still unsaved.
+    /// The caller holds `native_serial`.
+    pub(in super::super) async fn drain_kept(&self) -> Result<()> {
+        let mount = self.native.get().ok_or(Error::Internal)?;
+        let nodes: Vec<String> = {
+            let held = mount.kept.lock().map_err(|_| Error::Internal)?;
+            held.keys().cloned().collect()
+        };
+        let mut unsaved = Ok(());
+        for node in nodes {
+            unsaved = unsaved.and(self.drain_node(&node).await);
+        }
+        unsaved
+    }
+    /// The open handle whose capability journals a run: the handle that
+    /// accepted it or, for a run kept after that handle closed, any handle of
+    /// the file that Close has not reached. With none, the bytes stay in
+    /// memory and the caller gets a conflict.
+    fn carrier(&self, file: &File, open: &str) -> Result<Entry> {
         let mount = self.native.get().ok_or(Error::Internal)?;
         let opens = mount.opens.lock().map_err(|_| Error::Internal)?;
-        opens.get(open).cloned().ok_or(Error::Conflict)
+        if !open.is_empty() {
+            return opens.get(open).cloned().ok_or(Error::Conflict);
+        }
+        let open_handle = |e: &&Entry| e.close.state.load(Ordering::Acquire) == 0;
+        let same_file = |e: &&Entry| std::ptr::eq(Arc::as_ptr(&e.file), file);
+        let mut handles = opens.values().filter(same_file);
+        handles.find(open_handle).cloned().ok_or(Error::Conflict)
+    }
+    /// Detaches a refused run from its closing handle and holds the file, so
+    /// the bytes and the size they imply outlive the last handle. Returns the
+    /// number of bytes kept.
+    fn keep(&self, entry: &Entry) -> Result<Option<usize>> {
+        let Some(kept) = entry.file.orphan(entry.native.open())? else {
+            return Ok(None);
+        };
+        let node = entry.file.binding.base().map_err(error)?.node().to_owned();
+        let mount = self.native.get().ok_or(Error::Internal)?;
+        let mut held = mount.kept.lock().map_err(|_| Error::Internal)?;
+        held.insert(node, entry.file.clone());
+        Ok(Some(kept))
+    }
+    /// Lets go of a file once its buffered run has reached the journal.
+    fn release(&self, file: &File) -> Result<()> {
+        let base = file.binding.base().map_err(error)?;
+        let mount = self.native.get().ok_or(Error::Internal)?;
+        let mut held = mount.kept.lock().map_err(|_| Error::Internal)?;
+        held.remove(base.node());
+        Ok(())
     }
     /// Starts the idle timer of a new run. The timer lives as long as the run:
     /// each time no write has extended the run for `coalesce::IDLE`, it tries
-    /// once to journal that state without waiting for a commit point.
-    fn watch(self: &Arc<Self>, file: Arc<File>) {
+    /// once to journal that state without waiting for a commit point. It holds
+    /// the file weakly: a timer must never keep a file object alive after its
+    /// last handle closed, or a reopen would find the old object.
+    fn watch(self: &Arc<Self>, file: &Arc<File>) {
         let writer = Arc::downgrade(self);
         let Ok(Some((run, _))) = file.buffered_mark() else {
             return;
         };
+        let file = Arc::downgrade(file);
         tokio::spawn(async move {
             // The last state offered to the journal; a refused state is not
             // offered again until a write changes it.
@@ -63,17 +128,18 @@ impl Writes {
         });
     }
     /// Waits until run `run` has gone one idle period without a write and
-    /// returns its mark. Returns `None` once the run is no longer buffered or
-    /// the mount is stopping, which ends the timer.
-    async fn idle_mark(writer: &Weak<Self>, file: &File, run: u64) -> Option<(u64, u64)> {
+    /// returns its mark. Returns `None` once the run is no longer buffered, the
+    /// file is gone or the mount is stopping, which ends the timer.
+    async fn idle_mark(writer: &Weak<Self>, file: &Weak<File>, run: u64) -> Option<(u64, u64)> {
+        let mark = || file.upgrade()?.buffered_mark().ok().flatten();
         loop {
-            let seen = file.buffered_mark().ok().flatten().filter(|m| m.0 == run)?;
+            let seen = mark().filter(|m| m.0 == run)?;
             tokio::time::sleep(coalesce::IDLE).await;
             let stopping = |w: Arc<Self>| w.closing.load(Ordering::Acquire);
             if writer.upgrade().is_none_or(stopping) {
                 return None;
             }
-            if file.buffered_mark().ok().flatten() == Some(seen) {
+            if mark() == Some(seen) {
                 return Some(seen);
             }
         }
@@ -81,7 +147,7 @@ impl Writes {
     /// Idle-timer commit, serialized with every other journal user by the two
     /// order locks. A failure is kept: the bytes stay buffered and the handle's
     /// next operation retries the journal write and reports it.
-    async fn drain_idle(writer: &Weak<Self>, file: &File, seen: (u64, u64)) {
+    async fn drain_idle(writer: &Weak<Self>, file: &Weak<File>, seen: (u64, u64)) {
         let Some(writer) = writer.upgrade() else {
             return;
         };
@@ -91,6 +157,10 @@ impl Writes {
             return;
         }
         let _serial = writer.native_serial.lock().await;
+        // Upgraded only after the wait, so a long wait cannot hold the file.
+        let Some(file) = file.upgrade() else {
+            return;
+        };
         let _file = file.serial.lock().await;
         // While this timer waited for the locks the run changed. If a write
         // extended it, `watch` waits for it to go idle again; if it was
@@ -98,7 +168,7 @@ impl Writes {
         if file.buffered_mark().ok().flatten() != Some(seen) {
             return;
         }
-        if let Err(failure) = writer.drain(file).await {
+        if let Err(failure) = writer.drain(&file).await {
             eprintln!("Buffered write not journaled yet ({failure:?}); it stays buffered");
         }
     }
@@ -115,20 +185,28 @@ impl Object {
         let _file = self.entry.file.serial.lock().await;
         self.writer.drain(&self.entry.file).await
     }
-    /// Close-time commit of a run this handle still owns. The capability can
-    /// never write after Close, so a run the journal still refuses is discarded
-    /// and reported on standard error. Keeping it would leave the handle, and
-    /// with it the file, unable to close for the rest of the mount.
-    pub(super) async fn settle_or_discard(&self) {
+    /// Journals this node's buffered run, publishing first if the journal is
+    /// full. The caller holds `native_serial`.
+    async fn drain_own_node(&self) -> Result<()> {
+        let base = self.entry.file.binding.base().map_err(error)?;
+        self.writer.drain_making_room(base.node()).await
+    }
+    /// Close-time commit of a run this handle owns. The capability can never
+    /// write after Close, so a run the journal still refuses is detached from
+    /// the handle and kept in memory with its file. A later handle of the
+    /// file journals it; until then operations that need the bytes report
+    /// the failure. Only a process exit loses them.
+    pub(super) async fn settle_or_keep(&self) {
         let _serial = self.writer.native_serial.lock().await;
-        let _file = self.entry.file.serial.lock().await;
-        let Err(failure) = self.writer.drain(&self.entry.file).await else {
+        let Err(failure) = self.drain_own_node().await else {
             return;
         };
-        if let Ok(Some(lost)) = self.entry.file.discard(self.entry.native.open()) {
-            eprintln!(
-                "Discarded {lost} buffered bytes at Close: journal refused them ({failure:?})"
-            );
+        match self.writer.keep(&self.entry) {
+            Ok(Some(kept)) => eprintln!(
+                "Kept {kept} buffered bytes in memory at Close: journal refused them ({failure:?})"
+            ),
+            Ok(None) => {}
+            Err(unkept) => eprintln!("Buffered bytes not kept at Close ({unkept:?}; {failure:?})"),
         }
     }
     /// Tries to hold a write in memory. Returns false when the caller must
@@ -144,18 +222,23 @@ impl Object {
         }
         match file.offer(open, &self.entry.direct, size, offset, input)? {
             Offer::Direct => return Ok(false),
-            Offer::Started => self.writer.watch(file.clone()),
+            Offer::Started => self.writer.watch(file),
             Offer::Extended => {}
         }
         Ok(true)
     }
-    /// Ends buffering for this handle (cleanup) and journals what it holds, so
-    /// later writes on the handle reach the journal before they return.
+    /// Ends buffering for this handle (cleanup) and journals what the node
+    /// holds, publishing first if the journal is full, so later writes on the
+    /// handle reach the journal before they return.
     pub(super) async fn stop_buffering(&self) -> Result<()> {
         self.entry
             .file
             .retire(self.entry.native.open(), &self.entry.direct);
-        self.settle().await
+        if self.entry.file.buffered_size()?.is_none() {
+            return Ok(());
+        }
+        let _serial = self.writer.native_serial.lock().await;
+        self.drain_own_node().await
     }
 }
 

@@ -2714,7 +2714,7 @@ async fn component_retention_shared_write_coalescing_commit_points() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "slow: fills the journal to a limit; CI runs it in a release step"]
-async fn write_coalescing_refused_run_is_reported_then_discarded_at_close() {
+async fn write_coalescing_refused_run_is_reported_then_saved_at_close() {
     run("component:native_coalescing_refusal").await;
 }
 

@@ -267,9 +267,10 @@ fn scattered(count: usize) -> Vec<u8> {
     (0..count * 2 - 1).map(byte).collect()
 }
 
-/// Drives one open file to a journal limit. A refused run must be reported by
-/// every operation that tries to commit it, be discarded only at Close, and
-/// leave the file and the mount usable afterwards.
+/// Drives one open file to a journal limit. The refused run must be reported
+/// by the write and the read that try to commit it, and Close must save it:
+/// Close publishes what the journal holds, which makes room, and journals
+/// the run before the handle goes away. Nothing may be lost.
 pub async fn refusal(config: &s3drive_core::Config, root: &Path, s: &Server) {
     use s3drive_fs::Error::NoSpace;
     let c = native_lifecycle::configuration(config, root, s).await;
@@ -282,15 +283,11 @@ pub async fn refusal(config: &s3drive_core::Config, root: &Path, s: &Server) {
     let buffered = (accepted * 2 - 1) as u64;
     assert_eq!(file.current_metadata().unwrap().size, buffered);
     assert!(matches!(file.read(0, 1).await, Err(NoSpace)), "read");
-    assert!(matches!(file.flush().await, Err(NoSpace)), "flush");
     close(file).await;
+    assert_eq!(fs.metadata(id).await.unwrap().unwrap().size, buffered);
     let file = fs.open_write(id).await.unwrap();
-    let mut expected = scattered(accepted - 1);
-    assert_eq!(
-        contents(&file).await,
-        expected,
-        "journaled bytes after Close"
-    );
+    let mut expected = scattered(accepted);
+    assert_eq!(contents(&file).await, expected, "every byte after Close");
     expected[..5].copy_from_slice(b"again");
     put(&file, 0, b"again").await;
     close(file).await;
@@ -299,6 +296,6 @@ pub async fn refusal(config: &s3drive_core::Config, root: &Path, s: &Server) {
     assert_eq!(cold(&fs, "refused run.bin").await, expected);
     native_writer::stop(fs).await;
     eprintln!(
-        "COALESCING refusal accepted={accepted} reported=write,read,flush close=discarded_1_byte reopened=usable"
+        "COALESCING refusal accepted={accepted} reported=write,read close=saved_all reopened=usable"
     );
 }

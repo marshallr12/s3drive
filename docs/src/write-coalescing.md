@@ -11,8 +11,9 @@ Office-style saves failed on every available write profile.
 
 **Status.** Implemented for the version 8 native path (every
 `sparse-lifecycle` profile) and verified locally on MiniAir against loopback
-fixtures. It has no hosted exact-source CI evidence yet, and Word and Excel have
-not been rerun against it. No provider write was made for this work.
+fixtures. Hosted CI has not passed on it yet (see
+[Hosted CI so far](#hosted-ci-so-far-pull-request-3-2026-11-09)), and Word and
+Excel have not been rerun against it. No provider write was made for this work.
 
 ## Why
 
@@ -50,16 +51,17 @@ The run is written to the journal:
 | --- | --- |
 | Before any read of the file, through any handle | Reads always go through the validated journal reader |
 | Before truncate or extend | |
-| Before flush, and before `flush all` and unmount | Flush then publishes as before |
+| Before flush, and before `flush all` and unmount | Flush then publishes as before; a full journal is published first and the run retried |
 | Before rename or delete of the file, and before it is replaced by a rename | These already publish first |
-| At cleanup (Windows: the last user handle closes) | The handle stops buffering for good; later paging writes are journaled directly |
-| At Close/RELEASE, if the handle still owns a run | See below |
+| At cleanup (Windows: the last user handle closes) | The handle stops buffering for good; later paging writes are journaled directly. A full journal is published first and the run retried |
+| At Close/RELEASE, if the handle still owns a run or the file has kept bytes | See below |
 | Between 1 and 2 s after the last write to the run | Idle timer |
 | When another handle writes, or a write cannot be merged | |
 
 **Close.** The journal refuses every write through a handle once that handle's
-Close has been observed. A handle that reaches Close while it still owns a run
-therefore journals the run first and only then lets Close be observed. For
+Close has been observed. A handle that reaches Close while it still owns a run,
+or while the file has bytes kept from an earlier Close, therefore journals the
+run first and only then lets Close be observed. For
 every other handle, Close is observed at callback entry exactly as before. On
 Windows the run is normally already empty, because cleanup comes first; this
 path matters for FUSE RELEASE after a late mapped-page write and for callers
@@ -81,38 +83,64 @@ operating-system file cache. It does not change the
 [flush contract](filesystem-contract.md): a successful flush still means
 verified remote publication plus local acknowledgment.
 
-Unless the journal refuses a run (next section), nothing is lost on a clean
-unmount, on close, or on any path that reads the file back.
+Nothing is lost on close or on any path that reads the file back. A clean
+unmount loses bytes only in the case the next section describes: the journal
+still refuses them and the unmount reports it.
 
 ### Failure reporting
 
-If the journal refuses a buffered run (for example the dirty-byte or
-retained-view limit is reached), the bytes stay in the buffer and:
+If the journal refuses a buffered run (for example a retained-history limit is
+reached), the bytes stay in the buffer. They are never dropped while the mount
+process lives. Second owner decision, 2026-11-09: bytes still refused at Close
+are kept and retried, not discarded. The first implementation discarded them;
+automated review of the pull request and the owner both rejected that.
 
-- the operation that tried to commit them fails with the journal's error. This
-  can be a later write, a read, a truncate or a flush on any handle of the
-  file, so an application can see an error for bytes whose own write call had
-  succeeded;
-- a failure in the idle timer is written to standard error. The bytes stay
-  buffered and the next commit point retries them; the timer itself tries
-  again only after a later write has extended the run and it has gone idle
-  again;
-- a failure at cleanup cannot be returned to the application on Windows.
-  Cleanup still records its callback, reports the failure on standard error,
-  and the run stays buffered for Close to retry;
-- **at Close, a run the journal still refuses is discarded** and the number of
-  bytes lost is written to standard error. Close then proceeds normally. The
-  closing handle can never write again, so the only alternative is to leave the
-  handle unable to close. Under the existing Close design a handle in that
-  state makes its file refuse further work for the rest of the mount, and the
-  bytes would still not be saved. That alternative was reasoned from the code,
-  not exercised in a test.
+**Making room.** Publishing a file frees room in the journal (measured below).
+Flush, flush-all, unmount, cleanup and Close therefore do not stop at a full
+journal: they publish what the journal already holds for the file and try the
+buffered run once more. A write, a read, a truncate and the idle timer do not
+publish; they report the refusal.
 
-This last point differs from the original proposal, which said the bytes would
-stay attached and be retried. On FUSE the application normally sees the error
-first, because `close(2)` sends FLUSH, and flush reports it. On Windows an
-application that calls `FlushFileBuffers`, reads the file back, or keeps
-writing sees it; one that writes a final small piece and only closes does not.
+**Who sees a refusal.**
+
+- A write, read or truncate that has to commit the run fails with the
+  journal's error, on any handle of the file. An application can therefore see
+  an error for bytes whose own write call had succeeded.
+- A flush publishes the journaled state in every case. If the run is still
+  refused after that, the flush returns the journal's error.
+- The idle timer writes a failure to standard error. It tries again only after
+  a later write has extended the run and it has gone idle again.
+- Cleanup cannot return a status to the application on Windows. It reports the
+  failure on standard error and the run stays buffered for Close.
+- Publication that the disposition controller requests during another
+  handle's cleanup, Close or delete does not fail because of buffered bytes.
+
+**Kept after Close.** A closing handle can never write again. If its run is
+still refused after making room, the run is detached from the handle and the
+mount keeps it in memory with its file. Close then completes normally. From
+then on:
+
+- the file's size, by path and by handle, still includes the kept bytes;
+- any handle of the file that is open or opened later journals them at its
+  next commit point. A handle that closes takes the kept run over and journals
+  it first, so reopening and closing the file is enough once the journal
+  accepts the bytes;
+- until then a read through a handle reports the journal's error, and so does
+  a flush through a handle;
+- flush-all and unmount publish every journaled file first and then return a
+  conflict while kept bytes remain that no open handle can journal. They do
+  not open a handle of their own to retry;
+- rename and delete by path are refused with the same conflict while the file
+  has kept bytes and no open handle.
+
+The kept bytes are lost only when the mount process exits. An unmount that
+reported the conflict is such an exit. If the file is deleted while its bytes
+are still refused, they stay in memory until unmount.
+
+On FUSE the application normally sees a refusal before Close, because
+`close(2)` sends FLUSH and flush reports it. On Windows an application that
+writes a final small piece and only closes sees no error; the bytes are either
+journaled by cleanup or Close after making room, or kept as described.
 
 ## Not changed
 
@@ -159,8 +187,9 @@ the loopback provider, which this change does not reduce.
 
 `component_retention_shared_write_coalescing_commit_points`
 (`crates/s3drive-cli/tests/chunk_publication/native_coalescing.rs`) passed in
-104 s (debug build; 43 s before the extended-run check was added). It runs in the existing `component_retention_shared_` CI
-step on Linux and Windows. It checks that:
+86 s on the final source (debug build; 104 s in an earlier run, 43 s before the
+extended-run check was added). It runs in the existing
+`component_retention_shared_` CI step on Linux and Windows. It checks that:
 
 - 300 sequential 4 KiB writes add one journal view before any commit point, the
   size by handle and by path includes the buffered bytes, and the bytes read
@@ -187,32 +216,86 @@ step on Linux and Windows. It checks that:
 Six unit tests cover merging, including a 2,000-step pseudo-random comparison
 with the same writes applied directly, and the rule for what is buffered.
 
-`write_coalescing_refused_run_is_reported_then_discarded_at_close` forces the
+`write_coalescing_refused_run_is_reported_then_saved_at_close` forces the
 journal to refuse a run by writing single bytes two apart, so that every write
 commits the one before it. The journal refused after 91 accepted writes with a
 disk-full error. The test then checks that the size still includes the
-buffered byte, that a read and a flush each report the same error, that Close
-succeeds and discards exactly that byte, and that the file can be reopened,
-holds every journaled byte, accepts a new write and reads back exactly after a
-cold restart. It passed in 25 s (release build; 132 s in a debug build). It is ignored by default because it is
-slow, and has its own release-build CI step.
+buffered byte, that a read reports the same error, that Close succeeds, that
+the size by path still includes the byte afterwards, and that a reopened handle
+reads every accepted byte, including the one that was buffered at the refusal.
+It then writes again and reads everything back after a cold restart. It passed
+in 21 s (release build). In a debug build it exceeds the
+harness's three-minute limit, because Close now publishes before it retries.
+It is ignored by default because it is slow, and has its own release-build CI
+step.
+
+`refused_bytes_survive_close_until_a_later_handle_journals_them`
+(`crates/s3drive-fs/src/managed/chunk_writes/kept_tests.rs`) covers bytes that
+stay refused after making room. Publication frees room, so a real journal
+cannot be held in that state through the public interface; the test uses a
+switch that exists only in the crate's own test build and makes the journal
+refuse every buffered run. It checks that Close succeeds and keeps the bytes,
+that the size by path and by handle counts them, that flush-all with no open
+handle returns a conflict, that a read through a new handle reports the
+refusal, that a second refused Close keeps them again, that the next Close
+journals them once the switch is off, that unmount with kept bytes returns a
+conflict, and that after a cold restart the first file reads back whole and
+the second holds only its journaled bytes. It passed in 15 s and runs in the
+workspace test step.
+
+Does publication free journal room? In a one-off local run, 40 scattered
+single-byte writes, one flush and then at least 60 more were accepted before
+the harness time limit ended the run: at least 100 in total, against 91 without
+a flush. The cost of each write kept rising after the flush (about 1.2 s
+rising to 2.7 s in a debug build), so publication does not clear the retained
+history that every mutation validates. Where the limit lies with repeated
+flushes was not measured.
+
+### Hosted CI so far (pull request 3, 2026-11-09)
+
+No commit of this work has a complete passing hosted run yet.
+
+- `54eff16`: the Linux job stopped at Clippy (a constant read only by the
+  Windows adapter was dead code in the Linux test build). Fixed in `af30ad7`,
+  where Clippy passed on Linux and Windows.
+- `a63637d`: of the two runs of that commit, one failed in the Linux job
+  `extended-retention-soak`, step "Additional actual 1000-save and 100-remount
+  release soak" (real FUSE mount, `linked-retention-v1`). After the unmount that
+  followed saves 801 to 810, the private database still held one row in
+  `windows_open_journal`: one open record had not been closed. The other run
+  of the same commit passed that step, as did both runs of `54eff16` and of
+  `af30ad7`. It is the first failure of that job in the 30 runs GitHub lists.
+- **Cause not established.** The log names no failing callback. One change of
+  this work fits a rare race and has been removed: the idle timer held its
+  file object strongly, so the object could outlive its last handle by up to a
+  second and be reused by a reopen in that time, a state the engine never had
+  before. The timer now holds the file weakly. Whether that was the cause is
+  unproven; a single passing run would not show it either, at one failure in
+  six runs.
 
 ### Real WinFsp mount
 
 `desktop_application_actual_create_copy_attributes_times_and_replace` now also
 saves a file as 200 separate 4 KiB writes and a header rewrite through one
 Win32 handle, and reads it back before and after a cold remount. On the final
-source it passed in 90 s (debug build) with exactly 27 immutable PUTs for its
-nine files.
+source it passed in 103 s (debug build; 90 s before keep-and-retry) with exactly
+27 immutable PUTs for its nine files.
 
 Negative control: the same test with the engine change removed did not
 complete. The mount stalled, and the harness time limit ended it at small write
 86 (`ERROR_OPERATION_ABORTED`, 995) after 124 s.
 
 The other real-mount suites passed on the final source:
-`native_lifecycle_actual_` (three tests, 150 s), `component_retention_actual_`
-(three tests, 321 s) and
-`actual_native_chunk_writes_unicode_sparse_flush_resize_and_remount` (39 s).
+`native_lifecycle_actual_` (three tests, 141 s), `component_retention_actual_`
+(three tests, 346 s) and
+`actual_native_chunk_writes_unicode_sparse_flush_resize_and_remount` (48 s).
+Each real-mount worker has a 120 s harness bound. In one earlier run of the
+same source, made while the machine was slower, the unlink-replace lifecycle
+test and two component retention tests crossed that bound (`ERROR_OPERATION_ABORTED`,
+995, at the final reopen) and failed; the lifecycle sequence had taken 120 s
+against 100 to 111 s in every other run, before and after this change. The
+reruns above passed, so the bound is marginal on this machine, not a regression
+this change can be shown to have caused.
 
 ### Tests changed because of the durability decision
 
@@ -228,18 +311,22 @@ back before the stop. Their assertions about cold-start refusal are unchanged.
 
 On the final source: `cargo fmt --all --check` and
 `cargo clippy --workspace --all-targets --locked -- -D warnings` passed; the
-Windows workspace test run passed with 1,151 passed, 0 failed and 47 ignored in
-40 suites; the link check (121 files), `mdbook build`, `mdbook test` and the
+Windows workspace test run passed with 1,155 passed, 0 failed and 47 ignored in
+41 suites; the link check (121 files), `mdbook build`, `mdbook test` and the
 schema-fixture check passed. The pieces were run by hand because
 `scripts/gate.sh` calls `python3`, which is a stub on this machine.
 
 ### Not covered
 
-- No hosted CI yet, and no local Linux run. FUSE RELEASE with a buffered run is
-  covered only by the shared-engine close check, not by a real FUSE mount.
+- No passing hosted CI run yet, and no local Linux run. FUSE RELEASE with a
+  buffered run is covered only by the shared-engine close check, not by a real
+  FUSE mount.
 - No Word or Excel run.
 - Of the failure paths under [Failure reporting](#failure-reporting), refusal
-  at a write, a read, a flush and Close is tested on the shared engine.
-  Refusal in the idle timer and at cleanup has no assertion of its own, and
-  none of it has been exercised through a real mount.
-- Whether a flush resets the retained-view ceiling is still unmeasured.
+  at a write, a read, Close, flush-all and unmount is tested on the shared
+  engine. Making room is tested at Close only; flush, cleanup, flush-all and
+  unmount share its code but have no assertion of their own. Refusal in the
+  idle timer, at cleanup, and of rename or delete by path has no assertion
+  either, and none of it has been exercised through a real mount.
+- Kept bytes are tested only with the test-build switch, never with a
+  journal that is really full.

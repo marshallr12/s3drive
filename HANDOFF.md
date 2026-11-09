@@ -15,14 +15,16 @@ immediately. Read docs/src/write-coalescing.md before touching the engine's
 write, read, cleanup or Close paths, and docs/src/windows-desktop-requests.md
 for the measurements and the remaining stored-times proposal. Local evidence
 only (shared engine and real WinFsp, loopback); Office GUI pending. Hosted CI
-on PR #3 had not completed when this was written: read its result first.
+on PR #3 has not passed yet: one Linux soak run left an open record after
+unmount, cause not established ("Hosted CI so far" in write-coalescing.md).
+Read the PR's current CI result first.
 Tests that stop the owner abruptly after a write now need an explicit commit
 point (a read) first; two were changed that way.
-One point differs from the proposal the owner approved and awaits their
-confirmation: a buffered run the journal still refuses at Close is discarded
-(logged to standard error) so that the handle can close. The automated PR
-review flagged the same point as P1 (it cites the dirty-data rule in
-AGENTS.md); it is unanswered on the PR until the owner decides.
+Owner decision 2026-11-09 (second): a buffered run the journal refuses at
+Close is kept in memory with its file and retried, never discarded. Flush,
+cleanup, Close, flush-all and unmount first publish to make room. Kept bytes
+are journaled by the next handle of the file; flush-all and unmount report a
+conflict while any remain. See "Failure reporting" in write-coalescing.md.
 PR #2 (drive letter, passwordless startup) is a separate open thread.
 
 ## Current main (2026-11-08)
