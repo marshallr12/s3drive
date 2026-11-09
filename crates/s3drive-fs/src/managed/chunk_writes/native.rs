@@ -7,6 +7,7 @@ use s3drive_managed::{
 use s3drive_state::namespace_client::opens::{Callback, OpenInput};
 use std::sync::atomic::AtomicU8;
 use tokio::sync::Notify;
+mod buffering;
 
 pub(super) struct Mount {
     session: String,
@@ -21,6 +22,8 @@ struct Entry {
     native: NativeSparseFile,
     file: Arc<File>,
     close: Arc<CloseSignal>,
+    /// Set at cleanup or Close: this handle's later writes skip the buffer.
+    direct: Arc<AtomicBool>,
 }
 #[derive(Default)]
 struct CloseSignal {
@@ -223,6 +226,7 @@ impl Writes {
             native,
             file,
             close: Arc::new(CloseSignal::default()),
+            direct: Arc::new(AtomicBool::new(false)),
         };
         mount
             .opens
@@ -237,6 +241,8 @@ impl Writes {
     }
     pub(super) async fn flush_native_node(&self, node: &str) -> Result<()> {
         // Caller owns native_serial. Never reacquire it from the content hook.
+        // Buffered writes join the journal before anything selects or publishes.
+        self.drain_node(node).await?;
         let _publishing = self.publish_serial.lock().await;
         let mount = self.native.get().ok_or(Error::Internal)?;
         let entries: Vec<_> = mount
@@ -480,6 +486,7 @@ impl Object {
             .map_err(error)
     }
     async fn read_inner(&self, offset: u64, length: usize) -> Result<Vec<u8>> {
+        self.settle().await?;
         let _serial = self.entry.file.serial.lock().await;
         let head = self.entry.file.head().await?;
         self.entry
@@ -489,6 +496,9 @@ impl Object {
             .await
             .map_err(error)
     }
+    /// Accepts one write. Small writes are held in the node's buffer and reach
+    /// the journal at the next commit point; the rest are journaled before
+    /// this returns, after any buffered run that precedes them.
     async fn write_inner(
         &self,
         offset: u64,
@@ -506,27 +516,57 @@ impl Object {
             .inspect_err(|_| eprintln!("Native sparse write refused by Close coordination"))?;
         let _file = self.entry.file.serial.lock().await;
         self.allow_write()?;
-        let head = self
-            .entry
-            .file
-            .head()
-            .await
-            .inspect_err(|_| eprintln!("Native sparse write current-head lookup failed"))?;
-        let offset = if append { head.size() } else { offset };
+        let (size, head) = self.position().await?;
+        let offset = if append { size } else { offset };
         let count = if constrained {
-            bytes.len().min(head.size().saturating_sub(offset) as usize)
+            bytes.len().min(size.saturating_sub(offset) as usize)
         } else {
             bytes.len()
         };
+        if self.buffer(size, offset, &bytes[..count]).await? {
+            return Ok(count);
+        }
+        let head = match head {
+            Some(head) => head,
+            None => self.journal_head().await?,
+        };
+        self.write_through(&head, offset, &bytes[..count]).await?;
+        Ok(count)
+    }
+    /// Logical file size and, when no writes are buffered, the journal head it
+    /// was read from. A head lookup validates the whole retained ledger, so it
+    /// is skipped while the buffer already knows the size.
+    async fn position(&self) -> Result<(u64, Option<View>)> {
+        if let Some(size) = self.entry.file.buffered_size()? {
+            return Ok((size, None));
+        }
+        let head = self.current_head().await?;
+        Ok((head.size(), Some(head)))
+    }
+    /// Journal head for a write, reporting a failed lookup on standard error.
+    async fn current_head(&self) -> Result<View> {
+        self.entry
+            .file
+            .head()
+            .await
+            .inspect_err(|_| eprintln!("Native sparse write current-head lookup failed"))
+    }
+    /// Journals the buffered run, then returns the head that follows it.
+    async fn journal_head(&self) -> Result<View> {
+        self.writer.drain(&self.entry.file).await?;
+        self.current_head().await
+    }
+    /// Journals one write immediately through this handle's own capability.
+    async fn write_through(&self, head: &View, offset: u64, bytes: &[u8]) -> Result<()> {
         let edited = self
             .entry
-            .edited(&head)
+            .edited(head)
             .await
             .inspect_err(|_| eprintln!("Native sparse write base refresh failed"))?;
         let next = self
             .entry
             .native
-            .write(&edited, fresh()?, offset, bytes[..count].to_vec())
+            .write(&edited, fresh()?, offset, bytes.to_vec())
             .await
             .map_err(|failure| {
                 eprintln!("Native sparse source mutation rejected");
@@ -538,7 +578,7 @@ impl Object {
             .lock()
             .map_err(|_| Error::Internal)?
             .size = next.size();
-        Ok(count)
+        Ok(())
     }
     async fn truncate_inner(&self, size: u64) -> Result<()> {
         let _serial = self
@@ -550,6 +590,7 @@ impl Object {
             .await?;
         let _file = self.entry.file.serial.lock().await;
         self.allow_write()?;
+        self.writer.drain(&self.entry.file).await?;
         let head = self.entry.file.head().await?;
         if size == head.size() {
             return Ok(());
@@ -583,7 +624,18 @@ impl Object {
             .state
             .compare_exchange(0, 1, Ordering::AcqRel, Ordering::Acquire)
             .is_ok();
-        let observed = self.entry.native.observe_close(&cb).map_err(error);
+        // A handle closed while it still owns buffered bytes journals them
+        // first: the capability refuses every write once Close is observed.
+        let buffered = first
+            && self
+                .entry
+                .file
+                .retire(self.entry.native.open(), &self.entry.direct);
+        let observed = if buffered {
+            Ok(())
+        } else {
+            self.entry.native.observe_close(&cb).map_err(error)
+        };
         let permit = object.writer.admit();
         // Spawn through the mount's runtime at callback entry, including from a
         // driver thread outside Tokio. Dropping an unpolled join cannot cancel
@@ -599,6 +651,9 @@ impl Object {
                 let _permit = permit?;
 
                 let result = tokio::time::timeout(DEADLINE, async {
+                    if buffered {
+                        object.settle_or_discard().await;
+                    }
                     object.entry.native.close(cb.clone()).await.map_err(error)?;
                     object
                         .controller
@@ -676,6 +731,9 @@ impl Object {
         tokio::spawn(async move {
             let _slot = slot;
             tokio::time::timeout(DEADLINE, async {
+                // After cleanup only paging writes can arrive, and Close has
+                // no later commit point, so the handle stops buffering here.
+                let settled = object.stop_buffering().await;
                 let open = object.entry.native.open();
                 let cb = callback(open, b"cleanup");
                 object
@@ -694,7 +752,7 @@ impl Object {
                     .writer
                     .native_sync_node(object.entry.file.binding.base().map_err(error)?.node())
                     .await?;
-                result
+                settled.and(result)
             })
             .await
             .map_err(|_| Error::Timeout)?

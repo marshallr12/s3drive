@@ -3,13 +3,16 @@
 Dated 2026-11-09. This page records the follow-up to the
 [first physical Windows pass](wasabi-physical-windows-plan.md), which found that
 Office and `CopyFile` could not create files on the drive and that many small
-writes stalled. It covers one implemented adapter change, one measured defect
-that is **not** fixed, and two **proposals** that need the owner's decision.
+writes stalled. It covers one implemented adapter change, the measurements of
+the small-write defect, the write-coalescing decision that addresses it (now
+implemented; see [write coalescing](write-coalescing.md)), and one remaining
+**proposal** for stored modification times.
 
-**Status.** The adapter change and its real-mount test passed locally on MiniAir
-(Windows 11 Pro 10.0.26300, WinFsp 2.1, loopback provider and authority). It has
-no hosted exact-source CI evidence yet, and Word and Excel have not been rerun
-against it. No provider write was made for this work.
+**Status.** The adapter change, write coalescing and their real-mount test
+passed locally on MiniAir (Windows 11 Pro 10.0.26300, WinFsp 2.1, loopback
+provider and authority). Neither has hosted exact-source CI evidence yet, and
+Word and Excel have not been rerun against them. No provider write was made for
+this work.
 
 ## Implemented: create, attribute and time requests
 
@@ -69,7 +72,9 @@ ordinary Win32 calls from Rust's standard library:
 - a clean unmount, cold remount and byte-exact read of every surviving file.
 
 It passed in 18–21 s (release build) and 62 s (debug build, as CI runs it)
-with exactly 24 immutable PUTs to the loopback provider, none repeated. As a negative control, the same test against
+with exactly 24 immutable PUTs to the loopback provider, none repeated. (The
+test has since gained a small-write save and makes 27 PUTs; see
+[write coalescing](write-coalescing.md).) As a negative control, the same test against
 the unchanged `feea0a9` adapter failed at its first create with
 `ERROR_WRITE_PROTECT` (19), the failure seen on the physical pass. The six
 overlay unit tests and workspace Clippy with warnings denied also passed, as
@@ -81,7 +86,11 @@ This is not Office GUI acceptance. The earlier physical probes used direct
 `CreateFileW` calls against the installed `feea0a9` build; Word and Excel must
 be rerun on a build containing this change before defect 2 is called closed.
 
-## Not fixed: per-write cost and a 127-write ceiling (defect 1)
+## Per-write cost and a 127-write ceiling (defect 1)
+
+This section records the defect as measured **before**
+[write coalescing](write-coalescing.md), which now addresses it for saves made
+of adjacent small writes. The journal behavior described here is unchanged.
 
 The physical pass used the version 7 whole-generation profile, where each write
 stores a fresh copy of every 1 MiB chunk it touches. The copied evidence
@@ -91,8 +100,8 @@ document, 300 generations, nothing reclaimed.
 `managed configure` could only generate versions 6 and 7. It now accepts
 `--sparse-lifecycle`, which selects version 8 with the named lifecycle profile
 (see [setup](managed-bootstrap.md)). Version 8 stores only the bytes of each
-write and reclaims closed history under `component-retention-v1`. **It does not
-remove the defect.** A new ignored diagnostic,
+write and reclaims closed history under `component-retention-v1`. **By itself it
+does not remove the defect.** An ignored diagnostic,
 `component_retention_shared_save_pattern_probe`, measured the shared engine
 directly (release build, no driver, loopback provider, MiniAir, 2026-11-09):
 
@@ -110,39 +119,22 @@ writes, and a file cannot receive more than about 127 unflushed writes through
 one open. A flush did not reset the per-write cost; whether it resets the
 ceiling was not measured, and local history is reclaimed only at the last close.
 Word produced about 143 generations (writes and resizes) for each 3.4 MB
-temporary file, so the same save is expected to fail on this profile as well;
-that expectation has not been tested with Word itself. The diagnostic stays in the tree, ignored, and is
-expected to fail at its default setting until this is fixed.
+temporary file, so the same save was expected to fail on this profile as well;
+that expectation was not tested with Word itself. The diagnostic stays in the
+tree, ignored, as a timing probe.
 
-### Proposal: coalesce writes above the journal
+### Decision: coalesce writes above the journal
 
-*Proposal, not implemented; needs the owner's decision because it changes what
-is durable when.* Keep the validated journal unchanged and place a bounded
-write buffer in the shared engine's open-file object:
+The owner approved this on 2026-11-09 and it is implemented; behavior, commit
+points, the durability change and evidence are in
+[write coalescing](write-coalescing.md). In short: the validated journal is
+unchanged, and a bounded in-memory buffer in the shared engine merges adjacent
+small writes to one open file and commits them as one journal mutation.
 
-- consecutive and overlapping writes to one open file are merged in memory;
-- the buffer is committed to the journal as a single mutation when it reaches a
-  size threshold (proposed 1 MiB), before any read, truncate, flush, rename,
-  delete, cleanup or close on that file, before another handle touches the same
-  file, at unmount, and after a short idle interval (proposed 1 s);
-- flush and close keep their current contracts: flush still publishes, and a
-  file's bytes are journaled before its cleanup callback returns.
-
-Expected consequence, not yet measured: 4 MiB written 4 KiB at a time reaches
-the journal as about 4 writes instead of 1,024, and a 3.4 MB Word save stays
-far below the view ceiling.
-
-Cost: today a write that has returned is already in the local SQLite journal
-and survives a kill of the mount process. With the buffer, up to one threshold
-of the most recent writes exists only in memory until the next commit point, as
-with an ordinary operating-system file cache. A commit failure would be reported
-on the next call on that handle; if the last commit fails at cleanup, which
-cannot return a status on Windows, the bytes would stay attached to the open
-node in memory and be retried, and would be lost only if the process then died.
-Alternatives considered: enabling the Windows cache manager (same exposure,
-less control and "delayed write failed" reporting), and making ledger validation
-incremental (keeps per-write durability, but is a deep change to the proof core
-and does not lift the view ceiling by itself).
+Alternatives considered and not chosen: enabling the Windows cache manager
+(same exposure, less control and "delayed write failed" reporting), and making
+ledger validation incremental (keeps per-write durability, but is a deep change
+to the proof core and does not lift the view ceiling by itself).
 
 ### Proposal: stored modification times
 
@@ -155,9 +147,10 @@ so it is not folded into this change.
 
 ## Remaining before the next physical pass
 
-1. Hosted exact-source CI for this change on standard runners.
-2. The owner's decision on write coalescing; without it Office saves fail on
-   every available write profile.
-3. Passwordless startup (the separate drive-letter work) for the sign-in and
+1. Hosted exact-source CI for the adapter change and write coalescing on
+   standard runners.
+2. Passwordless startup (the separate drive-letter work) for the sign-in and
    reboot checks.
-4. A new MSI build and the owner's interactive install; then Word and Excel.
+3. A new MSI build and the owner's interactive install; then Word and Excel on
+   a version 8 `component-retention-v1` configuration. Whether a real Word save
+   stays inside the journal's limits is not known until that run.

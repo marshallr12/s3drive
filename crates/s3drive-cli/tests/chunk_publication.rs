@@ -25,6 +25,8 @@ mod namespace_recovery;
 #[cfg(any(target_os = "linux", windows))]
 #[path = "chunk_publication/native_application.rs"]
 mod native_application;
+#[path = "chunk_publication/native_coalescing.rs"]
+mod native_coalescing;
 #[cfg(windows)]
 #[path = "chunk_publication/native_desktop.rs"]
 mod native_desktop;
@@ -1375,6 +1377,8 @@ fn dispatch<'a>(
         #[cfg(windows)]
         "native_desktop" => boxed_case(|| native_desktop::mounted(config, root, s)),
         "native_save_pattern" => boxed_case(|| native_save_pattern::probe(config, root, s)),
+        "native_coalescing" => boxed_case(|| native_coalescing::flow(config, root, s)),
+        "native_coalescing_refusal" => boxed_case(|| native_coalescing::refusal(config, root, s)),
         "native_lifecycle_unlink" => boxed_case(|| native_lifecycle::unlink(config, root, s)),
         #[cfg(any(target_os = "linux", windows))]
         "native_retention_seed" => boxed_case(|| native_retention::seed(config, root, s)),
@@ -2088,9 +2092,10 @@ async fn run(mode: &str) {
             551
         }
         "native_component_repeated" | "native_component_repeated_mounted" => 23,
-        // Eight nonempty files, each an empty manifest + payload + manifest.
-        "native_desktop" => 8 * 3,
+        // Nine nonempty files, each an empty manifest + payload + manifest.
+        "native_desktop" => 9 * 3,
         "native_save_pattern" => puts(&f),
+        "native_coalescing" | "native_coalescing_refusal" => puts(&f),
         "native_lifecycle_unlink" => 5,
         "native_lifecycle_mounted" => 13,
         "native_lifecycle_mounted_known" => 3,
@@ -2697,9 +2702,20 @@ async fn hosted_application_git_save_replace_rename_delete_and_interrupted_cold_
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore = "defect reproduction: default 128 small writes fail until writes are coalesced"]
+#[ignore = "timing diagnostic for small-write saves; run on demand"]
 async fn component_retention_shared_save_pattern_probe() {
     run("component:native_save_pattern").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn component_retention_shared_write_coalescing_commit_points() {
+    run("component:native_coalescing").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "slow: fills the journal to a limit; CI runs it in a release step"]
+async fn write_coalescing_refused_run_is_reported_then_discarded_at_close() {
+    run("component:native_coalescing_refusal").await;
 }
 
 #[cfg(windows)]

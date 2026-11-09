@@ -436,6 +436,12 @@ pub async fn cold_unknown(config: &s3drive_core::Config, root: &Path, s: &Server
     )
     .await
     .unwrap();
+    // Small writes are buffered in memory. A read is a commit point, so the
+    // abrupt stop below leaves a journaled dirty epoch for cold start to protect.
+    assert_eq!(
+        file.read(0, 64).await.unwrap(),
+        b"must not adopt this original epoch"
+    );
     let cache = fs.cache_control().unwrap();
     drop((file, fs));
     cache.close().await.unwrap();
@@ -516,6 +522,17 @@ pub async fn mounted_crash(config: &s3drive_core::Config, root: &Path, s: &Serve
         mount.crash().await;
         drop(file);
     } else {
+        // Small writes are buffered in memory. Reading the bytes back is a
+        // commit point, so the kill below leaves a journaled dirty epoch.
+        let file = blocking(&mut mount, move || {
+            use std::io::{Read, Seek};
+            let (mut file, mut read) = (file, Vec::new());
+            file.rewind().unwrap();
+            file.read_to_end(&mut read).unwrap();
+            assert_eq!(read, b"retained original bytes");
+            file
+        })
+        .await;
         mount.crash().await;
         drop(file);
     }

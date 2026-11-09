@@ -17,6 +17,7 @@ use s3drive_state::{
 };
 use sha2::{Digest, Sha256};
 use std::sync::Weak;
+mod coalesce;
 mod directories;
 mod dispatch;
 pub(crate) mod native;
@@ -83,6 +84,8 @@ pub(crate) struct File {
     metadata: Mutex<ObjectMetadata>,
     edited: Mutex<Option<EditedFile>>,
     serial: AsyncMutex<()>,
+    /// Accepted writes not yet in the journal (native path only); see `coalesce`.
+    pending: Mutex<Option<coalesce::Pending>>,
 }
 impl File {
     pub fn metadata(&self) -> Result<ObjectMetadata> {
@@ -94,7 +97,9 @@ impl File {
             .current_head(self.binding.clone())
             .await
             .map_err(error)?;
-        self.metadata.lock().map_err(|_| Error::Internal)?.size = head.size();
+        // Buffered writes may extend the file beyond the journal's head.
+        let size = self.buffered_size()?.unwrap_or(head.size());
+        self.metadata.lock().map_err(|_| Error::Internal)?.size = size;
         Ok(head)
     }
     pub async fn read(&self, offset: u64, length: usize) -> Result<Vec<u8>> {
@@ -578,6 +583,7 @@ impl Writes {
             metadata: Mutex::new(metadata),
             edited: Mutex::new(Some(edited)),
             serial: AsyncMutex::new(()),
+            pending: Mutex::new(None),
         });
         let mut entries = self.entries.lock().map_err(|_| Error::Internal)?;
         entries.retain(|_, f| f.strong_count() > 0);
@@ -601,10 +607,18 @@ impl Writes {
                 return Ok(None);
             }
             let mut m = logical_metadata(n)?;
-            m.size = h.size();
+            m.size = self.buffered_size_of(&n.id)?.unwrap_or(h.size());
             return Ok(Some(m));
         }
         Ok(None)
+    }
+    /// Logical size of an open node whose latest writes are still buffered.
+    fn buffered_size_of(&self, node: &str) -> Result<Option<u64>> {
+        let entries = self.entries.lock().map_err(|_| Error::Internal)?;
+        match entries.get(node).and_then(Weak::upgrade) {
+            Some(file) => file.buffered_size(),
+            None => Ok(None),
+        }
     }
     async fn read_inner(&self, file: &File, offset: u64, length: usize) -> Result<Vec<u8>> {
         file.read(offset, length).await

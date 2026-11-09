@@ -122,18 +122,37 @@ fn save_replace(base: &Path) {
     assert!(!base.join("D1834730").exists());
 }
 
+/// Office-style save body: 200 separate 4 KiB writes and a header rewrite
+/// through one handle. Before write coalescing, write 127 failed disk-full.
+fn small_writes(base: &Path) -> Vec<u8> {
+    let path = base.join("small writes.docx");
+    let mut expected: Vec<u8> = (0..200 * 4096).map(|i| (i * 31 % 251) as u8).collect();
+    let mut file = std::fs::File::create_new(&path).expect("create for small writes");
+    for (index, block) in expected.chunks(4096).enumerate() {
+        file.write_all(block)
+            .unwrap_or_else(|e| panic!("small write {index}: {e}"));
+    }
+    expected[..8].copy_from_slice(b"REWRITE!");
+    file.seek(SeekFrom::Start(0)).unwrap();
+    file.write_all(b"REWRITE!").expect("header rewrite");
+    drop(file);
+    assert_eq!(std::fs::read(&path).unwrap(), expected);
+    expected
+}
+
 /// Runs every probe on one mount, then verifies the bytes after a cold remount.
 pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
     use native_mount::{Mount, blocking};
     native_lifecycle::mount_configuration(config, root, s).await;
     let mut mount = Mount::start(root).await;
     let (base, outside) = (mount.path.clone(), root.to_owned());
-    blocking(&mut mount, move || {
+    let saved = blocking(&mut mount, move || {
         access_masks(&base);
         attributes(&base);
         copies(&base, &outside);
         times(&base);
         save_replace(&base);
+        small_writes(&base)
     })
     .await;
     mount.stop().await;
@@ -141,6 +160,10 @@ pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
     let mut mount = Mount::start(root).await;
     let base = mount.path.clone();
     blocking(&mut mount, move || {
+        assert_eq!(
+            std::fs::read(base.join("small writes.docx")).unwrap(),
+            saved
+        );
         assert_eq!(
             std::fs::read(base.join("document 日本語.docx")).unwrap(),
             REVISED
@@ -152,6 +175,6 @@ pub async fn mounted(config: &s3drive_core::Config, root: &Path, s: &Server) {
     .await;
     mount.stop().await;
     eprintln!(
-        "DESKTOP_APPLICATION maximum_allowed=ok write_dac=ok temporary=ok hidden=ok copyfile=ok set_time=ok readonly=refused replace=ok cold_read=exact"
+        "DESKTOP_APPLICATION maximum_allowed=ok write_dac=ok temporary=ok hidden=ok copyfile=ok set_time=ok readonly=refused replace=ok small_writes=200 cold_read=exact"
     );
 }

@@ -8,10 +8,18 @@ docs/src/implementation-plan.md before continuing.
 
 Branch `claude/desktop-requests` (stacked on the open docs PR #1 branch) changes
 the WinFsp adapter so Office and CopyFile creates succeed, adds
-`managed configure --sparse-lifecycle`, and records that defect 1 also exists
-on version 8. Local real-mount evidence only; hosted CI and Office GUI pending.
-Read docs/src/windows-desktop-requests.md first: it holds the measurements and
-two proposals (write coalescing, stored times) awaiting the owner's decision.
+`managed configure --sparse-lifecycle`, and adds in-memory write coalescing on
+the version 8 native path (owner-approved 2026-11-09). Coalescing changes local
+durability: a returned small write is journaled at its next commit point, not
+immediately. Read docs/src/write-coalescing.md before touching the engine's
+write, read, cleanup or Close paths, and docs/src/windows-desktop-requests.md
+for the measurements and the remaining stored-times proposal. Local evidence
+only (shared engine and real WinFsp, loopback); hosted CI and Office GUI pending.
+Tests that stop the owner abruptly after a write now need an explicit commit
+point (a read) first; two were changed that way.
+One point differs from the proposal the owner approved and awaits their
+confirmation: a buffered run the journal still refuses at Close is discarded
+(logged to standard error) so that the handle can close.
 PR #2 (drive letter, passwordless startup) is a separate open thread.
 
 ## Current main (2026-11-08)
@@ -588,8 +596,10 @@ component retention, the Windows MSI) are not to be redone; see their docs.
    docs/src/wasabi-physical-windows-plan.md).** MSI install, probe and managed
    mount worked. Four defects block real use: (a) per-write cost that grows
    with local history, plus a ceiling of about 127 unflushed writes per open on
-   version 8 (measured 2026-11-09; NOT fixed, write coalescing proposed and
-   awaiting the owner); (b) WinFsp create refused MAXIMUM_ALLOWED/WRITE_DAC/
+   version 8 (measured 2026-11-09; addressed for adjacent small writes by write
+   coalescing on `claude/desktop-requests`, see docs/src/write-coalescing.md;
+   scattered small writes and the journal's view and dirty-byte limits remain;
+   hosted CI and a Word rerun pending); (b) WinFsp create refused MAXIMUM_ALLOWED/WRITE_DAC/
    WRITE_OWNER and TEMPORARY/HIDDEN (changed on `claude/desktop-requests`,
    hosted CI and Office rerun pending); (c) zero timestamps (per-mount overlay
    only; stored times proposed); (d) startup needs the account password,
