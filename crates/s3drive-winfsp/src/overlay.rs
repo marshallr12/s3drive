@@ -117,6 +117,18 @@ impl Overlay {
 mod tests {
     use super::*;
 
+    /// The accepted set is the remembered bits plus the three ignored neutral
+    /// bits; READONLY, COMPRESSED and ENCRYPTED stay outside it. Only the
+    /// Windows adapter reads `ACCEPTED`, so this is also its portable check.
+    #[test]
+    fn accepted_attributes_cover_remembered_and_neutral_bits_only() {
+        assert_eq!(ACCEPTED & REMEMBERED, REMEMBERED);
+        assert_eq!(ACCEPTED & !REMEMBERED, 0x20 | 0x80 | 0x2000);
+        for refused in [0x1, 0x800, 0x4000] {
+            assert_eq!(ACCEPTED & refused, 0);
+        }
+    }
+
     #[test]
     fn creation_keeps_only_remembered_attributes_and_stamps_all_times() {
         let overlay = Overlay::default();
