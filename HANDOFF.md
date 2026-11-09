@@ -1,8 +1,18 @@
 # S3Drive handoff
 
-Updated 2026-11-08. Main is `feea0a9`, with the GPL-3.0-only Windows MSI merged
+Updated 2026-11-09. Main is `feea0a9`, with the GPL-3.0-only Windows MSI merged
 and passing CI; the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
+
+## In flight (2026-11-09): Windows desktop requests, unmerged
+
+Branch `claude/desktop-requests` (stacked on the open docs PR #1 branch) changes
+the WinFsp adapter so Office and CopyFile creates succeed, adds
+`managed configure --sparse-lifecycle`, and records that defect 1 also exists
+on version 8. Local real-mount evidence only; hosted CI and Office GUI pending.
+Read docs/src/windows-desktop-requests.md first: it holds the measurements and
+two proposals (write coalescing, stored times) awaiting the owner's decision.
+PR #2 (drive letter, passwordless startup) is a separate open thread.
 
 ## Current main (2026-11-08)
 
@@ -576,12 +586,14 @@ component retention, the Windows MSI) are not to be redone; see their docs.
 
 1. **Physical Windows acceptance (first pass done 2026-11-08; see
    docs/src/wasabi-physical-windows-plan.md).** MSI install, probe and managed
-   mount worked. Four defects block real use and are the next code work, in
-   order: (a) per-write/per-open cost that grows with local history (Word's
-   save pattern stalls; repeatable); (b) WinFsp create refuses
-   MAXIMUM_ALLOWED/WRITE_DAC/WRITE_OWNER and the TEMPORARY/HIDDEN attributes,
-   breaking Office and CopyFile; (c) zero timestamps; (d) startup needs the
-   account password, unusable with PIN sign-in. Sign-in/reboot acceptance
+   mount worked. Four defects block real use: (a) per-write cost that grows
+   with local history, plus a ceiling of about 127 unflushed writes per open on
+   version 8 (measured 2026-11-09; NOT fixed, write coalescing proposed and
+   awaiting the owner); (b) WinFsp create refused MAXIMUM_ALLOWED/WRITE_DAC/
+   WRITE_OWNER and TEMPORARY/HIDDEN (changed on `claude/desktop-requests`,
+   hosted CI and Office rerun pending); (c) zero timestamps (per-mount overlay
+   only; stored times proposed); (d) startup needs the account password,
+   unusable with PIN sign-in. See docs/src/windows-desktop-requests.md. Sign-in/reboot acceptance
    waits for passwordless startup (PR #2 direction, coordinator included).
    **Original item:** Build the MSI
    locally, install with `msiexec /l*v` on a real Windows 10/11 machine with

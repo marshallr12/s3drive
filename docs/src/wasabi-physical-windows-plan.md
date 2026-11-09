@@ -156,6 +156,11 @@ registration still needs the same treatment. Sign-out/sign-in and reboot
 acceptance therefore wait for that work. Two registration directories left by
 the failed attempt must be removed before any retry.
 
+**Follow-up (2026-11-09).** Defect 2 has an adapter change with local real-mount
+evidence, defect 3 is narrowed to a per-mount overlay, and defect 1 was measured
+on the version 8 profile and is not fixed; see
+[Windows desktop application requests](windows-desktop-requests.md).
+
 **Not yet done:** scheduled startup tasks, sign-out/sign-in, reboot, and prefix
 cleanup with the owner's confirmation of the key count. Office tests cannot pass
 on this build and were stopped.

@@ -125,6 +125,13 @@ for version 7 and the accepted WinFsp lifecycle profile; versions 1–6 retain t
 existing unsupported native Windows deletion paths. This profile has documented
 [WinFsp differences from NTFS](native-windows-lifecycle.md).
 
+Add `--sparse-lifecycle component-retention-v1` instead for version 8, the
+[sparse chunk writer](native-chunk-writes.md) with fresh component cleanup;
+`owned-unlinked-v1` and `linked-retention-v1` select its narrower profiles. The
+two profile options are mutually exclusive, and both require `--mode read-write`.
+Version 8 still has the measured small-write limits recorded under
+[Windows desktop application requests](windows-desktop-requests.md).
+
 Mount the generated file with `s3drive mount /absolute/managed-drive/drive.toml
 /absolute/mountpoint`. Setup does not mount or install startup automatically;
 use the [per-account startup design](startup-and-sessions.md), including the

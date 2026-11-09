@@ -1,7 +1,7 @@
 //! Opt-in shared-engine gates. These do not substitute for real OS callbacks.
 use super::*;
 use s3drive_fs::{ROOT, ReadOnlyFs};
-async fn configuration(
+pub(super) async fn configuration(
     config: &s3drive_core::Config,
     root: &Path,
     s: &Server,

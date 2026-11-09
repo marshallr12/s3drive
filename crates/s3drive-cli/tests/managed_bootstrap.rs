@@ -425,6 +425,7 @@ async fn configure_refuses_unregistered_stores_and_implicit_write_authority() {
         vec!["--mode", "read-write"],
         vec!["--default-store", p["store_id"].as_str().unwrap()],
         vec!["--windows-disposition", "posix-v1"],
+        vec!["--sparse-lifecycle", "component-retention-v1"],
     ] {
         let mut c = h.command("configure");
         c.arg(&h.source)

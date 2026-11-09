@@ -4,6 +4,8 @@ mod names;
 #[cfg(windows)]
 #[allow(unsafe_code)]
 mod native;
+#[cfg(any(windows, test))]
+mod overlay;
 #[cfg(windows)]
 mod windows;
 #[cfg(all(windows, feature = "native-tests"))]

@@ -1,5 +1,9 @@
 #![forbid(unsafe_code)]
-use crate::{names::valid_component, native};
+use crate::{
+    names::valid_component,
+    native,
+    overlay::{self, Overlay},
+};
 use s3drive_fs::{Error, Kind, NativeFileObject, Node, OpenFile, ROOT, ReadOnlyFs};
 use s3drive_s3::{ErrorKind, MAX_READ_BYTES, ObjectMetadata};
 use std::{
@@ -34,7 +38,6 @@ struct FileContext {
     node: Arc<Node>,
     file: Option<Box<OpenFile>>,
     native: Option<NativeFileObject>,
-    info: FileInfo,
     directory: Mutex<Option<Snapshot>>,
     _permit: OwnedSemaphorePermit,
 }
@@ -45,6 +48,8 @@ struct Adapter {
     descriptor: Vec<u8>,
     handles: Arc<Semaphore>,
     entries: Arc<Semaphore>,
+    /// Attributes and times remembered for this mount only; never persisted.
+    overlay: Overlay,
 }
 fn rename_error(error: Error) -> FspError {
     use std::io::Write;
@@ -113,25 +118,69 @@ fn info(node: &Node, metadata: Option<&ObjectMetadata>) -> FileInfo {
         ..Default::default()
     }
 }
+/// Overlays this mount's remembered attributes and recorded times.
+fn remembered(info: &mut FileInfo, stamp: &overlay::Stamp) {
+    info.file_attributes |= stamp.attributes;
+    for (field, value) in [
+        (&mut info.creation_time, stamp.creation),
+        (&mut info.last_access_time, stamp.access),
+        (&mut info.last_write_time, stamp.write),
+        (&mut info.change_time, stamp.change),
+    ] {
+        if value != 0 {
+            *field = value;
+        }
+    }
+}
 impl Adapter {
+    /// Driver-visible information: stored metadata plus the mount's overlay.
     fn file_info(&self, node: &Node, metadata: Option<&ObjectMetadata>) -> FileInfo {
         let mut result = info(node, metadata);
         if self.fs.writable(node) || self.fs.writable_directory(node) {
             result.file_attributes &= !FILE_ATTRIBUTE_READONLY.0;
-            if result.file_attributes == 0 {
-                result.file_attributes = FILE_ATTRIBUTE_NORMAL.0;
-            }
+        }
+        if let Some(stamp) = self.overlay.get(node.id) {
+            remembered(&mut result, &stamp);
+        }
+        if result.file_attributes == 0 {
+            result.file_attributes = FILE_ATTRIBUTE_NORMAL.0;
         }
         result
     }
+    /// Fresh information for an open handle, including its current local size.
     fn current_info(&self, context: &FileContext) -> Result<FileInfo> {
-        match &context.file {
-            Some(file) => Ok(self.file_info(
-                &context.node,
-                Some(&file.current_metadata().map_err(storage_error)?),
-            )),
-            None => Ok(context.info.clone()),
-        }
+        let metadata = context
+            .file
+            .as_ref()
+            .map(|file| file.current_metadata())
+            .transpose()
+            .map_err(storage_error)?;
+        Ok(self.file_info(&context.node, metadata.as_ref()))
+    }
+    /// Access bits refused at open/create. Requesting WRITE_DAC or WRITE_OWNER
+    /// (as MAXIMUM_ALLOWED, CopyFile and Office do) changes nothing by itself:
+    /// the descriptor is fixed and an actual security change still fails.
+    fn refused_access(&self) -> u32 {
+        let security = if self.fs.is_read_only() {
+            WRITE_DAC.0 | WRITE_OWNER.0
+        } else {
+            0
+        };
+        let delete = if self.fs.namespace_mutation() {
+            0
+        } else {
+            DELETE.0
+        };
+        security | delete
+    }
+    /// Attribute bits a create or basic-information change may carry.
+    fn accepted_attributes(directory: bool) -> u32 {
+        overlay::ACCEPTED
+            | if directory {
+                FILE_ATTRIBUTE_DIRECTORY.0
+            } else {
+                0
+            }
     }
     fn wait<T>(&self, future: impl Future<Output = Result<T>>) -> Result<T> {
         let mut cancelled = self.cancelled.clone();
@@ -242,16 +291,9 @@ impl FileSystemContext for Adapter {
         access: u32,
         output: &mut OpenFileInfo,
     ) -> Result<FileContext> {
-        let writes = WRITE_DAC.0
-            | WRITE_OWNER.0
-            | if self.fs.namespace_mutation() {
-                0
-            } else {
-                DELETE.0
-            };
         // FILE_DELETE_ON_CLOSE = 0x1000, FILE_DIRECTORY_FILE = 1,
         // FILE_NON_DIRECTORY_FILE = 0x40 (NT create options).
-        if access & writes != 0
+        if access & self.refused_access() != 0
             || (options & 0x1000 != 0 && !self.fs.native_lifecycle_enabled())
             || (self.fs.is_read_only()
                 && access
@@ -317,12 +359,11 @@ impl FileSystemContext for Adapter {
                     .map_err(storage_error)?,
             };
             output.set_normalized_name(&normalized, None);
-            *output.as_mut() = info.clone();
+            *output.as_mut() = info;
             Ok(FileContext {
                 node,
                 file,
                 native,
-                info,
                 directory: Mutex::new(None),
                 _permit: permit,
             })
@@ -342,15 +383,7 @@ impl FileSystemContext for Adapter {
     ) -> Result<FileContext> {
         if self.fs.is_read_only()
             || (options & 0x1000 != 0 && !self.fs.native_lifecycle_enabled())
-            || access
-                & (WRITE_DAC.0
-                    | WRITE_OWNER.0
-                    | if self.fs.namespace_mutation() {
-                        0
-                    } else {
-                        DELETE.0
-                    })
-                != 0
+            || access & self.refused_access() != 0
         {
             return Err(STATUS_MEDIA_WRITE_PROTECTED.into());
         }
@@ -358,20 +391,13 @@ impl FileSystemContext for Adapter {
         if (directory && !self.fs.namespace_creation())
             || reparse
             || extra.is_some_and(|b| !b.is_empty())
-            || attributes
-                & !(FILE_ATTRIBUTE_NORMAL.0
-                    | FILE_ATTRIBUTE_ARCHIVE.0
-                    | if directory {
-                        FILE_ATTRIBUTE_DIRECTORY.0
-                    } else {
-                        0
-                    })
-                != 0
+            || attributes & !Self::accepted_attributes(directory) != 0
         {
             return Err(STATUS_NOT_SUPPORTED.into());
         }
         // New files use the mount's fixed owner-only security descriptor.
-        // Per-file ACLs, alternate streams and mutable attributes are unsupported.
+        // Per-file ACLs and alternate streams are unsupported. HIDDEN, SYSTEM
+        // and TEMPORARY are remembered for this mount only, never stored.
         let permit = self
             .handles
             .clone()
@@ -437,6 +463,7 @@ impl FileSystemContext for Adapter {
                 .map(|f| f.current_metadata())
                 .transpose()
                 .map_err(storage_error)?;
+            self.overlay.created(node.id, attributes, overlay::now());
             let info = self.file_info(&node, metadata.as_ref());
             let native = match object {
                 Some(object) => Some(object),
@@ -450,12 +477,11 @@ impl FileSystemContext for Adapter {
                 },
             };
             output.set_normalized_name(&normalized, None);
-            *output.as_mut() = info.clone();
+            *output.as_mut() = info;
             Ok(FileContext {
                 node,
                 file,
                 native,
-                info,
                 directory: Mutex::new(None),
                 _permit: permit,
             })
@@ -566,6 +592,40 @@ impl FileSystemContext for Adapter {
         *output = self.current_info(context)?;
         Ok(())
     }
+    /// Accepts attribute and time changes into the per-mount overlay. Nothing
+    /// is stored locally or remotely; READONLY and other bits stay refused.
+    fn set_basic_info(
+        &self,
+        context: &FileContext,
+        file_attributes: u32,
+        creation_time: u64,
+        last_access_time: u64,
+        last_write_time: u64,
+        last_change_time: u64,
+        output: &mut FileInfo,
+    ) -> Result<()> {
+        if self.fs.is_read_only() {
+            return Err(STATUS_MEDIA_WRITE_PROTECTED.into());
+        }
+        // INVALID_FILE_ATTRIBUTES (all ones) means "leave attributes unchanged".
+        let attributes = (file_attributes != u32::MAX).then_some(file_attributes);
+        let accepted = Self::accepted_attributes(context.node.kind == Kind::Directory);
+        if attributes.is_some_and(|bits| bits & !accepted != 0) {
+            return Err(STATUS_NOT_SUPPORTED.into());
+        }
+        self.overlay.set(
+            context.node.id,
+            overlay::Change {
+                attributes,
+                creation: creation_time,
+                access: last_access_time,
+                write: last_write_time,
+                change: last_change_time,
+            },
+        );
+        *output = self.current_info(context)?;
+        Ok(())
+    }
     fn flush(&self, context: Option<&FileContext>, output: &mut FileInfo) -> Result<()> {
         if let Some(context) = context {
             self.wait(async {
@@ -612,6 +672,7 @@ impl FileSystemContext for Adapter {
                 .await
                 .map_err(storage_error)
         })?;
+        self.overlay.written(context.node.id, overlay::now());
         *output = self.current_info(context)?;
         Ok(count as u32)
     }
@@ -625,6 +686,7 @@ impl FileSystemContext for Adapter {
         let file = context.file.as_ref().ok_or(STATUS_FILE_IS_A_DIRECTORY)?;
         if !allocation || size < file.current_metadata().map_err(storage_error)?.size {
             self.wait(async { file.truncate(size).await.map_err(storage_error) })?;
+            self.overlay.written(context.node.id, overlay::now());
         }
         *output = self.current_info(context)?;
         Ok(())
@@ -639,13 +701,16 @@ impl FileSystemContext for Adapter {
         output: &mut FileInfo,
     ) -> Result<()> {
         if extra.is_some_and(|b| !b.is_empty())
-            || (replace_attributes
-                && attributes & !(FILE_ATTRIBUTE_ARCHIVE.0 | FILE_ATTRIBUTE_NORMAL.0) != 0)
+            || attributes & !Self::accepted_attributes(false) != 0
         {
             return Err(STATUS_NOT_SUPPORTED.into());
         }
         let file = context.file.as_ref().ok_or(STATUS_FILE_IS_A_DIRECTORY)?;
         self.wait(async { file.truncate(0).await.map_err(storage_error) })?;
+        self.overlay.written(context.node.id, overlay::now());
+        // Supersede replaces the remembered attributes; overwrite adds to them.
+        self.overlay
+            .overwritten(context.node.id, attributes, replace_attributes);
         *output = self.current_info(context)?;
         Ok(())
     }
@@ -772,7 +837,7 @@ pub async fn run(
         let descriptor = native::owner_descriptor(!read_only,fs.namespace_mutation())?;
         let (cancel, cancelled) = watch::channel(false);
         let posix=fs.native_posix_unlink_rename_enabled();
-        let adapter = Adapter { fs, runtime, cancelled, descriptor, handles: Arc::new(Semaphore::new(256)), entries: Arc::new(Semaphore::new(100_000)) };
+        let adapter = Adapter { fs, runtime, cancelled, descriptor, handles: Arc::new(Semaphore::new(256)), entries: Arc::new(Semaphore::new(100_000)), overlay: Overlay::default() };
         let mut params = VolumeParams::new();
         params.filesystem_name("S3Drive").sector_size(512).sectors_per_allocation_unit(8).max_component_length(255)
             .case_sensitive_search(false).case_preserved_names(true).unicode_on_disk(true)
