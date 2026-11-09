@@ -6,7 +6,7 @@ docs/src/implementation-plan.md before continuing.
 
 ## In flight (2026-11-09): Windows desktop requests, unmerged
 
-Branch `claude/desktop-requests` (stacked on the open docs PR #1 branch) changes
+Branch `claude/desktop-requests` (PR #3, stacked on the open docs PR #1 branch) changes
 the WinFsp adapter so Office and CopyFile creates succeed, adds
 `managed configure --sparse-lifecycle`, and adds in-memory write coalescing on
 the version 8 native path (owner-approved 2026-11-09). Coalescing changes local
@@ -14,12 +14,15 @@ durability: a returned small write is journaled at its next commit point, not
 immediately. Read docs/src/write-coalescing.md before touching the engine's
 write, read, cleanup or Close paths, and docs/src/windows-desktop-requests.md
 for the measurements and the remaining stored-times proposal. Local evidence
-only (shared engine and real WinFsp, loopback); hosted CI and Office GUI pending.
+only (shared engine and real WinFsp, loopback); Office GUI pending. Hosted CI
+on PR #3 had not completed when this was written: read its result first.
 Tests that stop the owner abruptly after a write now need an explicit commit
 point (a read) first; two were changed that way.
 One point differs from the proposal the owner approved and awaits their
 confirmation: a buffered run the journal still refuses at Close is discarded
-(logged to standard error) so that the handle can close.
+(logged to standard error) so that the handle can close. The automated PR
+review flagged the same point as P1 (it cites the dirty-data rule in
+AGENTS.md); it is unanswered on the PR until the owner decides.
 PR #2 (drive letter, passwordless startup) is a separate open thread.
 
 ## Current main (2026-11-08)

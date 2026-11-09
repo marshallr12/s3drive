@@ -145,6 +145,34 @@ async fn idle_timer_journals(fs: &ReadOnlyFs, root: &Path) {
     eprintln!("COALESCING idle_timer=journaled blocks_before={before} after={after}");
 }
 
+/// A write that extends a run while its idle timer waits for the order locks
+/// must not end the timer. The flush of a second file holds the mount-wide
+/// lock, the second write queues behind it, and the timer queues behind that
+/// write. The window is hit only if the flush outlasts the idle period; when
+/// it does not, this is the same check as `idle_timer_journals`.
+async fn idle_timer_follows_an_extended_run(fs: &ReadOnlyFs, root: &Path) {
+    let blocker = create(fs, "blocker.bin").await;
+    put(&blocker, 0, &body(MEBIBYTE / 4)).await;
+    let file = create(fs, "extended.bin").await;
+    put(&file, 0, b"first ").await;
+    tokio::time::sleep(Duration::from_millis(600)).await;
+    let started = std::time::Instant::now();
+    let late = async {
+        tokio::time::sleep(Duration::from_millis(150)).await;
+        put(&file, 6, b"second").await;
+    };
+    let (flushed, ()) = tokio::join!(blocker.flush(), late);
+    flushed.unwrap();
+    let held = started.elapsed().as_millis();
+    let before = rows(root, "sparse_view_blocks");
+    tokio::time::sleep(Duration::from_millis(2500)).await;
+    let after = rows(root, "sparse_view_blocks");
+    assert!(after > before, "the extended run lost its idle timer");
+    close(file).await;
+    close(blocker).await;
+    eprintln!("COALESCING extended_run=journaled lock_held_ms={held}");
+}
+
 /// Every journaled patch block in the private database.
 fn blocks(root: &Path) -> Vec<Vec<u8>> {
     let path = root.join("native-state").join("metadata.sqlite3");
@@ -204,6 +232,7 @@ pub async fn flow(config: &s3drive_core::Config, root: &Path, s: &Server) {
     gap_reads_as_zeros(&fs).await;
     let large = large_write_and_flush(&fs).await;
     idle_timer_journals(&fs, root).await;
+    idle_timer_follows_an_extended_run(&fs, root).await;
     native_writer::stop(fs).await;
     let fs = ReadOnlyFs::new(&c).await.unwrap();
     assert_eq!(cold(&fs, "save pattern 日本語.docx").await, saved);
@@ -211,6 +240,7 @@ pub async fn flow(config: &s3drive_core::Config, root: &Path, s: &Server) {
     assert_eq!(cold(&fs, "two handles.bin").await, b"aabX");
     assert_eq!(cold(&fs, "large then flushed.bin").await, large);
     assert_eq!(cold(&fs, "idle.bin").await, b"left alone");
+    assert_eq!(cold(&fs, "extended.bin").await, b"first second");
     native_writer::stop(fs).await;
     eprintln!("COALESCING close=commit handles=ordered gap=zeros flush=published cold_read=exact");
     abrupt_stop_keeps_only_journaled_bytes(&c, root).await;

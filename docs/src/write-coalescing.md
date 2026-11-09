@@ -93,8 +93,10 @@ retained-view limit is reached), the bytes stay in the buffer and:
   can be a later write, a read, a truncate or a flush on any handle of the
   file, so an application can see an error for bytes whose own write call had
   succeeded;
-- a failure in the idle timer is written to standard error and retried by the
-  next operation;
+- a failure in the idle timer is written to standard error. The bytes stay
+  buffered and the next commit point retries them; the timer itself tries
+  again only after a later write has extended the run and it has gone idle
+  again;
 - a failure at cleanup cannot be returned to the application on Windows.
   Cleanup still records its callback, reports the failure on standard error,
   and the run stays buffered for Close to retry;
@@ -157,7 +159,7 @@ the loopback provider, which this change does not reduce.
 
 `component_retention_shared_write_coalescing_commit_points`
 (`crates/s3drive-cli/tests/chunk_publication/native_coalescing.rs`) passed in
-43 s (debug build). It runs in the existing `component_retention_shared_` CI
+104 s (debug build; 43 s before the extended-run check was added). It runs in the existing `component_retention_shared_` CI
 step on Linux and Windows. It checks that:
 
 - 300 sequential 4 KiB writes add one journal view before any commit point, the
@@ -171,6 +173,12 @@ step on Linux and Windows. It checks that:
   publishes buffered bytes;
 - a small write adds no journal block at once, and one is present 2.5 s later
   (idle timer);
+- a write that extends a run while its idle timer is waiting for the
+  mount-wide lock does not end the timer: the extended run is journaled
+  within 2.5 s. Automated review of the pull request found this defect; the
+  check failed before the fix. It needs a flush of a second file to hold the
+  lock past the idle period (5.6 s in the local run), and is an ordinary
+  idle-timer check on a machine where the flush is faster than that;
 - after a clean stop and a cold restart every file reads back exactly;
 - after an abrupt stop, bytes committed by a read are in the journal, a later
   buffered write is not, and cold start refuses the retained dirty epoch as

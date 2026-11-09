@@ -42,28 +42,46 @@ impl Writes {
         let opens = mount.opens.lock().map_err(|_| Error::Internal)?;
         opens.get(open).cloned().ok_or(Error::Conflict)
     }
-    /// Starts the idle timer of a new run: once no write has extended the run
-    /// for `coalesce::IDLE`, it is journaled without waiting for a commit point.
+    /// Starts the idle timer of a new run. The timer lives as long as the run:
+    /// each time no write has extended the run for `coalesce::IDLE`, it tries
+    /// once to journal that state without waiting for a commit point.
     fn watch(self: &Arc<Self>, file: Arc<File>) {
         let writer = Arc::downgrade(self);
         let Ok(Some((run, _))) = file.buffered_mark() else {
             return;
         };
         tokio::spawn(async move {
-            while let Ok(Some(seen)) = file.buffered_mark()
-                && seen.0 == run
-            {
-                tokio::time::sleep(coalesce::IDLE).await;
-                if file.buffered_mark().ok().flatten() == Some(seen) {
-                    return Self::drain_idle(writer, &file, seen).await;
+            // The last state offered to the journal; a refused state is not
+            // offered again until a write changes it.
+            let mut tried = None;
+            while let Some(seen) = Self::idle_mark(&writer, &file, run).await {
+                if tried != Some(seen) {
+                    Self::drain_idle(&writer, &file, seen).await;
+                    tried = Some(seen);
                 }
             }
         });
     }
+    /// Waits until run `run` has gone one idle period without a write and
+    /// returns its mark. Returns `None` once the run is no longer buffered or
+    /// the mount is stopping, which ends the timer.
+    async fn idle_mark(writer: &Weak<Self>, file: &File, run: u64) -> Option<(u64, u64)> {
+        loop {
+            let seen = file.buffered_mark().ok().flatten().filter(|m| m.0 == run)?;
+            tokio::time::sleep(coalesce::IDLE).await;
+            let stopping = |w: Arc<Self>| w.closing.load(Ordering::Acquire);
+            if writer.upgrade().is_none_or(stopping) {
+                return None;
+            }
+            if file.buffered_mark().ok().flatten() == Some(seen) {
+                return Some(seen);
+            }
+        }
+    }
     /// Idle-timer commit, serialized with every other journal user by the two
     /// order locks. A failure is kept: the bytes stay buffered and the handle's
     /// next operation retries the journal write and reports it.
-    async fn drain_idle(writer: Weak<Self>, file: &File, seen: (u64, u64)) {
+    async fn drain_idle(writer: &Weak<Self>, file: &File, seen: (u64, u64)) {
         let Some(writer) = writer.upgrade() else {
             return;
         };
@@ -74,8 +92,9 @@ impl Writes {
         }
         let _serial = writer.native_serial.lock().await;
         let _file = file.serial.lock().await;
-        // While this timer waited for the locks the run may have been journaled
-        // and a newer one started; that one has its own timer.
+        // While this timer waited for the locks the run changed. If a write
+        // extended it, `watch` waits for it to go idle again; if it was
+        // journaled, any newer run has its own timer.
         if file.buffered_mark().ok().flatten() != Some(seen) {
             return;
         }
