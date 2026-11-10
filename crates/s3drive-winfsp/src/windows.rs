@@ -294,7 +294,7 @@ impl FileSystemContext for Adapter {
         // FILE_DELETE_ON_CLOSE = 0x1000, FILE_DIRECTORY_FILE = 1,
         // FILE_NON_DIRECTORY_FILE = 0x40 (NT create options).
         if access & self.refused_access() != 0
-            || (options & 0x1000 != 0 && !self.fs.native_lifecycle_enabled())
+            || (options & 0x1000 != 0 && !self.fs.delete_on_close_enabled())
             || (self.fs.is_read_only()
                 && access
                     & (FILE_WRITE_DATA.0
@@ -382,12 +382,19 @@ impl FileSystemContext for Adapter {
         output: &mut OpenFileInfo,
     ) -> Result<FileContext> {
         if self.fs.is_read_only()
-            || (options & 0x1000 != 0 && !self.fs.native_lifecycle_enabled())
+            || (options & 0x1000 != 0 && !self.fs.delete_on_close_enabled())
             || access & self.refused_access() != 0
         {
             return Err(STATUS_MEDIA_WRITE_PROTECTED.into());
         }
         let directory = options & 1 != 0;
+        // Only the version 7 writer records a deferred creation. The version 8
+        // writer creates an ordinary file and deletes it at the flagged
+        // cleanup; it has no such path for a directory.
+        let deferred = options & 0x1000 != 0 && self.fs.native_lifecycle_enabled();
+        if directory && options & 0x1000 != 0 && !deferred {
+            return Err(STATUS_MEDIA_WRITE_PROTECTED.into());
+        }
         if (directory && !self.fs.namespace_creation())
             || reparse
             || extra.is_some_and(|b| !b.is_empty())
@@ -419,7 +426,7 @@ impl FileSystemContext for Adapter {
             if normalized.len() * 2 > usize::from(output.normalized_name_size()) {
                 return Err(STATUS_NAME_TOO_LONG.into());
             }
-            let doc = options & 0x1000 != 0;
+            let doc = deferred;
             let writing = access & (FILE_WRITE_DATA.0 | FILE_APPEND_DATA.0) != 0;
             let (node, file, object) = if doc {
                 let (node, object) = self
@@ -476,6 +483,10 @@ impl FileSystemContext for Adapter {
                         .map_err(storage_error)?,
                 },
             };
+            if options & 0x1000 != 0 && native.is_none() {
+                // Nothing could carry out the delete at cleanup.
+                return Err(STATUS_MEDIA_WRITE_PROTECTED.into());
+            }
             output.set_normalized_name(&normalized, None);
             *output.as_mut() = info;
             Ok(FileContext {

@@ -1,6 +1,6 @@
 # S3Drive handoff
 
-Updated 2026-11-09. Main is `feea0a9`, with the GPL-3.0-only Windows MSI merged
+Updated 2026-11-10. Main is `feea0a9`, with the GPL-3.0-only Windows MSI merged
 and passing CI; the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
@@ -31,9 +31,13 @@ creates. Results in wasabi-physical-windows-plan.md. The owner chose option A
 of docs/src/sparse-delete-on-close.md (delete at cleanup) on 2026-11-10.
 Phase 1 (engine) is done: the disposition controller arms a removal when a
 native chunk object's cleanup carries the delete flag and none is armed, with
-shared-engine tests. The adapter still refuses the flag on version 8; phase 2
-(adapter capability plus real WinFsp CreateFileW tests) is next, then a
-separately approved physical Office rerun.
+shared-engine tests; hosted CI passed 20 of 20 on e184cba. Phase 2 (2026-11-10)
+is implemented on branch `claude/relaxed-dirac-z0oi0d`, stacked on PR #3: the
+adapter accepts the flag on the version 8 native writer for files that carry a
+sparse native object, and two real WinFsp CreateFileW tests have their own
+Windows CI step. It was written on a Linux cloud workstation and has never been
+built or run on Windows; it is not accepted until hosted CI passes on the exact
+commit. A separately approved physical Office rerun (phase 3) follows.
 PR #2 (drive letter, passwordless startup) is a separate open thread.
 
 ## Current main (2026-11-08)

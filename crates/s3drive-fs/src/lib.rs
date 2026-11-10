@@ -582,11 +582,30 @@ impl ReadOnlyFs {
             .and_then(|m| m.writes.as_ref())
             .is_some_and(|w| w.native_lifecycle_enabled())
     }
+    /// Whether an open or create may carry the delete-on-close flag at all.
+    /// Version 7 records the obligation at open; the version 8 native writer
+    /// deletes at the flagged cleanup instead.
+    pub fn delete_on_close_enabled(&self) -> bool {
+        self.native_lifecycle_enabled() || self.sparse_native_enabled()
+    }
+    /// True for the version 8 native chunk writer.
+    fn sparse_native_enabled(&self) -> bool {
+        self.managed
+            .as_ref()
+            .and_then(|m| m.chunk_writes.as_ref())
+            .is_some_and(|w| w.native_enabled())
+    }
+    /// Supplies the whole-file (version 7) native object for an open that has
+    /// none of its own. A delete-on-close open without that writer is refused:
+    /// on version 8 only a sparse native object can delete at cleanup.
     pub async fn native_file_object(
         &self,
         node: u64,
         doc: bool,
     ) -> Result<Option<NativeFileObject>> {
+        if doc && !self.native_lifecycle_enabled() {
+            return Err(Error::ReadOnly);
+        }
         let node = self.node(node)?;
         match self.managed.as_ref().and_then(|m| m.writes.as_ref()) {
             Some(w) => w

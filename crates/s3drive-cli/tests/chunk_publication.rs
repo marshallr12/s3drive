@@ -28,6 +28,9 @@ mod native_application;
 #[path = "chunk_publication/native_coalescing.rs"]
 mod native_coalescing;
 #[cfg(windows)]
+#[path = "chunk_publication/native_delete_on_close.rs"]
+mod native_delete_on_close;
+#[cfg(windows)]
 #[path = "chunk_publication/native_desktop.rs"]
 mod native_desktop;
 #[path = "chunk_publication/native_directories.rs"]
@@ -1378,6 +1381,8 @@ fn dispatch<'a>(
             boxed_case(|| native_lifecycle::component_repeated(config, root, s))
         }
         #[cfg(windows)]
+        "native_delete_on_close" => boxed_case(|| native_delete_on_close::mounted(config, root, s)),
+        #[cfg(windows)]
         "native_desktop" => boxed_case(|| native_desktop::mounted(config, root, s)),
         "native_save_pattern" => boxed_case(|| native_save_pattern::probe(config, root, s)),
         "native_coalescing" => boxed_case(|| native_coalescing::flow(config, root, s)),
@@ -2100,6 +2105,7 @@ async fn run(mode: &str) {
         "native_save_pattern" => puts(&f),
         "native_coalescing" | "native_coalescing_refusal" => puts(&f),
         "native_lifecycle_delete_at_cleanup" => puts(&f),
+        "native_delete_on_close" => puts(&f),
         "native_lifecycle_unlink" => 5,
         "native_lifecycle_mounted" => 13,
         "native_lifecycle_mounted_known" => 3,
@@ -2730,6 +2736,20 @@ async fn component_retention_shared_deleting_cleanup_without_set_delete_removes_
 #[ignore = "slow: fills the journal to a limit; CI runs it in a release step"]
 async fn write_coalescing_refused_run_is_reported_then_saved_at_close() {
     run("component:native_coalescing_refusal").await;
+}
+
+#[cfg(windows)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "CreateFileW delete-on-close on the owned-unlinked profile; real WinFsp required"]
+async fn delete_on_close_actual_owned_unlinked_deletes_at_cleanup() {
+    run("native_delete_on_close").await;
+}
+
+#[cfg(windows)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "CreateFileW delete-on-close on component retention; real WinFsp required"]
+async fn delete_on_close_actual_component_retention_deletes_at_cleanup() {
+    run("component:native_delete_on_close").await;
 }
 
 #[cfg(windows)]

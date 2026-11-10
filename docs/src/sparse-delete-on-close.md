@@ -1,9 +1,10 @@
 # Delete-on-close on the version 8 writer (proposal)
 
 **Status: the owner chose option A on 2026-11-10. Phase 1 (engine) is
-implemented with shared-engine tests; phases 2 and 3 are not started.** The
-adapter's refusal of delete-on-close on version 8 stays in place until the
-phase 2 acceptance criteria pass, so no mount behaves differently yet. See
+implemented and passed hosted CI. Phase 2 (adapter) is implemented but not
+accepted: its real WinFsp tests have not run yet, because the cloud workstation
+that wrote them cannot build or mount on Windows. Phase 3 is not started.** See
+[phase 2 as built](#phase-2-as-built-2026-11-10-hosted-evidence-pending) and
 [phase 1 as built](#phase-1-as-built-2026-11-10). The owner asked for this design after the
 physical Office rerun failed; see
 [the run4 results](wasabi-physical-windows-plan.md#office-rerun-on-version-8-run4-approved-2026-11-09).
@@ -193,6 +194,11 @@ day when this machine ran every call about a quarter slower than on
 2026-11-09). One local run, so the cause is likely, not proven; the hosted
 result on the fixed commit is the check.
 
+Hosted CI on the fixed commit `e184cba` passed all 20 checks of
+[PR 3](https://github.com/marshallr12/s3drive/pull/3) (runs 42785058671 and
+42785051236, read from the check list on 2026-11-10; the logs were not
+reviewed line by line).
+
 Open questions, as far as phase 1 settles them:
 
 - **Arming twice.** The controller arms only when nothing is armed, so an
@@ -205,6 +211,48 @@ Open questions, as far as phase 1 settles them:
   for a flagged open on that path or route it through the writer.
 - **Cleanup order with POSIX unlink enabled** and **Office's actual calls** are
   still open. Both need a real mount and belong to phase 2.
+
+## Phase 2 as built (2026-11-10, hosted evidence pending)
+
+The adapter (`crates/s3drive-winfsp/src/windows.rs`, `open` and `create`) now
+asks the engine `delete_on_close_enabled()`, which is true for the version 7
+writer and for the version 8 native writer. Versions 1 to 6 and a version 8
+mount without the native writer still refuse the flag.
+
+- **Create of a file on version 8** is an ordinary create. The deferred
+  creation path stays version 7 only.
+- **Open of a file on version 8** is accepted only when the open carries a
+  sparse native object. An open that gets none (a read-only open of a clean
+  published file the writer does not track) is refused as before, in
+  `native_file_object`.
+- **Directories with the flag stay refused on version 8**, on both create and
+  open.
+- Nothing changed for FUSE, and no schema, wire or journal format changed.
+
+Real WinFsp tests through `CreateFileW`, loopback only, in both version 8
+profiles (`delete_on_close_actual_owned_unlinked_deletes_at_cleanup`,
+`delete_on_close_actual_component_retention_deletes_at_cleanup`, in
+`chunk_publication/native_delete_on_close.rs`), with their own Windows CI step:
+
+- create with the flag, write, read back, close: the name is gone;
+- open an existing file with the flag and close it: the name is gone;
+- two handles, the flagged one closing first: the other handle reads its
+  bytes, and the name is gone once it closes. Whether the name is still listed
+  in between is printed, not asserted;
+- a flagged directory create is refused and creates nothing;
+- none of the three names is back after a cold remount;
+- a flagged open of a published file after the cold remount: either refused
+  with the file intact, or accepted and deleted. The outcome is printed;
+- kill the mount process between a flagged create (written and flushed) and
+  its close: after remount the file is present with the flushed bytes.
+
+**Evidence so far.** On the Linux cloud workstation: formatting, clippy on the
+engine and test crates, and the two phase 1 shared-engine tests pass. The
+adapter change and the new tests are Windows-only code that could not be
+compiled there. They have never been built or run. Hosted Windows CI on the
+exact commit is the acceptance check, and it also answers the two questions
+phase 1 left open (cleanup order with POSIX unlink, and which opens carry a
+native object). Office's actual calls remain untraced.
 
 ## Open questions to settle in phase 1, before code
 
