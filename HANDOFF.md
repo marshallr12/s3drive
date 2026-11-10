@@ -15,9 +15,8 @@ immediately. Read docs/src/write-coalescing.md before touching the engine's
 write, read, cleanup or Close paths, and docs/src/windows-desktop-requests.md
 for the measurements and the remaining stored-times proposal. Local evidence
 only (shared engine and real WinFsp, loopback); Office GUI pending. Hosted CI
-on PR #3 has not passed yet: one Linux soak run left an open record after
-unmount, cause not established ("Hosted CI so far" in write-coalescing.md).
-Read the PR's current CI result first.
+on PR #3: one Linux soak run of a63637d left an open record after unmount,
+cause not established ("Hosted CI so far" in write-coalescing.md).
 Tests that stop the owner abruptly after a write now need an explicit commit
 point (a read) first; two were changed that way.
 Owner decision 2026-11-09 (second): a buffered run the journal refuses at
@@ -25,6 +24,12 @@ Close is kept in memory with its file and retried, never discarded. Flush,
 cleanup, Close, flush-all and unmount first publish to make room. Kept bytes
 are journaled by the next handle of the file; flush-all and unmount report a
 conflict while any remain. See "Failure reporting" in write-coalescing.md.
+Hosted CI passed 20 of 20 on 68cfab8, and the owner installed that MSI on
+MiniAir. Physical Office rerun on a version 8 drive (run4, 2026-11-09): Word and
+Excel both fail their first save, because version 8 refuses delete-on-close
+creates. Proposal, not started: docs/src/sparse-delete-on-close.md (owner asked
+for the design; option A awaits their decision). Results in
+wasabi-physical-windows-plan.md.
 PR #2 (drive letter, passwordless startup) is a separate open thread.
 
 ## Current main (2026-11-08)

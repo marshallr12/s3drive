@@ -5,6 +5,7 @@
 - [Windows installer and acceptance](windows-installer.md)
 - [Windows desktop application requests](windows-desktop-requests.md)
 - [Write coalescing](write-coalescing.md)
+- [Delete-on-close on version 8 (proposal)](sparse-delete-on-close.md)
 - [Experimental quiescent lifecycle retention](quiescent-lifecycle-retention.md)
 - [Existing tools and Rust libraries](landscape.md)
 - [Proposed architecture](architecture.md)

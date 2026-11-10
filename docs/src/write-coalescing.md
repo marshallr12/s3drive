@@ -11,9 +11,12 @@ Office-style saves failed on every available write profile.
 
 **Status.** Implemented for the version 8 native path (every
 `sparse-lifecycle` profile) and verified locally on MiniAir against loopback
-fixtures. Hosted CI has not passed on it yet (see
-[Hosted CI so far](#hosted-ci-so-far-pull-request-3-2026-11-09)), and Word and
-Excel have not been rerun against it. No provider write was made for this work.
+fixtures. Hosted CI passed on `68cfab8` (see
+[Hosted CI so far](#hosted-ci-so-far-pull-request-3-2026-11-09)). Word and Excel
+were rerun on a physical version 8 drive on 2026-11-09 and could not save, for
+a separate reason: version 8 refuses delete-on-close creates
+([proposal](sparse-delete-on-close.md)). Coalescing itself therefore still has
+no Office evidence. No provider write was made in developing this change.
 
 ## Why
 
@@ -253,7 +256,9 @@ flushes was not measured.
 
 ### Hosted CI so far (pull request 3, 2026-11-09)
 
-No commit of this work has a complete passing hosted run yet.
+`68cfab8` (keep-and-retry, weak idle timer) passed all 20 checks of both its
+runs on 2026-11-09, including both soak jobs, the release journal-limit step and
+the real-mount desktop test on Windows. Earlier commits did not:
 
 - `54eff16`: the Linux job stopped at Clippy (a constant read only by the
   Windows adapter was dead code in the Linux test build). Fixed in `af30ad7`,
@@ -318,7 +323,7 @@ schema-fixture check passed. The pieces were run by hand because
 
 ### Not covered
 
-- No passing hosted CI run yet, and no local Linux run. FUSE RELEASE with a
+- No local Linux run; Linux evidence is hosted CI only. FUSE RELEASE with a
   buffered run is covered only by the shared-engine close check, not by a real
   FUSE mount.
 - No Word or Excel run.

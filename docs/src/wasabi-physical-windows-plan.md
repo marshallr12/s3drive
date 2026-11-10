@@ -164,3 +164,63 @@ on the version 8 profile and is not fixed; see
 **Not yet done:** scheduled startup tasks, sign-out/sign-in, reboot, and prefix
 cleanup with the owner's confirmation of the key count. Office tests cannot pass
 on this build and were stopped.
+
+## Office rerun on version 8 (`run4`, approved 2026-11-09)
+
+**Status: approved by the owner on 2026-11-09; not yet run.** This is the
+separate approval that [Cleanup and limits](#cleanup-and-limits) requires for a
+rerun and a new prefix.
+
+- **Build.** The private MSI from `68cfab8` (pull request 3 head, hosted CI 20 of
+  20 checks passed), installed by the owner after uninstalling the `feea0a9`
+  build. Installed binary SHA-256 `b9773e23…d854`, matching the build.
+- **Write scope.** Bucket `s3drivetest`, managed root
+  `s3drive-physical-20261108/run4/.s3drive/`, inside the existing writable prefix
+  and write policy. Nothing outside it is written or deleted.
+- **Bound.** At most 200 object PUTs and 100 MiB uploaded for this rerun, from
+  throwaway files only. This fits inside what remains of the original
+  500-PUT / 256 MiB bound (140 objects and 41.7 MB used on 2026-11-08).
+- **Local components.** A fresh loopback authority (`authority-4`, its own
+  volume) on `127.0.0.1:43130`, a store plan in `store-plan-4`, state in
+  `managed-state-4` and a version 8 `component-retention-v1` drive in `drive4`,
+  all under `%LOCALAPPDATA%\S3Drive\physical-20261108\`. Mount at
+  `%USERPROFILE%\S3DriveRun4`. The owner runs every command; the assistant does
+  not handle the provider keys.
+- **Probe evidence.** The 2026-11-08 conditional-PUT report is within its
+  seven-day `evidence_max_age_seconds`; no new probe run.
+- **Checks.** Check 3 above (Word and Excel: create, save, edit-save, Save As,
+  close and reopen), then a cold remount with SHA-256 read-back. Record save
+  times, the state database size and the PUT count and bytes under the `run4`
+  root.
+- **Cleanup.** The `run4` keys are deleted with the rest of the prefix, after the
+  owner has reviewed the results, as above.
+
+### Results so far (2026-11-09, in progress)
+
+Authority volume `24866f09aede3a42787c2e74227a60ca`, store
+`8471b0605a628507976268fec168dd58` (plan SHA-256 `c34b866a…dc9b0`, registered),
+version 8 `component-retention-v1` drive mounted read-write.
+
+- **Word: the first save failed.** Word reported "Disk c: is write protected".
+  The mount process used no CPU for the attempt and the state database did not
+  change, so the request was refused in the WinFsp adapter before any storage
+  work.
+- **Probable cause: delete-on-close.** Two `CreateFileW` probes on the mount,
+  differing only in `FILE_FLAG_DELETE_ON_CLOSE`: the plain temporary create was
+  accepted (and the file deleted again); the delete-on-close create failed with
+  Win32 error 19, `ERROR_WRITE_PROTECT`. In the source, the adapter refuses
+  `FILE_DELETE_ON_CLOSE` unless `native_lifecycle_enabled()`, which only the
+  version 7 writer reports; on version 8 it is false. Delete-on-close is a
+  documented unsupported path of the sparse writer
+  ([native chunk writes](native-chunk-writes.md)). That Word's failing call is
+  that create is inferred, not observed: no call trace of Word was taken. The
+  real-mount desktop test passed because it never asks for delete-on-close.
+- **Excel: the first save failed the same way** ("write protected"). Again the
+  mount used about 0.1 CPU-seconds for the attempt and the state database did
+  not change.
+- **Cost of one empty file.** The accepted plain probe (create an empty
+  temporary file, close, delete) took the mount from 0.4 to 7.6 CPU-seconds in
+  about 20 s and grew the write-ahead log from 45 KB to 3.0 MB.
+- **Conclusion.** Office saves cannot succeed on version 8 until the sparse
+  writer supports delete-on-close. Version 7 supports it but keeps the per-write
+  cost measured on 2026-11-08, and write coalescing applies to version 8 only.
