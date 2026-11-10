@@ -1,10 +1,10 @@
 # Delete-on-close on the version 8 writer (proposal)
 
-**Status: the owner chose option A on 2026-11-10. Phase 1 (engine) is
-implemented and passed hosted CI. Phase 2 (adapter) is implemented but not
-accepted: its real WinFsp tests have not run yet, because the cloud workstation
-that wrote them cannot build or mount on Windows. Phase 3 is not started.** See
-[phase 2 as built](#phase-2-as-built-2026-11-10-hosted-evidence-pending) and
+**Status: the owner chose option A on 2026-11-10. Phases 1 (engine) and 2
+(adapter) are implemented and passed hosted Linux and Windows CI on their exact
+commits. Phase 2 is unmerged and has no physical-machine or Office evidence.
+Phase 3 (physical Office rerun) is not started and needs separate approval.** See
+[phase 2 as built](#phase-2-as-built-2026-11-10) and
 [phase 1 as built](#phase-1-as-built-2026-11-10). The owner asked for this design after the
 physical Office rerun failed; see
 [the run4 results](wasabi-physical-windows-plan.md#office-rerun-on-version-8-run4-approved-2026-11-09).
@@ -212,7 +212,7 @@ Open questions, as far as phase 1 settles them:
 - **Cleanup order with POSIX unlink enabled** and **Office's actual calls** are
   still open. Both need a real mount and belong to phase 2.
 
-## Phase 2 as built (2026-11-10, hosted evidence pending)
+## Phase 2 as built (2026-11-10)
 
 The adapter (`crates/s3drive-winfsp/src/windows.rs`, `open` and `create`) now
 asks the engine `delete_on_close_enabled()`, which is true for the version 7
@@ -246,13 +246,39 @@ profiles (`delete_on_close_actual_owned_unlinked_deletes_at_cleanup`,
 - kill the mount process between a flagged create (written and flushed) and
   its close: after remount the file is present with the flushed bytes.
 
-**Evidence so far.** On the Linux cloud workstation: formatting, clippy on the
-engine and test crates, and the two phase 1 shared-engine tests pass. The
-adapter change and the new tests are Windows-only code that could not be
-compiled there. They have never been built or run. Hosted Windows CI on the
-exact commit is the acceptance check, and it also answers the two questions
-phase 1 left open (cleanup order with POSIX unlink, and which opens carry a
-native object). Office's actual calls remain untraced.
+**Hosted evidence.** Commit `3ae3afd` passed all ten jobs of
+[run 42839890487](https://github.com/marshallr12/s3drive/actions/runs/42839890487)
+(2026-11-10), on standard Linux and Windows runners. The Windows job built the
+adapter, passed clippy with warnings denied, and passed both new tests in
+107 s, along with the unchanged lifecycle, retention, desktop, disposition and
+workspace steps. The delete-on-close step's log was read; the other steps were
+checked by their status only, not line by line.
+
+The component-retention test printed:
+
+```text
+DELETE_ON_CLOSE create=deleted existing=deleted two_handles=deleted listed_between=true directory=refused clean_published=deleted killed_before_cleanup=present_exact cold_remount=absent
+```
+
+The owned-unlinked test passed the same assertions, but the harness did not
+print its line in that run; a follow-up commit makes it print.
+
+What the run settles, for the hosted WinFsp version and loopback backend only:
+
+- **Cleanup order.** With two handles, the name is still listed after the
+  flagged handle closes and goes when the last handle closes. The delete is
+  carried out at the last cleanup, as on NTFS.
+- **Which opens carry a native object.** A flagged read-only open of a
+  published file after a cold remount was accepted and deleted the file, so
+  that open did get a native object. The refusal for an open without one
+  remains in the code but was not reached by any test.
+- **Killed mount.** A mount process killed between a flagged create and its
+  close leaves the file present with its flushed bytes after remount.
+
+Not covered: Office's actual calls (untraced), a physical machine, a real
+provider, and the cancel-then-delete order noted under phase 1. On the Linux
+cloud workstation only formatting, clippy and the two phase 1 shared-engine
+tests were run; the Windows-only code cannot be built there.
 
 ## Open questions to settle in phase 1, before code
 

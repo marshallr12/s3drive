@@ -35,9 +35,10 @@ shared-engine tests; hosted CI passed 20 of 20 on e184cba. Phase 2 (2026-11-10)
 is implemented on branch `claude/relaxed-dirac-z0oi0d`, stacked on PR #3: the
 adapter accepts the flag on the version 8 native writer for files that carry a
 sparse native object, and two real WinFsp CreateFileW tests have their own
-Windows CI step. It was written on a Linux cloud workstation and has never been
-built or run on Windows; it is not accepted until hosted CI passes on the exact
-commit. A separately approved physical Office rerun (phase 3) follows.
+Windows CI step. Commit 3ae3afd passed all ten jobs of run 42839890487,
+including both new tests on hosted Windows; results are in "Phase 2 as built"
+of the proposal. Not merged, no pull request, and no physical or Office
+evidence. A separately approved physical Office rerun (phase 3) follows.
 PR #2 (drive letter, passwordless startup) is a separate open thread.
 
 ## Current main (2026-11-08)

@@ -1840,6 +1840,7 @@ async fn run(mode: &str) {
         if component
             || stage.starts_with("native_lifecycle_mounted")
             || stage.starts_with("native_retention_")
+            || stage == "native_delete_on_close"
         {
             eprintln!("{err}");
         }
