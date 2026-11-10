@@ -182,6 +182,17 @@ shape of the same change passed 1,154 tests and failed two:
 
 The full workspace was not rerun locally after the final restructuring.
 
+Hosted CI on `f8f5fa3` then failed one check, the Windows
+`component_retention_actual_` step: the multiple-owners test hit the 120 s
+worker bound in its sixth cycle, and the same test failed the same way
+locally. The arming step ran a content flush on every deleting cleanup, also
+for an explicit delete whose removal was already armed. It now inspects first
+and flushes only when it has to arm. With that, the three
+`component_retention_actual_` tests pass locally on real WinFsp (408 s, on a
+day when this machine ran every call about a quarter slower than on
+2026-11-09). One local run, so the cause is likely, not proven; the hosted
+result on the fixed commit is the check.
+
 Open questions, as far as phase 1 settles them:
 
 - **Arming twice.** The controller arms only when nothing is armed, so an

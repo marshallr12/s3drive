@@ -625,13 +625,13 @@ impl Controller {
         if record.completed(cb) || !self.backend.native_record(&record) {
             return Ok(());
         }
+        // An explicit delete already armed its removal: look before flushing,
+        // so that common path pays one inspection and no content work.
+        let (node, pending) = self.inspect(&record.input.node).await?;
+        if node.deleted || pending.is_some() || Self::settling(&record, cb) {
+            return Ok(());
+        }
         if !Self::linked(&record, cb, "set") {
-            if ["promote", "commit", "retain"]
-                .iter()
-                .any(|role| Self::linked(&record, cb, role))
-            {
-                return Ok(());
-            }
             Box::pin(self.flush_retained(&record.input.node)).await?;
         }
         let (node, pending) = self.inspect(&record.input.node).await?;
@@ -639,6 +639,13 @@ impl Controller {
             return Ok(());
         }
         Box::pin(self.arm_removal(&record, open, cb, &node)).await
+    }
+    /// Whether this cleanup already issued a later-stage request, so that
+    /// arming belongs to the past.
+    fn settling(record: &OpenRecord, cb: &str) -> bool {
+        ["promote", "commit", "retain"]
+            .iter()
+            .any(|role| Self::linked(record, cb, role))
     }
     /// Applies the arm request for `arm_at_cleanup`, linked to its callback.
     async fn arm_removal(
