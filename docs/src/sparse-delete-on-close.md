@@ -3,8 +3,10 @@
 **Status: the owner chose option A on 2026-11-10. Phases 1 (engine) and 2
 (adapter) are implemented and passed hosted Linux and Windows CI on their exact
 commits. Phase 2 is unmerged and has no physical-machine or Office evidence.
-Phase 3 (physical Office rerun) is not started and needs separate approval.** See
-[phase 2 as built](#phase-2-as-built-2026-11-10) and
+Phase 3 (physical Office rerun) was approved by the owner on 2026-11-10 and
+has not been run; its plan is
+[run5](wasabi-physical-windows-plan.md#office-rerun-with-delete-on-close-run5-approved-2026-11-10).**
+See [phase 2 as built](#phase-2-as-built-2026-11-10) and
 [phase 1 as built](#phase-1-as-built-2026-11-10). The owner asked for this design after the
 physical Office rerun failed; see
 [the run4 results](wasabi-physical-windows-plan.md#office-rerun-on-version-8-run4-approved-2026-11-09).
@@ -261,7 +263,9 @@ DELETE_ON_CLOSE create=deleted existing=deleted two_handles=deleted listed_betwe
 ```
 
 The owned-unlinked test passed the same assertions, but the harness did not
-print its line in that run; a follow-up commit makes it print.
+print its line in that run. Commit `6992084` makes it print; in
+[run 42871136250](https://github.com/marshallr12/s3drive/actions/runs/42871136250)
+(ten of ten jobs) both profiles printed that same line.
 
 What the run settles, for the hosted WinFsp version and loopback backend only:
 

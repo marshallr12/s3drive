@@ -224,3 +224,53 @@ version 8 `component-retention-v1` drive mounted read-write.
 - **Conclusion.** Office saves cannot succeed on version 8 until the sparse
   writer supports delete-on-close. Version 7 supports it but keeps the per-write
   cost measured on 2026-11-08, and write coalescing applies to version 8 only.
+
+## Office rerun with delete-on-close (`run5`, approved 2026-11-10)
+
+**Status: approved by the owner on 2026-11-10; not yet run.** This is phase 3
+of [delete-on-close on the version 8 writer](sparse-delete-on-close.md) and the
+separate approval that [Cleanup and limits](#cleanup-and-limits) requires.
+It was planned from a cloud session that cannot reach MiniAir, so nothing below
+has been executed and no MSI has been built from this source.
+
+- **Build.** A private MSI built on MiniAir from `6992084` or a later commit of
+  branch `claude/relaxed-dirac-z0oi0d` whose hosted CI passed
+  ([run 42871136250](https://github.com/marshallr12/s3drive/actions/runs/42871136250),
+  ten of ten jobs). Hosted CI does not publish an MSI. The owner uninstalls the
+  `68cfab8` build and installs the new one; record the MSI and installed binary
+  SHA-256 and check that they match the build.
+- **Write scope.** Bucket `s3drivetest`, managed root
+  `s3drive-physical-20261108/run5/.s3drive/`, inside the existing writable
+  prefix and write policy. Nothing outside it is written or deleted.
+- **Bound.** At most 200 object PUTs and 100 MiB uploaded, from throwaway files
+  only. The owner's approval named no figures; this carries over the `run4`
+  bound, which the failed saves barely used. What `run4` actually uploaded was
+  not recorded, so list the prefix first and confirm the total stays inside the
+  original 500-PUT / 256 MiB bound (140 objects and 41.7 MB on 2026-11-08).
+  Stop and ask before exceeding either figure.
+- **Local components.** A fresh loopback authority (`authority-5`, its own
+  volume) on `127.0.0.1:43131`, a store plan in `store-plan-5`, state in
+  `managed-state-5` and a version 8 `component-retention-v1` drive in `drive5`,
+  all under `%LOCALAPPDATA%\S3Drive\physical-20261108\`. Mount at
+  `%USERPROFILE%\S3DriveRun5` (the path must not pre-exist). The owner runs
+  every command; the assistant does not handle the provider keys.
+- **Probe evidence.** The 2026-11-08 conditional-PUT report expires seven days
+  after it was written. Run before 2026-11-15, or get a new probe approved.
+- **Checks, in order.**
+  1. The two `CreateFileW` probes from `run4`: the delete-on-close create must
+     now succeed, and its file must be gone after the handle closes.
+  2. Word, then Excel: create, save, edit-save, Save As, close and reopen.
+     Record the wall time of each save, the mount's CPU-seconds, and the state
+     database and write-ahead log sizes before and after.
+  3. If a save still fails, take a Process Monitor trace of that one save
+     before changing anything, so the failing call is observed, not inferred.
+  4. Look for leftover Office temporary files (`~WRD*.tmp`, `~$*`, eight-hex
+     names) in the folder after each application closes.
+  5. Cold remount, then SHA-256 read-back of every saved document against a
+     copy saved outside the mount.
+  6. PUT count and bytes under the `run5` root, per save where it can be told
+     apart.
+- **Not covered.** Startup tasks, sign-out and reboot, and anything on another
+  machine.
+- **Cleanup.** The `run5` keys are deleted with the rest of the prefix, after
+  the owner has reviewed the results, as above.

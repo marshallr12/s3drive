@@ -38,7 +38,10 @@ sparse native object, and two real WinFsp CreateFileW tests have their own
 Windows CI step. Commit 3ae3afd passed all ten jobs of run 42839890487,
 including both new tests on hosted Windows; results are in "Phase 2 as built"
 of the proposal. Not merged, no pull request, and no physical or Office
-evidence. A separately approved physical Office rerun (phase 3) follows.
+evidence. The owner approved the physical Office rerun (phase 3) on
+2026-11-10. It has not been run: it needs a session on MiniAir to build the MSI
+from this branch. Plan, bound and checks: "run5" in
+docs/src/wasabi-physical-windows-plan.md.
 PR #2 (drive letter, passwordless startup) is a separate open thread.
 
 ## Current main (2026-11-08)
