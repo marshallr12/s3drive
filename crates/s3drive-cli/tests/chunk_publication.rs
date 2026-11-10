@@ -25,6 +25,11 @@ mod namespace_recovery;
 #[cfg(any(target_os = "linux", windows))]
 #[path = "chunk_publication/native_application.rs"]
 mod native_application;
+#[path = "chunk_publication/native_coalescing.rs"]
+mod native_coalescing;
+#[cfg(windows)]
+#[path = "chunk_publication/native_desktop.rs"]
+mod native_desktop;
 #[path = "chunk_publication/native_directories.rs"]
 mod native_directories;
 #[path = "chunk_publication/native_lifecycle.rs"]
@@ -34,6 +39,8 @@ mod native_lifecycle;
 mod native_mount;
 #[path = "chunk_publication/native_retention.rs"]
 mod native_retention;
+#[path = "chunk_publication/native_save_pattern.rs"]
+mod native_save_pattern;
 #[path = "chunk_publication/native_sparse_sdk.rs"]
 mod native_sparse_sdk;
 #[path = "chunk_publication/native_writer.rs"]
@@ -1349,6 +1356,9 @@ fn dispatch<'a>(
         "native_lifecycle_disposition_concurrent" => {
             boxed_case(|| native_lifecycle::disposition(config, root, s, true))
         }
+        "native_lifecycle_delete_at_cleanup" => {
+            boxed_case(|| native_lifecycle::delete_at_cleanup(config, root, s))
+        }
         "native_lifecycle_history" => {
             boxed_case(|| native_lifecycle::acknowledged_history(config, root, s))
         }
@@ -1367,6 +1377,11 @@ fn dispatch<'a>(
         "native_component_repeated" => {
             boxed_case(|| native_lifecycle::component_repeated(config, root, s))
         }
+        #[cfg(windows)]
+        "native_desktop" => boxed_case(|| native_desktop::mounted(config, root, s)),
+        "native_save_pattern" => boxed_case(|| native_save_pattern::probe(config, root, s)),
+        "native_coalescing" => boxed_case(|| native_coalescing::flow(config, root, s)),
+        "native_coalescing_refusal" => boxed_case(|| native_coalescing::refusal(config, root, s)),
         "native_lifecycle_unlink" => boxed_case(|| native_lifecycle::unlink(config, root, s)),
         #[cfg(any(target_os = "linux", windows))]
         "native_retention_seed" => boxed_case(|| native_retention::seed(config, root, s)),
@@ -2080,6 +2095,11 @@ async fn run(mode: &str) {
             551
         }
         "native_component_repeated" | "native_component_repeated_mounted" => 23,
+        // Nine nonempty files, each an empty manifest + payload + manifest.
+        "native_desktop" => 9 * 3,
+        "native_save_pattern" => puts(&f),
+        "native_coalescing" | "native_coalescing_refusal" => puts(&f),
+        "native_lifecycle_delete_at_cleanup" => puts(&f),
         "native_lifecycle_unlink" => 5,
         "native_lifecycle_mounted" => 13,
         "native_lifecycle_mounted_known" => 3,
@@ -2683,4 +2703,38 @@ async fn component_retention_actual_multiple_owners_preserve_cold_file_and_bound
 #[ignore = "genuine Git CLI, real FUSE/WinFsp, isolated loopback provider"]
 async fn hosted_application_git_save_replace_rename_delete_and_interrupted_cold_remount() {
     run("component:native_application").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "timing diagnostic for small-write saves; run on demand"]
+async fn component_retention_shared_save_pattern_probe() {
+    run("component:native_save_pattern").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn component_retention_shared_write_coalescing_commit_points() {
+    run("component:native_coalescing").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_lifecycle_shared_deleting_cleanup_without_set_delete_removes_file() {
+    run("native_lifecycle_delete_at_cleanup").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn component_retention_shared_deleting_cleanup_without_set_delete_removes_file() {
+    run("component:native_lifecycle_delete_at_cleanup").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "slow: fills the journal to a limit; CI runs it in a release step"]
+async fn write_coalescing_refused_run_is_reported_then_saved_at_close() {
+    run("component:native_coalescing_refusal").await;
+}
+
+#[cfg(windows)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "Win32 desktop-application create/copy/attribute calls; real WinFsp required"]
+async fn desktop_application_actual_create_copy_attributes_times_and_replace() {
+    run("component:native_desktop").await;
 }

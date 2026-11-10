@@ -17,6 +17,7 @@ use s3drive_state::{
 };
 use sha2::{Digest, Sha256};
 use std::sync::Weak;
+mod coalesce;
 mod directories;
 mod dispatch;
 pub(crate) mod native;
@@ -83,6 +84,8 @@ pub(crate) struct File {
     metadata: Mutex<ObjectMetadata>,
     edited: Mutex<Option<EditedFile>>,
     serial: AsyncMutex<()>,
+    /// Accepted writes not yet in the journal (native path only); see `coalesce`.
+    pending: Mutex<Option<coalesce::Pending>>,
 }
 impl File {
     pub fn metadata(&self) -> Result<ObjectMetadata> {
@@ -94,7 +97,9 @@ impl File {
             .current_head(self.binding.clone())
             .await
             .map_err(error)?;
-        self.metadata.lock().map_err(|_| Error::Internal)?.size = head.size();
+        // Buffered writes may extend the file beyond the journal's head.
+        let size = self.buffered_size()?.unwrap_or(head.size());
+        self.metadata.lock().map_err(|_| Error::Internal)?.size = size;
         Ok(head)
     }
     pub async fn read(&self, offset: u64, length: usize) -> Result<Vec<u8>> {
@@ -578,6 +583,7 @@ impl Writes {
             metadata: Mutex::new(metadata),
             edited: Mutex::new(Some(edited)),
             serial: AsyncMutex::new(()),
+            pending: Mutex::new(None),
         });
         let mut entries = self.entries.lock().map_err(|_| Error::Internal)?;
         entries.retain(|_, f| f.strong_count() > 0);
@@ -589,6 +595,13 @@ impl Writes {
     }
     pub async fn metadata(&self, n: &RemoteNode) -> Result<Option<ObjectMetadata>> {
         self.remember(n)?;
+        // Buffered bytes decide the size even when no handle is open and the
+        // journal head is already published: a run kept after Close.
+        if let Some(size) = self.buffered_size_of(&n.id)? {
+            let mut m = logical_metadata(n)?;
+            m.size = size;
+            return Ok(Some(m));
+        }
         let heads = self.local.heads().await.map_err(error)?;
         if let Some(h) = heads
             .iter()
@@ -605,6 +618,14 @@ impl Writes {
             return Ok(Some(m));
         }
         Ok(None)
+    }
+    /// Logical size of an open node whose latest writes are still buffered.
+    fn buffered_size_of(&self, node: &str) -> Result<Option<u64>> {
+        let entries = self.entries.lock().map_err(|_| Error::Internal)?;
+        match entries.get(node).and_then(Weak::upgrade) {
+            Some(file) => file.buffered_size(),
+            None => Ok(None),
+        }
     }
     async fn read_inner(&self, file: &File, offset: u64, length: usize) -> Result<Vec<u8>> {
         file.read(offset, length).await
@@ -754,13 +775,23 @@ impl Writes {
         if self.native_lifecycle {
             let _serial = self.native_serial.lock().await;
             self.recover().await?;
-            for h in self.local.heads().await.map_err(error)? {
-                self.flush_native_node(h.binding().base().map_err(error)?.node())
-                    .await?;
-            }
-            return Ok(());
+            return self.flush_native_heads().await;
         }
         self.flush_heads_legacy().await
+    }
+    /// Publishes every journaled file. Bytes the journal refuses must not stop
+    /// the other files from being published, so the first such refusal is
+    /// returned only at the end. The caller holds `native_serial`.
+    async fn flush_native_heads(&self) -> Result<()> {
+        let mut unsaved = Ok(());
+        for h in self.local.heads().await.map_err(error)? {
+            let node = h.binding().base().map_err(error)?.node().to_owned();
+            let drained = self.drain_making_room(&node).await;
+            self.publish_node(&node).await?;
+            unsaved = unsaved.and(drained);
+        }
+        // A kept run may belong to a file whose journal was already retired.
+        unsaved.and(self.drain_kept().await)
     }
     async fn flush_heads_legacy(&self) -> Result<()> {
         self.recover().await?;
@@ -793,5 +824,7 @@ impl Writes {
     }
 }
 
+#[cfg(test)]
+mod kept_tests;
 #[cfg(test)]
 mod retention_tests;

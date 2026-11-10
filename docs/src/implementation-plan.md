@@ -1,12 +1,15 @@
 # Phased implementation plan
 
-Current accepted main is `74e1540`, independently verified in
+Current main is `feea0a9` (2026-10-28), which merged the Windows installer and
+passed all ten jobs of
+[run40591665044](https://github.com/marshallr12/s3drive/actions/runs/40591665044).
+The previous independently reviewed main is `74e1540`,
 [run40270589324](https://github.com/marshallr12/s3drive/actions/runs/40270589324).
 See [current beta status](beta-completion.md) for the completed hosted scope and
 remaining physical/provider gates. GPL-3.0-only licensing is selected; the new
 [Windows installer](windows-installer.md) has hosted candidate acceptance at
-`1593ac9`/run40553716413, with separate documentation-successor and merge/main
-verification still required. The candidate and
+`1593ac9`/run40553716413; its documentation successor and merge passed CI at
+main `feea0a9`. The candidate and
 pending-main statements below preserve historical phase checkpoints.
 
 Fresh component lifecycle/recovery cleanup has exact candidate code acceptance

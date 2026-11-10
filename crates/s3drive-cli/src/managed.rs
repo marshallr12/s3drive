@@ -92,12 +92,39 @@ pub enum Command {
         state_directory: Option<PathBuf>,
         #[arg(long, value_parser = ["posix-v1"])]
         windows_disposition: Option<String>,
+        /// Version 8 sparse chunk writer with the named lifecycle profile.
+        #[arg(
+            long,
+            conflicts_with = "windows_disposition",
+            value_parser = ["owned-unlinked-v1", "linked-retention-v1", "component-retention-v1"]
+        )]
+        sparse_lifecycle: Option<String>,
     },
 }
 #[derive(Clone, Copy, ValueEnum, PartialEq, Eq)]
 pub enum Mode {
     ReadOnly,
     ReadWrite,
+}
+/// Optional write-profile selections for a generated read-write configuration.
+struct WriteProfile {
+    windows_disposition: Option<String>,
+    sparse_lifecycle: Option<String>,
+}
+impl WriteProfile {
+    /// True when either explicit write profile was requested.
+    fn is_selected(&self) -> bool {
+        self.windows_disposition.is_some() || self.sparse_lifecycle.is_some()
+    }
+    /// Configuration format version implied by the mode and selected profile.
+    fn version(&self, mode: Mode) -> u32 {
+        match (mode, &self.sparse_lifecycle, &self.windows_disposition) {
+            (Mode::ReadOnly, _, _) => 3,
+            (_, Some(_), _) => 8,
+            (_, None, Some(_)) => 7,
+            (_, None, None) => 6,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -436,6 +463,7 @@ pub async fn run(command: Command) -> Result<()> {
             default_store,
             state_directory,
             windows_disposition,
+            sparse_lifecycle,
         } => {
             configure(
                 &path,
@@ -446,7 +474,10 @@ pub async fn run(command: Command) -> Result<()> {
                 mode,
                 default_store,
                 state_directory,
-                windows_disposition,
+                WriteProfile {
+                    windows_disposition,
+                    sparse_lifecycle,
+                },
             )
             .await?
         }
@@ -483,6 +514,8 @@ struct OutputManaged<'a> {
         skip_serializing_if = "Option::is_none"
     )]
     windows_disposition: Option<&'a str>,
+    #[serde(rename = "sparse-lifecycle", skip_serializing_if = "Option::is_none")]
+    sparse_lifecycle: Option<&'a str>,
     stores: Vec<OutputStore>,
 }
 #[derive(Serialize)]
@@ -501,7 +534,7 @@ async fn configure(
     mode: Mode,
     default_store: Option<String>,
     state_directory: Option<PathBuf>,
-    windows_disposition: Option<String>,
+    profile: WriteProfile,
 ) -> Result<serde_json::Value> {
     if files.is_empty() || files.len() > 16 {
         return Err("configure requires 1..16 registered plans".into());
@@ -542,7 +575,7 @@ async fn configure(
         return Err("local mapping refers to a store absent from the supplied plans".into());
     }
     if mode == Mode::ReadOnly
-        && (default_store.is_some() || state_directory.is_some() || windows_disposition.is_some())
+        && (default_store.is_some() || state_directory.is_some() || profile.is_selected())
     {
         return Err("write options require explicit --mode read-write".into());
     }
@@ -627,13 +660,7 @@ async fn configure(
     };
     // Validate local input before any authority read; no provider checks.
     let output = OutputConfig {
-        version: if mode == Mode::ReadOnly {
-            3
-        } else if windows_disposition.is_some() {
-            7
-        } else {
-            6
-        },
+        version: profile.version(mode),
         mode: if mode == Mode::ReadOnly {
             "read-only"
         } else {
@@ -647,7 +674,8 @@ async fn configure(
             token_file: &connection.token_file,
             authority_ca_file: connection.ca_file.as_deref(),
             default_store: default_store.as_deref(),
-            windows_disposition: windows_disposition.as_deref(),
+            windows_disposition: profile.windows_disposition.as_deref(),
+            sparse_lifecycle: profile.sparse_lifecycle.as_deref(),
             stores,
         },
     };
@@ -666,4 +694,29 @@ async fn configure(
         json!({"config": file, "version": output.version, "mode": output.mode, "metadata_only": true,
         "provider_access_verified": false, "startup_installed": false}),
     )
+}
+
+#[cfg(test)]
+mod profile_tests {
+    use super::*;
+
+    /// Builds a profile from optional option values.
+    fn profile(disposition: Option<&str>, lifecycle: Option<&str>) -> WriteProfile {
+        WriteProfile {
+            windows_disposition: disposition.map(str::to_owned),
+            sparse_lifecycle: lifecycle.map(str::to_owned),
+        }
+    }
+
+    #[test]
+    fn version_follows_mode_and_selected_write_profile() {
+        let plain = profile(None, None);
+        let posix = profile(Some("posix-v1"), None);
+        let sparse = profile(None, Some("component-retention-v1"));
+        assert!(!plain.is_selected() && posix.is_selected() && sparse.is_selected());
+        assert_eq!(plain.version(Mode::ReadOnly), 3);
+        assert_eq!(plain.version(Mode::ReadWrite), 6);
+        assert_eq!(posix.version(Mode::ReadWrite), 7);
+        assert_eq!(sparse.version(Mode::ReadWrite), 8);
+    }
 }

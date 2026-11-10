@@ -4,7 +4,7 @@ use s3drive_authority::{Apply, Authority, Mutation, Token, WireClient};
 use std::path::Path;
 #[allow(dead_code)]
 #[path = "../../../../s3drive-cli/tests/support/fixture.rs"]
-mod fixture;
+pub(super) mod fixture;
 
 const CHILD: &str = "managed::chunk_writes::retention_tests::native_retention_runtime_child";
 #[tokio::test]
@@ -62,13 +62,13 @@ async fn runtime_fixture(component: bool) {
         "native runtime capacity child failed: {status}"
     );
 }
-async fn stop(fs: ReadOnlyFs) {
+pub(super) async fn stop(fs: ReadOnlyFs) {
     let cache = fs.cache_control().unwrap();
     fs.shutdown_writes().await.unwrap();
     drop(fs);
     cache.close().await.unwrap();
 }
-async fn config(root: &Path, endpoint: &str, wire: &WireClient, url: String) -> Config {
+pub(super) async fn config(root: &Path, endpoint: &str, wire: &WireClient, url: String) -> Config {
     let source = format!(
         "[[sources]]\nalias='docs'\nbucket='test-bucket'\nregion='us-east-1'\nprefix='desktop/'\nendpoint={endpoint:?}\nprofile='fixture'\npath_style=true\nallow_http_loopback=true\n"
     );

@@ -1,10 +1,52 @@
 # S3Drive handoff
 
-Updated 2026-10-27. Event-bound manifest authority is accepted at schema46;
-the overall project remains incomplete. Read this, AGENTS.md and
+Updated 2026-11-09. Main is `feea0a9`, with the GPL-3.0-only Windows MSI merged
+and passing CI; the overall project remains incomplete. Read this, AGENTS.md and
 docs/src/implementation-plan.md before continuing.
 
-## Current accepted baseline (2026-10-27)
+## In flight (2026-11-09): Windows desktop requests, unmerged
+
+Branch `claude/desktop-requests` (PR #3, stacked on the open docs PR #1 branch) changes
+the WinFsp adapter so Office and CopyFile creates succeed, adds
+`managed configure --sparse-lifecycle`, and adds in-memory write coalescing on
+the version 8 native path (owner-approved 2026-11-09). Coalescing changes local
+durability: a returned small write is journaled at its next commit point, not
+immediately. Read docs/src/write-coalescing.md before touching the engine's
+write, read, cleanup or Close paths, and docs/src/windows-desktop-requests.md
+for the measurements and the remaining stored-times proposal. Local evidence
+only (shared engine and real WinFsp, loopback); Office GUI pending. Hosted CI
+on PR #3: one Linux soak run of a63637d left an open record after unmount,
+cause not established ("Hosted CI so far" in write-coalescing.md).
+Tests that stop the owner abruptly after a write now need an explicit commit
+point (a read) first; two were changed that way.
+Owner decision 2026-11-09 (second): a buffered run the journal refuses at
+Close is kept in memory with its file and retried, never discarded. Flush,
+cleanup, Close, flush-all and unmount first publish to make room. Kept bytes
+are journaled by the next handle of the file; flush-all and unmount report a
+conflict while any remain. See "Failure reporting" in write-coalescing.md.
+Hosted CI passed 20 of 20 on 68cfab8, and the owner installed that MSI on
+MiniAir. Physical Office rerun on a version 8 drive (run4, 2026-11-09): Word and
+Excel both fail their first save, because version 8 refuses delete-on-close
+creates. Results in wasabi-physical-windows-plan.md. The owner chose option A
+of docs/src/sparse-delete-on-close.md (delete at cleanup) on 2026-11-10.
+Phase 1 (engine) is done: the disposition controller arms a removal when a
+native chunk object's cleanup carries the delete flag and none is armed, with
+shared-engine tests. The adapter still refuses the flag on version 8; phase 2
+(adapter capability plus real WinFsp CreateFileW tests) is next, then a
+separately approved physical Office rerun.
+PR #2 (drive letter, passwordless startup) is a separate open thread.
+
+## Current main (2026-11-08)
+
+Main `feea0a9eb0dc0d38b5f8ededb698c56cac6fdc9a` (merge of the GPL-3.0-only Windows
+installer and its documentation successor) passed all ten jobs of
+[run40591665044](https://github.com/marshallr12/s3drive/actions/runs/40591665044),
+completed 2026-10-28, including the `windows-installer` job. The MSI is now on
+main; it is still unsigned, unpublished and without real-machine acceptance.
+The first physical-machine MSI installation with throwaway data is the next
+acceptance step; see Next work below.
+
+## Previous accepted baseline (2026-10-27)
 
 Main `74e1540bd765fd8f2a61000d073e15780f455f31` independently passed
 [run40270589324](https://github.com/marshallr12/s3drive/actions/runs/40270589324):
@@ -22,7 +64,7 @@ MIT choice for this revision. The new
 [Windows MSI](docs/src/windows-installer.md) and its additional CI gate have hosted candidate acceptance at `1593ac9`
 ([run40553716413](https://github.com/marshallr12/s3drive/actions/runs/40553716413));
 all ten full logs,835 source blobs and six artifact digests/reports were reviewed.
-The documentation successor and any merge still require exact-source verification;
+The documentation successor and merge were later verified at main `feea0a9` (above);
 no public binary release or real-machine acceptance is implied. Third-party notices remain
 under their own terms. Earlier candidate/pending-main statements below are dated
 historical checkpoints, superseded by this independent main result, not requests
@@ -481,6 +523,12 @@ sparse-journal phase. Do not treat this authority acceptance as native activatio
 
 ## Decisions and permissions
 
+- 2026-11-08 owner decision: the installed default must behave like Google
+  Drive on Windows: a new drive letter with a custom S3Drive icon, mounted for
+  the signed-in user, not the current manual directory mount. Design and
+  implement this as its own work item (installer defaults, startup
+  registration, WinFsp drive-letter mount, DriveIcons registration). The
+  directory mount can remain an option for SSH/cross-logon paths.
 - marshallr12/s3drive is intentionally PUBLIC. Visibility checks GET-only; no
   mutation without a new specific user request. Original private goal superseded.
 - Managed immutable chunks/manifests, normal mounted names, Rust coordinator and
@@ -555,18 +603,46 @@ docs/src/evidence/creator-open-sdk-hosted-20261021.tar.gz. Writer DONE, NEVER re
 
 ## Next work
 
-1. docs/src/owned-unlinked-sparse-plan.md maps the next independently green
-   authority/state/SDK/native phases. Sparse publication must bind original fence/current event,
-   retain dirty/newer views and block final removal across unresolved effects.
-   Enable native delete/save-replace/rename only after library/state/SDK/FUSE
-   and WinFsp recovery gates. No user decision needed to plan this next phase.
-2. Cold namespace/open recovery, full retry-forest closure, retention/GC and
-   snapshot restore remain; prototype64-file/512-view/64MiB dirty/history limits,
-   no reclamation. Old profiles3-7 retain8MiB whole-generation bound.
-3. v8 supervisors; physical MX/Windows10/11 sign-in/reboot/SSH/tmux, independent
-   host partitions/fencing/deployment/restore, policy renewal, packaging/licensing
-   and real application workflows remain. Fresh bounded Wasabi plan before
-   requesting new mutations. Ignored local profilewasabi-s3drive/us-east-2.
+Updated 2026-11-08. Completed phases (owned-unlinked sparse publication,
+component retention, the Windows MSI) are not to be redone; see their docs.
+
+1. **Physical Windows acceptance (first pass done 2026-11-08; see
+   docs/src/wasabi-physical-windows-plan.md).** MSI install, probe and managed
+   mount worked. Four defects block real use: (a) per-write cost that grows
+   with local history, plus a ceiling of about 127 unflushed writes per open on
+   version 8 (measured 2026-11-09; addressed for adjacent small writes by write
+   coalescing on `claude/desktop-requests`, see docs/src/write-coalescing.md;
+   scattered small writes and the journal's view and dirty-byte limits remain;
+   hosted CI and a Word rerun pending); (b) WinFsp create refused MAXIMUM_ALLOWED/WRITE_DAC/
+   WRITE_OWNER and TEMPORARY/HIDDEN (changed on `claude/desktop-requests`,
+   hosted CI and Office rerun pending); (c) zero timestamps (per-mount overlay
+   only; stored times proposed); (d) startup needs the account password,
+   unusable with PIN sign-in. See docs/src/windows-desktop-requests.md. Sign-in/reboot acceptance
+   waits for passwordless startup (PR #2 direction, coordinator included).
+   **Original item:** Build the MSI
+   locally, install with `msiexec /l*v` on a real Windows 10/11 machine with
+   throwaway data, then verify sign-in startup, reboot and a real Office/Explorer
+   save. Follow docs/src/windows-installer.md and startup-and-sessions.md.
+   Linux MX sign-in startup on physical hardware is the matching Linux check.
+2. **Live Wasabi managed-layout plan.** Only reads and one single-PUT probe have
+   run. Write a bounded plan for managed writes/renames/deletes on a disposable
+   prefix; it needs the owner's sign-off before any provider write.
+   Ignored local profile wasabi-s3drive/us-east-2.
+3. **Multipart network uploads.** Geometry is candidate-only; nothing uploads
+   multipart over the network yet. Large files depend on this.
+4. **Remote cleanup and limits.** No remote object GC/reclamation; local cleanup
+   is only the fresh opt-in `component-retention-v1` profile. Dirty/history
+   limits remain prototype 64 files / 512 views / 64 MiB; old profiles 3-7 keep
+   the 8 MiB whole-generation bound. Cold namespace/open recovery, full
+   retry-forest closure and snapshot restore remain.
+5. **Hosted metadata service.** Real server deployment, backup/restore, policy
+   renewal, a second machine, partitions/fencing.
+6. **Google-Drive-style default (owner decision 2026-11-08).** Installer and
+   startup should mount a drive letter with a custom icon for the signed-in user
+   by default; see Decisions. Separate design/implementation work item.
+7. **Release hygiene.** Code signing and public redistribution review (GPL source
+   obligations). Watch Windows debug CI time: the 300-save gate had about 107 s
+   of margin under its 1200 s limit at `74e1540`.
 
 One local Cargo at a time, four test threads; use this checkout's target directory.
 Preserve unrelated/dirty work and every uncertain/failed cohort. No subagents.

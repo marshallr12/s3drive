@@ -1,7 +1,7 @@
 //! Opt-in shared-engine gates. These do not substitute for real OS callbacks.
 use super::*;
 use s3drive_fs::{ROOT, ReadOnlyFs};
-async fn configuration(
+pub(super) async fn configuration(
     config: &s3drive_core::Config,
     root: &Path,
     s: &Server,
@@ -436,6 +436,12 @@ pub async fn cold_unknown(config: &s3drive_core::Config, root: &Path, s: &Server
     )
     .await
     .unwrap();
+    // Small writes are buffered in memory. A read is a commit point, so the
+    // abrupt stop below leaves a journaled dirty epoch for cold start to protect.
+    assert_eq!(
+        file.read(0, 64).await.unwrap(),
+        b"must not adopt this original epoch"
+    );
     let cache = fs.cache_control().unwrap();
     drop((file, fs));
     cache.close().await.unwrap();
@@ -516,6 +522,17 @@ pub async fn mounted_crash(config: &s3drive_core::Config, root: &Path, s: &Serve
         mount.crash().await;
         drop(file);
     } else {
+        // Small writes are buffered in memory. Reading the bytes back is a
+        // commit point, so the kill below leaves a journaled dirty epoch.
+        let file = blocking(&mut mount, move || {
+            use std::io::{Read, Seek};
+            let (mut file, mut read) = (file, Vec::new());
+            file.rewind().unwrap();
+            file.read_to_end(&mut read).unwrap();
+            assert_eq!(read, b"retained original bytes");
+            file
+        })
+        .await;
         mount.crash().await;
         drop(file);
     }
@@ -710,6 +727,64 @@ pub async fn disposition(config: &s3drive_core::Config, root: &Path, s: &Server,
     file.native_object().unwrap().close().await.unwrap();
     other.native_object().unwrap().close().await.unwrap();
     drop((file, other));
+    native_writer::stop(fs).await;
+}
+
+/// Creates a file through the shared engine and buffers `bytes` on its handle.
+async fn created(fs: &ReadOnlyFs, name: &str, bytes: &'static [u8]) -> s3drive_fs::OpenFile {
+    let file = fs
+        .create_file(ROOT, name, |a, b| a == b, true)
+        .await
+        .unwrap();
+    file.write(0, Arc::from(bytes), false, false).await.unwrap();
+    file
+}
+
+/// Delete-on-close as WinFsp delivers it: a cleanup that carries the delete
+/// flag with no SetDelete before it. Shared adapter/controller control, not a
+/// claim of actual Windows callbacks.
+pub async fn delete_at_cleanup(config: &s3drive_core::Config, root: &Path, s: &Server) {
+    let c = configuration(config, root, s).await;
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    // One handle: its buffered bytes go with the name.
+    let alone = created(&fs, "temporary alone.bin", b"scratch").await;
+    let object = alone.native_object().unwrap();
+    object.cleanup(1).await.unwrap();
+    object.close().await.unwrap();
+    drop((object, alone));
+    assert!(fs.lookup(ROOT, "temporary alone.bin").await.is_err());
+    // Two handles: the name goes, the survivor keeps its bytes until Close.
+    let flagged = created(&fs, "temporary shared.bin", b"shared bytes").await;
+    let survivor = fs.open(flagged.node.id).await.unwrap();
+    let object = flagged.native_object().unwrap();
+    object.cleanup(1).await.unwrap();
+    object.close().await.unwrap();
+    drop((object, flagged));
+    assert!(fs.lookup(ROOT, "temporary shared.bin").await.is_err());
+    assert_eq!(survivor.read(0, 64).await.unwrap(), b"shared bytes");
+    survivor.native_object().unwrap().close().await.unwrap();
+    drop(survivor);
+    // The authority is unreachable at cleanup: the file stays present and
+    // readable, and Close re-drives the recorded cleanup once it is back.
+    let late = created(&fs, "temporary late.bin", b"late bytes").await;
+    let reader = fs.open(late.node.id).await.unwrap();
+    let object = late.native_object().unwrap();
+    s.proxy.mode.store(8, Ordering::SeqCst);
+    assert!(object.cleanup(1).await.is_err());
+    s.proxy.mode.store(0, Ordering::SeqCst);
+    assert!(fs.lookup(ROOT, "temporary late.bin").await.is_ok());
+    assert_eq!(reader.read(0, 64).await.unwrap(), b"late bytes");
+    object.close().await.unwrap();
+    assert!(fs.lookup(ROOT, "temporary late.bin").await.is_err());
+    assert_eq!(reader.read(0, 64).await.unwrap(), b"late bytes");
+    reader.native_object().unwrap().close().await.unwrap();
+    drop((object, late, reader));
+    native_writer::stop(fs).await;
+    let fs = ReadOnlyFs::new(&c).await.unwrap();
+    for name in ["alone", "shared", "late"] {
+        let name = format!("temporary {name}.bin");
+        assert!(fs.lookup(ROOT, &name).await.is_err());
+    }
     native_writer::stop(fs).await;
 }
 

@@ -50,6 +50,13 @@ original. Consequently, writable bytes alone are insufficient for a general
 desktop-drive claim. Test real save/replace workflows during managed native acceptance; document
 unsupported applications until their required semantics exist.
 
+**Local write durability (owner decision, 2026-11-09).** On the version 8
+native path a small write that has returned may be held in the mount process's
+memory until its next commit point, and is lost if the process dies first. The
+commit points, limits and failure reporting are in
+[write coalescing](write-coalescing.md). Flush and close keep the meanings in
+the table above.
+
 ## Names and directories
 
 The managed prototype stores byte-exact Unicode names and rejects structural

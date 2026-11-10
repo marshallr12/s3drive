@@ -6,12 +6,14 @@ as a local filesystem on Linux and Windows.
 Licensed under [GPL-3.0-only](LICENSE); dependencies retain their own
 [licenses and notices](THIRD-PARTY-NOTICES.md).
 
-**Current hosted baseline:** main `74e1540` passed independent
+**Current main:** `feea0a9` passed all ten jobs of
+[CI40591665044](https://github.com/marshallr12/s3drive/actions/runs/40591665044)
+(2026-10-28). The previous independently reviewed baseline is `74e1540`,
 [CI40270589324](https://github.com/marshallr12/s3drive/actions/runs/40270589324).
 Fresh opt-in `component-retention-v1` lifecycle/recovery cleanup and hosted CLI
 application/package/startup tests are accepted. See [precise scope](docs/src/beta-completion.md).
-The [Windows MSI](docs/src/windows-installer.md) has hosted candidate acceptance, not a
-published release. Physical hardware/Office/reboot and live-provider acceptance
+The [Windows MSI](docs/src/windows-installer.md) is merged and passes hosted CI; it is
+unsigned and not a published release. Physical hardware/Office/reboot and live-provider acceptance
 remain separate.
 
 **Target selected: [managed layout with stronger coordination](docs/src/managed-layout.md).**
