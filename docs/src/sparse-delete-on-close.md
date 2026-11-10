@@ -1,8 +1,10 @@
 # Delete-on-close on the version 8 writer (proposal)
 
-**Status: proposal, 2026-11-09. Nothing here is implemented or accepted.** The
+**Status: the owner chose option A on 2026-11-10. Phase 1 (engine) is
+implemented with shared-engine tests; phases 2 and 3 are not started.** The
 adapter's refusal of delete-on-close on version 8 stays in place until the
-acceptance criteria below pass. The owner asked for this design after the
+phase 2 acceptance criteria pass, so no mount behaves differently yet. See
+[phase 1 as built](#phase-1-as-built-2026-11-10). The owner asked for this design after the
 physical Office rerun failed; see
 [the run4 results](wasabi-physical-windows-plan.md#office-rerun-on-version-8-run4-approved-2026-11-09).
 
@@ -122,6 +124,76 @@ Each phase is independently green and keeps the refusal until phase 2 passes.
 
 Hosted Linux and Windows CI must pass on the exact source of phases 1 and 2.
 FUSE has no delete-on-close; its paths must be unchanged.
+
+## Phase 1 as built (2026-11-10)
+
+The arming is in the disposition controller's cleanup
+(`crates/s3drive-managed/src/disposition.rs`, `arm_at_cleanup`), not in the
+sparse native object as first sketched. When a cleanup carries the delete flag,
+no removal is armed and the open is a native chunk open, the controller arms a
+pending removal and continues into the existing deleting cleanup, all under the
+controller's one lock. Whole-file (version 7) opens are unchanged: a deleting
+cleanup with nothing armed is still a conflict there.
+
+Two things differ from the proposal above:
+
+- **A failed cleanup is retried, so the file is deleted later rather than
+  kept.** A first attempt armed the removal from the native object before the
+  cleanup. With the authority unreachable that left a recorded deleting cleanup
+  that could never complete: Close failed and the next mount was refused.
+  Inside the controller the recorded cleanup is re-driven by the recovery that
+  already runs at Close and at mount, and it arms on the retry. While the
+  authority is unreachable the file stays present and readable; the delete
+  completes at Close once it is back. The "leftover file" outcome now applies
+  only to a mount process that dies before the cleanup callback arrives.
+- **No new request role.** The state layer admits callback requests only under
+  a fixed list of roles, and a new one would be refused by an older binary
+  reading the same state. The arm request therefore uses the existing "set"
+  role under the cleanup's own callback identity. No schema, wire or journal
+  format changed.
+
+Shared-engine tests, loopback only, in both version 8 profiles
+(`native_lifecycle_shared_deleting_cleanup_without_set_delete_removes_file`,
+`component_retention_shared_deleting_cleanup_without_set_delete_removes_file`):
+
+- one handle with buffered bytes, deleting cleanup with no `SetDelete`: the
+  name is gone;
+- two handles: the name is gone, the other handle reads its bytes until Close;
+- authority unreachable during the cleanup: the cleanup reports an error, the
+  file is present and readable, Close completes the delete once the authority
+  is back;
+- none of the three names exists after a cold remount.
+
+The existing `native_lifecycle_shared_disposition_*` tests cover an explicit
+`SetDelete` followed by a deleting cleanup and pass unchanged.
+
+Local checks on MiniAir, 2026-11-10: formatting and clippy clean; the new
+tests, the explicit-disposition tests and the whole `managed_publication`
+suite (18 tests) pass on the final code. A full workspace run on an earlier
+shape of the same change passed 1,154 tests and failed two:
+
+- the whole-file controller test overflowed its debug-build stack, because
+  the arming was then a branch inside the large cleanup function. Making it a
+  separate boxed step fixed that; the test passes on the final code.
+- `native_retention_runtime_reader_release_reopens_at_capacity` exceeded its
+  900 s deadline, and did so again when run alone. It never calls cleanup, and
+  its passing runs on 2026-11-09 took 726 to 898 s, so it is at its limit on
+  this machine. Not passing locally; hosted CI decides.
+
+The full workspace was not rerun locally after the final restructuring.
+
+Open questions, as far as phase 1 settles them:
+
+- **Arming twice.** The controller arms only when nothing is armed, so an
+  explicit `SetDelete` before the cleanup is left as it was. A removal that was
+  armed and then cancelled leaves nothing armed and is armed again. Read from
+  the source; the cancel-then-delete order has no test of its own.
+- **Which opens carry a native object.** Confirmed from the source
+  (`chunk_writes.rs`, `select_inner`): a read-only open of a clean, published
+  file that has no local sparse state gets none. Phase 2 must keep the refusal
+  for a flagged open on that path or route it through the writer.
+- **Cleanup order with POSIX unlink enabled** and **Office's actual calls** are
+  still open. Both need a real mount and belong to phase 2.
 
 ## Open questions to settle in phase 1, before code
 

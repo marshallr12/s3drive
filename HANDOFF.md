@@ -27,9 +27,13 @@ conflict while any remain. See "Failure reporting" in write-coalescing.md.
 Hosted CI passed 20 of 20 on 68cfab8, and the owner installed that MSI on
 MiniAir. Physical Office rerun on a version 8 drive (run4, 2026-11-09): Word and
 Excel both fail their first save, because version 8 refuses delete-on-close
-creates. Proposal, not started: docs/src/sparse-delete-on-close.md (owner asked
-for the design; option A awaits their decision). Results in
-wasabi-physical-windows-plan.md.
+creates. Results in wasabi-physical-windows-plan.md. The owner chose option A
+of docs/src/sparse-delete-on-close.md (delete at cleanup) on 2026-11-10.
+Phase 1 (engine) is done: the disposition controller arms a removal when a
+native chunk object's cleanup carries the delete flag and none is armed, with
+shared-engine tests. The adapter still refuses the flag on version 8; phase 2
+(adapter capability plus real WinFsp CreateFileW tests) is next, then a
+separately approved physical Office rerun.
 PR #2 (drive letter, passwordless startup) is a separate open thread.
 
 ## Current main (2026-11-08)

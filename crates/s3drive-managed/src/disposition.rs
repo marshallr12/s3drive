@@ -599,7 +599,66 @@ impl Controller {
         Box::pin(self.cleanup_inner(open, cb, flags)).await?;
         Box::pin(self.recover_void(&record.input.node, None)).await
     }
+    /// Runs one recorded cleanup: arms a removal first when a deleting cleanup
+    /// needs one, then settles it. Recovery re-drives an interrupted cleanup
+    /// through here, so a failed arming is retried with the cleanup.
     async fn cleanup_inner(&self, open: &str, cb: &str, flags: u32) -> Result<()> {
+        if flags & 1 != 0 {
+            Box::pin(self.arm_at_cleanup(open, cb)).await?;
+        }
+        Box::pin(self.cleanup_settle(open, cb, flags)).await
+    }
+    /// Arms a pending removal for a deleting cleanup that has none.
+    ///
+    /// A delete-on-close open reaches a native chunk object only as the delete
+    /// flag on a cleanup: no SetDelete precedes it. Whole-file records keep
+    /// their admitted removal request, so a missing one there stays a
+    /// conflict. This is a step of its own, not a branch of the settling
+    /// code, because growing that frame overflows the debug-build stack.
+    ///
+    /// The request is linked to the cleanup callback and uses the "set" role
+    /// an explicit SetDelete uses: the state layer admits callback requests
+    /// only under its fixed role list, and the cleanup's own callback identity
+    /// keeps the operation distinct from any SetDelete's.
+    async fn arm_at_cleanup(&self, open: &str, cb: &str) -> Result<()> {
+        let record = self.record(open).await?;
+        if record.completed(cb) || !self.backend.native_record(&record) {
+            return Ok(());
+        }
+        if !Self::linked(&record, cb, "set") {
+            if ["promote", "commit", "retain"]
+                .iter()
+                .any(|role| Self::linked(&record, cb, role))
+            {
+                return Ok(());
+            }
+            Box::pin(self.flush_retained(&record.input.node)).await?;
+        }
+        let (node, pending) = self.inspect(&record.input.node).await?;
+        if node.deleted || pending.is_some() {
+            return Ok(());
+        }
+        Box::pin(self.arm_removal(&record, open, cb, &node)).await
+    }
+    /// Applies the arm request for `arm_at_cleanup`, linked to its callback.
+    async fn arm_removal(
+        &self,
+        record: &OpenRecord,
+        open: &str,
+        cb: &str,
+        node: &Node,
+    ) -> Result<()> {
+        let parent = self.parent(node).await?;
+        let mutation = Mutation::ArmRemoval {
+            node: guard(node),
+            parent: guard(&parent),
+            owner: record.owner.clone(),
+        };
+        let input = self.request(record, cb, "set", mutation, node).await?;
+        Box::pin(self.effect(open, cb, "set", Some(input))).await?;
+        Ok(())
+    }
+    async fn cleanup_settle(&self, open: &str, cb: &str, flags: u32) -> Result<()> {
         let record = self.record(open).await?;
         if record.completed(cb) {
             return Ok(());

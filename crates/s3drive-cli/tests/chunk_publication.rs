@@ -1356,6 +1356,9 @@ fn dispatch<'a>(
         "native_lifecycle_disposition_concurrent" => {
             boxed_case(|| native_lifecycle::disposition(config, root, s, true))
         }
+        "native_lifecycle_delete_at_cleanup" => {
+            boxed_case(|| native_lifecycle::delete_at_cleanup(config, root, s))
+        }
         "native_lifecycle_history" => {
             boxed_case(|| native_lifecycle::acknowledged_history(config, root, s))
         }
@@ -2096,6 +2099,7 @@ async fn run(mode: &str) {
         "native_desktop" => 9 * 3,
         "native_save_pattern" => puts(&f),
         "native_coalescing" | "native_coalescing_refusal" => puts(&f),
+        "native_lifecycle_delete_at_cleanup" => puts(&f),
         "native_lifecycle_unlink" => 5,
         "native_lifecycle_mounted" => 13,
         "native_lifecycle_mounted_known" => 3,
@@ -2710,6 +2714,16 @@ async fn component_retention_shared_save_pattern_probe() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn component_retention_shared_write_coalescing_commit_points() {
     run("component:native_coalescing").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn native_lifecycle_shared_deleting_cleanup_without_set_delete_removes_file() {
+    run("native_lifecycle_delete_at_cleanup").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn component_retention_shared_deleting_cleanup_without_set_delete_removes_file() {
+    run("component:native_lifecycle_delete_at_cleanup").await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
