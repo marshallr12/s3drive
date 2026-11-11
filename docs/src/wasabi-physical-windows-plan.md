@@ -227,11 +227,14 @@ version 8 `component-retention-v1` drive mounted read-write.
 
 ## Office rerun with delete-on-close (`run5`, approved 2026-11-10)
 
-**Status: approved by the owner on 2026-11-10; not yet run.** This is phase 3
+**Status: run on 2026-11-10 (evening, local; 2026-11-11 01:22 to 02:26 UTC) and
+stopped by the owner after Word. Delete-on-close works and Word saves reach the
+provider intact, but Word could not reopen its document within seven minutes
+and a cold read took about seven minutes per 4.6 MB file. Excel was not run.**
+See [Results](#results-2026-11-10). This is phase 3
 of [delete-on-close on the version 8 writer](sparse-delete-on-close.md) and the
 separate approval that [Cleanup and limits](#cleanup-and-limits) requires.
-It was planned from a cloud session that cannot reach MiniAir, so nothing below
-has been executed and no MSI has been built from this source.
+The plan below was written from a cloud session before the run.
 
 - **Build.** A private MSI built on MiniAir from `6992084` or a later commit of
   branch `claude/relaxed-dirac-z0oi0d` whose hosted CI passed
@@ -274,3 +277,169 @@ has been executed and no MSI has been built from this source.
   machine.
 - **Cleanup.** The `run5` keys are deleted with the rest of the prefix, after
   the owner has reviewed the results, as above.
+
+### Results (2026-11-10)
+
+Outcome by check:
+
+| Check | Result |
+|---|---|
+| 1. `CreateFileW` delete-on-close probe | Passed |
+| 2. Word create, save, edit-save, Save As | Files written; save times not cleanly measured |
+| 2. Word close and reopen | **Failed**: not open after at least seven minutes |
+| 2. Excel | Not run (owner stopped the run after Word) |
+| 3. Process Monitor trace | Not taken: no save failed |
+| 4. Leftover temporary files after Word closed | None |
+| 5. Cold remount, SHA-256 read-back | Bytes identical; **868.72 s for two 4.6 MB files** |
+| 6. Provider usage under `run5` | 36 objects, 13.16 MiB (bound 200 / 100 MiB) |
+
+So phase 3 confirms the delete-on-close change on a physical machine and a real
+provider, and shows that Office is still not usable on this build for two
+other reasons: the cost of Word's open sequence, and the cost of a cold read.
+Neither was diagnosed in this run. Details, in the order they happened:
+
+- **Build.** MSI built on MiniAir from `6992084` (clean tree, the CI installer
+  job's release command). `d138b5b`'s own hosted run 42898618988 was still in
+  progress at build time, so it was not used; it passed later, and differs from
+  `6992084` in documentation only. MSI SHA-256
+  `b09a099238509069499554014cb0eff3ceb70e19dea835e60382fd2330c5a812`, binary
+  `ce807c46f9b4be9823ccfad16b40759ac000a77eaac7e4fd0f412cc20ba02bc2`.
+- **Install.** The owner uninstalled the `68cfab8` build and installed this one
+  (Windows Installer status 0 for both). The installed binary's SHA-256 matches
+  the build.
+- **Probe evidence.** The report's `observed_unix_seconds` is 2026-11-08
+  19:20 UTC, about two days old at the start of the run; no new probe.
+- **Prefix before the run** (read-only listing run by the owner, 2026-11-11
+  01:22 UTC): 141 objects and 43,762,364 bytes (41.74 MiB) under
+  `s3drive-physical-20261108/`. Of these `run3` holds 131 objects (32.25 MiB),
+  the first volume 9 (9.48 MiB), `run4` one object of 64 bytes, and `run5`
+  none. The whole `run5` bound on top of that is 341 objects and 141.74 MiB,
+  inside the original 500-PUT / 256 MiB bound. The listing counts objects, not
+  PUT requests.
+- **Authority.** `authority-5` on `127.0.0.1:43131`, `portable-collision-v1`,
+  volume `267d24e3acd2e8d30ac1c6a2cca7122e`.
+- **Store and drive.** Store `27d713285d0eed0ee540bd508c2627b7`, root
+  `s3drive-physical-20261108/run5/.s3drive/` (plan SHA-256
+  `4d4650c28e109c2b1d7e001c4e35f3688d7ed110411eb3ee4c3e2cb6f446e414`,
+  registered), version 8 `component-retention-v1` drive in `drive5`, mounted
+  read-write at `%USERPROFILE%\S3DriveRun5`.
+- **Check 1, `CreateFileW` probes: passed.** Both creates ask for
+  `GENERIC_READ | GENERIC_WRITE | DELETE`, `CREATE_NEW` and
+  `FILE_ATTRIBUTE_TEMPORARY` on an empty file in the mount root.
+
+  ```text
+  plain-temporary create=ok exists_while_open=True exists_after_close=True ms=2989
+  plain-temporary removed=True
+  delete-on-close create=ok exists_while_open=True exists_after_close=False ms=2289
+  listing-after:
+  ```
+
+  The delete-on-close create, refused with Win32 error 19 on `run4`, is
+  accepted, and its name is gone once the handle closes. The folder was empty
+  afterwards.
+- **Cost of the two probe files.** From the baseline to 24 s after the probe
+  the mount went from 0.31 to 8.8 CPU-seconds, the state database from
+  651,264 to 729,088 bytes and the write-ahead log from 45,352 to 4,218,912
+  bytes. That is two empty files created and removed, so about the same per
+  file as on `run4` (about 7 CPU-seconds and 3 MB of log for one).
+- **Check 2, Word saves: the files were written; times are not clean.** A new
+  document saved as `run5-word.docx`, an edit saved with Ctrl+S, and a Save As
+  (the name came out as `run5-word.-copydocx.docx`, a typing slip) all left
+  their files in the folder. Whether Word showed any message during the saves
+  was not recorded. Snapshots taken by hand before and after each save:
+
+  | Step | Span between snapshots | Mount CPU-seconds | State database (bytes) | Write-ahead log (bytes) |
+  |---|---|---|---|---|
+  | Save 1 (new file) | 71 s | 8.8 → 17.42 | 729,088 → 3,969,024 | 4,218,912 → 5,108,832 |
+  | Save 2 (Ctrl+S) | 66 s | 54.58 → 79.97 | 13,389,824, unchanged | 5,108,832, unchanged |
+  | Save As | 67 s | 103.53 → 142.73 | 13,533,184, unchanged | 5,108,832 → 5,174,752 |
+  | Word closed (141 s later) | | 209.09 | 13,533,184 | 5,174,752 |
+
+  The spans include the owner's time in the dialogs, and each "after" snapshot
+  still listed a `~WRD` temporary file, so the saves were probably still
+  finishing; the spans are not save times. The owner gave no stopwatch
+  figures. The mount kept working between saves: 37 CPU-seconds between save 1's end and
+  save 2's start, 66 after the Save As.
+- **Check 4, leftovers after Word closed: none.** During the run the folder
+  listed `~$n5-word.docx`, `~WRD0000.tmp`, `~WRD0002.tmp`, `~WRL0003.tmp` and
+  `~WRD0004.tmp` at various snapshots. After Word closed only the two
+  documents remained.
+- **Check 2, Word reopen: FAILED.** Opening `run5-word.docx` from Explorer
+  froze the Explorer window; the first sample of the frozen state was at
+  01:44:40 UTC. Word's process started at 01:49:43 and a second Word process
+  at 01:50:56; both showed only the splash screen ("Opening - Word"). At
+  01:51:37, at least seven minutes after the open was requested, the document
+  had not appeared and the owner stopped the attempt. The mount was working
+  throughout, not idle: 209 CPU-seconds at 01:40:02, 541 at 01:44:40 and 645
+  at 01:51:37, with the database and log still being written. So this is
+  slowness, not a deadlock, but whether the open would ever have completed
+  was not observed. A 4.6 MB document that does not open in minutes is
+  unusable. No Process Monitor trace was taken: the plan asks for one on a
+  failed save, and this was an open. By the time Word was closed (01:53:36)
+  the mount had used 716 CPU-seconds.
+- **Plain reads are fast, so the cause is Word's open sequence, not reading.**
+  Straight after Word was closed, a script read both documents in full
+  through the same mount (4,599,470 and 4,599,486 bytes) in 6.59 seconds
+  for the pair, copy and hash included. Both copies are valid Word packages
+  (38 entries) with the typed text. What Word asks for while opening, and which of those requests
+  is slow, was not observed.
+- **Unmount.** Two operator slips first, neither with any effect on the data:
+  a second `mount` onto the still-mounted path was refused twice with Win32
+  error 1005 ("The volume does not contain a recognized file system"), a
+  misleading message for a path that is already mounted; and Ctrl+C was
+  pressed in the authority's window, stopping it while the mount was idle.
+  The authority was restarted on the same volume with `--expect-volume` at
+  01:58:54 UTC. Ctrl+C in the mount window then unmounted at once, with no
+  message; the process was gone, the mount point removed and the state
+  write-ahead log checkpointed away by 01:59:12 (database 13,533,184 bytes).
+  The mount had run for 33 m 55 s and used 717 CPU-seconds. The remount below
+  therefore also follows an authority restart.
+- **Check 5, cold remount and read-back: bytes correct, far too slow.** The
+  remount printed "Mounted" at once (process started 02:00:18 UTC). Both
+  documents then hashed identical to the copies taken before the unmount
+  (`mismatches=0`):
+
+  | File | SHA-256 | Result logged (UTC) |
+  |---|---|---|
+  | `run5-word.-copydocx.docx` | `4c1a4114c3bbecbee1ebfdb36d781cc8c26a093f86d33deacd67c673fbb5e818` | 02:07:50, MATCH |
+  | `run5-word.docx` | `b72b798de03ec09666cc653b6c4b249364944637d227b78248eeb95552c90ca5` | 02:15:21, MATCH |
+
+  The whole read-back took 868.72 seconds, so each 4.6 MB file took about
+  seven minutes to read cold, against 6.59 seconds for both
+  while their bytes were still local. Over that time the mount used 78
+  CPU-seconds at a constant rate (about 2.8 per 30 s), held one HTTPS
+  connection, and its process I/O counter rose by about 0.5 MiB per 30 s;
+  the state database was not written. Whether that is the object arriving at
+  about 17 KB/s or the overhead of many small ranged requests was not
+  measured. The copies are not independent of the mount (Word saved straight
+  into it), so the match shows the remount returns what the mount held, and
+  the package check above shows those bytes are valid documents.
+- **Check 6, provider usage after Word** (read-only listing, 02:26 UTC):
+  36 objects and 13,803,398 bytes (13.16 MiB) under the `run5` root, inside
+  the 200-PUT / 100 MiB bound. The whole prefix holds 177 objects and
+  54.90 MiB; the other roots are unchanged. By size the 36 are twelve 1 MiB
+  objects, three of 405,166, 405,182 and 407,042 bytes, three each of 145,
+  162 and 469 bytes, and twelve of 64 bytes. Four 1 MiB objects plus one tail
+  add up exactly to each saved document (4,599,470 and 4,599,486 bytes) and
+  to a third generation of 4,601,346 bytes. So the three saves published
+  three whole 4.6 MB generations, about twelve objects and 4.6 MB each, and
+  no object is attributable to Word's temporary files or to the two probe
+  files. This is inferred from sizes; the listing counts objects, not PUT
+  requests, and the keys were not mapped to files.
+- **Excel: not run.** The owner stopped the run after the Word results. Whether
+  Excel's save gets past the refusal that stopped it on `run4` is untested.
+
+**Open after this run** (proposals, none started):
+
+- A Process Monitor trace of one Word open on a version 8 drive, to see which
+  request costs minutes. Plain reads of the same files were fast.
+- The cold read path: five objects per document took about seven minutes.
+  Per-request overhead is suspected from the constant slow rate; not measured.
+- Clean save times need a scripted or traced save, not hand-run snapshots.
+- The `mount` error for an already-mounted path (Win32 1005) is misleading.
+
+**Left in place.** The `run5` drive, state, store plan and authority
+directories under `%LOCALAPPDATA%\S3Drive\physical-20261108\`, the `6992084`
+MSI installation, and all objects under the prefix. Scripts, logs and the two
+document copies are in `%TEMP%\s3drive-msi\run5\`, unpublished. No startup
+task, sign-out, reboot or key cleanup was done.

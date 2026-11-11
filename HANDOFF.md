@@ -39,9 +39,17 @@ Windows CI step. Commit 3ae3afd passed all ten jobs of run 42839890487,
 including both new tests on hosted Windows; results are in "Phase 2 as built"
 of the proposal. Not merged, no pull request, and no physical or Office
 evidence. The owner approved the physical Office rerun (phase 3) on
-2026-11-10. It has not been run: it needs a session on MiniAir to build the MSI
-from this branch. Plan, bound and checks: "run5" in
-docs/src/wasabi-physical-windows-plan.md.
+2026-11-10 and it was run that evening on MiniAir with an MSI built from
+6992084 (run5, stopped by the owner after Word). Delete-on-close now works on
+the physical mount and Word's three saves reached Wasabi intact (36 objects,
+13.16 MiB; SHA-256 identical after a cold remount; no leftover temporary
+files). Two failures: Word did not reopen its 4.6 MB document within seven
+minutes although plain reads took seconds, and the cold read-back took 868.72 s
+for two files. Neither is diagnosed; Excel was not run. Next step is a
+proposal, not approved: a Process Monitor trace of one Word open, and a look
+at the cold read path. Results: "run5" in
+docs/src/wasabi-physical-windows-plan.md. Local run5 state and the 6992084
+install are left in place on MiniAir.
 PR #2 (drive letter, passwordless startup) is a separate open thread.
 
 ## Current main (2026-11-08)

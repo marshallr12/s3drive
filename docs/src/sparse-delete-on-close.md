@@ -2,9 +2,11 @@
 
 **Status: the owner chose option A on 2026-11-10. Phases 1 (engine) and 2
 (adapter) are implemented and passed hosted Linux and Windows CI on their exact
-commits. Phase 2 is unmerged and has no physical-machine or Office evidence.
-Phase 3 (physical Office rerun) was approved by the owner on 2026-11-10 and
-has not been run; its plan is
+commits. Phase 2 is unmerged. Phase 3 (physical Office rerun) was run on
+2026-11-10: the delete-on-close create is accepted on MiniAir against Wasabi
+and Word's saves complete, but Word could not reopen its document within seven
+minutes, a cold read took about seven minutes per 4.6 MB file, and Excel was
+not run. Plan and results:
 [run5](wasabi-physical-windows-plan.md#office-rerun-with-delete-on-close-run5-approved-2026-11-10).**
 See [phase 2 as built](#phase-2-as-built-2026-11-10) and
 [phase 1 as built](#phase-1-as-built-2026-11-10). The owner asked for this design after the
